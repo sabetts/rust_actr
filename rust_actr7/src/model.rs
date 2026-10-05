@@ -203,7 +203,7 @@ fn structural<T>(msg: impl Into<String>) -> Result<T, LoadError> {
 fn buffer_ref(s: &str) -> Option<(char, &str)> {
     let mut c = s.chars();
     let op = c.next()?;
-    if !"=+-?".contains(op) || !s.ends_with('>') || s == "==>" {
+    if !"=+-?*".contains(op) || !s.ends_with('>') || s == "==>" {
         return None;
     }
     let inner = &s[op.len_utf8()..s.len() - 1];
@@ -360,7 +360,7 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
         if let Some((op, buffer)) = buffer_ref(&head) {
             let buffer = buffer.to_string();
             match op {
-                '=' => actions.push(RhsAction::Modify {
+                '=' | '*' => actions.push(RhsAction::Modify {
                     buffer,
                     slots: parse_pairs_plain(body)?,
                 }),
@@ -473,6 +473,15 @@ fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
                 Ok(Chunk {
                     name: name.clone(),
                     ctype: Some(t.clone()),
+                    slots: parse_pairs_plain(rest)?,
+                })
+            }
+            // Named chunk without `isa` (`(g value 3 color red)`): an odd
+            // number of forms is a name followed by slot/value pairs.
+            [Sexp::Sym(name), rest @ ..] if !rest.is_empty() && rest.len() % 2 == 0 => {
+                Ok(Chunk {
+                    name: name.clone(),
+                    ctype: None,
                     slots: parse_pairs_plain(rest)?,
                 })
             }
@@ -605,13 +614,13 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                 let mut anon = 0u64;
                 for e in &items[1..] {
                     let named_or_typed = match e {
-                        Sexp::List(p) => {
-                            matches!(p.as_slice(), [Sexp::Sym(_)])
-                                || matches!(
-                                    p.as_slice(),
-                                    [Sexp::Sym(_), Sexp::Sym(isa), Sexp::Sym(_), ..] if isa == "ISA"
-                                )
-                        }
+                        Sexp::List(p) => matches!(p.as_slice(), [Sexp::Sym(_)])
+                            || matches!(
+                                p.as_slice(),
+                                [Sexp::Sym(_), Sexp::Sym(isa), Sexp::Sym(_), ..] if isa == "ISA"
+                            )
+                            || (p.len() % 2 == 1
+                                && matches!(p.as_slice(), [Sexp::Sym(_), ..])),
                         _ => false,
                     };
                     if named_or_typed {

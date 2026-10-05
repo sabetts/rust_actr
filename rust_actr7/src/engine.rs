@@ -2857,11 +2857,60 @@ impl Engine {
         }
     }
 
-    fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
-        let (want_slots, want_neg) = match &spec {
-            NewChunk::Named(n) => {
-                return Err(unimpl(format!("single-item retrieval request {n}")));
+    /// Direct retrieval of a named chunk (`+retrieval> =goal`): activation
+    /// (base + spreading + noise) determines threshold and latency; a
+    /// missing chunk fails after the failure wait.
+    fn direct_retrieval(&mut self, name: &str) -> Result<(), EngineError> {
+        let gen = self.dm_gen;
+        match self.dm.iter().position(|c| c.name.as_deref() == Some(name)) {
+            Some(i) => {
+                let (act, _base) = self.compute_blending_activation(i, &[], &[]);
+                if self.cfg.esc && act < self.cfg.rt {
+                    let wait = failure_wait(&self.cfg);
+                    self.push(
+                        self.time_ms + wait,
+                        Prio::Num(0),
+                        Out::Low,
+                        Event::RetrievalFailure { gen },
+                    );
+                } else {
+                    let wait = if self.cfg.esc {
+                        latency(self.cfg.lf_ms, self.cfg.le, act)
+                    } else {
+                        0
+                    };
+                    self.push(
+                        self.time_ms + wait,
+                        Prio::Num(0),
+                        Out::Medium,
+                        Event::RetrievedChunk {
+                            name: name.to_string(),
+                            gen,
+                        },
+                    );
+                }
             }
+            None => {
+                let wait = failure_wait(&self.cfg);
+                self.push(
+                    self.time_ms + wait,
+                    Prio::Num(0),
+                    Out::Low,
+                    Event::RetrievalFailure { gen },
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
+        // A whole-chunk request (`+retrieval> =goal`) retrieves the named
+        // chunk directly (`direct-request`), not by slot matching.
+        if let NewChunk::Named(n) = &spec {
+            return self.direct_retrieval(n);
+        }
+        let (want_slots, want_neg) = match &spec {
+            NewChunk::Named(_) => unreachable!(),
             NewChunk::Instance(_) => {
                 return Err(bad(
                     "retrieval request cannot be a buffer instance".to_string(),
@@ -4842,7 +4891,23 @@ impl Engine {
         copied: &mut HashMap<String, String>,
     ) -> Result<NewChunk, EngineError> {
         match spec {
-            ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
+            ChunkDesc::Named(n) => {
+                // A named request item that is actually a variable
+                // (`+retrieval> =goal`) resolves to the referenced chunk.
+                if let Some(var) = n.strip_prefix('=') {
+                    let v = self.subst(&Pattern::Var(var.to_string()), b)?;
+                    match v {
+                        Value::Sym(s) => Ok(NewChunk::Named(s)),
+                        other => Err(bad(format!(
+                            "request chunk reference {} is not a chunk name: {}",
+                            n,
+                            other.show()
+                        ))),
+                    }
+                } else {
+                    Ok(NewChunk::Named(n.clone()))
+                }
+            }
             ChunkDesc::Spec {
                 ctype,
                 slots,
