@@ -62,10 +62,16 @@
 //!   `merging-test` green; the reference-count base-level fix, retrieval
 //!   finsts (`:recently-retrieved`), and symbol similarities made the
 //!   unit5 `v4-p3-run`/`v6-run-p3` traces green. `require-extra` is now
-//!   recognized/recorded and chunk-type default slots are applied;
-//!   porting the `blending` extra is in progress. Remaining: `!bind!`/`!eval!`,
-//!   `require-extra` behaviors, `schedule-event` scaffolding, and
-//!   multi-model traces.
+//!   recognized/recorded and chunk-type default slots are applied, and the
+//!   `blending` extra is ported: first-class inequality request constraints
+//!   (`> < >= <=`), the `BLENDING` buffer/module with its `state free/busy`
+//!   and `error nil` queries, and `start-blending` (signature/inequality
+//!   candidacy in DM-alist order, softmax probabilities at temperature
+//!   `:tmp`/`√2·:ans`, numeric weighted averages, similarity-based chunk
+//!   values, log-sum-exp blended activation, and the `:blt` trace) — making
+//!   `blending` green. Remaining: `!bind!`/`!eval!`, other `require-extra`
+//!   behaviors (associative-learning/act-touch/z-threads/extended-motor),
+//!   `schedule-event` scaffolding, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):

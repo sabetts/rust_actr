@@ -932,3 +932,48 @@ and LHS tests; they are numeric comparisons, not `=` similarity. Chunk
 construction (`add-dm`/`define-chunks`) and `?` queries still reject them
 (action-scoped). This lets `blending-test-7` load (it then stops at the
 missing `blending` buffer).
+
+## 96. `all-dm-chunks` order is a flattened signature alist (verified)
+
+`dm-chunks` is an alist of `slots-vector -> chunks`, built by *pushing*
+new signature groups and new chunks to the front
+(`add-chunk-into-dm`, `declarative-memory.lisp:1929`); `all-dm-chunks`
+(`:2747`) flattens it. So the order is: newest signature group first,
+newest chunk first inside a group. For `blending-test-7` that is
+`(D E C B A X-LARGE LARGE MEDIUM SMALL TINY)` — not add-dm order. This
+order feeds both the blended-slot candidate list and the RNG noise-draw
+order, so it is observable in the trace.
+
+## 97. `find-matching-chunks` reverses its result (verified)
+
+`find-matching-chunks` (`framework/chunk-spec.lisp:1129`) pushes matches
+and returns the list, so the result is the reverse of the match order.
+Blending's `matching-chunks` (and therefore the activation/noise order)
+is `reverse(filter(chunk-list))`; with the DM order above the three
+matches come out `(B C E)`.
+
+## 98. `set-base-levels` with `:bll nil` sets a fixed base level (verified)
+
+`set-bl` (`commands/dm-commands.lisp:623`) branches on `bll`: with a
+decay it sets reference count/list and recomputes, but with `bll` nil it
+just sets `chunk-base-level` to the given level, used verbatim as the
+base (`base-level-activation`, `:2421`). `:bll` defaults to nil, so
+`blending-test-7`'s `(set-base-levels (b 4 -10) …)` gives base levels
+4/5/1, plus one logistic noise draw each (activations 2.5325/4.7635/
+0.3433 for seed `(1 1)`).
+
+## 99. `?buffer> error nil` is a negated `state error` query (verified)
+
+`query-module` (`framework/modules.lisp:798`) special-cases the `error`
+query: `(error t)` calls the module query with `state error`; `(error
+nil)` calls it and negates. Only the blending module tracks an error
+flag, so every other buffer reports `error nil` as true.
+
+## 100. Blending trace floats are printed `~S`, not `~f` (verified)
+
+The checked-in `blending.ref` shows `3.7122225e-6` / `1.1136667e-5`
+(shortest single-float, exponent form outside `[1e-3, 1e7)`), not the
+fixed notation SBCL `~f` would produce from the same control strings.
+Reproduce `~S`/`~A` semantics for the blended values (see `lisp_s_f32`);
+the ref, not the source's `~f`, is the arbiter.
+

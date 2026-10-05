@@ -108,13 +108,10 @@ impl Value {
         match self {
             Value::Sym(s) => s.clone(),
             Value::Int(i) => i.to_string(),
-            Value::Num(x) => {
-                if x.fract() == 0.0 && x.abs() < 1e15 {
-                    format!("{x:.1}")
-                } else {
-                    format!("{x}")
-                }
-            }
+            // ACT-R numbers are single-floats; print the shortest
+            // round-tripping decimal the way SBCL `~S`/`~A` does
+            // (exponent form outside [1e-3, 1e7)).
+            Value::Num(x) => lisp_s_f32(*x as f32),
             Value::Str(s) => format!("{s:?}"),
             Value::Nil => "NIL".to_string(),
         }
@@ -189,6 +186,17 @@ struct Config {
     act: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
     crt: bool,
+    /// Blending extra enabled (`require-extra "blending"`): installs the
+    /// `BLENDING` buffer and its request/query handling.
+    blending: bool,
+    /// `:blt` — blending module trace.
+    blt: bool,
+    /// `:tmp` — blending temperature (overrides `:ans`-derived default).
+    tmp_: Option<f32>,
+    /// `:min-bl` — minimum base-level for a chunk to be blended.
+    min_bl: Option<f32>,
+    /// `:blend-all-slots` — blend requested slots too.
+    blend_all_slots: bool,
     /// Retrieval finsts: how many / how long (`:recently-retrieved`).
     num_finsts: usize,
     finst_span_ms: i64,
@@ -502,6 +510,14 @@ impl Config {
                 Some((_, got)) => return Err(bad(format!("bad :act {got:?}"))),
             },
             crt: sgp_bool(&m.params, ":CRT"),
+            blending: m
+                .required_extras
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case("blending")),
+            blt: sgp_bool(&m.params, ":BLT"),
+            tmp_: sgp_single(&m.params, ":TMP")?,
+            min_bl: sgp_single(&m.params, ":MIN-BL")?,
+            blend_all_slots: sgp_bool(&m.params, ":BLEND-ALL-SLOTS"),
             num_finsts: sgp_num(&m.params, ":DECLARATIVE-NUM-FINSTS", 4.0)? as usize,
             finst_span_ms: (sgp_num(&m.params, ":DECLARATIVE-FINST-SPAN", 3.0)? * 1000.0)
                 .round() as i64,
@@ -603,6 +619,10 @@ struct History {
     creation_ms: i64,
     refs: Vec<i64>,
     count: usize,
+    /// Fixed `chunk-base-level` set by `set-base-levels` when `:bll` is nil
+    /// (`set-bl` else-branch, dm-commands.lisp:623). Used verbatim as the
+    /// base level; `None` falls back to `:blc`.
+    fixed_base: Option<f32>,
 }
 
 impl Buffer {
@@ -699,6 +719,16 @@ enum Event {
     RetrievalFailure {
         gen: u64,
     },
+    /// Blending request processing (`start-blending`, priority -3000).
+    StartBlending {
+        spec: NewChunk,
+    },
+    /// Blended chunk ready: place it in BLENDING (priority -1000).
+    BlendingComplete {
+        spec: NewChunk,
+    },
+    /// Blending failed (no matches / below threshold).
+    BlendingFailure,
     ConflictResolution,
     ProductionSelected {
         prod: usize,
@@ -895,6 +925,9 @@ pub struct Engine {
     man_prep_busy: bool,
     man_exec_busy: bool,
     imag_busy: bool,
+    /// Blending module busy/error flags (`blending-module-busy/-error`).
+    blending_busy: bool,
+    blending_error: bool,
     /// Last press-key geometry, for preparation differences.
     last_press: Option<(String, String, f32, f32)>,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
@@ -979,6 +1012,8 @@ impl Engine {
             man_prep_busy: false,
             man_exec_busy: false,
             imag_busy: false,
+            blending_busy: false,
+            blending_error: false,
             last_press: None,
             trace_on: true,
         };
@@ -1023,6 +1058,7 @@ impl Engine {
                 creation_ms: 0,
                 refs: vec![0],
                 count: 1,
+                fixed_base: None,
             };
             dm_len
         ];
@@ -1035,6 +1071,7 @@ impl Engine {
                 let n = level.max(0.0).round() as usize;
                 self.hist[i].creation_ms = creation_ms;
                 self.hist[i].count = n;
+                self.hist[i].fixed_base = Some(*level);
                 self.hist[i].refs = match &self.cfg.ol {
                     Ol::On => vec![creation_ms; n],
                     Ol::Off => even_references(creation_ms, 0, n),
@@ -1058,6 +1095,10 @@ impl Engine {
         ] {
             self.buffers.insert(b.to_string(), Buffer::empty());
         }
+        if self.cfg.blending {
+            self.buffers
+                .insert("BLENDING".to_string(), Buffer::empty());
+        }
         self.queue = BinaryHeap::new();
         self.time_ms = 0;
         self.cr_armed = false;
@@ -1078,6 +1119,8 @@ impl Engine {
         self.man_prep_busy = false;
         self.man_exec_busy = false;
         self.imag_busy = false;
+        self.blending_busy = false;
+        self.blending_error = false;
         self.last_press = None;
         self.exec_prods = self
             .model
@@ -1375,6 +1418,7 @@ impl Engine {
                     creation_ms: now,
                     refs: vec![now],
                     count: 1,
+                    fixed_base: None,
                 });
                 // New DM chunk: update spreading fans like
                 // `add-chunk-into-dm` (self fan-out plus each chunk-valued
@@ -1609,6 +1653,19 @@ impl Engine {
                             self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
                         }
                     }
+                    "BLENDING" => {
+                        // blending-request: clear the error flag, mark busy,
+                        // and schedule the real work at priority -3000 so
+                        // other 0-time buffer changes settle first
+                        // (blending.lisp:465).
+                        self.blending_busy = true;
+                        self.blending_error = false;
+                        self.now(
+                            Prio::Num(-3000),
+                            Out::Medium,
+                            Event::StartBlending { spec },
+                        );
+                    }
                     "GOAL" => {
                         // goal-style-request: delay 0, priority -1000, so the
                         // new goal lands after the production's clears
@@ -1667,6 +1724,41 @@ impl Engine {
                 }
                 self.dm_busy = false;
                 let b = self.buffer_mut("RETRIEVAL");
+                b.busy = false;
+                b.failed = true;
+                self.changed();
+            }
+            Event::StartBlending { spec } => {
+                if show {
+                    self.emit("BLENDING", "START-BLENDING".into());
+                }
+                self.start_blending(&spec)?;
+            }
+            Event::BlendingComplete { spec } => {
+                if show {
+                    self.emit("BLENDING", "BLENDING-COMPLETE".into());
+                }
+                // blending-complete: free the module, then place the chunk
+                // (priority -1000, default `low` output).
+                self.blending_busy = false;
+                self.now(
+                    Prio::Num(-1000),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "BLENDING".to_string(),
+                        chunk: spec,
+                        requested: true,
+                        shown: None,
+                    },
+                );
+            }
+            Event::BlendingFailure => {
+                if show {
+                    self.emit("BLENDING", "BLENDING-FAILURE".into());
+                }
+                self.blending_busy = false;
+                self.blending_error = true;
+                let b = self.buffer_mut("BLENDING");
                 b.busy = false;
                 b.failed = true;
                 self.changed();
@@ -2076,6 +2168,10 @@ impl Engine {
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => {
                             !self.query_free(buffer).unwrap_or(false)
                         }
+                        ("ERROR", Pattern::Nil) => self.buffer_error(buffer),
+                        ("ERROR", Pattern::Sym(s)) if s == "T" => {
+                            !self.buffer_error(buffer)
+                        }
                         _ => true,
                     };
                     if !ok {
@@ -2168,6 +2264,10 @@ impl Engine {
                         }
                         ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
+                        // `?buffer> error t/nil`: only blending carries an
+                        // error flag (`query-module`, modules.lisp:798).
+                        ("ERROR", Pattern::Nil) => !self.buffer_error(buffer),
+                        ("ERROR", Pattern::Sym(s)) if s == "T" => self.buffer_error(buffer),
                         _ => {
                             return Err(unimpl(format!("query ?{buffer}> {attr} {val:?}")));
                         }
@@ -2189,12 +2289,19 @@ impl Engine {
             "VISUAL" => Ok(!self.visual_busy),
             "MANUAL" => Ok(!self.man_prep_busy && !self.man_exec_busy),
             "IMAGINAL" => Ok(!self.imag_busy),
+            "BLENDING" => Ok(!self.blending_busy),
             _ => Ok(!self
                 .buffers
                 .get(buffer)
                 .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
                 .busy),
         }
+    }
+
+    /// `?buffer> error t/nil`: only the blending module tracks an error
+    /// flag; every other buffer reports no error.
+    fn buffer_error(&self, buffer: &str) -> bool {
+        buffer == "BLENDING" && self.blending_error
     }
 
     fn fire(&mut self, prod_idx: usize, bindings: &Bindings) -> Result<(), EngineError> {
@@ -2455,12 +2562,20 @@ impl Engine {
                             )
                     }
                 }
-                None => {
-                    if self.act_medium() {
-                        self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                None => match self.hist[idx].fixed_base {
+                    Some(b) => {
+                        if self.act_medium() {
+                            self.out(format!("User provided chunk base-level: {}", lisp_f(b)));
+                        }
+                        b
                     }
-                    self.cfg.blc
-                }
+                    None => {
+                        if self.act_medium() {
+                            self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                        }
+                        self.cfg.blc
+                    }
+                },
             };
             if self.act_medium() {
                 self.out(format!("Total base-level: {}", lisp_f(base)));
@@ -2596,6 +2711,673 @@ impl Engine {
             }
         }
         Ok(())
+    }
+}
+
+impl Engine {
+    /// Filled-slot names of a chunk (`chunk-slots-vector` mask, as names):
+    /// non-nil slots only; `isa` is the chunk type, not a slot.
+    fn filled_slots(&self, c: &ChunkInst) -> Vec<String> {
+        c.slots
+            .iter()
+            .filter(|(_, v)| *v != Value::Nil)
+            .map(|(s, _)| s.clone())
+            .collect()
+    }
+
+    fn find_chunk(&self, name: &str) -> Option<&ChunkInst> {
+        self.dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+            .or_else(|| self.named.get(name))
+    }
+
+    /// DM chunk order as `all-dm-chunks` (`declarative-memory.lisp:2747`):
+    /// `dm-chunks` is an alist of signature -> chunks, built by pushing new
+    /// signature groups and new chunks to the front, then flattened. So
+    /// newest signature group first, newest chunk first within a group.
+    fn dm_alist_order(&self) -> Vec<usize> {
+        let mut groups: Vec<(Vec<String>, Vec<usize>)> = Vec::new();
+        for (i, c) in self.dm.iter().enumerate() {
+            let mut sig = self.filled_slots(c);
+            sig.sort();
+            if let Some(g) = groups.iter_mut().find(|(s, _)| *s == sig) {
+                g.1.insert(0, i);
+            } else {
+                groups.insert(0, (sig, vec![i]));
+            }
+        }
+        groups.into_iter().flat_map(|(_, v)| v).collect()
+    }
+
+    /// Global slot index order from chunk-type declarations (first
+    /// appearance wins), mirroring `slot-name->index`.
+    fn slot_index_map(&self) -> HashMap<String, usize> {
+        let mut m: HashMap<String, usize> = HashMap::new();
+        let mut n = 0usize;
+        for ct in &self.model.chunk_types {
+            for s in &ct.slots {
+                if !m.contains_key(s) {
+                    m.insert(s.clone(), n);
+                    n += 1;
+                }
+            }
+        }
+        m
+    }
+
+    /// `slot-mask->names`: the given names in slot-index order.
+    fn names_by_index(names: &HashSet<String>, idx: &HashMap<String, usize>) -> Vec<String> {
+        let mut v: Vec<String> = names.iter().cloned().collect();
+        v.sort_by_key(|s| idx.get(s).copied().unwrap_or(usize::MAX));
+        v
+    }
+
+    /// Numeric `> < >= <=` against runtime values.
+    fn rel_test_v(&self, op: SlotOp, rhs: &Value, got: &Value) -> bool {
+        let rhs = match rhs {
+            Value::Int(i) => *i as f64,
+            Value::Num(x) => *x,
+            _ => return false,
+        };
+        let lhs = match got {
+            Value::Int(i) => *i as f64,
+            Value::Num(x) => *x,
+            _ => return false,
+        };
+        match op {
+            SlotOp::Gt => lhs > rhs,
+            SlotOp::Lt => lhs < rhs,
+            SlotOp::Ge => lhs >= rhs,
+            SlotOp::Le => lhs <= rhs,
+            _ => false,
+        }
+    }
+
+    /// Full `find-matching-chunks` test of a chunk against a request spec
+    /// (`=`, `-` and the relative slots). Nil values are signature-only.
+    fn chunk_matches_req(
+        &self,
+        c: &ChunkInst,
+        slots: &[(String, Value)],
+        neg: &[(String, Value)],
+        rels: &[(String, Value, SlotOp)],
+    ) -> bool {
+        for (s, v) in slots {
+            if s.starts_with(':') || *v == Value::Nil {
+                continue;
+            }
+            if !self.value_eq(&c.get(s), v) {
+                return false;
+            }
+        }
+        for (s, v) in neg {
+            if s.starts_with(':') {
+                continue;
+            }
+            if *v == Value::Nil {
+                if c.get(s) == Value::Nil {
+                    return false;
+                }
+            } else if self.value_eq(&c.get(s), v) {
+                return false;
+            }
+        }
+        for (s, v, op) in rels {
+            if s.starts_with(':') {
+                continue;
+            }
+            if !self.rel_test_v(*op, v, &c.get(s)) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// `compute-activation` for a blending candidate: base + spreading +
+    /// partial matching + one logistic noise draw. `:min-bl` suppression is
+    /// applied by the caller (but the draw still happens, as in Lisp).
+    fn compute_blending_activation(
+        &mut self,
+        idx: usize,
+        want_slots: &[(String, Value)],
+        want_neg: &[(String, Value)],
+    ) -> (f32, f32) {
+        let base = match self.cfg.bll {
+            Some(bll) => {
+                let (refs, creation, count) = {
+                    let h = &self.hist[idx];
+                    (h.refs.clone(), h.creation_ms, h.count)
+                };
+                if count == 0 {
+                    -999999.0
+                } else {
+                    self.cfg.blc
+                        + bl_equation(
+                            self.time_ms,
+                            &refs,
+                            count as f32,
+                            creation,
+                            bll,
+                            &self.cfg.ol,
+                            self.cfg.act_scale,
+                        )
+                }
+            }
+            None => self.hist[idx].fixed_base.unwrap_or(self.cfg.blc),
+        };
+        let name = self.dm[idx].name.clone().unwrap_or_default();
+        let spread = if self.dm[idx].name.is_some() {
+            self.spreading_activation(&name)
+        } else {
+            0.0
+        };
+        let mut a = base + spread;
+        if let Some(mp) = self.cfg.mp {
+            for (s, v) in want_slots {
+                if s.starts_with(':') || *v == Value::Nil {
+                    continue;
+                }
+                a += mp * self.similarity(v, &self.dm[idx].get(s));
+            }
+            for (s, v) in want_neg {
+                if s.starts_with(':') || *v == Value::Nil {
+                    continue;
+                }
+                if self.similarity(v, &self.dm[idx].get(s)) == self.cfg.ms {
+                    a += mp * self.cfg.md;
+                }
+            }
+        }
+        let noise = match self.cfg.ans {
+            Some(s) => self.rng.noise(s),
+            None => 0.0,
+        };
+        (a + noise, base)
+    }
+
+    /// `start-blending` (`extras/blending/blending.lisp:474`). Operates on
+    /// the concretized request spec; emits the `:blt` trace and schedules
+    /// either the completion (with the blended chunk) or the failure.
+    fn start_blending(&mut self, spec: &NewChunk) -> Result<(), EngineError> {
+        let (slots, neg, rels) = match spec {
+            NewChunk::Spec {
+                slots,
+                neg,
+                rels,
+                ..
+            } => (slots.clone(), neg.clone(), rels.clone()),
+            _ => return Err(bad("blending request must be a chunk spec".to_string())),
+        };
+        let idx_map = self.slot_index_map();
+
+        // Request signature (`add-slot-spec-to-chunk-spec`): `= V` (V
+        // non-nil) and `- nil` are filled; `= nil` is empty.
+        let mut req_filled: HashSet<String> = HashSet::new();
+        let mut req_empty: HashSet<String> = HashSet::new();
+        for (s, v) in &slots {
+            if s.starts_with(':') {
+                continue;
+            }
+            if *v == Value::Nil {
+                req_empty.insert(s.clone());
+            } else {
+                req_filled.insert(s.clone());
+            }
+        }
+        for (s, v) in &neg {
+            if s.starts_with(':') {
+                continue;
+            }
+            if *v == Value::Nil {
+                req_filled.insert(s.clone());
+            }
+        }
+        for (s, _, _) in &rels {
+            if !s.starts_with(':') {
+                req_filled.insert(s.clone());
+            }
+        }
+        let filled_names = Self::names_by_index(&req_filled, &idx_map);
+        let empty_names = Self::names_by_index(&req_empty, &idx_map);
+
+        // Candidates: DM order filtered by the request signature.
+        let chunk_list: Vec<usize> = self
+            .dm_alist_order()
+            .into_iter()
+            .filter(|i| {
+                let fs = self.filled_slots(&self.dm[*i]);
+                req_filled.iter().all(|f| fs.contains(f))
+                    && req_empty.iter().all(|e| !fs.contains(e))
+            })
+            .collect();
+
+        // `find-matching-chunks`: full spec unless (esc && mp), in which
+        // case only the relative slots filter; the pushing loop reverses.
+        let partial = self.cfg.esc && self.cfg.mp.is_some();
+        let mut matched: Vec<usize> = Vec::new();
+        for i in &chunk_list {
+            let c = &self.dm[*i];
+            let ok = if partial {
+                rels.iter().all(|(s, v, op)| {
+                    s.starts_with(':') || self.rel_test_v(*op, v, &c.get(s))
+                })
+            } else {
+                self.chunk_matches_req(c, &slots, &neg, &rels)
+            };
+            if ok {
+                matched.push(*i);
+            }
+        }
+        matched.reverse();
+
+        // Blended slots: union of matching chunks' filled slots minus the
+        // fixed (`=`) slots unless `:blend-all-slots`.
+        let mut all_slots: HashSet<String> = HashSet::new();
+        for i in &matched {
+            for s in self.filled_slots(&self.dm[*i]) {
+                all_slots.insert(s);
+            }
+        }
+        let fixed: HashSet<String> = slots
+            .iter()
+            .filter(|(s, _)| !s.starts_with(':'))
+            .map(|(s, _)| s.clone())
+            .collect();
+        let mut blended_set: HashSet<String> = if self.cfg.blend_all_slots {
+            all_slots
+        } else {
+            all_slots.difference(&fixed).cloned().collect()
+        };
+        blended_set.retain(|s| !s.starts_with(':'));
+        let blended_slots = Self::names_by_index(&blended_set, &idx_map);
+
+        // Temperature.
+        let (temperature, temp_line) = if let Some(t) = self.cfg.tmp_ {
+            (t, format!("Blending temperature is: {}", lisp_s_f32(t)))
+        } else if let Some(a) = self.cfg.ans {
+            let t = std::f32::consts::SQRT_2 * a;
+            (
+                t,
+                format!(
+                    "Blending temperature defaults to (* (sqrt 2) :ans): {}",
+                    lisp_s_f32(t)
+                ),
+            )
+        } else {
+            (
+                1.0,
+                "Blending temperature defaults to 1 when :ans and :tmp are both nil"
+                    .to_string(),
+            )
+        };
+
+        // Activations (one noise draw per matching chunk, in match order).
+        let mut act_list: Vec<(f32, usize, String)> = Vec::new();
+        for i in &matched {
+            let (a, base) = self.compute_blending_activation(*i, &slots, &neg);
+            // `:min-bl`: a chunk whose base level is below the minimum is
+            // suppressed (its activation and noise draw already happened).
+            if let Some(minb) = self.cfg.min_bl {
+                if base < minb {
+                    continue;
+                }
+            }
+            let name = self.dm[*i].name.clone().unwrap_or_default();
+            act_list.push((a, *i, name));
+        }
+
+        if self.cfg.blt {
+            let mut line = "Blending request for chunks".to_string();
+            if !filled_names.is_empty() {
+                line.push_str(&format!(" with slots ({})", filled_names.join(" ")));
+            }
+            line.push(' ');
+            if !empty_names.is_empty() {
+                line.push_str(&format!("without slots ({})", empty_names.join(" ")));
+            }
+            self.out(line);
+            self.out(temp_line);
+        }
+
+        if act_list.is_empty() {
+            if self.cfg.blt {
+                self.out("No matching chunks found.".to_string());
+                self.out("Blending request fails.".to_string());
+            }
+            let wait = failure_wait(&self.cfg);
+            self.push(
+                self.time_ms + wait,
+                Prio::Num(0),
+                Out::Low,
+                Event::BlendingFailure,
+            );
+            return Ok(());
+        }
+
+        // Softmax probabilities over the activations.
+        let max_ai = act_list
+            .iter()
+            .map(|(a, _, _)| *a)
+            .fold(f32::NEG_INFINITY, f32::max);
+        let mut probs: Vec<f32> = act_list
+            .iter()
+            .map(|(a, _, _)| ((a - max_ai) / temperature).exp())
+            .collect();
+        let sum: f32 = probs.iter().sum();
+        for p in probs.iter_mut() {
+            *p /= sum;
+        }
+
+        if self.cfg.blt {
+            for ((a, _, name), p) in act_list.iter().zip(probs.iter()) {
+                self.out(format!(
+                    "Chunk {name} matches blending request\n  Activation {}\n  Probability of recall {}\n",
+                    lisp_s_f32(*a),
+                    lisp_s_f32(*p)
+                ));
+            }
+            self.out(format!(
+                "\nSlots to be blended: ({})",
+                blended_slots.join(" ")
+            ));
+        }
+
+        // Per-slot blending. `results` keeps blended-slots order.
+        let mut results: Vec<(String, Option<Value>)> = blended_slots
+            .iter()
+            .map(|s| (s.clone(), None))
+            .collect();
+
+        for slot in &blended_slots {
+            if self.cfg.blt {
+                self.out(format!("Finding blended value for slot: {slot}"));
+            }
+            // possible-values: (name, value, prob, magnitude) for each
+            // activation chunk with a non-nil slot value; magnitude is
+            // `:value->mag` (default identity).
+            let possible: Vec<(String, Value, f32, Value)> = act_list
+                .iter()
+                .zip(probs.iter())
+                .filter_map(|((_, i, name), p)| {
+                    let v = self.dm[*i].get(slot);
+                    if v == Value::Nil {
+                        None
+                    } else {
+                        Some((name.clone(), v.clone(), *p, v))
+                    }
+                })
+                .collect();
+            let slot_vals: Vec<Value> = possible.iter().map(|(_, v, _, _)| v.clone()).collect();
+            let mags: Vec<Value> = possible.iter().map(|(_, _, _, m)| m.clone()).collect();
+            if self.cfg.blt {
+                self.out(format!(
+                    "Matched chunks' slots contain: {}",
+                    show_values(&slot_vals)
+                ));
+                self.out(format!(
+                    "Magnitude values for those items: {}",
+                    show_values(&mags)
+                ));
+            }
+
+            let true_mags: Vec<Value> =
+                mags.iter().filter(|m| **m != Value::Nil).cloned().collect();
+
+            if true_mags.is_empty() {
+                if self.cfg.blt {
+                    self.out(
+                        "When all magnitudes are nil there's nothing to blend and the slot is ignored"
+                            .to_string(),
+                    );
+                }
+                results.retain(|(s, _)| s != slot);
+                continue;
+            }
+
+            if true_mags.iter().all(is_number) {
+                if self.cfg.blt {
+                    self.out("With numeric magnitudes blending by weighted average".to_string());
+                }
+                let mut sum = 0.0f32;
+                for (name, _v, p, m) in &possible {
+                    if *m == Value::Nil {
+                        continue;
+                    }
+                    let mag = f32_of(m).unwrap_or(0.0);
+                    let inc = p * mag;
+                    sum += inc;
+                    if self.cfg.blt {
+                        self.out(format!(
+                            " Chunk {name} with probability {} times magnitude {} = {} cumulative result: {}",
+                            lisp_s_f32(*p),
+                            lisp_s_f32(mag),
+                            lisp_s_f32(inc),
+                            lisp_s_f32(sum)
+                        ));
+                    }
+                }
+                set_result(&mut results, slot, Value::Num(sum as f64));
+                if self.cfg.blt {
+                    self.out(format!(" Final result: {}", lisp_s_f32(sum)));
+                }
+                continue;
+            }
+
+            // Chunk (or mixed) magnitudes: pick the candidate value whose
+            // similarity-weighted probability mass is smallest.
+            let which_chunks = true_mags.iter().all(|m| self.chunk_name_of(m).is_some());
+            if self.cfg.blt {
+                if which_chunks {
+                    self.out(
+                        "When all magnitudes are chunks blending based on similarities to all related chunks"
+                            .to_string(),
+                    );
+                } else {
+                    self.out(format!(
+                        "When not all magnitudes are numbers or chunks blending based on similarities using those unique values: {}",
+                        show_values(&true_mags)
+                    ));
+                }
+            }
+            let chunks: Vec<Value> = if which_chunks {
+                // Intersection of the magnitudes' filled-slot sets.
+                let mut inter: Option<HashSet<String>> = None;
+                for m in &true_mags {
+                    if let Some(n) = self.chunk_name_of(m) {
+                        if let Some(c) = self.find_chunk(&n) {
+                            let s: HashSet<String> = self.filled_slots(c).into_iter().collect();
+                            inter = Some(match inter {
+                                None => s,
+                                Some(x) => x.intersection(&s).cloned().collect(),
+                            });
+                        }
+                    }
+                }
+                let inter = inter.unwrap_or_default();
+                if inter.is_empty() {
+                    if self.cfg.blt {
+                        self.out(
+                            "No intersecting slots found all chunks will be tested".to_string(),
+                        );
+                    }
+                    self.dm_alist_order()
+                        .into_iter()
+                        .map(|i| Value::Sym(self.dm[i].name.clone().unwrap_or_default()))
+                        .collect()
+                } else {
+                    if self.cfg.blt {
+                        self.out(format!(
+                            "Intersection of slots for values is: ({})",
+                            Self::names_by_index(&inter, &idx_map).join(" ")
+                        ));
+                    }
+                    let list: Vec<Value> = self
+                        .dm_alist_order()
+                        .into_iter()
+                        .filter(|i| {
+                            let fs = self.filled_slots(&self.dm[*i]);
+                            inter.iter().all(|f| fs.contains(f))
+                        })
+                        .map(|i| Value::Sym(self.dm[i].name.clone().unwrap_or_default()))
+                        .collect();
+                    if self.cfg.blt {
+                        self.out(format!(
+                            "Chunks from DM with those slots: {}",
+                            show_values(&list)
+                        ));
+                    }
+                    list
+                }
+            } else {
+                let mut uniq: Vec<Value> = Vec::new();
+                for m in &true_mags {
+                    if !uniq.iter().any(|u| self.value_eq(u, m)) {
+                        uniq.push(m.clone());
+                    }
+                }
+                uniq
+            };
+
+            let best = if chunks.len() == 1 {
+                if self.cfg.blt {
+                    self.out(format!(" Only one possible value {}", chunks[0].show()));
+                }
+                chunks[0].clone()
+            } else {
+                let mut best_val: Option<Value> = None;
+                let mut best_mag: Option<f32> = None;
+                for val in &chunks {
+                    if self.cfg.blt {
+                        self.out(format!(" Comparing value {}", val.show()));
+                    }
+                    let mut sum = 0.0f32;
+                    for (name, v, p, m) in &possible {
+                        let sim = self.similarity(val, m);
+                        sum += p * (sim * sim);
+                        if self.cfg.blt {
+                            self.out(format!(
+                                "  Chunk {name} with probability {} slot value {} similarity: {} cumulative result: {}",
+                                lisp_s_f32(*p),
+                                v.show(),
+                                lisp_s_f32(sim),
+                                lisp_s_f32(sum)
+                            ));
+                        }
+                    }
+                    if best_mag.is_none() || sum < best_mag.unwrap() {
+                        best_mag = Some(sum);
+                        best_val = Some(val.clone());
+                    }
+                }
+                best_val.unwrap_or(Value::Nil)
+            };
+            if self.cfg.blt {
+                self.out(format!(" Final result: {}", best.show()));
+            }
+            set_result(&mut results, slot, best);
+        }
+
+        // Build the blended chunk def: fixed values (unless blend-all)
+        // followed by the blended values, in blended-slots order.
+        let mut new_slots: Vec<(String, Value)> = Vec::new();
+        if !self.cfg.blend_all_slots {
+            for (s, v) in &slots {
+                if s.starts_with(':') {
+                    continue;
+                }
+                new_slots.push((s.clone(), v.clone()));
+            }
+        }
+        for (s, opt) in &results {
+            if let Some(v) = opt {
+                new_slots.push((s.clone(), v.clone()));
+            }
+        }
+
+        if self.cfg.blt {
+            let mut flat: Vec<String> = Vec::new();
+            for (s, v) in &new_slots {
+                flat.push(s.clone());
+                flat.push(v.show());
+            }
+            self.out(format!(
+                "This is the definition of the blended chunk:\n({})",
+                flat.join(" ")
+            ));
+            self.out("\nComputing activation and latency for the blended chunk".to_string());
+        }
+
+        let mut act = 0.0f32;
+        for (a, _, name) in &act_list {
+            act += a.exp();
+            if self.cfg.blt {
+                self.out(format!(" Activation of chunk {name} is {}", lisp_s_f32(*a)));
+            }
+        }
+        act = act.ln();
+        if self.cfg.blt {
+            self.out(format!(
+                "Activation for blended chunk is: {}",
+                lisp_s_f32(act)
+            ));
+        }
+
+        let blended = NewChunk::Spec {
+            ctype: String::new(),
+            slots: new_slots,
+            neg: Vec::new(),
+            rels: Vec::new(),
+            bare: true,
+        };
+
+        if act >= self.cfg.rt {
+            let wait = latency(self.cfg.lf_ms, self.cfg.le, act);
+            self.push(
+                self.time_ms + wait,
+                Prio::Num(0),
+                Out::Medium,
+                Event::BlendingComplete { spec: blended },
+            );
+        } else {
+            if self.cfg.blt {
+                self.out("Not above threshold so blending failed".to_string());
+            }
+            let wait = failure_wait(&self.cfg);
+            self.push(
+                self.time_ms + wait,
+                Prio::Num(0),
+                Out::Low,
+                Event::BlendingFailure,
+            );
+        }
+        Ok(())
+    }
+}
+
+/// `(A B C)` from a slice of values (`~S` of a list).
+fn show_values(vals: &[Value]) -> String {
+    format!(
+        "({})",
+        vals.iter().map(|v| v.show()).collect::<Vec<_>>().join(" ")
+    )
+}
+
+fn is_number(v: &Value) -> bool {
+    matches!(v, Value::Int(_) | Value::Num(_))
+}
+
+fn f32_of(v: &Value) -> Option<f32> {
+    match v {
+        Value::Int(i) => Some(*i as f32),
+        Value::Num(x) => Some(*x as f32),
+        _ => None,
+    }
+}
+
+fn set_result(results: &mut [(String, Option<Value>)], slot: &str, v: Value) {
+    if let Some(e) = results.iter_mut().find(|(s, _)| s == slot) {
+        e.1 = Some(v);
     }
 }
 
@@ -2992,6 +3774,52 @@ fn lisp_f(x: f32) -> String {
         format!("{x:.1}")
     } else {
         format!("{x}")
+    }
+}
+
+/// SBCL `~S`/`~A` for a single-float: shortest round-tripping decimal,
+/// rendered fixed for decimal exponents in `-3..=6` and in `m.mmmmmmeN`
+/// form otherwise (e.g. `3.7122225e-6`, `1.0e7`). The blending trace prints
+/// its floats with this form (the refs are the arbiter).
+fn lisp_s_f32(x: f32) -> String {
+    if !x.is_finite() {
+        return format!("{x}");
+    }
+    if x == 0.0 {
+        return if x.is_sign_negative() {
+            "-0.0".to_string()
+        } else {
+            "0.0".to_string()
+        };
+    }
+    // `{:e}` gives the shortest digits (`d.dddde<exp>` or `de<exp>`).
+    let s = format!("{x:e}");
+    let (mant, exp) = s.split_once('e').expect("exp form has an e");
+    let exp: i32 = exp.parse().expect("exp is an integer");
+    let neg = mant.starts_with('-');
+    let mant = mant.trim_start_matches('-');
+    if (-3..=6).contains(&exp) {
+        let digits: String = mant.chars().filter(|c| *c != '.').collect();
+        let point = exp + 1; // digits before the decimal point
+        let body = if point <= 0 {
+            format!("0.{}{}", "0".repeat((-point) as usize), digits)
+        } else if (point as usize) >= digits.len() {
+            format!(
+                "{digits}{}.0",
+                "0".repeat(point as usize - digits.len())
+            )
+        } else {
+            let (a, b) = digits.split_at(point as usize);
+            format!("{a}.{b}")
+        };
+        format!("{}{body}", if neg { "-" } else { "" })
+    } else {
+        let m = if mant.contains('.') {
+            mant.to_string()
+        } else {
+            format!("{mant}.0")
+        };
+        format!("{}{m}e{exp}", if neg { "-" } else { "" })
     }
 }
 
@@ -3654,6 +4482,22 @@ mod tests {
         assert!(e.match_prod(&fail, &[]).unwrap().is_none());
         e.buffers.get_mut("RETRIEVAL").unwrap().failed = true;
         assert!(e.match_prod(&fail, &[]).unwrap().is_some());
+    }
+
+    /// SBCL `~S` single-float rendering (the blending trace's arbiter):
+    /// shortest digits, fixed for exponents -3..=6, exponent form outside.
+    #[test]
+    fn lisp_s_f32_matches_sbcl() {
+        assert_eq!(lisp_s_f32(0.35355338), "0.35355338");
+        assert_eq!(lisp_s_f32(2.5325232), "2.5325232");
+        assert_eq!(lisp_s_f32(3.7122225e-6), "3.7122225e-6");
+        assert_eq!(lisp_s_f32(1.1136667e-5), "1.1136667e-5");
+        assert_eq!(lisp_s_f32(0.001), "0.001");
+        assert_eq!(lisp_s_f32(1.0e7), "1.0e7");
+        assert_eq!(lisp_s_f32(9999999.0), "9999999.0");
+        assert_eq!(lisp_s_f32(-0.9), "-0.9");
+        assert_eq!(lisp_s_f32(0.0), "0.0");
+        assert_eq!(lisp_s_f32(2.0), "2.0");
     }
 
     /// Row-by-row against `golden/units/tables/latency.sexp`: 802
