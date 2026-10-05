@@ -12,3 +12,6 @@ tutorial-unit1-semantic-g1-trace
 tutorial-unit1-tutor-model-trace
 tutorial-unit1code-tutor-model-high-trace
 tutorial-unit1code-tutor-model-low-trace
+tutorial-unit5modeling-v1-run
+tutorial-unit5modeling-v2-first-run
+tutorial-unit5modeling-v2-longer-run

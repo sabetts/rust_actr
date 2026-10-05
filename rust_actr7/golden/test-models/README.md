@@ -48,10 +48,12 @@ only make sense in the command/device harness:
 The scripted engine supports multiple `run` steps (each bounded relative to
 the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
 `:seed`, and `(reset)` (clock to 0, DM/buffers rebuilt, RNG preserved).
-`define-chunks` named chunks, model-body `declare-buffer-usage`/`spp`,
-`?buffer> buffer empty|full`, and `+goal>` requests are also handled. The
-next big blocker for the unit5 modeling specs is spreading (`:mas`); see
-`../../GOTCHAS.md` #76.
+`define-chunks` named chunks, model-body
+`declare-buffer-usage`/`spp`/`set-base-levels`/`set-similarities`,
+`?buffer> buffer empty|full`, `+goal>` requests, `-` request slots, and
+spreading (`:mas`) are handled. The next blocker for the remaining unit5
+specs is signature-based partial-matching candidacy; see `../../GOTCHAS.md`
+#81.
 
 ## Regenerate
 

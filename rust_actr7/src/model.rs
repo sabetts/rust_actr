@@ -74,6 +74,9 @@ pub enum ChunkDesc {
     Spec {
         ctype: String,
         slots: Vec<(String, Pattern)>,
+        /// `- slot value` exclusions from a request spec (empty for
+        /// construction contexts).
+        neg: Vec<(String, Pattern)>,
     },
     /// A bare chunk name.
     Named(String),
@@ -129,6 +132,10 @@ pub struct Model {
     /// (values/references only; resolved for goal-focus and `=buffer>`
     /// copies). `add-dm` puts its chunks in `chunks` instead.
     pub defined_chunks: Vec<Chunk>,
+    /// Model-body `(set-similarities (a b v) ...)`.
+    pub similarities: Vec<(String, String, f32)>,
+    /// Model-body `(set-base-levels (name level [creation-seconds]) ...)`.
+    pub base_levels: Vec<(String, f32, Option<f64>)>,
     pub initial_goal: Option<ChunkDesc>,
     pub productions: Vec<Production>,
 }
@@ -249,16 +256,18 @@ pub fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
         [Sexp::Sym(isa), Sexp::Sym(t), rest @ ..] if isa == "ISA" => (t.clone(), rest),
         _ => (String::new(), forms),
     };
-    // Negation is meaningless in a construction context.
-    for f in rest {
-        if matches!(f, Sexp::Sym(t) if t == "-") {
-            return structural("`-` negation not allowed in chunk construction");
+    // Negation is valid in request specs (`- slot value` exclusions); it is
+    // separated out and applied during retrieval candidacy/scoring.
+    let mut slots = Vec::new();
+    let mut neg = Vec::new();
+    for t in parse_pairs(rest)? {
+        if t.negated {
+            neg.push((t.slot, t.value));
+        } else {
+            slots.push((t.slot, t.value));
         }
     }
-    Ok(ChunkDesc::Spec {
-        ctype,
-        slots: parse_pairs_plain(rest)?,
-    })
+    Ok(ChunkDesc::Spec { ctype, slots, neg })
 }
 
 fn parse_lhs(forms: &[Sexp]) -> Result<Vec<LhsItem>, LoadError> {
@@ -404,6 +413,15 @@ fn parse_chunk_type(form: &Sexp) -> Result<ChunkType, LoadError> {
     }
 }
 
+/// Numeric S-expression (`Int` or `Float`) as f64.
+fn sexp_f64(e: &Sexp) -> Option<f64> {
+    match e {
+        Sexp::Int(i) => Some(*i as f64),
+        Sexp::Float(x) => Some(*x),
+        _ => None,
+    }
+}
+
 fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
     match form {
         Sexp::List(items) => match items.as_slice() {
@@ -442,6 +460,8 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
         chunk_types: Vec::new(),
         chunks: Vec::new(),
         defined_chunks: Vec::new(),
+        similarities: Vec::new(),
+        base_levels: Vec::new(),
         initial_goal: None,
         productions: Vec::new(),
     };
@@ -501,6 +521,37 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                     got => return structural(format!("bad goal-focus arg: {got:?}")),
                 };
                 model.initial_goal = Some(desc);
+            }
+            // `(set-similarities (a b v) ...)`: explicit Sji between named
+            // chunks (`commands/dm-commands.lisp:513`). Values are stored
+            // both ways at reset.
+            "SET-SIMILARITIES" => {
+                for e in &items[1..] {
+                    if let Sexp::List(p) = e {
+                        if let (Some(a), Some(b), Some(v)) = (
+                            p.first().and_then(|x| x.as_sym()),
+                            p.get(1).and_then(|x| x.as_sym()),
+                            p.get(2).and_then(sexp_f64),
+                        ) {
+                            model.similarities.push((a.to_string(), b.to_string(), v as f32));
+                        }
+                    }
+                }
+            }
+            // `(set-base-levels (name level [creation-seconds]) ...)`: fixed
+            // base-level history (`commands/dm-commands.lisp:557`).
+            "SET-BASE-LEVELS" => {
+                for e in &items[1..] {
+                    if let Sexp::List(p) = e {
+                        if let (Some(name), Some(level)) = (
+                            p.first().and_then(|x| x.as_sym()),
+                            p.get(1).and_then(sexp_f64),
+                        ) {
+                            let creation = p.get(2).and_then(sexp_f64);
+                            model.base_levels.push((name.to_string(), level as f32, creation));
+                        }
+                    }
+                }
             }
             // Pure style-warning suppression (`commands/procedural-cmds.lisp:789`);
             // it records declared slot usage but changes no engine behavior.
@@ -596,7 +647,7 @@ mod tests {
         assert_eq!(slots_of(five), vec![("NUMBER", "Sym(\"FIVE\")".into())]);
 
         match m.initial_goal.as_ref().unwrap() {
-            ChunkDesc::Spec { ctype, slots } => {
+            ChunkDesc::Spec { ctype, slots, .. } => {
                 assert_eq!(ctype, "COUNT-FROM");
                 let get = |s: &str| slots.iter().find(|(k, _)| k == s).map(|(_, v)| v.clone());
                 assert_eq!(get("START"), Some(Pattern::Sym("TWO".into())));
@@ -708,7 +759,7 @@ mod tests {
             ]
         );
         match m.initial_goal.as_ref().unwrap() {
-            ChunkDesc::Spec { ctype, slots } => {
+            ChunkDesc::Spec { ctype, slots, .. } => {
                 assert_eq!(ctype, "ADD");
                 assert!(slots.contains(&("ARG1".to_string(), Pattern::Sym("FIVE".into()))));
             }

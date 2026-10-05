@@ -731,3 +731,51 @@ The `declarative-issues*` models set `:mas 2`; `Config::from_model` refuses
 non-spreading blockers in the corpus: negative request modifiers
 (`+retrieval> ... - slot nil`, refused at load), `:crt`/`:epl`/`:pct`
 conflict-resolution trace text, and `schedule-event` model scaffolding.
+
+## 77. Spreading needs DM fan tables, rebuilt at reset (verified)
+
+`compute-sji` (`declarative-memory.lisp:2536`): an explicit similarity wins;
+otherwise, when source `j` is in candidate `i`'s fan-in,
+`sji = mas - ln(fan-out(j) / count(j in i))`, clamped at 0 unless `:nsji`.
+`fan-out(j) = 1 (self) + #DM chunks referencing j`; `fan-in(i)` is i's
+referenced-chunk occurrences plus a self entry. Only DM chunks get a fan-in;
+a referenced `define-chunks` name still gains fan-out. Setting `:mas` sets
+both `dm-mas` and `dm-sa`, so any `:mas` value turns the path on. `:mas` is
+now accepted; only `:pas` is still refused. Verified by `unit5-v1-run` and
+`v2`.
+
+## 78. Source spread is per-buffer with different defaults (verified)
+
+`spreading-activation` sums over model buffers with a nonzero `buffer-spread`:
+goal is `:ga` (**default 0**), imaginal is `:imaginal-activation` (**default
+1.0**), retrieval/vision/manual default 0. Each source contributes
+`(spread / #chunk-valued-slots) * sji`. So default unit5 spreading comes
+from the imaginal buffer, not the goal.
+
+## 79. Model-body `set-base-levels`/`set-similarities` are reset-time (verified)
+
+`set-base-levels (name level creation-seconds)`: under `:ol t` sets
+reference-count = level and uses creation in the optimized-learning equation
+(refs list ignored), so `(v1 1 -1500)` yields base-level `-2.964` — matching
+the `sdp` output. The engine stores `level` copies of the creation time in
+`refs` so its `refs.len()`-based equation agrees. `set-similarities (a b v)`
+is stored both directions and re-applied at reset (chunk structs are rebuilt).
+
+## 80. `-` request slots only penalize under partial matching (verified)
+
+Under exact matching (`esc` off or `mp` off) `- slot value` excludes chunks
+whose slot equals value. Under partial matching it does **not** filter: it
+adds `mp * md` only when the chunk's value has similarity `ms` to the
+negated value (`partial-matching`, declarative-memory.lisp:2596). The spec
+loader now carries a `neg` list instead of refusing `-`.
+
+## 81. Partial-matching candidacy is signature-based, not type-based (verified)
+
+`start-retrieval` narrows candidates by `slots-vector-match-signature`
+(filled/empty slot masks over the request's slot names), **not** by chunk
+type (`framework/chunk-spec.lisp:895`, `declarative-memory.lisp:1125`). That
+is why `+retrieval> isa simple-value - result nil` can retrieve the
+`math-fact` chunk `2-1=1`. Our engine filters by type + positive-slot
+presence (GOTCHA #55), which matches every golden that avoids it but not
+unit5 `first-run`/`v4-p3-run`/`v6-run-p3`. Replacing it with the
+filled/empty-mask test is the next candidacy task.

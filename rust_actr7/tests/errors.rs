@@ -38,16 +38,17 @@ fn eval_needs_lisp_and_says_so() {
 }
 
 #[test]
-fn mas_rejected_up_front() {
-    // No point running: the config gate fires at build.
+fn pas_rejected_up_front() {
+    // `:pas` (permanent activation sources) is still unimplemented; the
+    // config gate fires at build. (`:mas` spreading is implemented now.)
     let m = load_one("err-mas.lisp");
     let err = match Engine::new(m, (100, 0), 10.0, actr_engine::DeviceSetup::default()) {
         Err(e) => e,
-        Ok(_) => panic!(":mas must be refused"),
+        Ok(_) => panic!(":pas must be refused"),
     };
     match err {
         EngineError::NotImplemented(msg) => assert!(
-            msg.contains(":MAS"),
+            msg.contains(":PAS"),
             "error should name the parameter: {msg}"
         ),
         other => panic!("wrong error kind: {other}"),
@@ -55,13 +56,17 @@ fn mas_rejected_up_front() {
 }
 
 #[test]
-fn minus_in_request_rejected_at_load() {
-    // `-` request modifiers are valid ACT-R (match chunks lacking the
-    // slot) but unimplemented: the loader must refuse, not mis-parse.
-    let err = match load_models(&models_dir().join("err-reqminus.lisp")) {
-        Err(e) => e,
-        Ok(_) => panic!("must not load"),
-    };
-    let msg = err.to_string();
-    assert!(msg.contains("negation"), "error should explain: {msg}");
+fn minus_in_request_is_captured() {
+    // `-` request modifiers (exclusions) are supported now: the loader
+    // must capture them rather than refuse.
+    use actr_engine::model::{ChunkDesc, RhsAction};
+    let ms = load_models(&models_dir().join("err-reqminus.lisp")).expect("must load");
+    let found = ms[0].productions.iter().any(|p| {
+        p.rhs.iter().any(|a| {
+            matches!(a, RhsAction::Request {
+                spec: ChunkDesc::Spec { neg, .. }, ..
+            } if !neg.is_empty())
+        })
+    });
+    assert!(found, "negative request slot should be captured");
 }

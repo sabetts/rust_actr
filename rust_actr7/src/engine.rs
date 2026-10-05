@@ -23,7 +23,7 @@
 //! `state free/busy`, chunk extension events, `:ignore-buffers`.
 
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use crate::model::{Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction};
 use crate::rand::Mt;
@@ -164,6 +164,14 @@ struct Config {
     mp: Option<f32>,
     ms: f32,
     md: f32,
+    /// Maximum associative strength (`:mas`). `Some` enables spreading.
+    mas: Option<f32>,
+    /// `:nsji` — do not clamp negative Sji at 0.
+    nsji: bool,
+    /// Goal buffer source spread (`:ga`, default 0).
+    ga: f32,
+    /// Imaginal buffer source spread (`:imaginal-activation`, default 1.0).
+    imaginal_activation: f32,
     dat_ms: i64,
     attention_ms: i64,
     imaginal_delay_ms: i64,
@@ -366,8 +374,9 @@ fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
 
 impl Config {
     fn from_model(m: &Model) -> Result<Config, EngineError> {
-        // Still beyond reach: spreading, utility learning.
-        for key in [":MAS", ":PAS"] {
+        // Still beyond reach: utility learning hooks, permanent activation
+        // sources. (`:mas` spreading is implemented below.)
+        for key in [":PAS"] {
             if let Some((_, v)) = m.params.iter().find(|(k, _)| k == key) {
                 if !matches!(v, Sexp::Sym(s) if s == "NIL") {
                     return Err(unimpl(format!("subsymbolic parameter {key}")));
@@ -456,6 +465,10 @@ impl Config {
             mp: sgp_single(&m.params, ":MP")?,
             ms: sgp_single(&m.params, ":MS")?.unwrap_or(0.0),
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
+            mas: sgp_single(&m.params, ":MAS")?,
+            nsji: sgp_bool(&m.params, ":NSJI"),
+            ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
+            imaginal_activation: sgp_single(&m.params, ":IMAGINAL-ACTIVATION")?.unwrap_or(1.0),
             bll,
             ol,
             act_scale,
@@ -601,6 +614,8 @@ enum NewChunk {
     Spec {
         ctype: String,
         slots: Vec<(String, Value)>,
+        /// `- slot value` exclusions (request specs only).
+        neg: Vec<(String, Value)>,
         /// Request-built specs print slots-only (`(PROBE "bank")`);
         /// goal-focus lists print with ISA. See chunk-spec-to-chunk-def.
         bare: bool,
@@ -788,6 +803,13 @@ pub struct Engine {
     dm: Vec<ChunkInst>,
     /// `define-chunks` named chunks (not in DM), for name resolution.
     named: HashMap<String, ChunkInst>,
+    /// Spreading fan-out per chunk name (DM chunks self-count 1; each
+    /// reference from a DM chunk adds 1).
+    fan_out: HashMap<String, u32>,
+    /// Spreading fan-in: candidate chunk -> source chunk -> occurrences.
+    fan_in: HashMap<String, HashMap<String, u32>>,
+    /// Every name resolvable as a chunk (DM plus `define-chunks`).
+    chunk_names: HashSet<String>,
     hist: Vec<History>,
     buffers: HashMap<String, Buffer>,
     queue: BinaryHeap<Queued>,
@@ -865,6 +887,9 @@ impl Engine {
             rng,
             dm: Vec::new(),
             named: HashMap::new(),
+            fan_out: HashMap::new(),
+            fan_in: HashMap::new(),
+            chunk_names: HashSet::new(),
             hist: Vec::new(),
             buffers: HashMap::new(),
             queue: BinaryHeap::new(),
@@ -938,6 +963,7 @@ impl Engine {
         for c in &self.model.defined_chunks {
             self.named.insert(c.name.clone(), chunk_inst(c)?);
         }
+        self.build_fans();
         let dm_len = self.dm.len();
         self.hist = vec![
             History {
@@ -947,6 +973,27 @@ impl Engine {
             };
             dm_len
         ];
+        // Model-body `set-base-levels`: fixed history for named DM chunks.
+        for (name, level, creation) in &self.model.base_levels {
+            if let Some(i) = self.dm.iter().position(|c| c.name.as_deref() == Some(name.as_str())) {
+                let creation_ms = creation
+                    .map(|s| (s * 1000.0).round() as i64)
+                    .unwrap_or(self.hist[i].creation_ms);
+                let n = level.max(0.0).round() as usize;
+                self.hist[i].creation_ms = creation_ms;
+                self.hist[i].count = n;
+                self.hist[i].refs = match &self.cfg.ol {
+                    Ol::On => vec![creation_ms; n],
+                    Ol::Off => even_references(creation_ms, 0, n),
+                    Ol::Num(ol) => even_references(creation_ms, 0, (*ol as usize).min(n)),
+                };
+            }
+        }
+        // Model-body `set-similarities`: explicit Sji both directions.
+        for (a, b, v) in &self.model.similarities {
+            self.sims.insert((a.clone(), b.clone()), *v);
+            self.sims.insert((b.clone(), a.clone()), *v);
+        }
         self.buffers.clear();
         for b in [
             "GOAL",
@@ -1006,6 +1053,98 @@ impl Engine {
         }
         self.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
         Ok(())
+    }
+
+    /// Rebuild the spreading fan tables from the model's DM (`add-dm`)
+    /// chunks. Mirrors `add-chunk-into-dm`'s fan updates
+    /// (`declarative-memory.lisp:1953`): each chunk counts itself in
+    /// fan-out, and every slot value that names a chunk adds to that
+    /// chunk's fan-out and to the owner's fan-in. Only DM chunks get a
+    /// fan-in (spreading candidates come from DM).
+    fn build_fans(&mut self) {
+        let mut names: HashSet<String> =
+            self.model.chunks.iter().map(|c| c.name.clone()).collect();
+        names.extend(self.model.defined_chunks.iter().map(|c| c.name.clone()));
+        self.chunk_names = names.clone();
+        self.fan_out.clear();
+        self.fan_in.clear();
+        for c in &self.model.chunks {
+            *self.fan_out.entry(c.name.clone()).or_insert(0) += 1;
+            let mut counts: HashMap<String, u32> = HashMap::new();
+            for (_, v) in &c.slots {
+                if let Pattern::Sym(s) = v {
+                    if names.contains(s) {
+                        *self.fan_out.entry(s.clone()).or_insert(0) += 1;
+                        *counts.entry(s.clone()).or_insert(0) += 1;
+                    }
+                }
+            }
+            *counts.entry(c.name.clone()).or_insert(0) += 1;
+            self.fan_in.insert(c.name.clone(), counts);
+        }
+    }
+
+    /// The name of the chunk a slot value denotes, if any (`chunk-p-fct`).
+    fn chunk_name_of(&self, v: &Value) -> Option<String> {
+        match v {
+            Value::Sym(s) if self.chunk_names.contains(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+
+    /// `compute-sji` (`declarative-memory.lisp:2536`): an explicit
+    /// similarity wins; otherwise, when the source `j` occurs in `i`'s
+    /// fan-in, `mas - ln(fan-out(j)/count)`, clamped at 0 unless `:nsji`.
+    fn compute_sji(&self, j: &str, i: &str, mas: f32) -> f32 {
+        if let Some(v) = self
+            .sims
+            .get(&(j.to_string(), i.to_string()))
+            .or_else(|| self.sims.get(&(i.to_string(), j.to_string())))
+        {
+            return *v;
+        }
+        if let Some(cnt) = self.fan_in.get(i).and_then(|m| m.get(j)) {
+            let fan_out = self.fan_out.get(j).copied().unwrap_or(0) as f32;
+            let val = mas - (fan_out / *cnt as f32).ln();
+            return if self.cfg.nsji { val } else { val.max(0.0) };
+        }
+        0.0
+    }
+
+    /// `spreading-activation` (`declarative-memory.lisp:2455`): sum over
+    /// buffers with a nonzero source spread of `(spread/len(sources)) *
+    /// sji(source, candidate)`. Goal spread is `:ga` (default 0), imaginal
+    /// is `:imaginal-activation` (default 1.0); other buffer spreads
+    /// default 0.
+    fn spreading_activation(&self, candidate: &str) -> f32 {
+        let Some(mas) = self.cfg.mas else {
+            return 0.0;
+        };
+        let mut total = 0.0f32;
+        for (buffer, spread) in [
+            ("GOAL", self.cfg.ga),
+            ("IMAGINAL", self.cfg.imaginal_activation),
+        ] {
+            if spread == 0.0 {
+                continue;
+            }
+            let Some(chunk) = self.buffers.get(buffer).and_then(|b| b.chunk.as_ref()) else {
+                continue;
+            };
+            let js: Vec<String> = chunk
+                .slots
+                .iter()
+                .filter_map(|(_, v)| self.chunk_name_of(v))
+                .collect();
+            if js.is_empty() {
+                continue;
+            }
+            let level = spread / js.len() as f32;
+            for j in &js {
+                total += level * self.compute_sji(j, candidate, mas);
+            }
+        }
+        total
     }
 
     fn push(&mut self, time_ms: i64, prio: Prio, out: Out, event: Event) {
@@ -1093,6 +1232,24 @@ impl Engine {
                     refs: vec![now],
                     count: 1,
                 });
+                // New DM chunk: update spreading fans like
+                // `add-chunk-into-dm` (self fan-out plus each chunk-valued
+                // slot).
+                let name = self.dm.last().and_then(|c| c.name.clone());
+                if let Some(name) = name {
+                    self.chunk_names.insert(name.clone());
+                    *self.fan_out.entry(name.clone()).or_insert(0) += 1;
+                    let mut counts: HashMap<String, u32> = HashMap::new();
+                    let slots = self.dm.last().map(|c| c.slots.clone()).unwrap_or_default();
+                    for (_, v) in &slots {
+                        if let Some(j) = self.chunk_name_of(v) {
+                            *self.fan_out.entry(j.clone()).or_insert(0) += 1;
+                            *counts.entry(j).or_insert(0) += 1;
+                        }
+                    }
+                    *counts.entry(name.clone()).or_insert(0) += 1;
+                    self.fan_in.insert(name, counts);
+                }
             }
         }
     }
@@ -1306,22 +1463,15 @@ impl Engine {
                     "GOAL" => {
                         // goal-style-request: delay 0, priority -1000, so the
                         // new goal lands after the production's clears
-                        // (`support/goal-style-module.lisp:245`). Unlike
-                        // retrieval/imaginal request specs, the goal SET
-                        // prints with ISA/type.
-                        let chunk = match spec {
-                            NewChunk::Spec { ctype, slots, .. } => {
-                                NewChunk::Spec { ctype, slots, bare: false }
-                            }
-                            other => other,
-                        };
+                        // (`support/goal-style-module.lisp:245`). Request
+                        // specs print slots-only (GOTCHA #44).
                         self.push(
                             self.time_ms,
                             Prio::Num(-1000),
                             Out::Medium,
                             Event::SetBuffer {
                                 buffer: "GOAL".to_string(),
-                                chunk,
+                                chunk: spec,
                                 requested: true,
                                 shown: None,
                             },
@@ -1665,7 +1815,12 @@ impl Engine {
                 .or_else(|| self.named.get(&name))
                 .cloned()
                 .ok_or_else(|| bad(format!("no chunk named {name}"))),
-            NewChunk::Spec { ctype, slots, bare } => Ok(ChunkInst {
+            NewChunk::Spec {
+                ctype,
+                slots,
+                bare,
+                ..
+            } => Ok(ChunkInst {
                 name: None,
                 ctype,
                 slots,
@@ -1954,16 +2109,18 @@ impl Engine {
     }
 
     fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
-        let (want_type, want_slots) = match &spec {
+        let (want_type, want_slots, want_neg) = match &spec {
             NewChunk::Named(n) => {
                 return Err(unimpl(format!("single-item retrieval request {n}")));
             }
             NewChunk::Instance(_) => {
                 return Err(bad(
-                    "retrieval request cannot be a buffer instance".to_string()
+                    "retrieval request cannot be a buffer instance".to_string(),
                 ));
             }
-            NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
+            NewChunk::Spec {
+                ctype, slots, neg, ..
+            } => (ctype.clone(), slots.clone(), neg.clone()),
         };
         // Partial matching (mp set, esc on): candidacy is type +
         // slot presence only; `=` values score activation instead of
@@ -1983,8 +2140,8 @@ impl Engine {
                 }
                 let got = c.get(s);
                 if partial {
-                    // Presence only (nil-valued constraints never occur:
-                    // the loader rejects `-` in requests).
+                    // Presence only: with partial matching, `=` values
+                    // score activation below instead of filtering.
                     if got == Value::Nil {
                         ok = false;
                         break;
@@ -1992,6 +2149,19 @@ impl Engine {
                 } else if got != *v {
                     ok = false;
                     break;
+                }
+            }
+            // `- slot value` exclusions filter under exact matching;
+            // under partial matching they only penalize (below).
+            if ok && !partial {
+                for (s, v) in &want_neg {
+                    if s.starts_with(':') {
+                        continue;
+                    }
+                    if c.get(s) == *v {
+                        ok = false;
+                        break;
+                    }
                 }
             }
             if !ok {
@@ -2025,15 +2195,29 @@ impl Engine {
                 }
                 None => self.cfg.blc,
             };
-            // Partial matching: mp * similarity per constant,
-            // non-keyword `=` slot (request vars are skipped, as are
-            // `-` slots, which the loader rejects in requests).
+            // Spreading activation (0 unless `:mas` is set): sources are
+            // the chunk-valued slots of the spread buffers.
+            if let Some(name) = &c.name {
+                a += self.spreading_activation(name);
+            }
+            // Partial matching: `=` slots add `mp * similarity`; `-` slots
+            // add `mp * md` only when the chunk's value matches the
+            // negated value (similarity == ms), per
+            // `partial-matching` (`declarative-memory.lisp:2596`).
             if let Some(mp) = self.cfg.mp {
                 for (s, v) in &want_slots {
                     if s.starts_with(':') || var_slots.contains(s) {
                         continue;
                     }
                     a += mp * self.similarity(v, &c.get(s));
+                }
+                for (s, v) in &want_neg {
+                    if s.starts_with(':') || var_slots.contains(s) {
+                        continue;
+                    }
+                    if self.similarity(v, &c.get(s)) == self.cfg.ms {
+                        a += mp * self.cfg.md;
+                    }
                 }
             }
             a += match self.cfg.ans {
@@ -2492,6 +2676,23 @@ fn lisp_round(x: f32) -> i64 {
     }
 }
 
+/// Distribute `m` references evenly from `end` back toward `start`
+/// (`even-references`, commands/dm-commands.lisp:639). Integer ms.
+fn even_references(start: i64, end: i64, m: usize) -> Vec<i64> {
+    if m == 0 {
+        return Vec::new();
+    }
+    let n = m as f64;
+    let decrement = (end - start) as f64 / n;
+    let mut time = end as f64;
+    let mut out = Vec::with_capacity(m);
+    for _ in 0..m {
+        time -= decrement;
+        out.push(time.round() as i64);
+    }
+    out
+}
+
 /// Optimized-learning flag for [`bl_equation`]: off, numeric, or `t`.
 #[derive(Debug, Clone, PartialEq)]
 enum Ol {
@@ -2612,14 +2813,19 @@ fn chunk_inst(c: &Chunk) -> Result<ChunkInst, EngineError> {
 fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
     match desc {
         ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
-        ChunkDesc::Spec { ctype, slots } => {
+        ChunkDesc::Spec { ctype, slots, neg } => {
             let mut out = Vec::new();
             for (s, p) in slots {
                 out.push((s.clone(), Value::from_pattern(p)?));
             }
+            let mut negv = Vec::new();
+            for (s, p) in neg {
+                negv.push((s.clone(), Value::from_pattern(p)?));
+            }
             Ok(NewChunk::Spec {
                 ctype: ctype.clone(),
                 slots: out,
+                neg: negv,
                 bare: false,
             })
         }
@@ -2630,14 +2836,19 @@ impl Engine {
     fn concretize(&self, spec: &ChunkDesc, b: &Bindings) -> Result<NewChunk, EngineError> {
         match spec {
             ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
-            ChunkDesc::Spec { ctype, slots } => {
+            ChunkDesc::Spec { ctype, slots, neg } => {
                 let mut out = Vec::new();
                 for (s, p) in slots {
                     out.push((s.clone(), self.subst(p, b)?));
                 }
+                let mut negv = Vec::new();
+                for (s, p) in neg {
+                    negv.push((s.clone(), self.subst(p, b)?));
+                }
                 Ok(NewChunk::Spec {
                     ctype: ctype.clone(),
                     slots: out,
+                    neg: negv,
                     bare: true,
                 })
             }
@@ -2847,6 +3058,7 @@ mod tests {
                 spec: crate::model::ChunkDesc::Spec {
                     ctype: String::new(),
                     slots: vec![],
+                    neg: vec![],
                 },
             }],
         };

@@ -2,7 +2,7 @@
 
 (define-model err-mas
 
-(sgp :esc t :lf .05 :mas 1.5 :trace-detail high)
+(sgp :esc t :lf .05 :pas 1.5 :trace-detail high)
 
 (chunk-type number number next)
 (chunk-type count-from start end count)
