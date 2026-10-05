@@ -182,6 +182,12 @@ struct Config {
     /// equality tests may mismatch when the value similarity exceeds `:md`,
     /// and utility is adjusted by `ppm * Σ similarities`.
     ppm: Option<f32>,
+    /// Production-compilation `:epl` (enable production learning).
+    epl: bool,
+    /// Production-compilation `:pct` (trace).
+    pct: bool,
+    /// Production-compilation `:tt` (max seconds between composed fires).
+    tt_ms: i64,
     /// Maximum associative strength (`:mas`). `Some` enables spreading.
     mas: Option<f32>,
     /// `:nsji` — do not clamp negative Sji at 0.
@@ -505,6 +511,9 @@ impl Config {
             ms: sgp_single(&m.params, ":MS")?.unwrap_or(0.0),
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
             ppm: sgp_single(&m.params, ":PPM")?,
+            epl: sgp_bool(&m.params, ":EPL"),
+            pct: sgp_bool(&m.params, ":PCT"),
+            tt_ms: (sgp_num(&m.params, ":TT", 2.0)? * 1000.0).round() as i64,
             mas: sgp_single(&m.params, ":MAS")?,
             nsji: sgp_bool(&m.params, ":NSJI"),
             ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
@@ -941,6 +950,11 @@ pub struct Engine {
     /// Blending module busy/error flags (`blending-module-busy/-error`).
     blending_busy: bool,
     blending_error: bool,
+    /// Production compilation: count of compiled productions, the previous
+    /// fired production `(index, bindings)`, and its fire time.
+    compiled_count: usize,
+    prev_prod: Option<(usize, Bindings)>,
+    prev_prod_ms: i64,
     /// Last press-key geometry, for preparation differences.
     last_press: Option<(String, String, f32, f32)>,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
@@ -1027,6 +1041,9 @@ impl Engine {
             imag_busy: false,
             blending_busy: false,
             blending_error: false,
+            compiled_count: 0,
+            prev_prod: None,
+            prev_prod_ms: 0,
             last_press: None,
             trace_on: true,
         };
@@ -1134,6 +1151,9 @@ impl Engine {
         self.imag_busy = false;
         self.blending_busy = false;
         self.blending_error = false;
+        self.compiled_count = 0;
+        self.prev_prod = None;
+        self.prev_prod_ms = 0;
         self.last_press = None;
         self.exec_prods = self
             .model
@@ -2512,6 +2532,9 @@ impl Engine {
             );
         }
         self.now(Prio::Min, Out::Medium, Event::ConflictResolution);
+        // `production-fired` runs actions, then compiles
+        // (`production-compilation.lisp`, called from `production-fired`).
+        self.compile_productions(prod_idx, bindings);
         Ok(())
     }
 
@@ -2519,6 +2542,201 @@ impl Engine {
     /// explicit table value (either direction), else `ms` for
     /// identical/equal values, else `md`. Chunkhood is DM membership
     /// (an approximation documented in GOTCHAS).
+    /// `compile-productions` (`production-compilation.lisp:1129`): compose
+    /// the previous fired production with the current one and emit the
+    /// `:epl`/`:pct` trace. This port covers the goal-style test+modify
+    /// composition exercised by `ppm-compilation`; compiled productions are
+    /// not (yet) added to the runtime set.
+    fn compile_productions(&mut self, idx: usize, bindings: &Bindings) {
+        if !self.cfg.epl {
+            return;
+        }
+        let trace = self.cfg.pct && self.trace_on;
+        let p2name = self.model.productions[idx].name.clone();
+        if trace {
+            self.out(format!(
+                "Production Compilation process started for {p2name}"
+            ));
+        }
+        if let Some((p1_idx, p1_bindings)) = self.prev_prod.clone() {
+            let p1name = self.model.productions[p1_idx].name.clone();
+            if self.time_ms - self.prev_prod_ms > self.cfg.tt_ms {
+                if trace {
+                    self.out(format!(
+                        "  Cannot compile {p1name} and {p2name} because the time between them exceeds the threshold time."
+                    ));
+                }
+            } else {
+                let (lhs, rhs) = self.compose_pair(p1_idx, &p1_bindings, idx, bindings);
+                if trace {
+                    self.out(format!(
+                        "  Production {p1name} and {p2name} are being composed."
+                    ));
+                    self.out("  New production:\n".to_string());
+                    let cname = format!("PRODUCTION{}", self.compiled_count);
+                    self.out(render_compiled(&cname, &p1name, &p2name, &lhs, &rhs));
+                    self.out(format!("Parameters for production {cname}:"));
+                    if self.cfg.esc {
+                        // Compiled productions have no numeric utility yet.
+                        self.out(" :utility    NIL".to_string());
+                    }
+                    self.out(" :u   0.000".to_string());
+                    self.out(format!(
+                        " :at {}",
+                        fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)
+                    ));
+                }
+                self.compiled_count += 1;
+            }
+        } else if trace {
+            self.out("  No previous production to compose with.".to_string());
+        }
+        self.prev_prod = Some((idx, bindings.clone()));
+        self.prev_prod_ms = self.time_ms;
+        if trace {
+            let name = self.model.productions[idx].name.clone();
+            self.out(format!("  Setting previous production to {name}."));
+        }
+    }
+
+    /// Compose two productions per buffer (`buffer-condition-union`,
+    /// production-compilation.lisp:2320): the first's conditions, then the
+    /// second's conditions minus the slots the first modifies, with
+    /// `remove-duplicates` keeping the later copy; the actions are the
+    /// first's untouched slots followed by the second's.
+    #[allow(clippy::type_complexity)]
+    fn compose_pair(
+        &self,
+        i1: usize,
+        b1: &Bindings,
+        i2: usize,
+        b2: &Bindings,
+    ) -> (
+        Vec<(String, Vec<(String, SlotVal)>)>,
+        Vec<(String, Vec<(String, String)>)>,
+    ) {
+        let p1 = &self.model.productions[i1];
+        let p2 = &self.model.productions[i2];
+        let p1_lhs = prod_lhs_slots(p1, b1);
+        let p2_lhs = prod_lhs_slots(p2, b2);
+        let p1_mod = prod_rhs_mods(p1, b1);
+        let p2_mod = prod_rhs_mods(p2, b2);
+
+        // Cross-production variable mappings for same-slot `=` pairs
+        // (`MAP-GOAL-BUFFER`, goal-compilation.lisp:320-330): two variables
+        // unify onto the first's; a variable facing a constant is
+        // instantiated from its own bindings.
+        let mut map: HashMap<String, SlotVal> = HashMap::new();
+        for (buf, slots1) in &p1_lhs {
+            for (name1, v1) in slots1 {
+                if let Some((_, slots2)) = p2_lhs.iter().find(|(b, _)| b == buf) {
+                    if let Some((_, v2)) = slots2.iter().find(|(n, _)| n == name1) {
+                        match (v1, v2) {
+                            (SlotVal::Var(a), SlotVal::Var(c)) => {
+                                map.insert(c.clone(), SlotVal::Var(a.clone()));
+                            }
+                            (SlotVal::Lit(_), SlotVal::Var(c)) => {
+                                if let Some(val) = instantiate_var(c, b2) {
+                                    map.insert(c.clone(), SlotVal::Lit(val));
+                                }
+                            }
+                            (SlotVal::Var(a), SlotVal::Lit(_)) => {
+                                if let Some(val) = instantiate_var(a, b1) {
+                                    map.insert(a.clone(), SlotVal::Lit(val));
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        let subst = |v: &SlotVal| -> SlotVal {
+            match v {
+                SlotVal::Var(n) => map.get(n).cloned().unwrap_or_else(|| v.clone()),
+                SlotVal::Lit(s) => SlotVal::Lit(s.clone()),
+            }
+        };
+        let apply = |lhs: &[(String, Vec<(String, SlotVal)>)]| {
+            lhs.iter()
+                .map(|(b, s)| {
+                    (
+                        b.clone(),
+                        s.iter()
+                            .map(|(n, v)| (n.clone(), subst(v)))
+                            .collect::<Vec<_>>(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        let p1_lhs = apply(&p1_lhs);
+        let p2_lhs = apply(&p2_lhs);
+
+        let mut buffers: Vec<String> = Vec::new();
+        for (b, _) in p1_lhs.iter().chain(&p2_lhs) {
+            if !buffers.contains(b) {
+                buffers.push(b.clone());
+            }
+        }
+        for (b, _) in p1_mod.iter().chain(&p2_mod) {
+            if !buffers.contains(b) {
+                buffers.push(b.clone());
+            }
+        }
+        buffers.sort();
+
+        let find_lhs =
+            |v: &[(String, Vec<(String, SlotVal)>)], b: &str| -> Vec<(String, SlotVal)> {
+                v.iter()
+                    .find(|(x, _)| x == b)
+                    .map(|(_, s)| s.clone())
+                    .unwrap_or_default()
+            };
+        let find_mod = |v: &[(String, Vec<(String, String)>)], b: &str| -> Vec<(String, String)> {
+            v.iter()
+                .find(|(x, _)| x == b)
+                .map(|(_, s)| s.clone())
+                .unwrap_or_default()
+        };
+
+        let mut lhs = Vec::new();
+        for buf in &buffers {
+            let c1 = find_lhs(&p1_lhs, buf);
+            let c2 = find_lhs(&p2_lhs, buf);
+            if c1.is_empty() && c2.is_empty() {
+                continue;
+            }
+            let modified: Vec<String> = find_mod(&p1_mod, buf)
+                .into_iter()
+                .map(|(n, _)| n)
+                .collect();
+            let mut slots = c1;
+            for (n, v) in c2 {
+                if !modified.contains(&n) {
+                    slots.push((n, v));
+                }
+            }
+            lhs.push((format!("={buf}>"), remove_dup_keep_last(slots)));
+        }
+
+        let mut rhs = Vec::new();
+        for buf in &buffers {
+            let a1 = find_mod(&p1_mod, buf);
+            let a2 = find_mod(&p2_mod, buf);
+            let a2names: Vec<String> = a2.iter().map(|(n, _)| n.clone()).collect();
+            let mut slots: Vec<(String, String)> = a1
+                .into_iter()
+                .filter(|(n, _)| !a2names.contains(n))
+                .collect();
+            slots.extend(a2);
+            if !slots.is_empty() {
+                rhs.push((format!("={buf}>"), slots));
+            }
+        }
+
+        (lhs, rhs)
+    }
+
     fn similarity(&self, a: &Value, b: &Value) -> f32 {
         let a_name = match a {
             Value::Sym(s) => Some(s.as_str()),
@@ -3468,6 +3686,110 @@ impl Engine {
         }
         Ok(())
     }
+}
+
+/// A composed condition/action slot value: an as-yet-uninstantiated LHS
+/// variable (`=s`) or a literal string.
+#[derive(Clone, PartialEq, Debug)]
+enum SlotVal {
+    Var(String),
+    Lit(String),
+}
+
+impl SlotVal {
+    fn render(&self) -> String {
+        match self {
+            SlotVal::Var(v) => format!("={v}"),
+            SlotVal::Lit(s) => s.clone(),
+        }
+    }
+}
+
+/// Instantiated LHS match slots per buffer, sorted by slot name
+/// (`sort-production-slots`). `isa` is the chunk type, not a slot. Values
+/// stay symbolic (`=var`) so cross-production mappings can apply first.
+fn prod_lhs_slots(p: &Production, _b: &Bindings) -> Vec<(String, Vec<(String, SlotVal)>)> {
+    let mut out = Vec::new();
+    for item in &p.lhs {
+        if let LhsItem::Match { buffer, tests } = item {
+            let mut slots: Vec<(String, SlotVal)> = tests
+                .iter()
+                .filter(|t| t.slot != "ISA")
+                .map(|t| {
+                    let v = match &t.value {
+                        Pattern::Var(v) => SlotVal::Var(v.clone()),
+                        other => SlotVal::Lit(
+                            Value::from_pattern(other).map(|x| x.show()).unwrap_or_default(),
+                        ),
+                    };
+                    (t.slot.clone(), v)
+                })
+                .collect();
+            slots.sort_by(|a, b| a.0.cmp(&b.0));
+            out.push((buffer.clone(), slots));
+        }
+    }
+    out
+}
+
+/// The printed value bound to an LHS variable, if bound.
+fn instantiate_var(name: &str, b: &Bindings) -> Option<String> {
+    b.get(name).map(|v| v.show())
+}
+
+/// Instantiated RHS `=` modify slots per buffer.
+fn prod_rhs_mods(p: &Production, b: &Bindings) -> Vec<(String, Vec<(String, String)>)> {
+    let mut out = Vec::new();
+    for a in &p.rhs {
+        if let RhsAction::Modify { buffer, slots } = a {
+            let s = slots
+                .iter()
+                .map(|(n, v)| (n.clone(), show_pat(v, b)))
+                .collect();
+            out.push((buffer.clone(), s));
+        }
+    }
+    out
+}
+
+/// CL `remove-duplicates` ordering: drop earlier duplicates, keeping the
+/// later copy, preserving the original order of the kept elements.
+fn remove_dup_keep_last<T: PartialEq + Clone>(v: Vec<T>) -> Vec<T> {
+    let mut out: Vec<T> = Vec::new();
+    for i in 0..v.len() {
+        if !v[i + 1..].iter().any(|x| x == &v[i]) {
+            out.push(v[i].clone());
+        }
+    }
+    out
+}
+
+/// Render a compiled production the way `print-production-text` does (the
+/// `:pct` trace block): `(P NAME`, the `"A & B"` documentation, one
+/// `=BUFFER>` group per condition/action, then `)`.
+fn render_compiled(
+    name: &str,
+    p1: &str,
+    p2: &str,
+    lhs: &[(String, Vec<(String, SlotVal)>)],
+    rhs: &[(String, Vec<(String, String)>)],
+) -> String {
+    let mut s = format!("(P {name}\n  \"{p1} & {p2}\"\n");
+    for (token, slots) in lhs {
+        s.push_str(&format!("   {token}\n"));
+        for (n, v) in slots {
+            s.push_str(&format!("       {n} {}\n", v.render()));
+        }
+    }
+    s.push_str(" ==>\n");
+    for (token, slots) in rhs {
+        s.push_str(&format!("   {token}\n"));
+        for (n, v) in slots {
+            s.push_str(&format!("       {n} {v}\n"));
+        }
+    }
+    s.push(')');
+    s
 }
 
 /// `(A B C)` from a slice of values (`~S` of a list).
@@ -4750,6 +5072,19 @@ mod tests {
         assert_eq!(lisp_s_f32(-0.9), "-0.9");
         assert_eq!(lisp_s_f32(0.0), "0.0");
         assert_eq!(lisp_s_f32(2.0), "2.0");
+    }
+
+    /// CL `remove-duplicates` keeps the later copy (production
+    /// compilation's condition union depends on it).
+    #[test]
+    fn remove_dup_keeps_last() {
+        assert_eq!(remove_dup_keep_last(vec![1, 2, 1, 3]), vec![2, 1, 3]);
+        let a = ("SLOT".to_string(), SlotVal::Lit("SMALL".to_string()));
+        let b = ("STATE".to_string(), SlotVal::Lit("P2".to_string()));
+        assert_eq!(
+            remove_dup_keep_last(vec![a.clone(), b.clone(), a]),
+            vec![b, ("SLOT".to_string(), SlotVal::Lit("SMALL".to_string()))]
+        );
     }
 
     /// `render_production` reproduces the `:cst` instantiation block

@@ -22,5 +22,6 @@ sji-merge
 buffer-queries
 blending
 tutorial-unit8-simple-ppm-model-initial-run
+ppm-compilation
 semantic-dynamic
 merging-test

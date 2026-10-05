@@ -1009,3 +1009,25 @@ event skeleton matches the ref with this alone. An invalid definition
 read from `define-chunks`/`car` semantics (code-read; the corpus spec it
 affects is otherwise blocked).
 
+## 104. Production compilation composes adjacent fires (verified)
+
+With `:epl t` the module composes each fired production with the previous
+one; `:pct t` prints the trace (`Production Compilation process
+started…`, the new `(P PRODUCTIONn "A & B" …)` text, its parameters, then
+`Setting previous production to …`). `:tt` (default 2.0 s) bounds the gap.
+The composed goal condition is the first production's conditions followed
+by the second's *minus the slots the first modifies*, with
+`remove-duplicates` keeping the **later** copy (CL default); slots are
+sorted by name and `isa` is dropped. Cross-production mappings unify a
+second production's `=var` with the first's when both test the same slot
+(`MAP-GOAL-BUFFER`, `tools/goal-compilation.lisp:320`); a variable facing
+a constant is instantiated from its own fire bindings. Compiled
+productions print `:utility NIL :u 0.000 :at <dat>`.
+
+## 105. `remove-duplicates` keeps the last copy (verified)
+
+CL `remove-duplicates` default (`:from-end nil`) drops the *earlier*
+duplicates and keeps the *later*, preserving the surviving elements'
+order. The production-compilation condition union depends on this
+(`[SLOT small, STATE p2] + [SLOT small]` ⇒ `[STATE p2, SLOT small]`).
+
