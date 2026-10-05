@@ -1,0 +1,4 @@
+# ACT-R build artifacts (SBCL/CL compile in-tree next to sources)
+*.fasl
+# Rust build output
+rust_actr7/target/
