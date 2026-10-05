@@ -1,8 +1,27 @@
 //! `actr_engine` — Rust port of the ACT-R 7 single-threaded kernel.
 //!
-//! M1: skeleton only. The golden test (`tests/golden.rs`) defines the
-//! contract this crate must eventually satisfy; every engine entry point
-//! below returns `EngineError::NotImplemented` until M2+ implements it.
+//! Status:
+//! - M1: golden harness (`tests/golden.rs`) — green.
+//! - M2a (done): S-expression reader ([`sexpr`]) + `define-model` loader
+//!   ([`model`]).
+//! - M2b (done): discrete-event [`engine`] — scheduler, buffers,
+//!   procedural match/select/fire, exact-match declarative retrieval.
+//!   First 3 M0 goldens reproduce byte-exact.
+//! - M2c (done): Lisp-identical MT stream ([`rand`]), activation noise
+//!   (`:ans`), utility noise (`:egs`), `:er` ties. Two synthetic noisy
+//!   goldens reproduce byte-exact, including failures and non-50 ms
+//!   latencies. Still out: `:bll`/`:mas`/`:mp` (activation math),
+//!   `:ul` (utility learning), imaginal/temporal/devices.
+//! - M4 (done): base-level learning — reference histories via
+//!   merge-on-clear, decay equation wired into retrieval, `bll-count`
+//!   golden byte-exact. Remaining subsymbolics: `:mas` spreading,
+//!   `:mp` partial matching, `:ul`.
+//! - M5a (done): device buffers — scripted window device, visicon +
+//!   onset stuffing, visual-location find, move-attention + encoding,
+//!   manual press-key pipeline (prep/init/output/finish), implicit
+//!   `?buffer> state free` queries. `attend` golden byte-exact.
+//! - Next: imaginal buffer + multi-item visicon + scheduled stimuli
+//!   toward the paired task (M5b).
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
@@ -12,57 +31,51 @@
 //!    lines from reset through end of run, byte-exact, including the
 //!    `------ Stopped because ...` terminator. No banner, no warnings.
 
-use std::fmt;
+pub mod engine;
+pub mod model;
+pub mod rand;
+pub mod sexpr;
+pub mod trace;
+
+pub use engine::{DeviceSetup, DeviceText, EngineError};
+pub use model::{load_models, Model};
+
 use std::path::Path;
-
-/// Errors from the (not yet implemented) engine.
-#[derive(Debug)]
-pub enum EngineError {
-    /// M2+ has not implemented this yet. The string says what was attempted.
-    NotImplemented(String),
-    /// Filesystem failure reading models or goldens.
-    Io(std::io::Error),
-}
-
-impl fmt::Display for EngineError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EngineError::NotImplemented(what) => write!(f, "not implemented: {what}"),
-            EngineError::Io(e) => write!(f, "io error: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for EngineError {}
-
-impl From<std::io::Error> for EngineError {
-    fn from(e: std::io::Error) -> Self {
-        EngineError::Io(e)
-    }
-}
 
 /// Run one model and return its trace as exact bytes.
 ///
 /// * `actr_root` — filesystem path of the `actr7.x` checkout.
 /// * `model` — model location in manifest form, e.g.
 ///   `"tutorial;unit1;count.lisp"` (`;` separates directories, as in the
-///   ACT-R logical host `ACT-R:tutorial;unit1;count.lisp`).
+///   ACT-R logical host `ACT-R:tutorial;unit1;count.lisp`). Task setup
+///   files (which load a model plus build device state) work too.
 /// * `seed` — `(sgp :seed ...)` value: initial seed + advance count.
-/// * `run_time` — seconds of model time passed to `(run ...)`.
+///   Applied to the Lisp-identical MT stream ([`rand::Mt`]); draws happen
+///   for activation noise (`:ans`), utility noise (`:egs`), and `:er`
+///   tie-breaking, in source order.
+/// * `run_time` — seconds of model time passed to `(run ...)`; the last
+///   defined model in the file runs (matches `define-model` currency).
+/// * `device` — scripted device input (window texts with appearance
+///   times), mirroring what a task file builds with `open-exp-window` /
+///   `add-text-to-exp-window` after install.
 pub fn run_model(
-    _actr_root: &Path,
+    actr_root: &Path,
     model: &str,
-    _seed: (u64, u64),
-    _run_time: f64,
+    seed: (u64, u64),
+    run_time: f64,
+    device: &DeviceSetup,
 ) -> Result<String, EngineError> {
-    Err(EngineError::NotImplemented(format!(
-        "M2 has not implemented model execution yet (model: {model})"
-    )))
+    let rel = model.replace(';', std::path::MAIN_SEPARATOR_STR);
+    let path = actr_root.join(rel);
+    let models = load_models(&path)?;
+    let def = models
+        .last()
+        .ok_or_else(|| EngineError::Model(format!("no define-model in {model}")))?;
+    engine::Engine::new(def.clone(), seed, run_time, device.clone())?.run()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::path::PathBuf;
 
     fn crate_dir() -> PathBuf {
@@ -73,7 +86,15 @@ mod tests {
     /// are present. Green now and forever; the red test is `tests/golden.rs`.
     #[test]
     fn golden_fixtures_present() {
-        for name in ["count", "semantic", "addition"] {
+        for name in [
+            "count",
+            "semantic",
+            "addition",
+            "noisy-count",
+            "noisy-count-7",
+            "bll-count",
+            "attend",
+        ] {
             let trace = crate_dir()
                 .join("golden")
                 .join("traces")

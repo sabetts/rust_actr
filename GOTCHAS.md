@@ -116,3 +116,286 @@ source of byte-diffs once the engine runs (`misc-utils.lisp` already
 carries per-Lisp double-float conditionals). If exact-match proves
 brittle here, fall back to timestamp-normalized diffing before
 weakening anything else.
+
+---
+
+# M2b findings (all verified: golden byte-match or source-read)
+
+## 14. Trace lines are filtered by event `:output` vs `:trace-detail`
+
+`filter-test` (`framework/printing.lisp:436`): `low` shows only `low`
+events, `medium` shows `low`+`medium`, `high` shows everything.
+`:trace-detail` defaults to `medium`. Lines visible only at high:
+`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `MOD-BUFFER-CHUNK`,
+`MODULE-REQUEST` (all `:output t`). This is why the semantic golden
+(default detail) is 13 lines while count (`:trace-detail high`) is 48
+for the same mechanisms — no behavioral difference, pure filtering.
+
+## 15. Productions gain implicit clears at parse time (strict harvesting)
+
+`support/production-parsing.lisp:1323`: every LHS `=` buffer (and
+`?x> buffer failure` query) not targeted by any RHS action gets an
+appended clear; every `+` request without an explicit `-` clear gets
+one too. Both clear at priority 10, `:output medium`-if-`:rhst`.
+The engine must reproduce parse-time action appending, not just the
+written RHS — `DIRECT-VERIFY` and `STOP` clear retrieval with no
+visible request.
+
+## 16. Same-timestamp order falls out of priorities, not code order
+
+Observed: modify 100, request 50, clear 10, `conflict-resolution`
+`:min`, `production-selected` `:max`, `start-retrieval` -2000,
+retrieval `SET-BUFFER-CHUNK` `:max`. The queue rule
+(`compare-events`, `framework/meta-process.lisp:659`) is: time first,
+then `:max`/numeric-desc/`:min`, ties FIFO. `MOD, REQUEST, CLEAR,
+start, CR` at one timestamp is exactly that ordering.
+
+## 17. `!output!` runs during firing, before action events
+
+`!output!` compiles to `rhs-binds`, not `production-actions`
+(`production-parsing.lisp:1241`), so `TWO ` prints between the
+`PRODUCTION-FIRED` line and the `MOD-BUFFER-CHUNK` event. Text format
+is `~{~S ~}` per value plus newline (`THREE ` + `\n`).
+
+## 18. `SET-BUFFER-CHUNK ... NIL` means "not from a request"
+
+Details string appends `" NIL"` iff `requested` is nil
+(`framework/buffers.lisp:1433`). Goal reset passes nil; retrieval
+completion passes `t`. Named chunks print as the bare name, specs
+print as `(ISA TYPE SLOT VAL ...)` — hence the two SET shapes.
+
+## 19. SET prints under the owning module, not the buffer
+
+`schedule-set-buffer-chunk`'s `:module` arg: goal reset uses `GOAL`,
+retrieval completion uses `DECLARATIVE`. First M2b run was 41/42
+lines for exactly this reason.
+
+## 20. Clock is integer ms; line layout has ghost fields
+
+`~6d.~3,'0d` seconds/ms, then *three* spaces (separators of the empty
+single-model mp/model fields in `+format-event-event-string+`,
+`framework/events.lisp:262`), module padded to 22
+(`PRODUCTION-COMPILATION`, longest loaded name), one space, details.
+Integer-ms arithmetic — no float clock — keeps times exact.
+
+## 21. Retrieval latency and threshold, exactly
+
+Success latency `round(lf_ms * e^(-le*A))`, failure latency the same
+with `A=rt`, threshold is strict (`A < rt` fails, `=` succeeds).
+`:lf` is stored in ms (`:lf .05` → 50). With all subsymbolics at
+defaults, `A` is exactly `0.0` (blc 0; bll/ans/mas/mp nil; spreading
+falls through to `0.0`), so every M2b retrieval takes exactly `:lf`.
+
+## 22. Utility ties go to the LAST production (`:er nil`)
+
+`core-modules/procedural.lisp:2251`: on `=`, the tied production
+*replaces* rather than joins (unless `:er`). All M2b conflict sets
+are singletons so this is untested by goldens, but implemented per
+source.
+
+## 23. `(run N)` stop conditions
+
+Events scheduled at exactly the limit still run (strict `>` in
+`scheduling.lisp:821`); queue empty first → `Stopped because no
+events left to process` at the current clock; limit first → a dummy
+event runs the clock to the limit, then `Stopped because time limit
+reached`. Only the first variant is golden-tested.
+
+## 24. No-match CR arms a wake-on-change trigger
+
+`schedule-event-after-change` (`procedural.lisp:2329`): a CR that
+selects nothing leaves a dynamic event that fires on the next buffer
+mutation. The engine models this as an armed flag consumed by the
+next set/clear/modify — it is why retrievals wake the cycle at
++50 ms with no polling event in the trace.
+
+---
+
+# M2c findings (all verified: golden byte-match or source-read)
+
+## 25. The RNG is stock MT19937, but the consumers are single-precision
+
+`init_genrand`/`init_by_array`/`genrand_int32` are verbatim
+`mt19937ar.c` (N=624, M=397). What matters for exactness is downstream:
+`genrand_real2` divides by the *single-float* literal `4294967296.0`,
+`act-r-noise` clamps to `[0.0001, 0.9999]` and computes `s*ln((1-p)/p)`
+in single precision, and `compute-activation-latency` rounds
+`lf_ms * e^(-le*A)` in single precision too (`:lf` is stored as
+integer ms). The Rust port does all noise/latency math in `f32` and
+matches SBCL bit-exact (14 ms and 27 ms noisy latencies in the
+`noisy-count-7` golden). Residual risk: `ln`/`exp` may differ by 1ulp
+across libms; only an exact `.5` rounding boundary would flip a
+latency, and none has appeared.
+
+## 26. Seed protocol is init + discard, and unseeded draws reseed
+
+`(sgp :seed (S C))` inits from `S` (`init_genrand` if it fits 32 bits,
+else `init_by_array` of `[low-32, high-32]`) then discards `C` draws.
+A stream used before any seed reseeds itself to 5489 on first draw
+(`random.lisp:274`) — the engine's `Mt::fresh` reproduces both.
+
+## 27. Noise is drawn per candidate, in order, even when invisible
+
+`start-retrieval` draws `:ans` noise per candidate chunk in DM order;
+`compute-utility` draws `:egs` noise per conflict-set production in
+definition order — including single-candidate/single-match cases
+where the value cannot affect selection but DOES advance the stream.
+Any port that skips "unneeded" draws desynchronizes every later one.
+
+## 28. No device-free tutorial model exercises noise
+`grep :ans` hits only device-bound tasks (paired needs vision/manual,
+siegler needs audio, past-tense needs imaginal+rewards). M2c coverage
+therefore comes from a synthetic model,
+`actr7.x/user-loads/noisy-count.lisp` (count + `:ans 0.5`), which is
+also the first golden to show `RETRIEVAL-FAILURE` (noise below
+`:rt`), failed-buffer CR stalls, and non-50 ms latencies. Two seeds:
+`(100 0)` fails the first retrieval; `(7 0)` retrieves twice first.
+`user-loads/` is ACT-R's designated user-file directory, so the
+harness loads it through the normal `ACT-R:` logical host.
+
+---
+
+# M3 findings: golden units (oracle tables for pure functions)
+
+## 29. End-to-end goldens say what, unit tables say where
+
+`rust_actr7/golden/units/tables/*.sexp` are produced by
+`run-units.lisp` from side-effect-free ACT-R functions (no model
+needed) and asserted row-by-row by Rust tests, parsed with our own
+`sexpr` reader. Regen via `regen-units.sh`; `cargo test` stays
+SBCL-free. Rule: pure functions and edge semantics get tables;
+anything needing live model context stays in `../traces/`.
+
+## 30. CL `round` is half-to-even; Rust `round` is half-away
+
+`(round 2.5)` → `2`, `(round 3.5)` → `4` (units table ROUND rows).
+The engine's latency rounding uses a `lisp_round` helper, not
+`f32::round` — identical on all non-half inputs, and the 802-row LAT
+table plus both noisy goldens pass with it. Any future float→int
+conversion must go through `lisp_round`.
+
+## 31. `compute-references` OL branches differ in act-scale
+
+Off and numeric-OL add `act-scale` after the log; the `:ol t` branch
+does NOT (declarative-memory.lisp:2725). An early port added it
+uniformly — the units table caught it (0.342 vs 2.414). The now-unused
+`bl_equation`/`Ol` live behind `allow(dead_code)` until the `:bll`
+slice wires them into retrieval.
+
+## 32. Reaching module internals headless needs `with-model-eval`
+
+In `--eval` context there is no current model, so `get-module`
+warns and returns nil (there is no `get-module` function at all —
+only `get-module-fct`). The units driver wraps reads in
+`(with-model-eval 'count ...)` (`framework/model.lisp:812`).
+`compute-references` itself never touches its `dm` arg with
+`sact=nil`, but `dm-act-scale` has no `sgp` getter (not a real
+parameter), so the instance is genuinely needed for ACTSCALE rows.
+
+## 33. Chunks with zero references never reach the decay equation
+
+`base-level-activation` short-circuits refcount-0 chunks to
+-999999.0 with a warning (`declarative-memory.lisp:2403`). The future
+engine must replicate the guard, not feed empty lists to the equation
+(which would `ln(0)` instead).
+
+## 34. `:owner nil` params inherit central defaults — `:ol` is T
+
+Declarative `:esc`/`:er`/`:ol` are `:owner nil`, meaning central
+parameters owns them (`support/central-parameters.lisp:192`:
+`:ol :default-value t`). An unset `:ol` reads back `T`, so the
+optimized-learning-`t` branch of `compute-references` is the DEFAULT
+path, not the `nil` one. The engine initially defaulted it off and
+only a golden latency mismatch (11 ms vs 6 ms) exposed it —
+DTO: never trust a `define-parameter` without following the
+`:owner` chain.
+
+## 35. Every buffer clear merges into DM (reference learning)
+
+Declarative registers `:notify-on-clear 'merge-chunk-into-dm`, so each
+clear adds a reference (list prepend, count+1; truncated/emptied under
+numeric-`t` `:ol`). Fresh contents get creation=now, refs=(now),
+count=1. `add-dm` chunks start at creation 0, refs (0), count 1.
+Empty clears merge nothing. At model reset the whole body
+re-evaluates (`framework/model.lisp:983`), so DM contents are rebuilt
+fresh — resets are idempotent for histories.
+
+## 36. No SJI/spreading units table — stateful by nature
+
+Attempted and abandoned: `compute-sji` reads live fan tables that only
+exist mid-run via merge paths (fan-out/fan-in are NIL at load even
+with `:mas`, and `setf` on extended chunk slots silently no-ops from
+outside). Fabricating fan state would make the oracle circular (we'd
+assert our own assumptions). Spreading stays an engine-integration
+concern for a future device-task golden; the formula itself
+(`mas - ln(fan)`, clamp, `:nsji`) is 5 lines at
+declarative-memory.lisp:2536.
+
+---
+
+# M5a findings: device buffers (all verified: golden byte-match)
+
+## 37. Nested `load-act-r-model` is locked out
+
+Calling it inside a file it is loading warns
+("currently loading a model") and SKIPS the inner load, leaving a
+stale current model — the attend golden once ran bll-count this way.
+Task/setup files must use plain `actr-load` for inner model loads.
+
+## 38. Device state must be built after reset, by the entry that owns it
+
+Reset clears pending visicon additions (and windows do not survive
+from load time), so task files build windows in a `(task-setup)` the
+driver calls post-reset. Two hygiene rules in `run-golden.lisp`: only
+an entry that newly defines `task-setup` runs it (startup auto-load
+of `user-loads/` leaks a stale binding into every entry otherwise —
+this contaminated `count` once), and it is always unbound afterwards.
+Manifest entries grew an optional 5th field: the task file.
+
+## 39. Armed CR wakes after ANY event, not just buffer changes
+
+`schedule-event-after-change` waits on `:any` (scheduling.lisp:1404;
+`visicon-update` is explicitly non-maintenance so it can trigger).
+The attend trace proves it: CRs follow motor phase events with no
+buffer traffic. The engine triggers after every event except the
+arming CR itself (which would self-loop). Earlier goldens are
+unaffected — their post-arm events were always buffer changes anyway.
+
+## 40. Implicit `?buffer> state free` queries + module exemption lists
+
+RHS `+`/`*` requests gain an implicit state-free query unless the
+buffer is exempt or explicitly queried
+(`production-parsing.lisp:1287`). Exemptions are registered by the
+modules themselves: goal/retrieval/visual-location/temporal skip
+queries; goal/temporal skip harvest clears. Same for the engine:
+explicit selection order is reads-then-queries per LHS item, implicit
+queries appended last.
+
+## 41. Request specs copy struct-valued `=buffer` refs (`-k` suffix)
+
+`Move-attention VISUAL-LOCATION0-1` while the buffer holds
+`VISUAL-LOCATION0`: `instantiate-chunk-spec` copies chunk values with
+deduped names. Symbol values (THREE, "bank") pass through untouched,
+which is why this never showed before. The engine copies on
+`=buffer` fallback in request AND modify specs, resolving copies back
+for attention/encoding.
+
+## 42. Onset stuffing draws RNG too
+
+New visicon features stuff the (empty) visual-location buffer, and
+the pick is `random-item` over newest-timestamp features sorted by
+name — one draw even for singletons (`vision.lisp` stuffing path).
+Same for find-location. Any skipped "unneeded" draw desynchronizes
+later `:ans` uses (cf. #27).
+
+## 43. Motor press-key pipeline (peck-recoil), all params defaulted
+
+Fresh prep = 5 features × 50 ms; exec = init(50) + max(burst(50),
+move-time); finish = exec + burst + max(burst, move-time); move-time
+= max(burst, fitts) with fitts = max(min-fitts 100 ms,
+0.075·log2(r+0.5)) — Q (r=1) lands exactly on exec 150 / finish 300.
+`PREPARATION/INITIATION/FINISH` lines print the request time in
+seconds; `output-key` prints under KEYBOARD with the device's
+(lowercase) key name. Phase lines are high-detail-only; PRESS-KEY is
+always shown. Later presses need per-key (hand finger r theta) +
+`feat-differences` prep math — only Q is tabled so far.

@@ -9,7 +9,14 @@ execution traces generated from the Lisp system, which the Rust port
 - `run-golden.lisp` — SBCL driver. Loads single-threaded ACT-R headless,
   then per manifest entry: load model, `(sgp :seed ...)`, `(reset)`,
   redirect trace via `(sgp :v <name.trace>)`, `(run t)`, close.
-- `manifest.lisp` — models under test: `((name subpath seed run-time) ...)`.
+- `manifest.lisp` — cases under test:
+  `((name model-subpath seed run-time [task-subpath]) ...)`.
+  The optional 5th field is a task/setup file (device scaffolding,
+  experiment code) loaded plainly after the model; it may define
+  `(task-setup)`, which the driver calls once, post-reset.
+- `traces/*.device.sexp` — optional scripted window input
+  (`(ADD-TEXT ms text x y)` rows) mirroring the task file, consumed by
+  the Rust harness to build the same device the Lisp task builds.
 - `regen.sh` — one-command regeneration into `traces/` (or given dir).
 - `traces/*.trace` — golden outputs. Byte-compared by the Rust harness.
 - `traces/*.meta` — provenance (model, seed, ACT-R/Lisp versions). Not compared.

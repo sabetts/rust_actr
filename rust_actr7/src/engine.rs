@@ -1,0 +1,2381 @@
+//! M2b discrete-event engine: scheduler, buffers, procedural cycle,
+//! stub-free declarative retrieval for fully-specified requests.
+//!
+//! Execution model (all from `actr7.x` sources, see GOTCHAS.md):
+//! - Integer millisecond clock; FIFO queue ordered by (time, priority, seq).
+//!   Priorities: `:max` first, numeric descending, `:min` last; ties FIFO
+//!   (`compare-events`, `framework/meta-process.lisp:659`).
+//! - Conflict-resolution runs after reset, after every firing (`:min`),
+//!   and after any buffer change when a previous CR found no match
+//!   (`schedule-event-after-change`, procedural.lisp:2329).
+//! - Selection schedules buffer-reads (LHS order) plus firing at
+//!   `+dat` (default 50 ms). Firing runs `!output!` binds, then RHS
+//!   action events in order: modify (100), request (50), clears (10),
+//!   then CR (`:min`). Implicit harvest clears are appended at build
+//!   (`support/production-parsing.lisp:1323`).
+//! - Retrieval: exact slot match, base-level learning (`:bll`) via
+//!   tracked reference histories, activation/utility noise. Still out:
+//!   spreading (`:mas`), partial matching (`:mp`), utility learning.
+//!
+//! Out of scope (error loudly): multi-model files beyond the last model,
+//! `!eval!`/`!bind!`, request modifiers, non-fully-specified requests with
+//! `-` slots (rejected at load), queries other than `buffer failure` and
+//! `state free/busy`, chunk extension events, `:ignore-buffers`.
+
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
+
+use crate::model::{ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction};
+use crate::rand::Mt;
+use crate::sexpr::Sexp;
+use crate::trace::{format_line, Detail, Out};
+
+#[derive(Debug)]
+pub enum EngineError {
+    NotImplemented(String),
+    Model(String),
+}
+
+impl std::fmt::Display for EngineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EngineError::NotImplemented(m) => write!(f, "not implemented: {m}"),
+            EngineError::Model(m) => write!(f, "bad model: {m}"),
+        }
+    }
+}
+
+impl std::error::Error for EngineError {}
+
+impl From<crate::model::LoadError> for EngineError {
+    fn from(e: crate::model::LoadError) -> Self {
+        EngineError::Model(e.to_string())
+    }
+}
+
+fn unimpl(what: impl Into<String>) -> EngineError {
+    EngineError::NotImplemented(what.into())
+}
+
+fn bad(what: impl Into<String>) -> EngineError {
+    EngineError::Model(what.into())
+}
+
+// ---------------------------------------------------------------- values
+
+#[derive(Debug, Clone, PartialEq)]
+enum Value {
+    Sym(String),
+    Num(f64),
+    Str(String),
+    Nil,
+}
+
+impl Value {
+    fn from_pattern(p: &Pattern) -> Result<Value, EngineError> {
+        match p {
+            Pattern::Var(v) => Err(bad(format!("unbound variable ={v} in chunk store"))),
+            Pattern::Sym(s) => Ok(Value::Sym(s.clone())),
+            Pattern::Num(x) => Ok(Value::Num(*x)),
+            Pattern::Str(s) => Ok(Value::Str(s.clone())),
+            Pattern::Nil => Ok(Value::Nil),
+        }
+    }
+
+    /// Lisp `~S` printing, as used by `!output!` and SET-BUFFER-CHUNK specs.
+    fn show(&self) -> String {
+        match self {
+            Value::Sym(s) => s.clone(),
+            Value::Num(x) => {
+                if x.fract() == 0.0 && x.abs() < 1e15 {
+                    format!("{x:.1}")
+                } else {
+                    format!("{x}")
+                }
+            }
+            Value::Str(s) => format!("{s:?}"),
+            Value::Nil => "NIL".to_string(),
+        }
+    }
+}
+
+type Bindings = HashMap<String, Value>;
+
+impl Engine {
+    /// Substitute a RHS pattern: bound variables first, then
+    /// `=buffer` whole-chunk references (the buffer's chunk name),
+    /// else literals. Unbound anything else errors.
+    fn subst(&self, p: &Pattern, b: &Bindings) -> Result<Value, EngineError> {
+        match p {
+            Pattern::Var(v) => {
+                if let Some(val) = b.get(v) {
+                    return Ok(val.clone());
+                }
+                if let Some(chunk) = self.buffers.get(v).and_then(|buf| buf.chunk.as_ref()) {
+                    if let Some(name) = &chunk.name {
+                        return Ok(Value::Sym(name.clone()));
+                    }
+                }
+                Err(bad(format!("unbound variable ={v} on RHS")))
+            }
+            other => Value::from_pattern(other),
+        }
+    }
+}
+
+// ---------------------------------------------------------------- config
+
+#[derive(Debug, Clone)]
+struct Config {
+    detail: Detail,
+    esc: bool,
+    lf_ms: i64,
+    le: f32,
+    rt: f32,
+    blc: f32,
+    bll: Option<f32>,
+    ol: Ol,
+    act_scale: f32,
+    ans: Option<f32>,
+    egs: f32,
+    dat_ms: i64,
+    attention_ms: i64,
+    feat_prep_ms: i64,
+    init_ms: i64,
+    burst_ms: i64,
+    peck_fitts: f32,
+    min_fitts_ms: i64,
+    rhst: bool,
+    er: bool,
+    do_not_query: Vec<String>,
+    do_not_harvest: Vec<String>,
+}
+
+/// One scripted device action: show text at a time and position.
+/// Mirrors what a task file does with `open-exp-window` /
+/// `add-text-to-exp-window` after install.
+#[derive(Debug, Clone)]
+pub struct DeviceText {
+    pub at_ms: i64,
+    pub text: String,
+    pub x: i64,
+    pub y: i64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DeviceSetup {
+    pub texts: Vec<DeviceText>,
+}
+
+/// A visicon feature: what the device shows and vision can find.
+#[derive(Debug, Clone)]
+struct Feature {
+    /// VISUAL-LOCATION{i} at proc-display time.
+    name: String,
+    kind: String,
+    value: String,
+    x: i64,
+    y: i64,
+    tstamp_ms: i64,
+    attended: bool,
+}
+
+/// Virtual keyboard entry: hand geometry for prep/fitss math.
+/// M5a seeds Q; digits etc. join with device-task goldens.
+#[derive(Debug, Clone)]
+struct KeySpec {
+    r: f32,
+}
+
+fn key_table() -> HashMap<String, KeySpec> {
+    HashMap::from([("Q".to_string(), KeySpec { r: 1.0 })])
+}
+
+fn sgp_num(params: &[(String, Sexp)], key: &str, default: f64) -> Result<f64, EngineError> {
+    match params.iter().find(|(k, _)| k == key) {
+        None => Ok(default),
+        Some((_, Sexp::Float(x))) => Ok(*x),
+        Some((_, Sexp::Int(i))) => Ok(*i as f64),
+        Some((_, got)) => Err(bad(format!("{key} must be a number, got {got:?}"))),
+    }
+}
+
+fn sgp_single(params: &[(String, Sexp)], key: &str) -> Result<Option<f32>, EngineError> {
+    match params.iter().find(|(k, _)| k == key) {
+        None => Ok(None),
+        // Source literals read as single-float in Lisp; narrow the same way.
+        Some((_, Sexp::Float(x))) => Ok(Some(*x as f32)),
+        Some((_, Sexp::Int(i))) => Ok(Some(*i as f32)),
+        Some((_, Sexp::Sym(s))) if s == "NIL" => Ok(None),
+        Some((_, got)) => Err(bad(format!("{key} must be a number or nil, got {got:?}"))),
+    }
+}
+fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
+    match params.iter().find(|(k, _)| k == key) {
+        // `t` (any non-nil symbol) is true; explicit NIL is false.
+        Some((_, Sexp::Sym(s))) => s != "NIL",
+        Some(_) => true,
+        None => false,
+    }
+}
+
+impl Config {
+    fn from_model(m: &Model) -> Result<Config, EngineError> {
+        // Still beyond reach: spreading, partial matching, utility learning.
+        for key in [":MAS", ":MP", ":PAS", ":UL"] {
+            if let Some((_, v)) = m.params.iter().find(|(k, _)| k == key) {
+                if !matches!(v, Sexp::Sym(s) if s == "NIL") {
+                    return Err(unimpl(format!("subsymbolic parameter {key}")));
+                }
+            }
+        }
+        let detail = match m.params.iter().find(|(k, _)| k == ":TRACE-DETAIL") {
+            None => Detail::Medium,
+            Some((_, Sexp::Sym(s))) => match s.as_str() {
+                "HIGH" => Detail::High,
+                "MEDIUM" => Detail::Medium,
+                "LOW" => Detail::Low,
+                got => return Err(bad(format!("bad :trace-detail {got}"))),
+            },
+            Some((_, got)) => return Err(bad(format!("bad :trace-detail {got:?}"))),
+        };
+        // `:lf` is stored as integer ms: (round (* x 1000)).
+        let lf_ms = (sgp_num(&m.params, ":LF", 1.0)? * 1000.0).round() as i64;
+        // Buffers the owning modules exempt from implicit processing.
+        // Defaults come from the modules themselves (goal.lisp:233,
+        // vision.lisp:3124, declarative secondary-reset, temporal):
+        // goal/retrieval/visual-location/temporal skip implicit
+        // state-free queries; goal/temporal skip harvest clears.
+        // (`:do-not-query`/`:do-not-harvest` extend or `:remove`.)
+        let mut do_not_query = vec!["GOAL", "RETRIEVAL", "VISUAL-LOCATION", "TEMPORAL"]
+            .into_iter()
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        let mut do_not_harvest = vec!["GOAL", "TEMPORAL"]
+            .into_iter()
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        for (key, target) in [
+            (":DO-NOT-QUERY", &mut do_not_query),
+            (":DO-NOT-HARVEST", &mut do_not_harvest),
+        ] {
+            if let Some((_, v)) = m.params.iter().find(|(k, _)| k == key) {
+                apply_buffer_list(target, v)?;
+            }
+        }
+        if sgp_bool(&m.params, ":RANDOMIZE-TIME") {
+            return Err(unimpl(":randomize-time"));
+        }
+        if sgp_bool(&m.params, ":AUTO-ATTEND") {
+            return Err(unimpl(":auto-attend"));
+        }
+        match m.params.iter().find(|(k, _)| k == ":OPTIMIZE-VISUAL") {
+            Some((_, Sexp::Sym(s))) if s == "NIL" => {
+                return Err(unimpl(":optimize-visual nil"));
+            }
+            _ => {}
+        }
+        let secs_to_ms = |key: &str, default: f64| -> Result<i64, EngineError> {
+            Ok((sgp_num(&m.params, key, default)? * 1000.0).round() as i64)
+        };
+        let bll = sgp_single(&m.params, ":BLL")?.filter(|b| *b > 0.0);
+        let ol = match m.params.iter().find(|(k, _)| k == ":OL") {
+            // Unset :ol inherits central-parameters' default, which is T
+            // (`:owner nil`; central default-value t).
+            None => Ol::On,
+            Some((_, Sexp::Sym(s))) if s == "NIL" => Ol::Off,
+            Some((_, Sexp::Sym(s))) if s == "T" => Ol::On,
+            Some((_, Sexp::Int(i))) => Ol::Num(*i as f64),
+            Some((_, Sexp::Float(x))) => Ol::Num(*x),
+            Some((_, got)) => return Err(bad(format!("bad :ol {got:?}"))),
+        };
+        // (log (expt 1/1000 (- bll))): ratio coerced to single, as read.
+        let act_scale = match bll {
+            Some(b) => (0.001f32).powf(-b).ln(),
+            None => 0.0,
+        };
+        Ok(Config {
+            detail,
+            esc: sgp_bool(&m.params, ":ESC"),
+            lf_ms,
+            le: sgp_single(&m.params, ":LE")?.unwrap_or(1.0),
+            rt: sgp_single(&m.params, ":RT")?.unwrap_or(0.0),
+            blc: sgp_single(&m.params, ":BLC")?.unwrap_or(0.0),
+            ans: sgp_single(&m.params, ":ANS")?.filter(|s| *s > 0.0),
+            bll,
+            ol,
+            act_scale,
+            egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
+            dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
+            attention_ms: secs_to_ms(":VISUAL-ATTENTION-LATENCY", 0.085)?,
+            feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
+            init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
+            burst_ms: secs_to_ms(":MOTOR-BURST-TIME", 0.05)?,
+            peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
+            min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
+            rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
+                None => true,
+                Some((_, Sexp::Sym(s))) => s != "NIL",
+                Some(_) => true,
+            },
+            er: sgp_bool(&m.params, ":ER"),
+            do_not_query,
+            do_not_harvest,
+        })
+    }
+}
+
+/// Extend (or `:remove` from) an implicit-processing exemption list.
+fn apply_buffer_list(target: &mut Vec<String>, v: &Sexp) -> Result<(), EngineError> {
+    match v {
+        Sexp::Sym(s) => {
+            if !target.contains(s) {
+                target.push(s.clone());
+            }
+            Ok(())
+        }
+        Sexp::List(items) => {
+            for it in items {
+                match it {
+                    Sexp::Sym(s) => {
+                        if !target.contains(s) {
+                            target.push(s.clone());
+                        }
+                    }
+                    Sexp::List(rm) if matches!(rm.as_slice(), [Sexp::Sym(k), _] if k == ":REMOVE") => {
+                        if let [_, Sexp::Sym(x)] = rm.as_slice() {
+                            target.retain(|b| b != x);
+                        }
+                    }
+                    got => {
+                        return Err(bad(format!("bad buffer list entry: {got:?}")));
+                    }
+                }
+            }
+            Ok(())
+        }
+        got => Err(bad(format!("bad buffer list: {got:?}"))),
+    }
+}
+
+// ---------------------------------------------------------------- chunks
+
+#[derive(Debug, Clone)]
+struct ChunkInst {
+    name: Option<String>,
+    ctype: String,
+    slots: Vec<(String, Value)>,
+}
+
+impl ChunkInst {
+    /// Missing slots read as NIL (matches `count nil`-style tests).
+    fn get(&self, slot: &str) -> Value {
+        self.slots
+            .iter()
+            .find(|(s, _)| s == slot)
+            .map(|(_, v)| v.clone())
+            .unwrap_or(Value::Nil)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Buffer {
+    chunk: Option<ChunkInst>,
+    failed: bool,
+    busy: bool,
+}
+
+/// Base-level history per DM chunk, aligned with `Engine.dm` by index:
+/// creation time, reference times, and total reference count
+/// (`merge-reference-list/count`; the list truncates under numeric
+/// `:ol` but the count never does).
+#[derive(Debug, Clone)]
+struct History {
+    creation_ms: i64,
+    refs: Vec<i64>,
+    count: usize,
+}
+
+impl Buffer {
+    fn empty() -> Buffer {
+        Buffer {
+            chunk: None,
+            failed: false,
+            busy: false,
+        }
+    }
+}
+
+// ---------------------------------------------------------------- events
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Prio {
+    Min,
+    Num(i64),
+    Max,
+}
+
+impl Ord for Prio {
+    fn cmp(&self, other: &Self) -> Ordering {
+        use Prio::*;
+        match (self, other) {
+            (Max, Max) | (Min, Min) => Ordering::Equal,
+            (Max, _) => Ordering::Greater,
+            (_, Max) => Ordering::Less,
+            (Min, _) => Ordering::Less,
+            (_, Min) => Ordering::Greater,
+            (Num(a), Num(b)) => a.cmp(b),
+        }
+    }
+}
+
+impl PartialOrd for Prio {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Debug, Clone)]
+enum NewChunk {
+    Named(String),
+    Spec {
+        ctype: String,
+        slots: Vec<(String, Value)>,
+    },
+    /// A fully-built instance (visual locations/objects, goal specs
+    /// with generated names): placed as-is, never DM-resolved.
+    Instance(ChunkInst),
+}
+
+#[derive(Debug, Clone)]
+enum Event {
+    SetBuffer {
+        buffer: String,
+        chunk: NewChunk,
+        requested: bool,
+    },
+    ClearBuffer {
+        buffer: String,
+    },
+    ModBuffer {
+        buffer: String,
+        slots: Vec<(String, Value)>,
+    },
+    ModuleRequest {
+        buffer: String,
+        spec: NewChunk,
+    },
+    StartRetrieval {
+        spec: NewChunk,
+    },
+    RetrievedChunk {
+        name: String,
+        gen: u64,
+    },
+    RetrievalFailure {
+        gen: u64,
+    },
+    ConflictResolution,
+    ProductionSelected {
+        prod: usize,
+        bindings: Bindings,
+    },
+    BufferRead {
+        buffer: String,
+    },
+    QueryBuffer {
+        buffer: String,
+    },
+    ProductionFired {
+        prod: usize,
+        bindings: Bindings,
+    },
+    /// Vision maintenance: move due device items into the visicon.
+    ProcDisplay,
+    /// Vision marker that the visicon was updated.
+    VisiconUpdate,
+    /// Visual-location request resolution.
+    FindLocation {
+        spec: NewChunk,
+    },
+    /// Visual-location request found nothing.
+    FindLocFailure,
+    /// Attention shift to a location chunk.
+    MoveAttention {
+        loc: String,
+    },
+    /// Attention landed: build the visual object.
+    EncodingComplete {
+        loc: String,
+    },
+    /// Manual style request (only press-key in M5a).
+    PressKey {
+        key: String,
+        req_ms: i64,
+    },
+    PreparationComplete {
+        key: String,
+        req_ms: i64,
+    },
+    InitiationComplete {
+        req_ms: i64,
+    },
+    MotorNotify {
+        key: String,
+        req_ms: i64,
+    },
+    FinishMovement {
+        req_ms: i64,
+    },
+}
+
+struct Queued {
+    time_ms: i64,
+    prio: Prio,
+    seq: u64,
+    out: Out,
+    event: Event,
+}
+
+impl Ord for Queued {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // BinaryHeap pops the greatest: invert so the earliest time,
+        // highest priority, lowest seq comes out first.
+        other
+            .time_ms
+            .cmp(&self.time_ms)
+            .then(self.prio.cmp(&other.prio))
+            .then(other.seq.cmp(&self.seq))
+    }
+}
+
+impl PartialOrd for Queued {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Queued {
+    fn eq(&self, other: &Self) -> bool {
+        self.time_ms == other.time_ms && self.prio == other.prio && self.seq == other.seq
+    }
+}
+
+impl Eq for Queued {}
+
+// ---------------------------------------------------------------- engine
+
+struct ExecProd {
+    index: usize,
+    /// Buffers implicitly cleared on firing (strict harvesting +
+    /// request rule, computed at build).
+    implicit_clears: Vec<String>,
+    /// Buffers with implicit `?buffer> state free` tests (computed at
+    /// build, matched and selected like explicit queries).
+    implicit_queries: Vec<String>,
+}
+
+impl Clone for ExecProd {
+    fn clone(&self) -> ExecProd {
+        ExecProd {
+            index: self.index,
+            implicit_clears: self.implicit_clears.clone(),
+            implicit_queries: self.implicit_queries.clone(),
+        }
+    }
+}
+
+pub struct Engine {
+    model: Model,
+    cfg: Config,
+    rng: Mt,
+    dm: Vec<ChunkInst>,
+    hist: Vec<History>,
+    buffers: HashMap<String, Buffer>,
+    queue: BinaryHeap<Queued>,
+    seq: u64,
+    time_ms: i64,
+    limit_ms: i64,
+    out_lines: Vec<String>,
+    exec_prods: Vec<ExecProd>,
+    cr_armed: bool,
+    dm_gen: u64,
+    dm_busy: bool,
+    /// Scripted device items not yet shown, by appearance time.
+    pending_texts: Vec<DeviceText>,
+    /// Live visicon features, in proc-display order.
+    features: Vec<Feature>,
+    feat_seq: u64,
+    /// Location-name dedup: base -> constructions so far.
+    vl_built: HashMap<String, u64>,
+    /// Request-spec copies: copy name -> feature index. Struct-valued
+    /// `=buffer` references in request/modify specs are copied with a
+    /// `-k` suffix (`Move-attention VISUAL-LOCATION0-1`); the copy
+    /// resolves back to the feature for attention/encoding.
+    vl_copies: HashMap<String, usize>,
+    /// Visual-object names per kind: KIND -> objects so far.
+    obj_built: HashMap<String, u64>,
+    visual_busy: bool,
+    man_prep_busy: bool,
+    man_exec_busy: bool,
+}
+
+impl Engine {
+    pub fn new(
+        model: Model,
+        seed: (u64, u64),
+        run_secs: f64,
+        device: DeviceSetup,
+    ) -> Result<Engine, EngineError> {
+        let cfg = Config::from_model(&model)?;
+        let mut rng = Mt::fresh();
+        rng.set_seed(seed.0, seed.1);
+        let mut dm = Vec::new();
+        for c in &model.chunks {
+            let mut slots = Vec::new();
+            for (s, p) in &c.slots {
+                slots.push((s.clone(), Value::from_pattern(p)?));
+            }
+            dm.push(ChunkInst {
+                name: Some(c.name.clone()),
+                ctype: c.ctype.clone().unwrap_or_default(),
+                slots,
+            });
+        }
+        let mut buffers = HashMap::new();
+        buffers.insert("GOAL".to_string(), Buffer::empty());
+        buffers.insert("RETRIEVAL".to_string(), Buffer::empty());
+
+        let mut exec_prods = Vec::new();
+        for (index, prod) in model.productions.iter().enumerate() {
+            exec_prods.push(ExecProd {
+                index,
+                implicit_clears: implicit_clears(prod, &cfg.do_not_harvest),
+                implicit_queries: implicit_queries(prod, &cfg.do_not_query),
+            });
+        }
+
+        let dm_len = dm.len();
+        let mut eng = Engine {
+            model,
+            cfg,
+            rng,
+            dm,
+            // add-dm chunks: creation at clock 0, one reference then.
+            hist: vec![
+                History {
+                    creation_ms: 0,
+                    refs: vec![0],
+                    count: 1
+                };
+                dm_len
+            ],
+            buffers,
+            queue: BinaryHeap::new(),
+            seq: 0,
+            time_ms: 0,
+            limit_ms: (run_secs * 1000.0).round() as i64,
+            out_lines: Vec::new(),
+            exec_prods,
+            cr_armed: false,
+            dm_gen: 0,
+            dm_busy: false,
+            pending_texts: {
+                let mut v = device.texts;
+                v.sort_by_key(|t| t.at_ms);
+                v
+            },
+            features: Vec::new(),
+            feat_seq: 0,
+            vl_built: HashMap::new(),
+            vl_copies: HashMap::new(),
+            obj_built: HashMap::new(),
+            visual_busy: false,
+            man_prep_busy: false,
+            man_exec_busy: false,
+        };
+        // Reset: device proc-display (maintenance) processes anything
+        // already due, then the initial goal, then conflict resolution.
+        if !eng.pending_texts.is_empty() && eng.pending_texts[0].at_ms <= 0 {
+            eng.push(0, Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        }
+        // Reset: restore the initial goal, then conflict resolution.
+        if let Some(goal) = eng.model.initial_goal.clone() {
+            let chunk = new_chunk(&goal)?;
+            eng.push(
+                0,
+                Prio::Num(0),
+                Out::Low,
+                Event::SetBuffer {
+                    buffer: "GOAL".to_string(),
+                    chunk,
+                    requested: false,
+                },
+            );
+        }
+        eng.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
+        Ok(eng)
+    }
+
+    fn push(&mut self, time_ms: i64, prio: Prio, out: Out, event: Event) {
+        let seq = self.seq;
+        self.seq += 1;
+        self.queue.push(Queued {
+            time_ms,
+            prio,
+            seq,
+            out,
+            event,
+        });
+    }
+
+    fn now(&mut self, prio: Prio, out: Out, event: Event) {
+        let t = self.time_ms;
+        self.push(t, prio, out, event);
+    }
+
+    fn emit(&mut self, module: &str, details: String) {
+        self.out_lines
+            .push(format_line(self.time_ms, module, &details));
+    }
+
+    fn buffer_mut(&mut self, name: &str) -> &mut Buffer {
+        self.buffers
+            .entry(name.to_string())
+            .or_insert_with(Buffer::empty)
+    }
+
+    /// Merge a cleared buffer chunk into DM by content match, adding a
+    /// reference (`merge-reference-list/count`); fresh contents are
+    /// added with creation=now, refs=(now), count=1. Buffers in
+    /// `:ignore-buffers` skip this; no golden sets it.
+    fn merge_into_dm(&mut self, chunk: ChunkInst) {
+        let now = self.time_ms;
+        let found = self
+            .dm
+            .iter()
+            .position(|c| c.ctype == chunk.ctype && c.slots == chunk.slots);
+        match found {
+            Some(i) => {
+                let h = &mut self.hist[i];
+                h.count += 1;
+                match &self.cfg.ol {
+                    Ol::Off => h.refs.insert(0, now),
+                    Ol::Num(ol) => {
+                        h.refs.insert(0, now);
+                        let keep = (*ol as usize).min(h.refs.len());
+                        h.refs.truncate(keep);
+                    }
+                    Ol::On => h.refs.clear(),
+                }
+            }
+            None => {
+                self.dm.push(chunk);
+                self.hist.push(History {
+                    creation_ms: now,
+                    refs: vec![now],
+                    count: 1,
+                });
+            }
+        }
+    }
+
+    /// Any buffer mutation wakes an armed conflict-resolution.
+    fn changed(&mut self) {
+        if self.cr_armed {
+            self.cr_armed = false;
+            self.now(Prio::Num(0), Out::Medium, Event::ConflictResolution);
+        }
+    }
+
+    pub fn run(mut self) -> Result<String, EngineError> {
+        loop {
+            let next = match self.queue.pop() {
+                None => {
+                    self.emit("------", "Stopped because no events left to process".into());
+                    break;
+                }
+                Some(q) => q,
+            };
+            if next.time_ms > self.limit_ms {
+                self.time_ms = self.limit_ms;
+                self.emit("------", "Stopped because time limit reached".into());
+                break;
+            }
+            self.time_ms = next.time_ms;
+            let show = self.cfg.detail.shows(next.out);
+            let is_cr = matches!(next.event, Event::ConflictResolution);
+            self.exec(next.event, show)?;
+            // Armed conflict-resolution wakes after ANY later event
+            // (`schedule-event-after-change` with wait-condition :any:
+            // visicon-update is explicitly non-maintenance for this,
+            // and motor events wake it too — see the attend golden).
+            // The arming CR itself does not count as the next event.
+            if !is_cr {
+                self.changed();
+            }
+        }
+        let mut s = self.out_lines.join("\n");
+        s.push('\n');
+        Ok(s)
+    }
+
+    fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
+        match event {
+            Event::SetBuffer {
+                buffer,
+                chunk,
+                requested,
+            } => {
+                let inst = self.instantiate(&buffer, chunk)?;
+                if show {
+                    let mut details = format!("SET-BUFFER-CHUNK {buffer} {}", inst.show());
+                    if !requested {
+                        details.push_str(" NIL");
+                    }
+                    // The SET event prints under the buffer's owning
+                    // module (the `:module` of `schedule-set-buffer-chunk`).
+                    let module = match buffer.as_str() {
+                        "RETRIEVAL" => "DECLARATIVE",
+                        "VISUAL-LOCATION" | "VISUAL" => "VISION",
+                        "MANUAL" => "MOTOR",
+                        other => other,
+                    };
+                    self.emit(module, details);
+                }
+                self.buffer_mut(&buffer).chunk = Some(inst);
+                self.buffer_mut(&buffer).failed = false;
+                self.changed();
+            }
+            Event::ClearBuffer { buffer } => {
+                if show {
+                    self.emit("PROCEDURAL", format!("CLEAR-BUFFER {buffer}"));
+                }
+                let cleared = self.buffer_mut(&buffer).chunk.take();
+                self.buffer_mut(&buffer).failed = false;
+                // `:notify-on-clear` for declarative: the cleared chunk
+                // merges into DM, gaining a reference
+                // (`merge-chunk-into-dm`). Empty clears merge nothing.
+                if let Some(chunk) = cleared {
+                    self.merge_into_dm(chunk);
+                }
+                self.changed();
+            }
+            Event::ModBuffer { buffer, slots } => {
+                if show {
+                    self.emit("PROCEDURAL", format!("MOD-BUFFER-CHUNK {buffer}"));
+                }
+                let b = self.buffer_mut(&buffer);
+                let chunk = b
+                    .chunk
+                    .as_mut()
+                    .ok_or_else(|| bad(format!("MOD-BUFFER-CHUNK with empty {buffer}")))?;
+                for (s, v) in slots {
+                    match chunk.slots.iter_mut().find(|(k, _)| k == &s) {
+                        Some((_, old)) => *old = v,
+                        None => chunk.slots.push((s, v)),
+                    }
+                }
+                self.changed();
+            }
+            Event::ModuleRequest { buffer, spec } => {
+                if show {
+                    self.emit("PROCEDURAL", format!("MODULE-REQUEST {buffer}"));
+                }
+                match buffer.as_str() {
+                    "RETRIEVAL" => {
+                        // dm-request: abort any in-flight retrieval, then start.
+                        self.dm_gen += 1;
+                        self.dm_busy = true;
+                        self.buffers.get_mut("RETRIEVAL").unwrap().busy = true;
+                        self.buffers.get_mut("RETRIEVAL").unwrap().failed = false;
+                        self.now(
+                            Prio::Num(-2000),
+                            Out::Medium,
+                            Event::StartRetrieval { spec },
+                        );
+                    }
+                    "VISUAL-LOCATION" => {
+                        self.now(Prio::Num(0), Out::Medium, Event::FindLocation { spec });
+                    }
+                    "VISUAL" => {
+                        self.visual_request(spec)?;
+                    }
+                    "MANUAL" => {
+                        self.manual_request(spec)?;
+                    }
+                    got => {
+                        return Err(unimpl(format!("request to buffer {got}")));
+                    }
+                }
+            }
+            Event::StartRetrieval { spec } => {
+                if show {
+                    self.emit("DECLARATIVE", "start-retrieval".into());
+                }
+                self.start_retrieval(spec)?;
+            }
+            Event::RetrievedChunk { name, gen } => {
+                if gen != self.dm_gen {
+                    return Ok(()); // aborted by a newer request: silent.
+                }
+                if show {
+                    self.emit("DECLARATIVE", format!("RETRIEVED-CHUNK {name}"));
+                }
+                self.dm_busy = false;
+                self.buffers.get_mut("RETRIEVAL").unwrap().busy = false;
+                self.now(
+                    Prio::Max,
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "RETRIEVAL".to_string(),
+                        chunk: NewChunk::Named(name),
+                        requested: true,
+                    },
+                );
+            }
+            Event::RetrievalFailure { gen } => {
+                if gen != self.dm_gen {
+                    return Ok(());
+                }
+                if show {
+                    self.emit("DECLARATIVE", "RETRIEVAL-FAILURE".into());
+                }
+                self.dm_busy = false;
+                let b = self.buffer_mut("RETRIEVAL");
+                b.busy = false;
+                b.failed = true;
+                self.changed();
+            }
+            Event::ConflictResolution => {
+                if show {
+                    self.emit("PROCEDURAL", "CONFLICT-RESOLUTION".into());
+                }
+                self.conflict_resolution()?;
+            }
+            Event::ProductionSelected { prod, bindings } => {
+                let name = self.model.productions[prod].name.clone();
+                if show {
+                    self.emit("PROCEDURAL", format!("PRODUCTION-SELECTED {name}"));
+                }
+                // Reads and queries in LHS order, implicit queries last,
+                // then firing at +dat.
+                for item in self.model.productions[prod].lhs.clone() {
+                    match item {
+                        LhsItem::Match { buffer, .. } => {
+                            self.now(Prio::Num(0), Out::Always, Event::BufferRead { buffer });
+                        }
+                        LhsItem::Query { buffer, .. } => {
+                            self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
+                        }
+                    }
+                }
+                for buffer in self.exec_prods[prod].implicit_queries.clone() {
+                    self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
+                }
+                let at = self.time_ms + self.cfg.dat_ms;
+                self.push(
+                    at,
+                    Prio::Num(0),
+                    Out::Low,
+                    Event::ProductionFired { prod, bindings },
+                );
+            }
+            Event::BufferRead { buffer } => {
+                if show {
+                    self.emit("PROCEDURAL", format!("BUFFER-READ-ACTION {buffer}"));
+                }
+            }
+            Event::QueryBuffer { buffer } => {
+                if show {
+                    self.emit("PROCEDURAL", format!("QUERY-BUFFER-ACTION {buffer}"));
+                }
+            }
+            Event::ProductionFired { prod, bindings } => {
+                let name = self.model.productions[prod].name.clone();
+                if show {
+                    self.emit("PROCEDURAL", format!("PRODUCTION-FIRED {name}"));
+                }
+                self.fire(prod, &bindings)?;
+            }
+            Event::ProcDisplay => {
+                if show {
+                    self.emit("VISION", "proc-display".into());
+                }
+                self.proc_display()?;
+            }
+            Event::VisiconUpdate => {
+                if show {
+                    self.emit("VISION", "visicon-update".into());
+                }
+            }
+            Event::FindLocation { spec } => {
+                if show {
+                    self.emit("VISION", "Find-location".into());
+                }
+                self.find_location(spec)?;
+            }
+            Event::FindLocFailure => {
+                if show {
+                    self.emit("VISION", "find-loc-failure".into());
+                }
+                // Buffer failure was set when the search failed.
+            }
+            Event::MoveAttention { loc } => {
+                if show {
+                    self.emit("VISION", format!("Move-attention {loc} NIL"));
+                }
+                self.visual_busy = true;
+                let at = self.time_ms + self.cfg.attention_ms;
+                self.push(
+                    at,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::EncodingComplete { loc },
+                );
+            }
+            Event::EncodingComplete { loc } => {
+                if show {
+                    self.emit("VISION", format!("Encoding-complete {loc} NIL"));
+                }
+                self.encoding_complete(loc)?;
+            }
+            Event::PressKey { key, req_ms } => {
+                if show {
+                    self.emit("MOTOR", format!("PRESS-KEY KEY {key}"));
+                }
+                // Fresh movement: all features prepared.
+                self.man_prep_busy = true;
+                let prep = 5 * self.cfg.feat_prep_ms;
+                let at = self.time_ms + prep;
+                self.push(
+                    at,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::PreparationComplete { key, req_ms },
+                );
+            }
+            Event::PreparationComplete { key, req_ms } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!("PREPARATION-COMPLETE {}", Self::secs_str(req_ms)),
+                    );
+                }
+                self.man_prep_busy = false;
+                self.man_exec_busy = true;
+                // peck-recoil: exec = init + max(burst, move-time),
+                // finish = exec + burst + max(burst, move-time),
+                // all in seconds, rounded to ms at scheduling.
+                let spec = Self::key_spec(&key)?;
+                let fit = (self.cfg.peck_fitts * (spec.r + 0.5).log2())
+                    .max(self.cfg.min_fitts_ms as f32 / 1000.0);
+                let move_s = (self.cfg.burst_ms as f32 / 1000.0).max(fit);
+                // Lisp rounds seconds->ms at scheduling time.
+                let exec_ms = ((self.cfg.init_ms as f32 / 1000.0 + move_s) * 1000.0).round() as i64;
+                let finish_ms =
+                    ((exec_ms as f32 / 1000.0 + self.cfg.burst_ms as f32 / 1000.0 + move_s)
+                        * 1000.0)
+                        .round() as i64;
+                let t = self.time_ms;
+                self.push(
+                    t + self.cfg.init_ms,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::InitiationComplete { req_ms },
+                );
+                self.push(
+                    t + exec_ms,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::MotorNotify { key, req_ms },
+                );
+                self.push(
+                    t + finish_ms,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::FinishMovement { req_ms },
+                );
+            }
+            Event::InitiationComplete { req_ms } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!("INITIATION-COMPLETE {}", Self::secs_str(req_ms)),
+                    );
+                }
+            }
+            Event::MotorNotify { key, req_ms } => {
+                if show {
+                    // The device reports its own key name (lowercase as
+                    // specified in the keyboard table).
+                    self.emit(
+                        "KEYBOARD",
+                        format!("output-key {} {}", self.model.name, key.to_lowercase()),
+                    );
+                }
+                let _ = req_ms;
+            }
+            Event::FinishMovement { req_ms } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!("FINISH-MOVEMENT {}", Self::secs_str(req_ms)),
+                    );
+                }
+                self.man_exec_busy = false;
+            }
+        }
+        Ok(())
+    }
+
+    /// Seconds from integer ms, printed as Lisp `princ` shows it.
+    fn secs_str(req_ms: i64) -> String {
+        format!("{}", req_ms as f32 / 1000.0)
+    }
+
+    /// Virtual keyboard geometry for press-key movements (hand/finger/r/theta
+    /// per key name as requested; output uses the table's lowercase name).
+    /// M5a seeds Q; digits join with device-task goldens.
+    fn key_spec(key: &str) -> Result<KeySpec, EngineError> {
+        key_table()
+            .get(key)
+            .cloned()
+            .ok_or_else(|| unimpl(format!("press-key for unknown key {key}")))
+    }
+
+    fn instantiate(&self, _buffer: &str, chunk: NewChunk) -> Result<ChunkInst, EngineError> {
+        match chunk {
+            NewChunk::Named(name) => self
+                .dm
+                .iter()
+                .find(|c| c.name.as_deref() == Some(name.as_str()))
+                .cloned()
+                .ok_or_else(|| bad(format!("no chunk named {name}"))),
+            NewChunk::Spec { ctype, slots } => Ok(ChunkInst {
+                name: None,
+                ctype,
+                slots,
+            }),
+            NewChunk::Instance(inst) => Ok(inst),
+        }
+    }
+
+    fn conflict_resolution(&mut self) -> Result<(), EngineError> {
+        // Utilities are 0.0 plus optional `:egs` noise, drawn per
+        // candidate in definition order (`compute-utility` runs inside
+        // the conflict-set loop). Ties go to the LAST production when
+        // `:er` is nil, per `conflict-resolution` source.
+        let mut best_u: Option<f32> = None;
+        let mut tied: Vec<(usize, Bindings)> = Vec::new();
+        for ep in self.exec_prods.clone() {
+            let prod = &self.model.productions[ep.index];
+            if let Some(b) = self.match_prod(prod, &ep.implicit_queries)? {
+                let mut u = 0.0f32;
+                if self.cfg.egs != 0.0 {
+                    u += self.rng.noise(self.cfg.egs);
+                }
+                match best_u {
+                    None => {
+                        best_u = Some(u);
+                        tied = vec![(ep.index, b)];
+                    }
+                    Some(cur) if u > cur => {
+                        best_u = Some(u);
+                        tied = vec![(ep.index, b)];
+                    }
+                    Some(cur) if u == cur => tied.push((ep.index, b)),
+                    _ => {}
+                }
+            }
+        }
+        let winner = match tied.len() {
+            0 => None,
+            1 => Some(tied.into_iter().next().unwrap()),
+            _ if self.cfg.er => {
+                let i = self.rng.random_int(tied.len() as u64) as usize;
+                Some(tied.into_iter().nth(i).unwrap())
+            }
+            _ => Some(tied.into_iter().last().unwrap()),
+        };
+        match winner {
+            Some((prod, bindings)) => {
+                self.cr_armed = false;
+                self.now(
+                    Prio::Max,
+                    Out::Always,
+                    Event::ProductionSelected { prod, bindings },
+                );
+            }
+            None => {
+                self.cr_armed = true;
+            }
+        }
+        Ok(())
+    }
+
+    fn match_prod(
+        &self,
+        prod: &Production,
+        implicit_queries: &[String],
+    ) -> Result<Option<Bindings>, EngineError> {
+        let mut b = Bindings::new();
+        for item in &prod.lhs {
+            if self.match_item(item, &mut b)?.is_none() {
+                return Ok(None);
+            }
+        }
+        for buffer in implicit_queries {
+            if !self.query_free(buffer)? {
+                return Ok(None);
+            }
+        }
+        Ok(Some(b))
+    }
+
+    fn match_item(&self, item: &LhsItem, b: &mut Bindings) -> Result<Option<()>, EngineError> {
+        match item {
+            LhsItem::Match { buffer, tests } => {
+                let buf = self
+                    .buffers
+                    .get(buffer)
+                    .ok_or_else(|| bad(format!("unknown buffer ={buffer}>")))?;
+                let chunk = match &buf.chunk {
+                    Some(c) => c,
+                    None => return Ok(None),
+                };
+                for t in tests {
+                    if t.slot == "ISA" {
+                        let ok = match &t.value {
+                            Pattern::Var(v) => match b.get(v) {
+                                Some(Value::Sym(s)) => s == &chunk.ctype,
+                                Some(_) => false,
+                                None => {
+                                    b.insert(v.clone(), Value::Sym(chunk.ctype.clone()));
+                                    true
+                                }
+                            },
+                            Pattern::Sym(s) => s == &chunk.ctype,
+                            _ => false,
+                        };
+                        if t.negated == ok {
+                            return Ok(None);
+                        }
+                        continue;
+                    }
+                    if !test_value(&t.value, &chunk.get(&t.slot), &mut *b, t.negated)? {
+                        return Ok(None);
+                    }
+                }
+            }
+            LhsItem::Query { buffer, queries } => {
+                for (attr, val) in queries {
+                    let ok = match (attr.as_str(), val) {
+                        ("BUFFER", Pattern::Sym(s)) if s == "FAILURE" => {
+                            self.buffers
+                                .get(buffer)
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
+                                .failed
+                        }
+                        ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
+                        ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
+                        _ => {
+                            return Err(unimpl(format!("query ?{buffer}> {attr} {val:?}")));
+                        }
+                    };
+                    if !ok {
+                        return Ok(None);
+                    }
+                }
+            }
+        }
+        Ok(Some(()))
+    }
+
+    /// `?buffer> state free`: module busy flags for perceptual-motor
+    /// buffers, buffer flag otherwise. (Motor free = neither preparing
+    /// nor executing; visual free = no attention shift in flight.)
+    fn query_free(&self, buffer: &str) -> Result<bool, EngineError> {
+        match buffer {
+            "VISUAL" => Ok(!self.visual_busy),
+            "MANUAL" => Ok(!self.man_prep_busy && !self.man_exec_busy),
+            _ => Ok(!self
+                .buffers
+                .get(buffer)
+                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
+                .busy),
+        }
+    }
+
+    fn fire(&mut self, prod_idx: usize, bindings: &Bindings) -> Result<(), EngineError> {
+        let prod = self.model.productions[prod_idx].clone();
+        // `!output!` binds run during firing, before action events.
+        for action in &prod.rhs {
+            if let RhsAction::Output { args } = action {
+                let mut text = String::new();
+                for a in args {
+                    text.push_str(&self.show_output_arg(a, bindings)?);
+                    text.push(' ');
+                }
+                self.out_lines.push(text);
+            } else if let RhsAction::Other { head, .. } = action {
+                return Err(unimpl(format!("RHS {head} needs a Lisp evaluator")));
+            }
+        }
+        // Explicit actions in RHS order, then implicit harvest clears.
+        for action in &prod.rhs {
+            match action {
+                RhsAction::Modify { buffer, slots } => {
+                    let mut sub = Vec::new();
+                    for (s, p) in slots {
+                        sub.push((s.clone(), self.subst_req(p, bindings)?));
+                    }
+                    self.now(
+                        Prio::Num(100),
+                        explicit_out(self.cfg.rhst),
+                        Event::ModBuffer {
+                            buffer: buffer.clone(),
+                            slots: sub,
+                        },
+                    );
+                }
+                RhsAction::Request { buffer, spec } => {
+                    let concrete = self.concretize(spec, bindings)?;
+                    self.now(
+                        Prio::Num(50),
+                        explicit_out(self.cfg.rhst),
+                        Event::ModuleRequest {
+                            buffer: buffer.clone(),
+                            spec: concrete,
+                        },
+                    );
+                }
+                RhsAction::Clear { buffer } => {
+                    self.now(
+                        Prio::Num(10),
+                        Out::Medium,
+                        Event::ClearBuffer {
+                            buffer: buffer.clone(),
+                        },
+                    );
+                }
+                RhsAction::Output { .. } | RhsAction::Other { .. } => {}
+            }
+        }
+        for buffer in &self.exec_prods[prod_idx].implicit_clears.clone() {
+            self.now(
+                Prio::Num(10),
+                Out::Medium,
+                Event::ClearBuffer {
+                    buffer: buffer.clone(),
+                },
+            );
+        }
+        self.now(Prio::Min, Out::Medium, Event::ConflictResolution);
+        Ok(())
+    }
+
+    fn start_retrieval(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        let (want_type, want_slots) = match &spec {
+            NewChunk::Named(n) => {
+                return Err(unimpl(format!("single-item retrieval request {n}")));
+            }
+            NewChunk::Instance(_) => {
+                return Err(bad(
+                    "retrieval request cannot be a buffer instance".to_string()
+                ));
+            }
+            NewChunk::Spec { ctype, slots } => (ctype.clone(), slots.clone()),
+        };
+        let mut best_a: Option<f32> = None;
+        let mut tied: Vec<ChunkInst> = Vec::new();
+        for idx in 0..self.dm.len() {
+            let c = self.dm[idx].clone();
+            if !want_type.is_empty() && c.ctype != want_type {
+                continue;
+            }
+            let mut ok = true;
+            for (s, v) in &want_slots {
+                if &c.get(s) != v {
+                    ok = false;
+                    break;
+                }
+            }
+            if !ok {
+                continue;
+            }
+            // A = base-level + activation noise (mas/mp unimplemented,
+            // default off). Base-level comes from the decay equation
+            // when :bll is set, else blc (or a chunk override, which no
+            // golden uses). Drawn per candidate in DM order, exactly as
+            // `start-retrieval` computes activation over the chunk set.
+            let base = match self.cfg.bll {
+                Some(bll) => {
+                    let (refs, creation, count) = {
+                        let h = &self.hist[idx];
+                        (h.refs.clone(), h.creation_ms, h.count)
+                    };
+                    if count == 0 {
+                        // Mirrors the Lisp warning path; unreachable via
+                        // merge/add (both start count at 1).
+                        -999999.0
+                    } else {
+                        self.cfg.blc
+                            + bl_equation(
+                                self.time_ms,
+                                &refs,
+                                creation,
+                                bll,
+                                &self.cfg.ol,
+                                self.cfg.act_scale,
+                            )
+                    }
+                }
+                None => self.cfg.blc,
+            };
+            let a = base
+                + match self.cfg.ans {
+                    Some(s) => self.rng.noise(s),
+                    None => 0.0,
+                };
+            match best_a {
+                None => {
+                    best_a = Some(a);
+                    tied = vec![c.clone()];
+                }
+                Some(cur) if a > cur => {
+                    best_a = Some(a);
+                    tied = vec![c.clone()];
+                }
+                Some(cur) if a == cur => tied.push(c.clone()),
+                _ => {}
+            }
+        }
+        let best = match tied.len() {
+            0 => None,
+            1 => Some(tied.into_iter().next().unwrap()),
+            _ if self.cfg.er => {
+                let i = self.rng.random_int(tied.len() as u64) as usize;
+                Some(tied.into_iter().nth(i).unwrap())
+            }
+            // Deterministic tie-break: lowest chunk name first
+            // (`(sort best 'string<)` then car).
+            _ => {
+                tied.sort_by(|a, b| {
+                    a.name
+                        .as_deref()
+                        .unwrap_or("")
+                        .cmp(b.name.as_deref().unwrap_or(""))
+                });
+                Some(tied.into_iter().next().unwrap())
+            }
+        };
+        let act = best_a.unwrap_or(0.0);
+        let gen = self.dm_gen;
+        match best {
+            None => {
+                let wait = failure_wait(&self.cfg);
+                let at = self.time_ms + wait;
+                self.push(at, Prio::Num(0), Out::Low, Event::RetrievalFailure { gen });
+            }
+            Some(_) if self.cfg.esc && act < self.cfg.rt => {
+                let wait = failure_wait(&self.cfg);
+                let at = self.time_ms + wait;
+                self.push(at, Prio::Num(0), Out::Low, Event::RetrievalFailure { gen });
+            }
+            Some(winner) => {
+                let name = winner.name.clone().unwrap_or_default();
+                let wait = if self.cfg.esc {
+                    latency(self.cfg.lf_ms, self.cfg.le, act)
+                } else {
+                    0
+                };
+                let at = self.time_ms + wait;
+                self.push(
+                    at,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::RetrievedChunk { name, gen },
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Failure latency uses the threshold: `round(lf * e^(-le*rt))`.
+fn failure_wait(cfg: &Config) -> i64 {
+    if cfg.esc {
+        latency(cfg.lf_ms, cfg.le, cfg.rt)
+    } else {
+        0
+    }
+}
+
+/// `round(lf_ms * e^(-le*A))`, all single-float like the Lisp
+/// (`compute-activation-latency`; `:lf` is stored as integer ms).
+/// Rounds halves to even, as CL `round` does (units table ROUND rows).
+fn latency(lf_ms: i64, le: f32, act: f32) -> i64 {
+    lisp_round((lf_ms as f32) * (-le * act).exp())
+}
+
+impl Engine {
+    /// Device request routing for the visual buffer: only
+    /// move-attention in M5a (plus finst assignment later).
+    fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        let (slots, ctype_ok) = match &spec {
+            NewChunk::Spec { ctype, slots } => (slots.clone(), ctype.is_empty()),
+            _ => return Err(unimpl("non-spec visual request")),
+        };
+        let _ = ctype_ok;
+        let mut cmd: Option<String> = None;
+        let mut screen_pos: Option<String> = None;
+        let mut scale: Option<String> = None;
+        for (s, v) in &slots {
+            match (s.as_str(), v) {
+                ("CMD", Value::Sym(c)) => cmd = Some(c.clone()),
+                ("SCREEN-POS", Value::Sym(n)) => screen_pos = Some(n.clone()),
+                ("SCALE", Value::Sym(n)) => scale = Some(n.clone()),
+                got => {
+                    return Err(unimpl(format!("visual request slot {got:?}")));
+                }
+            }
+        }
+        match cmd.as_deref() {
+            Some("MOVE-ATTENTION") => {
+                let loc = screen_pos
+                    .ok_or_else(|| bad("move-attention without screen-pos".to_string()))?;
+                if !self.loc_known(&loc) {
+                    return Err(bad(format!("screen-pos {loc} is not a visual location")));
+                }
+                let _ = scale;
+                self.now(Prio::Num(0), Out::Always, Event::MoveAttention { loc });
+                Ok(())
+            }
+            got => Err(unimpl(format!("visual command {got:?}"))),
+        }
+    }
+
+    /// Manual request routing: only press-key in M5a.
+    fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        let slots = match &spec {
+            NewChunk::Spec { slots, .. } => slots.clone(),
+            _ => return Err(unimpl("non-spec manual request")),
+        };
+        let mut cmd: Option<String> = None;
+        let mut key: Option<String> = None;
+        for (s, v) in &slots {
+            match (s.as_str(), v) {
+                ("CMD", Value::Sym(c)) => cmd = Some(c.clone()),
+                ("KEY", Value::Sym(k)) => key = Some(k.clone()),
+                ("KEY", Value::Str(k)) => key = Some(k.clone()),
+                got => {
+                    return Err(unimpl(format!("manual request slot {got:?}")));
+                }
+            }
+        }
+        match (cmd.as_deref(), key) {
+            (Some("PRESS-KEY"), Some(k)) => {
+                Self::key_spec(&k)?;
+                let req_ms = self.time_ms;
+                self.now(Prio::Num(0), Out::Low, Event::PressKey { key: k, req_ms });
+                Ok(())
+            }
+            got => Err(unimpl(format!("manual request {got:?}"))),
+        }
+    }
+
+    fn loc_known(&self, loc: &str) -> bool {
+        self.vl_copies.contains_key(loc)
+            || self.features.iter().any(|f| f.name == loc)
+            || self
+                .buffers
+                .get("VISUAL-LOCATION")
+                .and_then(|b| b.chunk.as_ref())
+                .and_then(|c| c.name.as_deref())
+                == Some(loc)
+    }
+
+    /// A location name (feature base, request copy, or buffer chunk) to
+    /// its feature index.
+    fn resolve_loc(&self, loc: &str) -> Result<usize, EngineError> {
+        if let Some(&idx) = self.vl_copies.get(loc) {
+            return Ok(idx);
+        }
+        if let Some(idx) = self.features.iter().position(|f| f.name == loc) {
+            return Ok(idx);
+        }
+        Err(bad(format!("screen-pos {loc} is not a visual location")))
+    }
+
+    /// proc-display: move due device texts into the visicon, stuff the
+    /// visual-location buffer if empty, and note the update.
+    fn proc_display(&mut self) -> Result<(), EngineError> {
+        let now = self.time_ms;
+        let mut due = Vec::new();
+        self.pending_texts.retain(|t| {
+            if t.at_ms <= now {
+                due.push(t.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for t in due {
+            let n = self.feat_seq;
+            self.feat_seq += 1;
+            self.features.push(Feature {
+                name: format!("VISUAL-LOCATION{n}"),
+                kind: "TEXT".to_string(),
+                value: t.text.clone(),
+                x: t.x,
+                y: t.y,
+                tstamp_ms: now,
+                attended: false,
+            });
+        }
+        let empty = self
+            .buffers
+            .get("VISUAL-LOCATION")
+            .and_then(|b| b.chunk.as_ref())
+            .is_none();
+        if empty {
+            if let Some(feat) = self.newest_feature() {
+                let inst = ChunkInst {
+                    name: Some(feat.name.clone()),
+                    ctype: "VISUAL-LOCATION".to_string(),
+                    slots: feat.loc_slots(),
+                };
+                self.now(
+                    Prio::Num(10),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "VISUAL-LOCATION".to_string(),
+                        chunk: NewChunk::Instance(inst),
+                        requested: false,
+                    },
+                );
+            }
+        }
+        self.now(Prio::Num(0), Out::Medium, Event::VisiconUpdate);
+        // Schedule the next wave if items remain.
+        if let Some(next) = self.pending_texts.first() {
+            let at = next.at_ms;
+            self.push(at, Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        }
+        Ok(())
+    }
+
+    fn newest_feature(&mut self) -> Option<Feature> {
+        let top = self.features.iter().map(|f| f.tstamp_ms).max()?;
+        let mut names: Vec<String> = self
+            .features
+            .iter()
+            .filter(|f| f.tstamp_ms == top)
+            .map(|f| f.name.clone())
+            .collect();
+        names.sort();
+        // `random-item` consumes exactly one draw, even for singletons.
+        let pick = self.rng_draw(names.len());
+        let want = names[pick].clone();
+        self.features.iter().find(|f| f.name == want).cloned()
+    }
+
+    /// Random index uniform in 0..n, always consuming exactly one draw
+    /// (`random-item` draws even for singletons).
+    fn rng_draw(&mut self, n: usize) -> usize {
+        self.rng.random_int(n as u64) as usize
+    }
+
+    /// Find-location: newest-tstamp candidates, random among them,
+    /// construct a fresh (dedup-named) location chunk into the buffer.
+    fn find_location(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        let want = match &spec {
+            NewChunk::Spec { slots, .. } => slots.clone(),
+            _ => return Err(unimpl("non-spec visual-location request")),
+        };
+        let mut cands: Vec<Feature> = Vec::new();
+        for f in &self.features {
+            if loc_matches(f, &want)? {
+                cands.push(f.clone());
+            }
+        }
+        if cands.is_empty() {
+            self.buffer_mut("VISUAL-LOCATION").failed = true;
+            self.now(Prio::Num(0), Out::Low, Event::FindLocFailure);
+            return Ok(());
+        }
+        let top = cands.iter().map(|f| f.tstamp_ms).max().unwrap();
+        let mut names: Vec<String> = cands
+            .iter()
+            .filter(|f| f.tstamp_ms == top)
+            .map(|f| f.name.clone())
+            .collect();
+        names.sort();
+        // `random-item` consumes exactly one draw, even for singletons.
+        let pick = self.rng_draw(names.len());
+        let feat = cands
+            .iter()
+            .find(|f| f.name == names[pick])
+            .cloned()
+            .unwrap();
+        // The found feature chunk itself fills the buffer (find-or-build
+        // reuses it: the golden shows the same VISUAL-LOCATION0 name the
+        // onset stuffing used, not a deduped copy).
+        let inst = ChunkInst {
+            name: Some(feat.name.clone()),
+            ctype: "VISUAL-LOCATION".to_string(),
+            slots: feat.loc_slots(),
+        };
+        self.buffer_mut("VISUAL-LOCATION").failed = false;
+        self.now(
+            Prio::Num(10),
+            Out::Low,
+            Event::SetBuffer {
+                buffer: "VISUAL-LOCATION".to_string(),
+                chunk: NewChunk::Instance(inst),
+                requested: true,
+            },
+        );
+        Ok(())
+    }
+
+    /// Attention landed: build the TEXT object and fill the buffer.
+    fn encoding_complete(&mut self, loc: String) -> Result<(), EngineError> {
+        let idx = self.resolve_loc(&loc)?;
+        let feat = self.features[idx].clone();
+        let k = self.obj_built.entry(feat.kind.clone()).or_insert(0);
+        let name = format!("{}{}", feat.kind, *k);
+        *k += 1;
+        let inst = ChunkInst {
+            name: Some(name),
+            ctype: "VISUAL-OBJECT".to_string(),
+            slots: vec![("VALUE".to_string(), Value::Str(feat.value.clone()))],
+        };
+        if let Ok(idx) = self.resolve_loc(&loc) {
+            self.features[idx].attended = true;
+        }
+        self.visual_busy = false;
+        self.now(
+            Prio::Num(10),
+            Out::Low,
+            Event::SetBuffer {
+                buffer: "VISUAL".to_string(),
+                chunk: NewChunk::Instance(inst),
+                requested: true,
+            },
+        );
+        Ok(())
+    }
+}
+
+/// Screen-pos name a location chunk carries after attention bookkeeping.
+/// M5a observes `VISUAL-LOCATION0-1`: constructions after the first gain
+/// a `-k` suffix. (The exact naming-module rule behind the suffix is
+/// verified by goldens, not derived here.)
+impl Feature {
+    fn loc_slots(&self) -> Vec<(String, Value)> {
+        vec![
+            ("KIND".to_string(), Value::Sym(self.kind.clone())),
+            ("VALUE".to_string(), Value::Str(self.value.clone())),
+            ("SCREEN-X".to_string(), Value::Num(self.x as f64)),
+            ("SCREEN-Y".to_string(), Value::Num(self.y as f64)),
+        ]
+    }
+}
+
+/// Visual-location request matching over features. Unconstrained
+/// requests match everything; unknown slots error.
+fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineError> {
+    for (s, v) in want {
+        match (s.as_str(), v) {
+            ("ISA", _) => {}
+            ("ATTENDED", Value::Sym(x)) if x == "T" => {
+                if !feat.attended {
+                    return Ok(false);
+                }
+            }
+            ("ATTENDED", Value::Sym(x)) if x == "NIL" => {
+                if feat.attended {
+                    return Ok(false);
+                }
+            }
+            ("ATTENDED", _) => {
+                return Err(unimpl("non-t/nil :attended"));
+            }
+            ("KIND", Value::Sym(k)) => {
+                if *k != feat.kind {
+                    return Ok(false);
+                }
+            }
+            ("VALUE", Value::Str(val)) => {
+                if *val != feat.value {
+                    return Ok(false);
+                }
+            }
+            ("VALUE", Value::Sym(val)) => {
+                if *val != feat.value {
+                    return Ok(false);
+                }
+            }
+            ("SCREEN-X", Value::Num(x)) => {
+                if (*x as i64) != feat.x {
+                    return Ok(false);
+                }
+            }
+            ("SCREEN-Y", Value::Num(y)) => {
+                if (*y as i64) != feat.y {
+                    return Ok(false);
+                }
+            }
+            got => {
+                return Err(unimpl(format!("visual-location slot {got:?}")));
+            }
+        }
+    }
+    Ok(true)
+}
+
+/// CL `round`: fractional .5 goes to the even neighbor.
+fn lisp_round(x: f32) -> i64 {
+    let f = x.floor();
+    let d = x - f;
+    if d < 0.5 {
+        f as i64
+    } else if d > 0.5 {
+        f as i64 + 1
+    } else {
+        let fi = f as i64;
+        if fi % 2 == 0 {
+            fi
+        } else {
+            fi + 1
+        }
+    }
+}
+
+/// Optimized-learning flag for [`bl_equation`]: off, numeric, or `t`.
+#[derive(Debug, Clone, PartialEq)]
+enum Ol {
+    Off,
+    Num(f64),
+    On,
+}
+
+/// Generalized base-level decay (`compute-references`,
+/// declarative-memory.lisp:2695), all single-float. Pure: takes the
+/// clock, reference/creation times in ms, decay, OL flag and the
+/// `:bll`-derived act-scale. Chunks with zero references never reach
+/// here (the caller returns -999999.0 with a warning instead).
+fn bl_equation(
+    now_ms: i64,
+    refs: &[i64],
+    creation_ms: i64,
+    decay: f32,
+    ol: &Ol,
+    act_scale: f32,
+) -> f32 {
+    let mut value = 0.0f32;
+    let mut last_ref = 0i64;
+    for r in refs {
+        let lag = (now_ms - r).max(50);
+        value += (lag as f32).powf(-decay);
+        last_ref = *r;
+    }
+    match ol {
+        Ol::Off => value.ln() + act_scale,
+        Ol::Num(ol) => {
+            if refs.len() as f64 > *ol {
+                // (+ 1.0 minus-decay)
+                let denom = 1.0f32 - decay;
+                let a = (now_ms - creation_ms).max(0) as f32;
+                let b = (now_ms - last_ref).max(0) as f32;
+                value += ((refs.len() as f32 - *ol as f32) * (a.powf(denom) - b.powf(denom)))
+                    / ((last_ref - creation_ms).max(50) as f32 * denom);
+            }
+            value.ln() + act_scale
+        }
+        Ol::On => {
+            // NOTE: unlike the other branches, this one adds NO
+            // act-scale (declarative-memory.lisp:2725). The units table
+            // caught an early draft that added it.
+            // ms->seconds is (/ x 1000.0), single-float.
+            let t = ((now_ms - creation_ms).max(0) as f32 / 1000.0).max(0.05);
+            let denom = 1.0f32 - decay;
+            (refs.len() as f32 * t.powf(-decay) / denom).ln()
+        }
+    }
+}
+
+/// Match one slot test; returns whether it passes.
+fn test_value(
+    pat: &Pattern,
+    got: &Value,
+    b: &mut Bindings,
+    negated: bool,
+) -> Result<bool, EngineError> {
+    let ok = match pat {
+        Pattern::Nil => *got == Value::Nil,
+        Pattern::Var(v) => match b.get(v) {
+            Some(prev) => prev == got,
+            None => {
+                b.insert(v.clone(), got.clone());
+                true
+            }
+        },
+        Pattern::Sym(s) => *got == Value::Sym(s.clone()),
+        Pattern::Num(x) => *got == Value::Num(*x),
+        Pattern::Str(s) => *got == Value::Str(s.clone()),
+    };
+    Ok(if negated { !ok } else { ok })
+}
+
+impl Engine {
+    fn show_output_arg(&self, a: &crate::sexpr::Sexp, b: &Bindings) -> Result<String, EngineError> {
+        use crate::sexpr::Sexp::*;
+        match a {
+            // `!output! (=num1)`: one-element lists hold the value.
+            List(items) if items.len() == 1 => self.show_output_arg(&items[0], b),
+            List(items) => {
+                let mut s = String::new();
+                for it in items {
+                    s.push_str(&self.show_output_arg(it, b)?);
+                    s.push(' ');
+                }
+                Ok(s.trim_end().to_string())
+            }
+            Sym(v) if v.starts_with('=') => self
+                .subst(&Pattern::Var(v[1..].to_string()), b)
+                .map(|val| val.show())
+                .map_err(|_| bad(format!("unbound output variable {v}"))),
+            Sym(v) => Ok(v.clone()),
+            Int(i) => Ok(i.to_string()),
+            Float(x) => Ok(Value::Num(*x).show()),
+            Str(s) => Ok(format!("{s:?}")),
+        }
+    }
+}
+
+fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
+    match desc {
+        ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
+        ChunkDesc::Spec { ctype, slots } => {
+            let mut out = Vec::new();
+            for (s, p) in slots {
+                out.push((s.clone(), Value::from_pattern(p)?));
+            }
+            Ok(NewChunk::Spec {
+                ctype: ctype.clone(),
+                slots: out,
+            })
+        }
+    }
+}
+
+impl Engine {
+    fn concretize(&mut self, spec: &ChunkDesc, b: &Bindings) -> Result<NewChunk, EngineError> {
+        match spec {
+            ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
+            ChunkDesc::Spec { ctype, slots } => {
+                let mut out = Vec::new();
+                for (s, p) in slots {
+                    out.push((s.clone(), self.subst_req(p, b)?));
+                }
+                Ok(NewChunk::Spec {
+                    ctype: ctype.clone(),
+                    slots: out,
+                })
+            }
+        }
+    }
+
+    /// Request/modify-spec substitution: struct-valued `=buffer`
+    /// references are copied with a `-k` suffix (as `Move-attention
+    /// VISUAL-LOCATION0-1` shows); plain variables and literals pass
+    /// through. The copy resolves back via `vl_copies`.
+    fn subst_req(&mut self, p: &Pattern, b: &Bindings) -> Result<Value, EngineError> {
+        match p {
+            Pattern::Var(v) => {
+                if let Some(val) = b.get(v) {
+                    return Ok(val.clone());
+                }
+                if let Some(chunk) = self.buffers.get(v).and_then(|buf| buf.chunk.as_ref()) {
+                    if let Some(name) = &chunk.name {
+                        let base = name.clone();
+                        let n = self.vl_built.entry(base.clone()).or_insert(0);
+                        *n += 1;
+                        let copy = format!("{base}-{n}");
+                        if let Some(idx) = self.features.iter().position(|f| f.name == base) {
+                            self.vl_copies.insert(copy.clone(), idx);
+                        }
+                        return Ok(Value::Sym(copy));
+                    }
+                }
+                Err(bad(format!("unbound variable ={v} on RHS")))
+            }
+            other => Value::from_pattern(other),
+        }
+    }
+}
+
+/// Strict harvesting + request rule
+/// (`support/production-parsing.lisp:1323`): buffers tested on the LHS
+/// that no RHS action targets, plus requested buffers without an
+/// explicit clear, are cleared when the production fires.
+fn implicit_clears(prod: &Production, exempt: &[String]) -> Vec<String> {
+    let mut tested: Vec<String> = Vec::new();
+    for item in &prod.lhs {
+        match item {
+            LhsItem::Match { buffer, .. } => {
+                if !tested.contains(buffer) {
+                    tested.push(buffer.clone());
+                }
+            }
+            LhsItem::Query { buffer, queries } => {
+                if queries
+                    .iter()
+                    .any(|(a, v)| a == "BUFFER" && *v == Pattern::Sym("FAILURE".into()))
+                    && !tested.contains(buffer)
+                {
+                    tested.push(buffer.clone());
+                }
+            }
+        }
+    }
+    let mut targeted: Vec<(char, String)> = Vec::new();
+    for a in &prod.rhs {
+        match a {
+            RhsAction::Modify { buffer, .. } => targeted.push(('=', buffer.clone())),
+            RhsAction::Request { buffer, .. } => targeted.push(('+', buffer.clone())),
+            RhsAction::Clear { buffer } => targeted.push(('-', buffer.clone())),
+            RhsAction::Output { .. } | RhsAction::Other { .. } => {}
+        }
+    }
+    let mut clears: Vec<String> = Vec::new();
+    for t in &tested {
+        // Harvest rule skips do-not-harvest buffers; the request rule
+        // below does not.
+        if exempt.contains(t) {
+            continue;
+        }
+        if !targeted.iter().any(|(_, b)| b == t) && !clears.contains(t) {
+            clears.push(t.clone());
+        }
+    }
+    for (op, t) in &targeted {
+        if *op == '+' && !targeted.iter().any(|(o, b)| *o == '-' && b == t) && !clears.contains(t) {
+            clears.push(t.clone());
+        }
+    }
+    clears
+}
+
+/// Buffers gaining an implicit `?buffer> state free` test: RHS `+`
+/// (or `*`) requests whose target is not exempt and has no explicit
+/// `?` test on the LHS (`production-parsing.lisp:1287`). Appended to
+/// the LHS, matched, and emitted as query-buffer selection events.
+fn implicit_queries(prod: &Production, exempt: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for a in &prod.rhs {
+        if let RhsAction::Request { buffer, .. } = a {
+            let explicit = prod.lhs.iter().any(|item| match item {
+                LhsItem::Query { buffer: b, .. } => b == buffer,
+                _ => false,
+            });
+            if !exempt.contains(buffer) && !explicit && !out.contains(buffer) {
+                out.push(buffer.clone());
+            }
+        }
+    }
+    out
+}
+
+/// Explicit modify/request output: `(procedural-rhst prod)` is `t` by
+/// default, and `t` shows only at high detail. With `:rhst nil` the
+/// event is hidden entirely.
+fn explicit_out(rhst: bool) -> Out {
+    if rhst {
+        Out::Always
+    } else {
+        Out::Never
+    }
+}
+
+impl ChunkInst {
+    fn show(&self) -> String {
+        match &self.name {
+            Some(n) => n.clone(),
+            None => {
+                let mut s = format!("(ISA {}", self.ctype);
+                for (k, v) in &self.slots {
+                    s.push(' ');
+                    s.push_str(k);
+                    s.push(' ');
+                    s.push_str(&v.show());
+                }
+                s.push(')');
+                s
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn m0(name: &str) -> Model {
+        let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../actr7.x/tutorial/unit1")
+            .join(name);
+        let ms = crate::model::load_models(&p).unwrap();
+        assert_eq!(ms.len(), 1);
+        ms.into_iter().next().unwrap()
+    }
+
+    fn inst(ctype: &str, slots: Vec<(&str, Value)>) -> ChunkInst {
+        ChunkInst {
+            name: None,
+            ctype: ctype.into(),
+            slots: slots.into_iter().map(|(s, v)| (s.into(), v)).collect(),
+        }
+    }
+
+    fn sym(s: &str) -> Value {
+        Value::Sym(s.into())
+    }
+
+    #[test]
+    fn queue_orders_time_then_priority_then_fifo() {
+        let m = m0("count.lisp");
+        let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        e.queue.clear();
+        e.seq = 0;
+        let rd = |b: &str| Event::BufferRead { buffer: b.into() };
+        e.push(100, Prio::Num(0), Out::Low, rd("A"));
+        e.push(50, Prio::Min, Out::Low, rd("B"));
+        e.push(50, Prio::Num(10), Out::Low, rd("C"));
+        e.push(50, Prio::Num(10), Out::Low, rd("D"));
+        e.push(50, Prio::Max, Out::Low, rd("E"));
+        e.push(50, Prio::Num(0), Out::Low, rd("F"));
+        let mut order = Vec::new();
+        while let Some(q) = e.queue.pop() {
+            match q.event {
+                Event::BufferRead { buffer } => order.push(buffer),
+                _ => unreachable!(),
+            }
+        }
+        assert_eq!(order, vec!["E", "C", "D", "F", "B", "A"]);
+    }
+
+    #[test]
+    fn harvest_rules() {
+        let exempt: Vec<String> = vec!["GOAL".to_string()];
+        let m = m0("count.lisp");
+        let clears =
+            |n: &str| implicit_clears(m.productions.iter().find(|p| p.name == n).unwrap(), &exempt);
+        // START tests only =goal> but requests retrieval: request rule.
+        assert_eq!(clears("START"), vec!["RETRIEVAL".to_string()]);
+        // INCREMENT tests both, requests retrieval: request rule (no double).
+        assert_eq!(clears("INCREMENT"), vec!["RETRIEVAL".to_string()]);
+        // STOP has explicit -goal>: only the untested-by-rhs retrieval.
+        assert_eq!(clears("STOP"), vec!["RETRIEVAL".to_string()]);
+        let s = m0("semantic.lisp");
+        let dv = s
+            .productions
+            .iter()
+            .find(|p| p.name == "DIRECT-VERIFY")
+            .unwrap();
+        assert_eq!(implicit_clears(dv, &exempt), vec!["RETRIEVAL".to_string()]);
+        // Goal is harvest-exempt even when tested-but-untargeted.
+        use crate::model::Pattern as Pat;
+        use crate::model::{LhsItem, Production, RhsAction, SlotTest};
+        let probe = Production {
+            name: "PROBE".to_string(),
+            lhs: vec![LhsItem::Match {
+                buffer: "GOAL".to_string(),
+                tests: vec![SlotTest {
+                    slot: "ISA".to_string(),
+                    value: Pat::Sym("GOAL".to_string()),
+                    negated: false,
+                }],
+            }],
+            rhs: vec![RhsAction::Request {
+                buffer: "VISUAL".to_string(),
+                spec: crate::model::ChunkDesc::Spec {
+                    ctype: String::new(),
+                    slots: vec![],
+                },
+            }],
+        };
+        let no_exempt: Vec<String> = vec![];
+        assert_eq!(
+            implicit_clears(&probe, &no_exempt),
+            vec!["GOAL".to_string(), "VISUAL".to_string()]
+        );
+        assert_eq!(implicit_clears(&probe, &exempt), vec!["VISUAL".to_string()]);
+    }
+
+    #[test]
+    fn matcher_vars_nil_negation() {
+        let m = m0("count.lisp");
+        let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        // goal-focus state: COUNT slot absent (= nil for tests).
+        e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
+            "COUNT-FROM",
+            vec![("START", sym("TWO")), ("END", sym("FOUR"))],
+        ));
+        let start = e.model.productions[0].clone();
+        let b = e
+            .match_prod(&start, &[])
+            .unwrap()
+            .expect("START should match");
+        assert_eq!(b.get("NUM1"), Some(&sym("TWO")));
+        // INCREMENT needs =retrieval>: absent, no match.
+        let inc = e.model.productions[1].clone();
+        assert!(e.match_prod(&inc, &[]).unwrap().is_none());
+        // Retrieval TWO (number TWO next THREE): full match, NUM2=THREE.
+        e.buffers.get_mut("RETRIEVAL").unwrap().chunk = Some(inst(
+            "NUMBER",
+            vec![("NUMBER", sym("TWO")), ("NEXT", sym("THREE"))],
+        ));
+        // Goal still count-less: `count =num1` fails on nil... START's
+        // `count nil` passes but increment needs a real count.
+        assert!(e.match_prod(&inc, &[]).unwrap().is_none());
+        // Advance the goal as START's firing would: count=TWO.
+        e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
+            "COUNT-FROM",
+            vec![
+                ("START", sym("TWO")),
+                ("END", sym("FOUR")),
+                ("COUNT", sym("TWO")),
+            ],
+        ));
+        let b = e.match_prod(&inc, &[]).unwrap().expect("INCREMENT matches");
+        assert_eq!(b.get("NUM1"), Some(&sym("TWO")));
+        assert_eq!(b.get("NUM2"), Some(&sym("THREE")));
+        // STOP needs count=end: not yet.
+        let stop = e.model.productions[2].clone();
+        assert!(e.match_prod(&stop, &[]).unwrap().is_none());
+    }
+
+    #[test]
+    fn matcher_failure_query() {
+        let m = m0("semantic.lisp");
+        let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
+            "IS-MEMBER",
+            vec![
+                ("OBJECT", sym("CANARY")),
+                ("CATEGORY", sym("BIRD")),
+                ("JUDGMENT", sym("PENDING")),
+            ],
+        ));
+        let fail = e.model.productions[3].clone();
+        // Retrieval merely empty is not failure.
+        assert!(e.match_prod(&fail, &[]).unwrap().is_none());
+        e.buffers.get_mut("RETRIEVAL").unwrap().failed = true;
+        assert!(e.match_prod(&fail, &[]).unwrap().is_some());
+    }
+
+    /// Row-by-row against `golden/units/tables/latency.sexp`: 802
+    /// `compute-activation-latency` points plus CL half-even ROUND probes.
+    #[test]
+    fn latency_matches_lisp_table() {
+        use crate::sexpr::{parse_all, Sexp};
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/units/tables/latency.sexp");
+        let src = std::fs::read_to_string(&path).unwrap();
+        let forms = parse_all(&src).unwrap();
+        let (mut lat, mut rnd) = (0, 0);
+        for f in &forms {
+            let items = match f {
+                Sexp::List(it) => it,
+                _ => panic!("table row not a list: {f:?}"),
+            };
+            match items.as_slice() {
+                [Sexp::Sym(h), Sexp::Float(a), Sexp::Int(lf), Sexp::Float(le), Sexp::Int(want)]
+                    if h == "LAT" =>
+                {
+                    assert_eq!(latency(*lf, *le as f32, *a as f32), *want, "row {f:?}");
+                    lat += 1;
+                }
+                [Sexp::Sym(h), Sexp::Float(x), Sexp::Int(want)] if h == "ROUND" => {
+                    assert_eq!(lisp_round(*x as f32), *want, "row {f:?}");
+                    rnd += 1;
+                }
+                row => panic!("bad table row: {row:?}"),
+            }
+        }
+        assert!(lat >= 800 && rnd >= 7, "table shrank: lat={lat} rnd={rnd}");
+    }
+
+    /// Row-by-row against `golden/units/tables/base-level.sexp`:
+    /// act-scale derivation plus the decay equation over three OL
+    /// modes. Compared with epsilon (f32 `powf`/`ln` may differ 1ulp
+    /// across libms); the table pins the equation, not the last bit.
+    #[test]
+    fn base_level_matches_lisp_table() {
+        use crate::sexpr::{parse_all, Sexp};
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/units/tables/base-level.sexp");
+        let src = std::fs::read_to_string(&path).unwrap();
+        let forms = parse_all(&src).unwrap();
+        let (mut acts, mut rows, mut now_ms) = (0, 0, 0i64);
+        for f in &forms {
+            let items = match f {
+                Sexp::List(it) => it,
+                _ => panic!("table row not a list: {f:?}"),
+            };
+            match items.as_slice() {
+                [Sexp::Sym(h), Sexp::Int(t)] if h == "NOW" => now_ms = *t,
+                [Sexp::Sym(h), Sexp::Float(bll), Sexp::Float(want)] if h == "ACTSCALE" => {
+                    // (log (expt 1/1000 (- bll))): ratio coerced to single.
+                    let got = (0.001f32).powf(-(*bll as f32)).ln();
+                    assert!(
+                        (got - *want as f32).abs() <= 1e-6,
+                        "ACTSCALE {bll}: got {got}, want {want}"
+                    );
+                    acts += 1;
+                }
+                [Sexp::Sym(h), Sexp::Float(bll), ol, Sexp::Float(scale), Sexp::Int(n), Sexp::Int(ct), rest @ ..]
+                    if h == "BL" =>
+                {
+                    let ol = match ol {
+                        Sexp::Sym(s) if s == "NIL" => Ol::Off,
+                        Sexp::Int(i) => Ol::Num(*i as f64),
+                        Sexp::Sym(s) if s == "T" => Ol::On,
+                        got => panic!("bad OL flag: {got:?}"),
+                    };
+                    assert!(rest.len() >= 1, "BL row missing RESULT: {f:?}");
+                    let (refs_s, res_s) = rest.split_at(rest.len() - 1);
+                    let refs: Vec<i64> = refs_s
+                        .iter()
+                        .map(|r| match r {
+                            Sexp::Int(t) => *t,
+                            got => panic!("bad ref time: {got:?}"),
+                        })
+                        .collect();
+                    let want = match &res_s[0] {
+                        Sexp::Float(x) => *x as f32,
+                        got => panic!("bad RESULT: {got:?}"),
+                    };
+                    assert_eq!(refs.len(), *n as usize, "row {f:?}");
+                    let got = bl_equation(now_ms, &refs, *ct, *bll as f32, &ol, *scale as f32);
+                    let tol = 1e-5 * want.abs().max(1.0);
+                    assert!(
+                        (got - want).abs() <= tol,
+                        "BL row {f:?}: got {got}, want {want}"
+                    );
+                    rows += 1;
+                }
+                row => panic!("bad table row: {row:?}"),
+            }
+        }
+        assert!(
+            acts >= 2 && rows >= 24,
+            "table shrank: acts={acts} rows={rows}"
+        );
+    }
+}

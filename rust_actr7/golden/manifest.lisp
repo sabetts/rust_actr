@@ -11,4 +11,16 @@
  ("count"    "tutorial;unit1;count.lisp"    (100 0) 10)
  ("semantic" "tutorial;unit1;semantic.lisp" (100 0) 10)
  ("addition" "tutorial;unit1;addition.lisp" (100 0) 10)
+ ;; Synthetic (project-authored, in user-loads/): count with :ans 0.5
+ ;; exercises activation noise + noisy latencies end to end.
+ ("noisy-count" "user-loads;noisy-count.lisp" (100 0) 10)
+ ;; Same model, seed (7 0): two successful noisy retrievals at non-50ms
+ ;; latencies, then a threshold failure.
+ ("noisy-count-7" "user-loads;noisy-count.lisp" (7 0) 10)
+ ;; Base-level learning, no noise: deterministic rising activation as
+ ;; harvests add references (exercises merge-on-clear + decay equation).
+ ("bll-count" "user-loads;bll-count.lisp" (100 0) 10)
+ ;; Static single-item visual task (model + task files + device sidecar):
+ ;; find, attend, read, press-key. First device golden.
+ ("attend" "user-loads;attend-test.lisp" (100 0) 10 "user-loads;attend-task.lisp")
 )

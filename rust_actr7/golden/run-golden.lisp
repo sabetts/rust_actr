@@ -31,19 +31,35 @@
   #-sbcl (error "golden driver currently requires SBCL (missing env ~a)" name))
 
 (defun golden-run-one (entry outdir)
-  (destructuring-bind (name subpath seed runtime) entry
+  (destructuring-bind (name subpath seed runtime &optional taskpath) entry
     (let ((trace-path (concatenate 'string outdir "/" name ".trace"))
           (meta-path (concatenate 'string outdir "/" name ".meta")))
       (when (probe-file trace-path)
         (delete-file trace-path))
       (handler-case
           (progn
-            (load-act-r-model (concatenate 'string "ACT-R:" subpath))
-            ;; NB: sgp is a macro that quotes its args
-            ;; (framework/parameters.lisp:202), so computed values
-            ;; must go through sgp-fct.
-            (sgp-fct (list :seed seed))
-            (reset)
+            ;; Stale task-setup binding leaked from ACT-R startup
+            ;; auto-load (user-loads/) must never fire: only an entry
+            ;; that defines it gets it, and it is always removed after.
+            (let ((had-task-setup (fboundp 'task-setup)))
+              (load-act-r-model (concatenate 'string "ACT-R:" subpath))
+              ;; Optional task file (device scaffolding, experiment
+              ;; code): loaded plainly, since nested load-act-r-model
+              ;; is locked out while a model is loading.
+              (when taskpath
+                (actr-load (concatenate 'string "ACT-R:" taskpath)))
+              ;; NB: sgp is a macro that quotes its args
+              ;; (framework/parameters.lisp:202), so computed values
+              ;; must go through sgp-fct.
+              (sgp-fct (list :seed seed))
+              (reset)
+              ;; Task entries may define (task-setup) to build device
+              ;; state that reset would otherwise wipe (e.g. window items
+              ;; whose pending visicon additions reset clears).
+              (when (and (fboundp 'task-setup) (not had-task-setup))
+                (funcall 'task-setup))
+              (when (fboundp 'task-setup)
+                (fmakunbound 'task-setup)))
             (sgp-fct (list :v trace-path))
             (unwind-protect
                  (run runtime)
@@ -56,6 +72,7 @@
               (format m "model: ~a~%" subpath)
               (format m "seed: ~S~%" seed)
               (format m "run: ~S~%" runtime)
+              (format m "task: ~S~%" (or taskpath "none"))
               (format m "act-r-version: ~S~%" (ssp :act-r-version))
               (format m "lisp: ~a ~a~%"
                       (lisp-implementation-type)
