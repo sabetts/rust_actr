@@ -834,3 +834,34 @@ name nor `NAME ISA TYPE …` is an **anonymous** slot-value list
 `CHUNK{k}`. Also, `chunk-spec-to-chunk-def` collapses a slot-less request spec
 to `(ISA CHUNK)` — a goal/imaginal request SET with slots prints slots-only,
 an empty one prints `(ISA CHUNK)`. `buffer-queries` (`:crt t`) is green.
+
+## 86. LHS variable slot names and `slot =var` requiring filled (verified)
+
+Two matching rules the engine had wrong, both fixed via `semantic-dynamic`:
+- A LHS slot *name* may be a variable (`=retrieval> … =attr =val`), substituted
+  from bindings at match time (ACT-R `test-var-slot`). Resolve `SlotTest.slot`
+  against bindings before reading the chunk slot.
+- A LHS `slot =var` requires the slot to be **filled**: the spec's filled
+  signature includes it (value non-nil syntactically), so an empty slot does
+  not bind (`direct-verify`'s `original =ori` must not match G1's absent
+  `original`).
+
+## 87. A named `define-chunks` chunk modified in a buffer is renamed on merge (verified)
+
+`goal-focus G2` places a copy of the table chunk `G2`; productions mutate that
+buffer copy (adding `state`/`answer`). When the buffer clears, merging the
+copy into DM must **not** reuse the name `G2`, or it shadows the `named` table
+entry and the next `goal-focus G2` resolves to the mutated DM chunk. The
+engine now gives such a merged copy a fresh `G2-{k}` name (under `:ol t`,
+like other reuse copies). This was the second `semantic-dynamic` divergence.
+
+## 88. `isa` is a slot signature, not a type test — for retrieval and LHS (verified)
+
+`match-chunk-spec-p` (chunk-spec.lisp:940) and the compiled production LHS
+`isa` condition (`production-parsing.lisp:786`) both reduce `ISA TYPE` to the
+spec's filled/empty masks; the chunk **type is never compared**. That is why
+semantic-dynamic retrieves the `CHUNK`-typed imaginal chunk for a request with
+`ISA property`, and why unit5 retrieves a `math-fact` for `ISA simple-value`.
+The engine now ignores `isa`/`want_type` in retrieval candidacy and in LHS
+matching; the per-slot tests reproduce the signature (GOTCHA #81 refined).
+`semantic-dynamic` is green.

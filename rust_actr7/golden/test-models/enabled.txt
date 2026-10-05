@@ -19,3 +19,4 @@ tutorial-unit5modeling-v2-longer-run
 tutorial-unit5modeling-v4-p3-run
 sji-merge
 buffer-queries
+semantic-dynamic

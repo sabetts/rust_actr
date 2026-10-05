@@ -1320,8 +1320,17 @@ impl Engine {
             None => {
                 // Unnamed buffer contents (imaginal/goal request specs)
                 // land as reuse-chunk copies: {BUFFER}-CHUNK0-{k}, which
-                // is the name later retrievals print.
-                if chunk.name.is_none() {
+                // is the name later retrievals print. A *named*
+                // `define-chunks` chunk modified in a buffer must not
+                // shadow its table entry when merged, so it gets a fresh
+                // `NAME-{k}` copy instead.
+                if let Some(n) = chunk.name.clone() {
+                    if self.named.contains_key(&n) {
+                        let k = *self.copy_count.entry(n.clone()).or_insert(0);
+                        self.copy_count.insert(n.clone(), k + 1);
+                        chunk.name = Some(format!("{n}-{k}"));
+                    }
+                } else {
                     let base = format!("{buffer}-CHUNK0");
                     let n = *self.copy_count.entry(base.clone()).or_insert(0);
                     self.copy_count.insert(base.clone(), n + 1);
@@ -2073,25 +2082,17 @@ impl Engine {
                     None => return Ok(None),
                 };
                 for t in tests {
+                    // ACT-R compiles a LHS `ISA` line into a slot signature
+                    // (filled/empty masks), not a chunk-type comparison
+                    // (`production-parsing.lisp:786`); the per-slot tests
+                    // below already reproduce that signature.
                     if t.slot == "ISA" {
-                        let ok = match &t.value {
-                            Pattern::Var(v) => match b.get(v) {
-                                Some(Value::Sym(s)) => s == &chunk.ctype,
-                                Some(_) => false,
-                                None => {
-                                    b.insert(v.clone(), Value::Sym(chunk.ctype.clone()));
-                                    true
-                                }
-                            },
-                            Pattern::Sym(s) => s == &chunk.ctype,
-                            _ => false,
-                        };
-                        if t.negated == ok {
-                            return Ok(None);
-                        }
                         continue;
                     }
-                    if !test_value(&t.value, &chunk.get(&t.slot), &mut *b, t.negated)? {
+                    // ACT-R `test-var-slot`: the slot *name* itself may be an
+                    // LHS variable (`=attr =val`), substituted from bindings.
+                    let slot = self.resolve_slot_name(&t.slot, b);
+                    if !test_value(&t.value, &chunk.get(&slot), &mut *b, t.negated)? {
                         return Ok(None);
                     }
                 }
@@ -2274,7 +2275,7 @@ impl Engine {
     }
 
     fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
-        let (want_type, want_slots, want_neg) = match &spec {
+        let (want_slots, want_neg) = match &spec {
             NewChunk::Named(n) => {
                 return Err(unimpl(format!("single-item retrieval request {n}")));
             }
@@ -2283,9 +2284,7 @@ impl Engine {
                     "retrieval request cannot be a buffer instance".to_string(),
                 ));
             }
-            NewChunk::Spec {
-                ctype, slots, neg, ..
-            } => (ctype.clone(), slots.clone(), neg.clone()),
+            NewChunk::Spec { slots, neg, .. } => (slots.clone(), neg.clone()),
         };
         // Partial matching (mp set, esc on): candidacy is the request's
         // slot signature — required-filled and required-empty slot names —
@@ -2329,32 +2328,30 @@ impl Engine {
                 continue;
             }
             if !partial {
-                let matched = if !want_type.is_empty() && c.ctype != want_type {
-                    false
-                } else {
-                    let mut ok = true;
-                    for (s, v) in &want_slots {
+                // ACT-R retrieval does not test the request's `isa`; the
+                // signature + slot tests alone decide (`match-chunk-spec-p`
+                // only checks slots, chunk-spec.lisp:940).
+                let mut matched = true;
+                for (s, v) in &want_slots {
+                    if s.starts_with(':') {
+                        continue;
+                    }
+                    if c.get(s) != *v {
+                        matched = false;
+                        break;
+                    }
+                }
+                if matched {
+                    for (s, v) in &want_neg {
                         if s.starts_with(':') {
                             continue;
                         }
-                        if c.get(s) != *v {
-                            ok = false;
+                        if c.get(s) == *v {
+                            matched = false;
                             break;
                         }
                     }
-                    if ok {
-                        for (s, v) in &want_neg {
-                            if s.starts_with(':') {
-                                continue;
-                            }
-                            if c.get(s) == *v {
-                                ok = false;
-                                break;
-                            }
-                        }
-                    }
-                    ok
-                };
+                }
                 if !matched {
                     if self.act_high() {
                         self.out(format!("Chunk {cname} does not match"));
@@ -3016,8 +3013,15 @@ fn test_value(
         Pattern::Var(v) => match b.get(v) {
             Some(prev) => prev == got,
             None => {
-                b.insert(v.clone(), got.clone());
-                true
+                // A LHS `slot =var` requires the slot to be filled
+                // (`add-slot-spec-to-chunk-spec` sets the signature's
+                // filled bit); an empty slot does not bind.
+                if *got == Value::Nil {
+                    false
+                } else {
+                    b.insert(v.clone(), got.clone());
+                    true
+                }
             }
         },
         Pattern::Sym(s) => *got == Value::Sym(s.clone()),

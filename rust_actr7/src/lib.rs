@@ -54,8 +54,11 @@
 //!   (5 specs green), and `:act` activation traces plus request-spec
 //!   `=buffer` chunk copies made `sji-merge` green; `:crt`
 //!   conflict-resolution text and unnamed `add-dm` auto-naming made
-//!   `buffer-queries` green. Remaining: `!bind!`/`!eval!`,
-//!   `require-extra`, `schedule-event` scaffolding, and multi-model traces.
+//!   `buffer-queries` green; and LHS variable slot names, `slot =var`
+//!   requiring filled, named-merge renaming, and type-free `isa` matching
+//!   made `semantic-dynamic` green. Remaining: `!bind!`/`!eval!`,
+//!   `require-extra`, `schedule-event` scaffolding, chunk-valued RHS
+//!   references (`merging-test`), and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
