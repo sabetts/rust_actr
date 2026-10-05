@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit7modeling-pcomp-issues-v10-non-win-composition" :REF "tutorial-unit7modeling-pcomp-issues-v10-non-win-composition.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

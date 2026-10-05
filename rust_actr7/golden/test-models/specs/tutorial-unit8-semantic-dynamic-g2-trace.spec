@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit8-semantic-dynamic-g2-trace" :REF "tutorial-unit8-semantic-dynamic-g2-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

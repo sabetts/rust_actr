@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit4-paired-trace" :REF "tutorial-unit4-paired-trace.ref" :MODELS ("tutorial;lisp;paired.lisp" "tutorial;unit4;paired-model.lisp") :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

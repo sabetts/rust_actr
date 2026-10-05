@@ -1,0 +1,1 @@
+(:NAME "creating-an-image" :REF "creating-an-image.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

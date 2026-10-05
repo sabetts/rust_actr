@@ -44,16 +44,20 @@ impl Detail {
 
 /// Longest loaded ACT-R module name (`PRODUCTION-COMPILATION`).
 pub const MODULE_WIDTH: usize = 22;
-
 /// One trace line: `     0.050   PROCEDURAL             MOD-BUFFER-CHUNK GOAL`.
 ///
 /// The three spaces after the time are the separators of the always-empty
 /// (single-model, no-mp) model/mp fields in `+format-event-event-string+`.
-pub fn format_line(time_ms: i64, module: &str, details: &str) -> String {
+///
+/// `width` is the module column width. ACT-R computes it from
+/// `max-module-name-length` (`framework/modules.lisp:386`); stubs may
+/// override that function to shrink the column (e.g.
+/// `tutorial-unit1-count-trace` pins 13), so the spec carries the value.
+pub fn format_line(time_ms: i64, module: &str, details: &str, width: usize) -> String {
     debug_assert!(time_ms >= 0);
     let sec = time_ms / 1000;
     let ms = time_ms % 1000;
-    format!("{sec:>6}.{ms:03}   {module:<22} {details}")
+    format!("{sec:>6}.{ms:03}   {module:<width$} {details}")
 }
 
 #[cfg(test)]
@@ -63,16 +67,26 @@ mod tests {
     #[test]
     fn byte_shape() {
         assert_eq!(
-            format_line(50, "PROCEDURAL", "MOD-BUFFER-CHUNK GOAL"),
+            format_line(50, "PROCEDURAL", "MOD-BUFFER-CHUNK GOAL", MODULE_WIDTH),
             "     0.050   PROCEDURAL             MOD-BUFFER-CHUNK GOAL"
         );
         assert_eq!(
-            format_line(0, "GOAL", "SET-BUFFER-CHUNK GOAL (ISA X) NIL"),
+            format_line(0, "GOAL", "SET-BUFFER-CHUNK GOAL (ISA X) NIL", MODULE_WIDTH),
             "     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA X) NIL"
         );
         assert_eq!(
-            format_line(350, "------", "Stopped because no events left to process"),
+            format_line(
+                350,
+                "------",
+                "Stopped because no events left to process",
+                MODULE_WIDTH
+            ),
             "     0.350   ------                 Stopped because no events left to process"
+        );
+        // Stub-overridden width (`max-module-name-length`), e.g. 13.
+        assert_eq!(
+            format_line(0, "GOAL", "SET-BUFFER-CHUNK GOAL (ISA X) NIL", 13),
+            "     0.000   GOAL          SET-BUFFER-CHUNK GOAL (ISA X) NIL"
         );
     }
 

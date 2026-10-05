@@ -1,0 +1,13 @@
+# ACT-R test-models: specs that must pass under `cargo test`.
+# One test name per line (matches golden/test-models/specs/<name>.spec).
+# Grow this list with:
+#   cargo test --test test_models probe_all_pure -- --ignored --nocapture
+#
+# Device-free, single-run, feature-supported models. The rest of the 219
+# trace specs are out of scope until the engine grows the needed feature
+# (see golden/test-models/README.md).
+addition
+count
+tutorial-unit1-count-trace
+tutorial-unit1-semantic-g1-trace
+tutorial-unit1-tutor-model-trace

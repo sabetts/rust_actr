@@ -41,6 +41,11 @@ append/reset semantics, time-seeded RNG) are logged in
 `../tests/golden.rs` (M1) auto-discovers `traces/*.trace` + `.meta` and
 diffs engine output byte-exact. No Rust edits needed to add a model.
 
+`test-models/` is a second, larger corpus derived from ACT-R's own
+regression suite (`actr7.x/test-models/`); see `test-models/README.md`.
+It is consumed by `../tests/test_models.rs`, with the enabled allowlist in
+`test-models/enabled.txt`.
+
 ## Why this is trustworthy
 
 - Capture uses ACT-R's own trace sink (`:v` file redirect,

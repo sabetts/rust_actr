@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit2-demo2-strict-harvest" :REF "tutorial-unit2-demo2-strict-harvest.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

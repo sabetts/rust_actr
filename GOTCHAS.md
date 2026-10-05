@@ -551,3 +551,91 @@ Updates are `U += α(R−U)` per history entry in selection order with
 clears after. Non-`esc`/`ul` rewards are silent no-ops (Lisp warns to
 stdout). `:iu` honored for initial utilities; `:ult` trace lines,
 `spp :u`/`:reward`, and production self-rewards remain out.
+
+---
+
+# M10 findings: ACT-R test-model corpus (integration in progress)
+
+## 59. `test-models/*.ref` are ACT-R's own oracle — and they are trimmed (verified)
+
+`actr7.x/test-models/model-tester.cl` is Dan Bothell's regression harness.
+Each `*.lisp` stub defines `(run-it)`, loads a model, and its captured output
+is compared to `*.ref`. The refs are **CRLF** and the comparator
+(`compare-test-model-files`, model-tester.cl:373) right-trims every line and
+uses `string-equal` (**case-insensitive**), line by line. Diff raw bytes and
+every line "differs"; mirror the comparator
+(`rust_actr7/tests/test_models.rs::normalize`). Our own
+`golden/traces/count.trace` is byte-identical to `test-models/count.ref`
+after stripping CR, which is what first revealed this.
+
+## 60. Refs capture four channels, not just `:v` (verified)
+
+`run-actr-test` monitors `model-trace`/`command-trace`/`warning-trace`/
+`general-trace` (model-tester.cl:354-357), so refs can contain command output
+and warnings. Only 219 of 563 refs have engine trace lines; the rest are
+`dm`/`sdp`/`spp`/`whynot`/parsed-source dumps or warnings. `:v` already
+defaults to **T**, and the `(:testing-function set-testing-traces)`
+`:starting-parameters` line is actually rejected ("must be a list that is
+valid for passing to sgp-fct") and never runs — traces reproduce anyway. A
+`run-it` that touches `*out-file*`, `with-open-file`, or `read-line` needs the
+harness and is not an engine test.
+
+## 61. `model-tester.cl` must be loaded by physical path in SBCL (verified)
+
+`(load "ACT-R:test-models;model-tester.cl")` dies translating
+`...MODEL-TESTER.CL.NEWEST` (`TRANSLATE-PATHNAME ... :NEWEST NIL`): the ACT-R
+logical host pattern `**;*.*` has no version component, but `load` merges a
+`:newest` version in. Use
+`(load #P"<actr7.x>/test-models/model-tester.cl")`. (`load-act-r-model` and
+`actr-load` do the translation themselves and are unaffected.)
+
+## 62. `max-module-name-length` is rebindable, so the trace column width varies (verified)
+
+`framework/modules.lisp:386`. Stubs `setf` its fdefinition to shrink the
+module column: `tutorial-unit1-count-trace` pins 13,
+`tutorial-unit1-tutor-model-*` pins 11, default is 22. Hardcoding 22 (as the
+engine did) mis-diffs every line of those refs at the first `SET-BUFFER-CHUNK`.
+`extract-specs.lisp` records `(max-module-name-length)` at each `run`; the
+column width is a per-run spec field
+(`run_model_with`/`Engine::new_with_width`).
+
+## 63. Integer and float slot values print differently (verified)
+
+Lisp `~S` prints `3` for an integer and `3.0` for a float. `Pattern::Num(f64)`
+collapsed the distinction, so `tutor-model`'s initial goal printed
+`TEN1 3.0` where the ref has `TEN1 3`. `Pattern`/`Value` now carry a distinct
+`Int(i64)`; equality remains numeric across the two so `3` still matches a
+stored `3.0`.
+
+## 64. Computed seeds make some refs run-order dependent (verified)
+
+Stubs use `(sgp-fct (list :seed (list (incf *starting-seed*) 0)))` and friends.
+The extractor executes each stub and records the **effective** seed at each
+`run`. Deciding whether that seed is reproducible is the subtle part: runtime
+observation is useless (the random module's own reset calls `sgp-fct` with
+`:seed`, so every model looks "explicit"), and a plain text search is wrong
+both ways (commented-out `(sgp :seed ...)` looks explicit;
+`(ssp :starting-parameters (:seed ...))` looks explicit but ACT-R rejects
+that list once `:testing-function` is in it, so the seed really is
+time-random). The extractor parses the stub and each loaded model file with
+`read` and only trusts a real `(sgp ... :seed ...)`/`(sgp-fct ... :seed ...)`
+form (comments skipped for free). Everything else is canonicalized to
+`(100 0)`, which keeps the committed corpus stable across regens; non-PURE
+specs are canonicalized regardless since they are re-extracted when their
+feature lands.
+
+## 65. Extraction must force `run`'s real-time flag off (verified)
+
+Some stubs call `(run N t)`. Real-time only paces wall clock and does not
+change model output, so `extract-specs.lisp` calls the original `run` with
+`nil`; otherwise regen sleeps for the run duration. (The `(declare (ignore
+real-time))` in the wrapper must precede the other forms — placing it after
+made every executed stub fail to compile.)
+
+## 66. Multi-model refs add a model column (verified)
+
+`unit-1-together-1-mp` runs COUNT+SEMANTIC+ADDITION together; its ref lines
+carry a model-name column (`0.000  COUNT     GOAL ...`) that single-model
+`format_line` never emits. Detection is structural, not from `:v` (which read
+back NIL): the model file defines more than one `define-model`. Out of scope
+until multi-model/meta-process support.

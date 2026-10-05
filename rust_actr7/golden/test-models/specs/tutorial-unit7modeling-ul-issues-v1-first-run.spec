@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit7modeling-ul-issues-v1-first-run" :REF "tutorial-unit7modeling-ul-issues-v1-first-run.ref" :MODELS ("tutorial;lisp;ul-issues.lisp" "tutorial;unit7;utility-learning-issues-model.lisp" "test-models;models;utility-learning-issues-model-v1.lisp") :SEED-SET NIL :RUNS ((5.05 (100 0) T 22)) :GOAL-FOCUS 1 :RESETS 0 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

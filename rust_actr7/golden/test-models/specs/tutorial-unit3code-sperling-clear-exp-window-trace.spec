@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit3code-sperling-clear-exp-window-trace" :REF "tutorial-unit3code-sperling-clear-exp-window-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

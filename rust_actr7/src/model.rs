@@ -22,6 +22,10 @@ pub enum Pattern {
     /// `=foo` variable reference (stored without the `=`).
     Var(String),
     Sym(String),
+    /// Integer literal. Kept distinct from [`Pattern::Num`] because Lisp
+    /// prints `3` for an integer and `3.0` for a float (`~S`), and traces
+    /// compare byte-for-byte (GOTCHAS #13).
+    Int(i64),
     Num(f64),
     Str(String),
     Nil,
@@ -33,7 +37,7 @@ impl Pattern {
             Sexp::Sym(v) if v == "NIL" => Ok(Pattern::Nil),
             Sexp::Sym(v) if v.starts_with('=') => Ok(Pattern::Var(v[1..].to_string())),
             Sexp::Sym(v) => Ok(Pattern::Sym(v.clone())),
-            Sexp::Int(i) => Ok(Pattern::Num(*i as f64)),
+            Sexp::Int(i) => Ok(Pattern::Int(*i)),
             Sexp::Float(x) => Ok(Pattern::Num(*x)),
             Sexp::Str(v) => Ok(Pattern::Str(v.clone())),
             Sexp::List(_) => Err(LoadError::Structural(format!(

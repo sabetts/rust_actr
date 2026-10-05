@@ -37,6 +37,16 @@
 //! - M9 (done): utility learning — selection history, reward
 //!   propagation with recency discount, `ul-test` penalty-flip golden.
 //!   Byte-exact (`:iu` honored; `:ult` trace lines not implemented).
+//! - M10 (in progress): ACT-R's own regression corpus
+//!   (`actr7.x/test-models/`) is integrated as a second oracle:
+//!   `golden/regen-specs.sh` extracts runner specs, `tests/test_models.rs`
+//!   diffs engine output against `.ref` with ACT-R's comparator, and
+//!   `golden/test-models/enabled.txt` is the green allowlist (5/26 pure
+//!   trace specs so far). This milestone added per-spec trace module width
+//!   (`max-module-name-length` overrides) and integer-vs-float slot
+//!   printing. Remaining `PURE` gaps: `define-chunks`, `!bind!`,
+//!   `set-similarities`, `?buffer empty`, `require-extra`; then multi-run
+//!   drivers (Phase 3).
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
@@ -81,13 +91,28 @@ pub fn run_model(
     run_time: f64,
     device: &DeviceSetup,
 ) -> Result<String, EngineError> {
+    run_model_with(actr_root, model, seed, run_time, device, trace::MODULE_WIDTH)
+}
+
+/// Like [`run_model`], but with an explicit trace module-column width.
+/// ACT-R derives this from `max-module-name-length`, which test-model stubs
+/// may override (e.g. `tutorial-unit1-count-trace` pins 13); the spec corpus
+/// captures the value per run.
+pub fn run_model_with(
+    actr_root: &Path,
+    model: &str,
+    seed: (u64, u64),
+    run_time: f64,
+    device: &DeviceSetup,
+    module_width: usize,
+) -> Result<String, EngineError> {
     let rel = model.replace(';', std::path::MAIN_SEPARATOR_STR);
     let path = actr_root.join(rel);
     let models = load_models(&path)?;
     let def = models
         .last()
         .ok_or_else(|| EngineError::Model(format!("no define-model in {model}")))?;
-    engine::Engine::new(def.clone(), seed, run_time, device.clone())?.run()
+    engine::Engine::new_with_width(def.clone(), seed, run_time, device.clone(), module_width)?.run()
 }
 
 #[cfg(test)]

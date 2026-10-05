@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit5-fan-lawyer-store-trace" :REF "tutorial-unit5-fan-lawyer-store-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

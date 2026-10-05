@@ -1,0 +1,1 @@
+(:NAME "indirect-action-compilation" :REF "indirect-action-compilation.ref" :MODELS ("test-models;models;indirect-action-compilation.lisp") :SEED-SET NIL :RUNS ((0.2 (100 0) T 22) (0.2 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 2 :SGP ((:CIA NIL) (:CIA T)) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

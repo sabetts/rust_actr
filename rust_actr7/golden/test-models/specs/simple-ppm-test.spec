@@ -1,0 +1,1 @@
+(:NAME "simple-ppm-test" :REF "simple-ppm-test.ref" :MODELS ("tutorial;unit8;simple-ppm-model.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22) (1 (100 0) T 22) (1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 3 :SGP ((:PPM 1) (:UTILITY-OFFSETS PPM-OFFSET) (:SEED (100 1) :EGS 1 :PPM 1) (:UTILITY-OFFSETS PPM-OFFSET)) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

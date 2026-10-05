@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit5modeling-v6-p5-run-with-mp-2" :REF "tutorial-unit5modeling-v6-p5-run-with-mp-2.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

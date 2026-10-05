@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit7-paired-learning-alpha-1" :REF "tutorial-unit7-paired-learning-alpha-1.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

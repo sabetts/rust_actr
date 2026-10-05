@@ -1,0 +1,1 @@
+(:NAME "demo2-randomized" :REF "demo2-randomized.ref" :MODELS ("tutorial;lisp;demo2.lisp" "tutorial;unit2;demo2-model.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

@@ -1,0 +1,1 @@
+(:NAME "paired-learning" :REF "paired-learning.ref" :MODELS ("tutorial;unit4;paired-model.lisp" "tutorial;unit7;paired-learning-model.lisp") :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 2 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

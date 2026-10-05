@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit1code-tutor-model-high-trace" :REF "tutorial-unit1code-tutor-model-high-trace.ref" :MODELS ("tutorial;unit1;tutor-model-solution.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 11)) :GOAL-FOCUS 0 :RESETS 0 :SGP ((:TRACE-DETAIL HIGH)) :SCOPE :PURE :FLAGS NIL :ERROR NIL)

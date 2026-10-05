@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit2code-demo2-manual-actions-trace" :REF "tutorial-unit2code-demo2-manual-actions-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

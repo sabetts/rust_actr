@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit3-sperling-trial-trace" :REF "tutorial-unit3-sperling-trial-trace.ref" :MODELS ("tutorial;unit3;sperling-model.lisp") :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :ERROR :FLAGS NIL :ERROR "The function COMMON-LISP-USER::SPERLING-TRIAL is undefined.")

@@ -1,0 +1,1 @@
+(:NAME "retain-indirect-retrievals" :REF "retain-indirect-retrievals.ref" :MODELS ("test-models;models;retain-indirect-retrievals.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22) (1 (100 0) T 22) (1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 3 :SGP ((:CIA NIL) (:CIA T) (:CIA T :RIR T)) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

@@ -1,0 +1,1 @@
+(:NAME "merging-test" :REF "merging-test.ref" :MODELS ("test-models;models;merging-test.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

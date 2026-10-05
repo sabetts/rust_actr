@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit8-simple-ppm-model-medium-chosen-run" :REF "tutorial-unit8-simple-ppm-model-medium-chosen-run.ref" :MODELS ("tutorial;unit8;simple-ppm-model.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP ((:PPM 1 :EGS 1) (:UTILITY-OFFSETS PPM-OFFSET) (:SEED (150264085143 2))) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit5modeling-v3-first-run" :REF "tutorial-unit5modeling-v3-first-run.ref" :MODELS ("test-models;models;declarative-issues-v3.lisp") :SEED-SET T :RUNS ((12.26 (100 1) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP ((:ACT LOW)) :SCOPE :PURE :FLAGS NIL :ERROR NIL)

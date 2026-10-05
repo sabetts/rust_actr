@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3" :REF "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

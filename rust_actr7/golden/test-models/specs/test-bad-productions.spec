@@ -1,0 +1,1 @@
+(:NAME "test-bad-productions" :REF "test-bad-productions.ref" :MODELS ("test-models;models;test-bad-productions.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

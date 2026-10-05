@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit1modeling-broken-addition-v7-run-low-detail" :REF "tutorial-unit1modeling-broken-addition-v7-run-low-detail.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

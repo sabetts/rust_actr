@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit3-sperling-do-report-trace" :REF "tutorial-unit3-sperling-do-report-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

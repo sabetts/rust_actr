@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit1-tutor-model-partial-trace" :REF "tutorial-unit1-tutor-model-partial-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :DRIVER :FLAGS (:DRIVER) :ERROR NIL)

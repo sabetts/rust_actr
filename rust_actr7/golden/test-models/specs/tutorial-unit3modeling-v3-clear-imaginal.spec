@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit3modeling-v3-clear-imaginal" :REF "tutorial-unit3modeling-v3-clear-imaginal.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

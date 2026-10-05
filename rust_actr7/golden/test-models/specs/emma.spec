@@ -1,0 +1,1 @@
+(:NAME "emma" :REF "emma.ref" :MODELS ("extras;emma;example-demo2.lisp" "tutorial;unit2;demo2-model.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP ((:SSP :STARTING-PARAMETERS (:EMMA T)) (:SSP :STARTING-PARAMETERS NIL)) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

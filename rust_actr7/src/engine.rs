@@ -28,7 +28,7 @@ use std::collections::{BinaryHeap, HashMap};
 use crate::model::{ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction};
 use crate::rand::Mt;
 use crate::sexpr::Sexp;
-use crate::trace::{format_line, Detail, Out};
+use crate::trace::{format_line, Detail, Out, MODULE_WIDTH};
 
 #[derive(Debug)]
 pub enum EngineError {
@@ -63,12 +63,30 @@ fn bad(what: impl Into<String>) -> EngineError {
 
 // ---------------------------------------------------------------- values
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 enum Value {
     Sym(String),
+    Int(i64),
     Num(f64),
     Str(String),
     Nil,
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        use Value::*;
+        match (self, other) {
+            (Int(a), Int(b)) => a == b,
+            (Num(a), Num(b)) => a == b,
+            // Integer and float slots compare numerically so a `3` pattern
+            // still matches a `3.0` stored value and vice versa.
+            (Int(a), Num(b)) | (Num(b), Int(a)) => (*a as f64) == *b,
+            (Sym(a), Sym(b)) => a == b,
+            (Str(a), Str(b)) => a == b,
+            (Nil, Nil) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Value {
@@ -76,6 +94,7 @@ impl Value {
         match p {
             Pattern::Var(v) => Err(bad(format!("unbound variable ={v} in chunk store"))),
             Pattern::Sym(s) => Ok(Value::Sym(s.clone())),
+            Pattern::Int(i) => Ok(Value::Int(*i)),
             Pattern::Num(x) => Ok(Value::Num(*x)),
             Pattern::Str(s) => Ok(Value::Str(s.clone())),
             Pattern::Nil => Ok(Value::Nil),
@@ -86,6 +105,7 @@ impl Value {
     fn show(&self) -> String {
         match self {
             Value::Sym(s) => s.clone(),
+            Value::Int(i) => i.to_string(),
             Value::Num(x) => {
                 if x.fract() == 0.0 && x.abs() < 1e15 {
                     format!("{x:.1}")
@@ -156,6 +176,9 @@ struct Config {
     er: bool,
     do_not_query: Vec<String>,
     do_not_harvest: Vec<String>,
+    /// Module column width in trace lines (`max-module-name-length`). The
+    /// normal value is 22; test-model stubs may override it (GOTCHAS M10).
+    module_width: usize,
 }
 
 /// One scripted device action: show text at a time and position.
@@ -453,6 +476,7 @@ impl Config {
             er: sgp_bool(&m.params, ":ER"),
             do_not_query,
             do_not_harvest,
+            module_width: MODULE_WIDTH,
         })
     }
 }
@@ -809,7 +833,20 @@ impl Engine {
         run_secs: f64,
         device: DeviceSetup,
     ) -> Result<Engine, EngineError> {
-        let cfg = Config::from_model(&model)?;
+        Engine::new_with_width(model, seed, run_secs, device, MODULE_WIDTH)
+    }
+
+    /// Like [`Engine::new`], but with an explicit trace module-column width
+    /// (see [`crate::trace::format_line`]).
+    pub fn new_with_width(
+        model: Model,
+        seed: (u64, u64),
+        run_secs: f64,
+        device: DeviceSetup,
+        module_width: usize,
+    ) -> Result<Engine, EngineError> {
+        let mut cfg = Config::from_model(&model)?;
+        cfg.module_width = module_width;
         let mut rng = Mt::fresh();
         rng.set_seed(seed.0, seed.1);
         let mut dm = Vec::new();
@@ -959,8 +996,12 @@ impl Engine {
     }
 
     fn emit(&mut self, module: &str, details: String) {
-        self.out_lines
-            .push(format_line(self.time_ms, module, &details));
+        self.out_lines.push(format_line(
+            self.time_ms,
+            module,
+            &details,
+            self.cfg.module_width,
+        ));
     }
 
     fn buffer_mut(&mut self, name: &str) -> &mut Buffer {
@@ -2379,6 +2420,7 @@ fn test_value(
             }
         },
         Pattern::Sym(s) => *got == Value::Sym(s.clone()),
+        Pattern::Int(i) => *got == Value::Int(*i),
         Pattern::Num(x) => *got == Value::Num(*x),
         Pattern::Str(s) => *got == Value::Str(s.clone()),
     };

@@ -1,0 +1,1 @@
+(:NAME "act-touch" :REF "act-touch.ref" :MODELS ("extras;act-touch;touch-demo-model.lisp") :SEED-SET NIL :RUNS ((20 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP ((:LEFT-START (100 300) :RIGHT-START (600 300))) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

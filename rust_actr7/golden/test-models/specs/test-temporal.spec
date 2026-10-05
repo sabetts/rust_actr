@@ -1,0 +1,1 @@
+(:NAME "test-temporal" :REF "test-temporal.ref" :MODELS ("test-models;models;test-temporal.lisp") :SEED-SET NIL :RUNS ((8.1 (100 0) T 22) (10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP ((:RECORD-TICKS NIL)) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

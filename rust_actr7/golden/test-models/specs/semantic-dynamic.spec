@@ -1,0 +1,1 @@
+(:NAME "semantic-dynamic" :REF "semantic-dynamic.ref" :MODELS ("tutorial;unit8;semantic-dynamic-model.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22) (10 (100 0) T 22) (10 (100 0) T 22) (10 (100 0) T 22)) :GOAL-FOCUS 4 :RESETS 0 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)
