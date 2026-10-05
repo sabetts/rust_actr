@@ -905,3 +905,21 @@ v4/v6 would re-retrieve the just-retrieved `V2` (its base-level is highest).
 resolves them as (undefined) chunks and consults the explicit similarity
 before `ms`/`md`. The engine now checks the explicit similarity table first
 for any symbol pair, not only DM chunks.
+
+## 93. `require-extra` is a tiny macro over large modules (verified)
+
+`(require-extra "name")` (load-act-r.lisp:844) just loads
+`extras/name/name.lisp`; the extras themselves are big (blending 3378 lines,
+associative-learning 1847, …). The loader now recognizes and records
+`require-extra` (`Model.required_extras`) instead of erroring, but no extra
+behavior is implemented, so the require-extra trace specs only advance to
+their next blocker (`blending` → chunk-type defaults; `associative-learning`
+→ `buffer-requires-copies`; `z-threads`/`zz-extended-motor-actions` →
+top-level `defun`/`defparameter`).
+
+## 94. Chunk-type default slot values (verified)
+
+`(chunk-type size (size-type t))` declares slot `size-type` with default `t`.
+Chunks of that type created without the slot get the default (applied after
+the model body is parsed). This matters for slot-signature/intersection
+logic — e.g. blending's `size` chunks all share the defaulted `size-type`.

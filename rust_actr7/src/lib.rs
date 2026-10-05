@@ -61,8 +61,11 @@
 //!   Chunk-valued references + merge aliasing and `!stop!` made
 //!   `merging-test` green; the reference-count base-level fix, retrieval
 //!   finsts (`:recently-retrieved`), and symbol similarities made the
-//!   unit5 `v4-p3-run`/`v6-run-p3` traces green. Remaining: `!bind!`/`!eval!`,
-//!   `require-extra`, `schedule-event` scaffolding, and multi-model traces.
+//!   unit5 `v4-p3-run`/`v6-run-p3` traces green. `require-extra` is now
+//!   recognized/recorded and chunk-type default slots are applied;
+//!   porting the `blending` extra is in progress. Remaining: `!bind!`/`!eval!`,
+//!   `require-extra` behaviors, `schedule-event` scaffolding, and
+//!   multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):

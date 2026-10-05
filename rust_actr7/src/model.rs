@@ -110,6 +110,9 @@ pub struct Production {
 pub struct ChunkType {
     pub name: String,
     pub slots: Vec<String>,
+    /// `(slot default)` declarations: slots with a default value applied
+    /// when a chunk of this type is created.
+    pub defaults: Vec<(String, Pattern)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -136,6 +139,8 @@ pub struct Model {
     pub similarities: Vec<(String, String, f32)>,
     /// Model-body `(set-base-levels (name level [creation-seconds]) ...)`.
     pub base_levels: Vec<(String, f32, Option<f64>)>,
+    /// Extras requested via top-level `(require-extra "name")`.
+    pub required_extras: Vec<String>,
     pub initial_goal: Option<ChunkDesc>,
     pub productions: Vec<Production>,
 }
@@ -394,9 +399,20 @@ fn parse_chunk_type(form: &Sexp) -> Result<ChunkType, LoadError> {
         Sexp::List(items) => match items.as_slice() {
             [Sexp::Sym(h), Sexp::Sym(name), slots @ ..] if h == "CHUNK-TYPE" => {
                 let mut out = Vec::new();
+                let mut defaults = Vec::new();
                 for s in slots {
                     match s {
                         Sexp::Sym(t) => out.push(t.clone()),
+                        // `(slot default)` — slot with a default value.
+                        Sexp::List(pair) => match pair.as_slice() {
+                            [Sexp::Sym(t), default] => {
+                                out.push(t.clone());
+                                defaults.push((t.clone(), Pattern::from_sexp(default)?));
+                            }
+                            got => {
+                                return structural(format!("bad chunk-type slot: {got:?}"))
+                            }
+                        },
                         got => {
                             return structural(format!("chunk-type slot must be a symbol: {got:?}"))
                         }
@@ -405,6 +421,7 @@ fn parse_chunk_type(form: &Sexp) -> Result<ChunkType, LoadError> {
                 Ok(ChunkType {
                     name: name.clone(),
                     slots: out,
+                    defaults,
                 })
             }
             got => structural(format!("bad chunk-type form: {got:?}")),
@@ -462,6 +479,7 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
         defined_chunks: Vec::new(),
         similarities: Vec::new(),
         base_levels: Vec::new(),
+        required_extras: Vec::new(),
         initial_goal: None,
         productions: Vec::new(),
     };
@@ -588,6 +606,19 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
             got => return structural(format!("unknown model body form: {got}")),
         }
     }
+    // Apply chunk-type default slot values to chunks that don't set them.
+    let types = model.chunk_types.clone();
+    for c in model.chunks.iter_mut().chain(model.defined_chunks.iter_mut()) {
+        if let Some(t) = &c.ctype {
+            if let Some(ct) = types.iter().find(|ct| &ct.name == t) {
+                for (s, p) in &ct.defaults {
+                    if !c.slots.iter().any(|(k, _)| k == s) {
+                        c.slots.push((s.clone(), p.clone()));
+                    }
+                }
+            }
+        }
+    }
     Ok(model)
 }
 
@@ -596,15 +627,26 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
 pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
     let src = fs::read_to_string(path).map_err(LoadError::Io)?;
     let mut models = Vec::new();
+    let mut required_extras: Vec<String> = Vec::new();
     for form in parse_all(&src)? {
         match &form {
             Sexp::List(items) => match items.first() {
                 Some(Sexp::Sym(h)) if h == "CLEAR-ALL" => {}
+                // `(require-extra "name")` loads an extra Lisp module; record
+                // it so the engine can tell which behaviors are expected.
+                Some(Sexp::Sym(h)) if h == "REQUIRE-EXTRA" => {
+                    if let Some(Sexp::Str(n)) = items.get(1) {
+                        required_extras.push(n.clone());
+                    }
+                }
                 Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => models.push(parse_model(&form)?),
                 got => return structural(format!("unexpected top-level form: {got:?}")),
             },
             got => return structural(format!("unexpected top-level form: {got:?}")),
         }
+    }
+    for m in &mut models {
+        m.required_extras = required_extras.clone();
     }
     Ok(models)
 }
@@ -647,10 +689,12 @@ mod tests {
                 ChunkType {
                     name: "NUMBER".into(),
                     slots: vec!["NUMBER".into(), "NEXT".into()],
+                    defaults: vec![],
                 },
                 ChunkType {
                     name: "COUNT-FROM".into(),
                     slots: vec!["START".into(), "END".into(), "COUNT".into()],
+                    defaults: vec![],
                 },
             ]
         );
