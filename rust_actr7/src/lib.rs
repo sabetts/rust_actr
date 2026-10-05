@@ -81,8 +81,12 @@
 //!   `*buffer>` modification requests and indirect-action validity
 //!   (`:cia`) cover run 1 of `indirect-action-compilation`; indirect-action
 //!   composition + installing compiled productions into the runtime made
-//!   `indirect-action-compilation` green. Remaining: `!bind!`/`!eval!`
-//!   (incl. `!safe-bind!`), other `require-extra` behaviors
+//!   `indirect-action-compilation` green. A bounded `!eval!`/`!bind!`
+//!   evaluator (pure operators + `safe-` variants; unknown heads error)
+//!   made `dynamic-slot-compilation` green. Remaining: task-supplied
+//!   functions/commands (`bind-test`, `remote-bind-test`, `grouped`),
+//!   production validation (`test-bad-productions`), `!bind!`/`!eval!`
+//!   timing (`dynamic-real-time`), other `require-extra` behaviors
 //!   (associative-learning/act-touch/z-threads/extended-motor),
 //!   `schedule-event` scaffolding, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.

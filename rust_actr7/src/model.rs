@@ -83,6 +83,16 @@ pub enum LhsItem {
         buffer: String,
         queries: Vec<(String, Pattern)>,
     },
+    /// `!eval!`/`!safe-eval!` — a predicate evaluated against bindings.
+    Eval { value: Sexp, safe: bool },
+    /// `!bind!`/`!safe-bind!` — evaluate and bind one variable.
+    Bind {
+        var: String,
+        value: Sexp,
+        safe: bool,
+    },
+    /// `!mv-bind!` — evaluate to multiple values and bind several vars.
+    MvBind { vars: Vec<String>, value: Sexp },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -121,6 +131,16 @@ pub enum RhsAction {
     Clear { buffer: String },
     /// `!output! (...)` — args kept raw for the M2c evaluator.
     Output { args: Vec<Sexp> },
+    /// `!eval!`/`!safe-eval!` on the RHS.
+    Eval { value: Sexp, safe: bool },
+    /// `!bind!`/`!safe-bind!` on the RHS.
+    Bind {
+        var: String,
+        value: Sexp,
+        safe: bool,
+    },
+    /// `!mv-bind!` on the RHS.
+    MvBind { vars: Vec<String>, value: Sexp },
     /// Any other `!head! ...` — preserved, executor decides later.
     Other { head: String, args: Vec<Sexp> },
 }
@@ -308,11 +328,8 @@ fn parse_lhs(forms: &[Sexp]) -> Result<Vec<LhsItem>, LoadError> {
     let mut items = Vec::new();
     let mut i = 0;
     while i < forms.len() {
-        let (op, buffer) = match &forms[i] {
-            Sexp::Sym(t) => match buffer_ref(t) {
-                Some(b) => b,
-                None => return structural(format!("LHS: buffer ref expected, got {t}")),
-            },
+        let head = match &forms[i] {
+            Sexp::Sym(t) => t.clone(),
             got => return structural(format!("LHS: buffer ref expected, got {got:?}")),
         };
         i += 1;
@@ -321,33 +338,91 @@ fn parse_lhs(forms: &[Sexp]) -> Result<Vec<LhsItem>, LoadError> {
             j += 1;
         }
         let body = &forms[i..j];
-        match op {
-            '=' | '+' => {
-                // `+` on the LHS never occurs in M0 models; accept like `=`
-                // so the loader stays total over match-shaped groups.
-                let tests = parse_pairs(body)?;
-                items.push(LhsItem::Match {
-                    buffer: buffer.to_string(),
-                    tests,
-                });
-            }
-            '?' => {
-                let qs = parse_pairs(body)?;
-                for q in &qs {
-                    if q.op != SlotOp::Eq {
-                        return structural("`-`/inequality not allowed in `?` queries");
-                    }
+        if let Some((op, buffer)) = buffer_ref(&head) {
+            match op {
+                '=' | '+' => {
+                    // `+` on the LHS never occurs in M0 models; accept like `=`
+                    // so the loader stays total over match-shaped groups.
+                    let tests = parse_pairs(body)?;
+                    items.push(LhsItem::Match {
+                        buffer: buffer.to_string(),
+                        tests,
+                    });
                 }
-                items.push(LhsItem::Query {
-                    buffer: buffer.to_string(),
-                    queries: qs.into_iter().map(|q| (q.slot, q.value)).collect(),
-                });
+                '?' => {
+                    let qs = parse_pairs(body)?;
+                    for q in &qs {
+                        if q.op != SlotOp::Eq {
+                            return structural("`-`/inequality not allowed in `?` queries");
+                        }
+                    }
+                    items.push(LhsItem::Query {
+                        buffer: buffer.to_string(),
+                        queries: qs.into_iter().map(|q| (q.slot, q.value)).collect(),
+                    });
+                }
+                _ => return structural(format!("LHS: unexpected `{op}` buffer ref")),
             }
-            _ => return structural(format!("LHS: unexpected `{op}` buffer ref")),
+        } else if head.starts_with('!') && head.ends_with('!') {
+            parse_lhs_bang(&head, body, &mut items)?;
+        } else {
+            return structural(format!("LHS: buffer ref expected, got {head}"));
         }
         i = j;
     }
     Ok(items)
+}
+
+/// Split a `!name!` head into its (lower-case) name and whether it is the
+/// `safe-` variant (`!safe-eval!` / `!safe-bind!`).
+fn bang_head(head: &str) -> (String, bool) {
+    let inner = head.trim_matches('!').to_lowercase();
+    match inner.strip_prefix("safe-") {
+        Some(rest) => (rest.to_string(), true),
+        None => (inner, false),
+    }
+}
+
+fn parse_lhs_bang(head: &str, body: &[Sexp], items: &mut Vec<LhsItem>) -> Result<(), LoadError> {
+    let (name, safe) = bang_head(head);
+    match name.as_str() {
+        "eval" => {
+            let value = body
+                .first()
+                .cloned()
+                .ok_or_else(|| LoadError::Structural("!eval! needs an expression".into()))?;
+            items.push(LhsItem::Eval { value, safe });
+        }
+        "bind" => {
+            let var = body
+                .first()
+                .and_then(|s| s.as_sym())
+                .and_then(|v| v.strip_prefix('='))
+                .ok_or_else(|| LoadError::Structural("!bind! needs a =variable".into()))?
+                .to_string();
+            let value = body
+                .get(1)
+                .cloned()
+                .ok_or_else(|| LoadError::Structural("!bind! needs an expression".into()))?;
+            items.push(LhsItem::Bind { var, value, safe });
+        }
+        "mv-bind" => {
+            let vars = match body.first() {
+                Some(Sexp::List(v)) => v
+                    .iter()
+                    .filter_map(|s| s.as_sym().and_then(|x| x.strip_prefix('=')).map(str::to_string))
+                    .collect(),
+                _ => return structural("!mv-bind! needs a (=a =b) list"),
+            };
+            let value = body
+                .get(1)
+                .cloned()
+                .ok_or_else(|| LoadError::Structural("!mv-bind! needs an expression".into()))?;
+            items.push(LhsItem::MvBind { vars, value });
+        }
+        other => return structural(format!("LHS: unsupported !{other}! condition")),
+    }
+    Ok(())
 }
 
 fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
@@ -388,15 +463,50 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
                 _ => return structural(format!("RHS: unexpected `{op}` buffer ref")),
             }
         } else if head.starts_with('!') && head.ends_with('!') {
-            if head == "!OUTPUT!" {
-                actions.push(RhsAction::Output {
+            let (name, safe) = bang_head(&head);
+            match name.as_str() {
+                "output" => actions.push(RhsAction::Output {
                     args: body.to_vec(),
-                });
-            } else {
-                actions.push(RhsAction::Other {
+                }),
+                "eval" => {
+                    let value = body.first().cloned().ok_or_else(|| {
+                        LoadError::Structural("!eval! needs an expression".into())
+                    })?;
+                    actions.push(RhsAction::Eval { value, safe });
+                }
+                "bind" => {
+                    let var = body
+                        .first()
+                        .and_then(|s| s.as_sym())
+                        .and_then(|v| v.strip_prefix('='))
+                        .ok_or_else(|| {
+                            LoadError::Structural("!bind! needs a =variable".into())
+                        })?
+                        .to_string();
+                    let value = body.get(1).cloned().ok_or_else(|| {
+                        LoadError::Structural("!bind! needs an expression".into())
+                    })?;
+                    actions.push(RhsAction::Bind { var, value, safe });
+                }
+                "mv-bind" => {
+                    let vars = match body.first() {
+                        Some(Sexp::List(v)) => v
+                            .iter()
+                            .filter_map(|s| {
+                                s.as_sym().and_then(|x| x.strip_prefix('=')).map(str::to_string)
+                            })
+                            .collect(),
+                        _ => return structural("!mv-bind! needs a (=a =b) list"),
+                    };
+                    let value = body.get(1).cloned().ok_or_else(|| {
+                        LoadError::Structural("!mv-bind! needs an expression".into())
+                    })?;
+                    actions.push(RhsAction::MvBind { vars, value });
+                }
+                _ => actions.push(RhsAction::Other {
                     head,
                     args: body.to_vec(),
-                });
+                }),
             }
         } else {
             return structural(format!("RHS: action head expected, got {head}"));

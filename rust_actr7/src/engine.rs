@@ -1924,6 +1924,9 @@ impl Engine {
                         LhsItem::Query { buffer, .. } => {
                             self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
                         }
+                        LhsItem::Eval { .. }
+                        | LhsItem::Bind { .. }
+                        | LhsItem::MvBind { .. } => {}
                     }
                 }
                 for buffer in self.exec_prods[prod].implicit_queries.clone() {
@@ -2355,8 +2358,22 @@ impl Engine {
         ppm: &mut Vec<PpmMismatch>,
     ) -> Result<Option<Bindings>, EngineError> {
         let mut b = Bindings::new();
+        // Buffer matches/queries run first (they bind the variables that
+        // LHS `!eval!`/`!bind!` conditions may use; ACT-R orders these by
+        // dependency, `production-parsing.lisp`).
         for item in &prod.lhs {
-            if self.match_item(item, &mut b, ppm)?.is_none() {
+            if matches!(item, LhsItem::Match { .. } | LhsItem::Query { .. })
+                && self.match_item(item, &mut b, ppm)?.is_none()
+            {
+                return Ok(None);
+            }
+        }
+        for item in &prod.lhs {
+            if matches!(
+                item,
+                LhsItem::Eval { .. } | LhsItem::Bind { .. } | LhsItem::MvBind { .. }
+            ) && self.match_item(item, &mut b, ppm)?.is_none()
+            {
                 return Ok(None);
             }
         }
@@ -2446,11 +2463,256 @@ impl Engine {
                     }
                 }
             }
+            LhsItem::Eval { value, safe } => match self.eval_expr(value, b) {
+                Ok(v) => {
+                    if v == Value::Nil {
+                        return Ok(None);
+                    }
+                }
+                Err(e) => {
+                    if !*safe {
+                        return Err(unimpl(format!("!EVAL! {e}")));
+                    }
+                    return Ok(None);
+                }
+            },
+            LhsItem::Bind { var, value, safe } => match self.eval_expr(value, b) {
+                Ok(v) => {
+                    b.insert(var.clone(), v);
+                }
+                Err(e) => {
+                    if !*safe {
+                        return Err(unimpl(format!("!BIND! {e}")));
+                    }
+                    b.insert(var.clone(), Value::Nil);
+                }
+            },
+            LhsItem::MvBind { vars, value } => {
+                let vals = self
+                    .eval_values(value, b)
+                    .map_err(|e| unimpl(format!("!MV-BIND! {e}")))?;
+                for (i, var) in vars.iter().enumerate() {
+                    b.insert(var.clone(), vals.get(i).cloned().unwrap_or(Value::Nil));
+                }
+            }
         }
         Ok(Some(()))
     }
 
-    /// LHS `=` equality test with procedural partial matching (`:ppm`).
+    /// LHS/RHS `!eval!`/`!bind!` expressions, evaluated against bindings.
+    fn eval_expr(&self, e: &Sexp, b: &Bindings) -> Result<Value, String> {
+        match e {
+            Sexp::Int(i) => Ok(Value::Int(*i)),
+            Sexp::Float(x) => Ok(Value::Num(*x)),
+            Sexp::Str(s) => Ok(Value::Str(s.clone())),
+            Sexp::Sym(s) => self.eval_symbol(s, b),
+            Sexp::List(items) => {
+                if items.is_empty() {
+                    return Err("empty ()".to_string());
+                }
+                if let Some(h) = items[0].as_sym() {
+                    if h.eq_ignore_ascii_case("quote") {
+                        return self.quote_value(items.get(1));
+                    }
+                }
+                self.eval_call(&items[0], &items[1..], b)
+            }
+        }
+    }
+
+    fn eval_symbol(&self, s: &str, b: &Bindings) -> Result<Value, String> {
+        if s == "T" {
+            return Ok(Value::Sym("T".to_string()));
+        }
+        if s == "NIL" {
+            return Ok(Value::Nil);
+        }
+        if let Some(var) = s.strip_prefix('=') {
+            if let Some(v) = b.get(var) {
+                return Ok(v.clone());
+            }
+            if let Some(buf) = self.buffers.get(var) {
+                return Ok(buf
+                    .chunk
+                    .as_ref()
+                    .and_then(|c| c.name.clone())
+                    .map(Value::Sym)
+                    .unwrap_or(Value::Nil));
+            }
+            return Err(format!("unbound variable {s}"));
+        }
+        // A bare symbol is data (only valid where a value is expected).
+        Ok(Value::Sym(s.to_string()))
+    }
+
+    fn quote_value(&self, e: Option<&Sexp>) -> Result<Value, String> {
+        match e {
+            None => Ok(Value::Nil),
+            Some(Sexp::Sym(s)) => Ok(Value::Sym(s.clone())),
+            Some(Sexp::Int(i)) => Ok(Value::Int(*i)),
+            Some(Sexp::Float(x)) => Ok(Value::Num(*x)),
+            Some(Sexp::Str(s)) => Ok(Value::Str(s.clone())),
+            Some(Sexp::List(_)) => Err("quoted lists are not supported".to_string()),
+        }
+    }
+
+    /// Evaluate an expression that may yield multiple values (`values`).
+    fn eval_values(&self, e: &Sexp, b: &Bindings) -> Result<Vec<Value>, String> {
+        if let Sexp::List(items) = e {
+            if items
+                .first()
+                .and_then(|s| s.as_sym())
+                .map(|s| s.eq_ignore_ascii_case("values"))
+                .unwrap_or(false)
+            {
+                let mut out = Vec::new();
+                for a in &items[1..] {
+                    out.push(self.eval_expr(a, b)?);
+                }
+                return Ok(out);
+            }
+        }
+        Ok(vec![self.eval_expr(e, b)?])
+    }
+
+    fn eval_call(&self, head: &Sexp, args: &[Sexp], b: &Bindings) -> Result<Value, String> {
+        if let Sexp::Str(name) = head {
+            return self.eval_command(name, args, b);
+        }
+        let head = head.as_sym().ok_or("expression head is not a symbol")?;
+        match head.to_uppercase().as_str() {
+            "+" | "-" | "*" | "/" => {
+                let nums = self.eval_nums(args, b)?;
+                if nums.is_empty() {
+                    return Err(format!("{head} needs arguments"));
+                }
+                let r = match head {
+                    "+" => nums.iter().sum::<f64>(),
+                    "*" => nums.iter().product::<f64>(),
+                    "-" => {
+                        if nums.len() == 1 {
+                            -nums[0]
+                        } else {
+                            nums[1..].iter().fold(nums[0], |a, x| a - x)
+                        }
+                    }
+                    _ => {
+                        if nums.len() == 1 {
+                            1.0 / nums[0]
+                        } else {
+                            nums[1..].iter().fold(nums[0], |a, x| a / x)
+                        }
+                    }
+                };
+                Ok(self.num_value(r))
+            }
+            "1+" => Ok(self.num_value(self.eval_num(args, b)? + 1.0)),
+            "1-" => Ok(self.num_value(self.eval_num(args, b)? - 1.0)),
+            "ABS" => Ok(self.num_value(self.eval_num(args, b)?.abs())),
+            ">" | "<" | ">=" | "<=" | "=" | "/=" => {
+                let nums = self.eval_nums(args, b)?;
+                if nums.len() < 2 {
+                    return Err(format!("{head} needs two numbers"));
+                }
+                let ok = match head {
+                    ">" => nums[0] > nums[1],
+                    "<" => nums[0] < nums[1],
+                    ">=" => nums[0] >= nums[1],
+                    "<=" => nums[0] <= nums[1],
+                    "=" => nums[0] == nums[1],
+                    _ => nums[0] != nums[1],
+                };
+                Ok(bool_value(ok))
+            }
+            "EQ" | "EQL" | "EQUAL" | "EQUALP" => {
+                if args.len() < 2 {
+                    return Err(format!("{head} needs two arguments"));
+                }
+                let a = self.eval_expr(&args[0], b)?;
+                let c = self.eval_expr(&args[1], b)?;
+                Ok(bool_value(a == c))
+            }
+            "NOT" | "NULL" => {
+                let v = self.eval_expr(args.first().ok_or("not needs an argument")?, b)?;
+                Ok(bool_value(v == Value::Nil))
+            }
+            "AND" => {
+                for a in args {
+                    if self.eval_expr(a, b)? == Value::Nil {
+                        return Ok(Value::Nil);
+                    }
+                }
+                Ok(Value::Sym("T".to_string()))
+            }
+            "OR" => {
+                for a in args {
+                    let v = self.eval_expr(a, b)?;
+                    if v != Value::Nil {
+                        return Ok(v);
+                    }
+                }
+                Ok(Value::Nil)
+            }
+            "MP-TIME" => Ok(Value::Num(self.time_ms as f64 / 1000.0)),
+            "CHUNK-SLOT-VALUE-FCT" => {
+                if args.len() < 2 {
+                    return Err("chunk-slot-value-fct needs a chunk and a slot".to_string());
+                }
+                let chunk = self.eval_expr(&args[0], b)?;
+                let slot = self.eval_expr(&args[1], b)?;
+                self.chunk_slot_value(&chunk, &slot)
+            }
+            other => Err(format!("unsupported eval function {other}")),
+        }
+    }
+
+    /// Remote-command call by name (a string head). No commands are
+    /// registered yet, so these fail loudly rather than silently.
+    fn eval_command(&self, name: &str, _args: &[Sexp], _b: &Bindings) -> Result<Value, String> {
+        Err(format!("unsupported eval command \"{name}\""))
+    }
+
+    fn eval_num(&self, args: &[Sexp], b: &Bindings) -> Result<f64, String> {
+        let e = args.first().ok_or("number argument expected")?;
+        let v = self.eval_expr(e, b)?;
+        as_num(&v).ok_or_else(|| format!("not a number: {}", v.show()))
+    }
+
+    fn eval_nums(&self, args: &[Sexp], b: &Bindings) -> Result<Vec<f64>, String> {
+        let mut out = Vec::new();
+        for e in args {
+            let v = self.eval_expr(e, b)?;
+            out.push(as_num(&v).ok_or_else(|| format!("not a number: {}", v.show()))?);
+        }
+        Ok(out)
+    }
+
+    /// Preserve integer-ness when a numeric result is integral.
+    fn num_value(&self, x: f64) -> Value {
+        if x.fract() == 0.0 && x.abs() < 9e15 {
+            Value::Int(x as i64)
+        } else {
+            Value::Num(x)
+        }
+    }
+
+    fn chunk_slot_value(&self, chunk: &Value, slot: &Value) -> Result<Value, String> {
+        let name = match chunk {
+            Value::Sym(s) => s.clone(),
+            Value::Nil => return Ok(Value::Nil),
+            _ => return Err("chunk-slot-value-fct needs a chunk".to_string()),
+        };
+        let slot = match slot {
+            Value::Sym(s) => s.clone(),
+            _ => return Err("chunk-slot-value-fct needs a slot symbol".to_string()),
+        };
+        let c = self
+            .dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name.as_str()))
+            .or_else(|| self.named.get(&name));
+        Ok(c.map(|c| c.get(&slot)).unwrap_or(Value::Nil))
+    }
     /// An exact miss may still pass when the value similarity is strictly
     /// greater than `:md`; the mismatch is recorded for the utility penalty
     /// (`test-slot`, procedural.lisp:1774).
@@ -2548,22 +2810,63 @@ impl Engine {
         // firing (GOTCHA #41): a modify and a request referencing the same
         // buffer share `NAME-0`.
         let mut copied: HashMap<String, String> = HashMap::new();
-        // `!output!` binds run during firing, before action events.
+        // RHS `!bind!`/`!mv-bind!` run first (they may be referenced by
+        // later actions), then `!eval!`, then `!output!`. ACT-R reorders
+        // these by variable dependencies (`production-parsing.lisp:1879`).
+        let mut b = bindings.clone();
         for action in &prod.rhs {
-            if let RhsAction::Output { args } = action {
-                let mut text = String::new();
-                for a in args {
-                    text.push_str(&self.show_output_arg(a, bindings)?);
-                    text.push(' ');
+            if let RhsAction::Bind { var, value, safe } = action {
+                match self.eval_expr(value, &b) {
+                    Ok(v) => {
+                        b.insert(var.clone(), v);
+                    }
+                    Err(e) => {
+                        if !*safe {
+                            return Err(unimpl(format!("!BIND! {e}")));
+                        }
+                        b.insert(var.clone(), Value::Nil);
+                    }
                 }
-                self.out_lines.push(text);
-            } else if let RhsAction::Other { head, .. } = action {
-                // `!stop!` ends the run with a BREAK-EVENT.
-                if head == "!STOP!" {
-                    self.stopped = true;
-                } else {
-                    return Err(unimpl(format!("RHS {head} needs a Lisp evaluator")));
+            }
+        }
+        for action in &prod.rhs {
+            if let RhsAction::MvBind { vars, value } = action {
+                let vals = self
+                    .eval_values(value, &b)
+                    .map_err(|e| unimpl(format!("!MV-BIND! {e}")))?;
+                for (i, var) in vars.iter().enumerate() {
+                    b.insert(var.clone(), vals.get(i).cloned().unwrap_or(Value::Nil));
                 }
+            }
+        }
+        for action in &prod.rhs {
+            if let RhsAction::Eval { value, safe } = action {
+                if let Err(e) = self.eval_expr(value, &b) {
+                    if !*safe {
+                        return Err(unimpl(format!("!EVAL! {e}")));
+                    }
+                }
+            }
+        }
+        for action in &prod.rhs {
+            match action {
+                RhsAction::Output { args } => {
+                    let mut text = String::new();
+                    for a in args {
+                        text.push_str(&self.show_output_arg(a, &b)?);
+                        text.push(' ');
+                    }
+                    self.out_lines.push(text);
+                }
+                RhsAction::Other { head, .. } => {
+                    // `!stop!` ends the run with a BREAK-EVENT.
+                    if head == "!STOP!" {
+                        self.stopped = true;
+                    } else {
+                        return Err(unimpl(format!("RHS {head} needs a Lisp evaluator")));
+                    }
+                }
+                _ => {}
             }
         }
         if self.stopped {
@@ -2584,7 +2887,7 @@ impl Engine {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
-                        sub.push((s.clone(), self.rhs_value(p, bindings, copy, &mut copied)?));
+                        sub.push((s.clone(), self.rhs_value(p, &b, copy, &mut copied)?));
                     }
                     self.now(
                         Prio::Num(100),
@@ -2605,7 +2908,7 @@ impl Engine {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
-                        sub.push((s.clone(), self.rhs_value(p, bindings, copy, &mut copied)?));
+                        sub.push((s.clone(), self.rhs_value(p, &b, copy, &mut copied)?));
                     }
                     self.now(
                         Prio::Num(100),
@@ -2619,7 +2922,7 @@ impl Engine {
                 }
                 RhsAction::Request { buffer, spec } => {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
-                    let concrete = self.concretize(spec, bindings, copy, &mut copied)?;
+                    let concrete = self.concretize(spec, &b, copy, &mut copied)?;
                     if let NewChunk::Named(n) = &concrete {
                         reqs.push((buffer.clone(), n.clone()));
                     }
@@ -2650,7 +2953,11 @@ impl Engine {
                         },
                     );
                 }
-                RhsAction::Output { .. } | RhsAction::Other { .. } => {}
+                RhsAction::Output { .. }
+                | RhsAction::Other { .. }
+                | RhsAction::Eval { .. }
+                | RhsAction::Bind { .. }
+                | RhsAction::MvBind { .. } => {}
             }
         }
         for buffer in &self.exec_prods[prod_idx].implicit_clears.clone() {
@@ -2665,7 +2972,7 @@ impl Engine {
         self.now(Prio::Min, Out::Medium, Event::ConflictResolution);
         // `production-fired` runs actions, then compiles
         // (`production-compilation.lisp`, called from `production-fired`).
-        self.compile_productions(prod_idx, bindings, &reqs);
+        self.compile_productions(prod_idx, &b, &reqs);
         Ok(())
     }
 
@@ -4341,6 +4648,24 @@ fn indirect_action_buffer_name(prod: &Production) -> Option<String> {
     None
 }
 
+/// Numeric view of a value for the `!eval!`/`!bind!` evaluator.
+fn as_num(v: &Value) -> Option<f64> {
+    match v {
+        Value::Int(i) => Some(*i as f64),
+        Value::Num(x) => Some(*x),
+        _ => None,
+    }
+}
+
+/// CL truth: `T` or `NIL`.
+fn bool_value(b: bool) -> Value {
+    if b {
+        Value::Sym("T".to_string())
+    } else {
+        Value::Nil
+    }
+}
+
 /// `(A B C)` from a slice of values (`~S` of a list).
 fn show_values(vals: &[Value]) -> String {
     format!(
@@ -4450,6 +4775,28 @@ fn render_production(prod: &Production, b: &Bindings, partials: &[PpmMismatch]) 
                     s.push_str(&format!("       {attr} {}\n", show_pat(val, b)));
                 }
             }
+            LhsItem::Eval { value, safe } => {
+                s.push_str(&format!(
+                    "   !{}! {}\n",
+                    if *safe { "SAFE-EVAL" } else { "EVAL" },
+                    show_sexp_arg(value, b)
+                ));
+            }
+            LhsItem::Bind { var, value, safe } => {
+                s.push_str(&format!(
+                    "   !{}! ={var} {}\n",
+                    if *safe { "SAFE-BIND" } else { "BIND" },
+                    show_sexp_arg(value, b)
+                ));
+            }
+            LhsItem::MvBind { vars, value } => {
+                let vs: Vec<String> = vars.iter().map(|v| format!("={v}")).collect();
+                s.push_str(&format!(
+                    "   !MV-BIND! ({}) {}\n",
+                    vs.join(" "),
+                    show_sexp_arg(value, b)
+                ));
+            }
         }
     }
     s.push_str(" ==>\n");
@@ -4500,6 +4847,28 @@ fn render_production(prod: &Production, b: &Bindings, partials: &[PpmMismatch]) 
                 let name = head.trim_matches('!');
                 let body: Vec<String> = args.iter().map(|a| show_sexp_arg(a, b)).collect();
                 s.push_str(&format!("   !{name}! {}\n", body.join(" ")));
+            }
+            RhsAction::Eval { value, safe } => {
+                s.push_str(&format!(
+                    "   !{}! {}\n",
+                    if *safe { "SAFE-EVAL" } else { "EVAL" },
+                    show_sexp_arg(value, b)
+                ));
+            }
+            RhsAction::Bind { var, value, safe } => {
+                s.push_str(&format!(
+                    "   !{}! ={var} {}\n",
+                    if *safe { "SAFE-BIND" } else { "BIND" },
+                    show_sexp_arg(value, b)
+                ));
+            }
+            RhsAction::MvBind { vars, value } => {
+                let vs: Vec<String> = vars.iter().map(|v| format!("={v}")).collect();
+                s.push_str(&format!(
+                    "   !MV-BIND! ({}) {}\n",
+                    vs.join(" "),
+                    show_sexp_arg(value, b)
+                ));
             }
         }
     }
@@ -5384,6 +5753,9 @@ fn implicit_clears(prod: &Production, exempt: &[String]) -> Vec<String> {
                     tested.push(buffer.clone());
                 }
             }
+            LhsItem::Eval { .. }
+            | LhsItem::Bind { .. }
+            | LhsItem::MvBind { .. } => {}
         }
     }
     let mut targeted: Vec<(char, String)> = Vec::new();
@@ -5395,7 +5767,11 @@ fn implicit_clears(prod: &Production, exempt: &[String]) -> Vec<String> {
             }
             RhsAction::Request { buffer, .. } => targeted.push(('+', buffer.clone())),
             RhsAction::Clear { buffer } => targeted.push(('-', buffer.clone())),
-            RhsAction::Output { .. } | RhsAction::Other { .. } => {}
+            RhsAction::Output { .. }
+            | RhsAction::Other { .. }
+            | RhsAction::Eval { .. }
+            | RhsAction::Bind { .. }
+            | RhsAction::MvBind { .. } => {}
         }
     }
     let mut clears: Vec<String> = Vec::new();

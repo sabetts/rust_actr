@@ -1079,3 +1079,17 @@ text and **installed** with utility 0 so they can fire (contradictory
 conditions simply never match). This makes `indirect-action-compilation`
 green.
 
+## 110. A bounded `!eval!`/`!bind!` evaluator (verified)
+
+LHS/RHS `!eval!`/`!safe-eval!`, `!bind!`/`!safe-bind!`, and `!mv-bind!`
+are evaluated by a small S-expression evaluator: literals, quoted
+symbols, `=vars`, `+ - * / 1+ 1- abs`, `< > <= >= = /= eq eql equal
+equalp`, `not null and or`, `mp-time`, `values` +
+`chunk-slot-value-fct`. Unknown functions/commands **error loudly** (never
+silent `nil`). The `safe-` variants swallow errors (condition false /
+binding nil). LHS `!bind!` runs after buffer tests (so it sees their
+bindings); RHS binds/mv-binds run before evals, then `!output!` (ACT-R
+reorders by dependencies). This alone flips `dynamic-slot-compilation`;
+the other bind/eval specs need task functions (`single-bind`/`multi-bind`),
+remote commands, or unrelated features.
+
