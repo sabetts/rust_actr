@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit1-semantic-g3-trace" :REF "tutorial-unit1-semantic-g3-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit1-semantic-g3-trace" :REF "tutorial-unit1-semantic-g3-trace.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit5modeling-v7-p4-run" :REF "tutorial-unit5modeling-v7-p4-run.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit5modeling-v7-p4-run" :REF "tutorial-unit5modeling-v7-p4-run.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

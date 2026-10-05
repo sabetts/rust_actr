@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit7-paired-learning-results-no-compiling" :REF "tutorial-unit7-paired-learning-results-no-compiling.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit7-paired-learning-results-no-compiling" :REF "tutorial-unit7-paired-learning-results-no-compiling.ref" :MODELS NIL :SEED-SET T :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition" :REF "tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition" :REF "tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

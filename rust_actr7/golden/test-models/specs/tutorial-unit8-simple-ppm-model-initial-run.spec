@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit8-simple-ppm-model-initial-run" :REF "tutorial-unit8-simple-ppm-model-initial-run.ref" :MODELS ("tutorial;unit8;simple-ppm-model.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)
+(:NAME "tutorial-unit8-simple-ppm-model-initial-run" :REF "tutorial-unit8-simple-ppm-model-initial-run.ref" :MODELS ("tutorial;unit8;simple-ppm-model.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22)) :STEPS ((:RUN 1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

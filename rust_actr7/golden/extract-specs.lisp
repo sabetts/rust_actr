@@ -54,6 +54,7 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defvar *mode* nil)                 ; :load | :drive | nil
 (defvar *models* nil)
 (defvar *runs* nil)
+(defvar *steps* nil)
 (defvar *goal-focus-count* 0)
 (defvar *reset-count* 0)
 (defvar *sgp-calls* nil)
@@ -81,41 +82,44 @@ disable/enable, breakpoints); not trace-only drivers.")
 
 ;;; Explicit-seed detection.
 ;;;
-;;; A seed is reproducible only if a real `(sgp ... :seed ...)` /
-;;; `(sgp-fct ... :seed ...)` form appears in the stub or one of the loaded
-;;; model files. Plain text search gives false positives (commented-out
-;;; calls, docstrings) and `(ssp :starting-parameters (:seed ...))` is
-;;; rejected by ACT-R once `:testing-function` is in the list, so those keep
-;;; a time-random seed. Parsing forms with `read` skips comments exactly
-;;; like Lisp does.
+;;; A run's seed is reproducible only if it matches a literal value in a real
+;;; `(sgp ... :seed V ...)` form in the stub or a loaded model file. Parsing
+;;; forms with `read` skips comments exactly like Lisp. A per-spec boolean is
+;;; not enough: `simple-ppm-test` runs twice before its first `(sgp :seed
+;;; (100 1))`, so those runs are time-seeded while the last is fixed.
+;;; `(ssp :starting-parameters (:seed ...))` is also deliberately not
+;;; trusted: ACT-R rejects that list once `:testing-function` is in it.
 
-(defun seed-in-sgp-form-p (form)
-  (labels ((has (x)
-             (cond ((eq x :seed) t)
-                   ((consp x) (some #'has x))
-                   (t nil))))
-    (and (consp form)
-         (member (car form) '(sgp sgp-fct) :test #'eq)
-         (has form))))
+(defun collect-seed-values (form acc)
+  (when (consp form)
+    ;; Scan this list's elements for a `:seed` followed by its value, so both
+    ;; `(sgp :seed V ...)` and `(sgp-fct (list :seed V ...))` are seen.
+    (loop for (k v) on form
+          when (eq k :seed) do (push v acc))
+    (dolist (e form)
+      (when (consp e)
+        (setf acc (collect-seed-values e acc)))))
+  acc)
 
-(defun form-has-seed-p (form)
-  (or (seed-in-sgp-form-p form)
-      (and (consp form) (some #'form-has-seed-p form))))
-
-(defun file-sets-seed-p (path)
+(defun file-seed-values (path)
   (when (probe-file path)
     (with-open-file (f path :direction :input)
-      (loop for form = (handler-case (read f nil :eof) (error () :eof))
-            until (eq form :eof)
-            thereis (form-has-seed-p form)))))
+      (let ((acc nil))
+        (loop for form = (handler-case (read f nil :eof) (error () :eof))
+              until (eq form :eof)
+              do (setf acc (collect-seed-values form acc)))
+        acc))))
 
 (defun model-phys (logical)
   (merge-pathnames (substitute #\/ #\; (logical->rel logical)) *actr-dir*))
 
-(defun explicit-seed-p (name logical-models)
-  (or (file-sets-seed-p (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))
-      (loop for m in logical-models
-            thereis (file-sets-seed-p (model-phys m)))))
+(defun all-seed-values (name logical-models)
+  (let ((vals (file-seed-values (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))))
+    (dolist (m logical-models vals)
+      (setf vals (append (file-seed-values (model-phys m)) vals)))))
+
+(defun seed-reproducible-p (seed values)
+  (and (member seed values :test #'equal) t))
 
 ;;; ---------------------------------------------------------------- wrappers
 
@@ -147,19 +151,22 @@ disable/enable, breakpoints); not trace-only drivers.")
   ;; without changing model output.
   (declare (ignore real-time))
   (when (and (eq *mode* :drive) (not *suppress*))
-    (push (list run-time (eff-seed) (eff-v)
-                (ignore-errors (max-module-name-length)))
-          *runs*))
+    (let ((rec (list run-time (eff-seed) (eff-v)
+                     (ignore-errors (max-module-name-length)))))
+      (push rec *runs*)
+      (push (cons :run rec) *steps*)))
   (call-orig 'run run-time nil))
 
 (defun w-goal-focus (spec)
   (when (and (eq *mode* :drive) (not *suppress*))
-    (incf *goal-focus-count*))
+    (incf *goal-focus-count*)
+    (push (list :goal-focus spec) *steps*))
   (call-orig 'goal-focus-fct spec))
 
 (defun w-reset ()
   (when (and (eq *mode* :drive) (not *suppress*))
-    (incf *reset-count*))
+    (incf *reset-count*)
+    (push (list :reset) *steps*))
   (let ((*suppress* t))
     (call-orig 'reset)))
 
@@ -167,13 +174,15 @@ disable/enable, breakpoints); not trace-only drivers.")
   (when (and (eq *mode* :drive) (not *suppress*)
              ;; Drop read-only getters like `(sgp :alpha)` (GOTCHAS #12).
              (not (every #'keywordp params)))
-    (push params *sgp-calls*))
+    (push params *sgp-calls*)
+    (push (cons :sgp params) *steps*))
   (call-orig 'sgp-fct params))
 
 (defun w-ssp (params)
   (when (and (eq *mode* :drive) (not *suppress*)
              (not (every #'keywordp params)))
-    (push (cons :ssp params) *sgp-calls*))
+    (push (cons :ssp params) *sgp-calls*)
+    (push (cons :ssp params) *steps*))
   (call-orig 'ssp-fct params))
 
 (defun w-actr-load (&rest args)
@@ -206,8 +215,8 @@ disable/enable, breakpoints); not trace-only drivers.")
     ((any-token src *driver-tokens*) :driver)))
 
 (defun fresh-state ()
-  (setf *models* nil *runs* nil *goal-focus-count* 0 *reset-count* 0
-        *sgp-calls* nil))
+  (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
+        *reset-count* 0 *sgp-calls* nil))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))
@@ -216,27 +225,39 @@ disable/enable, breakpoints); not trace-only drivers.")
         (setf (gethash x seen) t)
         (push x out)))))
 
-(defun canon-runs (runs explicit)
-  "Replace a time-random seed with a stable canonical one. Tests whose files
-contain no `(sgp ... :seed ...)` form are RNG-independent (a noisy one
-without a seed has a non-reproducible ref and must not be a golden), so the
-value is irrelevant."
+(defun canon-runs (runs values)
+  "Replace a time-random seed with a stable canonical one. A run whose seed
+does not match a literal `:seed` value in the sources is RNG-independent (a
+noisy run without a fixed seed has a non-reproducible ref and must not be a
+golden), so the value is irrelevant."
   (mapcar (lambda (r)
-            (list (first r) (if explicit (second r) '(100 0)) (third r) (fourth r)))
+            (list (first r)
+                  (if (seed-reproducible-p (second r) values) (second r) '(100 0))
+                  (third r) (fourth r)))
           runs))
+
+(defun canon-steps (steps values)
+  "Canonicalize the seed inside each `(:run ...)` step, mirroring
+`canon-runs`; other step shapes pass through."
+  (mapcar (lambda (st)
+            (if (and (consp st) (eq (car st) :run))
+                (let ((r (cdr st)))
+                  (list :run (first r)
+                        (if (seed-reproducible-p (second r) values) (second r) '(100 0))
+                        (third r) (fourth r)))
+                st))
+          steps))
 
 (defun make-spec (name scope &key flags error)
   (let* ((models (dedupe-preserve (mapcar #'logical->rel (reverse *models*))))
-         ;; Only PURE specs are driven by the harness today; non-PURE specs
-         ;; are re-extracted when their feature lands, so canonicalize their
-         ;; seeds to keep the committed corpus stable across regens.
-         (explicit (and (eq scope :pure) (explicit-seed-p name models)))
-         (runs (canon-runs (reverse *runs*) explicit)))
+         (seedvals (all-seed-values name models))
+         (runs (canon-runs (reverse *runs*) seedvals)))
     (list :name name
           :ref (concatenate 'string name ".ref")
           :models models
-          :seed-set (if explicit t nil)
+          :seed-set (if seedvals t nil)
           :runs runs
+          :steps (canon-steps (reverse *steps*) seedvals)
           :goal-focus *goal-focus-count*
           :resets *reset-count*
           :sgp (reverse *sgp-calls*)

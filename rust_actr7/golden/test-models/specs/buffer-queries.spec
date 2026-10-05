@@ -1,1 +1,1 @@
-(:NAME "buffer-queries" :REF "buffer-queries.ref" :MODELS ("test-models;models;buffer-queries.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)
+(:NAME "buffer-queries" :REF "buffer-queries.ref" :MODELS ("test-models;models;buffer-queries.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22)) :STEPS ((:RUN 1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

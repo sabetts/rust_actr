@@ -233,7 +233,7 @@ fn parse_pairs_plain(forms: &[Sexp]) -> Result<Vec<(String, Pattern)>, LoadError
 }
 
 /// `ISA <type> pairs...`, bare pairs (empty type), or a lone chunk name.
-fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
+pub fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
     if forms.len() == 1 {
         if let Some(name) = forms[0].as_sym() {
             if name != "ISA" {

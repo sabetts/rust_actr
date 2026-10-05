@@ -824,6 +824,8 @@ pub struct Engine {
     imag_busy: bool,
     /// Last press-key geometry, for preparation differences.
     last_press: Option<(String, String, f32, f32)>,
+    /// Trace output enabled (`:v`). Scripted drivers can toggle it.
+    trace_on: bool,
 }
 
 impl Engine {
@@ -931,6 +933,7 @@ impl Engine {
             man_exec_busy: false,
             imag_busy: false,
             last_press: None,
+            trace_on: true,
         };
         // Reset: device proc-display (maintenance) processes anything
         // already due, then the initial goal, then conflict resolution.
@@ -996,6 +999,9 @@ impl Engine {
     }
 
     fn emit(&mut self, module: &str, details: String) {
+        if !self.trace_on {
+            return;
+        }
         self.out_lines.push(format_line(
             self.time_ms,
             module,
@@ -1062,15 +1068,28 @@ impl Engine {
         }
     }
 
+    /// Run once and return the full trace (single-shot contract).
     pub fn run(mut self) -> Result<String, EngineError> {
+        let secs = self.limit_ms as f64 / 1000.0;
+        self.run_secs(secs)?;
+        Ok(self.output())
+    }
+
+    /// One `(run secs)` step: process events until the queue drains or the
+    /// relative limit (`time_ms + secs*1000`) is passed. Emits its own
+    /// `Stopped because ...` terminator, exactly like Lisp `run`
+    /// (`framework/scheduling.lisp:816`, which bounds each run relative to
+    /// the current model time).
+    pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
+        let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         loop {
             let next = match self.queue.pop() {
                 None => {
                     // Queue empty before the limit: out of events; at or
                     // past the limit (run-full-time dummy consumed):
                     // time limit reached, like Lisp `run`.
-                    if self.time_ms >= self.limit_ms {
-                        self.time_ms = self.limit_ms;
+                    if self.time_ms >= limit_ms {
+                        self.time_ms = limit_ms;
                         self.emit("------", "Stopped because time limit reached".into());
                     } else {
                         self.emit("------", "Stopped because no events left to process".into());
@@ -1079,8 +1098,8 @@ impl Engine {
                 }
                 Some(q) => q,
             };
-            if next.time_ms > self.limit_ms {
-                self.time_ms = self.limit_ms;
+            if next.time_ms > limit_ms {
+                self.time_ms = limit_ms;
                 self.emit("------", "Stopped because time limit reached".into());
                 break;
             }
@@ -1096,9 +1115,56 @@ impl Engine {
                 self.changed();
             }
         }
+        Ok(())
+    }
+
+    /// All trace emitted so far, newline-terminated (empty if none).
+    pub fn output(&self) -> String {
+        if self.out_lines.is_empty() {
+            return String::new();
+        }
         let mut s = self.out_lines.join("\n");
         s.push('\n');
-        Ok(s)
+        s
+    }
+
+    /// `(goal-focus <spec>)`: place a chunk in the goal buffer at the
+    /// current time (`core-modules/goal.lisp:275`, priority `:max`,
+    /// `requested nil`). Any armed conflict-resolution wakes on the buffer
+    /// change via [`Engine::changed`], matching the Lisp trace.
+    pub fn goal_focus(&mut self, desc: &ChunkDesc) -> Result<(), EngineError> {
+        let chunk = new_chunk(desc)?;
+        self.now(
+            Prio::Max,
+            Out::Low,
+            Event::SetBuffer {
+                buffer: "GOAL".to_string(),
+                chunk,
+                requested: false,
+                shown: None,
+            },
+        );
+        Ok(())
+    }
+
+    /// Trace on/off (`:v`), used by scripted drivers that hide segments.
+    pub fn set_trace(&mut self, on: bool) {
+        self.trace_on = on;
+    }
+
+    /// Override the trace module-column width (`max-module-name-length`).
+    pub fn set_module_width(&mut self, width: usize) {
+        self.cfg.module_width = width;
+    }
+
+    /// `(sgp :trace-detail X)` mid-driver.
+    pub fn set_detail(&mut self, detail: Detail) {
+        self.cfg.detail = detail;
+    }
+
+    /// `(sgp :seed (S C))`: init + discard, same as construction.
+    pub fn set_seed(&mut self, seed: (u64, u64)) {
+        self.rng.set_seed(seed.0, seed.1);
     }
 
     fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {

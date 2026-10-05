@@ -41,12 +41,14 @@
 //!   (`actr7.x/test-models/`) is integrated as a second oracle:
 //!   `golden/regen-specs.sh` extracts runner specs, `tests/test_models.rs`
 //!   diffs engine output against `.ref` with ACT-R's comparator, and
-//!   `golden/test-models/enabled.txt` is the green allowlist (5/26 pure
-//!   trace specs so far). This milestone added per-spec trace module width
-//!   (`max-module-name-length` overrides) and integer-vs-float slot
-//!   printing. Remaining `PURE` gaps: `define-chunks`, `!bind!`,
-//!   `set-similarities`, `?buffer empty`, `require-extra`; then multi-run
-//!   drivers (Phase 3).
+//!   `golden/test-models/enabled.txt` is the green allowlist (8 specs so
+//!   far). This milestone added per-spec trace module width
+//!   (`max-module-name-length` overrides), integer-vs-float slot printing,
+//!   and a scripted driver (`run_model_steps`: repeated `run`, `goal-focus`,
+//!   `:v`/`:trace-detail`/`:seed`), which made the multi-run `semantic`
+//!   trace green. Remaining `PURE`/`MULTI` gaps: `define-chunks`,
+//!   `!bind!`, `set-similarities`, `?buffer empty`, `require-extra`,
+//!   scripted `(reset)`, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
@@ -64,7 +66,7 @@ pub mod sexpr;
 pub mod trace;
 
 pub use engine::{DeviceSetup, DeviceText, EngineError};
-pub use model::{load_models, Model};
+pub use model::{load_models, ChunkDesc, Model};
 
 use std::path::Path;
 
@@ -113,6 +115,93 @@ pub fn run_model_with(
         .last()
         .ok_or_else(|| EngineError::Model(format!("no define-model in {model}")))?;
     engine::Engine::new_with_width(def.clone(), seed, run_time, device.clone(), module_width)?.run()
+}
+
+/// One driver step from a test spec (`golden/test-models/specs/*.spec`).
+#[derive(Debug, Clone)]
+pub enum Step {
+    /// `(run secs)` with the trace state and module width in effect.
+    Run {
+        secs: f64,
+        trace: bool,
+        width: usize,
+    },
+    /// `(goal-focus <spec>)`.
+    GoalFocus(ChunkDesc),
+    /// `(sgp :seed (S C))`.
+    Seed((u64, u64)),
+    /// `(sgp :trace-detail X)`.
+    SetDetail(trace::Detail),
+    /// `(reset)`.
+    Reset,
+}
+
+/// Run a scripted sequence of steps over one or more model files (the
+/// test-model driver form: repeated `run` bounded relative to the current
+/// model time, `goal-focus` between runs). Returns the concatenated trace.
+///
+/// The RNG is seeded once from `seed` (the first run's effective seed); Lisp
+/// `(run ...)` does not reseed, and none of the current PURE/MULTI specs
+/// change `:seed` mid-driver.
+pub fn run_model_steps(
+    actr_root: &Path,
+    models: &[String],
+    seed: (u64, u64),
+    steps: &[Step],
+    device: &DeviceSetup,
+) -> Result<String, EngineError> {
+    let mut defs = Vec::new();
+    for m in models {
+        let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
+        let path = actr_root.join(rel);
+        // Test-model stubs load a task file (defuns, experiment code) that
+        // in turn loads the actual model. Only files that define a model are
+        // fed to the strict loader.
+        if path.is_file() && file_defines_model(&path) {
+            defs.extend(load_models(&path)?);
+        }
+    }
+    let def = defs
+        .last()
+        .ok_or_else(|| EngineError::Model("no define-model in step script".to_string()))?;
+    let mut eng = engine::Engine::new(def.clone(), seed, 0.0, device.clone())?;
+    for step in steps {
+        match step {
+            Step::Run { secs, trace, width } => {
+                eng.set_module_width(*width);
+                eng.set_trace(*trace);
+                eng.run_secs(*secs)?;
+            }
+            Step::GoalFocus(desc) => eng.goal_focus(desc)?,
+            Step::Seed(s) => eng.set_seed(*s),
+            Step::SetDetail(d) => eng.set_detail(*d),
+            Step::Reset => {
+                return Err(EngineError::NotImplemented(
+                    "scripted (reset) step".to_string(),
+                ))
+            }
+        }
+    }
+    Ok(eng.output())
+}
+
+/// Whether a file contains a top-level `define-model` (possibly `-fct`)
+/// form. Used to skip test-model task files, which strict `load_models`
+/// would reject on their `defun`/experiment forms.
+pub fn file_defines_model(path: &Path) -> bool {
+    let Ok(src) = std::fs::read_to_string(path) else {
+        return false;
+    };
+    let Ok(forms) = sexpr::parse_all(&src) else {
+        return false;
+    };
+    forms.iter().any(|f| match f {
+        sexpr::Sexp::List(v) => matches!(
+            v.first(),
+            Some(sexpr::Sexp::Sym(s)) if s == "DEFINE-MODEL" || s == "DEFINE-MODEL-FCT"
+        ),
+        _ => false,
+    })
 }
 
 #[cfg(test)]

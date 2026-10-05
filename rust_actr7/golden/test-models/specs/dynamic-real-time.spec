@@ -1,1 +1,1 @@
-(:NAME "dynamic-real-time" :REF "dynamic-real-time.ref" :MODELS ("test-models;models;dynamic-real-time.lisp") :SEED-SET NIL :RUNS ((1.1 (100 0) T 22) (1.1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 2 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)
+(:NAME "dynamic-real-time" :REF "dynamic-real-time.ref" :MODELS ("test-models;models;dynamic-real-time.lisp") :SEED-SET NIL :RUNS ((1.1 (100 0) T 22) (1.1 (100 0) T 22)) :STEPS ((:RESET) (:RUN 1.1 (100 0) T 22) (:RESET) (:RUN 1.1 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 2 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

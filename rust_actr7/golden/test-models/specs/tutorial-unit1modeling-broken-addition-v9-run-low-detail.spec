@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit1modeling-broken-addition-v9-run-low-detail" :REF "tutorial-unit1modeling-broken-addition-v9-run-low-detail.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit1modeling-broken-addition-v9-run-low-detail" :REF "tutorial-unit1modeling-broken-addition-v9-run-low-detail.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)

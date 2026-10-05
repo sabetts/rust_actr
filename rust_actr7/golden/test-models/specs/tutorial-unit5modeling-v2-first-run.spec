@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit5modeling-v2-first-run" :REF "tutorial-unit5modeling-v2-first-run.ref" :MODELS ("test-models;models;declarative-issues-v2.lisp") :SEED-SET T :RUNS ((10 (100 1) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)
+(:NAME "tutorial-unit5modeling-v2-first-run" :REF "tutorial-unit5modeling-v2-first-run.ref" :MODELS ("test-models;models;declarative-issues-v2.lisp") :SEED-SET T :RUNS ((10 (100 1) T 22)) :STEPS ((:RUN 10 (100 1) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

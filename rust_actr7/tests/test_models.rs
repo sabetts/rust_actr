@@ -2,27 +2,28 @@
 //!
 //! Phase 1 (`golden/regen-specs.sh`) runs the Lisp stubs under
 //! instrumentation and writes `golden/test-models/specs/*.spec` describing
-//! each test's model chain, resolved seed, and run steps. This harness
-//! consumes those specs plus `actr7.x/test-models/*.ref`, so `cargo test`
-//! never needs SBCL.
+//! each test's model chain, resolved seed, and ordered driver steps. This
+//! harness consumes those specs plus `actr7.x/test-models/*.ref`, so
+//! `cargo test` never needs SBCL.
 //!
 //! Comparison mirrors ACT-R's own `compare-test-model-files`
 //! (`actr7.x/test-models/model-tester.cl`): each line is right-trimmed and
 //! compared case-insensitively (`string-equal`), line by line. That is what
 //! the refs were produced/validated against.
 //!
-//! Only `scope = PURE` specs (one run, one model, no device/command output)
-//! are runnable today; the rest are reported as ignored with a reason so the
-//! coverage gap is visible and only shrinks. `enabled.txt` is the checked-in
-//! allowlist that must stay green; `probe_all_pure` (ignored test) reports
-//! which other pure specs already pass, to promote over time.
+//! `PURE`/`MULTI` trace specs the scripted engine can drive (repeated `run`,
+//! `goal-focus`, `:v`/`:trace-detail`/`:seed`) are runnable; the rest are
+//! reported as ignored with a reason so the coverage gap is visible and only
+//! shrinks. `enabled.txt` is the checked-in allowlist that must stay green;
+//! `probe_runnable` (ignored test) reports which other specs already pass.
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use actr_engine::sexpr::{parse_all, Sexp};
-use actr_engine::DeviceSetup;
+use actr_engine::trace::Detail;
+use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, Step};
 
 // ---------------------------------------------------------------- spec model
 
@@ -31,24 +32,17 @@ struct Spec {
     name: String,
     ref_name: String,
     models: Vec<String>,
-    runs: Vec<Run>,
-    goal_focus: i64,
-    resets: i64,
-    sgp_nonempty: bool,
+    /// Effective seed of each run, in order (only the first is needed: the
+    /// engine seeds once; later changes are explicit `Step::Seed`s).
+    run_seeds: Vec<(u64, u64)>,
+    steps: Vec<Step>,
+    /// Set when a step uses an op the scripted engine does not support.
+    steps_unsupported: Option<String>,
     scope: String,
     error: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-struct Run {
-    secs: f64,
-    seed: (u64, u64),
-    v: bool,
-    width: usize,
-}
-
-fn crate_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+fn crate_dir() -> PathBuf {    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 fn actr_dir() -> PathBuf {
@@ -138,31 +132,17 @@ fn parse_spec(src: &str) -> Result<Spec, String> {
         .iter()
         .filter_map(as_str)
         .collect();
-    let runs = plist_get(items, ":RUNS")
+    let run_seeds = plist_get(items, ":RUNS")
         .map(list_or_empty)
         .unwrap_or_default()
         .iter()
         .map(|r| {
             let rr = list(r).ok_or("run not a list")?;
-            let secs = match &rr[0] {
-                Sexp::Int(i) => *i as f64,
-                Sexp::Float(x) => *x,
-                _ => return Err("run secs not numeric".to_string()),
-            };
-            let seed = parse_seed(&rr[1]).ok_or("bad run seed")?;
-            let v = matches!(&rr[2], Sexp::Sym(s) if s != "NIL");
-            let width = rr.get(3).and_then(as_i64).unwrap_or(22).max(1) as usize;
-            Ok(Run {
-                secs,
-                seed,
-                v,
-                width,
-            })
+            parse_seed(&rr[1]).ok_or("bad run seed".to_string())
         })
         .collect::<Result<Vec<_>, String>>()?;
-    let goal_focus = plist_get(items, ":GOAL-FOCUS").and_then(as_i64).unwrap_or(0);
-    let resets = plist_get(items, ":RESETS").and_then(as_i64).unwrap_or(0);
-    let sgp_nonempty = matches!(plist_get(items, ":SGP"), Some(Sexp::List(v)) if !v.is_empty());
+    let (steps, steps_unsupported) =
+        parse_steps(&plist_get(items, ":STEPS").map(list_or_empty).unwrap_or_default())?;
     let scope = plist_get(items, ":SCOPE")
         .and_then(as_str)
         .map(|s| s.trim_start_matches(':').to_string())
@@ -173,13 +153,104 @@ fn parse_spec(src: &str) -> Result<Spec, String> {
         name,
         ref_name,
         models,
-        runs,
-        goal_focus,
-        resets,
-        sgp_nonempty,
+        run_seeds,
+        steps,
+        steps_unsupported,
         scope,
         error,
     })
+}
+
+/// Parse the ordered `:STEPS` driver list. Returns the steps plus the first
+/// unsupported op seen, if any (so the spec is ignored rather than misrun).
+fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
+    let mut steps = Vec::new();
+    let mut unsupported: Option<String> = None;
+    let note = |u: &mut Option<String>, msg: String| {
+        if u.is_none() {
+            *u = Some(msg);
+        }
+    };
+    for st in items {
+        let v = match st {
+            Sexp::List(v) => v,
+            _ => continue,
+        };
+        let head = match v.first().and_then(|s| s.as_sym()) {
+            Some(h) => h,
+            None => continue,
+        };
+        match head {
+            ":RUN" => {
+                let secs = match v.get(1) {
+                    Some(Sexp::Int(i)) => *i as f64,
+                    Some(Sexp::Float(x)) => *x,
+                    _ => {
+                        note(&mut unsupported, format!("bad :RUN in {st:?}"));
+                        continue;
+                    }
+                };
+                let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
+                let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
+                steps.push(Step::Run {
+                    secs,
+                    trace,
+                    width,
+                });
+            }
+            ":GOAL-FOCUS" => {
+                let item = match v.get(1) {
+                    Some(i) => i,
+                    None => {
+                        note(&mut unsupported, "empty :GOAL-FOCUS".into());
+                        continue;
+                    }
+                };
+                let desc = match item {
+                    Sexp::List(forms) => match actr_engine::model::parse_chunk_desc(forms) {
+                        Ok(d) => d,
+                        Err(e) => {
+                            note(&mut unsupported, format!("goal-focus: {e}"));
+                            continue;
+                        }
+                    },
+                    Sexp::Sym(name) => ChunkDesc::Named(name.clone()),
+                    Sexp::Str(name) => ChunkDesc::Named(name.clone()),
+                    other => {
+                        note(&mut unsupported, format!("bad :GOAL-FOCUS {other:?}"));
+                        continue;
+                    }
+                };
+                steps.push(Step::GoalFocus(desc));
+            }
+            ":RESET" => steps.push(Step::Reset),
+            ":SGP" | ":SSP" => {
+                let mut i = 1;
+                while i + 1 < v.len() {
+                    let key = v[i].as_sym().unwrap_or("");
+                    let val = &v[i + 1];
+                    match key {
+                        ":SEED" => match parse_seed(val) {
+                            Some(s) => steps.push(Step::Seed(s)),
+                            None => note(&mut unsupported, format!("seed step {val:?}")),
+                        },
+                        ":TRACE-DETAIL" => match val.as_sym() {
+                            Some("HIGH") => steps.push(Step::SetDetail(Detail::High)),
+                            Some("MEDIUM") => steps.push(Step::SetDetail(Detail::Medium)),
+                            Some("LOW") => steps.push(Step::SetDetail(Detail::Low)),
+                            _ => note(&mut unsupported, format!("trace-detail {val:?}")),
+                        },
+                        // `:v` is already encoded in each Run step's trace flag.
+                        ":V" => {}
+                        other => note(&mut unsupported, format!("sgp {other}")),
+                    }
+                    i += 2;
+                }
+            }
+            other => note(&mut unsupported, format!("step {other}")),
+        }
+    }
+    Ok((steps, unsupported))
 }
 
 fn discover_specs() -> Result<Vec<Spec>, String> {
@@ -237,49 +308,73 @@ fn first_diff(expected: &[String], actual: &[String]) -> String {
     )
 }
 
+/// True when the spec's files define more than one model (a multi-model
+/// trace has an extra model-name column the single-model formatter lacks).
+fn is_multi_model(spec: &Spec) -> bool {
+    let mut count = 0usize;
+    for m in &spec.models {
+        let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
+        let path = actr_dir().join(rel);
+        if !actr_engine::file_defines_model(&path) {
+            continue;
+        }
+        if let Ok(src) = fs::read_to_string(&path) {
+            if let Ok(forms) = parse_all(&src) {
+                count += forms
+                    .iter()
+                    .filter(|f| match f {
+                        Sexp::List(v) => matches!(
+                            v.first().and_then(|s| s.as_sym()),
+                            Some("DEFINE-MODEL") | Some("DEFINE-MODEL-FCT")
+                        ),
+                        _ => false,
+                    })
+                    .count();
+            }
+        }
+    }
+    count > 1
+}
+
 /// Why a spec is not runnable in the current engine (None = runnable).
 fn ignore_reason(spec: &Spec) -> Option<String> {
     if let Some(e) = &spec.error {
         return Some(format!("extraction error: {}", e.lines().next().unwrap_or("")));
     }
     match spec.scope.as_str() {
-        "PURE" => {}
-        "MULTI" => return Some("multi-run/step driver (needs scripted engine)".into()),
+        "PURE" | "MULTI" => {}
         "DEVICE" => return Some("device/test scaffolding not in spec yet".into()),
         "COMMAND" => return Some("command-layer output in ref".into()),
         "DRIVER" => return Some("unsupported run-it driver op (pdisable/...)".into()),
-        "OTHER" => return Some("no single run recorded".into()),
+        "OTHER" => return Some("no run recorded".into()),
         other => return Some(format!("scope {other}")),
     }
-    if spec.models.len() != 1 {
-        return Some(format!("{} model files", spec.models.len()));
+    if spec.models.is_empty() {
+        return Some("no model files".into());
     }
-    if spec.runs.len() != 1 {
-        return Some(format!("{} runs", spec.runs.len()));
+    if is_multi_model(spec) {
+        return Some("multi-model trace (model column)".into());
     }
-    if spec.goal_focus != 0 || spec.resets != 0 {
-        return Some("goal-focus/reset steps".into());
+    if let Some(u) = &spec.steps_unsupported {
+        return Some(format!("unsupported step: {u}"));
     }
-    if spec.sgp_nonempty {
-        return Some("mid-driver sgp setters".into());
+    if spec.steps.iter().any(|s| matches!(s, Step::Reset)) {
+        return Some("scripted (reset) step not implemented".into());
     }
-    if !spec.runs[0].v {
-        return Some("run with trace disabled".into());
+    if !spec.steps.iter().any(|s| matches!(s, Step::Run { .. })) {
+        return Some("no run step".into());
     }
     None
 }
 
 fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
-    let run = &spec.runs[0];
-    let actual = actr_engine::run_model_with(
-        root,
-        &spec.models[0],
-        run.seed,
-        run.secs,
-        &DeviceSetup::default(),
-        run.width,
-    )
-    .map_err(|e| format!("engine error: {e}"))?;
+    let seed = spec
+        .run_seeds
+        .first()
+        .copied()
+        .ok_or("no run seed")?;
+    let actual = run_model_steps(root, &spec.models, seed, &spec.steps, &DeviceSetup::default())
+        .map_err(|e| format!("engine error: {e}"))?;
     Ok(normalize(&actual))
 }
 
@@ -350,31 +445,40 @@ fn enabled_test_models_match() {
     );
 }
 
-/// Report every pure spec that currently passes, so `enabled.txt` can grow.
-/// Run with: `cargo test --test test_models probe_all_pure -- --ignored --nocapture`
+/// Report every runnable spec that currently passes, so `enabled.txt` can
+/// grow. Run with:
+/// `cargo test --test test_models probe_runnable -- --ignored --nocapture`
 #[test]
 #[ignore]
-fn probe_all_pure() {
+fn probe_runnable() {
     let root = actr_dir();
     let specs = discover_specs().expect("spec discovery failed");
     let mut pass = Vec::new();
     let mut fail = Vec::new();
+    let mut ignored = 0;
     for spec in &specs {
-        if spec.scope != "PURE" || ignore_reason(spec).is_some() {
+        if ignore_reason(spec).is_some() {
+            ignored += 1;
             continue;
         }
         let ref_path = refs_dir().join(&spec.ref_name);
         let expected = normalize(&fs::read_to_string(&ref_path).unwrap());
         match run_spec(&root, spec) {
-            Ok(actual) if actual == expected => pass.push(spec.name.clone()),
+            Ok(actual) if actual == expected => pass.push(format!("{} [{}]", spec.name, spec.scope)),
             Ok(actual) => fail.push(format!(
-                "{} (mismatch)\n{}",
+                "{} [{}] (mismatch)\n{}",
                 spec.name,
+                spec.scope,
                 first_diff(&expected, &actual)
             )),
-            Err(e) => fail.push(format!("{} ({e})", spec.name)),
+            Err(e) => fail.push(format!("{} [{}] ({e})", spec.name, spec.scope)),
         }
     }
-    println!("\n=== pass ({}) ===\n{}", pass.len(), pass.join("\n"));
+    println!(
+        "\n=== pass ({}) ({} ignored as out of scope) ===\n{}",
+        pass.len(),
+        ignored,
+        pass.join("\n")
+    );
     println!("\n=== fail ({}) ===\n{}", fail.len(), fail.join("\n"));
 }

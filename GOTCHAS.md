@@ -639,3 +639,41 @@ carry a model-name column (`0.000  COUNT     GOAL ...`) that single-model
 `format_line` never emits. Detection is structural, not from `:v` (which read
 back NIL): the model file defines more than one `define-model`. Out of scope
 until multi-model/meta-process support.
+
+## 67. `run` limits are relative to the current model time (verified)
+
+Each `(run N)` in a script bounds events to `current_time + N*1000`, not an
+absolute model time, and a drained queue emits its own `Stopped because no
+events left to process` at the current clock (`framework/scheduling.lisp:816`,
+`meta-p-start-time`). `semantic.ref` stops at 0.150, 0.400, 0.750 — one
+terminator per `run`, clock carrying over. `Engine::run_secs` is the relative
+step; `run(self)` is just the single-shot zero-based case. Seeding happens
+once; Lisp `(run ...)` never reseeds.
+
+## 68. `goal-focus` is a priority-`:max` buffer set (verified)
+
+`goal-focus-fct` (`core-modules/goal.lisp:275`) schedules
+`SET-BUFFER-CHUNK GOAL (spec) NIL` at the current time with `:priority :max`
+and `requested nil`, plus an invisible maintenance `clear-delayed-goal`. The
+`CONFLICT-RESOLUTION` line that follows is the armed wake-on-change
+(GOTCHA #24), not part of goal-focus. A trailing `goal-focus` after the last
+`run` never executes and adds no lines (`ul-issues-first-run`), so replaying
+it as a scheduled-but-unprocessed event is correct.
+
+## 69. Scripted drivers need ordered steps, not just counts (verified)
+
+`semantic` is run → goal-focus → run → goal-focus → run; `ul-issues-second-run`
+runs once with `:v nil` (trace suppressed, `!output!` still printed) then with
+`:v t`. A `(:RUNS ...)` list plus `:GOAL-FOCUS`/`:RESETS` counts cannot express
+that, so specs carry an ordered `:STEPS`. `:v` is encoded per run; a `:seed`
+step re-inits the RNG at that point only — re-seeding before every run would
+reset the stream, which Lisp does not do.
+
+## 70. Test-model task files are not model files (verified)
+
+Stubs like `tutorial;lisp;ul-issues.lisp` define `defun`s and load the real
+model; strict `load_models` rejects the `defun` ("unexpected top-level form:
+DEFUN"). `run_model_steps` now loads only files that contain a top-level
+`define-model`. Multi-model files (`unit-1-together-1-mp` defines
+COUNT+SEMANTIC+ADDITION) are detected and skipped: their refs carry a
+model-name column the single-model formatter lacks (cf. #66).

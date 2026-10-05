@@ -1,1 +1,1 @@
-(:NAME "ppm-compilation" :REF "ppm-compilation.ref" :MODELS ("test-models;models;ppm-compilation.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)
+(:NAME "ppm-compilation" :REF "ppm-compilation.ref" :MODELS ("test-models;models;ppm-compilation.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :STEPS ((:RUN 10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)
