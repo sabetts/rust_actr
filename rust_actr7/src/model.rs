@@ -51,7 +51,24 @@ impl Pattern {
 pub struct SlotTest {
     pub slot: String,
     pub value: Pattern,
-    pub negated: bool,
+    pub op: SlotOp,
+}
+
+/// Slot test operator: `=`, `-`, or a numeric inequality.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SlotOp {
+    Eq,
+    Neg,
+    Gt,
+    Lt,
+    Ge,
+    Le,
+}
+
+impl SlotOp {
+    pub fn negated(self) -> bool {
+        self == SlotOp::Neg
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -77,6 +94,8 @@ pub enum ChunkDesc {
         /// `- slot value` exclusions from a request spec (empty for
         /// construction contexts).
         neg: Vec<(String, Pattern)>,
+        /// `> < >= <= slot value` numeric inequalities.
+        rels: Vec<(String, Pattern, SlotOp)>,
     },
     /// A bare chunk name.
     Named(String),
@@ -201,34 +220,31 @@ fn is_action_head(s: &Sexp) -> bool {
     }
 }
 
-/// Parse `slot value` pairs with optional `-` negation prefixes.
+/// Parse `slot value` pairs with optional `-`/`>`/`<`/`>=`/`<=` operators.
 fn parse_pairs(forms: &[Sexp]) -> Result<Vec<SlotTest>, LoadError> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < forms.len() {
-        let negated = matches!(&forms[i], Sexp::Sym(t) if t == "-");
-        if negated {
+        let op = match &forms[i] {
+            Sexp::Sym(t) if t == "-" => SlotOp::Neg,
+            Sexp::Sym(t) if t == ">" => SlotOp::Gt,
+            Sexp::Sym(t) if t == "<" => SlotOp::Lt,
+            Sexp::Sym(t) if t == ">=" => SlotOp::Ge,
+            Sexp::Sym(t) if t == "<=" => SlotOp::Le,
+            _ => SlotOp::Eq,
+        };
+        if op != SlotOp::Eq {
             i += 1;
         }
         let slot = match forms.get(i) {
             Some(Sexp::Sym(t)) => t.clone(),
             got => return structural(format!("slot name expected, got {got:?}")),
         };
-        // Inequality modifiers (>, <, >=, <=) are valid ACT-R but
-        // unimplemented: refuse loudly instead of treating the
-        // modifier as a slot name and silently never matching.
-        if [">", "<", ">=", "<="].contains(&slot.as_str()) {
-            return structural(format!("inequality tests not implemented: {slot}"));
-        }
         let value = match forms.get(i + 1) {
             Some(v) => Pattern::from_sexp(v)?,
             None => return structural(format!("value missing for slot {slot}")),
         };
-        out.push(SlotTest {
-            slot,
-            value,
-            negated,
-        });
+        out.push(SlotTest { slot, value, op });
         i += 2;
     }
     Ok(out)
@@ -237,9 +253,9 @@ fn parse_pairs(forms: &[Sexp]) -> Result<Vec<SlotTest>, LoadError> {
 fn parse_pairs_plain(forms: &[Sexp]) -> Result<Vec<(String, Pattern)>, LoadError> {
     let mut out = Vec::new();
     for t in parse_pairs(forms)? {
-        if t.negated {
+        if t.op != SlotOp::Eq {
             return structural(format!(
-                "`-` negation of slot {} only valid on production LHS",
+                "operator on slot {} only valid in a request/test",
                 t.slot
             ));
         }
@@ -261,18 +277,24 @@ pub fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
         [Sexp::Sym(isa), Sexp::Sym(t), rest @ ..] if isa == "ISA" => (t.clone(), rest),
         _ => (String::new(), forms),
     };
-    // Negation is valid in request specs (`- slot value` exclusions); it is
-    // separated out and applied during retrieval candidacy/scoring.
+    // Operators are separated out: `-` exclusions and numeric inequalities
+    // are applied during candidacy/scoring; `=` slots are exact/score tests.
     let mut slots = Vec::new();
     let mut neg = Vec::new();
+    let mut rels = Vec::new();
     for t in parse_pairs(rest)? {
-        if t.negated {
-            neg.push((t.slot, t.value));
-        } else {
-            slots.push((t.slot, t.value));
+        match t.op {
+            SlotOp::Eq => slots.push((t.slot, t.value)),
+            SlotOp::Neg => neg.push((t.slot, t.value)),
+            other => rels.push((t.slot, t.value, other)),
         }
     }
-    Ok(ChunkDesc::Spec { ctype, slots, neg })
+    Ok(ChunkDesc::Spec {
+        ctype,
+        slots,
+        neg,
+        rels,
+    })
 }
 
 fn parse_lhs(forms: &[Sexp]) -> Result<Vec<LhsItem>, LoadError> {
@@ -305,8 +327,8 @@ fn parse_lhs(forms: &[Sexp]) -> Result<Vec<LhsItem>, LoadError> {
             '?' => {
                 let qs = parse_pairs(body)?;
                 for q in &qs {
-                    if q.negated {
-                        return structural("`-` negation not allowed in `?` queries");
+                    if q.op != SlotOp::Eq {
+                        return structural("`-`/inequality not allowed in `?` queries");
                     }
                 }
                 items.push(LhsItem::Query {
@@ -737,7 +759,7 @@ mod tests {
                 assert_eq!(tests[0].slot, "ISA");
                 assert_eq!(tests[0].value, Pattern::Sym("COUNT-FROM".into()));
                 assert_eq!(tests[1].value, Pattern::Var("NUM1".into()));
-                assert!(!tests[1].negated);
+                assert_eq!(tests[1].op, SlotOp::Eq);
                 assert_eq!(tests[2].slot, "COUNT");
                 assert_eq!(tests[2].value, Pattern::Nil);
             }
@@ -752,7 +774,7 @@ mod tests {
                 LhsItem::Match { tests, .. } => tests.clone(),
                 _ => vec![],
             })
-            .filter(|t| t.negated)
+            .filter(|t| t.op == SlotOp::Neg)
             .collect();
         assert_eq!(neg.len(), 1);
         assert_eq!(neg[0].slot, "END");

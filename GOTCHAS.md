@@ -923,3 +923,12 @@ top-level `defun`/`defparameter`).
 Chunks of that type created without the slot get the default (applied after
 the model body is parsed). This matters for slot-signature/intersection
 logic — e.g. blending's `size` chunks all share the defaulted `size-type`.
+
+## 95. Inequality slot tests are first-class (verified)
+
+Slot tests carry a `SlotOp` (`=`, `-`, `>`, `<`, `>=`, `<=`) rather than a
+bool. Inequalities appear in requests (`+blending> … <= value 3`, `> value 1`)
+and LHS tests; they are numeric comparisons, not `=` similarity. Chunk
+construction (`add-dm`/`define-chunks`) and `?` queries still reject them
+(action-scoped). This lets `blending-test-7` load (it then stops at the
+missing `blending` buffer).

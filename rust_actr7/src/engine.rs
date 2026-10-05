@@ -25,7 +25,9 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use crate::model::{Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction};
+use crate::model::{
+    Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction, SlotOp,
+};
 use crate::rand::Mt;
 use crate::sexpr::Sexp;
 use crate::trace::{format_line, Detail, Out, MODULE_WIDTH};
@@ -650,6 +652,8 @@ enum NewChunk {
         slots: Vec<(String, Value)>,
         /// `- slot value` exclusions (request specs only).
         neg: Vec<(String, Value)>,
+        /// `> < >= <= slot value` numeric inequalities (request specs only).
+        rels: Vec<(String, Value, SlotOp)>,
         /// Request-built specs print slots-only (`(PROBE "bank")`);
         /// goal-focus lists print with ISA. See chunk-spec-to-chunk-def.
         bare: bool,
@@ -2128,7 +2132,13 @@ impl Engine {
                     // ACT-R `test-var-slot`: the slot *name* itself may be an
                     // LHS variable (`=attr =val`), substituted from bindings.
                     let slot = self.resolve_slot_name(&t.slot, b);
-                    if !self.test_value(&t.value, &chunk.get(&slot), &mut *b, t.negated)? {
+                    let ok = match t.op {
+                        SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
+                            self.rel_test(t.op, &t.value, &chunk.get(&slot))
+                        }
+                        _ => self.test_value(&t.value, &chunk.get(&slot), &mut *b, t.op.negated())?,
+                    };
+                    if !ok {
                         return Ok(None);
                     }
                 }
@@ -3098,6 +3108,27 @@ impl Engine {
         }
     }
 
+    /// Numeric inequality test (`> < >= <=`) for LHS/request slots.
+    fn rel_test(&self, op: SlotOp, pat: &Pattern, got: &Value) -> bool {
+        let rhs = match pat {
+            Pattern::Int(i) => *i as f64,
+            Pattern::Num(x) => *x,
+            _ => return false,
+        };
+        let lhs = match got {
+            Value::Int(i) => *i as f64,
+            Value::Num(x) => *x,
+            _ => return false,
+        };
+        match op {
+            SlotOp::Gt => lhs > rhs,
+            SlotOp::Lt => lhs < rhs,
+            SlotOp::Ge => lhs >= rhs,
+            SlotOp::Le => lhs <= rhs,
+            _ => false,
+        }
+    }
+
     /// Match one slot test; returns whether it passes.
     fn test_value(
         &self,
@@ -3174,7 +3205,12 @@ fn chunk_inst(c: &Chunk) -> Result<ChunkInst, EngineError> {
 fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
     match desc {
         ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
-        ChunkDesc::Spec { ctype, slots, neg } => {
+        ChunkDesc::Spec {
+            ctype,
+            slots,
+            neg,
+            rels,
+        } => {
             let mut out = Vec::new();
             for (s, p) in slots {
                 out.push((s.clone(), Value::from_pattern(p)?));
@@ -3183,10 +3219,15 @@ fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
             for (s, p) in neg {
                 negv.push((s.clone(), Value::from_pattern(p)?));
             }
+            let mut relv = Vec::new();
+            for (s, p, op) in rels {
+                relv.push((s.clone(), Value::from_pattern(p)?, *op));
+            }
             Ok(NewChunk::Spec {
                 ctype: ctype.clone(),
                 slots: out,
                 neg: negv,
+                rels: relv,
                 bare: false,
             })
         }
@@ -3293,7 +3334,12 @@ impl Engine {
     ) -> Result<NewChunk, EngineError> {
         match spec {
             ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
-            ChunkDesc::Spec { ctype, slots, neg } => {
+            ChunkDesc::Spec {
+                ctype,
+                slots,
+                neg,
+                rels,
+            } => {
                 let mut out = Vec::new();
                 for (s, p) in slots {
                     out.push((
@@ -3308,10 +3354,19 @@ impl Engine {
                         self.rhs_value(p, b, copy, copied)?,
                     ));
                 }
+                let mut relv = Vec::new();
+                for (s, p, op) in rels {
+                    relv.push((
+                        self.resolve_slot_name(s, b),
+                        self.rhs_value(p, b, copy, copied)?,
+                        *op,
+                    ));
+                }
                 Ok(NewChunk::Spec {
                     ctype: ctype.clone(),
                     slots: out,
                     neg: negv,
+                    rels: relv,
                     bare: true,
                 })
             }
@@ -3518,7 +3573,7 @@ mod tests {
                 tests: vec![SlotTest {
                     slot: "ISA".to_string(),
                     value: Pat::Sym("GOAL".to_string()),
-                    negated: false,
+                    op: SlotOp::Eq,
                 }],
             }],
             rhs: vec![RhsAction::Request {
@@ -3527,6 +3582,7 @@ mod tests {
                     ctype: String::new(),
                     slots: vec![],
                     neg: vec![],
+                    rels: vec![],
                 },
             }],
         };
