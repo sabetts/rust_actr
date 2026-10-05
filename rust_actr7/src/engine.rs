@@ -962,7 +962,8 @@ pub struct Engine {
     /// Production compilation: count of compiled productions, the previous
     /// fired production `(index, bindings)`, and its fire time.
     compiled_count: usize,
-    prev_prod: Option<(usize, Bindings)>,
+    /// `(index, bindings, whole-chunk requests)` at the previous fire.
+    prev_prod: Option<(usize, Bindings, Vec<(String, String)>)>,
     prev_prod_ms: i64,
     /// Last press-key geometry, for preparation differences.
     last_press: Option<(String, String, f32, f32)>,
@@ -2568,6 +2569,9 @@ impl Engine {
         if self.stopped {
             return Ok(());
         }
+        // Whole-chunk requests resolved this fire (`+retrieval> =goal`),
+        // used by production compilation for indirect actions.
+        let mut reqs: Vec<(String, String)> = Vec::new();
         // Explicit actions in RHS order, then implicit harvest clears.
         for action in &prod.rhs {
             match action {
@@ -2616,6 +2620,9 @@ impl Engine {
                 RhsAction::Request { buffer, spec } => {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let concrete = self.concretize(spec, bindings, copy, &mut copied)?;
+                    if let NewChunk::Named(n) = &concrete {
+                        reqs.push((buffer.clone(), n.clone()));
+                    }
                     let var_slots = match spec {
                         ChunkDesc::Spec { slots, .. } => slots
                             .iter()
@@ -2658,7 +2665,7 @@ impl Engine {
         self.now(Prio::Min, Out::Medium, Event::ConflictResolution);
         // `production-fired` runs actions, then compiles
         // (`production-compilation.lisp`, called from `production-fired`).
-        self.compile_productions(prod_idx, bindings);
+        self.compile_productions(prod_idx, bindings, &reqs);
         Ok(())
     }
 
@@ -2744,12 +2751,66 @@ impl Engine {
         "of unknown reason. (This should not happen. Please report this issue.)".to_string()
     }
 
+    /// A buffer both productions make a `+` request to: composition is
+    /// refused (`Buffer X prevents composition … both make requests`).
+    fn both_request_buffer(&self, i1: usize, i2: usize) -> Option<String> {
+        let p1 = &self.model.productions[i1];
+        let p2 = &self.model.productions[i2];
+        for a in &p1.rhs {
+            if let RhsAction::Request { buffer, .. } = a {
+                if p2.rhs.iter().any(
+                    |b| matches!(b, RhsAction::Request { buffer: bb, .. } if bb == buffer),
+                ) {
+                    return Some(buffer.clone());
+                }
+            }
+        }
+        None
+    }
+
+    /// Install a composed production into the runtime set (parse its text
+    /// and add it with utility 0). Compiled productions with contradictory
+    /// conditions simply never match.
+    fn install_compiled(
+        &mut self,
+        name: &str,
+        lhs: &[(String, Vec<(String, SlotVal)>)],
+        rhs: &[(String, Vec<(String, String)>)],
+    ) {
+        let mut text = format!("(P {name}");
+        for (token, slots) in lhs {
+            text.push_str(&format!(" {token}"));
+            for (n, v) in slots {
+                text.push_str(&format!(" {n} {}", v.render()));
+            }
+        }
+        text.push_str(" ==>");
+        for (token, slots) in rhs {
+            text.push_str(&format!(" {token}"));
+            for (n, v) in slots {
+                text.push_str(&format!(" {n} {v}"));
+            }
+        }
+        text.push(')');
+        if let Ok(prod) = crate::model::parse_production_text(&text) {
+            self.model.productions.push(prod);
+            self.utilities.push(0.0);
+            let idx = self.model.productions.len() - 1;
+            let p = self.model.productions[idx].clone();
+            self.exec_prods.push(ExecProd {
+                index: idx,
+                implicit_clears: implicit_clears(&p, &self.cfg.do_not_harvest),
+                implicit_queries: implicit_queries(&p, &self.cfg.do_not_query),
+            });
+        }
+    }
+
     /// `compile-productions` (`production-compilation.lisp:1129`): compose
     /// the previous fired production with the current one and emit the
     /// `:epl`/`:pct` trace. This port covers the goal-style test+modify
     /// composition exercised by `ppm-compilation`; compiled productions are
     /// not (yet) added to the runtime set.
-    fn compile_productions(&mut self, idx: usize, bindings: &Bindings) {
+    fn compile_productions(&mut self, idx: usize, bindings: &Bindings, reqs: &[(String, String)]) {
         if !self.cfg.epl {
             return;
         }
@@ -2771,7 +2832,7 @@ impl Engine {
             self.prev_prod = None;
             return;
         }
-        if let Some((p1_idx, p1_bindings)) = self.prev_prod.clone() {
+        if let Some((p1_idx, p1_bindings, p1_reqs)) = self.prev_prod.clone() {
             let p1name = self.model.productions[p1_idx].name.clone();
             if self.time_ms - self.prev_prod_ms > self.cfg.tt_ms {
                 if trace {
@@ -2779,15 +2840,31 @@ impl Engine {
                         "  Cannot compile {p1name} and {p2name} because the time between them exceeds the threshold time."
                     ));
                 }
+            } else if let Some(buf) = self.both_request_buffer(p1_idx, idx) {
+                if trace {
+                    self.out(format!(
+                        "  Buffer {buf} prevents composition of these productions"
+                    ));
+                    self.out("   because both productions make requests".to_string());
+                    self.out(format!(
+                        "  Production {p1name} and {p2name} cannot be composed."
+                    ));
+                }
             } else {
-                let (lhs, rhs) = self.compose_pair(p1_idx, &p1_bindings, idx, bindings);
+                let (lhs, rhs, dropped) =
+                    self.compose_pair(p1_idx, &p1_bindings, &p1_reqs, idx, bindings);
+                let cname = format!("PRODUCTION{}", self.compiled_count);
                 if trace {
                     self.out(format!(
                         "  Production {p1name} and {p2name} are being composed."
                     ));
                     self.out("  New production:\n".to_string());
-                    let cname = format!("PRODUCTION{}", self.compiled_count);
-                    self.out(render_compiled(&cname, &p1name, &p2name, &lhs, &rhs));
+                    let doc = if dropped.is_empty() {
+                        format!("{p1name} & {p2name}")
+                    } else {
+                        format!("{p1name} & {p2name} - {}", dropped.join(" - "))
+                    };
+                    self.out(render_compiled(&cname, &doc, &lhs, &rhs));
                     self.out(format!("Parameters for production {cname}:"));
                     if self.cfg.esc {
                         // Compiled productions have no numeric utility yet.
@@ -2799,6 +2876,7 @@ impl Engine {
                         fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)
                     ));
                 }
+                self.install_compiled(&cname, &lhs, &rhs);
                 self.compiled_count += 1;
             }
         } else if trace {
@@ -2806,7 +2884,7 @@ impl Engine {
         }
         // `handle-check-valid-1st-p` (`production-compilation.lisp:1338`).
         if self.valid_first_production(idx) {
-            self.prev_prod = Some((idx, bindings.clone()));
+            self.prev_prod = Some((idx, bindings.clone(), reqs.to_vec()));
             self.prev_prod_ms = self.time_ms;
             if trace {
                 let name = self.model.productions[idx].name.clone();
@@ -2829,22 +2907,25 @@ impl Engine {
     /// `remove-duplicates` keeping the later copy; the actions are the
     /// first's untouched slots followed by the second's.
     #[allow(clippy::type_complexity)]
+    #[allow(clippy::type_complexity)]
     fn compose_pair(
         &self,
         i1: usize,
         b1: &Bindings,
+        reqs1: &[(String, String)],
         i2: usize,
         b2: &Bindings,
     ) -> (
         Vec<(String, Vec<(String, SlotVal)>)>,
         Vec<(String, Vec<(String, String)>)>,
+        Vec<String>,
     ) {
         let p1 = &self.model.productions[i1];
         let p2 = &self.model.productions[i2];
         let p1_lhs = prod_lhs_slots(p1, b1);
         let p2_lhs = prod_lhs_slots(p2, b2);
-        let p1_mod = prod_rhs_mods(p1, b1);
-        let p2_mod = prod_rhs_mods(p2, b2);
+        let p1_acts = prod_rhs_actions(p1, b1);
+        let p2_acts = prod_rhs_actions(p2, b2);
 
         // Cross-production variable mappings for same-slot `=` pairs
         // (`MAP-GOAL-BUFFER`, goal-compilation.lisp:320-330): two variables
@@ -2881,7 +2962,7 @@ impl Engine {
                 SlotVal::Lit(s) => SlotVal::Lit(s.clone()),
             }
         };
-        let apply = |lhs: &[(String, Vec<(String, SlotVal)>)]| {
+        let apply_lhs = |lhs: &[(String, Vec<(String, SlotVal)>)]| {
             lhs.iter()
                 .map(|(b, s)| {
                     (
@@ -2893,72 +2974,143 @@ impl Engine {
                 })
                 .collect::<Vec<_>>()
         };
-        let p1_lhs = apply(&p1_lhs);
-        let p2_lhs = apply(&p2_lhs);
+        let p1_lhs = apply_lhs(&p1_lhs);
+        let p2_lhs = apply_lhs(&p2_lhs);
 
         let mut buffers: Vec<String> = Vec::new();
+        let add_buf = |buffers: &mut Vec<String>, b: &str| {
+            if !buffers.iter().any(|x| x == b) {
+                buffers.push(b.to_string());
+            }
+        };
         for (b, _) in p1_lhs.iter().chain(&p2_lhs) {
-            if !buffers.contains(b) {
-                buffers.push(b.clone());
-            }
+            add_buf(&mut buffers, b);
         }
-        for (b, _) in p1_mod.iter().chain(&p2_mod) {
-            if !buffers.contains(b) {
-                buffers.push(b.clone());
-            }
+        for (_, b, _, _) in p1_acts.iter().chain(&p2_acts) {
+            add_buf(&mut buffers, b);
         }
         buffers.sort();
 
-        let find_lhs =
-            |v: &[(String, Vec<(String, SlotVal)>)], b: &str| -> Vec<(String, SlotVal)> {
-                v.iter()
-                    .find(|(x, _)| x == b)
-                    .map(|(_, s)| s.clone())
-                    .unwrap_or_default()
-            };
-        let find_mod = |v: &[(String, Vec<(String, String)>)], b: &str| -> Vec<(String, String)> {
+        let lhs_for = |v: &[(String, Vec<(String, SlotVal)>)], b: &str| -> Vec<(String, SlotVal)> {
             v.iter()
                 .find(|(x, _)| x == b)
                 .map(|(_, s)| s.clone())
                 .unwrap_or_default()
         };
+        let acts_for =
+            |v: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
+             b: &str,
+             ops: &[char]|
+             -> Vec<(Vec<(String, SlotVal)>, Option<String>)> {
+                v.iter()
+                    .filter(|(op, bb, _, _)| bb == b && ops.contains(op))
+                    .map(|(_, _, s, var)| (s.clone(), var.clone()))
+                    .collect()
+            };
 
         let mut lhs = Vec::new();
         for buf in &buffers {
-            let c1 = find_lhs(&p1_lhs, buf);
-            let c2 = find_lhs(&p2_lhs, buf);
-            if c1.is_empty() && c2.is_empty() {
-                continue;
-            }
-            let modified: Vec<String> = find_mod(&p1_mod, buf)
-                .into_iter()
-                .map(|(n, _)| n)
-                .collect();
-            let mut slots = c1;
-            for (n, v) in c2 {
-                if !modified.contains(&n) {
-                    slots.push((n, v));
+            let c1 = lhs_for(&p1_lhs, buf);
+            let c2 = lhs_for(&p2_lhs, buf);
+            let mut modified: Vec<String> = Vec::new();
+            for (s, _) in acts_for(&p1_acts, buf, &['=', '*']) {
+                for (n, _) in s {
+                    modified.push(n);
                 }
             }
-            lhs.push((format!("={buf}>"), remove_dup_keep_last(slots)));
-        }
-
-        let mut rhs = Vec::new();
-        for buf in &buffers {
-            let a1 = find_mod(&p1_mod, buf);
-            let a2 = find_mod(&p2_mod, buf);
-            let a2names: Vec<String> = a2.iter().map(|(n, _)| n.clone()).collect();
-            let mut slots: Vec<(String, String)> = a1
-                .into_iter()
-                .filter(|(n, _)| !a2names.contains(n))
-                .collect();
-            slots.extend(a2);
-            if !slots.is_empty() {
-                rhs.push((format!("={buf}>"), slots));
+            let p1_req = p1_acts
+                .iter()
+                .any(|(op, bb, _, _)| bb == buf && (*op == '+' || *op == 'r'));
+            if p1_req {
+                // The request supplies the buffer; drop the second's tests.
+                if !c1.is_empty() {
+                    lhs.push((format!("={buf}>"), remove_dup_keep_last(c1)));
+                }
+            } else {
+                let mut slots = c1;
+                for (n, v) in c2 {
+                    if !modified.contains(&n) {
+                        slots.push((n, v));
+                    }
+                }
+                let had = p1_lhs.iter().any(|(b, _)| b == buf)
+                    || p2_lhs.iter().any(|(b, _)| b == buf);
+                if had {
+                    lhs.push((format!("={buf}>"), remove_dup_keep_last(slots)));
+                }
             }
         }
 
-        (lhs, rhs)
+        let mut rhs: Vec<(String, Vec<(String, String)>)> = Vec::new();
+        let mut dropped: Vec<String> = Vec::new();
+        for buf in &buffers {
+            let p2_tests = p2_lhs.iter().any(|(b, _)| b == buf);
+            let sv = |s: Vec<(String, SlotVal)>| -> Vec<(String, String)> {
+                s.iter().map(|(n, v)| (n.clone(), v.render())).collect()
+            };
+            // `=` modify union (second overrides).
+            let eq1: Vec<_> = acts_for(&p1_acts, buf, &['='])
+                .into_iter()
+                .flat_map(|(s, _)| s)
+                .collect();
+            let eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
+                .into_iter()
+                .flat_map(|(s, _)| s)
+                .collect();
+            if !eq1.is_empty() || !eq2.is_empty() {
+                let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
+                let mut slots: Vec<(String, SlotVal)> =
+                    eq1.into_iter().filter(|(n, _)| !names2.contains(n)).collect();
+                slots.extend(eq2);
+                rhs.push((format!("={buf}>"), sv(slots)));
+            }
+            // `*` modify-request union.
+            let st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
+                .into_iter()
+                .flat_map(|(s, _)| s)
+                .collect();
+            let st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
+                .into_iter()
+                .flat_map(|(s, _)| s)
+                .collect();
+            if !st1.is_empty() || !st2.is_empty() {
+                let names2: Vec<String> = st2.iter().map(|(n, _)| n.clone()).collect();
+                let mut slots: Vec<(String, SlotVal)> =
+                    st1.into_iter().filter(|(n, _)| !names2.contains(n)).collect();
+                slots.extend(st2);
+                rhs.push((format!("*{buf}>"), sv(slots)));
+            }
+            // `+` requests: p1's is dropped when p2 tests the buffer (and
+            // the requested chunk is noted); p2's indirect ones are
+            // resolved from p1's requests and expanded to slots.
+            for (_, _) in acts_for(&p1_acts, buf, &['+', 'r']) {
+                if p2_tests {
+                    if let Some(n) = reqs1.iter().find(|(bb, _)| bb == buf).map(|(_, n)| n.clone()) {
+                        dropped.push(n);
+                    }
+                } else {
+                    rhs.push((format!("+{buf}>"), Vec::new()));
+                }
+            }
+            for (s, var) in acts_for(&p2_acts, buf, &['+', 'r']) {
+                if let Some(v) = var {
+                    if let Some(chunk) =
+                        reqs1.iter().find(|(bb, _)| bb == &v).map(|(_, c)| c.clone())
+                    {
+                        if let Some(c) = self.dm.iter().find(|c| c.name.as_deref() == Some(chunk.as_str())) {
+                            let slots: Vec<(String, String)> =
+                                c.slots.iter().map(|(n, val)| (n.clone(), val.show())).collect();
+                            rhs.push((format!("+{buf}>"), slots));
+                        }
+                    }
+                } else {
+                    rhs.push((format!("+{buf}>"), sv(s)));
+                }
+            }
+        }
+        // `sort-actions`: descending by token (op+buffer), stable.
+        rhs.sort_by(|a, b| b.0.cmp(&a.0));
+        (lhs, rhs, dropped)
     }
 
     fn similarity(&self, a: &Value, b: &Value) -> f32 {
@@ -4029,18 +4181,95 @@ fn instantiate_var(name: &str, b: &Bindings) -> Option<String> {
     b.get(name).map(|v| v.show())
 }
 
-/// Instantiated RHS `=` modify slots per buffer.
-fn prod_rhs_mods(p: &Production, b: &Bindings) -> Vec<(String, Vec<(String, String)>)> {
+/// Instantiated RHS actions per buffer as `(op, buffer, slots, var)`:
+/// `=` modify, `*` modify-request, `+` request (var is the referenced
+/// variable for a whole-chunk request), `-` clear.
+fn prod_rhs_actions(
+    p: &Production,
+    b: &Bindings,
+) -> Vec<(char, String, Vec<(String, SlotVal)>, Option<String>)> {
     let mut out = Vec::new();
     for a in &p.rhs {
-        if let RhsAction::Modify { buffer, slots } = a {
-            let s = slots
-                .iter()
-                .map(|(n, v)| (n.clone(), show_pat(v, b)))
-                .collect();
-            out.push((buffer.clone(), s));
+        match a {
+            RhsAction::Modify { buffer, slots } => out.push((
+                '=',
+                buffer.clone(),
+                slots
+                    .iter()
+                    .map(|(n, v)| {
+                        (
+                            n.clone(),
+                            match v {
+                                Pattern::Var(v) => SlotVal::Var(v.clone()),
+                                other => SlotVal::Lit(
+                                    Value::from_pattern(other)
+                                        .map(|x| x.show())
+                                        .unwrap_or_default(),
+                                ),
+                            },
+                        )
+                    })
+                    .collect(),
+                None,
+            )),
+            RhsAction::ModifyRequest { buffer, slots } => out.push((
+                '*',
+                buffer.clone(),
+                slots
+                    .iter()
+                    .map(|(n, v)| {
+                        (
+                            n.clone(),
+                            match v {
+                                Pattern::Var(v) => SlotVal::Var(v.clone()),
+                                other => SlotVal::Lit(
+                                    Value::from_pattern(other)
+                                        .map(|x| x.show())
+                                        .unwrap_or_default(),
+                                ),
+                            },
+                        )
+                    })
+                    .collect(),
+                None,
+            )),
+            RhsAction::Request { buffer, spec } => match spec {
+                ChunkDesc::Named(n) if n.starts_with('=') => out.push((
+                    'r',
+                    buffer.clone(),
+                    Vec::new(),
+                    Some(n[1..].to_string()),
+                )),
+                ChunkDesc::Spec { slots, .. } => out.push((
+                    '+',
+                    buffer.clone(),
+                    slots
+                        .iter()
+                        .map(|(n, v)| {
+                            (
+                                n.clone(),
+                                match v {
+                                    Pattern::Var(v) => SlotVal::Var(v.clone()),
+                                    other => SlotVal::Lit(
+                                        Value::from_pattern(other)
+                                            .map(|x| x.show())
+                                            .unwrap_or_default(),
+                                    ),
+                                },
+                            )
+                        })
+                        .collect(),
+                    None,
+                )),
+                _ => {}
+            },
+            RhsAction::Clear { buffer } => {
+                out.push(('-', buffer.clone(), Vec::new(), None))
+            }
+            _ => {}
         }
     }
+    let _ = b;
     out
 }
 
@@ -4061,12 +4290,11 @@ fn remove_dup_keep_last<T: PartialEq + Clone>(v: Vec<T>) -> Vec<T> {
 /// `=BUFFER>` group per condition/action, then `)`.
 fn render_compiled(
     name: &str,
-    p1: &str,
-    p2: &str,
+    doc: &str,
     lhs: &[(String, Vec<(String, SlotVal)>)],
     rhs: &[(String, Vec<(String, String)>)],
 ) -> String {
-    let mut s = format!("(P {name}\n  \"{p1} & {p2}\"\n");
+    let mut s = format!("(P {name}\n  \"{doc}\"\n");
     for (token, slots) in lhs {
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {

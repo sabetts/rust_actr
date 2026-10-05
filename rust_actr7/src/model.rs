@@ -406,6 +406,16 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
     Ok(actions)
 }
 
+/// Parse a production from text (used for runtime-compiled productions).
+pub fn parse_production_text(text: &str) -> Result<Production, LoadError> {
+    let forms = crate::sexpr::parse_all(text)
+        .map_err(|e| LoadError::Structural(e.to_string()))?;
+    match forms.first() {
+        Some(f) => parse_production(f),
+        None => structural("empty production text"),
+    }
+}
+
 fn parse_production(form: &Sexp) -> Result<Production, LoadError> {
     let items = match form {
         Sexp::List(items) => items,

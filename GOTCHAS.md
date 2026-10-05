@@ -1063,3 +1063,19 @@ one prints the referenced chunk's slots (`(COLOR RED VALUE 3)`), not the
 name. Run 1 (`:cia nil`) of `indirect-action-compilation` is reproduced;
 run 2 needs the full indirect-action composition + installation below.
 
+## 109. Compiling/installing indirect actions (`:cia`) (verified)
+
+With `:cia t` an indirect production is valid and composes. When p1's
+`+buffer> =var` request is tested by p2, the request is consumed: the
+requested chunk is dropped from the composition (doc suffix ` - CHUNK`),
+p2's condition on that buffer is removed, and any p2 action referencing
+the retrieved chunk (`+goal> =retrieval`) is expanded to the referenced
+chunk's slots. Composed RHS actions are `sort-actions`-ordered
+**descending** by token, so `+GOAL>` precedes `*GOAL>` (the token includes
+the op char). Composition is refused with `Buffer X prevents composition …
+because both productions make requests` when both productions `+` request
+the same buffer. Compiled productions are re-parsed from their rendered
+text and **installed** with utility 0 so they can fire (contradictory
+conditions simply never match). This makes `indirect-action-compilation`
+green.
+
