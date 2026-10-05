@@ -50,10 +50,9 @@ the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
 `:seed`, and `(reset)` (clock to 0, DM/buffers rebuilt, RNG preserved).
 `define-chunks` named chunks, model-body
 `declare-buffer-usage`/`spp`/`set-base-levels`/`set-similarities`,
-`?buffer> buffer empty|full`, `+goal>` requests, `-` request slots, and
-spreading (`:mas`) are handled. The next blocker for the remaining unit5
-specs is signature-based partial-matching candidacy; see `../../GOTCHAS.md`
-#81.
+`?buffer> buffer empty|full`, `+goal>` requests, `-` request slots, spreading
+(`:mas`), and signature-based partial-matching candidacy are handled. The
+next gaps are `:act`/`:crt` trace text; see `../../GOTCHAS.md` #81.
 
 ## Regenerate
 

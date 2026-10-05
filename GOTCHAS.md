@@ -771,11 +771,16 @@ loader now carries a `neg` list instead of refusing `-`.
 
 ## 81. Partial-matching candidacy is signature-based, not type-based (verified)
 
-`start-retrieval` narrows candidates by `slots-vector-match-signature`
-(filled/empty slot masks over the request's slot names), **not** by chunk
-type (`framework/chunk-spec.lisp:895`, `declarative-memory.lisp:1125`). That
-is why `+retrieval> isa simple-value - result nil` can retrieve the
-`math-fact` chunk `2-1=1`. Our engine filters by type + positive-slot
-presence (GOTCHA #55), which matches every golden that avoids it but not
-unit5 `first-run`/`v4-p3-run`/`v6-run-p3`. Replacing it with the
-filled/empty-mask test is the next candidacy task.
+`start-retrieval` narrows candidates by `slots-vector-match-signature` — the
+request's **filled/empty slot masks** — not by chunk type
+(`framework/chunk-spec.lisp:895`, `declarative-memory.lisp:1125`). Per
+`add-slot-spec-to-chunk-spec` (chunk-spec.lisp:758): `= V` (V non-nil) marks
+the slot filled; `= nil` marks it empty; `- nil` marks it filled; `- V`
+(non-nil) imposes no signature constraint. Slots with a nil request value are
+signature-only (no testable slot, so they do not score). The engine now
+applies exactly this under `:mp` (and keeps type+value filtering for exact
+matching), which is why `+retrieval> isa simple-value - result nil` can
+retrieve the `math-fact` `2-1=1`. This turned unit5 `first-run` and
+`v4-p3-run` green. Not yet handled: `:act t` activation-trace text (needed by
+`sji-merge`), and `v6-run-p3` misses only by ~1 ms at the run limit (float
+brittleness, not candidacy).

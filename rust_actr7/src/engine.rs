@@ -2122,50 +2122,73 @@ impl Engine {
                 ctype, slots, neg, ..
             } => (ctype.clone(), slots.clone(), neg.clone()),
         };
-        // Partial matching (mp set, esc on): candidacy is type +
-        // slot presence only; `=` values score activation instead of
-        // filtering. Otherwise exact matching as before.
+        // Partial matching (mp set, esc on): candidacy is the request's
+        // slot signature — required-filled and required-empty slot names —
+        // NOT the chunk type (`slots-vector-match-signature`,
+        // framework/chunk-spec.lisp:895). `=`/`-` values score activation
+        // instead of filtering. Otherwise exact matching as before.
         let partial = self.cfg.esc && self.cfg.mp.is_some();
+        // Signature masks from `add-slot-spec-to-chunk-spec`
+        // (chunk-spec.lisp:758): `= V` (V non-nil) -> filled; `= nil` ->
+        // empty; `- nil` -> filled; `- V` (V non-nil) -> no constraint.
+        let mut req_filled: Vec<&str> = Vec::new();
+        let mut req_empty: Vec<&str> = Vec::new();
+        for (s, v) in &want_slots {
+            if s.starts_with(':') {
+                continue;
+            }
+            if *v == Value::Nil {
+                req_empty.push(s);
+            } else {
+                req_filled.push(s);
+            }
+        }
+        for (s, v) in &want_neg {
+            if s.starts_with(':') {
+                continue;
+            }
+            if *v == Value::Nil {
+                req_filled.push(s);
+            }
+        }
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
         for idx in 0..self.dm.len() {
             let c = self.dm[idx].clone();
-            if !want_type.is_empty() && c.ctype != want_type {
-                continue;
-            }
-            let mut ok = true;
-            for (s, v) in &want_slots {
-                if s.starts_with(':') {
+            if partial {
+                let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
+                    && req_empty.iter().all(|s| c.get(s) == Value::Nil);
+                if !sig_ok {
                     continue;
                 }
-                let got = c.get(s);
-                if partial {
-                    // Presence only: with partial matching, `=` values
-                    // score activation below instead of filtering.
-                    if got == Value::Nil {
-                        ok = false;
-                        break;
-                    }
-                } else if got != *v {
-                    ok = false;
-                    break;
+            } else {
+                if !want_type.is_empty() && c.ctype != want_type {
+                    continue;
                 }
-            }
-            // `- slot value` exclusions filter under exact matching;
-            // under partial matching they only penalize (below).
-            if ok && !partial {
-                for (s, v) in &want_neg {
+                let mut ok = true;
+                for (s, v) in &want_slots {
                     if s.starts_with(':') {
                         continue;
                     }
-                    if c.get(s) == *v {
+                    if c.get(s) != *v {
                         ok = false;
                         break;
                     }
                 }
-            }
-            if !ok {
-                continue;
+                if ok {
+                    for (s, v) in &want_neg {
+                        if s.starts_with(':') {
+                            continue;
+                        }
+                        if c.get(s) == *v {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                if !ok {
+                    continue;
+                }
             }
             // A = base-level + spreading (0) + partial matching +
             // activation noise. Base-level comes from the decay equation
@@ -2203,16 +2226,18 @@ impl Engine {
             // Partial matching: `=` slots add `mp * similarity`; `-` slots
             // add `mp * md` only when the chunk's value matches the
             // negated value (similarity == ms), per
-            // `partial-matching` (`declarative-memory.lisp:2596`).
+            // `partial-matching` (`declarative-memory.lisp:2596`). Slots
+            // with a nil request value are signature-only (no testable
+            // slot), so they do not score.
             if let Some(mp) = self.cfg.mp {
                 for (s, v) in &want_slots {
-                    if s.starts_with(':') || var_slots.contains(s) {
+                    if s.starts_with(':') || var_slots.contains(s) || *v == Value::Nil {
                         continue;
                     }
                     a += mp * self.similarity(v, &c.get(s));
                 }
                 for (s, v) in &want_neg {
-                    if s.starts_with(':') || var_slots.contains(s) {
+                    if s.starts_with(':') || var_slots.contains(s) || *v == Value::Nil {
                         continue;
                     }
                     if self.similarity(v, &c.get(s)) == self.cfg.ms {
