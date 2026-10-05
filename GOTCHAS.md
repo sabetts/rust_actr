@@ -1093,3 +1093,20 @@ reorders by dependencies). This alone flips `dynamic-slot-compilation`;
 the other bind/eval specs need task functions (`single-bind`/`multi-bind`),
 remote commands, or unrelated features.
 
+## 111. Model-load warnings are not per-test reproducible (verified)
+
+ACT-R's model-tester installs its `warning-trace` monitor only *after*
+`(load file)` (`model-tester.cl:351` vs `354`), so warnings emitted while
+a model loads are normally dropped. But `test-bad-productions.ref`
+*does* contain `#|Warning: … |#` load warnings, while `semantic.ref` and
+`tutorial-unit1-tutor-model-trace.ref` omit `Creating chunk …` warnings
+that ACT-R clearly emits on load (verified by loading those models under
+SBCL — `CATEGORY`/`PENDING`/`YES`/`NO`, and `BUSY` is preseeded by
+`create-model-default-chunks`, `framework/model.lisp:755`). The
+difference is the global `suppress-and-capture-warnings` state
+(`misc-utils.lisp:887`), which is not reliably reset between productions,
+so which warnings surface depends on prior loads. Emitting load warnings
+per-test to match `test-bad-productions` therefore regresses
+`semantic`/`tutor-model`; this is why production-validation + warning
+capture was abandoned.
+
