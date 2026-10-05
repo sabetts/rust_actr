@@ -389,6 +389,10 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
             }),
             "CLEAR" => device.clears.push(ms()?),
             "CLEAR-ON-KEYPRESS" => device.clear_on_keypress = true,
+            "CONSUME-RNG" => {
+                device.consume_rng =
+                    as_i64(v.get(1).ok_or("missing count")?).ok_or("bad count")? as u64
+            }
             "END" => device.end = Some(ms()?),
             "REWARD" => device.rewards.push((
                 ms()?,

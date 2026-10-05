@@ -1236,3 +1236,29 @@ timer.  `+temporal> isa time` places `(isa time ticks 0)` (priority
 
 `(spp <prod> :at S)` overrides a production's action time (`wait` fires
 at 8.0 s, not 50 ms); parsed alongside `:reward`.
+
+## 121. `:randomize-time` and the task's model-RNG draws (verified)
+
+`demo2-randomized` enables `(ssp :starting-parameters (:randomize-time t
+:vpft t :vidt t))`, but the model's `(clear-all)` wipes those
+starting-parameters, so `extract-specs.lisp` never recorded them (the spec
+said `:SGP NIL`).  Getting the ref requires:
+- `randomize-time-ms(time)`: `time - round(time/3) + act-r-random(1 +
+  2·round(time/3))` (default scale 3), gated by `:randomize-time`;
+  `:vpft` applies it to production action times, `:vidt` to the imaginal
+  delay, and vision encoding / the keypress re-encode always route
+  through it.
+- `randomize-time(seconds)`: `(time/3)·(2 + act-r-random(2.0))`, used for
+  motor prep/exec/finish (`computing exec/finish` draws once each, in
+  that order, at preparation-complete).
+- The seed comes from the **model** (`(sgp :seed (123456 0))`), not the
+  spec's recorded run seed.
+- The task's `permute-list` (21-element letter list) consumes ~22 draws
+  from the *model* stream before the first production, which this
+  scripted driver never replays.  The `.device.sexp` carries
+  `(CONSUME-RNG 21)`; 21 not 22 because our t=0 `proc-display` already
+  draws once (`newest_feature`/`random-item`).  Without the offset the
+  first production fires at 0.051 instead of 0.048.
+
+Instrumenting ACT-R (wrapping `randomize-time[-ms]` under SBCL) pinned the
+exact draw sequence, which is what made this tractable.

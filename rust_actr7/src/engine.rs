@@ -219,6 +219,13 @@ struct Config {
     time_start_ms: f32,
     /// Temporal module `:record-ticks` (default t).
     record_ticks: bool,
+    /// `:randomize-time` (random module): `Some(scale)` jitters module
+    /// latencies (`t/scale` uniform by default scale 3).
+    randomize_scale: Option<f32>,
+    /// `:vpft` — randomize production action times.
+    vpft: bool,
+    /// `:vidt` — randomize the imaginal module delay.
+    vidt: bool,
     /// Activation trace (`:act`); see [`Act`].
     act: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
@@ -287,6 +294,11 @@ pub struct DeviceSetup {
     /// (`clear-exp-window`, e.g. the demo2 task), so the clear happens
     /// at the moment of a keypress rather than at a scripted time.
     pub clear_on_keypress: bool,
+    /// Model-RNG draws the task performs during setup but that this
+    /// scripted driver does not replay (e.g. demo2's `permute-list`
+    /// selecting the window text), consumed after the initial reset so
+    /// `:randomize-time` draws line up.
+    pub consume_rng: u64,
 }
 
 /// A visicon feature: what the device shows and vision can find.
@@ -587,6 +599,16 @@ impl Config {
                 Some((_, Sexp::Sym(s))) => s != "NIL",
                 Some(_) => true,
             },
+            randomize_scale: match m.params.iter().find(|(k, _)| k == ":RANDOMIZE-TIME") {
+                None => None,
+                Some((_, Sexp::Sym(s))) if s == "NIL" => None,
+                Some((_, Sexp::Sym(_))) => Some(3.0),
+                Some((_, Sexp::Float(x))) => Some(*x as f32),
+                Some((_, Sexp::Int(i))) => Some(*i as f32),
+                _ => None,
+            },
+            vpft: sgp_bool(&m.params, ":VPFT"),
+            vidt: sgp_bool(&m.params, ":VIDT"),
             act: match m.params.iter().find(|(k, _)| k == ":ACT") {
                 None => None,
                 Some((_, Sexp::Sym(s))) if s == "NIL" => None,
@@ -1096,6 +1118,7 @@ impl Engine {
             rewards,
             sims,
             clear_on_keypress,
+            consume_rng,
         } = device;
         let mut eng = Engine {
             model,
@@ -1164,6 +1187,10 @@ impl Engine {
         };
         eng.reset()?;
         eng.cfg.module_width = module_width;
+        // Skin off the task's non-replayed setup draws (device sidecar).
+        for _ in 0..consume_rng {
+            eng.rng.borrow_mut().next_u32();
+        }
         // Device script: a run-full-time dummy and scheduled rewards are part
         // of the task, not the model reset, so they are armed only here.
         if let Some(end) = end {
@@ -1793,6 +1820,17 @@ impl Engine {
             ":UL" => self.cfg.ul = truthy,
             ":ULT" => self.cfg.ult = truthy,
             ":RECORD-TICKS" => self.cfg.record_ticks = truthy,
+            ":RANDOMIZE-TIME" => {
+                self.cfg.randomize_scale = match val {
+                    Sexp::Sym(s) if s == "NIL" => None,
+                    Sexp::Sym(_) => Some(3.0),
+                    Sexp::Float(x) => Some(*x as f32),
+                    Sexp::Int(i) => Some(*i as f32),
+                    _ => None,
+                }
+            }
+            ":VPFT" => self.cfg.vpft = truthy,
+            ":VIDT" => self.cfg.vidt = truthy,
             ":IU" => {
                 if let Some(x) = num(val) {
                     self.cfg.iu = x;
@@ -1941,7 +1979,12 @@ impl Engine {
                         // (warning to stdout in Lisp, nothing in trace).
                         if !self.imag_busy {
                             self.imag_busy = true;
-                            let at = self.time_ms + self.cfg.imaginal_delay_ms;
+                            let delay = if self.cfg.vidt {
+                                self.randomize_ms(self.cfg.imaginal_delay_ms)
+                            } else {
+                                self.cfg.imaginal_delay_ms
+                            };
+                            let at = self.time_ms + delay;
                             self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
                         }
                     }
@@ -2098,6 +2141,11 @@ impl Engine {
                     .at
                     .map(|s| (s * 1000.0).round() as i64)
                     .unwrap_or(self.cfg.dat_ms);
+                let action_ms = if self.cfg.vpft {
+                    self.randomize_ms(action_ms)
+                } else {
+                    action_ms
+                };
                 let at = self.time_ms + action_ms;
                 self.push(
                     at,
@@ -2171,7 +2219,8 @@ impl Engine {
                 }
                 self.last_attention = Some(loc.clone());
                 self.visual_busy = true;
-                let at = self.time_ms + self.cfg.attention_ms;
+                let lat = self.randomize_ms(self.cfg.attention_ms);
+                let at = self.time_ms + lat;
                 self.push(
                     at,
                     Prio::Num(0),
@@ -2299,7 +2348,8 @@ impl Engine {
                     spec.theta,
                 ));
                 self.man_prep_busy = true;
-                let prep = feats as i64 * self.cfg.feat_prep_ms;
+                let prep_s = feats as f32 * self.cfg.feat_prep_ms as f32 / 1000.0;
+                let prep = (self.randomize_secs(prep_s) * 1000.0).round() as i64;
                 let at = self.time_ms + prep;
                 self.push(
                     at,
@@ -2321,15 +2371,18 @@ impl Engine {
                 // finish = exec + burst + max(burst, move-time),
                 // all in seconds, rounded to ms at scheduling.
                 let spec = Self::key_spec(&key)?;
+                let burst_s = self.cfg.burst_ms as f32 / 1000.0;
                 let fit = (self.cfg.peck_fitts * (spec.r + 0.5).log2())
                     .max(self.cfg.min_fitts_ms as f32 / 1000.0);
-                let move_s = (self.cfg.burst_ms as f32 / 1000.0).max(fit);
+                let move_s = burst_s.max(fit);
+                // peck-recoil: exec = init + max(burst, randomize-time(move)),
+                // finish = exec + burst + max(burst, randomize-time(move)).
+                let exec_s = self.cfg.init_ms as f32 / 1000.0
+                    + burst_s.max(self.randomize_secs(move_s));
+                let finish_s = exec_s + burst_s + burst_s.max(self.randomize_secs(move_s));
                 // Lisp rounds seconds->ms at scheduling time.
-                let exec_ms = ((self.cfg.init_ms as f32 / 1000.0 + move_s) * 1000.0).round() as i64;
-                let finish_ms =
-                    ((exec_ms as f32 / 1000.0 + self.cfg.burst_ms as f32 / 1000.0 + move_s)
-                        * 1000.0)
-                        .round() as i64;
+                let exec_ms = (exec_s * 1000.0).round() as i64;
+                let finish_ms = (finish_s * 1000.0).round() as i64;
                 let t = self.time_ms;
                 self.push(
                     t + self.cfg.init_ms,
@@ -2383,7 +2436,7 @@ impl Engine {
                         Event::ProcDisplay,
                     );
                     if let Some(loc) = self.last_attention.clone() {
-                        let at = self.time_ms + self.cfg.attention_ms;
+                        let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
                         self.push(
                             at,
                             Prio::Num(0),
@@ -3301,6 +3354,32 @@ impl Engine {
             Value::Int(x as i64)
         } else {
             Value::Num(x)
+        }
+    }
+
+    /// `randomize-time-ms` (`framework/random.lisp:541`): with
+    /// `:randomize-time` enabled, `time - round(time/scale) + act-r-random(1
+    /// + 2·round(time/scale))`.
+    fn randomize_ms(&mut self, time_ms: i64) -> i64 {
+        match self.cfg.randomize_scale {
+            None => time_ms,
+            Some(_) if time_ms == 0 => time_ms,
+            Some(scale) => {
+                let step = lisp_round(time_ms as f32 / scale);
+                time_ms - step + self.rng.borrow_mut().random_int((1 + 2 * step) as u64) as i64
+            }
+        }
+    }
+
+    /// `randomize-time` (`framework/random.lisp:519`): with `:randomize-time`
+    /// enabled, `(time/scale)·(scale - 1 + act-r-random(2.0))`.
+    fn randomize_secs(&mut self, secs: f32) -> f32 {
+        match self.cfg.randomize_scale {
+            None => secs,
+            Some(_) if secs == 0.0 => secs,
+            Some(scale) => {
+                (secs / scale) * (scale - 1.0 + self.rng.borrow_mut().random_float(2.0))
+            }
         }
     }
 
