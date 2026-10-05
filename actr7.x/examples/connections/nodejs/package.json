@@ -1,0 +1,25 @@
+{
+  "name": "html-environment",
+  "version": "1.0a",
+  "description": "ACT-R Environment tools and experiment window viewer tools in a browser.",
+  "main": "environment.js",
+  "bin": "environment.js",
+  "author": "Dan Bothell",
+  "pkg": {
+    "targets": [
+      "node18-win-x64",
+      "node18-linux-x64",
+      "node18-macos-x64",
+      "node18-macos-arm64"
+    ],
+    "assets": [
+      "environment.html",
+      "expwindow.html",
+      "./node_modules/socket.io/client-dist/**/*"
+    ]
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
