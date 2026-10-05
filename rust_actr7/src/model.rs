@@ -11,6 +11,7 @@
 //! Symbol case: the reader folds to UPPERCASE, so `isa`/`ISA`,
 //! `p`/`P` compare equal here.
 
+use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::path::Path;
@@ -150,6 +151,48 @@ pub struct Production {
     pub name: String,
     pub lhs: Vec<LhsItem>,
     pub rhs: Vec<RhsAction>,
+}
+
+/// A task-file `defun` captured for the bounded evaluator (simple pure
+/// helpers like `(defun single-bind (val) (1+ val))`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct UserDefun {
+    pub params: Vec<String>,
+    pub body: Vec<Sexp>,
+}
+
+/// Collect `defun`s from a task file (other top-level forms are ignored).
+/// Parse failures yield an empty map.
+pub fn parse_defuns(src: &str) -> HashMap<String, UserDefun> {
+    let mut map = HashMap::new();
+    let Ok(forms) = parse_all(src) else {
+        return map;
+    };
+    for f in forms {
+        if let Sexp::List(items) = &f {
+            if items.first().and_then(|s| s.as_sym()) != Some("DEFUN") {
+                continue;
+            }
+            let Some(name) = items.get(1).and_then(|s| s.as_sym()) else {
+                continue;
+            };
+            let Sexp::List(params) = &items[2] else {
+                continue;
+            };
+            let params = params
+                .iter()
+                .filter_map(|p| p.as_sym().map(str::to_string))
+                .collect();
+            map.insert(
+                name.to_uppercase(),
+                UserDefun {
+                    params,
+                    body: items[3..].to_vec(),
+                },
+            );
+        }
+    }
+    map
 }
 
 #[derive(Debug, Clone, PartialEq)]

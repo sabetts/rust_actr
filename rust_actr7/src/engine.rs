@@ -969,6 +969,8 @@ pub struct Engine {
     last_press: Option<(String, String, f32, f32)>,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
     trace_on: bool,
+    /// Task-file `defun`s available to `!eval!`/`!bind!`.
+    user_fns: HashMap<String, crate::model::UserDefun>,
 }
 
 impl Engine {
@@ -1056,6 +1058,7 @@ impl Engine {
             prev_prod_ms: 0,
             last_press: None,
             trace_on: true,
+            user_fns: HashMap::new(),
         };
         eng.reset()?;
         eng.cfg.module_width = module_width;
@@ -1580,6 +1583,11 @@ impl Engine {
     /// Trace on/off (`:v`), used by scripted drivers that hide segments.
     pub fn set_trace(&mut self, on: bool) {
         self.trace_on = on;
+    }
+
+    /// Install task-file `defun`s for the bounded `!eval!`/`!bind!` evaluator.
+    pub fn set_user_fns(&mut self, fns: HashMap<String, crate::model::UserDefun>) {
+        self.user_fns = fns;
     }
 
     /// Override the trace module-column width (`max-module-name-length`).
@@ -2401,12 +2409,21 @@ impl Engine {
                     Some(c) => c,
                     None => return Ok(None),
                 };
+                // A LHS `ISA TYPE` as the *only* test constrains the buffer
+                // chunk's type: a request-built `(ISA CHUNK)` chunk must not
+                // satisfy `ISA GOAL` (bind-test). With other slot tests the
+                // type is carried for slot indices only, so the tests
+                // themselves decide (blending/addition).
+                let only_isa = tests.iter().all(|t| t.slot == "ISA");
                 for t in tests {
-                    // ACT-R compiles a LHS `ISA` line into a slot signature
-                    // (filled/empty masks), not a chunk-type comparison
-                    // (`production-parsing.lisp:786`); the per-slot tests
-                    // below already reproduce that signature.
                     if t.slot == "ISA" {
+                        if only_isa {
+                            if let Pattern::Sym(want) = &t.value {
+                                if want != "CHUNK" && &chunk.ctype != want {
+                                    return Ok(None);
+                                }
+                            }
+                        }
                         continue;
                     }
                     // ACT-R `test-var-slot`: the slot *name* itself may be an
@@ -2531,17 +2548,18 @@ impl Engine {
             if let Some(v) = b.get(var) {
                 return Ok(v.clone());
             }
-            if let Some(buf) = self.buffers.get(var) {
-                return Ok(buf
-                    .chunk
-                    .as_ref()
-                    .and_then(|c| c.name.clone())
-                    .map(Value::Sym)
-                    .unwrap_or(Value::Nil));
+            if self.buffers.contains_key(var) {
+                // A buffer reference (`=goal`) denotes the buffer's chunk;
+                // keep it as a marker resolved by `chunk-slot-value-fct`.
+                return Ok(Value::Sym(format!("={var}")));
             }
             return Err(format!("unbound variable {s}"));
         }
-        // A bare symbol is data (only valid where a value is expected).
+        // A bare symbol bound as a task-file `defun` parameter; otherwise
+        // it is literal data (e.g. a quoted symbol argument).
+        if let Some(v) = b.get(s) {
+            return Ok(v.clone());
+        }
         Ok(Value::Sym(s.to_string()))
     }
 
@@ -2559,23 +2577,67 @@ impl Engine {
     /// Evaluate an expression that may yield multiple values (`values`).
     fn eval_values(&self, e: &Sexp, b: &Bindings) -> Result<Vec<Value>, String> {
         if let Sexp::List(items) = e {
-            if items
-                .first()
-                .and_then(|s| s.as_sym())
-                .map(|s| s.eq_ignore_ascii_case("values"))
-                .unwrap_or(false)
-            {
-                let mut out = Vec::new();
-                for a in &items[1..] {
-                    out.push(self.eval_expr(a, b)?);
+            if let Some(head) = items.first() {
+                if head
+                    .as_sym()
+                    .map(|s| s.eq_ignore_ascii_case("values"))
+                    .unwrap_or(false)
+                {
+                    let mut out = Vec::new();
+                    for a in &items[1..] {
+                        out.push(self.eval_expr(a, b)?);
+                    }
+                    return Ok(out);
                 }
-                return Ok(out);
+                if let Some(def) = self.user_fn_for_head(head) {
+                    return self.user_fn_values(def, &items[1..], b);
+                }
             }
         }
         Ok(vec![self.eval_expr(e, b)?])
     }
 
+    /// Look up a task-file `defun` by a symbol or string head.
+    fn user_fn_for_head(&self, head: &Sexp) -> Option<&crate::model::UserDefun> {
+        let name = match head {
+            Sexp::Sym(s) | Sexp::Str(s) => s,
+            _ => return None,
+        };
+        self.user_fns.get(&name.to_uppercase())
+    }
+
+    /// Call a task-file `defun`: evaluate args in the caller's scope, bind
+    /// parameters, and evaluate the body (last expression may be `values`).
+    fn user_fn_values(
+        &self,
+        def: &crate::model::UserDefun,
+        args: &[Sexp],
+        b: &Bindings,
+    ) -> Result<Vec<Value>, String> {
+        let mut local = b.clone();
+        for (i, p) in def.params.iter().enumerate() {
+            let v = match args.get(i) {
+                Some(a) => self.eval_expr(a, b)?,
+                None => Value::Nil,
+            };
+            local.insert(p.to_uppercase(), v);
+        }
+        let mut out = vec![Value::Nil];
+        for (i, e) in def.body.iter().enumerate() {
+            if i + 1 == def.body.len() {
+                out = self.eval_values(e, &local)?;
+            } else {
+                self.eval_expr(e, &local)?;
+            }
+        }
+        Ok(out)
+    }
+
     fn eval_call(&self, head: &Sexp, args: &[Sexp], b: &Bindings) -> Result<Value, String> {
+        if let Some(def) = self.user_fn_for_head(head) {
+            let vals = self.user_fn_values(def, args, b)?;
+            return Ok(vals.into_iter().next().unwrap_or(Value::Nil));
+        }
         if let Sexp::Str(name) = head {
             return self.eval_command(name, args, b);
         }
@@ -2697,20 +2759,23 @@ impl Engine {
     }
 
     fn chunk_slot_value(&self, chunk: &Value, slot: &Value) -> Result<Value, String> {
-        let name = match chunk {
-            Value::Sym(s) => s.clone(),
-            Value::Nil => return Ok(Value::Nil),
-            _ => return Err("chunk-slot-value-fct needs a chunk".to_string()),
-        };
         let slot = match slot {
             Value::Sym(s) => s.clone(),
             _ => return Err("chunk-slot-value-fct needs a slot symbol".to_string()),
         };
-        let c = self
-            .dm
-            .iter()
-            .find(|c| c.name.as_deref() == Some(name.as_str()))
-            .or_else(|| self.named.get(&name));
+        let c = match chunk {
+            // A buffer reference marker (`=goal`).
+            Value::Sym(s) if s.starts_with('=') => {
+                self.buffers.get(&s[1..]).and_then(|b| b.chunk.as_ref())
+            }
+            Value::Sym(name) => self
+                .dm
+                .iter()
+                .find(|c| c.name.as_deref() == Some(name.as_str()))
+                .or_else(|| self.named.get(name)),
+            Value::Nil => return Ok(Value::Nil),
+            _ => return Err("chunk-slot-value-fct needs a chunk".to_string()),
+        };
         Ok(c.map(|c| c.get(&slot)).unwrap_or(Value::Nil))
     }
     /// An exact miss may still pass when the value similarity is strictly
@@ -6075,6 +6140,31 @@ mod tests {
             t
         );
         assert!(e.eval_expr(&one("(this-needs-a-real-lisp)"), &b).is_err());
+    }
+
+    /// Task-file `defun`s are callable by symbol or string head, with bare
+    /// parameters bound from the call scope.
+    #[test]
+    fn eval_user_defun() {
+        use crate::model::UserDefun;
+        use crate::sexpr::parse_all;
+        let mut e = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        let expr = |s: &str| parse_all(s).unwrap().pop().unwrap();
+        let mut fns = HashMap::new();
+        fns.insert(
+            "SINGLE-BIND".to_string(),
+            UserDefun {
+                params: vec!["VAL".to_string()],
+                body: vec![expr("(1+ val)")],
+            },
+        );
+        e.set_user_fns(fns);
+        let b = Bindings::new();
+        assert_eq!(e.eval_expr(&expr("(single-bind 3)"), &b).unwrap(), Value::Int(4));
+        assert_eq!(
+            e.eval_expr(&expr("(\"single-bind\" 4)"), &b).unwrap(),
+            Value::Int(5)
+        );
     }
 
     /// `render_production` reproduces the `:cst` instantiation block

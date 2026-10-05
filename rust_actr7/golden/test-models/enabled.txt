@@ -30,3 +30,6 @@ semantic-dynamic
 merging-test
 indirect-action-compilation
 dynamic-slot-compilation
+bind-test
+remote-bind-test
+tutorial-unit5modeling-v6-p4-run-with-mp-2

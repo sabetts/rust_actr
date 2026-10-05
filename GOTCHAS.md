@@ -1110,3 +1110,18 @@ per-test to match `test-bad-productions` therefore regresses
 `semantic`/`tutor-model`; this is why production-validation + warning
 capture was abandoned.
 
+## 112. Task-file `defun`s + the sole-`isa` rule (verified)
+
+`bind-test`/`remote-bind-test` call task helpers (`single-bind` = `1+`,
+`multi-bind` = `values` of the goal chunk's `slot1`/`slot2`, the latter by
+name or as a remote command string). A `models/X.lisp` model's sibling
+`X.lisp` task file is scanned for simple `defun`s and installed in the
+evaluator; `defun` parameters are bare symbols resolved from the call
+scope (extended `eval_symbol`), and a buffer reference like `=goal`
+evaluates to a marker `=GOAL` that `chunk-slot-value-fct` resolves to the
+buffer chunk (which may be unnamed). Separately, a LHS `ISA TYPE` that is
+the **only** test constrains the buffer chunk's type: a request-built
+`(ISA CHUNK)` chunk must not satisfy `ISA GOAL`, or `bind-test` loops
+forever. With other slot tests the `isa` line only carries slot indices,
+so the tests decide (as before).
+

@@ -83,12 +83,14 @@
 //!   composition + installing compiled productions into the runtime made
 //!   `indirect-action-compilation` green. A bounded `!eval!`/`!bind!`
 //!   evaluator (pure operators + `safe-` variants; unknown heads error)
-//!   made `dynamic-slot-compilation` green. Remaining: task-supplied
-//!   functions/commands (`bind-test`, `remote-bind-test`, `grouped`),
-//!   production validation (`test-bad-productions`), `!bind!`/`!eval!`
-//!   timing (`dynamic-real-time`), other `require-extra` behaviors
-//!   (associative-learning/act-touch/z-threads/extended-motor),
-//!   `schedule-event` scaffolding, and multi-model traces.
+//!   made `dynamic-slot-compilation` green. A bounded task-file `defun`
+//!   interpreter plus the sole-`isa` matching rule made `bind-test` and
+//!   `remote-bind-test` green. Remaining: task-supplied commands
+//!   (`grouped`), production validation (`test-bad-productions`, blocked
+//!   by cross-test warning state), `!eval!` timing (`dynamic-real-time`),
+//!   other `require-extra` behaviors (associative-learning/act-touch/
+//!   z-threads/extended-motor), `schedule-event` scaffolding, and
+//!   multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
@@ -108,6 +110,7 @@ pub mod trace;
 pub use engine::{DeviceSetup, DeviceText, EngineError};
 pub use model::{load_models, ChunkDesc, Model};
 
+use std::collections::HashMap;
 use std::path::Path;
 
 /// Run one model and return its trace as exact bytes.
@@ -193,6 +196,7 @@ pub fn run_model_steps(
     device: &DeviceSetup,
 ) -> Result<String, EngineError> {
     let mut defs = Vec::new();
+    let mut user_fns: HashMap<String, model::UserDefun> = HashMap::new();
     for m in models {
         let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
         let path = actr_root.join(rel);
@@ -202,11 +206,19 @@ pub fn run_model_steps(
         if path.is_file() && file_defines_model(&path) {
             defs.extend(load_models(&path)?);
         }
+        // A `models/X.lisp` model commonly has a sibling task file
+        // `X.lisp` defining helper `defun`s (e.g. `single-bind`).
+        if let Some(task) = companion_task_file(&path) {
+            if let Ok(src) = std::fs::read_to_string(&task) {
+                user_fns.extend(model::parse_defuns(&src));
+            }
+        }
     }
     let def = defs
         .last()
         .ok_or_else(|| EngineError::Model("no define-model in step script".to_string()))?;
     let mut eng = engine::Engine::new(def.clone(), seed, 0.0, device.clone())?;
+    eng.set_user_fns(user_fns);
     for step in steps {
         match step {
             Step::Run { secs, trace, width } => {
@@ -222,6 +234,18 @@ pub fn run_model_steps(
         }
     }
     Ok(eng.output())
+}
+
+/// A `.../models/X.lisp` model's sibling task file `.../X.lisp`, if present
+/// (test-model convention: the task file defines helper `defun`s and loads
+/// the model).
+fn companion_task_file(model_path: &Path) -> Option<std::path::PathBuf> {
+    let parent = model_path.parent()?;
+    if parent.file_name()?.to_str()? != "models" {
+        return None;
+    }
+    let candidate = parent.parent()?.join(model_path.file_name()?);
+    candidate.is_file().then_some(candidate)
 }
 
 /// Whether a file contains a top-level `define-model` (possibly `-fct`)
