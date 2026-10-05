@@ -358,9 +358,6 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
     if let Some(u) = &spec.steps_unsupported {
         return Some(format!("unsupported step: {u}"));
     }
-    if spec.steps.iter().any(|s| matches!(s, Step::Reset)) {
-        return Some("scripted (reset) step not implemented".into());
-    }
     if !spec.steps.iter().any(|s| matches!(s, Step::Run { .. })) {
         return Some("no run step".into());
     }

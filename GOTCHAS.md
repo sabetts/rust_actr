@@ -677,3 +677,57 @@ DEFUN"). `run_model_steps` now loads only files that contain a top-level
 `define-model`. Multi-model files (`unit-1-together-1-mp` defines
 COUNT+SEMANTIC+ADDITION) are detected and skipped: their refs carry a
 model-name column the single-model formatter lacks (cf. #66).
+
+## 71. `define-chunks` chunks are NOT in declarative memory (verified)
+
+`define-chunks-fct` (`framework/chunks.lisp:1129`) puts chunks in the model's
+chunk table; `add-dm` runs the same creation *and* `add-chunk-into-dm`. The
+table is needed for name resolution (goal-focus by name, `=buffer` copies)
+but retrieval must never see those chunks. The engine keeps a `named` map
+separate from `dm` and `instantiate(Named)` checks `dm` then `named`.
+`define-chunks` also accepts bare names (`(define-chunks a b)`), which are
+chunks with no type/slots.
+
+## 72. `(reset)` zeroes the clock and rebuilds DM/buffers, but not the RNG (verified)
+
+`internal-reset` sets `meta-p-time` to 0 (`framework/meta-process.lisp:339`);
+`reset-model` clears the chunk table, rebuilds the starting chunk structs,
+clears every buffer, and **re-evaluates the model body** (so
+`add-dm`/`define-chunks`/`set-base-levels`/`set-similarities` reapply). The
+random seed is a module parameter and survives reset (`run-golden.lisp`
+seeds before reset). `Engine::reset` mirrors this and preserves trace
+history; `Engine::new` now just calls it.
+
+## 73. Model-body `declare-buffer-usage` and `spp` are behaviorless (code-read)
+
+`declare-buffer-usage` only records declared slot usage to suppress style
+warnings (`commands/procedural-cmds.lisp:789`). Model-body `(spp <prod>
+:param value)` sets production parameters (e.g. `:reward`); ignoring it
+changes utility learning only where a production self-reward is actually
+exercised (GOTCHA #58). Both were blocking unit5/UL models at *load* and are
+now accepted no-ops.
+
+## 74. `?buffer> buffer empty|full` is buffer presence, not module state (verified)
+
+`buffer empty`/`buffer full` test whether the buffer holds a chunk;
+`state free` tests module busy state; `failure` is the retrieval-failure
+flag. `?goal> buffer empty` is used by `merging-test` and unit5 P1.
+
+## 75. `+goal>` is a goal-style request: delay 0, priority -1000, prints ISA (verified)
+
+`goal-style-request` calls `schedule-set-buffer-chunk ... 0 :priority -1000`
+(`support/goal-style-module.lisp:245`), so the new goal lands *after* the
+production's clears (priority 10) — matching `merging-test`'s 0.050 order of
+MODULE-REQUEST / CLEAR-BUFFER / SET-BUFFER-CHUNK GOAL. Unlike
+retrieval/imaginal request SETs (slots-only, `bare`), the goal SET prints
+`(ISA ...)`.
+
+## 76. Unit5 modeling is gated by spreading, not `define-chunks` (verified)
+
+The `declarative-issues*` models set `:mas 2`; `Config::from_model` refuses
+`:mas`/`:pas` (`unimpl`). `define-chunks`, `set-base-levels`, and
+`set-similarities` are prerequisites, but exact reproduction needs spreading
+(`compute-sji`: `mas - ln(fan-out/fan-in)`, clamped; GOTCHA #36). Remaining
+non-spreading blockers in the corpus: negative request modifiers
+(`+retrieval> ... - slot nil`, refused at load), `:crt`/`:epl`/`:pct`
+conflict-resolution trace text, and `schedule-event` model scaffolding.

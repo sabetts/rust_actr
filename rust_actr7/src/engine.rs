@@ -25,7 +25,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
-use crate::model::{ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction};
+use crate::model::{Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction};
 use crate::rand::Mt;
 use crate::sexpr::Sexp;
 use crate::trace::{format_line, Detail, Out, MODULE_WIDTH};
@@ -786,6 +786,8 @@ pub struct Engine {
     cfg: Config,
     rng: Mt,
     dm: Vec<ChunkInst>,
+    /// `define-chunks` named chunks (not in DM), for name resolution.
+    named: HashMap<String, ChunkInst>,
     hist: Vec<History>,
     buffers: HashMap<String, Buffer>,
     queue: BinaryHeap<Queued>,
@@ -847,79 +849,46 @@ impl Engine {
         device: DeviceSetup,
         module_width: usize,
     ) -> Result<Engine, EngineError> {
-        let mut cfg = Config::from_model(&model)?;
-        cfg.module_width = module_width;
+        let cfg = Config::from_model(&model)?;
         let mut rng = Mt::fresh();
         rng.set_seed(seed.0, seed.1);
-        let mut dm = Vec::new();
-        for c in &model.chunks {
-            let mut slots = Vec::new();
-            for (s, p) in &c.slots {
-                slots.push((s.clone(), Value::from_pattern(p)?));
-            }
-            dm.push(ChunkInst {
-                name: Some(c.name.clone()),
-                ctype: c.ctype.clone().unwrap_or_default(),
-                slots,
-                bare: false,
-            });
-        }
-        let mut buffers = HashMap::new();
-        buffers.insert("GOAL".to_string(), Buffer::empty());
-        buffers.insert("RETRIEVAL".to_string(), Buffer::empty());
-        buffers.insert("IMAGINAL".to_string(), Buffer::empty());
-        buffers.insert("VISUAL".to_string(), Buffer::empty());
-        buffers.insert("VISUAL-LOCATION".to_string(), Buffer::empty());
-        buffers.insert("MANUAL".to_string(), Buffer::empty());
-
-        let mut exec_prods = Vec::new();
-        for (index, prod) in model.productions.iter().enumerate() {
-            exec_prods.push(ExecProd {
-                index,
-                implicit_clears: implicit_clears(prod, &cfg.do_not_harvest),
-                implicit_queries: implicit_queries(prod, &cfg.do_not_query),
-            });
-        }
-
-        let dm_len = dm.len();
+        let DeviceSetup {
+            texts,
+            clears,
+            end,
+            rewards,
+            sims,
+        } = device;
         let mut eng = Engine {
             model,
             cfg,
             rng,
-            dm,
-            // add-dm chunks: creation at clock 0, one reference then.
-            hist: vec![
-                History {
-                    creation_ms: 0,
-                    refs: vec![0],
-                    count: 1
-                };
-                dm_len
-            ],
-            buffers,
+            dm: Vec::new(),
+            named: HashMap::new(),
+            hist: Vec::new(),
+            buffers: HashMap::new(),
             queue: BinaryHeap::new(),
             seq: 0,
             time_ms: 0,
             limit_ms: (run_secs * 1000.0).round() as i64,
             out_lines: Vec::new(),
-            exec_prods,
+            exec_prods: Vec::new(),
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
             utilities: Vec::new(),
             history: Vec::new(),
-            sims: device
-                .sims
+            sims: sims
                 .iter()
                 .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
                 .collect(),
             pending_texts: {
-                let mut v = device.texts;
+                let mut v = texts;
                 v.sort_by_key(|t| t.at_ms);
                 v
             },
             pending_clears: {
-                let mut v = device.clears;
+                let mut v = clears;
                 v.sort_unstable();
                 v
             },
@@ -935,16 +904,14 @@ impl Engine {
             last_press: None,
             trace_on: true,
         };
-        // Reset: device proc-display (maintenance) processes anything
-        // already due, then the initial goal, then conflict resolution.
-        eng.utilities = vec![eng.cfg.iu; eng.model.productions.len()];
-        if !eng.pending_texts.is_empty() && eng.pending_texts[0].at_ms <= 0 {
-            eng.push_m(0, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
-        }
-        if let Some(end) = device.end {
+        eng.reset()?;
+        eng.cfg.module_width = module_width;
+        // Device script: a run-full-time dummy and scheduled rewards are part
+        // of the task, not the model reset, so they are armed only here.
+        if let Some(end) = end {
             eng.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
         }
-        for (at, value) in &device.rewards {
+        for (at, value) in &rewards {
             eng.push(
                 *at,
                 Prio::Max,
@@ -952,10 +919,80 @@ impl Engine {
                 Event::PropagateReward { value: *value },
             );
         }
-        // Reset: restore the initial goal, then conflict resolution.
-        if let Some(goal) = eng.model.initial_goal.clone() {
+        Ok(eng)
+    }
+
+    /// `(reset)`: re-evaluate the model body's effect on engine state —
+    /// rebuild DM and the named-chunk table, clear buffers, reset the clock
+    /// to 0, and re-arm the initial goal + conflict resolution. The RNG is
+    /// intentionally NOT reseeded (GOTCHAS #5/#35); scripted `:seed` steps
+    /// handle that. Trace history (`out_lines`) is preserved.
+    pub fn reset(&mut self) -> Result<(), EngineError> {
+        self.cfg = Config::from_model(&self.model)?;
+        self.trace_on = true;
+        self.dm = Vec::new();
+        for c in &self.model.chunks {
+            self.dm.push(chunk_inst(c)?);
+        }
+        self.named = HashMap::new();
+        for c in &self.model.defined_chunks {
+            self.named.insert(c.name.clone(), chunk_inst(c)?);
+        }
+        let dm_len = self.dm.len();
+        self.hist = vec![
+            History {
+                creation_ms: 0,
+                refs: vec![0],
+                count: 1,
+            };
+            dm_len
+        ];
+        self.buffers.clear();
+        for b in [
+            "GOAL",
+            "RETRIEVAL",
+            "IMAGINAL",
+            "VISUAL",
+            "VISUAL-LOCATION",
+            "MANUAL",
+        ] {
+            self.buffers.insert(b.to_string(), Buffer::empty());
+        }
+        self.queue = BinaryHeap::new();
+        self.time_ms = 0;
+        self.cr_armed = false;
+        self.dm_gen = 0;
+        self.dm_busy = false;
+        self.utilities = vec![self.cfg.iu; self.model.productions.len()];
+        self.history.clear();
+        self.features.clear();
+        self.feat_seq = 0;
+        self.copy_count.clear();
+        self.vl_copies.clear();
+        self.obj_built.clear();
+        self.visual_busy = false;
+        self.man_prep_busy = false;
+        self.man_exec_busy = false;
+        self.imag_busy = false;
+        self.last_press = None;
+        self.exec_prods = self
+            .model
+            .productions
+            .iter()
+            .enumerate()
+            .map(|(index, prod)| ExecProd {
+                index,
+                implicit_clears: implicit_clears(prod, &self.cfg.do_not_harvest),
+                implicit_queries: implicit_queries(prod, &self.cfg.do_not_query),
+            })
+            .collect();
+        // Device proc-display already due at t=0 (maintenance).
+        if !self.pending_texts.is_empty() && self.pending_texts[0].at_ms <= 0 {
+            self.push_m(0, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
+        }
+        if let Some(goal) = self.model.initial_goal.clone() {
             let chunk = new_chunk(&goal)?;
-            eng.push(
+            self.push(
                 0,
                 Prio::Num(0),
                 Out::Low,
@@ -967,8 +1004,8 @@ impl Engine {
                 },
             );
         }
-        eng.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
-        Ok(eng)
+        self.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
+        Ok(())
     }
 
     fn push(&mut self, time_ms: i64, prio: Prio, out: Out, event: Event) {
@@ -1265,6 +1302,30 @@ impl Engine {
                             let at = self.time_ms + self.cfg.imaginal_delay_ms;
                             self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
                         }
+                    }
+                    "GOAL" => {
+                        // goal-style-request: delay 0, priority -1000, so the
+                        // new goal lands after the production's clears
+                        // (`support/goal-style-module.lisp:245`). Unlike
+                        // retrieval/imaginal request specs, the goal SET
+                        // prints with ISA/type.
+                        let chunk = match spec {
+                            NewChunk::Spec { ctype, slots, .. } => {
+                                NewChunk::Spec { ctype, slots, bare: false }
+                            }
+                            other => other,
+                        };
+                        self.push(
+                            self.time_ms,
+                            Prio::Num(-1000),
+                            Out::Medium,
+                            Event::SetBuffer {
+                                buffer: "GOAL".to_string(),
+                                chunk,
+                                requested: true,
+                                shown: None,
+                            },
+                        );
                     }
                     got => {
                         return Err(unimpl(format!("request to buffer {got}")));
@@ -1601,6 +1662,7 @@ impl Engine {
                 .dm
                 .iter()
                 .find(|c| c.name.as_deref() == Some(name.as_str()))
+                .or_else(|| self.named.get(&name))
                 .cloned()
                 .ok_or_else(|| bad(format!("no chunk named {name}"))),
             NewChunk::Spec { ctype, slots, bare } => Ok(ChunkInst {
@@ -1728,6 +1790,20 @@ impl Engine {
                                 .get(buffer)
                                 .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
                                 .failed
+                        }
+                        ("BUFFER", Pattern::Sym(s)) if s == "EMPTY" => {
+                            self.buffers
+                                .get(buffer)
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
+                                .chunk
+                                .is_none()
+                        }
+                        ("BUFFER", Pattern::Sym(s)) if s == "FULL" => {
+                            self.buffers
+                                .get(buffer)
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
+                                .chunk
+                                .is_some()
                         }
                         ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
@@ -2519,6 +2595,20 @@ impl Engine {
     }
 }
 
+/// Build a chunk instance from a parsed `add-dm`/`define-chunks` entry.
+fn chunk_inst(c: &Chunk) -> Result<ChunkInst, EngineError> {
+    let mut slots = Vec::new();
+    for (s, p) in &c.slots {
+        slots.push((s.clone(), Value::from_pattern(p)?));
+    }
+    Ok(ChunkInst {
+        name: Some(c.name.clone()),
+        ctype: c.ctype.clone().unwrap_or_default(),
+        slots,
+        bare: false,
+    })
+}
+
 fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
     match desc {
         ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
@@ -2683,6 +2773,18 @@ mod tests {
 
     fn sym(s: &str) -> Value {
         Value::Sym(s.into())
+    }
+
+    #[test]
+    fn scripted_reset_is_idempotent() {
+        // Construction performs a reset; an explicit `(reset)` at t=0 must
+        // reproduce the same run (same DM, goal, CR) exactly.
+        let a = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        let out_a = a.run().unwrap();
+        let mut b = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        b.reset().unwrap();
+        b.run_secs(10.0).unwrap();
+        assert_eq!(out_a, b.output());
     }
 
     #[test]

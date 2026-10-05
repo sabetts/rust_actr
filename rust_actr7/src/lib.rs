@@ -45,10 +45,13 @@
 //!   far). This milestone added per-spec trace module width
 //!   (`max-module-name-length` overrides), integer-vs-float slot printing,
 //!   and a scripted driver (`run_model_steps`: repeated `run`, `goal-focus`,
-//!   `:v`/`:trace-detail`/`:seed`), which made the multi-run `semantic`
-//!   trace green. Remaining `PURE`/`MULTI` gaps: `define-chunks`,
-//!   `!bind!`, `set-similarities`, `?buffer empty`, `require-extra`,
-//!   scripted `(reset)`, and multi-model traces.
+//!   `:v`/`:trace-detail`/`:seed`, `(reset)`), which made the multi-run
+//!   `semantic` trace green. Added `define-chunks`, model-body
+//!   `declare-buffer-usage`/`spp`, `?buffer> buffer empty|full`, and
+//!   `+goal>` requests. Remaining `PURE`/`MULTI` gaps: spreading (`:mas`),
+//!   negative request modifiers, `:crt` conflict-resolution text,
+//!   `set-base-levels`/`set-similarities`, `!bind!`, `require-extra`, and
+//!   multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
@@ -175,11 +178,7 @@ pub fn run_model_steps(
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),
             Step::SetDetail(d) => eng.set_detail(*d),
-            Step::Reset => {
-                return Err(EngineError::NotImplemented(
-                    "scripted (reset) step".to_string(),
-                ))
-            }
+            Step::Reset => eng.reset()?,
         }
     }
     Ok(eng.output())

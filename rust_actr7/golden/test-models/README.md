@@ -46,9 +46,12 @@ only make sense in the command/device harness:
 | `ERROR` | stub needed the harness (`*out-file*`, helpers) | out of scope |
 
 The scripted engine supports multiple `run` steps (each bounded relative to
-the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`, and
-`:seed`. Scripted `(reset)` is not implemented yet (the engine's reset lives
-in `Engine::new`).
+the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
+`:seed`, and `(reset)` (clock to 0, DM/buffers rebuilt, RNG preserved).
+`define-chunks` named chunks, model-body `declare-buffer-usage`/`spp`,
+`?buffer> buffer empty|full`, and `+goal>` requests are also handled. The
+next big blocker for the unit5 modeling specs is spreading (`:mas`); see
+`../../GOTCHAS.md` #76.
 
 ## Regenerate
 

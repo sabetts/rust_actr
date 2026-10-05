@@ -125,6 +125,10 @@ pub struct Model {
     pub chunk_types: Vec<ChunkType>,
     /// Declarative memory from `add-dm`.
     pub chunks: Vec<Chunk>,
+    /// Named chunks from `define-chunks` that are NOT in declarative memory
+    /// (values/references only; resolved for goal-focus and `=buffer>`
+    /// copies). `add-dm` puts its chunks in `chunks` instead.
+    pub defined_chunks: Vec<Chunk>,
     pub initial_goal: Option<ChunkDesc>,
     pub productions: Vec<Production>,
 }
@@ -437,6 +441,7 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
         params: Vec::new(),
         chunk_types: Vec::new(),
         chunks: Vec::new(),
+        defined_chunks: Vec::new(),
         initial_goal: None,
         productions: Vec::new(),
     };
@@ -469,6 +474,23 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                     model.chunks.push(parse_dm_entry(e)?);
                 }
             }
+            "DEFINE-CHUNKS" => {
+                // Named chunks that live in the model's chunk table but not
+                // in declarative memory (`framework/chunks.lisp:1129`).
+                for e in &items[1..] {
+                    match e {
+                        Sexp::Sym(n) => model.defined_chunks.push(Chunk {
+                            name: n.clone(),
+                            ctype: None,
+                            slots: Vec::new(),
+                        }),
+                        Sexp::List(_) => model.defined_chunks.push(parse_dm_entry(e)?),
+                        got => {
+                            return structural(format!("bad define-chunks entry: {got:?}"));
+                        }
+                    }
+                }
+            }
             "GOAL-FOCUS" => {
                 if items.len() != 2 {
                     return structural("goal-focus takes exactly one argument");
@@ -480,6 +502,13 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                 };
                 model.initial_goal = Some(desc);
             }
+            // Pure style-warning suppression (`commands/procedural-cmds.lisp:789`);
+            // it records declared slot usage but changes no engine behavior.
+            "DECLARE-BUFFER-USAGE" => {}
+            // `(spp <production> :param value ...)` — production-level
+            // parameters (e.g. `:reward`). Ignored for now; the ref diff
+            // will surface any behavior that actually matters.
+            "SPP" => {}
             "P" => model.productions.push(parse_production(f)?),
             got => return structural(format!("unknown model body form: {got}")),
         }
