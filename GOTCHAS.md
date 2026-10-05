@@ -528,3 +528,26 @@ that reset rebuilds, so the task file must call it in `task-setup`
 name (both directions); chunkhood is DM membership (approximation).
 Sidecar symbols fold to uppercase like everything else — a lowercase
 miss once zeroed every similarity to `:md` (loud failure, fixed).
+
+---
+
+# M9 findings: utility learning (all verified: golden byte-match)
+
+## 57. Penalty flips beat rewards for golden design
+
+History credits every firing since the last reward (decayed by
+recency), so rewarding the winner only widens its lead. A `-10`
+penalty at 275 ms drops L from 0 to ≈−6.7 across its 5 recorded
+firings, flipping subsequent ties to R in one step. Compact,
+deterministic, RNG-free.
+
+## 58. Reward plumbing: invisible wrapper, visible propagate
+
+Task-scheduled `trigger-reward` (default output, high-only) forwards
+to `propagate-reward` (`:max`, medium, `UTILITY PROPAGATE-REWARD v`).
+The engine schedules propagate directly with identical timing.
+Updates are `U += α(R−U)` per history entry in selection order with
+`R = value − seconds-since-selection`, all single-float; history
+clears after. Non-`esc`/`ul` rewards are silent no-ops (Lisp warns to
+stdout). `:iu` honored for initial utilities; `:ult` trace lines,
+`spp :u`/`:reward`, and production self-rewards remain out.

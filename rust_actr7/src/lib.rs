@@ -34,8 +34,10 @@
 //! - M8 (done): partial matching — signature candidacy, similarity
 //!   scoring with var-skipping, `mp-test` golden (similarity decides
 //!   between two non-matching candidates). Byte-exact.
-//! - Next: audio/speech devices, `:ul` utility learning, production
-//!   compilation.
+//! - M9 (done): utility learning — selection history, reward
+//!   propagation with recency discount, `ul-test` penalty-flip golden.
+//!   Byte-exact (`:iu` honored; `:ult` trace lines not implemented).
+//! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
@@ -112,6 +114,7 @@ mod tests {
             "paired-2x2",
             "paired-full",
             "mp-test",
+            "ul-test",
         ] {
             let trace = crate_dir()
                 .join("golden")

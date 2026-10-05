@@ -138,6 +138,9 @@ struct Config {
     act_scale: f32,
     ans: Option<f32>,
     egs: f32,
+    ul: bool,
+    alpha: f32,
+    iu: f32,
     mp: Option<f32>,
     ms: f32,
     md: f32,
@@ -173,6 +176,10 @@ pub struct DeviceSetup {
     pub clears: Vec<i64>,
     /// Run-full-time dummy: keep running to this ms, then time-limit stop.
     pub end: Option<i64>,
+    /// Task rewards `(ms, value)`, mirroring scheduled `trigger-reward`
+    /// calls (the invisible wrapper is skipped; propagate is scheduled
+    /// directly with identical timing).
+    pub rewards: Vec<(i64, f32)>,
     /// Chunk similarities `(a, b, value)`, mirrored from the task
     /// file's `set-similarities` (which must run post-reset: reset
     /// rebuilds chunk structs, wiping table state set at load).
@@ -337,7 +344,7 @@ fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
 impl Config {
     fn from_model(m: &Model) -> Result<Config, EngineError> {
         // Still beyond reach: spreading, utility learning.
-        for key in [":MAS", ":PAS", ":UL"] {
+        for key in [":MAS", ":PAS"] {
             if let Some((_, v)) = m.params.iter().find(|(k, _)| k == key) {
                 if !matches!(v, Sexp::Sym(s) if s == "NIL") {
                     return Err(unimpl(format!("subsymbolic parameter {key}")));
@@ -420,6 +427,9 @@ impl Config {
             rt: sgp_single(&m.params, ":RT")?.unwrap_or(0.0),
             blc: sgp_single(&m.params, ":BLC")?.unwrap_or(0.0),
             ans: sgp_single(&m.params, ":ANS")?.filter(|s| *s > 0.0),
+            ul: sgp_bool(&m.params, ":UL"),
+            alpha: sgp_single(&m.params, ":ALPHA")?.unwrap_or(0.2),
+            iu: sgp_single(&m.params, ":IU")?.unwrap_or(0.0),
             mp: sgp_single(&m.params, ":MP")?,
             ms: sgp_single(&m.params, ":MS")?.unwrap_or(0.0),
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
@@ -654,6 +664,10 @@ enum Event {
     VisualClear,
     /// Run-full-time dummy: keeps the run going to the time limit.
     Dummy,
+    /// Utility reward propagation (output medium).
+    PropagateReward {
+        value: f32,
+    },
     /// Preparation-state release after a module clear. High-detail
     /// only; matters because executing it wakes armed CR.
     ChangeState {
@@ -759,6 +773,10 @@ pub struct Engine {
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
+    /// Production utilities (init :iu) and selection history
+    /// (prod index, selection time ms) for reward propagation.
+    utilities: Vec<f32>,
+    history: Vec<(usize, i64)>,
     /// Chunk similarities, as given (lookup tries both orders;
     /// mirrors set-similarities).
     sims: HashMap<(String, String), f32>,
@@ -849,6 +867,8 @@ impl Engine {
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
+            utilities: Vec::new(),
+            history: Vec::new(),
             sims: device
                 .sims
                 .iter()
@@ -877,11 +897,20 @@ impl Engine {
         };
         // Reset: device proc-display (maintenance) processes anything
         // already due, then the initial goal, then conflict resolution.
+        eng.utilities = vec![eng.cfg.iu; eng.model.productions.len()];
         if !eng.pending_texts.is_empty() && eng.pending_texts[0].at_ms <= 0 {
             eng.push_m(0, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
         if let Some(end) = device.end {
             eng.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
+        }
+        for (at, value) in &device.rewards {
+            eng.push(
+                *at,
+                Prio::Max,
+                Out::Medium,
+                Event::PropagateReward { value: *value },
+            );
         }
         // Reset: restore the initial goal, then conflict resolution.
         if let Some(goal) = eng.model.initial_goal.clone() {
@@ -1185,6 +1214,10 @@ impl Engine {
                 if show {
                     self.emit("PROCEDURAL", format!("PRODUCTION-SELECTED {name}"));
                 }
+                // Utility-learning history records selections.
+                if self.cfg.ul {
+                    self.history.push((prod, self.time_ms));
+                }
                 // Reads and queries in LHS order, implicit queries last,
                 // then firing at +dat.
                 for item in self.model.productions[prod].lhs.clone() {
@@ -1302,6 +1335,22 @@ impl Engine {
                 );
             }
             Event::Dummy => {}
+            Event::PropagateReward { value } => {
+                if show {
+                    self.emit("UTILITY", format!("PROPAGATE-REWARD {value}"));
+                }
+                // Rewards apply only with subsymbolics + learning on;
+                // otherwise silently ignored (Lisp warns to stdout).
+                if self.cfg.esc && self.cfg.ul {
+                    for (prod, at) in self.history.clone() {
+                        let dt = (self.time_ms - at) as f32 / 1000.0;
+                        let r = value - dt;
+                        let u = &mut self.utilities[prod];
+                        *u += self.cfg.alpha * (r - *u);
+                    }
+                    self.history.clear();
+                }
+            }
             Event::ChangeState { module } => {
                 if show {
                     self.emit(
@@ -1458,16 +1507,16 @@ impl Engine {
     }
 
     fn conflict_resolution(&mut self) -> Result<(), EngineError> {
-        // Utilities are 0.0 plus optional `:egs` noise, drawn per
-        // candidate in definition order (`compute-utility` runs inside
-        // the conflict-set loop). Ties go to the LAST production when
-        // `:er` is nil, per `conflict-resolution` source.
+        // Utilities are production U plus optional `:egs` noise, drawn
+        // per candidate in definition order (`compute-utility` runs
+        // inside the conflict-set loop). Ties go to the LAST production
+        // when `:er` is nil, per `conflict-resolution` source.
         let mut best_u: Option<f32> = None;
         let mut tied: Vec<(usize, Bindings)> = Vec::new();
         for ep in self.exec_prods.clone() {
             let prod = &self.model.productions[ep.index];
             if let Some(b) = self.match_prod(prod, &ep.implicit_queries)? {
-                let mut u = 0.0f32;
+                let mut u = self.utilities[ep.index];
                 if self.cfg.egs != 0.0 {
                     u += self.rng.noise(self.cfg.egs);
                 }

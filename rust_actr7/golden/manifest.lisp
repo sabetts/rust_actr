@@ -32,6 +32,8 @@
  ;; Partial matching: neither candidate matches exactly; similarities
  ;; decide (model + task + sidecar similarities).
  ("mp-test" "user-loads;mp-test.lisp" (100 0) 10 "user-loads;mp-task.lisp")
+ ;; Penalty-flip utility learning (model + task + sidecar reward).
+ ("ul-test" "user-loads;ul-test.lisp" (100 0) 1 "user-loads;ul-task.lisp")
  ;; Two pairs x two blocks, fixed 60 s schedule (model + task + sidecar).
  ;; Exercises long-run learning: repeated retrievals, rising base-levels.
  ("paired-2x2" "tutorial;unit4;paired-model.lisp" (200 4) 60 "user-loads;paired2-task.lisp")

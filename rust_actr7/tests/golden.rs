@@ -215,6 +215,12 @@ fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
             [op, ms] if op == "END" => {
                 device.end = Some(ms.parse().map_err(|_| format!("bad ms in {form}"))?);
             }
+            [op, ms, v] if op == "REWARD" => {
+                device.rewards.push((
+                    ms.parse().map_err(|_| format!("bad ms in {form}"))?,
+                    v.parse().map_err(|_| format!("bad value in {form}"))?,
+                ));
+            }
             [op, a, b, v] if op == "SIMILARITY" => {
                 // Lisp symbols fold to uppercase (as do model files).
                 device.sims.push((
