@@ -35,3 +35,6 @@ remote-bind-test
 tutorial-unit5modeling-v6-p4-run-with-mp-2
 tutorial-unit5modeling-v3-first-run
 demo2
+tutorial-unit7modeling-ul-issues-first-run
+tutorial-unit7modeling-ul-issues-first-run-with-ult
+tutorial-unit7modeling-ul-issues-second-run

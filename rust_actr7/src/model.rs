@@ -151,6 +151,42 @@ pub struct Production {
     pub name: String,
     pub lhs: Vec<LhsItem>,
     pub rhs: Vec<RhsAction>,
+    /// `(spp <name> :reward R)`: propagated as a reward when the production
+    /// is selected (`commands/procedural-cmds.lisp`).
+    pub reward: Option<f32>,
+}
+
+/// Collect `add-act-r-command` name→function aliases from a task file
+/// (`(add-act-r-command "cmd-name" 'fn ...)`) so scheduled commands resolve
+/// to their `defun`.
+pub fn parse_commands(src: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    let Ok(forms) = parse_all(src) else {
+        return map;
+    };
+    for f in forms {
+        if let Sexp::List(items) = &f {
+            if items.first().and_then(|s| s.as_sym()) != Some("ADD-ACT-R-COMMAND") {
+                continue;
+            }
+            let name = items.get(1).and_then(|s| match s {
+                Sexp::Str(s) | Sexp::Sym(s) => Some(s.clone()),
+                _ => None,
+            });
+            let fname = items.get(2).and_then(|s| match s {
+                Sexp::Sym(s) => Some(s.clone()),
+                Sexp::List(q) => match q.as_slice() {
+                    [Sexp::Sym(q), Sexp::Sym(s)] if q == "QUOTE" => Some(s.clone()),
+                    _ => None,
+                },
+                _ => None,
+            });
+            if let (Some(name), Some(fname)) = (name, fname) {
+                map.insert(name.to_uppercase(), fname.to_uppercase());
+            }
+        }
+    }
+    map
 }
 
 /// A task-file `defun` captured for the bounded evaluator (simple pure
@@ -232,6 +268,12 @@ pub struct Model {
     pub required_extras: Vec<String>,
     pub initial_goal: Option<ChunkDesc>,
     pub productions: Vec<Production>,
+    /// Model-body `(schedule-event <secs> "command" :params (...) ...)`:
+    /// scheduled relative to model time 0 on each reset.
+    pub scheduled_events: Vec<(i64, String, Vec<Sexp>)>,
+    /// `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`: the default
+    /// chunk type per buffer, used by `set-buffer-chunk`.
+    pub buffer_decls: Vec<(String, String)>,
 }
 
 #[derive(Debug)]
@@ -587,6 +629,7 @@ fn parse_production(form: &Sexp) -> Result<Production, LoadError> {
         name: name.clone(),
         lhs: parse_lhs(&body[..split])?,
         rhs: parse_rhs(&body[split + 1..])?,
+        reward: None,
     })
 }
 
@@ -759,7 +802,12 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
         required_extras: Vec::new(),
         initial_goal: None,
         productions: Vec::new(),
+        scheduled_events: Vec::new(),
+        buffer_decls: Vec::new(),
     };
+    // `(spp <production> :key value ...)` calls, applied after the body so
+    // they may appear before their production.
+    let mut spp_calls: Vec<(String, Vec<(String, Sexp)>)> = Vec::new();
     for f in forms {
         let items = match f {
             Sexp::List(items) => items,
@@ -871,15 +919,85 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                     }
                 }
             }
-            // Pure style-warning suppression (`commands/procedural-cmds.lisp:789`);
-            // it records declared slot usage but changes no engine behavior.
-            "DECLARE-BUFFER-USAGE" => {}
+            // `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`:
+            // records the buffer's default chunk type (`:buffer`
+            // declaration), used by `set-buffer-chunk`.
+            "DECLARE-BUFFER-USAGE" => {
+                if let (Some(b), Some(t)) = (
+                    items.get(1).and_then(|x| x.as_sym()),
+                    items.get(2).and_then(|x| x.as_sym()),
+                ) {
+                    model.buffer_decls.push((b.to_uppercase(), t.to_uppercase()));
+                }
+            }
             // `(spp <production> :param value ...)` — production-level
-            // parameters (e.g. `:reward`). Ignored for now; the ref diff
-            // will surface any behavior that actually matters.
-            "SPP" => {}
+            // parameters (`:reward`, `:at`). Collected and applied after the
+            // body so they may precede their production.
+            "SPP" => {
+                if let Some(p) = items.get(1).and_then(|x| x.as_sym()) {
+                    let mut kv = Vec::new();
+                    let rest = &items[2..];
+                    for pair in rest.as_chunks::<2>().0 {
+                        if let Some(k) = pair[0].as_sym() {
+                            kv.push((k.to_uppercase(), pair[1].clone()));
+                        }
+                    }
+                    spp_calls.push((p.to_uppercase(), kv));
+                }
+            }
+            // `(schedule-event <secs> "command" :params (...) ...)`:
+            // schedule a task command relative to model time 0.
+            "SCHEDULE-EVENT" | "SCHEDULE-EVENT-RELATIVE" => {
+                let at = items.get(1).and_then(sexp_f64).ok_or_else(|| {
+                    LoadError::Structural("schedule-event needs a time".into())
+                })?;
+                let command = items
+                    .get(2)
+                    .and_then(|x| match x {
+                        Sexp::Str(s) => Some(s.clone()),
+                        Sexp::Sym(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .ok_or_else(|| {
+                        LoadError::Structural("schedule-event needs a command".into())
+                    })?;
+                let mut params = Vec::new();
+                let mut i = 3;
+                while i + 1 < items.len() {
+                    if items[i].as_sym() == Some(":PARAMS") {
+                        if let Sexp::List(ps) = &items[i + 1] {
+                            // `(list a b ...)`: keep the elements as forms.
+                            params = if ps.first().and_then(|x| x.as_sym()) == Some("LIST") {
+                                ps[1..].to_vec()
+                            } else {
+                                ps.clone()
+                            };
+                        }
+                    }
+                    i += 2;
+                }
+                model
+                    .scheduled_events
+                    .push(((at * 1000.0).round() as i64, command, params));
+            }
             "P" => model.productions.push(parse_production(f)?),
             got => return structural(format!("unknown model body form: {got}")),
+        }
+    }
+    // Apply collected `spp` parameters to their productions.
+    for (pname, kv) in &spp_calls {
+        if let Some(prod) = model
+            .productions
+            .iter_mut()
+            .find(|p| p.name.eq_ignore_ascii_case(pname))
+        {
+            for (k, v) in kv {
+                if k == ":REWARD" {
+                    if let Some(r) = sexp_f64(v) {
+                        prod.reward = Some(r as f32);
+                    }
+                }
+            }
         }
     }
     // Apply chunk-type default slot values to chunks that don't set them.

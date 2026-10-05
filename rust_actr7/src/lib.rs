@@ -41,7 +41,7 @@
 //!   (`actr7.x/test-models/`) is integrated as a second oracle:
 //!   `golden/regen-specs.sh` extracts runner specs, `tests/test_models.rs`
 //!   diffs engine output against `.ref` with ACT-R's comparator, and
-//!   `golden/test-models/enabled.txt` is the green allowlist (31 specs so
+//!   `golden/test-models/enabled.txt` is the green allowlist (34 specs so
 //!   far). This milestone added per-spec trace module width
 //!   (`max-module-name-length` overrides), integer-vs-float slot printing,
 //!   and a scripted driver (`run_model_steps`: repeated `run`, `goal-focus`,
@@ -90,7 +90,13 @@
 //!   device window for the test-model corpus (an `ADD-TEXT` sidecar,
 //!   `:attended`/`nil` request-parameter matching, the QWERTY key table,
 //!   and a `clear_on_keypress` behavior that re-encodes the vanished
-//!   attended object) made `demo2` green. Remaining: task-supplied commands
+//!   attended object) made `demo2` green. Model-body `schedule-event`
+//!   plus a bounded task-command dispatch (`add-act-r-command` aliases,
+//!   `goal-focus`/`set-buffer-chunk`/`schedule-event-relative`/`act-r-random`),
+//!   `declare-buffer-usage`, `(spp :reward R)` propagation and its `:ult`
+//!   update trace made the `ul-issues` cluster green (fixing the extractor's
+//!   stray runtime `:goal-focus` steps and a `run_secs` event-drop bug).
+//!   Remaining: task-supplied commands
 //!   (`grouped`), production validation (`test-bad-productions`, blocked
 //!   by cross-test warning state), `!eval!` timing (`dynamic-real-time`),
 //!   other `require-extra` behaviors (associative-learning/act-touch/
@@ -202,21 +208,37 @@ pub fn run_model_steps(
 ) -> Result<String, EngineError> {
     let mut defs = Vec::new();
     let mut user_fns: HashMap<String, model::UserDefun> = HashMap::new();
+    let mut commands: HashMap<String, String> = HashMap::new();
     for m in models {
         let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
         let path = actr_root.join(rel);
         // Test-model stubs load a task file (defuns, experiment code) that
         // in turn loads the actual model. Only files that define a model are
         // fed to the strict loader.
-        if path.is_file() && file_defines_model(&path) {
-            defs.extend(load_models(&path)?);
+        if path.is_file() {
+            if file_defines_model(&path) {
+                defs.extend(load_models(&path)?);
+            }
+            // Task files (also listed in the spec's model chain) carry the
+            // `defun`s and `add-act-r-command` registrations.
+            if let Ok(src) = std::fs::read_to_string(&path) {
+                user_fns.extend(model::parse_defuns(&src));
+                commands.extend(model::parse_commands(&src));
+            }
         }
         // A `models/X.lisp` model commonly has a sibling task file
         // `X.lisp` defining helper `defun`s (e.g. `single-bind`).
         if let Some(task) = companion_task_file(&path) {
             if let Ok(src) = std::fs::read_to_string(&task) {
                 user_fns.extend(model::parse_defuns(&src));
+                commands.extend(model::parse_commands(&src));
             }
+        }
+    }
+    // A scheduled command name resolves to its registered function.
+    for (cmd, fname) in commands {
+        if let Some(def) = user_fns.get(&fname).cloned() {
+            user_fns.insert(cmd, def);
         }
     }
     let def = defs

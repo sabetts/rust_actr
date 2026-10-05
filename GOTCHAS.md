@@ -1174,3 +1174,41 @@ time, visual encoding latency, and motor prep/execution.  Reproducing it
 needs a matching RNG-draw order across modules, so `demo2-randomized` is
 left out of the allowlist even though its device setup is identical to
 `demo2`.
+
+## 117. The spec extractor wrapped *runtime* `goal-focus` calls (verified)
+
+`extract-specs.lisp` wraps `goal-focus-fct` and pushes a `:goal-focus` step
+for every call.  Task commands call `goal-focus` *during* a `run`
+(`ul-issues.lisp`'s `present-choose`), so the recorded steps gained a
+`(:GOAL-FOCUS (ISA CHOOSE))` after the run and bumped the scope to
+`:multi` — steps the engine replay was never meant to own.  Guarding the
+wrapper with an `*in-run*` dynamic flag (set around `call-orig 'run`)
+leaves only genuine driver-level focus calls.  The three `ul-issues`
+specs were regenerated with the fix.
+
+## 118. `run_secs` must leave future events queued (verified)
+
+`run_secs` used to `pop` the first event and, if its time exceeded the
+limit, **discard** it.  For a multi-`run` spec whose next event lies just
+past the boundary (`ul-issues-second-run`: `(run 6.95)` then `(run 14)`,
+with a command due at 7.000), the 7.000 event vanished and the second run
+reported "no events left".  It now peeks: an out-of-range head stays in
+the queue and fires on the next `run`, matching ACT-R's per-run bounding.
+
+## 119. Model-body `schedule-event` + task commands (verified)
+
+`ul-issues` drives itself: the model body ends with
+`(schedule-event 0 "utility-learning-issues-choose" :output 'medium)`,
+the task file pairs that name with a function via
+`(add-act-r-command "utility-learning-issues-choose" 'present-choose …)`,
+and `present-choose`/`show-result` chain `schedule-event-relative`,
+`goal-focus`, `set-buffer-chunk` and `act-r-random` at runtime.
+The engine now parses model-body `schedule-event`, resolves command names
+through `add-act-r-command` aliases, and runs the task body with a mutable
+evaluator (`m_eval`).  Two supporting details: `declare-buffer-usage`
+supplies the default chunk type for `set-buffer-chunk` (the imaginal
+chunk is `isa response`), and `(spp <prod> :reward R)` schedules a
+`PROPAGATE-REWARD` at fire time, whose `:ult t` trace prints the
+per-production utility update (formats from
+`modules/utility-and-reward-1.lisp:441-461`).  `act-r-random` forced the
+RNG into a `RefCell` so the `&self` evaluator can draw.

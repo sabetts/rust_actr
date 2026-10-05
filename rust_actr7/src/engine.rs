@@ -22,6 +22,7 @@
 //! `-` slots (rejected at load), queries other than `buffer failure` and
 //! `state free/busy`, chunk extension events, `:ignore-buffers`.
 
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
@@ -65,6 +66,7 @@ fn bad(what: impl Into<String>) -> EngineError {
 
 // ---------------------------------------------------------------- values
 
+/// Evaluated Lisp value usable by the bounded task-function evaluator.
 #[derive(Debug, Clone)]
 enum Value {
     Sym(String),
@@ -72,6 +74,8 @@ enum Value {
     Num(f64),
     Str(String),
     Nil,
+    /// A list of values (`(list 'answer choice)` → `(ANSWER A)`).
+    List(Vec<Value>),
 }
 
 impl PartialEq for Value {
@@ -86,6 +90,7 @@ impl PartialEq for Value {
             (Sym(a), Sym(b)) => a == b,
             (Str(a), Str(b)) => a == b,
             (Nil, Nil) => true,
+            (List(a), List(b)) => a == b,
             _ => false,
         }
     }
@@ -114,6 +119,10 @@ impl Value {
             Value::Num(x) => lisp_s_f32(*x as f32),
             Value::Str(s) => format!("{s:?}"),
             Value::Nil => "NIL".to_string(),
+            Value::List(v) => format!(
+                "({})",
+                v.iter().map(Value::show).collect::<Vec<_>>().join(" ")
+            ),
         }
     }
 }
@@ -173,6 +182,8 @@ struct Config {
     ans: Option<f32>,
     egs: f32,
     ul: bool,
+    /// `:ult` — print the utility-learning update trace.
+    ult: bool,
     alpha: f32,
     iu: f32,
     mp: Option<f32>,
@@ -543,6 +554,7 @@ impl Config {
             blc: sgp_single(&m.params, ":BLC")?.unwrap_or(0.0),
             ans: sgp_single(&m.params, ":ANS")?.filter(|s| *s > 0.0),
             ul: sgp_bool(&m.params, ":UL"),
+            ult: sgp_bool(&m.params, ":ULT"),
             alpha: sgp_single(&m.params, ":ALPHA")?.unwrap_or(0.2),
             iu: sgp_single(&m.params, ":IU")?.unwrap_or(0.0),
             mp: sgp_single(&m.params, ":MP")?,
@@ -868,6 +880,13 @@ enum Event {
     FinishMovement {
         req_ms: i64,
     },
+    /// A task command scheduled by model-body `schedule-event` or by
+    /// `schedule-event-relative` inside another command. Emits a `NONE`
+    /// trace line then runs the registered task function.
+    Command {
+        name: String,
+        params: Vec<Value>,
+    },
 }
 
 struct Queued {
@@ -932,7 +951,7 @@ impl Clone for ExecProd {
 pub struct Engine {
     model: Model,
     cfg: Config,
-    rng: Mt,
+    rng: RefCell<Mt>,
     dm: Vec<ChunkInst>,
     /// `define-chunks` named chunks (not in DM), for name resolution.
     named: HashMap<String, ChunkInst>,
@@ -1045,7 +1064,7 @@ impl Engine {
         let mut eng = Engine {
             model,
             cfg,
-            rng,
+            rng: RefCell::new(rng),
             dm: Vec::new(),
             named: HashMap::new(),
             fan_out: HashMap::new(),
@@ -1241,6 +1260,27 @@ impl Engine {
             );
         }
         self.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
+        // Model-body `(schedule-event <secs> ...)`: armed relative to model
+        // time 0 (params evaluated with no bindings).
+        for (at_ms, command, params) in self.model.scheduled_events.clone() {
+            let empty = Bindings::new();
+            let mut vals = Vec::new();
+            for p in &params {
+                match self.m_eval(p, &empty) {
+                    Ok(v) => vals.push(v),
+                    Err(e) => return Err(bad(e)),
+                }
+            }
+            self.push(
+                at_ms,
+                Prio::Num(0),
+                Out::Medium,
+                Event::Command {
+                    name: command,
+                    params: vals,
+                },
+            );
+        }
         Ok(())
     }
 
@@ -1554,7 +1594,10 @@ impl Engine {
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         loop {
-            let next = match self.queue.pop() {
+            // Peek so an event beyond the limit stays queued for a later
+            // `run` (ACT-R bounds each run relative to the current time and
+            // leaves future events in place).
+            match self.queue.peek().map(|q| q.time_ms) {
                 None => {
                     // Queue empty before the limit: out of events; at or
                     // past the limit (run-full-time dummy consumed):
@@ -1567,13 +1610,14 @@ impl Engine {
                     }
                     break;
                 }
-                Some(q) => q,
-            };
-            if next.time_ms > limit_ms {
-                self.time_ms = limit_ms;
-                self.emit("------", "Stopped because time limit reached".into());
-                break;
+                Some(t) if t > limit_ms => {
+                    self.time_ms = limit_ms;
+                    self.emit("------", "Stopped because time limit reached".into());
+                    break;
+                }
+                Some(_) => {}
             }
+            let next = self.queue.pop().expect("peeked non-empty");
             self.time_ms = next.time_ms;
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
@@ -1698,6 +1742,7 @@ impl Engine {
                 };
             }
             ":UL" => self.cfg.ul = truthy,
+            ":ULT" => self.cfg.ult = truthy,
             ":IU" => {
                 if let Some(x) = num(val) {
                     self.cfg.iu = x;
@@ -1744,7 +1789,7 @@ impl Engine {
 
     /// `(sgp :seed (S C))`: init + discard, same as construction.
     pub fn set_seed(&mut self, seed: (u64, u64)) {
-        self.rng.set_seed(seed.0, seed.1);
+        self.rng.borrow_mut().set_seed(seed.0, seed.1);
     }
 
     fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
@@ -2020,6 +2065,11 @@ impl Engine {
                     self.emit("PROCEDURAL", format!("PRODUCTION-FIRED {name}"));
                 }
                 self.fire(prod, &bindings)?;
+                // `(spp <prod> :reward R)`: propagate the reward at fire time
+                // (after the RHS actions), like ACT-R's `propagate-reward`.
+                if let Some(r) = self.model.productions[prod].reward {
+                    self.now(Prio::Num(0), Out::Medium, Event::PropagateReward { value: r });
+                }
             }
             Event::ProcDisplay => {
                 if show {
@@ -2106,11 +2156,32 @@ impl Engine {
                 // Rewards apply only with subsymbolics + learning on;
                 // otherwise silently ignored (Lisp warns to stdout).
                 if self.cfg.esc && self.cfg.ul {
+                    if self.cfg.ult {
+                        self.out(format!(
+                            " Utility updates with Reward = {}   alpha = {}",
+                            lisp_s_f32(value),
+                            lisp_s_f32(self.cfg.alpha)
+                        ));
+                    }
                     for (prod, at) in self.history.clone() {
                         let dt = (self.time_ms - at) as f32 / 1000.0;
                         let r = value - dt;
-                        let u = &mut self.utilities[prod];
-                        *u += self.cfg.alpha * (r - *u);
+                        let u_old = self.utilities[prod];
+                        let alpha = self.cfg.alpha;
+                        let u_new = u_old + alpha * (r - u_old);
+                        self.utilities[prod] = u_new;
+                        if self.cfg.ult {
+                            let pname = self.model.productions[prod].name.clone();
+                            self.out(format!("  Updating utility of production {pname}"));
+                            self.out(format!(
+                                "   U(n-1) = {}   R(n) = {} [{} - {} seconds since selection]",
+                                lisp_s_f32(u_old),
+                                lisp_s_f32(r),
+                                lisp_s_f32(value),
+                                lisp_s_f32(dt)
+                            ));
+                            self.out(format!("   U(n) = {}", lisp_s_f32(u_new)));
+                        }
                     }
                     self.history.clear();
                 }
@@ -2254,7 +2325,194 @@ impl Engine {
                 }
                 self.man_exec_busy = false;
             }
+            Event::Command { name, params } => {
+                if show {
+                    let suffix = if params.is_empty() {
+                        String::new()
+                    } else {
+                        format!(
+                            " {}",
+                            params
+                                .iter()
+                                .map(Value::show)
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        )
+                    };
+                    self.emit("NONE", format!("{name}{suffix}"));
+                }
+                self.run_command(&name, params)?;
+            }
         }
+        Ok(())
+    }
+
+    /// Run a scheduled task command: bind its `:params` to the `defun`'s
+    /// parameters and execute the body (side-effecting forms handled by
+    /// [`Engine::m_eval`]).
+    fn run_command(&mut self, name: &str, params: Vec<Value>) -> Result<(), EngineError> {
+        let key = name.to_uppercase();
+        let def = self
+            .user_fns
+            .get(&key)
+            .cloned()
+            .ok_or_else(|| unimpl(format!("scheduled command has no task defun: {name}")))?;
+        let mut b: Bindings = HashMap::new();
+        for (p, v) in def.params.iter().zip(params) {
+            b.insert(p.to_uppercase(), v);
+        }
+        for e in &def.body {
+            self.m_eval(e, &b).map_err(bad)?;
+        }
+        Ok(())
+    }
+
+    /// Mutable evaluator for command bodies: handles the side-effecting forms
+    /// (`goal-focus`, `set-buffer-chunk`, `schedule-event[-relative]`,
+    /// `act-r-random`) and the special forms `if`/`list`, delegating
+    /// everything else to the pure evaluator.
+    fn m_eval(&mut self, e: &Sexp, b: &Bindings) -> Result<Value, String> {
+        if let Sexp::List(items) = e {
+            if let Some(h) = items.first().and_then(|x| x.as_sym()) {
+                match h.to_uppercase().as_str() {
+                    "IF" => {
+                        let c = self.m_eval(items.get(1).ok_or("if needs a test")?, b)?;
+                        return if c == Value::Nil {
+                            match items.get(3) {
+                                Some(a) => self.m_eval(a, b),
+                                None => Ok(Value::Nil),
+                            }
+                        } else {
+                            self.m_eval(items.get(2).ok_or("if needs a then")?, b)
+                        };
+                    }
+                    "LIST" => {
+                        let mut out = Vec::new();
+                        for a in &items[1..] {
+                            out.push(self.m_eval(a, b)?);
+                        }
+                        return Ok(Value::List(out));
+                    }
+                    "ACT-R-RANDOM" => {
+                        let lim =
+                            self.m_eval(items.get(1).ok_or("act-r-random needs a limit")?, b)?;
+                        return match lim {
+                            Value::Int(n) if n > 0 => Ok(Value::Int(
+                                self.rng.borrow_mut().random_int(n as u64) as i64,
+                            )),
+                            Value::Int(_) => Ok(Value::Int(0)),
+                            Value::Num(x) => Ok(Value::Num(
+                                self.rng.borrow_mut().random_float(x as f32) as f64
+                            )),
+                            other => {
+                                Err(format!("act-r-random needs a number, got {}", other.show()))
+                            }
+                        };
+                    }
+                    "GOAL-FOCUS" | "GOAL-FOCUS-FCT" => {
+                        let desc = self
+                            .m_chunk_desc(items.get(1).ok_or("goal-focus needs an argument")?)?;
+                        self.goal_focus(&desc).map_err(|e| e.to_string())?;
+                        return Ok(Value::Nil);
+                    }
+                    "SET-BUFFER-CHUNK" => {
+                        let buffer = self
+                            .m_eval(items.get(1).ok_or("set-buffer-chunk needs a buffer")?, b)?;
+                        let chunk = self
+                            .m_eval(items.get(2).ok_or("set-buffer-chunk needs a chunk")?, b)?;
+                        self.set_buffer_chunk_cmd(&buffer, &chunk)?;
+                        return Ok(Value::Nil);
+                    }
+                    "SCHEDULE-EVENT-RELATIVE" | "SCHEDULE-EVENT" => {
+                        let relative = h.eq_ignore_ascii_case("schedule-event-relative");
+                        let at = self
+                            .m_eval(items.get(1).ok_or("schedule-event needs a time")?, b)?;
+                        let at_secs = as_num(&at)
+                            .ok_or_else(|| "schedule-event time is not a number".to_string())?;
+                        let name_v = self
+                            .m_eval(items.get(2).ok_or("schedule-event needs a command")?, b)?;
+                        let name = match name_v {
+                            Value::Str(s) | Value::Sym(s) => s,
+                            other => {
+                                return Err(format!("bad command name {}", other.show()));
+                            }
+                        };
+                        let mut params = Vec::new();
+                        let mut i = 3;
+                        while i + 1 < items.len() {
+                            if items[i].as_sym() == Some(":PARAMS") {
+                                if let Value::List(vs) = self.m_eval(&items[i + 1], b)? {
+                                    params = vs;
+                                }
+                            }
+                            i += 2;
+                        }
+                        let base = if relative { self.time_ms } else { 0 };
+                        let at_ms = base + (at_secs * 1000.0).round() as i64;
+                        self.push(
+                            at_ms,
+                            Prio::Num(0),
+                            Out::Medium,
+                            Event::Command { name, params },
+                        );
+                        return Ok(Value::Nil);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        self.eval_expr(e, b)
+    }
+
+    /// A `goal-focus` argument: a chunk spec list, a symbol, or a string.
+    fn m_chunk_desc(&self, e: &Sexp) -> Result<ChunkDesc, String> {
+        match e {
+            Sexp::List(spec) => crate::model::parse_chunk_desc(spec).map_err(|err| err.to_string()),
+            Sexp::Sym(n) | Sexp::Str(n) => Ok(ChunkDesc::Named(n.clone())),
+            other => Err(format!("bad goal-focus argument {other:?}")),
+        }
+    }
+
+    /// `set-buffer-chunk <buffer> <(slot value ...)>`: replace the buffer's
+    /// chunk silently (no module trace at the tested detail), using the
+    /// buffer's `declare-buffer-usage` type for the chunk.
+    fn set_buffer_chunk_cmd(&mut self, buffer: &Value, chunk: &Value) -> Result<(), String> {
+        let bname = match buffer {
+            Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+            other => return Err(format!("set-buffer-chunk buffer {}", other.show())),
+        };
+        let items = match chunk {
+            Value::List(v) => v,
+            other => return Err(format!("set-buffer-chunk content {}", other.show())),
+        };
+        let mut slots: Vec<(String, Value)> = Vec::new();
+        for pair in items.chunks(2) {
+            let name = match &pair[0] {
+                Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                other => return Err(format!("set-buffer-chunk slot {}", other.show())),
+            };
+            slots.push((name, pair.get(1).cloned().unwrap_or(Value::Nil)));
+        }
+        let ctype = self
+            .model
+            .buffer_decls
+            .iter()
+            .find(|(b, _)| *b == bname)
+            .map(|(_, t)| t.clone())
+            .unwrap_or_else(|| "CHUNK".to_string());
+        let inst = ChunkInst {
+            name: None,
+            ctype,
+            slots,
+            bare: false,
+        };
+        let buf = self
+            .buffers
+            .get_mut(&bname)
+            .ok_or_else(|| format!("unknown buffer {bname}"))?;
+        buf.chunk = Some(inst);
+        buf.busy = false;
+        buf.failed = false;
         Ok(())
     }
 
@@ -2322,7 +2580,7 @@ impl Engine {
                     u += p * mism.iter().map(|m| m.4).sum::<f32>();
                 }
                 if self.cfg.egs != 0.0 {
-                    u += self.rng.noise(self.cfg.egs);
+                    u += self.rng.borrow_mut().noise(self.cfg.egs);
                 }
                 matched.push((ep.index, b.clone(), u, mism));
                 match best_u {
@@ -2370,7 +2628,7 @@ impl Engine {
             0 => None,
             1 => Some(tied.into_iter().next().unwrap()),
             _ if self.cfg.er => {
-                let i = self.rng.random_int(tied.len() as u64) as usize;
+                let i = self.rng.borrow_mut().random_int(tied.len() as u64) as usize;
                 Some(tied.into_iter().nth(i).unwrap())
             }
             _ => Some(tied.into_iter().last().unwrap()),
@@ -2794,6 +3052,19 @@ impl Engine {
                 Ok(Value::Nil)
             }
             "MP-TIME" => Ok(Value::Num(self.time_ms as f64 / 1000.0)),
+            "ACT-R-RANDOM" => {
+                let lim = self.eval_expr(args.first().ok_or("act-r-random needs a limit")?, b)?;
+                match lim {
+                    Value::Int(n) if n > 0 => Ok(Value::Int(
+                        self.rng.borrow_mut().random_int(n as u64) as i64
+                    )),
+                    Value::Int(_) => Ok(Value::Int(0)),
+                    Value::Num(x) => {
+                        Ok(Value::Num(self.rng.borrow_mut().random_float(x as f32) as f64))
+                    }
+                    other => Err(format!("act-r-random needs a number, got {}", other.show())),
+                }
+            }
             "CHUNK-SLOT-VALUE-FCT" => {
                 if args.len() < 2 {
                     return Err("chunk-slot-value-fct needs a chunk and a slot".to_string());
@@ -3836,7 +4107,7 @@ impl Engine {
                 }
             }
             let noise = match self.cfg.ans {
-                Some(s) => self.rng.noise(s),
+                Some(s) => self.rng.borrow_mut().noise(s),
                 None => 0.0,
             };
             if self.act_medium() {
@@ -3884,7 +4155,7 @@ impl Engine {
             0 => None,
             1 => Some(tied.into_iter().next().unwrap()),
             _ if self.cfg.er => {
-                let i = self.rng.random_int(tied.len() as u64) as usize;
+                let i = self.rng.borrow_mut().random_int(tied.len() as u64) as usize;
                 Some(tied.into_iter().nth(i).unwrap())
             }
             // Deterministic tie-break: lowest chunk name first
@@ -4117,7 +4388,7 @@ impl Engine {
             }
         }
         let noise = match self.cfg.ans {
-            Some(s) => self.rng.noise(s),
+            Some(s) => self.rng.borrow_mut().noise(s),
             None => 0.0,
         };
         (a + noise, base)
@@ -5268,7 +5539,7 @@ impl Engine {
     /// Random index uniform in 0..n, always consuming exactly one draw
     /// (`random-item` draws even for singletons).
     fn rng_draw(&mut self, n: usize) -> usize {
-        self.rng.random_int(n as u64) as usize
+        self.rng.borrow_mut().random_int(n as u64) as usize
     }
 
     /// Find-location: newest-tstamp candidates, random among them,
@@ -6096,6 +6367,7 @@ mod tests {
         use crate::model::{LhsItem, Production, RhsAction, SlotTest};
         let probe = Production {
             name: "PROBE".to_string(),
+            reward: None,
             lhs: vec![LhsItem::Match {
                 buffer: "GOAL".to_string(),
                 tests: vec![SlotTest {
@@ -6270,6 +6542,7 @@ mod tests {
         use crate::model::{LhsItem, Pattern as Pat, Production, RhsAction, SlotTest};
         let prod = Production {
             name: "SMALL".to_string(),
+            reward: None,
             lhs: vec![LhsItem::Match {
                 buffer: "GOAL".to_string(),
                 tests: vec![
