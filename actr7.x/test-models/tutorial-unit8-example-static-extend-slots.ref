@@ -1,0 +1,5 @@
+  (p change-new-slot
+     =goal>
+    ==>
+     =goal>
+      new-slot 10)

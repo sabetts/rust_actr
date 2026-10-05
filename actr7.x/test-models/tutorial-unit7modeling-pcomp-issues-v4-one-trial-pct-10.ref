@@ -1,0 +1,37 @@
+    11.077   PROCEDURAL             PRODUCTION-FIRED DETECT-FEEDBACK
+Production Compilation process started for DETECT-FEEDBACK
+  Production RESPOND and DETECT-FEEDBACK are being composed.
+  New production:
+
+(P PRODUCTION4
+  "RESPOND & DETECT-FEEDBACK"
+   =GOAL>
+       STATE RESPOND
+   =IMAGINAL>
+   =RETRIEVAL>
+       IS-RESPONSE T
+       KEY =KEY
+   =VISUAL-LOCATION>
+   ?MANUAL>
+       STATE FREE
+   ?VISUAL>
+       STATE FREE
+ ==>
+   =IMAGINAL>
+       RESPONSE =RETRIEVAL
+   =GOAL>
+       STATE ENCODE-FEEDBACK
+   +VISUAL>
+       CMD MOVE-ATTENTION
+       SCREEN-POS =VISUAL-LOCATION
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY =KEY
+)
+Parameters for production PRODUCTION4:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to DETECT-FEEDBACK.

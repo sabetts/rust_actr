@@ -1,0 +1,8 @@
+     2.285   NONE                   pm-issue-display (vision exp-window Simple task) next
+     2.285   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     2.285   VISION                 visicon-update
+     2.285   PROCEDURAL             CONFLICT-RESOLUTION
+     2.370   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     2.370   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1 NIL
+     2.370   PROCEDURAL             CONFLICT-RESOLUTION
+     2.420   PROCEDURAL             PRODUCTION-FIRED RESPOND-NEXT

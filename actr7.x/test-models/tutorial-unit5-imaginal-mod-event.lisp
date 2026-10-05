@@ -1,0 +1,20 @@
+(defvar *set-break*)
+(defvar *output*)
+
+(defun filter (evt)
+  (when (or (eq (evt-action evt) 'mod-buffer-chunk)
+            (eq (evt-action evt) 'production-fired))
+    (push-last (format-event evt) *output*))
+  nil)
+
+(defun run-it ()
+  (setf *output* nil)
+  (let ((p (add-pre-event-hook 'filter)))
+    (sgp :v nil)
+    (run .05)
+    (delete-event-hook p))
+  (sgp-fct (list :v *out-file*))
+  (model-output "~{~a~^~%~}" *output*)
+  )
+
+(load-act-r-code "ACT-R:test-models;models;unit5-imaginal-mod-event.lisp")

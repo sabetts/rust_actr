@@ -1,0 +1,74 @@
+run the build-actr-distro.sh script with three parameters to send all of the
+created files to act-r.psy.cmu.edu/actr7.x/next:
+
+./build-actr-distro 7.x send send
+
+Then run the build-actr-container-distro with the version and send:
+
+./build-actr-container-distro 7.x send
+
+Notes:
+
+Sending the container however doesn't really do anything since the container
+has cached the downloaded file so it doesn't actually update currently 
+without me "touching" the Dockerfile to invalidate that.
+
+Follow up to that. Don't need to touch the Dockerfile, but do need to
+rebuild it.  Can be done using play-with-docker:
+
+git clone https://github.com/db30/act-r-container
+cd act-r-container
+docker build --no-cache=true -t db30/act-r-container .
+docker login
+docker push db30/act-r-container
+
+That doesn't change the mybinder cache however which will require that
+something be done, like change the Dockerfile (probably something else
+can be done but not sure at this point).
+
+Also, it seems like libreoffice on my Linux box seems to sometimes lose the
+update macro after it's been added so probably want to open it first and 
+paste it in again to be safe.
+
+-----
+create the .zip files (unzip them if needed first and add/change contents)
+
+cd test-models
+rm solution-tests.zip
+7z a -p"XXX" solution-tests.zip .\solution-tests\*
+cd examples
+rm act-r-solutions.zip
+7z a -p"XXX" act-r-solutions.zip .\act-r-solutions\*
+
+
+-----
+
+Updating what's on the website:
+
+Copy the existing actr7.x to a new directory with the version number (in the software directory): cp -r actr7.x actr7.27
+Remove the next from that copy: rm -rf actr7.27.6/next
+Create a link in the www directory to that new version. ln -s ..../actr7.27 actr7.27
+
+
+Create a copy of the software page and name it based on the version.
+Go to settings hide pages and mark it as hidden.
+Remove everything except the software pieces.
+Change the links to point to the old version.
+
+Add a link to the Old Software versions page for that one.
+
+Move the new files into actr7.x: mv next/* .
+
+Update the version on the software page.
+Comment out the link to the prerelease.  <!--- ... ---> but need to also remove the <>'s inside the comment...
+
+----- 
+
+Some notes on problems with the HTML environment server application.
+Was having issues with some systems not getting the socket.io.js script.
+In the developer tools interface there was an error:
+
+ GET http://localhost:4000/socket.io/socket.io.js net::ERR_EMPTY_RESPONSE 
+
+Found a similar issue with a resolution that I added which seems to have solved it:
+https://github.com/vercel/pkg/issues/1551

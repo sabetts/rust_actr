@@ -1,0 +1,62 @@
+    26.591   PROCEDURAL             PRODUCTION-FIRED P3
+    26.591   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.591   DECLARATIVE            start-retrieval
+Computing activation for chunk F1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9471392
+Total base-level: -0.9471392
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ATTRIBUTE
+  Requested: = PINK  Chunk's slot value: BLUE
+  similarity: -1.0
+  effective similarity value is -10.0
+Total similarity score -10.0
+Adding transient noise -0.026406968
+Adding permanent noise 0.0
+Chunk F1 has an activation of: -10.973546
+Chunk F1 has the current best activation -10.973546
+Computing activation for chunk F2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9471392
+Total base-level: -0.9471392
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ATTRIBUTE
+  Requested: = PINK  Chunk's slot value: RED
+  similarity: -1.0
+  effective similarity value is -10.0
+Total similarity score -10.0
+Adding transient noise -0.42355087
+Adding permanent noise 0.0
+Chunk F2 has an activation of: -11.370689
+Computing activation for chunk F3
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9471392
+Total base-level: -0.9471392
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ATTRIBUTE
+  Requested: = PINK  Chunk's slot value: GREEN
+  similarity: -1.0
+  effective similarity value is -10.0
+Total similarity score -10.0
+Adding transient noise 0.43639642
+Adding permanent noise 0.0
+Chunk F3 has an activation of: -10.510742
+Chunk F3 is now the current best with activation -10.510742
+No chunk above the retrieval threshold: -10.0
+    26.591   PROCEDURAL             CONFLICT-RESOLUTION
+    26.591   ------                 Stopped because time limit reached

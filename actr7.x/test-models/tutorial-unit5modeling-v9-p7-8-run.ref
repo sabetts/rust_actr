@@ -1,0 +1,28 @@
+    27.431   PROCEDURAL             PRODUCTION-FIRED P7
+    27.431   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.431   PROCEDURAL             CONFLICT-RESOLUTION
+    27.481   PROCEDURAL             PRODUCTION-FIRED P8
+    27.481   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    27.481   PROCEDURAL             CLEAR-BUFFER GOAL
+    27.481   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+    27.481   PROCEDURAL             CONFLICT-RESOLUTION
+    27.481   ------                 Stopped because no events left to process
+
+? (sdm - state nil)
+G1
+   STATE  R8
+
+
+>>> actr.sdm('-','goal','nil')
+OLD-CONTEXT
+   VAL1  ONE
+   VAL2  TWO
+   VAL3  ADD
+   GOAL  G1
+
+IMAGINAL-CHUNK0-0
+   VAL1  ONE
+   VAL2  TWO
+   VAL3  ADD
+   GOAL  G1
+

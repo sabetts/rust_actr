@@ -1,0 +1,7 @@
+? (buffer-chunk goal)
+GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   ARG1  ZERO
+   ARG2  TEN
+   SUM  TEN
+

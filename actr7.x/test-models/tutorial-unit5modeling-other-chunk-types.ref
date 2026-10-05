@@ -1,0 +1,3 @@
+  (chunk-type number visual-rep)
+  (chunk-type math-fact arg1 arg2 result operator)
+  (chunk-type context val1 val2 val3 goal)

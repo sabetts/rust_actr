@@ -1,0 +1,4 @@
+(define-chunks
+ (g1 ISA test-attribute object canary attribute category value bird)
+ (g2 ISA test-attribute object canary attribute wings value true)
+ (g3 ISA test-attribute object canary attribute dangerous value true))

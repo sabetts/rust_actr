@@ -1,0 +1,2 @@
+(chunk-type read-letters step)
+(chunk-type array letter)

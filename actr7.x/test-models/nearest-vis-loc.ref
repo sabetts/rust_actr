@@ -1,0 +1,165 @@
+     0.000   VISION                 proc-display
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (335 346 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+VISUAL-LOCATION2  NEW  (337 338 1080)  T     TEXT  BLACK  7      "z"    10      0.19999999  
+VISUAL-LOCATION1  NEW  (345 336 1080)  T     TEXT  BLACK  7      "y"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   VISION                 Move-attention START NIL
+     0.000   VISION                 Encoding-complete START NIL
+     0.000   VISION                 No visual-object found
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED FIND
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED REPORT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED REPORT
+FOUND VISUAL-LOCATION2-0 337 338 
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process
+     0.000   VISION                 proc-display
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (335 346 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+VISUAL-LOCATION2  NEW  (337 338 1080)  T     TEXT  BLACK  7      "z"    10      0.19999999  
+VISUAL-LOCATION1  NEW  (345 336 1080)  T     TEXT  BLACK  7      "y"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   VISION                 Move-attention START NIL
+     0.000   VISION                 Encoding-complete START NIL
+     0.000   VISION                 No visual-object found
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED FIND
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED REPORT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED REPORT
+FOUND VISUAL-LOCATION0-1 335 346 
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process
+     0.000   VISION                 proc-display
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (335 346 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+VISUAL-LOCATION2  NEW  (337 338 1080)  T     TEXT  BLACK  7      "z"    10      0.19999999  
+VISUAL-LOCATION1  NEW  (345 336 1080)  T     TEXT  BLACK  7      "y"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   VISION                 Move-attention START NIL
+     0.000   VISION                 Encoding-complete START NIL
+     0.000   VISION                 No visual-object found
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED FIND
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED REPORT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED REPORT
+FOUND VISUAL-LOCATION1-0 345 336 
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process
+     0.000   VISION                 proc-display
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (335 346 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+VISUAL-LOCATION2  NEW  (337 338 1080)  T     TEXT  BLACK  7      "z"    10      0.19999999  
+VISUAL-LOCATION1  NEW  (345 336 1080)  T     TEXT  BLACK  7      "y"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   VISION                 Move-attention START NIL
+     0.000   VISION                 Encoding-complete START NIL
+     0.000   VISION                 No visual-object found
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED FIND
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED REPORT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED REPORT
+FOUND VISUAL-LOCATION0-1 335 346 
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process
+     0.000   VISION                 proc-display
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (335 346 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+VISUAL-LOCATION2  NEW  (337 338 1080)  T     TEXT  BLACK  7      "z"    10      0.19999999  
+VISUAL-LOCATION1  NEW  (345 336 1080)  T     TEXT  BLACK  7      "y"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   VISION                 Move-attention START NIL
+     0.000   VISION                 Encoding-complete START NIL
+     0.000   VISION                 No visual-object found
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED FIND
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED REPORT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED REPORT
+FOUND VISUAL-LOCATION1-0 345 336 
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process

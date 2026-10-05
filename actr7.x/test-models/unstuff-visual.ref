@@ -1,0 +1,396 @@
+unstuff = NIL over = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = T over = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.25 over = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.35 over = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = NIL over = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = T over = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.25 over = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.35 over = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = NIL over = T modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = T over = T modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.800   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.800   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.550   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     1.550   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.25 over = T modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.300   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     1.300   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.35 over = T modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.650   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.650   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 OVERWRITE-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.400   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     1.400   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = NIL over = NIL modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = T over = NIL modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.500   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     1.500   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.25 over = NIL modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.250   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     1.250   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+unstuff = 0.35 over = NIL modify no
+     0.000   VISION                 PROC-DISPLAY
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because time limit reached
+     0.300   VISION                 PROC-DISPLAY
+     0.300   VISION                 visicon-update
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   VISION                 PROC-DISPLAY
+     1.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.000   VISION                 visicon-update
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   ------                 Stopped because time limit reached
+     1.050   VISION                 PROC-DISPLAY
+     1.050   VISION                 visicon-update
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.350   VISION                 ERASE-BUFFER VISUAL-LOCATION
+     1.350   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached

@@ -1,0 +1,29 @@
+     0.587   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-PAST-TRIAL
+Production Compilation process started for RETRIEVE-PAST-TRIAL
+  Production ENCODE-NUM-2 and RETRIEVE-PAST-TRIAL are being composed.
+  New production:
+
+(P PRODUCTION2
+  "ENCODE-NUM-2 & RETRIEVE-PAST-TRIAL"
+   =GOAL>
+       STATE ENCODE-NUM-2
+   =IMAGINAL>
+       NUM1 =N1
+   =RETRIEVAL>
+ ==>
+   =IMAGINAL>
+       NUM2 =RETRIEVAL
+   =GOAL>
+       STATE PROCESS-PAST-TRIAL
+   +RETRIEVAL>
+       NUM1 =N1
+       NUM2 =RETRIEVAL
+       RESULT WIN
+)
+Parameters for production PRODUCTION2:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RETRIEVE-PAST-TRIAL.

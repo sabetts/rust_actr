@@ -1,0 +1,2484 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA TRY-STRATEGY STATE START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED START-TRIAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   VISION                 Find-location
+     0.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION8
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     0.235   VISION                 SET-BUFFER-CHUNK VISUAL LINE0
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.285   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-A
+     0.285   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.285   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.285   PROCEDURAL             CONFLICT-RESOLUTION
+     0.335   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.335   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.335   VISION                 Find-location
+     0.335   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION9
+     0.335   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     0.470   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     0.470   VISION                 SET-BUFFER-CHUNK VISUAL LINE1
+     0.470   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (A-LOC VISUAL-LOCATION8-0)
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-B
+     0.535   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.585   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.585   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.585   VISION                 Find-location
+     0.585   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION10
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     0.635   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.635   PROCEDURAL             CONFLICT-RESOLUTION
+     0.720   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     0.720   VISION                 SET-BUFFER-CHUNK VISUAL LINE2
+     0.720   PROCEDURAL             CONFLICT-RESOLUTION
+     0.770   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-C
+     0.770   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.770   PROCEDURAL             CONFLICT-RESOLUTION
+     0.820   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.820   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.820   VISION                 Find-location
+     0.820   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION11
+     0.820   PROCEDURAL             CONFLICT-RESOLUTION
+     0.870   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.870   PROCEDURAL             CONFLICT-RESOLUTION
+     0.955   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     0.955   VISION                 SET-BUFFER-CHUNK VISUAL LINE3
+     0.955   PROCEDURAL             CONFLICT-RESOLUTION
+     1.005   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-GOAL
+     1.005   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.005   PROCEDURAL             CONFLICT-RESOLUTION
+     1.090   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     1.090   VISION                 SET-BUFFER-CHUNK VISUAL LINE4
+     1.090   PROCEDURAL             CONFLICT-RESOLUTION
+     1.140   PROCEDURAL             PRODUCTION-FIRED ENCODE-UNDER
+     1.140   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.140   PROCEDURAL             CONFLICT-RESOLUTION
+     1.225   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     1.225   VISION                 SET-BUFFER-CHUNK VISUAL LINE5
+     1.225   PROCEDURAL             CONFLICT-RESOLUTION
+     1.275   PROCEDURAL             PRODUCTION-FIRED ENCODE-OVER
+     1.275   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.275   PROCEDURAL             CONFLICT-RESOLUTION
+     1.325   PROCEDURAL             PRODUCTION-FIRED DECIDE-UNDER
+     1.325   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.325   VISION                 Find-location
+     1.325   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     1.325   PROCEDURAL             CONFLICT-RESOLUTION
+     1.375   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.375   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.375   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-0
+     1.375   PROCEDURAL             CONFLICT-RESOLUTION
+     1.460   VISION                 Encoding-complete VISUAL-LOCATION4-0 NIL
+     1.460   VISION                 SET-BUFFER-CHUNK VISUAL OVAL0
+     1.460   PROCEDURAL             CONFLICT-RESOLUTION
+     1.575   PROCEDURAL             CONFLICT-RESOLUTION
+     1.625   PROCEDURAL             CONFLICT-RESOLUTION
+     1.826   PROCEDURAL             CONFLICT-RESOLUTION
+     1.876   PROCEDURAL             CONFLICT-RESOLUTION
+     1.926   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     1.926   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.926   MOTOR                  CLICK-MOUSE
+     1.926   PROCEDURAL             CONFLICT-RESOLUTION
+     2.076   PROCEDURAL             CONFLICT-RESOLUTION
+     2.126   PROCEDURAL             CONFLICT-RESOLUTION
+     2.136   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12 NIL
+     2.136   VISION                 visicon-update
+     2.136   PROCEDURAL             CONFLICT-RESOLUTION
+     2.226   PROCEDURAL             CONFLICT-RESOLUTION
+     2.276   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     2.276   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.276   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.276   VISION                 Find-location
+     2.276   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     2.276   PROCEDURAL             CONFLICT-RESOLUTION
+     2.326   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     2.326   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.326   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.326   PROCEDURAL             CONFLICT-RESOLUTION
+     2.411   VISION                 Encoding-complete VISUAL-LOCATION12-1 NIL
+     2.411   VISION                 SET-BUFFER-CHUNK VISUAL LINE6
+     2.411   PROCEDURAL             CONFLICT-RESOLUTION
+     2.461   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     2.461   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.461   PROCEDURAL             CONFLICT-RESOLUTION
+     2.546   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     2.546   VISION                 SET-BUFFER-CHUNK VISUAL LINE7
+     2.546   PROCEDURAL             CONFLICT-RESOLUTION
+     2.596   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     2.596   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.596   PROCEDURAL             CONFLICT-RESOLUTION
+     2.646   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     2.646   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.646   PROCEDURAL             CONFLICT-RESOLUTION
+     2.731   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     2.731   VISION                 SET-BUFFER-CHUNK VISUAL LINE8
+     2.731   PROCEDURAL             CONFLICT-RESOLUTION
+     2.781   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     2.781   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.781   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.781   VISION                 Find-location
+     2.781   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     2.781   PROCEDURAL             CONFLICT-RESOLUTION
+     2.831   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     2.831   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.831   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.831   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.831   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-1
+     2.831   PROCEDURAL             CONFLICT-RESOLUTION
+     2.881   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     2.881   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.881   MOTOR                  CLICK-MOUSE
+     2.881   PROCEDURAL             CONFLICT-RESOLUTION
+     2.916   VISION                 Encoding-complete VISUAL-LOCATION4-1 NIL
+     2.916   VISION                 SET-BUFFER-CHUNK VISUAL OVAL1
+     2.916   PROCEDURAL             CONFLICT-RESOLUTION
+     2.931   PROCEDURAL             CONFLICT-RESOLUTION
+     2.941   VISION                 visicon-update
+     2.941   PROCEDURAL             CONFLICT-RESOLUTION
+     3.031   PROCEDURAL             CONFLICT-RESOLUTION
+     3.081   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     3.081   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.081   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.081   VISION                 Find-location
+     3.081   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     3.081   PROCEDURAL             CONFLICT-RESOLUTION
+     3.131   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     3.131   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.131   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.131   PROCEDURAL             CONFLICT-RESOLUTION
+     3.216   VISION                 Encoding-complete VISUAL-LOCATION12-2 NIL
+     3.216   VISION                 SET-BUFFER-CHUNK VISUAL LINE9
+     3.216   PROCEDURAL             CONFLICT-RESOLUTION
+     3.266   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     3.266   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.266   PROCEDURAL             CONFLICT-RESOLUTION
+     3.351   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     3.351   VISION                 SET-BUFFER-CHUNK VISUAL LINE10
+     3.351   PROCEDURAL             CONFLICT-RESOLUTION
+     3.401   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     3.401   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.401   PROCEDURAL             CONFLICT-RESOLUTION
+     3.451   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     3.451   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.451   PROCEDURAL             CONFLICT-RESOLUTION
+     3.536   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     3.536   VISION                 SET-BUFFER-CHUNK VISUAL LINE11
+     3.536   PROCEDURAL             CONFLICT-RESOLUTION
+     3.586   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     3.586   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.586   PROCEDURAL             CONFLICT-RESOLUTION
+     3.671   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     3.671   VISION                 SET-BUFFER-CHUNK VISUAL LINE12
+     3.671   PROCEDURAL             CONFLICT-RESOLUTION
+     3.721   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+     3.721   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.721   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.721   VISION                 Find-location
+     3.721   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     3.721   PROCEDURAL             CONFLICT-RESOLUTION
+     3.771   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     3.771   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.771   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.771   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.771   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION0-0
+     3.771   PROCEDURAL             CONFLICT-RESOLUTION
+     3.856   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     3.856   VISION                 SET-BUFFER-CHUNK VISUAL OVAL2
+     3.856   PROCEDURAL             CONFLICT-RESOLUTION
+     3.971   PROCEDURAL             CONFLICT-RESOLUTION
+     4.021   PROCEDURAL             CONFLICT-RESOLUTION
+     4.158   PROCEDURAL             CONFLICT-RESOLUTION
+     4.208   PROCEDURAL             CONFLICT-RESOLUTION
+     4.258   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     4.258   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.258   MOTOR                  CLICK-MOUSE
+     4.258   PROCEDURAL             CONFLICT-RESOLUTION
+     4.408   PROCEDURAL             CONFLICT-RESOLUTION
+     4.458   PROCEDURAL             CONFLICT-RESOLUTION
+     4.468   VISION                 visicon-update
+     4.468   PROCEDURAL             CONFLICT-RESOLUTION
+     4.558   PROCEDURAL             CONFLICT-RESOLUTION
+     4.608   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     4.608   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.608   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.608   VISION                 Find-location
+     4.608   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     4.608   PROCEDURAL             CONFLICT-RESOLUTION
+     4.658   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     4.658   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.658   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.658   PROCEDURAL             CONFLICT-RESOLUTION
+     4.743   VISION                 Encoding-complete VISUAL-LOCATION12-3 NIL
+     4.743   VISION                 SET-BUFFER-CHUNK VISUAL LINE13
+     4.743   PROCEDURAL             CONFLICT-RESOLUTION
+     4.793   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     4.793   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.793   PROCEDURAL             CONFLICT-RESOLUTION
+     4.878   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     4.878   VISION                 SET-BUFFER-CHUNK VISUAL LINE14
+     4.878   PROCEDURAL             CONFLICT-RESOLUTION
+     4.928   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     4.928   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.928   PROCEDURAL             CONFLICT-RESOLUTION
+     4.978   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     4.978   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.978   PROCEDURAL             CONFLICT-RESOLUTION
+     5.063   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     5.063   VISION                 SET-BUFFER-CHUNK VISUAL LINE15
+     5.063   PROCEDURAL             CONFLICT-RESOLUTION
+     5.113   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     5.113   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.113   PROCEDURAL             CONFLICT-RESOLUTION
+     5.198   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     5.198   VISION                 SET-BUFFER-CHUNK VISUAL LINE16
+     5.198   PROCEDURAL             CONFLICT-RESOLUTION
+     5.248   PROCEDURAL             PRODUCTION-FIRED RESET
+     5.248   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.248   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.248   VISION                 Find-location
+     5.248   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION6
+     5.248   PROCEDURAL             CONFLICT-RESOLUTION
+     5.298   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     5.298   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.298   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.298   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.298   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION6-0
+     5.298   PROCEDURAL             CONFLICT-RESOLUTION
+     5.383   VISION                 Encoding-complete VISUAL-LOCATION6-0 NIL
+     5.383   VISION                 SET-BUFFER-CHUNK VISUAL OVAL3
+     5.383   PROCEDURAL             CONFLICT-RESOLUTION
+     5.498   PROCEDURAL             CONFLICT-RESOLUTION
+     5.548   PROCEDURAL             CONFLICT-RESOLUTION
+     5.770   PROCEDURAL             CONFLICT-RESOLUTION
+     5.820   PROCEDURAL             CONFLICT-RESOLUTION
+     5.870   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     5.870   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.870   MOTOR                  CLICK-MOUSE
+     5.870   PROCEDURAL             CONFLICT-RESOLUTION
+     6.020   PROCEDURAL             CONFLICT-RESOLUTION
+     6.070   PROCEDURAL             CONFLICT-RESOLUTION
+     6.080   VISION                 visicon-update
+     6.080   PROCEDURAL             CONFLICT-RESOLUTION
+     6.170   PROCEDURAL             CONFLICT-RESOLUTION
+     6.220   PROCEDURAL             PRODUCTION-FIRED PICK-ANOTHER-STRATEGY
+     6.220   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.220   UTILITY                PROPAGATE-REWARD 0
+ Utility updates with Reward = 0.0   alpha = 0.2
+  Updating utility of production START-TRIAL
+   U(n-1) = 0.0   R(n) = -6.22 [0.0 - 6.22 seconds since selection]
+   U(n) = -1.244
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 0.0   R(n) = -6.17 [0.0 - 6.17 seconds since selection]
+   U(n) = -1.2340001
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.0   R(n) = -6.12 [0.0 - 6.12 seconds since selection]
+   U(n) = -1.224
+  Updating utility of production ENCODE-LINE-A
+   U(n-1) = 0.0   R(n) = -5.985 [0.0 - 5.985 seconds since selection]
+   U(n) = -1.197
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = -1.2340001   R(n) = -5.935 [0.0 - 5.935 seconds since selection]
+   U(n) = -2.1742
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -1.224   R(n) = -5.885 [0.0 - 5.885 seconds since selection]
+   U(n) = -2.1562
+  Updating utility of production ENCODE-LINE-B
+   U(n-1) = 0.0   R(n) = -5.735 [0.0 - 5.735 seconds since selection]
+   U(n) = -1.1470001
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = -2.1742   R(n) = -5.685 [0.0 - 5.685 seconds since selection]
+   U(n) = -2.87636
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -2.1562   R(n) = -5.635 [0.0 - 5.635 seconds since selection]
+   U(n) = -2.85196
+  Updating utility of production ENCODE-LINE-C
+   U(n-1) = 0.0   R(n) = -5.5 [0.0 - 5.5 seconds since selection]
+   U(n) = -1.1
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = -2.87636   R(n) = -5.45 [0.0 - 5.45 seconds since selection]
+   U(n) = -3.391088
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -2.85196   R(n) = -5.4 [0.0 - 5.4 seconds since selection]
+   U(n) = -3.361568
+  Updating utility of production ENCODE-LINE-GOAL
+   U(n-1) = 0.0   R(n) = -5.265 [0.0 - 5.265 seconds since selection]
+   U(n) = -1.053
+  Updating utility of production ENCODE-UNDER
+   U(n-1) = 0.0   R(n) = -5.13 [0.0 - 5.13 seconds since selection]
+   U(n) = -1.026
+  Updating utility of production ENCODE-OVER
+   U(n-1) = 0.0   R(n) = -4.995 [0.0 - 4.995 seconds since selection]
+   U(n) = -0.999
+  Updating utility of production DECIDE-UNDER
+   U(n-1) = 13.0   R(n) = -4.945 [0.0 - 4.945 seconds since selection]
+   U(n) = 9.411
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 0.0   R(n) = -4.895 [0.0 - 4.895 seconds since selection]
+   U(n) = -0.97900003
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 0.0   R(n) = -4.344 [0.0 - 4.344 seconds since selection]
+   U(n) = -0.8688
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 0.0   R(n) = -3.994 [0.0 - 3.994 seconds since selection]
+   U(n) = -0.7988
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.361568   R(n) = -3.944 [0.0 - 3.944 seconds since selection]
+   U(n) = -3.4780543
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 0.0   R(n) = -3.809 [0.0 - 3.809 seconds since selection]
+   U(n) = -0.7618
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 0.0   R(n) = -3.674 [0.0 - 3.674 seconds since selection]
+   U(n) = -0.73480004
+  Updating utility of production CONSIDER-C
+   U(n-1) = 0.0   R(n) = -3.624 [0.0 - 3.624 seconds since selection]
+   U(n) = -0.72480005
+  Updating utility of production CHOOSE-C
+   U(n-1) = 0.0   R(n) = -3.489 [0.0 - 3.489 seconds since selection]
+   U(n) = -0.69780004
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -0.97900003   R(n) = -3.439 [0.0 - 3.439 seconds since selection]
+   U(n) = -1.471
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -0.8688   R(n) = -3.389 [0.0 - 3.389 seconds since selection]
+   U(n) = -1.3728399
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = -0.7988   R(n) = -3.189 [0.0 - 3.189 seconds since selection]
+   U(n) = -1.27684
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.4780543   R(n) = -3.139 [0.0 - 3.139 seconds since selection]
+   U(n) = -3.4102435
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = -0.7618   R(n) = -3.004 [0.0 - 3.004 seconds since selection]
+   U(n) = -1.21024
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = -0.73480004   R(n) = -2.869 [0.0 - 2.869 seconds since selection]
+   U(n) = -1.16164
+  Updating utility of production CONSIDER-C
+   U(n-1) = -0.72480005   R(n) = -2.819 [0.0 - 2.819 seconds since selection]
+   U(n) = -1.14364
+  Updating utility of production CONSIDER-A
+   U(n-1) = 0.0   R(n) = -2.684 [0.0 - 2.684 seconds since selection]
+   U(n) = -0.5368
+  Updating utility of production CHOOSE-A
+   U(n-1) = 0.0   R(n) = -2.549 [0.0 - 2.549 seconds since selection]
+   U(n) = -0.5098
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -1.471   R(n) = -2.499 [0.0 - 2.499 seconds since selection]
+   U(n) = -1.6766
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -1.3728399   R(n) = -2.012 [0.0 - 2.012 seconds since selection]
+   U(n) = -1.500672
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = -1.27684   R(n) = -1.662 [0.0 - 1.662 seconds since selection]
+   U(n) = -1.353872
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.4102435   R(n) = -1.612 [0.0 - 1.612 seconds since selection]
+   U(n) = -3.0505948
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = -1.21024   R(n) = -1.477 [0.0 - 1.477 seconds since selection]
+   U(n) = -1.263592
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = -1.16164   R(n) = -1.342 [0.0 - 1.342 seconds since selection]
+   U(n) = -1.1977121
+  Updating utility of production CONSIDER-C
+   U(n-1) = -1.14364   R(n) = -1.292 [0.0 - 1.292 seconds since selection]
+   U(n) = -1.1733121
+  Updating utility of production CONSIDER-A
+   U(n-1) = -0.5368   R(n) = -1.157 [0.0 - 1.157 seconds since selection]
+   U(n) = -0.66084003
+  Updating utility of production RESET
+   U(n-1) = 0.0   R(n) = -1.022 [0.0 - 1.022 seconds since selection]
+   U(n) = -0.20439999
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -1.6766   R(n) = -0.972 [0.0 - 0.972 seconds since selection]
+   U(n) = -1.5356799
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -1.500672   R(n) = -0.4 [0.0 - 0.4 seconds since selection]
+   U(n) = -1.2805376
+  Updating utility of production PICK-ANOTHER-STRATEGY
+   U(n-1) = 0.0   R(n) = -0.05 [0.0 - 0.05 seconds since selection]
+   U(n) = -0.010000001
+     6.220   PROCEDURAL             CONFLICT-RESOLUTION
+     6.270   PROCEDURAL             PRODUCTION-FIRED FORCE-OVER
+     6.270   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.270   VISION                 Find-location
+     6.270   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2
+     6.270   PROCEDURAL             CONFLICT-RESOLUTION
+     6.320   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     6.320   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.320   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.320   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.320   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION2-1
+     6.320   PROCEDURAL             CONFLICT-RESOLUTION
+     6.405   VISION                 Encoding-complete VISUAL-LOCATION2-1 NIL
+     6.405   VISION                 SET-BUFFER-CHUNK VISUAL OVAL4
+     6.405   PROCEDURAL             CONFLICT-RESOLUTION
+     6.520   PROCEDURAL             CONFLICT-RESOLUTION
+     6.570   PROCEDURAL             CONFLICT-RESOLUTION
+     6.756   PROCEDURAL             CONFLICT-RESOLUTION
+     6.806   PROCEDURAL             CONFLICT-RESOLUTION
+     6.856   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     6.856   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.856   MOTOR                  CLICK-MOUSE
+     6.856   PROCEDURAL             CONFLICT-RESOLUTION
+     7.006   PROCEDURAL             CONFLICT-RESOLUTION
+     7.056   PROCEDURAL             CONFLICT-RESOLUTION
+     7.066   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13 NIL
+     7.066   VISION                 visicon-update
+     7.066   PROCEDURAL             CONFLICT-RESOLUTION
+     7.156   PROCEDURAL             CONFLICT-RESOLUTION
+     7.206   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     7.206   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.206   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.206   VISION                 Find-location
+     7.206   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     7.206   PROCEDURAL             CONFLICT-RESOLUTION
+     7.256   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     7.256   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.256   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.256   PROCEDURAL             CONFLICT-RESOLUTION
+     7.341   VISION                 Encoding-complete VISUAL-LOCATION13-1 NIL
+     7.341   VISION                 SET-BUFFER-CHUNK VISUAL LINE17
+     7.341   PROCEDURAL             CONFLICT-RESOLUTION
+     7.391   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     7.391   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.391   PROCEDURAL             CONFLICT-RESOLUTION
+     7.476   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     7.476   VISION                 SET-BUFFER-CHUNK VISUAL LINE18
+     7.476   PROCEDURAL             CONFLICT-RESOLUTION
+     7.526   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     7.526   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.526   PROCEDURAL             CONFLICT-RESOLUTION
+     7.576   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     7.576   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.576   PROCEDURAL             CONFLICT-RESOLUTION
+     7.661   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     7.661   VISION                 SET-BUFFER-CHUNK VISUAL LINE19
+     7.661   PROCEDURAL             CONFLICT-RESOLUTION
+     7.711   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     7.711   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.711   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.711   VISION                 Find-location
+     7.711   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     7.711   PROCEDURAL             CONFLICT-RESOLUTION
+     7.761   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     7.761   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.761   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.761   PROCEDURAL             CLEAR-BUFFER MANUAL
+     7.761   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-2
+     7.761   PROCEDURAL             CONFLICT-RESOLUTION
+     7.846   VISION                 Encoding-complete VISUAL-LOCATION4-2 NIL
+     7.846   VISION                 SET-BUFFER-CHUNK VISUAL OVAL5
+     7.846   PROCEDURAL             CONFLICT-RESOLUTION
+     7.961   PROCEDURAL             CONFLICT-RESOLUTION
+     8.011   PROCEDURAL             CONFLICT-RESOLUTION
+     8.111   PROCEDURAL             CONFLICT-RESOLUTION
+     8.161   PROCEDURAL             CONFLICT-RESOLUTION
+     8.211   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     8.211   PROCEDURAL             CLEAR-BUFFER MANUAL
+     8.211   MOTOR                  CLICK-MOUSE
+     8.211   PROCEDURAL             CONFLICT-RESOLUTION
+     8.361   PROCEDURAL             CONFLICT-RESOLUTION
+     8.411   PROCEDURAL             CONFLICT-RESOLUTION
+     8.421   VISION                 visicon-update
+     8.421   PROCEDURAL             CONFLICT-RESOLUTION
+     8.511   PROCEDURAL             CONFLICT-RESOLUTION
+     8.561   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     8.561   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.561   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     8.561   VISION                 Find-location
+     8.561   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     8.561   PROCEDURAL             CONFLICT-RESOLUTION
+     8.611   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     8.611   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     8.611   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.611   PROCEDURAL             CONFLICT-RESOLUTION
+     8.696   VISION                 Encoding-complete VISUAL-LOCATION13-2 NIL
+     8.696   VISION                 SET-BUFFER-CHUNK VISUAL LINE20
+     8.696   PROCEDURAL             CONFLICT-RESOLUTION
+     8.746   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     8.746   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.746   PROCEDURAL             CONFLICT-RESOLUTION
+     8.831   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     8.831   VISION                 SET-BUFFER-CHUNK VISUAL LINE21
+     8.831   PROCEDURAL             CONFLICT-RESOLUTION
+     8.881   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     8.881   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.881   PROCEDURAL             CONFLICT-RESOLUTION
+     8.931   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     8.931   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.931   PROCEDURAL             CONFLICT-RESOLUTION
+     9.016   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     9.016   VISION                 SET-BUFFER-CHUNK VISUAL LINE22
+     9.016   PROCEDURAL             CONFLICT-RESOLUTION
+     9.066   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     9.066   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.066   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.066   VISION                 Find-location
+     9.066   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     9.066   PROCEDURAL             CONFLICT-RESOLUTION
+     9.116   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     9.116   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.116   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.116   PROCEDURAL             CLEAR-BUFFER MANUAL
+     9.116   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-3
+     9.116   PROCEDURAL             CONFLICT-RESOLUTION
+     9.166   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     9.166   PROCEDURAL             CLEAR-BUFFER MANUAL
+     9.166   MOTOR                  CLICK-MOUSE
+     9.166   PROCEDURAL             CONFLICT-RESOLUTION
+     9.201   VISION                 Encoding-complete VISUAL-LOCATION4-3 NIL
+     9.201   VISION                 SET-BUFFER-CHUNK VISUAL OVAL6
+     9.201   PROCEDURAL             CONFLICT-RESOLUTION
+     9.216   PROCEDURAL             CONFLICT-RESOLUTION
+     9.226   VISION                 visicon-update
+     9.226   PROCEDURAL             CONFLICT-RESOLUTION
+     9.316   PROCEDURAL             CONFLICT-RESOLUTION
+     9.366   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     9.366   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.366   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.366   VISION                 Find-location
+     9.366   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     9.366   PROCEDURAL             CONFLICT-RESOLUTION
+     9.416   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     9.416   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.416   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.416   PROCEDURAL             CONFLICT-RESOLUTION
+     9.501   VISION                 Encoding-complete VISUAL-LOCATION13-3 NIL
+     9.501   VISION                 SET-BUFFER-CHUNK VISUAL LINE23
+     9.501   PROCEDURAL             CONFLICT-RESOLUTION
+     9.551   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     9.551   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.551   PROCEDURAL             CONFLICT-RESOLUTION
+     9.636   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     9.636   VISION                 SET-BUFFER-CHUNK VISUAL LINE24
+     9.636   PROCEDURAL             CONFLICT-RESOLUTION
+     9.686   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     9.686   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.686   PROCEDURAL             CONFLICT-RESOLUTION
+     9.736   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     9.736   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.736   PROCEDURAL             CONFLICT-RESOLUTION
+     9.821   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     9.821   VISION                 SET-BUFFER-CHUNK VISUAL LINE25
+     9.821   PROCEDURAL             CONFLICT-RESOLUTION
+     9.871   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     9.871   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.871   PROCEDURAL             CONFLICT-RESOLUTION
+     9.956   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     9.956   VISION                 SET-BUFFER-CHUNK VISUAL LINE26
+     9.956   PROCEDURAL             CONFLICT-RESOLUTION
+    10.006   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+    10.006   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.006   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.006   VISION                 Find-location
+    10.006   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+    10.006   PROCEDURAL             CONFLICT-RESOLUTION
+    10.056   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+    10.056   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.056   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.056   PROCEDURAL             CLEAR-BUFFER MANUAL
+    10.056   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION0-1
+    10.056   PROCEDURAL             CONFLICT-RESOLUTION
+    10.141   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+    10.141   VISION                 SET-BUFFER-CHUNK VISUAL OVAL7
+    10.141   PROCEDURAL             CONFLICT-RESOLUTION
+    10.256   PROCEDURAL             CONFLICT-RESOLUTION
+    10.306   PROCEDURAL             CONFLICT-RESOLUTION
+    10.443   PROCEDURAL             CONFLICT-RESOLUTION
+    10.493   PROCEDURAL             CONFLICT-RESOLUTION
+    10.543   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+    10.543   PROCEDURAL             CLEAR-BUFFER MANUAL
+    10.543   MOTOR                  CLICK-MOUSE
+    10.543   PROCEDURAL             CONFLICT-RESOLUTION
+    10.693   PROCEDURAL             CONFLICT-RESOLUTION
+    10.743   PROCEDURAL             CONFLICT-RESOLUTION
+    10.753   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION14 NIL
+    10.753   VISION                 visicon-update
+    10.753   PROCEDURAL             CONFLICT-RESOLUTION
+    10.843   PROCEDURAL             CONFLICT-RESOLUTION
+    10.893   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+    10.893   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.893   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.893   VISION                 Find-location
+    10.893   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+    10.893   PROCEDURAL             CONFLICT-RESOLUTION
+    10.943   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+    10.943   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.943   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.943   PROCEDURAL             CONFLICT-RESOLUTION
+    11.028   VISION                 Encoding-complete VISUAL-LOCATION13-4 NIL
+    11.028   VISION                 SET-BUFFER-CHUNK VISUAL LINE27
+    11.028   PROCEDURAL             CONFLICT-RESOLUTION
+    11.078   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+    11.078   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.078   PROCEDURAL             CONFLICT-RESOLUTION
+    11.163   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+    11.163   VISION                 SET-BUFFER-CHUNK VISUAL LINE28
+    11.163   PROCEDURAL             CONFLICT-RESOLUTION
+    11.213   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+    11.213   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.213   PROCEDURAL             CONFLICT-RESOLUTION
+    11.263   PROCEDURAL             PRODUCTION-FIRED CHECK-FOR-DONE
+    11.263   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    11.263   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    11.263   VISION                 Find-location
+    11.263   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION14
+    11.263   PROCEDURAL             CONFLICT-RESOLUTION
+    11.313   PROCEDURAL             PRODUCTION-FIRED FIND-DONE
+    11.313   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    11.313   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.313   PROCEDURAL             CONFLICT-RESOLUTION
+    11.398   VISION                 Encoding-complete VISUAL-LOCATION14-1 NIL
+    11.398   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+    11.398   PROCEDURAL             CONFLICT-RESOLUTION
+    11.448   PROCEDURAL             PRODUCTION-FIRED READ-DONE
+    11.448   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.448   PROCEDURAL             CLEAR-BUFFER GOAL
+    11.448   GOAL                   SET-BUFFER-CHUNK GOAL (STATE START)
+    11.448   UTILITY                PROPAGATE-REWARD 20
+ Utility updates with Reward = 20.0   alpha = 0.2
+  Updating utility of production FORCE-OVER
+   U(n-1) = 10.0   R(n) = 14.771999 [20.0 - 5.228 seconds since selection]
+   U(n) = 10.9544
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -1.5356799   R(n) = 14.8220005 [20.0 - 5.178 seconds since selection]
+   U(n) = 1.7358564
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -1.2805376   R(n) = 15.358 [20.0 - 4.642 seconds since selection]
+   U(n) = 2.0471702
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = -1.353872   R(n) = 15.708 [20.0 - 4.292 seconds since selection]
+   U(n) = 2.0585027
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.0505948   R(n) = 15.757999 [20.0 - 4.242 seconds since selection]
+   U(n) = 0.71112394
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = -1.263592   R(n) = 15.893 [20.0 - 4.107 seconds since selection]
+   U(n) = 2.1677263
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = -1.1977121   R(n) = 16.028 [20.0 - 3.972 seconds since selection]
+   U(n) = 2.2474303
+  Updating utility of production CONSIDER-C
+   U(n-1) = -1.1733121   R(n) = 16.078 [20.0 - 3.922 seconds since selection]
+   U(n) = 2.27695
+  Updating utility of production CHOOSE-C
+   U(n-1) = -0.69780004   R(n) = 16.213 [20.0 - 3.787 seconds since selection]
+   U(n) = 2.68436
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 1.7358564   R(n) = 16.263 [20.0 - 3.737 seconds since selection]
+   U(n) = 4.6412854
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 2.0471702   R(n) = 16.713 [20.0 - 3.287 seconds since selection]
+   U(n) = 4.980336
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 2.0585027   R(n) = 17.063 [20.0 - 2.937 seconds since selection]
+   U(n) = 5.0594025
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.71112394   R(n) = 17.112999 [20.0 - 2.887 seconds since selection]
+   U(n) = 3.991499
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 2.1677263   R(n) = 17.248 [20.0 - 2.752 seconds since selection]
+   U(n) = 5.1837807
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 2.2474303   R(n) = 17.383 [20.0 - 2.617 seconds since selection]
+   U(n) = 5.274544
+  Updating utility of production CONSIDER-C
+   U(n-1) = 2.27695   R(n) = 17.433 [20.0 - 2.567 seconds since selection]
+   U(n) = 5.30816
+  Updating utility of production CHOOSE-C
+   U(n-1) = 2.68436   R(n) = 17.568 [20.0 - 2.432 seconds since selection]
+   U(n) = 5.661088
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 4.6412854   R(n) = 17.618 [20.0 - 2.382 seconds since selection]
+   U(n) = 7.2366285
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 4.980336   R(n) = 17.668 [20.0 - 2.332 seconds since selection]
+   U(n) = 7.517869
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 5.0594025   R(n) = 17.868 [20.0 - 2.132 seconds since selection]
+   U(n) = 7.6211224
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 3.991499   R(n) = 17.918 [20.0 - 2.082 seconds since selection]
+   U(n) = 6.776799
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 5.1837807   R(n) = 18.053 [20.0 - 1.947 seconds since selection]
+   U(n) = 7.7576246
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 5.274544   R(n) = 18.188 [20.0 - 1.812 seconds since selection]
+   U(n) = 7.857235
+  Updating utility of production CONSIDER-C
+   U(n-1) = 5.30816   R(n) = 18.238 [20.0 - 1.762 seconds since selection]
+   U(n) = 7.894128
+  Updating utility of production CONSIDER-A
+   U(n-1) = -0.66084003   R(n) = 18.373 [20.0 - 1.627 seconds since selection]
+   U(n) = 3.1459281
+  Updating utility of production CHOOSE-A
+   U(n-1) = -0.5098   R(n) = 18.508 [20.0 - 1.492 seconds since selection]
+   U(n) = 3.29376
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 7.2366285   R(n) = 18.558 [20.0 - 1.442 seconds since selection]
+   U(n) = 9.500903
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 7.517869   R(n) = 19.045 [20.0 - 0.955 seconds since selection]
+   U(n) = 9.823296
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 7.6211224   R(n) = 19.395 [20.0 - 0.605 seconds since selection]
+   U(n) = 9.975898
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 6.776799   R(n) = 19.445 [20.0 - 0.555 seconds since selection]
+   U(n) = 9.310439
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 7.7576246   R(n) = 19.58 [20.0 - 0.42 seconds since selection]
+   U(n) = 10.1221
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 7.857235   R(n) = 19.715 [20.0 - 0.285 seconds since selection]
+   U(n) = 10.228788
+  Updating utility of production CHECK-FOR-DONE
+   U(n-1) = 0.0   R(n) = 19.765 [20.0 - 0.235 seconds since selection]
+   U(n) = 3.9529998
+  Updating utility of production FIND-DONE
+   U(n-1) = 0.0   R(n) = 19.815 [20.0 - 0.185 seconds since selection]
+   U(n) = 3.963
+  Updating utility of production READ-DONE
+   U(n-1) = 0.0   R(n) = 19.95 [20.0 - 0.05 seconds since selection]
+   U(n) = 3.9900002
+    11.448   PROCEDURAL             CONFLICT-RESOLUTION
+    11.448   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA TRY-STRATEGY STATE START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED START-TRIAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   VISION                 Find-location
+     0.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION8
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     0.235   VISION                 SET-BUFFER-CHUNK VISUAL LINE0
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.285   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-A
+     0.285   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.285   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.285   PROCEDURAL             CONFLICT-RESOLUTION
+     0.335   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.335   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.335   VISION                 Find-location
+     0.335   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION9
+     0.335   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     0.470   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     0.470   VISION                 SET-BUFFER-CHUNK VISUAL LINE1
+     0.470   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (A-LOC VISUAL-LOCATION8-0)
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-B
+     0.535   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.585   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.585   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.585   VISION                 Find-location
+     0.585   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION10
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     0.635   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.635   PROCEDURAL             CONFLICT-RESOLUTION
+     0.720   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     0.720   VISION                 SET-BUFFER-CHUNK VISUAL LINE2
+     0.720   PROCEDURAL             CONFLICT-RESOLUTION
+     0.770   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-C
+     0.770   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.770   PROCEDURAL             CONFLICT-RESOLUTION
+     0.820   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.820   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.820   VISION                 Find-location
+     0.820   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION11
+     0.820   PROCEDURAL             CONFLICT-RESOLUTION
+     0.870   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.870   PROCEDURAL             CONFLICT-RESOLUTION
+     0.955   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     0.955   VISION                 SET-BUFFER-CHUNK VISUAL LINE3
+     0.955   PROCEDURAL             CONFLICT-RESOLUTION
+     1.005   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-GOAL
+     1.005   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.005   PROCEDURAL             CONFLICT-RESOLUTION
+     1.090   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     1.090   VISION                 SET-BUFFER-CHUNK VISUAL LINE4
+     1.090   PROCEDURAL             CONFLICT-RESOLUTION
+     1.140   PROCEDURAL             PRODUCTION-FIRED ENCODE-UNDER
+     1.140   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.140   PROCEDURAL             CONFLICT-RESOLUTION
+     1.225   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     1.225   VISION                 SET-BUFFER-CHUNK VISUAL LINE5
+     1.225   PROCEDURAL             CONFLICT-RESOLUTION
+     1.275   PROCEDURAL             PRODUCTION-FIRED ENCODE-OVER
+     1.275   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.275   PROCEDURAL             CONFLICT-RESOLUTION
+     1.325   PROCEDURAL             PRODUCTION-FIRED DECIDE-OVER
+     1.325   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.325   VISION                 Find-location
+     1.325   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2
+     1.325   PROCEDURAL             CONFLICT-RESOLUTION
+     1.375   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.375   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.375   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION2-1
+     1.375   PROCEDURAL             CONFLICT-RESOLUTION
+     1.460   VISION                 Encoding-complete VISUAL-LOCATION2-1 NIL
+     1.460   VISION                 SET-BUFFER-CHUNK VISUAL OVAL0
+     1.460   PROCEDURAL             CONFLICT-RESOLUTION
+     1.575   PROCEDURAL             CONFLICT-RESOLUTION
+     1.625   PROCEDURAL             CONFLICT-RESOLUTION
+     1.783   PROCEDURAL             CONFLICT-RESOLUTION
+     1.833   PROCEDURAL             CONFLICT-RESOLUTION
+     1.883   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     1.883   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.883   MOTOR                  CLICK-MOUSE
+     1.883   PROCEDURAL             CONFLICT-RESOLUTION
+     2.033   PROCEDURAL             CONFLICT-RESOLUTION
+     2.083   PROCEDURAL             CONFLICT-RESOLUTION
+     2.093   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12 NIL
+     2.093   VISION                 visicon-update
+     2.093   PROCEDURAL             CONFLICT-RESOLUTION
+     2.183   PROCEDURAL             CONFLICT-RESOLUTION
+     2.233   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     2.233   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.233   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.233   VISION                 Find-location
+     2.233   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     2.233   PROCEDURAL             CONFLICT-RESOLUTION
+     2.283   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     2.283   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.283   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.283   PROCEDURAL             CONFLICT-RESOLUTION
+     2.368   VISION                 Encoding-complete VISUAL-LOCATION12-1 NIL
+     2.368   VISION                 SET-BUFFER-CHUNK VISUAL LINE6
+     2.368   PROCEDURAL             CONFLICT-RESOLUTION
+     2.418   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     2.418   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.418   PROCEDURAL             CONFLICT-RESOLUTION
+     2.503   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     2.503   VISION                 SET-BUFFER-CHUNK VISUAL LINE7
+     2.503   PROCEDURAL             CONFLICT-RESOLUTION
+     2.553   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     2.553   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.553   PROCEDURAL             CONFLICT-RESOLUTION
+     2.603   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     2.603   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.603   PROCEDURAL             CONFLICT-RESOLUTION
+     2.688   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     2.688   VISION                 SET-BUFFER-CHUNK VISUAL LINE8
+     2.688   PROCEDURAL             CONFLICT-RESOLUTION
+     2.738   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     2.738   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.738   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.738   VISION                 Find-location
+     2.738   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     2.738   PROCEDURAL             CONFLICT-RESOLUTION
+     2.788   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     2.788   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.788   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.788   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.788   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-0
+     2.788   PROCEDURAL             CONFLICT-RESOLUTION
+     2.873   VISION                 Encoding-complete VISUAL-LOCATION4-0 NIL
+     2.873   VISION                 SET-BUFFER-CHUNK VISUAL OVAL1
+     2.873   PROCEDURAL             CONFLICT-RESOLUTION
+     2.988   PROCEDURAL             CONFLICT-RESOLUTION
+     3.038   PROCEDURAL             CONFLICT-RESOLUTION
+     3.138   PROCEDURAL             CONFLICT-RESOLUTION
+     3.188   PROCEDURAL             CONFLICT-RESOLUTION
+     3.238   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     3.238   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.238   MOTOR                  CLICK-MOUSE
+     3.238   PROCEDURAL             CONFLICT-RESOLUTION
+     3.388   PROCEDURAL             CONFLICT-RESOLUTION
+     3.438   PROCEDURAL             CONFLICT-RESOLUTION
+     3.448   VISION                 visicon-update
+     3.448   PROCEDURAL             CONFLICT-RESOLUTION
+     3.538   PROCEDURAL             CONFLICT-RESOLUTION
+     3.588   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     3.588   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.588   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.588   VISION                 Find-location
+     3.588   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     3.588   PROCEDURAL             CONFLICT-RESOLUTION
+     3.638   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     3.638   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.638   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.638   PROCEDURAL             CONFLICT-RESOLUTION
+     3.723   VISION                 Encoding-complete VISUAL-LOCATION12-2 NIL
+     3.723   VISION                 SET-BUFFER-CHUNK VISUAL LINE9
+     3.723   PROCEDURAL             CONFLICT-RESOLUTION
+     3.773   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     3.773   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.773   PROCEDURAL             CONFLICT-RESOLUTION
+     3.858   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     3.858   VISION                 SET-BUFFER-CHUNK VISUAL LINE10
+     3.858   PROCEDURAL             CONFLICT-RESOLUTION
+     3.908   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     3.908   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.908   PROCEDURAL             CONFLICT-RESOLUTION
+     3.958   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     3.958   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.958   PROCEDURAL             CONFLICT-RESOLUTION
+     4.043   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     4.043   VISION                 SET-BUFFER-CHUNK VISUAL LINE11
+     4.043   PROCEDURAL             CONFLICT-RESOLUTION
+     4.093   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     4.093   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.093   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.093   VISION                 Find-location
+     4.093   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     4.093   PROCEDURAL             CONFLICT-RESOLUTION
+     4.143   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     4.143   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.143   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.143   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.143   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-1
+     4.143   PROCEDURAL             CONFLICT-RESOLUTION
+     4.193   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     4.193   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.193   MOTOR                  CLICK-MOUSE
+     4.193   PROCEDURAL             CONFLICT-RESOLUTION
+     4.228   VISION                 Encoding-complete VISUAL-LOCATION4-1 NIL
+     4.228   VISION                 SET-BUFFER-CHUNK VISUAL OVAL2
+     4.228   PROCEDURAL             CONFLICT-RESOLUTION
+     4.243   PROCEDURAL             CONFLICT-RESOLUTION
+     4.253   VISION                 visicon-update
+     4.253   PROCEDURAL             CONFLICT-RESOLUTION
+     4.343   PROCEDURAL             CONFLICT-RESOLUTION
+     4.393   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     4.393   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.393   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.393   VISION                 Find-location
+     4.393   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     4.393   PROCEDURAL             CONFLICT-RESOLUTION
+     4.443   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     4.443   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.443   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.443   PROCEDURAL             CONFLICT-RESOLUTION
+     4.528   VISION                 Encoding-complete VISUAL-LOCATION12-3 NIL
+     4.528   VISION                 SET-BUFFER-CHUNK VISUAL LINE12
+     4.528   PROCEDURAL             CONFLICT-RESOLUTION
+     4.578   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     4.578   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.578   PROCEDURAL             CONFLICT-RESOLUTION
+     4.663   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     4.663   VISION                 SET-BUFFER-CHUNK VISUAL LINE13
+     4.663   PROCEDURAL             CONFLICT-RESOLUTION
+     4.713   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     4.713   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.713   PROCEDURAL             CONFLICT-RESOLUTION
+     4.763   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     4.763   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.763   PROCEDURAL             CONFLICT-RESOLUTION
+     4.848   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     4.848   VISION                 SET-BUFFER-CHUNK VISUAL LINE14
+     4.848   PROCEDURAL             CONFLICT-RESOLUTION
+     4.898   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     4.898   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.898   PROCEDURAL             CONFLICT-RESOLUTION
+     4.983   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     4.983   VISION                 SET-BUFFER-CHUNK VISUAL LINE15
+     4.983   PROCEDURAL             CONFLICT-RESOLUTION
+     5.033   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+     5.033   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.033   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.033   VISION                 Find-location
+     5.033   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     5.033   PROCEDURAL             CONFLICT-RESOLUTION
+     5.083   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     5.083   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.083   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.083   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.083   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION0-0
+     5.083   PROCEDURAL             CONFLICT-RESOLUTION
+     5.168   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     5.168   VISION                 SET-BUFFER-CHUNK VISUAL OVAL3
+     5.168   PROCEDURAL             CONFLICT-RESOLUTION
+     5.283   PROCEDURAL             CONFLICT-RESOLUTION
+     5.333   PROCEDURAL             CONFLICT-RESOLUTION
+     5.470   PROCEDURAL             CONFLICT-RESOLUTION
+     5.520   PROCEDURAL             CONFLICT-RESOLUTION
+     5.570   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     5.570   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.570   MOTOR                  CLICK-MOUSE
+     5.570   PROCEDURAL             CONFLICT-RESOLUTION
+     5.720   PROCEDURAL             CONFLICT-RESOLUTION
+     5.770   PROCEDURAL             CONFLICT-RESOLUTION
+     5.780   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13 NIL
+     5.780   VISION                 visicon-update
+     5.780   PROCEDURAL             CONFLICT-RESOLUTION
+     5.870   PROCEDURAL             CONFLICT-RESOLUTION
+     5.920   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     5.920   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.920   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.920   VISION                 Find-location
+     5.920   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     5.920   PROCEDURAL             CONFLICT-RESOLUTION
+     5.970   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     5.970   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.970   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.970   PROCEDURAL             CONFLICT-RESOLUTION
+     6.055   VISION                 Encoding-complete VISUAL-LOCATION12-4 NIL
+     6.055   VISION                 SET-BUFFER-CHUNK VISUAL LINE16
+     6.055   PROCEDURAL             CONFLICT-RESOLUTION
+     6.105   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     6.105   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.105   PROCEDURAL             CONFLICT-RESOLUTION
+     6.190   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     6.190   VISION                 SET-BUFFER-CHUNK VISUAL LINE17
+     6.190   PROCEDURAL             CONFLICT-RESOLUTION
+     6.240   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     6.240   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.240   PROCEDURAL             CONFLICT-RESOLUTION
+     6.290   PROCEDURAL             PRODUCTION-FIRED CHECK-FOR-DONE
+     6.290   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     6.290   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.290   VISION                 Find-location
+     6.290   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     6.290   PROCEDURAL             CONFLICT-RESOLUTION
+     6.340   PROCEDURAL             PRODUCTION-FIRED FIND-DONE
+     6.340   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.340   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.340   PROCEDURAL             CONFLICT-RESOLUTION
+     6.425   VISION                 Encoding-complete VISUAL-LOCATION13-1 NIL
+     6.425   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     6.425   PROCEDURAL             CONFLICT-RESOLUTION
+     6.475   PROCEDURAL             PRODUCTION-FIRED READ-DONE
+     6.475   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.475   PROCEDURAL             CLEAR-BUFFER GOAL
+     6.475   GOAL                   SET-BUFFER-CHUNK GOAL (STATE START)
+     6.475   UTILITY                PROPAGATE-REWARD 20
+ Utility updates with Reward = 20.0   alpha = 0.2
+  Updating utility of production START-TRIAL
+   U(n-1) = 0.0   R(n) = 13.525 [20.0 - 6.475 seconds since selection]
+   U(n) = 2.705
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 0.0   R(n) = 13.575 [20.0 - 6.425 seconds since selection]
+   U(n) = 2.715
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.0   R(n) = 13.625 [20.0 - 6.375 seconds since selection]
+   U(n) = 2.7250001
+  Updating utility of production ENCODE-LINE-A
+   U(n-1) = 0.0   R(n) = 13.76 [20.0 - 6.24 seconds since selection]
+   U(n) = 2.752
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 2.715   R(n) = 13.809999 [20.0 - 6.19 seconds since selection]
+   U(n) = 4.934
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 2.7250001   R(n) = 13.860001 [20.0 - 6.14 seconds since selection]
+   U(n) = 4.952
+  Updating utility of production ENCODE-LINE-B
+   U(n-1) = 0.0   R(n) = 14.01 [20.0 - 5.99 seconds since selection]
+   U(n) = 2.802
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 4.934   R(n) = 14.059999 [20.0 - 5.94 seconds since selection]
+   U(n) = 6.7592
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 4.952   R(n) = 14.110001 [20.0 - 5.89 seconds since selection]
+   U(n) = 6.7836003
+  Updating utility of production ENCODE-LINE-C
+   U(n-1) = 0.0   R(n) = 14.245 [20.0 - 5.755 seconds since selection]
+   U(n) = 2.849
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 6.7592   R(n) = 14.295 [20.0 - 5.705 seconds since selection]
+   U(n) = 8.26636
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 6.7836003   R(n) = 14.344999 [20.0 - 5.655 seconds since selection]
+   U(n) = 8.29588
+  Updating utility of production ENCODE-LINE-GOAL
+   U(n-1) = 0.0   R(n) = 14.48 [20.0 - 5.52 seconds since selection]
+   U(n) = 2.896
+  Updating utility of production ENCODE-UNDER
+   U(n-1) = 0.0   R(n) = 14.615 [20.0 - 5.385 seconds since selection]
+   U(n) = 2.923
+  Updating utility of production ENCODE-OVER
+   U(n-1) = 0.0   R(n) = 14.75 [20.0 - 5.25 seconds since selection]
+   U(n) = 2.95
+  Updating utility of production DECIDE-OVER
+   U(n-1) = 13.0   R(n) = 14.8 [20.0 - 5.2 seconds since selection]
+   U(n) = 13.36
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 0.0   R(n) = 14.85 [20.0 - 5.15 seconds since selection]
+   U(n) = 2.97
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 0.0   R(n) = 15.358 [20.0 - 4.642 seconds since selection]
+   U(n) = 3.0716
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 0.0   R(n) = 15.708 [20.0 - 4.292 seconds since selection]
+   U(n) = 3.1416001
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 8.29588   R(n) = 15.757999 [20.0 - 4.242 seconds since selection]
+   U(n) = 9.788304
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 0.0   R(n) = 15.893 [20.0 - 4.107 seconds since selection]
+   U(n) = 3.1786
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 0.0   R(n) = 16.028 [20.0 - 3.972 seconds since selection]
+   U(n) = 3.2056
+  Updating utility of production CONSIDER-C
+   U(n-1) = 0.0   R(n) = 16.078 [20.0 - 3.922 seconds since selection]
+   U(n) = 3.2155998
+  Updating utility of production CHOOSE-C
+   U(n-1) = 0.0   R(n) = 16.213 [20.0 - 3.787 seconds since selection]
+   U(n) = 3.2426
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 2.97   R(n) = 16.263 [20.0 - 3.737 seconds since selection]
+   U(n) = 5.6286
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 3.0716   R(n) = 16.713 [20.0 - 3.287 seconds since selection]
+   U(n) = 5.79988
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 3.1416001   R(n) = 17.063 [20.0 - 2.937 seconds since selection]
+   U(n) = 5.9258804
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 9.788304   R(n) = 17.112999 [20.0 - 2.887 seconds since selection]
+   U(n) = 11.253243
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 3.1786   R(n) = 17.248 [20.0 - 2.752 seconds since selection]
+   U(n) = 5.99248
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 3.2056   R(n) = 17.383 [20.0 - 2.617 seconds since selection]
+   U(n) = 6.04108
+  Updating utility of production CONSIDER-C
+   U(n-1) = 3.2155998   R(n) = 17.433 [20.0 - 2.567 seconds since selection]
+   U(n) = 6.05908
+  Updating utility of production CHOOSE-C
+   U(n-1) = 3.2426   R(n) = 17.568 [20.0 - 2.432 seconds since selection]
+   U(n) = 6.1076803
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 5.6286   R(n) = 17.618 [20.0 - 2.382 seconds since selection]
+   U(n) = 8.02648
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 5.79988   R(n) = 17.668 [20.0 - 2.332 seconds since selection]
+   U(n) = 8.173504
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 5.9258804   R(n) = 17.868 [20.0 - 2.132 seconds since selection]
+   U(n) = 8.314304
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 11.253243   R(n) = 17.918 [20.0 - 2.082 seconds since selection]
+   U(n) = 12.586195
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 5.99248   R(n) = 18.053 [20.0 - 1.947 seconds since selection]
+   U(n) = 8.404584
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 6.04108   R(n) = 18.188 [20.0 - 1.812 seconds since selection]
+   U(n) = 8.470464
+  Updating utility of production CONSIDER-C
+   U(n-1) = 6.05908   R(n) = 18.238 [20.0 - 1.762 seconds since selection]
+   U(n) = 8.494864
+  Updating utility of production CONSIDER-A
+   U(n-1) = 0.0   R(n) = 18.373 [20.0 - 1.627 seconds since selection]
+   U(n) = 3.6746
+  Updating utility of production CHOOSE-A
+   U(n-1) = 0.0   R(n) = 18.508 [20.0 - 1.492 seconds since selection]
+   U(n) = 3.7015998
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 8.02648   R(n) = 18.558 [20.0 - 1.442 seconds since selection]
+   U(n) = 10.132784
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 8.173504   R(n) = 19.045 [20.0 - 0.955 seconds since selection]
+   U(n) = 10.347803
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 8.314304   R(n) = 19.395 [20.0 - 0.605 seconds since selection]
+   U(n) = 10.530443
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 12.586195   R(n) = 19.445 [20.0 - 0.555 seconds since selection]
+   U(n) = 13.957956
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 8.404584   R(n) = 19.58 [20.0 - 0.42 seconds since selection]
+   U(n) = 10.6396675
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 8.470464   R(n) = 19.715 [20.0 - 0.285 seconds since selection]
+   U(n) = 10.719371
+  Updating utility of production CHECK-FOR-DONE
+   U(n-1) = 0.0   R(n) = 19.765 [20.0 - 0.235 seconds since selection]
+   U(n) = 3.9529998
+  Updating utility of production FIND-DONE
+   U(n-1) = 0.0   R(n) = 19.815 [20.0 - 0.185 seconds since selection]
+   U(n) = 3.963
+  Updating utility of production READ-DONE
+   U(n-1) = 0.0   R(n) = 19.95 [20.0 - 0.05 seconds since selection]
+   U(n) = 3.9900002
+     6.475   PROCEDURAL             CONFLICT-RESOLUTION
+     6.475   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA TRY-STRATEGY STATE START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED START-TRIAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   VISION                 Find-location
+     0.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION8
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     0.235   VISION                 SET-BUFFER-CHUNK VISUAL LINE0
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.285   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-A
+     0.285   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.285   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.285   PROCEDURAL             CONFLICT-RESOLUTION
+     0.335   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.335   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.335   VISION                 Find-location
+     0.335   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION9
+     0.335   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     0.470   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     0.470   VISION                 SET-BUFFER-CHUNK VISUAL LINE1
+     0.470   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (A-LOC VISUAL-LOCATION8-0)
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-B
+     0.535   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.585   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.585   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.585   VISION                 Find-location
+     0.585   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION10
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     0.635   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.635   PROCEDURAL             CONFLICT-RESOLUTION
+     0.720   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     0.720   VISION                 SET-BUFFER-CHUNK VISUAL LINE2
+     0.720   PROCEDURAL             CONFLICT-RESOLUTION
+     0.770   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-C
+     0.770   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.770   PROCEDURAL             CONFLICT-RESOLUTION
+     0.820   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.820   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.820   VISION                 Find-location
+     0.820   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION11
+     0.820   PROCEDURAL             CONFLICT-RESOLUTION
+     0.870   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.870   PROCEDURAL             CONFLICT-RESOLUTION
+     0.955   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     0.955   VISION                 SET-BUFFER-CHUNK VISUAL LINE3
+     0.955   PROCEDURAL             CONFLICT-RESOLUTION
+     1.005   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-GOAL
+     1.005   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.005   PROCEDURAL             CONFLICT-RESOLUTION
+     1.090   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     1.090   VISION                 SET-BUFFER-CHUNK VISUAL LINE4
+     1.090   PROCEDURAL             CONFLICT-RESOLUTION
+     1.140   PROCEDURAL             PRODUCTION-FIRED ENCODE-UNDER
+     1.140   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.140   PROCEDURAL             CONFLICT-RESOLUTION
+     1.225   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     1.225   VISION                 SET-BUFFER-CHUNK VISUAL LINE5
+     1.225   PROCEDURAL             CONFLICT-RESOLUTION
+     1.275   PROCEDURAL             PRODUCTION-FIRED ENCODE-OVER
+     1.275   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.275   PROCEDURAL             CONFLICT-RESOLUTION
+     1.325   PROCEDURAL             PRODUCTION-FIRED DECIDE-UNDER
+     1.325   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.325   VISION                 Find-location
+     1.325   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     1.325   PROCEDURAL             CONFLICT-RESOLUTION
+     1.375   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.375   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.375   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-0
+     1.375   PROCEDURAL             CONFLICT-RESOLUTION
+     1.460   VISION                 Encoding-complete VISUAL-LOCATION4-0 NIL
+     1.460   VISION                 SET-BUFFER-CHUNK VISUAL OVAL0
+     1.460   PROCEDURAL             CONFLICT-RESOLUTION
+     1.575   PROCEDURAL             CONFLICT-RESOLUTION
+     1.625   PROCEDURAL             CONFLICT-RESOLUTION
+     1.826   PROCEDURAL             CONFLICT-RESOLUTION
+     1.876   PROCEDURAL             CONFLICT-RESOLUTION
+     1.926   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     1.926   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.926   MOTOR                  CLICK-MOUSE
+     1.926   PROCEDURAL             CONFLICT-RESOLUTION
+     2.076   PROCEDURAL             CONFLICT-RESOLUTION
+     2.126   PROCEDURAL             CONFLICT-RESOLUTION
+     2.136   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12 NIL
+     2.136   VISION                 visicon-update
+     2.136   PROCEDURAL             CONFLICT-RESOLUTION
+     2.226   PROCEDURAL             CONFLICT-RESOLUTION
+     2.276   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     2.276   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.276   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.276   VISION                 Find-location
+     2.276   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     2.276   PROCEDURAL             CONFLICT-RESOLUTION
+     2.326   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     2.326   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.326   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.326   PROCEDURAL             CONFLICT-RESOLUTION
+     2.411   VISION                 Encoding-complete VISUAL-LOCATION12-1 NIL
+     2.411   VISION                 SET-BUFFER-CHUNK VISUAL LINE6
+     2.411   PROCEDURAL             CONFLICT-RESOLUTION
+     2.461   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     2.461   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.461   PROCEDURAL             CONFLICT-RESOLUTION
+     2.546   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     2.546   VISION                 SET-BUFFER-CHUNK VISUAL LINE7
+     2.546   PROCEDURAL             CONFLICT-RESOLUTION
+     2.596   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     2.596   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.596   PROCEDURAL             CONFLICT-RESOLUTION
+     2.646   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     2.646   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.646   PROCEDURAL             CONFLICT-RESOLUTION
+     2.731   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     2.731   VISION                 SET-BUFFER-CHUNK VISUAL LINE8
+     2.731   PROCEDURAL             CONFLICT-RESOLUTION
+     2.781   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     2.781   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.781   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.781   VISION                 Find-location
+     2.781   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     2.781   PROCEDURAL             CONFLICT-RESOLUTION
+     2.831   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     2.831   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.831   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.831   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.831   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-1
+     2.831   PROCEDURAL             CONFLICT-RESOLUTION
+     2.881   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     2.881   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.881   MOTOR                  CLICK-MOUSE
+     2.881   PROCEDURAL             CONFLICT-RESOLUTION
+     2.916   VISION                 Encoding-complete VISUAL-LOCATION4-1 NIL
+     2.916   VISION                 SET-BUFFER-CHUNK VISUAL OVAL1
+     2.916   PROCEDURAL             CONFLICT-RESOLUTION
+     2.931   PROCEDURAL             CONFLICT-RESOLUTION
+     2.941   VISION                 visicon-update
+     2.941   PROCEDURAL             CONFLICT-RESOLUTION
+     3.031   PROCEDURAL             CONFLICT-RESOLUTION
+     3.081   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     3.081   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.081   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.081   VISION                 Find-location
+     3.081   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     3.081   PROCEDURAL             CONFLICT-RESOLUTION
+     3.131   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     3.131   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.131   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.131   PROCEDURAL             CONFLICT-RESOLUTION
+     3.216   VISION                 Encoding-complete VISUAL-LOCATION12-2 NIL
+     3.216   VISION                 SET-BUFFER-CHUNK VISUAL LINE9
+     3.216   PROCEDURAL             CONFLICT-RESOLUTION
+     3.266   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     3.266   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.266   PROCEDURAL             CONFLICT-RESOLUTION
+     3.351   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     3.351   VISION                 SET-BUFFER-CHUNK VISUAL LINE10
+     3.351   PROCEDURAL             CONFLICT-RESOLUTION
+     3.401   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     3.401   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.401   PROCEDURAL             CONFLICT-RESOLUTION
+     3.451   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     3.451   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.451   PROCEDURAL             CONFLICT-RESOLUTION
+     3.536   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     3.536   VISION                 SET-BUFFER-CHUNK VISUAL LINE11
+     3.536   PROCEDURAL             CONFLICT-RESOLUTION
+     3.586   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     3.586   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.586   PROCEDURAL             CONFLICT-RESOLUTION
+     3.671   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     3.671   VISION                 SET-BUFFER-CHUNK VISUAL LINE12
+     3.671   PROCEDURAL             CONFLICT-RESOLUTION
+     3.721   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+     3.721   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.721   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.721   VISION                 Find-location
+     3.721   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     3.721   PROCEDURAL             CONFLICT-RESOLUTION
+     3.771   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     3.771   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.771   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.771   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.771   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION0-0
+     3.771   PROCEDURAL             CONFLICT-RESOLUTION
+     3.856   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     3.856   VISION                 SET-BUFFER-CHUNK VISUAL OVAL2
+     3.856   PROCEDURAL             CONFLICT-RESOLUTION
+     3.971   PROCEDURAL             CONFLICT-RESOLUTION
+     4.021   PROCEDURAL             CONFLICT-RESOLUTION
+     4.158   PROCEDURAL             CONFLICT-RESOLUTION
+     4.208   PROCEDURAL             CONFLICT-RESOLUTION
+     4.258   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     4.258   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.258   MOTOR                  CLICK-MOUSE
+     4.258   PROCEDURAL             CONFLICT-RESOLUTION
+     4.408   PROCEDURAL             CONFLICT-RESOLUTION
+     4.458   PROCEDURAL             CONFLICT-RESOLUTION
+     4.468   VISION                 visicon-update
+     4.468   PROCEDURAL             CONFLICT-RESOLUTION
+     4.558   PROCEDURAL             CONFLICT-RESOLUTION
+     4.608   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     4.608   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.608   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.608   VISION                 Find-location
+     4.608   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     4.608   PROCEDURAL             CONFLICT-RESOLUTION
+     4.658   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     4.658   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.658   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.658   PROCEDURAL             CONFLICT-RESOLUTION
+     4.743   VISION                 Encoding-complete VISUAL-LOCATION12-3 NIL
+     4.743   VISION                 SET-BUFFER-CHUNK VISUAL LINE13
+     4.743   PROCEDURAL             CONFLICT-RESOLUTION
+     4.793   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     4.793   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.793   PROCEDURAL             CONFLICT-RESOLUTION
+     4.878   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     4.878   VISION                 SET-BUFFER-CHUNK VISUAL LINE14
+     4.878   PROCEDURAL             CONFLICT-RESOLUTION
+     4.928   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     4.928   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.928   PROCEDURAL             CONFLICT-RESOLUTION
+     4.978   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     4.978   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.978   PROCEDURAL             CONFLICT-RESOLUTION
+     5.063   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     5.063   VISION                 SET-BUFFER-CHUNK VISUAL LINE15
+     5.063   PROCEDURAL             CONFLICT-RESOLUTION
+     5.113   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     5.113   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.113   PROCEDURAL             CONFLICT-RESOLUTION
+     5.198   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     5.198   VISION                 SET-BUFFER-CHUNK VISUAL LINE16
+     5.198   PROCEDURAL             CONFLICT-RESOLUTION
+     5.248   PROCEDURAL             PRODUCTION-FIRED RESET
+     5.248   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.248   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.248   VISION                 Find-location
+     5.248   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION6
+     5.248   PROCEDURAL             CONFLICT-RESOLUTION
+     5.298   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     5.298   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.298   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.298   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.298   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION6-0
+     5.298   PROCEDURAL             CONFLICT-RESOLUTION
+     5.383   VISION                 Encoding-complete VISUAL-LOCATION6-0 NIL
+     5.383   VISION                 SET-BUFFER-CHUNK VISUAL OVAL3
+     5.383   PROCEDURAL             CONFLICT-RESOLUTION
+     5.498   PROCEDURAL             CONFLICT-RESOLUTION
+     5.548   PROCEDURAL             CONFLICT-RESOLUTION
+     5.770   PROCEDURAL             CONFLICT-RESOLUTION
+     5.820   PROCEDURAL             CONFLICT-RESOLUTION
+     5.870   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     5.870   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.870   MOTOR                  CLICK-MOUSE
+     5.870   PROCEDURAL             CONFLICT-RESOLUTION
+     6.020   PROCEDURAL             CONFLICT-RESOLUTION
+     6.070   PROCEDURAL             CONFLICT-RESOLUTION
+     6.080   VISION                 visicon-update
+     6.080   PROCEDURAL             CONFLICT-RESOLUTION
+     6.170   PROCEDURAL             CONFLICT-RESOLUTION
+     6.220   PROCEDURAL             PRODUCTION-FIRED PICK-ANOTHER-STRATEGY
+     6.220   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.220   UTILITY                PROPAGATE-REWARD 0
+ Utility updates with Reward = 0.0   alpha = 0.2
+  Updating utility of production START-TRIAL
+   U(n-1) = 0.0   R(n) = -6.22 [0.0 - 6.22 seconds since selection]
+   U(n) = -1.244
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 0.0   R(n) = -6.17 [0.0 - 6.17 seconds since selection]
+   U(n) = -1.2340001
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.0   R(n) = -6.12 [0.0 - 6.12 seconds since selection]
+   U(n) = -1.224
+  Updating utility of production ENCODE-LINE-A
+   U(n-1) = 0.0   R(n) = -5.985 [0.0 - 5.985 seconds since selection]
+   U(n) = -1.197
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = -1.2340001   R(n) = -5.935 [0.0 - 5.935 seconds since selection]
+   U(n) = -2.1742
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -1.224   R(n) = -5.885 [0.0 - 5.885 seconds since selection]
+   U(n) = -2.1562
+  Updating utility of production ENCODE-LINE-B
+   U(n-1) = 0.0   R(n) = -5.735 [0.0 - 5.735 seconds since selection]
+   U(n) = -1.1470001
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = -2.1742   R(n) = -5.685 [0.0 - 5.685 seconds since selection]
+   U(n) = -2.87636
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -2.1562   R(n) = -5.635 [0.0 - 5.635 seconds since selection]
+   U(n) = -2.85196
+  Updating utility of production ENCODE-LINE-C
+   U(n-1) = 0.0   R(n) = -5.5 [0.0 - 5.5 seconds since selection]
+   U(n) = -1.1
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = -2.87636   R(n) = -5.45 [0.0 - 5.45 seconds since selection]
+   U(n) = -3.391088
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -2.85196   R(n) = -5.4 [0.0 - 5.4 seconds since selection]
+   U(n) = -3.361568
+  Updating utility of production ENCODE-LINE-GOAL
+   U(n-1) = 0.0   R(n) = -5.265 [0.0 - 5.265 seconds since selection]
+   U(n) = -1.053
+  Updating utility of production ENCODE-UNDER
+   U(n-1) = 0.0   R(n) = -5.13 [0.0 - 5.13 seconds since selection]
+   U(n) = -1.026
+  Updating utility of production ENCODE-OVER
+   U(n-1) = 0.0   R(n) = -4.995 [0.0 - 4.995 seconds since selection]
+   U(n) = -0.999
+  Updating utility of production DECIDE-UNDER
+   U(n-1) = 13.0   R(n) = -4.945 [0.0 - 4.945 seconds since selection]
+   U(n) = 9.411
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 0.0   R(n) = -4.895 [0.0 - 4.895 seconds since selection]
+   U(n) = -0.97900003
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 0.0   R(n) = -4.344 [0.0 - 4.344 seconds since selection]
+   U(n) = -0.8688
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 0.0   R(n) = -3.994 [0.0 - 3.994 seconds since selection]
+   U(n) = -0.7988
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.361568   R(n) = -3.944 [0.0 - 3.944 seconds since selection]
+   U(n) = -3.4780543
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 0.0   R(n) = -3.809 [0.0 - 3.809 seconds since selection]
+   U(n) = -0.7618
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 0.0   R(n) = -3.674 [0.0 - 3.674 seconds since selection]
+   U(n) = -0.73480004
+  Updating utility of production CONSIDER-C
+   U(n-1) = 0.0   R(n) = -3.624 [0.0 - 3.624 seconds since selection]
+   U(n) = -0.72480005
+  Updating utility of production CHOOSE-C
+   U(n-1) = 0.0   R(n) = -3.489 [0.0 - 3.489 seconds since selection]
+   U(n) = -0.69780004
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -0.97900003   R(n) = -3.439 [0.0 - 3.439 seconds since selection]
+   U(n) = -1.471
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -0.8688   R(n) = -3.389 [0.0 - 3.389 seconds since selection]
+   U(n) = -1.3728399
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = -0.7988   R(n) = -3.189 [0.0 - 3.189 seconds since selection]
+   U(n) = -1.27684
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.4780543   R(n) = -3.139 [0.0 - 3.139 seconds since selection]
+   U(n) = -3.4102435
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = -0.7618   R(n) = -3.004 [0.0 - 3.004 seconds since selection]
+   U(n) = -1.21024
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = -0.73480004   R(n) = -2.869 [0.0 - 2.869 seconds since selection]
+   U(n) = -1.16164
+  Updating utility of production CONSIDER-C
+   U(n-1) = -0.72480005   R(n) = -2.819 [0.0 - 2.819 seconds since selection]
+   U(n) = -1.14364
+  Updating utility of production CONSIDER-A
+   U(n-1) = 0.0   R(n) = -2.684 [0.0 - 2.684 seconds since selection]
+   U(n) = -0.5368
+  Updating utility of production CHOOSE-A
+   U(n-1) = 0.0   R(n) = -2.549 [0.0 - 2.549 seconds since selection]
+   U(n) = -0.5098
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -1.471   R(n) = -2.499 [0.0 - 2.499 seconds since selection]
+   U(n) = -1.6766
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -1.3728399   R(n) = -2.012 [0.0 - 2.012 seconds since selection]
+   U(n) = -1.500672
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = -1.27684   R(n) = -1.662 [0.0 - 1.662 seconds since selection]
+   U(n) = -1.353872
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.4102435   R(n) = -1.612 [0.0 - 1.612 seconds since selection]
+   U(n) = -3.0505948
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = -1.21024   R(n) = -1.477 [0.0 - 1.477 seconds since selection]
+   U(n) = -1.263592
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = -1.16164   R(n) = -1.342 [0.0 - 1.342 seconds since selection]
+   U(n) = -1.1977121
+  Updating utility of production CONSIDER-C
+   U(n-1) = -1.14364   R(n) = -1.292 [0.0 - 1.292 seconds since selection]
+   U(n) = -1.1733121
+  Updating utility of production CONSIDER-A
+   U(n-1) = -0.5368   R(n) = -1.157 [0.0 - 1.157 seconds since selection]
+   U(n) = -0.66084003
+  Updating utility of production RESET
+   U(n-1) = 0.0   R(n) = -1.022 [0.0 - 1.022 seconds since selection]
+   U(n) = -0.20439999
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -1.6766   R(n) = -0.972 [0.0 - 0.972 seconds since selection]
+   U(n) = -1.5356799
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -1.500672   R(n) = -0.4 [0.0 - 0.4 seconds since selection]
+   U(n) = -1.2805376
+  Updating utility of production PICK-ANOTHER-STRATEGY
+   U(n-1) = 0.0   R(n) = -0.05 [0.0 - 0.05 seconds since selection]
+   U(n) = -0.010000001
+     6.220   PROCEDURAL             CONFLICT-RESOLUTION
+     6.270   PROCEDURAL             PRODUCTION-FIRED FORCE-OVER
+     6.270   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.270   VISION                 Find-location
+     6.270   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2
+     6.270   PROCEDURAL             CONFLICT-RESOLUTION
+     6.320   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     6.320   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.320   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.320   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.320   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION2-1
+     6.320   PROCEDURAL             CONFLICT-RESOLUTION
+     6.405   VISION                 Encoding-complete VISUAL-LOCATION2-1 NIL
+     6.405   VISION                 SET-BUFFER-CHUNK VISUAL OVAL4
+     6.405   PROCEDURAL             CONFLICT-RESOLUTION
+     6.520   PROCEDURAL             CONFLICT-RESOLUTION
+     6.570   PROCEDURAL             CONFLICT-RESOLUTION
+     6.756   PROCEDURAL             CONFLICT-RESOLUTION
+     6.806   PROCEDURAL             CONFLICT-RESOLUTION
+     6.856   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     6.856   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.856   MOTOR                  CLICK-MOUSE
+     6.856   PROCEDURAL             CONFLICT-RESOLUTION
+     7.006   PROCEDURAL             CONFLICT-RESOLUTION
+     7.056   PROCEDURAL             CONFLICT-RESOLUTION
+     7.066   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13 NIL
+     7.066   VISION                 visicon-update
+     7.066   PROCEDURAL             CONFLICT-RESOLUTION
+     7.156   PROCEDURAL             CONFLICT-RESOLUTION
+     7.206   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     7.206   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.206   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.206   VISION                 Find-location
+     7.206   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     7.206   PROCEDURAL             CONFLICT-RESOLUTION
+     7.256   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     7.256   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.256   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.256   PROCEDURAL             CONFLICT-RESOLUTION
+     7.341   VISION                 Encoding-complete VISUAL-LOCATION13-1 NIL
+     7.341   VISION                 SET-BUFFER-CHUNK VISUAL LINE17
+     7.341   PROCEDURAL             CONFLICT-RESOLUTION
+     7.391   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     7.391   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.391   PROCEDURAL             CONFLICT-RESOLUTION
+     7.476   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     7.476   VISION                 SET-BUFFER-CHUNK VISUAL LINE18
+     7.476   PROCEDURAL             CONFLICT-RESOLUTION
+     7.526   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     7.526   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.526   PROCEDURAL             CONFLICT-RESOLUTION
+     7.576   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     7.576   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.576   PROCEDURAL             CONFLICT-RESOLUTION
+     7.661   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     7.661   VISION                 SET-BUFFER-CHUNK VISUAL LINE19
+     7.661   PROCEDURAL             CONFLICT-RESOLUTION
+     7.711   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     7.711   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.711   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.711   VISION                 Find-location
+     7.711   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     7.711   PROCEDURAL             CONFLICT-RESOLUTION
+     7.761   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     7.761   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.761   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.761   PROCEDURAL             CLEAR-BUFFER MANUAL
+     7.761   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-2
+     7.761   PROCEDURAL             CONFLICT-RESOLUTION
+     7.846   VISION                 Encoding-complete VISUAL-LOCATION4-2 NIL
+     7.846   VISION                 SET-BUFFER-CHUNK VISUAL OVAL5
+     7.846   PROCEDURAL             CONFLICT-RESOLUTION
+     7.961   PROCEDURAL             CONFLICT-RESOLUTION
+     8.011   PROCEDURAL             CONFLICT-RESOLUTION
+     8.111   PROCEDURAL             CONFLICT-RESOLUTION
+     8.161   PROCEDURAL             CONFLICT-RESOLUTION
+     8.211   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     8.211   PROCEDURAL             CLEAR-BUFFER MANUAL
+     8.211   MOTOR                  CLICK-MOUSE
+     8.211   PROCEDURAL             CONFLICT-RESOLUTION
+     8.361   PROCEDURAL             CONFLICT-RESOLUTION
+     8.411   PROCEDURAL             CONFLICT-RESOLUTION
+     8.421   VISION                 visicon-update
+     8.421   PROCEDURAL             CONFLICT-RESOLUTION
+     8.511   PROCEDURAL             CONFLICT-RESOLUTION
+     8.561   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     8.561   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.561   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     8.561   VISION                 Find-location
+     8.561   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     8.561   PROCEDURAL             CONFLICT-RESOLUTION
+     8.611   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     8.611   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     8.611   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.611   PROCEDURAL             CONFLICT-RESOLUTION
+     8.696   VISION                 Encoding-complete VISUAL-LOCATION13-2 NIL
+     8.696   VISION                 SET-BUFFER-CHUNK VISUAL LINE20
+     8.696   PROCEDURAL             CONFLICT-RESOLUTION
+     8.746   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     8.746   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.746   PROCEDURAL             CONFLICT-RESOLUTION
+     8.831   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     8.831   VISION                 SET-BUFFER-CHUNK VISUAL LINE21
+     8.831   PROCEDURAL             CONFLICT-RESOLUTION
+     8.881   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     8.881   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.881   PROCEDURAL             CONFLICT-RESOLUTION
+     8.931   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     8.931   PROCEDURAL             CLEAR-BUFFER VISUAL
+     8.931   PROCEDURAL             CONFLICT-RESOLUTION
+     9.016   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     9.016   VISION                 SET-BUFFER-CHUNK VISUAL LINE22
+     9.016   PROCEDURAL             CONFLICT-RESOLUTION
+     9.066   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     9.066   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.066   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.066   VISION                 Find-location
+     9.066   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     9.066   PROCEDURAL             CONFLICT-RESOLUTION
+     9.116   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     9.116   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.116   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.116   PROCEDURAL             CLEAR-BUFFER MANUAL
+     9.116   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-3
+     9.116   PROCEDURAL             CONFLICT-RESOLUTION
+     9.166   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     9.166   PROCEDURAL             CLEAR-BUFFER MANUAL
+     9.166   MOTOR                  CLICK-MOUSE
+     9.166   PROCEDURAL             CONFLICT-RESOLUTION
+     9.201   VISION                 Encoding-complete VISUAL-LOCATION4-3 NIL
+     9.201   VISION                 SET-BUFFER-CHUNK VISUAL OVAL6
+     9.201   PROCEDURAL             CONFLICT-RESOLUTION
+     9.216   PROCEDURAL             CONFLICT-RESOLUTION
+     9.226   VISION                 visicon-update
+     9.226   PROCEDURAL             CONFLICT-RESOLUTION
+     9.316   PROCEDURAL             CONFLICT-RESOLUTION
+     9.366   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     9.366   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.366   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.366   VISION                 Find-location
+     9.366   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     9.366   PROCEDURAL             CONFLICT-RESOLUTION
+     9.416   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     9.416   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     9.416   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.416   PROCEDURAL             CONFLICT-RESOLUTION
+     9.501   VISION                 Encoding-complete VISUAL-LOCATION13-3 NIL
+     9.501   VISION                 SET-BUFFER-CHUNK VISUAL LINE23
+     9.501   PROCEDURAL             CONFLICT-RESOLUTION
+     9.551   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     9.551   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.551   PROCEDURAL             CONFLICT-RESOLUTION
+     9.636   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     9.636   VISION                 SET-BUFFER-CHUNK VISUAL LINE24
+     9.636   PROCEDURAL             CONFLICT-RESOLUTION
+     9.686   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     9.686   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.686   PROCEDURAL             CONFLICT-RESOLUTION
+     9.736   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     9.736   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.736   PROCEDURAL             CONFLICT-RESOLUTION
+     9.821   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     9.821   VISION                 SET-BUFFER-CHUNK VISUAL LINE25
+     9.821   PROCEDURAL             CONFLICT-RESOLUTION
+     9.871   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     9.871   PROCEDURAL             CLEAR-BUFFER VISUAL
+     9.871   PROCEDURAL             CONFLICT-RESOLUTION
+     9.956   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     9.956   VISION                 SET-BUFFER-CHUNK VISUAL LINE26
+     9.956   PROCEDURAL             CONFLICT-RESOLUTION
+    10.006   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+    10.006   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.006   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.006   VISION                 Find-location
+    10.006   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+    10.006   PROCEDURAL             CONFLICT-RESOLUTION
+    10.056   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+    10.056   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.056   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.056   PROCEDURAL             CLEAR-BUFFER MANUAL
+    10.056   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION0-1
+    10.056   PROCEDURAL             CONFLICT-RESOLUTION
+    10.141   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+    10.141   VISION                 SET-BUFFER-CHUNK VISUAL OVAL7
+    10.141   PROCEDURAL             CONFLICT-RESOLUTION
+    10.256   PROCEDURAL             CONFLICT-RESOLUTION
+    10.306   PROCEDURAL             CONFLICT-RESOLUTION
+    10.443   PROCEDURAL             CONFLICT-RESOLUTION
+    10.493   PROCEDURAL             CONFLICT-RESOLUTION
+    10.543   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+    10.543   PROCEDURAL             CLEAR-BUFFER MANUAL
+    10.543   MOTOR                  CLICK-MOUSE
+    10.543   PROCEDURAL             CONFLICT-RESOLUTION
+    10.693   PROCEDURAL             CONFLICT-RESOLUTION
+    10.743   PROCEDURAL             CONFLICT-RESOLUTION
+    10.753   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION14 NIL
+    10.753   VISION                 visicon-update
+    10.753   PROCEDURAL             CONFLICT-RESOLUTION
+    10.843   PROCEDURAL             CONFLICT-RESOLUTION
+    10.893   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+    10.893   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.893   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.893   VISION                 Find-location
+    10.893   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+    10.893   PROCEDURAL             CONFLICT-RESOLUTION
+    10.943   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+    10.943   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.943   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.943   PROCEDURAL             CONFLICT-RESOLUTION
+    11.028   VISION                 Encoding-complete VISUAL-LOCATION13-4 NIL
+    11.028   VISION                 SET-BUFFER-CHUNK VISUAL LINE27
+    11.028   PROCEDURAL             CONFLICT-RESOLUTION
+    11.078   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+    11.078   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.078   PROCEDURAL             CONFLICT-RESOLUTION
+    11.163   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+    11.163   VISION                 SET-BUFFER-CHUNK VISUAL LINE28
+    11.163   PROCEDURAL             CONFLICT-RESOLUTION
+    11.213   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+    11.213   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.213   PROCEDURAL             CONFLICT-RESOLUTION
+    11.263   PROCEDURAL             PRODUCTION-FIRED CHECK-FOR-DONE
+    11.263   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    11.263   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    11.263   VISION                 Find-location
+    11.263   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION14
+    11.263   PROCEDURAL             CONFLICT-RESOLUTION
+    11.313   PROCEDURAL             PRODUCTION-FIRED FIND-DONE
+    11.313   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    11.313   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.313   PROCEDURAL             CONFLICT-RESOLUTION
+    11.398   VISION                 Encoding-complete VISUAL-LOCATION14-1 NIL
+    11.398   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+    11.398   PROCEDURAL             CONFLICT-RESOLUTION
+    11.448   PROCEDURAL             PRODUCTION-FIRED READ-DONE
+    11.448   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.448   PROCEDURAL             CLEAR-BUFFER GOAL
+    11.448   GOAL                   SET-BUFFER-CHUNK GOAL (STATE START)
+    11.448   UTILITY                PROPAGATE-REWARD 20
+ Utility updates with Reward = 20.0   alpha = 0.2
+  Updating utility of production FORCE-OVER
+   U(n-1) = 10.0   R(n) = 14.771999 [20.0 - 5.228 seconds since selection]
+   U(n) = 10.9544
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = -1.5356799   R(n) = 14.8220005 [20.0 - 5.178 seconds since selection]
+   U(n) = 1.7358564
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = -1.2805376   R(n) = 15.358 [20.0 - 4.642 seconds since selection]
+   U(n) = 2.0471702
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = -1.353872   R(n) = 15.708 [20.0 - 4.292 seconds since selection]
+   U(n) = 2.0585027
+  Updating utility of production ATTEND-LINE
+   U(n-1) = -3.0505948   R(n) = 15.757999 [20.0 - 4.242 seconds since selection]
+   U(n) = 0.71112394
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = -1.263592   R(n) = 15.893 [20.0 - 4.107 seconds since selection]
+   U(n) = 2.1677263
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = -1.1977121   R(n) = 16.028 [20.0 - 3.972 seconds since selection]
+   U(n) = 2.2474303
+  Updating utility of production CONSIDER-C
+   U(n-1) = -1.1733121   R(n) = 16.078 [20.0 - 3.922 seconds since selection]
+   U(n) = 2.27695
+  Updating utility of production CHOOSE-C
+   U(n-1) = -0.69780004   R(n) = 16.213 [20.0 - 3.787 seconds since selection]
+   U(n) = 2.68436
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 1.7358564   R(n) = 16.263 [20.0 - 3.737 seconds since selection]
+   U(n) = 4.6412854
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 2.0471702   R(n) = 16.713 [20.0 - 3.287 seconds since selection]
+   U(n) = 4.980336
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 2.0585027   R(n) = 17.063 [20.0 - 2.937 seconds since selection]
+   U(n) = 5.0594025
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.71112394   R(n) = 17.112999 [20.0 - 2.887 seconds since selection]
+   U(n) = 3.991499
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 2.1677263   R(n) = 17.248 [20.0 - 2.752 seconds since selection]
+   U(n) = 5.1837807
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 2.2474303   R(n) = 17.383 [20.0 - 2.617 seconds since selection]
+   U(n) = 5.274544
+  Updating utility of production CONSIDER-C
+   U(n-1) = 2.27695   R(n) = 17.433 [20.0 - 2.567 seconds since selection]
+   U(n) = 5.30816
+  Updating utility of production CHOOSE-C
+   U(n-1) = 2.68436   R(n) = 17.568 [20.0 - 2.432 seconds since selection]
+   U(n) = 5.661088
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 4.6412854   R(n) = 17.618 [20.0 - 2.382 seconds since selection]
+   U(n) = 7.2366285
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 4.980336   R(n) = 17.668 [20.0 - 2.332 seconds since selection]
+   U(n) = 7.517869
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 5.0594025   R(n) = 17.868 [20.0 - 2.132 seconds since selection]
+   U(n) = 7.6211224
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 3.991499   R(n) = 17.918 [20.0 - 2.082 seconds since selection]
+   U(n) = 6.776799
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 5.1837807   R(n) = 18.053 [20.0 - 1.947 seconds since selection]
+   U(n) = 7.7576246
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 5.274544   R(n) = 18.188 [20.0 - 1.812 seconds since selection]
+   U(n) = 7.857235
+  Updating utility of production CONSIDER-C
+   U(n-1) = 5.30816   R(n) = 18.238 [20.0 - 1.762 seconds since selection]
+   U(n) = 7.894128
+  Updating utility of production CONSIDER-A
+   U(n-1) = -0.66084003   R(n) = 18.373 [20.0 - 1.627 seconds since selection]
+   U(n) = 3.1459281
+  Updating utility of production CHOOSE-A
+   U(n-1) = -0.5098   R(n) = 18.508 [20.0 - 1.492 seconds since selection]
+   U(n) = 3.29376
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 7.2366285   R(n) = 18.558 [20.0 - 1.442 seconds since selection]
+   U(n) = 9.500903
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 7.517869   R(n) = 19.045 [20.0 - 0.955 seconds since selection]
+   U(n) = 9.823296
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 7.6211224   R(n) = 19.395 [20.0 - 0.605 seconds since selection]
+   U(n) = 9.975898
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 6.776799   R(n) = 19.445 [20.0 - 0.555 seconds since selection]
+   U(n) = 9.310439
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 7.7576246   R(n) = 19.58 [20.0 - 0.42 seconds since selection]
+   U(n) = 10.1221
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 7.857235   R(n) = 19.715 [20.0 - 0.285 seconds since selection]
+   U(n) = 10.228788
+  Updating utility of production CHECK-FOR-DONE
+   U(n-1) = 0.0   R(n) = 19.765 [20.0 - 0.235 seconds since selection]
+   U(n) = 3.9529998
+  Updating utility of production FIND-DONE
+   U(n-1) = 0.0   R(n) = 19.815 [20.0 - 0.185 seconds since selection]
+   U(n) = 3.963
+  Updating utility of production READ-DONE
+   U(n-1) = 0.0   R(n) = 19.95 [20.0 - 0.05 seconds since selection]
+   U(n) = 3.9900002
+    11.448   PROCEDURAL             CONFLICT-RESOLUTION
+    11.448   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA TRY-STRATEGY STATE START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED START-TRIAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   VISION                 Find-location
+     0.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION8
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.150   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     0.235   VISION                 SET-BUFFER-CHUNK VISUAL LINE0
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.285   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-A
+     0.285   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.285   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.285   PROCEDURAL             CONFLICT-RESOLUTION
+     0.335   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.335   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.335   VISION                 Find-location
+     0.335   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION9
+     0.335   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.385   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     0.470   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     0.470   VISION                 SET-BUFFER-CHUNK VISUAL LINE1
+     0.470   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (A-LOC VISUAL-LOCATION8-0)
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-B
+     0.535   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.585   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.585   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.585   VISION                 Find-location
+     0.585   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION10
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     0.635   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.635   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.635   PROCEDURAL             CONFLICT-RESOLUTION
+     0.720   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     0.720   VISION                 SET-BUFFER-CHUNK VISUAL LINE2
+     0.720   PROCEDURAL             CONFLICT-RESOLUTION
+     0.770   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-C
+     0.770   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.770   PROCEDURAL             CONFLICT-RESOLUTION
+     0.820   PROCEDURAL             PRODUCTION-FIRED FIND-NEXT-LINE
+     0.820   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.820   VISION                 Find-location
+     0.820   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION11
+     0.820   PROCEDURAL             CONFLICT-RESOLUTION
+     0.870   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.870   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.870   PROCEDURAL             CONFLICT-RESOLUTION
+     0.955   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     0.955   VISION                 SET-BUFFER-CHUNK VISUAL LINE3
+     0.955   PROCEDURAL             CONFLICT-RESOLUTION
+     1.005   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-GOAL
+     1.005   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.005   PROCEDURAL             CONFLICT-RESOLUTION
+     1.090   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     1.090   VISION                 SET-BUFFER-CHUNK VISUAL LINE4
+     1.090   PROCEDURAL             CONFLICT-RESOLUTION
+     1.140   PROCEDURAL             PRODUCTION-FIRED ENCODE-UNDER
+     1.140   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.140   PROCEDURAL             CONFLICT-RESOLUTION
+     1.225   VISION                 Encoding-complete VISUAL-LOCATION9-0 NIL
+     1.225   VISION                 SET-BUFFER-CHUNK VISUAL LINE5
+     1.225   PROCEDURAL             CONFLICT-RESOLUTION
+     1.275   PROCEDURAL             PRODUCTION-FIRED ENCODE-OVER
+     1.275   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.275   PROCEDURAL             CONFLICT-RESOLUTION
+     1.325   PROCEDURAL             PRODUCTION-FIRED DECIDE-OVER
+     1.325   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.325   VISION                 Find-location
+     1.325   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2
+     1.325   PROCEDURAL             CONFLICT-RESOLUTION
+     1.375   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.375   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.375   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.375   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION2-1
+     1.375   PROCEDURAL             CONFLICT-RESOLUTION
+     1.460   VISION                 Encoding-complete VISUAL-LOCATION2-1 NIL
+     1.460   VISION                 SET-BUFFER-CHUNK VISUAL OVAL0
+     1.460   PROCEDURAL             CONFLICT-RESOLUTION
+     1.575   PROCEDURAL             CONFLICT-RESOLUTION
+     1.625   PROCEDURAL             CONFLICT-RESOLUTION
+     1.783   PROCEDURAL             CONFLICT-RESOLUTION
+     1.833   PROCEDURAL             CONFLICT-RESOLUTION
+     1.883   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     1.883   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.883   MOTOR                  CLICK-MOUSE
+     1.883   PROCEDURAL             CONFLICT-RESOLUTION
+     2.033   PROCEDURAL             CONFLICT-RESOLUTION
+     2.083   PROCEDURAL             CONFLICT-RESOLUTION
+     2.093   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12 NIL
+     2.093   VISION                 visicon-update
+     2.093   PROCEDURAL             CONFLICT-RESOLUTION
+     2.183   PROCEDURAL             CONFLICT-RESOLUTION
+     2.233   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     2.233   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.233   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.233   VISION                 Find-location
+     2.233   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     2.233   PROCEDURAL             CONFLICT-RESOLUTION
+     2.283   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     2.283   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.283   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.283   PROCEDURAL             CONFLICT-RESOLUTION
+     2.368   VISION                 Encoding-complete VISUAL-LOCATION12-1 NIL
+     2.368   VISION                 SET-BUFFER-CHUNK VISUAL LINE6
+     2.368   PROCEDURAL             CONFLICT-RESOLUTION
+     2.418   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     2.418   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.418   PROCEDURAL             CONFLICT-RESOLUTION
+     2.503   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     2.503   VISION                 SET-BUFFER-CHUNK VISUAL LINE7
+     2.503   PROCEDURAL             CONFLICT-RESOLUTION
+     2.553   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     2.553   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.553   PROCEDURAL             CONFLICT-RESOLUTION
+     2.603   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     2.603   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.603   PROCEDURAL             CONFLICT-RESOLUTION
+     2.688   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     2.688   VISION                 SET-BUFFER-CHUNK VISUAL LINE8
+     2.688   PROCEDURAL             CONFLICT-RESOLUTION
+     2.738   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     2.738   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.738   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.738   VISION                 Find-location
+     2.738   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     2.738   PROCEDURAL             CONFLICT-RESOLUTION
+     2.788   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     2.788   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.788   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.788   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.788   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-0
+     2.788   PROCEDURAL             CONFLICT-RESOLUTION
+     2.873   VISION                 Encoding-complete VISUAL-LOCATION4-0 NIL
+     2.873   VISION                 SET-BUFFER-CHUNK VISUAL OVAL1
+     2.873   PROCEDURAL             CONFLICT-RESOLUTION
+     2.988   PROCEDURAL             CONFLICT-RESOLUTION
+     3.038   PROCEDURAL             CONFLICT-RESOLUTION
+     3.138   PROCEDURAL             CONFLICT-RESOLUTION
+     3.188   PROCEDURAL             CONFLICT-RESOLUTION
+     3.238   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     3.238   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.238   MOTOR                  CLICK-MOUSE
+     3.238   PROCEDURAL             CONFLICT-RESOLUTION
+     3.388   PROCEDURAL             CONFLICT-RESOLUTION
+     3.438   PROCEDURAL             CONFLICT-RESOLUTION
+     3.448   VISION                 visicon-update
+     3.448   PROCEDURAL             CONFLICT-RESOLUTION
+     3.538   PROCEDURAL             CONFLICT-RESOLUTION
+     3.588   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     3.588   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.588   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.588   VISION                 Find-location
+     3.588   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     3.588   PROCEDURAL             CONFLICT-RESOLUTION
+     3.638   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     3.638   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.638   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.638   PROCEDURAL             CONFLICT-RESOLUTION
+     3.723   VISION                 Encoding-complete VISUAL-LOCATION12-2 NIL
+     3.723   VISION                 SET-BUFFER-CHUNK VISUAL LINE9
+     3.723   PROCEDURAL             CONFLICT-RESOLUTION
+     3.773   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     3.773   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.773   PROCEDURAL             CONFLICT-RESOLUTION
+     3.858   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     3.858   VISION                 SET-BUFFER-CHUNK VISUAL LINE10
+     3.858   PROCEDURAL             CONFLICT-RESOLUTION
+     3.908   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     3.908   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.908   PROCEDURAL             CONFLICT-RESOLUTION
+     3.958   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     3.958   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.958   PROCEDURAL             CONFLICT-RESOLUTION
+     4.043   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     4.043   VISION                 SET-BUFFER-CHUNK VISUAL LINE11
+     4.043   PROCEDURAL             CONFLICT-RESOLUTION
+     4.093   PROCEDURAL             PRODUCTION-FIRED CHOOSE-C
+     4.093   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.093   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.093   VISION                 Find-location
+     4.093   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4
+     4.093   PROCEDURAL             CONFLICT-RESOLUTION
+     4.143   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     4.143   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.143   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.143   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.143   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION4-1
+     4.143   PROCEDURAL             CONFLICT-RESOLUTION
+     4.193   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     4.193   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.193   MOTOR                  CLICK-MOUSE
+     4.193   PROCEDURAL             CONFLICT-RESOLUTION
+     4.228   VISION                 Encoding-complete VISUAL-LOCATION4-1 NIL
+     4.228   VISION                 SET-BUFFER-CHUNK VISUAL OVAL2
+     4.228   PROCEDURAL             CONFLICT-RESOLUTION
+     4.243   PROCEDURAL             CONFLICT-RESOLUTION
+     4.253   VISION                 visicon-update
+     4.253   PROCEDURAL             CONFLICT-RESOLUTION
+     4.343   PROCEDURAL             CONFLICT-RESOLUTION
+     4.393   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     4.393   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.393   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.393   VISION                 Find-location
+     4.393   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     4.393   PROCEDURAL             CONFLICT-RESOLUTION
+     4.443   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     4.443   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.443   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.443   PROCEDURAL             CONFLICT-RESOLUTION
+     4.528   VISION                 Encoding-complete VISUAL-LOCATION12-3 NIL
+     4.528   VISION                 SET-BUFFER-CHUNK VISUAL LINE12
+     4.528   PROCEDURAL             CONFLICT-RESOLUTION
+     4.578   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     4.578   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.578   PROCEDURAL             CONFLICT-RESOLUTION
+     4.663   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     4.663   VISION                 SET-BUFFER-CHUNK VISUAL LINE13
+     4.663   PROCEDURAL             CONFLICT-RESOLUTION
+     4.713   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     4.713   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.713   PROCEDURAL             CONFLICT-RESOLUTION
+     4.763   PROCEDURAL             PRODUCTION-FIRED CONSIDER-C
+     4.763   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.763   PROCEDURAL             CONFLICT-RESOLUTION
+     4.848   VISION                 Encoding-complete VISUAL-LOCATION10-0 NIL
+     4.848   VISION                 SET-BUFFER-CHUNK VISUAL LINE14
+     4.848   PROCEDURAL             CONFLICT-RESOLUTION
+     4.898   PROCEDURAL             PRODUCTION-FIRED CONSIDER-A
+     4.898   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.898   PROCEDURAL             CONFLICT-RESOLUTION
+     4.983   VISION                 Encoding-complete VISUAL-LOCATION8-0 NIL
+     4.983   VISION                 SET-BUFFER-CHUNK VISUAL LINE15
+     4.983   PROCEDURAL             CONFLICT-RESOLUTION
+     5.033   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+     5.033   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.033   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.033   VISION                 Find-location
+     5.033   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     5.033   PROCEDURAL             CONFLICT-RESOLUTION
+     5.083   PROCEDURAL             PRODUCTION-FIRED MOVE-MOUSE
+     5.083   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.083   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.083   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.083   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION0-0
+     5.083   PROCEDURAL             CONFLICT-RESOLUTION
+     5.168   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     5.168   VISION                 SET-BUFFER-CHUNK VISUAL OVAL3
+     5.168   PROCEDURAL             CONFLICT-RESOLUTION
+     5.283   PROCEDURAL             CONFLICT-RESOLUTION
+     5.333   PROCEDURAL             CONFLICT-RESOLUTION
+     5.470   PROCEDURAL             CONFLICT-RESOLUTION
+     5.520   PROCEDURAL             CONFLICT-RESOLUTION
+     5.570   PROCEDURAL             PRODUCTION-FIRED CLICK-MOUSE
+     5.570   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.570   MOTOR                  CLICK-MOUSE
+     5.570   PROCEDURAL             CONFLICT-RESOLUTION
+     5.720   PROCEDURAL             CONFLICT-RESOLUTION
+     5.770   PROCEDURAL             CONFLICT-RESOLUTION
+     5.780   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13 NIL
+     5.780   VISION                 visicon-update
+     5.780   PROCEDURAL             CONFLICT-RESOLUTION
+     5.870   PROCEDURAL             CONFLICT-RESOLUTION
+     5.920   PROCEDURAL             PRODUCTION-FIRED LOOK-FOR-CURRENT
+     5.920   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.920   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.920   VISION                 Find-location
+     5.920   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION12
+     5.920   PROCEDURAL             CONFLICT-RESOLUTION
+     5.970   PROCEDURAL             PRODUCTION-FIRED ATTEND-LINE
+     5.970   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.970   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.970   PROCEDURAL             CONFLICT-RESOLUTION
+     6.055   VISION                 Encoding-complete VISUAL-LOCATION12-4 NIL
+     6.055   VISION                 SET-BUFFER-CHUNK VISUAL LINE16
+     6.055   PROCEDURAL             CONFLICT-RESOLUTION
+     6.105   PROCEDURAL             PRODUCTION-FIRED ENCODE-LINE-CURRENT
+     6.105   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.105   PROCEDURAL             CONFLICT-RESOLUTION
+     6.190   VISION                 Encoding-complete VISUAL-LOCATION11-0 NIL
+     6.190   VISION                 SET-BUFFER-CHUNK VISUAL LINE17
+     6.190   PROCEDURAL             CONFLICT-RESOLUTION
+     6.240   PROCEDURAL             PRODUCTION-FIRED CALCULATE-DIFFERENCE
+     6.240   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.240   PROCEDURAL             CONFLICT-RESOLUTION
+     6.290   PROCEDURAL             PRODUCTION-FIRED CHECK-FOR-DONE
+     6.290   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     6.290   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.290   VISION                 Find-location
+     6.290   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     6.290   PROCEDURAL             CONFLICT-RESOLUTION
+     6.340   PROCEDURAL             PRODUCTION-FIRED FIND-DONE
+     6.340   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.340   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.340   PROCEDURAL             CONFLICT-RESOLUTION
+     6.425   VISION                 Encoding-complete VISUAL-LOCATION13-1 NIL
+     6.425   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     6.425   PROCEDURAL             CONFLICT-RESOLUTION
+     6.475   PROCEDURAL             PRODUCTION-FIRED READ-DONE
+     6.475   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.475   PROCEDURAL             CLEAR-BUFFER GOAL
+     6.475   GOAL                   SET-BUFFER-CHUNK GOAL (STATE START)
+     6.475   UTILITY                PROPAGATE-REWARD 20
+ Utility updates with Reward = 20.0   alpha = 0.2
+  Updating utility of production START-TRIAL
+   U(n-1) = 0.0   R(n) = 13.525 [20.0 - 6.475 seconds since selection]
+   U(n) = 2.705
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 0.0   R(n) = 13.575 [20.0 - 6.425 seconds since selection]
+   U(n) = 2.715
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.0   R(n) = 13.625 [20.0 - 6.375 seconds since selection]
+   U(n) = 2.7250001
+  Updating utility of production ENCODE-LINE-A
+   U(n-1) = 0.0   R(n) = 13.76 [20.0 - 6.24 seconds since selection]
+   U(n) = 2.752
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 2.715   R(n) = 13.809999 [20.0 - 6.19 seconds since selection]
+   U(n) = 4.934
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 2.7250001   R(n) = 13.860001 [20.0 - 6.14 seconds since selection]
+   U(n) = 4.952
+  Updating utility of production ENCODE-LINE-B
+   U(n-1) = 0.0   R(n) = 14.01 [20.0 - 5.99 seconds since selection]
+   U(n) = 2.802
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 4.934   R(n) = 14.059999 [20.0 - 5.94 seconds since selection]
+   U(n) = 6.7592
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 4.952   R(n) = 14.110001 [20.0 - 5.89 seconds since selection]
+   U(n) = 6.7836003
+  Updating utility of production ENCODE-LINE-C
+   U(n-1) = 0.0   R(n) = 14.245 [20.0 - 5.755 seconds since selection]
+   U(n) = 2.849
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 6.7592   R(n) = 14.295 [20.0 - 5.705 seconds since selection]
+   U(n) = 8.26636
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 6.7836003   R(n) = 14.344999 [20.0 - 5.655 seconds since selection]
+   U(n) = 8.29588
+  Updating utility of production ENCODE-LINE-GOAL
+   U(n-1) = 0.0   R(n) = 14.48 [20.0 - 5.52 seconds since selection]
+   U(n) = 2.896
+  Updating utility of production ENCODE-UNDER
+   U(n-1) = 0.0   R(n) = 14.615 [20.0 - 5.385 seconds since selection]
+   U(n) = 2.923
+  Updating utility of production ENCODE-OVER
+   U(n-1) = 0.0   R(n) = 14.75 [20.0 - 5.25 seconds since selection]
+   U(n) = 2.95
+  Updating utility of production DECIDE-OVER
+   U(n-1) = 13.0   R(n) = 14.8 [20.0 - 5.2 seconds since selection]
+   U(n) = 13.36
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 0.0   R(n) = 14.85 [20.0 - 5.15 seconds since selection]
+   U(n) = 2.97
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 0.0   R(n) = 15.358 [20.0 - 4.642 seconds since selection]
+   U(n) = 3.0716
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 0.0   R(n) = 15.708 [20.0 - 4.292 seconds since selection]
+   U(n) = 3.1416001
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 8.29588   R(n) = 15.757999 [20.0 - 4.242 seconds since selection]
+   U(n) = 9.788304
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 0.0   R(n) = 15.893 [20.0 - 4.107 seconds since selection]
+   U(n) = 3.1786
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 0.0   R(n) = 16.028 [20.0 - 3.972 seconds since selection]
+   U(n) = 3.2056
+  Updating utility of production CONSIDER-C
+   U(n-1) = 0.0   R(n) = 16.078 [20.0 - 3.922 seconds since selection]
+   U(n) = 3.2155998
+  Updating utility of production CHOOSE-C
+   U(n-1) = 0.0   R(n) = 16.213 [20.0 - 3.787 seconds since selection]
+   U(n) = 3.2426
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 2.97   R(n) = 16.263 [20.0 - 3.737 seconds since selection]
+   U(n) = 5.6286
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 3.0716   R(n) = 16.713 [20.0 - 3.287 seconds since selection]
+   U(n) = 5.79988
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 3.1416001   R(n) = 17.063 [20.0 - 2.937 seconds since selection]
+   U(n) = 5.9258804
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 9.788304   R(n) = 17.112999 [20.0 - 2.887 seconds since selection]
+   U(n) = 11.253243
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 3.1786   R(n) = 17.248 [20.0 - 2.752 seconds since selection]
+   U(n) = 5.99248
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 3.2056   R(n) = 17.383 [20.0 - 2.617 seconds since selection]
+   U(n) = 6.04108
+  Updating utility of production CONSIDER-C
+   U(n-1) = 3.2155998   R(n) = 17.433 [20.0 - 2.567 seconds since selection]
+   U(n) = 6.05908
+  Updating utility of production CHOOSE-C
+   U(n-1) = 3.2426   R(n) = 17.568 [20.0 - 2.432 seconds since selection]
+   U(n) = 6.1076803
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 5.6286   R(n) = 17.618 [20.0 - 2.382 seconds since selection]
+   U(n) = 8.02648
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 5.79988   R(n) = 17.668 [20.0 - 2.332 seconds since selection]
+   U(n) = 8.173504
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 5.9258804   R(n) = 17.868 [20.0 - 2.132 seconds since selection]
+   U(n) = 8.314304
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 11.253243   R(n) = 17.918 [20.0 - 2.082 seconds since selection]
+   U(n) = 12.586195
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 5.99248   R(n) = 18.053 [20.0 - 1.947 seconds since selection]
+   U(n) = 8.404584
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 6.04108   R(n) = 18.188 [20.0 - 1.812 seconds since selection]
+   U(n) = 8.470464
+  Updating utility of production CONSIDER-C
+   U(n-1) = 6.05908   R(n) = 18.238 [20.0 - 1.762 seconds since selection]
+   U(n) = 8.494864
+  Updating utility of production CONSIDER-A
+   U(n-1) = 0.0   R(n) = 18.373 [20.0 - 1.627 seconds since selection]
+   U(n) = 3.6746
+  Updating utility of production CHOOSE-A
+   U(n-1) = 0.0   R(n) = 18.508 [20.0 - 1.492 seconds since selection]
+   U(n) = 3.7015998
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 8.02648   R(n) = 18.558 [20.0 - 1.442 seconds since selection]
+   U(n) = 10.132784
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 8.173504   R(n) = 19.045 [20.0 - 0.955 seconds since selection]
+   U(n) = 10.347803
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 8.314304   R(n) = 19.395 [20.0 - 0.605 seconds since selection]
+   U(n) = 10.530443
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 12.586195   R(n) = 19.445 [20.0 - 0.555 seconds since selection]
+   U(n) = 13.957956
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 8.404584   R(n) = 19.58 [20.0 - 0.42 seconds since selection]
+   U(n) = 10.6396675
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 8.470464   R(n) = 19.715 [20.0 - 0.285 seconds since selection]
+   U(n) = 10.719371
+  Updating utility of production CHECK-FOR-DONE
+   U(n-1) = 0.0   R(n) = 19.765 [20.0 - 0.235 seconds since selection]
+   U(n) = 3.9529998
+  Updating utility of production FIND-DONE
+   U(n-1) = 0.0   R(n) = 19.815 [20.0 - 0.185 seconds since selection]
+   U(n) = 3.963
+  Updating utility of production READ-DONE
+   U(n-1) = 0.0   R(n) = 19.95 [20.0 - 0.05 seconds since selection]
+   U(n) = 3.9900002
+     6.475   PROCEDURAL             CONFLICT-RESOLUTION
+     6.475   ------                 Stopped because no events left to process

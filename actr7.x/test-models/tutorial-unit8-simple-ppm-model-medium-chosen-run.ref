@@ -1,0 +1,31 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA TEST VALUE SMALL) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+(P SMALL
+   =GOAL>
+       VALUE SMALL
+       VALUE SMALL
+ ==>
+   !OUTPUT! SMALL
+   -GOAL>
+)
+Parameters for production SMALL:
+ :UTILITY -1.534
+ :U  0.000
+(P MEDIUM
+   =GOAL>
+       VALUE [MEDIUM, SMALL, -0.5]
+       VALUE SMALL
+ ==>
+   !OUTPUT! SMALL
+   -GOAL>
+)
+Parameters for production MEDIUM:
+ :UTILITY  3.296
+ :U  0.000
+     0.000   PROCEDURAL             PRODUCTION-SELECTED MEDIUM
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED MEDIUM
+SMALL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   ------                 Stopped because no events left to process

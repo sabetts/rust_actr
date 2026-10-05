@@ -1,0 +1,3 @@
+(set-similarities 
+ (first second -0.5)
+ (second third -0.5))

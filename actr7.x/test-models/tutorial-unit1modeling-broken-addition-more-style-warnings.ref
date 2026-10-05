@@ -1,0 +1,2 @@
+#|Warning: Productions test the ARG1 slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the ARG2 slot in the GOAL buffer which is not requested or modified in any productions. |#

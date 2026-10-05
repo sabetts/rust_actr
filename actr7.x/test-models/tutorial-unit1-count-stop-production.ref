@@ -1,0 +1,12 @@
+(p stop
+   =goal>
+      ISA         count-from
+      count       =num
+      end         =num
+   =retrieval>
+      ISA         number
+      number      =num
+ ==>
+   -goal>
+   !output!       (=num)
+   )

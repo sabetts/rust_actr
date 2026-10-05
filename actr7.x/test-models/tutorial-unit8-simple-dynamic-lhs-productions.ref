@@ -1,0 +1,20 @@
+  (p start                           (p retrieve-first-step
+     =goal>                             =goal>
+       isa      fact                      isa     fact
+       context  =context                  context =slot
+       =context =x                        data    =x
+     ?imaginal>                         =imaginal>
+       state    free                      isa     result
+       buffer   empty                     data1   =x
+    ==>                                 =retrieval>
+     =goal>                               isa     step
+       context  destination               =slot   =target
+     +imaginal>                           step    first
+       isa      result                 ==>
+       data1    =x                      =goal>
+     +retrieval>                          data    11
+       isa      step                    =imaginal>
+       step     first)                    =target =x
+                                        +retrieval>
+                                          isa     step
+                                          step    second)

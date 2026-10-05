@@ -1,0 +1,11 @@
+install pyinstaller: pip3 install pyinstaller
+
+in the environment directory run: pyinstaller --onefile envstarter.py
+
+move the dist/envstarter application up to environment and name
+it appropriately
+
+make sure the pstarter.tcl file is in gui
+
+Creates a slightly larger executable, but on the Mac it seems
+more stable than the current Tcl/Tk app that doesn't work everywhere.

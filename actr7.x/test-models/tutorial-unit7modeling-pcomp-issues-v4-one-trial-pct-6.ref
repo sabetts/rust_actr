@@ -1,0 +1,25 @@
+     0.537   PROCEDURAL             PRODUCTION-FIRED ENCODE-NUM-2
+Production Compilation process started for ENCODE-NUM-2
+  Production ATTEND-NUM-2 and ENCODE-NUM-2 are being composed.
+  New production:
+
+(P PRODUCTION1
+  "ATTEND-NUM-2 & ENCODE-NUM-2 - ZERO"
+   =GOAL>
+       STATE ATTEND-NUM-2
+   =IMAGINAL>
+   =VISUAL>
+       VALUE "0"
+ ==>
+   =IMAGINAL>
+       NUM2 ZERO-0
+   =GOAL>
+       STATE RETRIEVE-PAST-TRIAL
+)
+Parameters for production PRODUCTION1:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to ENCODE-NUM-2.

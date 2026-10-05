@@ -1,0 +1,11 @@
+(P terminate-addition
+   =goal>
+      ISA         add
+      count       =num
+      arg2        =num2
+      summ         =answer
+  ==>
+   =goal>
+      ISA         add
+      count       nil
+)

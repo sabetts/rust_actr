@@ -1,0 +1,13 @@
+(p start
+   =goal>
+      ISA         count-from
+      start       =num1
+      count       nil
+ ==>
+   =goal>
+      ISA         count-from
+      count       =num1
+   +retrieval>
+      ISA         number
+      number      =num1
+   )

@@ -1,0 +1,4 @@
+#|Warning: No production defined for (INITIALIZE-ADDITION =GOAL> ISA ADD ARG1 =NUM1 ARG2 =NUM2 SUM NIL ==> =GOAL ISA ADD SUM =NUM1 COUNT ZERO +RETRIEVAL> ISA NUMBER NUMBER =NUM1). |#
+#|Warning: First item on RHS is not a valid command |#
+#|Warning: --- end of warnings for undefined production INITIALIZE-ADDITION --- |#
+#|Warning: Productions test the ARG2 slot in the GOAL buffer which is not requested or modified in any productions. |#

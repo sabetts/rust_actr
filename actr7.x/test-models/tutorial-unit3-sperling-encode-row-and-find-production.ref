@@ -1,0 +1,18 @@
+(p encode-row-and-find
+   =goal>
+     isa       read-letters
+     location  =pos
+     upper-y   =uy
+     lower-y   =ly
+   =visual>
+==>
+   =visual>
+     status    =pos
+   -visual>
+   =goal>
+     location  nil
+     step      attending
+   +visual-location>
+     :attended nil
+   > screen-y  =uy 
+   < screen-y  =ly)

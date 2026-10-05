@@ -1,0 +1,3 @@
+  (spp encode-feedback-win :reward 18)
+  (spp encode-feedback-lose :reward 12)
+  (spp encode-feedback-draw :reward 15)

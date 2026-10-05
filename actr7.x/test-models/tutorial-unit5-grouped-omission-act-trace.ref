@@ -1,0 +1,18 @@
+Computing activation for chunk ITEM9
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot GROUP
+  Requested: = GROUP3  Chunk's slot value: GROUP3
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot POSITION
+  Requested: = THIRD  Chunk's slot value: THIRD
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.5353896
+Adding permanent noise 0.0
+Chunk ITEM9 has an activation of: -0.5353896
+

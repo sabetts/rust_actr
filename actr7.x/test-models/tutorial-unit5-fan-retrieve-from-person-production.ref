@@ -1,0 +1,13 @@
+  (P retrieve-from-person
+     =imaginal>
+        ISA         comprehend-sentence
+        arg1        =person
+        arg2        =location
+     ?retrieval>
+        state       free
+        buffer      empty 
+     ==>
+     =imaginal>
+     +retrieval>
+        ISA         comprehend-sentence
+        arg1        =person)

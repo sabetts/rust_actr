@@ -1,0 +1,9 @@
+    29.981   PROCEDURAL             PRODUCTION-FIRED P4
+    29.981   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    29.981   DECLARATIVE            start-retrieval
+    29.981   PROCEDURAL             CONFLICT-RESOLUTION
+    30.000   ------                 Stopped because time limit reached
+
+Events in the queue:
+   261.522   DECLARATIVE            RETRIEVED-CHUNK F1
+   261.522   PROCEDURAL             CONFLICT-RESOLUTION

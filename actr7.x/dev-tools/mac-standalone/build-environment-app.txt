@@ -1,0 +1,30 @@
+Download a tclkit
+ Currently used tclkit-8.6.7 downloaded from web.archive.org :: https://www.zolli.fr/tclkit-darwin.php
+
+Another place to get them (though slightly out of date relative to that one surprisingly):
+
+http://tclkits.rkeene.org/fossil/wiki/Downloads
+
+ Create a copy named tclkit
+
+
+Download the sdx.kit file
+ Available from: https://equi4.com/pub/sk/
+
+Put the start-environment-osx.tcl file into same directory as those
+
+Run this (using the original name of the tclkit downloaded):
+
+./tclkit sdx.kit qwrap start-environment-osx.tcl -runtime tclkit-8.6.7
+
+
+Use the generated start-environment app.
+
+
+Some additional info at:
+
+http://anoved.net/2007/12/minimal-tcltk-mac-application-packages/
+
+And
+
+https://equi4.com/starkit/started.html

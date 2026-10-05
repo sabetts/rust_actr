@@ -1,0 +1,19 @@
+(P PRODUCTION29
+  "RETRIEVED-A-WIN & RESPOND - RESPONSE-3"
+   =GOAL>
+       STATE PROCESS-PAST-TRIAL
+   =IMAGINAL>
+   =RETRIEVAL>
+       RESPONSE "f"
+       RESULT WIN
+   ?MANUAL>
+       STATE FREE
+ ==>
+   =IMAGINAL>
+       RESPONSE "f"
+   =GOAL>
+       STATE DETECT-FEEDBACK
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY "f"
+)

@@ -1,0 +1,10 @@
+>>> actr.sdp('old-context')
+Declarative parameters for chunk OLD-CONTEXT:
+ :Activation  0.190
+ :Permanent-Noise  0.000
+ :Base-Level -0.270
+ :Creation-Time 0.000
+ :Reference-Count  2
+ :Source-Spread  0.000
+ :Sjis ((OLD-CONTEXT 4.0) (ONE 1.6974149) (TWO 2.2082405) (ADD 2.6137056) (G1 3.3068528))
+ :Similarities ((OLD-CONTEXT 0.0))

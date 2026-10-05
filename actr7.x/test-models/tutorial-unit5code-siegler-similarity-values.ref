@@ -1,0 +1,6 @@
+(Set-similarities
+  (zero one -0.1) (one two -0.1) (two three -0.1) (three four -0.1) (four five -0.1)
+  (zero two -0.2)(one three -0.2)(two four -0.2)(three five -0.2)
+  (zero three -0.3)(one four -0.3) (two five -0.3)
+  (zero four -0.4)(one five -0.4)
+  (zero five -0.5))

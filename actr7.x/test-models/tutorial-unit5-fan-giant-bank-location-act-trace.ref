@@ -1,0 +1,36 @@
+     0.585   DECLARATIVE            start-retrieval
+Chunk P6 matches
+Chunk P3 matches
+Computing activation for chunk P6
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK GIANT)
+    Spreading activation  0.25069386 from source BANK level  0.5 times Sji 0.5013877
+    Spreading activation  0.0 from source GIANT level  0.5 times Sji 0.0
+Total spreading activation: 0.25069386
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P6 has an activation of: 0.25069386
+Chunk P6 has the current best activation 0.25069386
+Computing activation for chunk P3
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK GIANT)
+    Spreading activation  0.25069386 from source BANK level  0.5 times Sji 0.5013877
+    Spreading activation  0.0 from source GIANT level  0.5 times Sji 0.0
+Total spreading activation: 0.25069386
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P3 has an activation of: 0.25069386
+Chunk P3 matches the current best activation 0.25069386
+Chunk P3 chosen among the chunks with activation 0.25069386
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     1.075   DECLARATIVE            RETRIEVED-CHUNK P3
+     1.075   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL P3
+     1.075   PROCEDURAL             CONFLICT-RESOLUTION

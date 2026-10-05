@@ -1,0 +1,17 @@
+(p respond-next
+   =imaginal>
+     isa         task
+     letter      =letter
+   =visual>
+     isa         visual-object
+     value       "next"
+   ?manual>
+     state       free
+ ==>
+   +retrieval>
+     isa         letter
+     previous    =letter
+   +manual>
+     cmd         press-key
+     key         =letter
+)

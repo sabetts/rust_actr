@@ -1,0 +1,225 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED G1
+Production Compilation process started for G1
+  No previous production to compose with.
+  Setting previous production to G1.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED G1
+Production Compilation process started for G1
+  Production G1 and G1 are being composed.
+  Result is production G1
+  No actions taken.
+  Setting previous production to G1.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED G2
+Production Compilation process started for G2
+  No previous production to compose with.
+  Setting previous production to G2.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED G2
+Production Compilation process started for G2
+  Production G2 and G2 are being composed.
+  Result is production G2
+  No actions taken.
+  Setting previous production to G2.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED I1
+Production Compilation process started for I1
+  No previous production to compose with.
+  Setting previous production to I1.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED I1
+Production Compilation process started for I1
+  Production I1 and I1 are being composed.
+  Result is production I1
+  No actions taken.
+  Setting previous production to I1.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED I2
+Production Compilation process started for I2
+  No previous production to compose with.
+  Setting previous production to I2.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED I2
+Production Compilation process started for I2
+  Production I2 and I2 are being composed.
+  Result is production I2
+  No actions taken.
+  Setting previous production to I2.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED P1
+Production Compilation process started for P1
+  No previous production to compose with.
+  Setting previous production to P1.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED P1
+Production Compilation process started for P1
+  Production P1 and P1 are being composed.
+  Result is production P1
+  No actions taken.
+  Setting previous production to P1.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED P2
+Production Compilation process started for P2
+  No previous production to compose with.
+  Setting previous production to P2.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED P2
+Production Compilation process started for P2
+  Buffer VISUAL-LOCATION prevents composition of these productions
+   because buffer modification actions in first production are not allowed.
+  Production P2 and P2 cannot be composed.
+  Setting previous production to P2.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED GD
+Production Compilation process started for GD
+  No previous production to compose with.
+  Setting previous production to GD.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED GD
+Production Compilation process started for GD
+  Production GD and GD are being composed.
+  Result is production GD
+  No actions taken.
+  Setting previous production to GD.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED ID
+Production Compilation process started for ID
+  No previous production to compose with.
+  Setting previous production to ID.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED ID
+Production Compilation process started for ID
+  Production ID and ID are being composed.
+  Result is production ID
+  No actions taken.
+  Setting previous production to ID.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED PD
+Production Compilation process started for PD
+  No previous production to compose with.
+  Setting previous production to PD.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED PD
+Production Compilation process started for PD
+  Production PD and PD are being composed.
+  Result is production PD
+  No actions taken.
+  Setting previous production to PD.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED GI
+Production Compilation process started for GI
+  No previous production to compose with.
+  Setting previous production to GI.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED GI
+Production Compilation process started for GI
+  Production GI and GI are being composed.
+  Result is production GI
+  No actions taken.
+  Setting previous production to GI.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED GP
+Production Compilation process started for GP
+  No previous production to compose with.
+  Setting previous production to GP.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED GP
+Production Compilation process started for GP
+  Production GP and GP are being composed.
+  Result is production GP
+  No actions taken.
+  Setting previous production to GP.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED IG
+Production Compilation process started for IG
+  No previous production to compose with.
+  Setting previous production to IG.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED IG
+Production Compilation process started for IG
+  Production IG and IG are being composed.
+  Result is production IG
+  No actions taken.
+  Setting previous production to IG.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED IP
+Production Compilation process started for IP
+  No previous production to compose with.
+  Setting previous production to IP.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED IP
+Production Compilation process started for IP
+  Production IP and IP are being composed.
+  Result is production IP
+  No actions taken.
+  Setting previous production to IP.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED PG
+Production Compilation process started for PG
+  No previous production to compose with.
+  Setting previous production to PG.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED PG
+Production Compilation process started for PG
+  Production PG and PG are being composed.
+  Result is production PG
+  No actions taken.
+  Setting previous production to PG.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL X NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED PI
+Production Compilation process started for PI
+  No previous production to compose with.
+  Setting previous production to PI.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED PI
+Production Compilation process started for PI
+  Production PI and PI are being composed.
+  Result is production PI
+  No actions taken.
+  Setting previous production to PI.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached

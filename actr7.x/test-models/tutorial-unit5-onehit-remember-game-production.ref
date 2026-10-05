@@ -1,0 +1,17 @@
+  (p remember-game
+     =goal>
+       isa game-state
+       state retrieving
+     =retrieval>
+       isa learned-info
+       action =act
+     ?manual>
+       state free
+    ==>
+     =goal>
+       state nil
+     +manual>
+       cmd press-key
+       key =act
+     
+     @retrieval>)

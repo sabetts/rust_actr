@@ -1,0 +1,65 @@
+    12.309   PROCEDURAL             PRODUCTION-FIRED P2
+    12.309   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    12.309   DECLARATIVE            start-retrieval
+Computing activation for chunk V1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references ()
+  creation time: -1500.000 decay: 0.5  Optimized-learning: T
+base-level value: -2.9675493
+Total base-level: -2.9675493
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot SIMPLE-VALUE-CHUNK
+  Requested: = T  Chunk's slot value: T
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.08887799
+Adding permanent noise 0.0
+Chunk V1 has an activation of: -2.8786714
+Chunk V1 has the current best activation -2.8786714
+Computing activation for chunk V2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 2 references ()
+  creation time: -1500.000 decay: 0.5  Optimized-learning: T
+base-level value: -2.2744021
+Total base-level: -2.2744021
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot SIMPLE-VALUE-CHUNK
+  Requested: = T  Chunk's slot value: T
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.07606379
+Adding permanent noise 0.0
+Chunk V2 has an activation of: -2.1983383
+Chunk V2 is now the current best with activation -2.1983383
+Computing activation for chunk V3
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references ()
+  creation time: -1500.000 decay: 0.5  Optimized-learning: T
+base-level value: -2.9675493
+Total base-level: -2.9675493
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot SIMPLE-VALUE-CHUNK
+  Requested: = T  Chunk's slot value: T
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.026406968
+Adding permanent noise 0.0
+Chunk V3 has an activation of: -2.9939563
+Chunk V2 with activation -2.1983383 is the best
+    12.309   PROCEDURAL             CONFLICT-RESOLUTION
+    19.517   DECLARATIVE            RETRIEVED-CHUNK V2
+    19.517   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL V2
+    19.517   PROCEDURAL             CONFLICT-RESOLUTION
+    19.517   ------                 Stopped because time limit reached

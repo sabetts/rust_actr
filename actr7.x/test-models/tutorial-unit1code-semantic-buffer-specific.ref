@@ -1,0 +1,9 @@
+? (buffer-chunk retrieval goal)
+RETRIEVAL: NIL 
+GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   OBJECT  CANARY
+   CATEGORY  BIRD
+   JUDGMENT  YES
+
+(NIL GOAL-CHUNK0)

@@ -1,0 +1,18 @@
+Build the sources on the Linux box and send the standalone to the server.
+
+Run the build script to do "everything":
+
+it requires the version # and the full path to sbcl (unless it's on the path) like this:
+
+./build.sh 7.x sbcl
+
+- It'll download the source zip from the server
+- create a directory based on the current subversion number
+- copy the default items into there
+- build the applications
+- copy all the ACT-R items in
+- bundle all that into a .zip file 
+
+Then, after testing it use the send script to send it to the server.
+
+./send.sh 7.x

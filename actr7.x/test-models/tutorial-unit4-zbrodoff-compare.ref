@@ -1,0 +1,11 @@
+? (zbrodoff-compare 10)
+
+>>> zbrodoff.compare(10)
+
+CORRELATION:  0.288
+MEAN DEVIATION:  1.540
+
+              2 (64)      3 (64)      4 (64)
+Block  1  2.406 (64)  3.045 (64)  3.643 (64)
+Block  2  2.395 (64)  3.043 (64)  3.658 (64)
+Block  3  2.392 (64)  3.047 (64)  3.643 (64)

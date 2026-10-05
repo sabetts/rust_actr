@@ -1,0 +1,28 @@
+? (spp force-over force-under decide-over decide-under)
+
+>>> actr.spp('force-over', 'force-under', 'decide-over', 'decide-under')
+
+Parameters for production FORCE-OVER:
+ :utility    NIL
+ :u  10.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production FORCE-UNDER:
+ :utility    NIL
+ :u  10.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production DECIDE-OVER:
+ :utility    NIL
+ :u  13.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production DECIDE-UNDER:
+ :utility    NIL
+ :u  13.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL

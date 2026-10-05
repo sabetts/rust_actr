@@ -1,0 +1,12 @@
+(p find-letter
+   =visual-location>
+   ?visual>
+     state       free
+   ?imaginal>
+     buffer      empty
+ ==>
+   +visual>
+     cmd         move-attention
+     screen-pos  =visual-location
+   +imaginal>
+   )

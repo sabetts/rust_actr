@@ -1,0 +1,20 @@
+? (sperling-experiment 100)
+CORRELATION:  0.996
+MEAN DEVIATION:  0.139
+
+Condition    Current Participant   Original Experiment
+ 0.00 sec.            3.09                  3.03
+ 0.15 sec.            2.47                  2.40
+ 0.30 sec.            2.11                  2.03
+ 1.00 sec.            1.75                  1.50
+
+
+>>> sperling.experiment(100)
+CORRELATION:  0.993
+MEAN DEVIATION:  0.208
+
+Condition    Current Participant   Original Experiment
+ 0.00 sec.            3.25                  3.03
+ 0.15 sec.            2.57                  2.40
+ 0.30 sec.            2.14                  2.03
+ 1.00 sec.            1.79                  1.50

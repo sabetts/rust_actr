@@ -1,0 +1,182 @@
+    27.155   PROCEDURAL             PRODUCTION-FIRED P6
+    27.155   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.155   DECLARATIVE            start-retrieval
+Computing activation for chunk 1-1=0
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.95763344
+Total base-level: -0.95763344
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.0 from source ADD level  0.33333334 times Sji 0.0
+    Spreading activation  0.0 from source TWO level  0.33333334 times Sji 0.0
+    Spreading activation  0.13018736 from source ONE level  0.33333334 times Sji 0.39056206
+Total spreading activation: 0.13018736
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: ZERO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.36828277
+Adding permanent noise 0.0
+Chunk 1-1=0 has an activation of: -0.45916334
+Chunk 1-1=0 has the current best activation -0.45916334
+Computing activation for chunk 2-1=1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.95763344
+Total base-level: -0.95763344
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.0 from source ADD level  0.33333334 times Sji 0.0
+    Spreading activation  0.069413505 from source TWO level  0.33333334 times Sji 0.20824051
+    Spreading activation  0.13018736 from source ONE level  0.33333334 times Sji 0.39056206
+Total spreading activation: 0.19960088
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.17789373
+Adding permanent noise 0.0
+Chunk 2-1=1 has an activation of: -0.9359263
+Computing activation for chunk 3-2=1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.95763344
+Total base-level: -0.95763344
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.0 from source ADD level  0.33333334 times Sji 0.0
+    Spreading activation  0.069413505 from source TWO level  0.33333334 times Sji 0.20824051
+#|Warning: Calculated Sji value between ONE and 3-2=1 is negative, but using a value of 0. |#
+    Spreading activation  0.0 from source ONE level  0.33333334 times Sji 0.0
+Total spreading activation: 0.069413505
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: THREE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.33106902
+Adding permanent noise 0.0
+Chunk 3-2=1 has an activation of: -0.55715096
+Computing activation for chunk 1+1=2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.95763344
+Total base-level: -0.95763344
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.20456855 from source ADD level  0.33333334 times Sji 0.61370564
+    Spreading activation  0.069413505 from source TWO level  0.33333334 times Sji 0.20824051
+    Spreading activation  0.13018736 from source ONE level  0.33333334 times Sji 0.39056206
+Total spreading activation: 0.4041694
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.38912883
+Adding permanent noise 0.0
+Chunk 1+1=2 has an activation of: -0.94259286
+Computing activation for chunk 1+2=3
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.95763344
+Total base-level: -0.95763344
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.20456855 from source ADD level  0.33333334 times Sji 0.61370564
+    Spreading activation  0.069413505 from source TWO level  0.33333334 times Sji 0.20824051
+#|Warning: Calculated Sji value between ONE and 1+2=3 is negative, but using a value of 0. |#
+    Spreading activation  0.0 from source ONE level  0.33333334 times Sji 0.0
+Total spreading activation: 0.27398205
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: THREE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0474016
+Adding permanent noise 0.0
+Chunk 1+2=3 has an activation of: -0.6362498
+Chunk 1-1=0 with activation -0.45916334 is the best
+    27.155   PROCEDURAL             CONFLICT-RESOLUTION
+    28.421   DECLARATIVE            RETRIEVED-CHUNK 1-1=0
+    28.421   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL 1-1=0
+    28.421   PROCEDURAL             CONFLICT-RESOLUTION
+    28.422   ------                 Stopped because time limit reached

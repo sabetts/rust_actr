@@ -1,0 +1,318 @@
+
+Times are in seconds
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  new-sound
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   AUDIO                  new-sound
+     0.200   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED STUFFED
+AUDIO-EVENT2-0
+   ONSET  0.0
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     0.250   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.250   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   AUDIO                  new-sound
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   PROCEDURAL             PRODUCTION-FIRED UNSTUFFED
+     0.750   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.750   AUDIO                  FIND-SOUND
+     0.750   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0
+     0.750   ------                 BREAK-EVENT Stopped by !stop!
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    NIL  T           SPEECH         "first"           EXTERNAL           0.0   ongoing  SOUND0                              
+AUDIO-EVENT3    NIL  T           WORD           "other"           EXTERNAL           0.1   ongoing  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           0.2       1.0  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           0.5       0.6  TONE0                               
+
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     0.800   PROCEDURAL             PRODUCTION-FIRED RESULT
+AUDIO-EVENT0-0
+   ONSET  0.5
+   OFFSET  0.6
+   DURATION  0.1
+   PITCH  LOW
+   KIND  TONE
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT0
+
+     0.800   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.800   PROCEDURAL             CONFLICT-RESOLUTION
+     0.850   PROCEDURAL             PRODUCTION-FIRED FIND-AN-ONGOING
+     0.850   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.850   AUDIO                  FIND-SOUND
+     0.850   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2
+     0.850   PROCEDURAL             CONFLICT-RESOLUTION
+     0.900   PROCEDURAL             PRODUCTION-FIRED BEFORE-ONGOING-STOPPED
+AUDIO-EVENT2-1
+   ONSET  0.0
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     0.900   ------                 BREAK-EVENT Stopped by !stop!
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    NIL  T           SPEECH         "first"           EXTERNAL           0.0   ongoing  SOUND0                              
+AUDIO-EVENT3    NIL  T           WORD           "other"           EXTERNAL           0.1   ongoing  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           0.2       1.0  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           0.5       0.6  TONE0                               
+
+     0.900   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.900   PROCEDURAL             CONFLICT-RESOLUTION
+     0.950   PROCEDURAL             PRODUCTION-FIRED AFTER-ONGOING-STOPPED
+AUDIO-EVENT2-1
+   ONSET  0.0
+   OFFSET  0.9
+   DURATION  0.9
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     0.950   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.950   PROCEDURAL             CLEAR-BUFFER AURAL
+     0.950   AUDIO                  ATTEND-SOUND AUDIO-EVENT2-1
+     0.950   PROCEDURAL             CONFLICT-RESOLUTION
+     1.450   AUDIO                  SET-BUFFER-CHUNK AURAL SOUND0
+     1.450   PROCEDURAL             CONFLICT-RESOLUTION
+     1.500   PROCEDURAL             PRODUCTION-FIRED FOUND-STOPPED-ONGOING
+SOUND0-0
+   KIND  SPEECH
+   CONTENT  "first"
+   EVENT  AUDIO-EVENT2
+
+AUDIO-EVENT2
+   ONSET  0.0
+   OFFSET  0.9
+   DURATION  0.9
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     1.500   PROCEDURAL             CLEAR-BUFFER AURAL
+     1.500   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     1.500   AUDIO                  FIND-SOUND
+     1.500   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT3
+     1.500   PROCEDURAL             CONFLICT-RESOLUTION
+     1.550   PROCEDURAL             PRODUCTION-FIRED ATTEND-OTHER
+AUDIO-EVENT3-0
+   ONSET  0.1
+   PITCH  MIDDLE
+   KIND  WORD
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT3
+   ONLY-EVT  "evt"
+   BOTH  10
+
+     1.550   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     1.550   PROCEDURAL             CLEAR-BUFFER AURAL
+     1.550   AUDIO                  ATTEND-SOUND AUDIO-EVENT3-0
+     1.550   ------                 BREAK-EVENT Stopped by !stop!
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    T    T           SPEECH         "first"           EXTERNAL           0.0       0.9  SOUND0                              
+AUDIO-EVENT3    REQ  T           WORD           "other"           EXTERNAL           0.1   ongoing  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           0.2       1.0  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           0.5       0.6  TONE0                               
+
+     1.550   PROCEDURAL             CONFLICT-RESOLUTION
+     1.600   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  SET-BUFFER-CHUNK AURAL SOUND1
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   PROCEDURAL             PRODUCTION-FIRED ONGOING-STOPED-BEFORE-AURAL-COMPLETION
+SOUND1-0
+   KIND  WORD
+   CONTENT  "other"
+   EVENT  AUDIO-EVENT3
+   BOTH  10
+   ONLY-SOUND  "snd"
+
+AUDIO-EVENT3
+   ONSET  0.1
+   PITCH  MIDDLE
+   KIND  WORD
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT3
+   ONLY-EVT  "evt"
+   BOTH  10
+
+     2.100   PROCEDURAL             CLEAR-BUFFER AURAL
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   ------                 Stopped because no events left to process
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    T    T           SPEECH         "first"           EXTERNAL           0.0       0.9  SOUND0                              
+AUDIO-EVENT3    T    T           WORD           "other"           EXTERNAL           0.1       1.6  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           0.2       1.0  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           0.5       0.6  TONE0                               
+
+
+Times are in milliseconds
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  new-sound
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   AUDIO                  new-sound
+     0.200   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED STUFFED
+AUDIO-EVENT2-0
+   ONSET  0
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     0.250   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.250   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   AUDIO                  new-sound
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   PROCEDURAL             PRODUCTION-FIRED UNSTUFFED
+     0.750   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.750   AUDIO                  FIND-SOUND
+     0.750   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0
+     0.750   ------                 BREAK-EVENT Stopped by !stop!
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    NIL  T           SPEECH         "first"           EXTERNAL             0   ongoing  SOUND0                              
+AUDIO-EVENT3    NIL  T           WORD           "other"           EXTERNAL           100   ongoing  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           200      1000  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           500       600  TONE0                               
+
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     0.800   PROCEDURAL             PRODUCTION-FIRED RESULT
+AUDIO-EVENT0-0
+   ONSET  500
+   OFFSET  600
+   DURATION  100
+   PITCH  LOW
+   KIND  TONE
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT0
+
+     0.800   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.800   PROCEDURAL             CONFLICT-RESOLUTION
+     0.850   PROCEDURAL             PRODUCTION-FIRED FIND-AN-ONGOING
+     0.850   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.850   AUDIO                  FIND-SOUND
+     0.850   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2
+     0.850   PROCEDURAL             CONFLICT-RESOLUTION
+     0.900   PROCEDURAL             PRODUCTION-FIRED BEFORE-ONGOING-STOPPED
+AUDIO-EVENT2-1
+   ONSET  0
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     0.900   ------                 BREAK-EVENT Stopped by !stop!
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    NIL  T           SPEECH         "first"           EXTERNAL             0   ongoing  SOUND0                              
+AUDIO-EVENT3    NIL  T           WORD           "other"           EXTERNAL           100   ongoing  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           200      1000  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           500       600  TONE0                               
+
+     0.900   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.900   PROCEDURAL             CONFLICT-RESOLUTION
+     0.950   PROCEDURAL             PRODUCTION-FIRED AFTER-ONGOING-STOPPED
+AUDIO-EVENT2-1
+   ONSET  0
+   OFFSET  900
+   DURATION  900
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     0.950   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     0.950   PROCEDURAL             CLEAR-BUFFER AURAL
+     0.950   AUDIO                  ATTEND-SOUND AUDIO-EVENT2-1
+     0.950   PROCEDURAL             CONFLICT-RESOLUTION
+     1.450   AUDIO                  SET-BUFFER-CHUNK AURAL SOUND0
+     1.450   PROCEDURAL             CONFLICT-RESOLUTION
+     1.500   PROCEDURAL             PRODUCTION-FIRED FOUND-STOPPED-ONGOING
+SOUND0-0
+   KIND  SPEECH
+   CONTENT  "first"
+   EVENT  AUDIO-EVENT2
+
+AUDIO-EVENT2
+   ONSET  0
+   OFFSET  900
+   DURATION  900
+   PITCH  MIDDLE
+   KIND  SPEECH
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT2
+
+     1.500   PROCEDURAL             CLEAR-BUFFER AURAL
+     1.500   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     1.500   AUDIO                  FIND-SOUND
+     1.500   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT3
+     1.500   PROCEDURAL             CONFLICT-RESOLUTION
+     1.550   PROCEDURAL             PRODUCTION-FIRED ATTEND-OTHER
+AUDIO-EVENT3-0
+   ONSET  100
+   PITCH  MIDDLE
+   KIND  WORD
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT3
+   ONLY-EVT  "evt"
+   BOTH  10
+
+     1.550   PROCEDURAL             CLEAR-BUFFER AURAL-LOCATION
+     1.550   PROCEDURAL             CLEAR-BUFFER AURAL
+     1.550   AUDIO                  ATTEND-SOUND AUDIO-EVENT3-0
+     1.550   ------                 BREAK-EVENT Stopped by !stop!
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    T    T           SPEECH         "first"           EXTERNAL             0       900  SOUND0                              
+AUDIO-EVENT3    REQ  T           WORD           "other"           EXTERNAL           100   ongoing  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           200      1000  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           500       600  TONE0                               
+
+     1.550   PROCEDURAL             CONFLICT-RESOLUTION
+     1.600   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  SET-BUFFER-CHUNK AURAL SOUND1
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   PROCEDURAL             PRODUCTION-FIRED ONGOING-STOPED-BEFORE-AURAL-COMPLETION
+SOUND1-0
+   KIND  WORD
+   CONTENT  "other"
+   EVENT  AUDIO-EVENT3
+   BOTH  10
+   ONLY-SOUND  "snd"
+
+AUDIO-EVENT3
+   ONSET  100
+   PITCH  MIDDLE
+   KIND  WORD
+   LOCATION  EXTERNAL
+   ID  AUDIO-EVENT3
+   ONLY-EVT  "evt"
+   BOTH  10
+
+     2.100   PROCEDURAL             CLEAR-BUFFER AURAL
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   ------                 Stopped because no events left to process
+Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH
+--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----
+AUDIO-EVENT2    T    T           SPEECH         "first"           EXTERNAL             0       900  SOUND0                              
+AUDIO-EVENT3    T    T           WORD           "other"           EXTERNAL           100      1600  SOUND1    snd         evt       10  
+AUDIO-EVENT1    NIL  T           TONE           1000              EXTERNAL           200      1000  TONE1                               
+AUDIO-EVENT0    NIL  T           TONE           100               EXTERNAL           500       600  TONE0                               
+

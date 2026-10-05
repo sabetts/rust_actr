@@ -1,0 +1,822 @@
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     0.000   ------                 Stopped because event limit reached
+Name               Att  Loc             KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE         TEXT  LINE  END2-Y  END2-X  END1-Y  END1-X  OVAL  
+-----------------  ---  --------------  ----  -----  -----  -----  ------  -----------  ----  ----  ------  ------  ------  ------  ----
+VISUAL-LOCATION0   NEW  (328 332 1080)  TEXT  BLUE   14     "A"    20      0.78999996   T                                                 
+VISUAL-LOCATION3   NEW  (335 410 1080)  OVAL  BLUE   30     "A"    20      1.6899999                                                T     
+VISUAL-LOCATION4   NEW  (335 410 1080)  TEXT  BLACK  7      "A"    10      0.19999999   T                                                 
+VISUAL-LOCATION9   NEW  (337 470 1080)  LINE  BLUE   35     -60    20      1.9699999          T     480     355     460     320           
+VISUAL-LOCATION1   NEW  (365 338 1080)  TEXT  RED    8      "B"    12      0.26999998   T                                                 
+VISUAL-LOCATION10  NEW  (377 465 1080)  LINE  RED    35     49     30      2.95               T     450     395     480     360           
+VISUAL-LOCATION5   NEW  (380 425 1080)  OVAL  RED    40     "B"    30      3.3799999                                                T     
+VISUAL-LOCATION6   NEW  (380 425 1080)  TEXT  BLACK  7      "B"    10      0.19999999   T                                                 
+VISUAL-LOCATION2   NEW  (403 354 1080)  TEXT  GREEN  5      "C"    7       0.099999994  T                                                 
+VISUAL-LOCATION11  NEW  (415 475 1080)  LINE  GREEN  30     72     10      0.84               T     480     400     470     430           
+VISUAL-LOCATION7   NEW  (425 440 1080)  OVAL  GREEN  50     "C"    40      5.6299996                                                T     
+VISUAL-LOCATION8   NEW  (425 440 1080)  TEXT  BLACK  7      "C"    10      0.19999999   T                                                 
+
+VISUAL-LOCATION0
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLUE
+   HEIGHT  20
+   WIDTH  14
+   SCREEN-X  328
+   SCREEN-Y  332
+   DISTANCE  1080
+   SIZE  0.78999996
+
+VISUAL-LOCATION3
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  BLUE
+   HEIGHT  20
+   WIDTH  30
+   SCREEN-X  335
+   SCREEN-Y  410
+   DISTANCE  1080
+   SIZE  1.6899999
+
+VISUAL-LOCATION4
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  335
+   SCREEN-Y  410
+   DISTANCE  1080
+   SIZE  0.19999999
+
+VISUAL-LOCATION9
+   KIND  LINE
+   VALUE  -60
+   COLOR  BLUE
+   HEIGHT  20
+   WIDTH  35
+   SCREEN-X  337
+   SCREEN-Y  470
+   DISTANCE  1080
+   SIZE  1.9699999
+
+VISUAL-LOCATION1
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  RED
+   HEIGHT  12
+   WIDTH  8
+   SCREEN-X  365
+   SCREEN-Y  338
+   DISTANCE  1080
+   SIZE  0.26999998
+
+VISUAL-LOCATION10
+   KIND  LINE
+   VALUE  49
+   COLOR  RED
+   HEIGHT  30
+   WIDTH  35
+   SCREEN-X  377
+   SCREEN-Y  465
+   DISTANCE  1080
+   SIZE  2.95
+
+VISUAL-LOCATION5
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  RED
+   HEIGHT  30
+   WIDTH  40
+   SCREEN-X  380
+   SCREEN-Y  425
+   DISTANCE  1080
+   SIZE  3.3799999
+
+VISUAL-LOCATION6
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  380
+   SCREEN-Y  425
+   DISTANCE  1080
+   SIZE  0.19999999
+
+VISUAL-LOCATION2
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  GREEN
+   HEIGHT  7
+   WIDTH  5
+   SCREEN-X  403
+   SCREEN-Y  354
+   DISTANCE  1080
+   SIZE  0.099999994
+
+VISUAL-LOCATION11
+   KIND  LINE
+   VALUE  72
+   COLOR  GREEN
+   HEIGHT  10
+   WIDTH  30
+   SCREEN-X  415
+   SCREEN-Y  475
+   DISTANCE  1080
+   SIZE  0.84
+
+VISUAL-LOCATION7
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  GREEN
+   HEIGHT  40
+   WIDTH  50
+   SCREEN-X  425
+   SCREEN-Y  440
+   DISTANCE  1080
+   SIZE  5.6299996
+
+VISUAL-LOCATION8
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  425
+   SCREEN-Y  440
+   DISTANCE  1080
+   SIZE  0.19999999
+
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED START
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.050   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION3-0
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION3-0 NIL
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL OVAL0
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.558   PROCEDURAL             CONFLICT-RESOLUTION
+     0.608   PROCEDURAL             CONFLICT-RESOLUTION
+     0.658   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL0]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION3-0
+   VALUE  "A"
+   COLOR  BLUE
+   HEIGHT  20
+   WIDTH  30
+   OVAL  T
+
+     0.658   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.658   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.658   MOTOR                  CLICK-MOUSE
+     0.658   PROCEDURAL             CONFLICT-RESOLUTION
+     0.808   PROCEDURAL             CONFLICT-RESOLUTION
+     0.858   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B1
+     0.868   PROCEDURAL             CONFLICT-RESOLUTION
+     0.958   PROCEDURAL             CONFLICT-RESOLUTION
+     1.008   PROCEDURAL             PRODUCTION-FIRED NEXT
+     1.008   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.008   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.008   VISION                 Find-location
+     1.008   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION5
+     1.008   PROCEDURAL             CONFLICT-RESOLUTION
+     1.058   PROCEDURAL             PRODUCTION-FIRED START
+     1.058   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.058   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.058   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.058   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.058   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION5-0
+     1.058   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     1.058   PROCEDURAL             CONFLICT-RESOLUTION
+     1.143   VISION                 Encoding-complete VISUAL-LOCATION5-0 NIL
+     1.143   VISION                 SET-BUFFER-CHUNK VISUAL OVAL1
+     1.143   PROCEDURAL             CONFLICT-RESOLUTION
+     1.258   PROCEDURAL             CONFLICT-RESOLUTION
+     1.308   PROCEDURAL             CONFLICT-RESOLUTION
+     1.408   PROCEDURAL             CONFLICT-RESOLUTION
+     1.458   PROCEDURAL             CONFLICT-RESOLUTION
+     1.508   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL1]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION5-0
+   VALUE  "B"
+   COLOR  RED
+   HEIGHT  30
+   WIDTH  40
+   OVAL  T
+
+     1.508   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.508   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.508   MOTOR                  CLICK-MOUSE
+     1.508   PROCEDURAL             CONFLICT-RESOLUTION
+     1.658   PROCEDURAL             CONFLICT-RESOLUTION
+     1.708   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B2
+     1.718   PROCEDURAL             CONFLICT-RESOLUTION
+     1.808   PROCEDURAL             CONFLICT-RESOLUTION
+     1.858   PROCEDURAL             PRODUCTION-FIRED NEXT
+     1.858   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.858   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.858   VISION                 Find-location
+     1.858   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION7
+     1.858   PROCEDURAL             CONFLICT-RESOLUTION
+     1.908   PROCEDURAL             PRODUCTION-FIRED START
+     1.908   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     1.908   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.908   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.908   PROCEDURAL             CLEAR-BUFFER VISUAL
+     1.908   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION7-0
+     1.908   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     1.908   PROCEDURAL             CONFLICT-RESOLUTION
+     1.993   VISION                 Encoding-complete VISUAL-LOCATION7-0 NIL
+     1.993   VISION                 SET-BUFFER-CHUNK VISUAL OVAL2
+     1.993   PROCEDURAL             CONFLICT-RESOLUTION
+     2.108   PROCEDURAL             CONFLICT-RESOLUTION
+     2.158   PROCEDURAL             CONFLICT-RESOLUTION
+     2.258   PROCEDURAL             CONFLICT-RESOLUTION
+     2.308   PROCEDURAL             CONFLICT-RESOLUTION
+     2.358   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL2]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION7-0
+   VALUE  "C"
+   COLOR  GREEN
+   HEIGHT  40
+   WIDTH  50
+   OVAL  T
+
+     2.358   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.358   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.358   MOTOR                  CLICK-MOUSE
+     2.358   PROCEDURAL             CONFLICT-RESOLUTION
+     2.508   PROCEDURAL             CONFLICT-RESOLUTION
+     2.558   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B3
+     2.568   PROCEDURAL             CONFLICT-RESOLUTION
+     2.658   PROCEDURAL             CONFLICT-RESOLUTION
+     2.708   PROCEDURAL             PRODUCTION-FIRED NEXT
+     2.708   PROCEDURAL             CLEAR-BUFFER GOAL
+     2.708   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.708   VISION                 Find-location
+     2.708   VISION                 find-loc-failure
+     2.708   PROCEDURAL             CONFLICT-RESOLUTION
+     2.708   ------                 Stopped because no events left to process
+     2.708   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     2.708   ------                 Stopped because event limit reached
+Name               Att  Loc             KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        TEXT  OVAL  LINE  END2-Y  END2-X  END1-Y  END1-X  
+-----------------  ---  --------------  ----  -----  -----  -----  ------  ----------  ----  ----  ----  ------  ------  ------  ------
+VISUAL-LOCATION12  NEW  (322 320 1080)  TEXT  GRAY   12     "D"    17      0.57        T                                                 
+VISUAL-LOCATION9   NIL  (330 470 1080)  LINE  GRAY   30     56     20      1.6899999               T     460     345     480     315     
+VISUAL-LOCATION3   T    (333 417 1080)  OVAL  GRAY   35     "DDD"  25      2.46              T                                           
+VISUAL-LOCATION4   NIL  (333 417 1080)  TEXT  BLACK  21     "DDD"  10      0.59        T                                                 
+VISUAL-LOCATION1   NIL  (365 338 1080)  TEXT  RED    8      "B"    12      0.26999998  T                                                 
+VISUAL-LOCATION10  NIL  (377 465 1080)  LINE  RED    35     49     30      2.95                    T     450     395     480     360     
+VISUAL-LOCATION13  T    (380 425 1080)  OVAL  RED    40     "B"    30      3.3799999         T                                           
+VISUAL-LOCATION14  NEW  (380 425 1080)  TEXT  BLACK  7      "B"    10      0.19999999  T                                                 
+VISUAL-LOCATION2   NIL  (415 348 1080)  TEXT  BROWN  8      "E"    12      0.26999998  T                                                 
+VISUAL-LOCATION15  NEW  (425 477 1080)  LINE  BROWN  30     -50    25      2.11                    T     465     410     490     440     
+VISUAL-LOCATION7   T    (437 433 1080)  OVAL  BROWN  45     "E"    35      4.43              T                                           
+VISUAL-LOCATION8   NIL  (437 433 1080)  TEXT  BLACK  7      "E"    10      0.19999999  T                                                 
+
+VISUAL-LOCATION12
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  GRAY
+   HEIGHT  17
+   WIDTH  12
+   SCREEN-X  322
+   SCREEN-Y  320
+   DISTANCE  1080
+   SIZE  0.57
+
+VISUAL-LOCATION9
+   KIND  LINE
+   VALUE  56
+   COLOR  GRAY
+   HEIGHT  20
+   WIDTH  30
+   SCREEN-X  330
+   SCREEN-Y  470
+   DISTANCE  1080
+   SIZE  1.6899999
+
+VISUAL-LOCATION3
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  GRAY
+   HEIGHT  25
+   WIDTH  35
+   SCREEN-X  333
+   SCREEN-Y  417
+   DISTANCE  1080
+   SIZE  2.46
+
+VISUAL-LOCATION4
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  21
+   SCREEN-X  333
+   SCREEN-Y  417
+   DISTANCE  1080
+   SIZE  0.59
+
+VISUAL-LOCATION1
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  RED
+   HEIGHT  12
+   WIDTH  8
+   SCREEN-X  365
+   SCREEN-Y  338
+   DISTANCE  1080
+   SIZE  0.26999998
+
+VISUAL-LOCATION10
+   KIND  LINE
+   VALUE  49
+   COLOR  RED
+   HEIGHT  30
+   WIDTH  35
+   SCREEN-X  377
+   SCREEN-Y  465
+   DISTANCE  1080
+   SIZE  2.95
+
+VISUAL-LOCATION13
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  RED
+   HEIGHT  30
+   WIDTH  40
+   SCREEN-X  380
+   SCREEN-Y  425
+   DISTANCE  1080
+   SIZE  3.3799999
+
+VISUAL-LOCATION14
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  380
+   SCREEN-Y  425
+   DISTANCE  1080
+   SIZE  0.19999999
+
+VISUAL-LOCATION2
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BROWN
+   HEIGHT  12
+   WIDTH  8
+   SCREEN-X  415
+   SCREEN-Y  348
+   DISTANCE  1080
+   SIZE  0.26999998
+
+VISUAL-LOCATION15
+   KIND  LINE
+   VALUE  -50
+   COLOR  BROWN
+   HEIGHT  25
+   WIDTH  30
+   SCREEN-X  425
+   SCREEN-Y  477
+   DISTANCE  1080
+   SIZE  2.11
+
+VISUAL-LOCATION7
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  BROWN
+   HEIGHT  35
+   WIDTH  45
+   SCREEN-X  437
+   SCREEN-Y  433
+   DISTANCE  1080
+   SIZE  4.43
+
+VISUAL-LOCATION8
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  437
+   SCREEN-Y  433
+   DISTANCE  1080
+   SIZE  0.19999999
+
+     2.708   VISION                 visicon-update
+     2.708   PROCEDURAL             CONFLICT-RESOLUTION
+     2.793   VISION                 Encoding-complete VISUAL-LOCATION7-0 NIL
+     2.793   VISION                 No visual-object found
+     2.793   PROCEDURAL             CONFLICT-RESOLUTION
+     2.843   PROCEDURAL             PRODUCTION-FIRED START
+     2.843   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.843   PROCEDURAL             CLEAR-BUFFER GOAL
+     2.843   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.843   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.843   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION3-1
+     2.843   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     2.843   PROCEDURAL             CONFLICT-RESOLUTION
+     2.928   VISION                 Encoding-complete VISUAL-LOCATION3-1 NIL
+     2.928   VISION                 SET-BUFFER-CHUNK VISUAL OVAL3
+     2.928   PROCEDURAL             CONFLICT-RESOLUTION
+     3.043   PROCEDURAL             CONFLICT-RESOLUTION
+     3.093   PROCEDURAL             CONFLICT-RESOLUTION
+     3.257   PROCEDURAL             CONFLICT-RESOLUTION
+     3.307   PROCEDURAL             CONFLICT-RESOLUTION
+     3.357   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL3]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION3-1
+   VALUE  "DDD"
+   COLOR  GRAY
+   HEIGHT  25
+   WIDTH  35
+   OVAL  T
+
+     3.357   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.357   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.357   MOTOR                  CLICK-MOUSE
+     3.357   PROCEDURAL             CONFLICT-RESOLUTION
+     3.507   PROCEDURAL             CONFLICT-RESOLUTION
+     3.557   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B1m1
+     3.567   PROCEDURAL             CONFLICT-RESOLUTION
+     3.657   PROCEDURAL             CONFLICT-RESOLUTION
+     3.707   PROCEDURAL             PRODUCTION-FIRED NEXT
+     3.707   PROCEDURAL             CLEAR-BUFFER GOAL
+     3.707   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.707   VISION                 Find-location
+     3.707   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     3.707   PROCEDURAL             CONFLICT-RESOLUTION
+     3.757   PROCEDURAL             PRODUCTION-FIRED START
+     3.757   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     3.757   PROCEDURAL             CLEAR-BUFFER GOAL
+     3.757   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.757   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.757   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION13-0
+     3.757   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     3.757   PROCEDURAL             CONFLICT-RESOLUTION
+     3.842   VISION                 Encoding-complete VISUAL-LOCATION13-0 NIL
+     3.842   VISION                 SET-BUFFER-CHUNK VISUAL OVAL4
+     3.842   PROCEDURAL             CONFLICT-RESOLUTION
+     3.957   PROCEDURAL             CONFLICT-RESOLUTION
+     4.007   PROCEDURAL             CONFLICT-RESOLUTION
+     4.107   PROCEDURAL             CONFLICT-RESOLUTION
+     4.157   PROCEDURAL             CONFLICT-RESOLUTION
+     4.207   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL4]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION5-0
+   VALUE  "B"
+   COLOR  RED
+   HEIGHT  30
+   WIDTH  40
+   OVAL  T
+
+     4.207   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.207   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.207   MOTOR                  CLICK-MOUSE
+     4.207   PROCEDURAL             CONFLICT-RESOLUTION
+     4.357   PROCEDURAL             CONFLICT-RESOLUTION
+     4.407   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B2
+     4.417   PROCEDURAL             CONFLICT-RESOLUTION
+     4.507   PROCEDURAL             CONFLICT-RESOLUTION
+     4.557   PROCEDURAL             PRODUCTION-FIRED NEXT
+     4.557   PROCEDURAL             CLEAR-BUFFER GOAL
+     4.557   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.557   VISION                 Find-location
+     4.557   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION7
+     4.557   PROCEDURAL             CONFLICT-RESOLUTION
+     4.607   PROCEDURAL             PRODUCTION-FIRED START
+     4.607   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     4.607   PROCEDURAL             CLEAR-BUFFER GOAL
+     4.607   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.607   PROCEDURAL             CLEAR-BUFFER VISUAL
+     4.607   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION7-1
+     4.607   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     4.607   PROCEDURAL             CONFLICT-RESOLUTION
+     4.692   VISION                 Encoding-complete VISUAL-LOCATION7-1 NIL
+     4.692   VISION                 SET-BUFFER-CHUNK VISUAL OVAL5
+     4.692   PROCEDURAL             CONFLICT-RESOLUTION
+     4.807   PROCEDURAL             CONFLICT-RESOLUTION
+     4.857   PROCEDURAL             CONFLICT-RESOLUTION
+     4.957   PROCEDURAL             CONFLICT-RESOLUTION
+     5.007   PROCEDURAL             CONFLICT-RESOLUTION
+     5.057   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL5]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION7-1
+   VALUE  "E"
+   COLOR  BROWN
+   HEIGHT  35
+   WIDTH  45
+   OVAL  T
+
+     5.057   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.057   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.057   MOTOR                  CLICK-MOUSE
+     5.057   PROCEDURAL             CONFLICT-RESOLUTION
+     5.207   PROCEDURAL             CONFLICT-RESOLUTION
+     5.257   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B3m1
+     5.267   PROCEDURAL             CONFLICT-RESOLUTION
+     5.357   PROCEDURAL             CONFLICT-RESOLUTION
+     5.407   PROCEDURAL             PRODUCTION-FIRED NEXT
+     5.407   PROCEDURAL             CLEAR-BUFFER GOAL
+     5.407   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.407   VISION                 Find-location
+     5.407   VISION                 find-loc-failure
+     5.407   PROCEDURAL             CONFLICT-RESOLUTION
+     5.407   ------                 Stopped because no events left to process
+     5.407   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+     5.407   ------                 Stopped because event limit reached
+Name               Att  Loc             KIND  COLOR   WIDTH  VALUE  HEIGHT  SIZE        TEXT  OVAL  LINE  END2-Y  END2-X  END1-Y  END1-X  
+-----------------  ---  --------------  ----  ------  -----  -----  ------  ----------  ----  ----  ----  ------  ------  ------  ------
+VISUAL-LOCATION12  NIL  (322 320 1080)  TEXT  PINK    6      "F"    8       0.14        T                                                 
+VISUAL-LOCATION19  NEW  (330 470 1080)  LINE  GRAY    30     56     20      1.6899999               T     460     345     480     315     
+VISUAL-LOCATION3   T    (333 417 1080)  OVAL  GRAY    35     "DDD"  25      2.46              T                                           
+VISUAL-LOCATION4   NIL  (333 417 1080)  TEXT  BLACK   21     "DDD"  10      0.59        T                                                 
+VISUAL-LOCATION13  T    (370 443 1080)  OVAL  YELLOW  30     "F"    35      2.95              T                                           
+VISUAL-LOCATION14  NIL  (370 443 1080)  TEXT  BLACK   7      "F"    10      0.19999999  T                                                 
+VISUAL-LOCATION1   NIL  (372 331 1080)  TEXT  YELLOW  13     "G"    18      0.65999997  T                                                 
+VISUAL-LOCATION10  NIL  (375 475 1080)  LINE  YELLOW  20     -34    30      1.6899999               T     490     385     460     365     
+VISUAL-LOCATION16  NEW  (415 348 1080)  TEXT  BROWN   8      "E"    12      0.26999998  T                                                 
+VISUAL-LOCATION17  NEW  (424 432 1080)  OVAL  PINK    25     "GGG"  45      3.1699998         T                                           
+VISUAL-LOCATION18  NEW  (424 432 1080)  TEXT  BLACK   21     "GGG"  10      0.59        T                                                 
+VISUAL-LOCATION15  NIL  (428 484 1080)  LINE  PINK    33     -61    18      1.67                    T     493     445     475     412     
+
+VISUAL-LOCATION12
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  PINK
+   HEIGHT  8
+   WIDTH  6
+   SCREEN-X  322
+   SCREEN-Y  320
+   DISTANCE  1080
+   SIZE  0.14
+
+VISUAL-LOCATION19
+   KIND  LINE
+   VALUE  56
+   COLOR  GRAY
+   HEIGHT  20
+   WIDTH  30
+   SCREEN-X  330
+   SCREEN-Y  470
+   DISTANCE  1080
+   SIZE  1.6899999
+
+VISUAL-LOCATION3
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  GRAY
+   HEIGHT  25
+   WIDTH  35
+   SCREEN-X  333
+   SCREEN-Y  417
+   DISTANCE  1080
+   SIZE  2.46
+
+VISUAL-LOCATION4
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  21
+   SCREEN-X  333
+   SCREEN-Y  417
+   DISTANCE  1080
+   SIZE  0.59
+
+VISUAL-LOCATION13
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  YELLOW
+   HEIGHT  35
+   WIDTH  30
+   SCREEN-X  370
+   SCREEN-Y  443
+   DISTANCE  1080
+   SIZE  2.95
+
+VISUAL-LOCATION14
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  370
+   SCREEN-Y  443
+   DISTANCE  1080
+   SIZE  0.19999999
+
+VISUAL-LOCATION1
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  YELLOW
+   HEIGHT  18
+   WIDTH  13
+   SCREEN-X  372
+   SCREEN-Y  331
+   DISTANCE  1080
+   SIZE  0.65999997
+
+VISUAL-LOCATION10
+   KIND  LINE
+   VALUE  -34
+   COLOR  YELLOW
+   HEIGHT  30
+   WIDTH  20
+   SCREEN-X  375
+   SCREEN-Y  475
+   DISTANCE  1080
+   SIZE  1.6899999
+
+VISUAL-LOCATION16
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BROWN
+   HEIGHT  12
+   WIDTH  8
+   SCREEN-X  415
+   SCREEN-Y  348
+   DISTANCE  1080
+   SIZE  0.26999998
+
+VISUAL-LOCATION17
+   KIND  OVAL
+   VALUE  OVAL
+   COLOR  PINK
+   HEIGHT  45
+   WIDTH  25
+   SCREEN-X  424
+   SCREEN-Y  432
+   DISTANCE  1080
+   SIZE  3.1699998
+
+VISUAL-LOCATION18
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  21
+   SCREEN-X  424
+   SCREEN-Y  432
+   DISTANCE  1080
+   SIZE  0.59
+
+VISUAL-LOCATION15
+   KIND  LINE
+   VALUE  -61
+   COLOR  PINK
+   HEIGHT  18
+   WIDTH  33
+   SCREEN-X  428
+   SCREEN-Y  484
+   DISTANCE  1080
+   SIZE  1.67
+
+     5.407   VISION                 visicon-update
+     5.407   PROCEDURAL             CONFLICT-RESOLUTION
+     5.492   VISION                 Encoding-complete VISUAL-LOCATION7-1 NIL
+     5.492   VISION                 No visual-object found
+     5.492   PROCEDURAL             CONFLICT-RESOLUTION
+     5.542   PROCEDURAL             PRODUCTION-FIRED START
+     5.542   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.542   PROCEDURAL             CLEAR-BUFFER GOAL
+     5.542   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.542   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.542   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION3-2
+     5.542   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     5.542   PROCEDURAL             CONFLICT-RESOLUTION
+     5.627   VISION                 Encoding-complete VISUAL-LOCATION3-2 NIL
+     5.627   VISION                 SET-BUFFER-CHUNK VISUAL OVAL6
+     5.627   PROCEDURAL             CONFLICT-RESOLUTION
+     5.742   PROCEDURAL             CONFLICT-RESOLUTION
+     5.792   PROCEDURAL             CONFLICT-RESOLUTION
+     5.971   PROCEDURAL             CONFLICT-RESOLUTION
+     6.021   PROCEDURAL             CONFLICT-RESOLUTION
+     6.071   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL6]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION3-1
+   VALUE  "DDD"
+   COLOR  GRAY
+   HEIGHT  25
+   WIDTH  35
+   OVAL  T
+
+     6.071   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.071   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.071   MOTOR                  CLICK-MOUSE
+     6.071   PROCEDURAL             CONFLICT-RESOLUTION
+     6.221   PROCEDURAL             CONFLICT-RESOLUTION
+     6.271   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B1m1
+     6.281   PROCEDURAL             CONFLICT-RESOLUTION
+     6.371   PROCEDURAL             CONFLICT-RESOLUTION
+     6.421   PROCEDURAL             PRODUCTION-FIRED NEXT
+     6.421   PROCEDURAL             CLEAR-BUFFER GOAL
+     6.421   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.421   VISION                 Find-location
+     6.421   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION13
+     6.421   PROCEDURAL             CONFLICT-RESOLUTION
+     6.471   PROCEDURAL             PRODUCTION-FIRED START
+     6.471   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     6.471   PROCEDURAL             CLEAR-BUFFER GOAL
+     6.471   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.471   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.471   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION13-1
+     6.471   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     6.471   PROCEDURAL             CONFLICT-RESOLUTION
+     6.556   VISION                 Encoding-complete VISUAL-LOCATION13-1 NIL
+     6.556   VISION                 SET-BUFFER-CHUNK VISUAL OVAL7
+     6.556   PROCEDURAL             CONFLICT-RESOLUTION
+     6.671   PROCEDURAL             CONFLICT-RESOLUTION
+     6.721   PROCEDURAL             CONFLICT-RESOLUTION
+     6.821   PROCEDURAL             CONFLICT-RESOLUTION
+     6.871   PROCEDURAL             CONFLICT-RESOLUTION
+     6.921   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL7]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION13-1
+   VALUE  "F"
+   COLOR  YELLOW
+   HEIGHT  35
+   WIDTH  30
+   OVAL  T
+
+     6.921   PROCEDURAL             CLEAR-BUFFER VISUAL
+     6.921   PROCEDURAL             CLEAR-BUFFER MANUAL
+     6.921   MOTOR                  CLICK-MOUSE
+     6.921   PROCEDURAL             CONFLICT-RESOLUTION
+     7.071   PROCEDURAL             CONFLICT-RESOLUTION
+     7.121   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B2m2
+     7.131   PROCEDURAL             CONFLICT-RESOLUTION
+     7.221   PROCEDURAL             CONFLICT-RESOLUTION
+     7.271   PROCEDURAL             PRODUCTION-FIRED NEXT
+     7.271   PROCEDURAL             CLEAR-BUFFER GOAL
+     7.271   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.271   VISION                 Find-location
+     7.271   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION17
+     7.271   PROCEDURAL             CONFLICT-RESOLUTION
+     7.321   PROCEDURAL             PRODUCTION-FIRED START
+     7.321   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     7.321   PROCEDURAL             CLEAR-BUFFER GOAL
+     7.321   PROCEDURAL             CLEAR-BUFFER MANUAL
+     7.321   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.321   MOTOR                  MOVE-CURSOR LOC VISUAL-LOCATION17-0
+     7.321   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     7.321   PROCEDURAL             CONFLICT-RESOLUTION
+     7.406   VISION                 Encoding-complete VISUAL-LOCATION17-0 NIL
+     7.406   VISION                 SET-BUFFER-CHUNK VISUAL OVAL8
+     7.406   PROCEDURAL             CONFLICT-RESOLUTION
+     7.521   PROCEDURAL             CONFLICT-RESOLUTION
+     7.571   PROCEDURAL             CONFLICT-RESOLUTION
+     7.712   PROCEDURAL             CONFLICT-RESOLUTION
+     7.762   PROCEDURAL             CONFLICT-RESOLUTION
+     7.812   PROCEDURAL             PRODUCTION-FIRED CLICK
+VISUAL: VISUAL-CHUNK0 [OVAL8]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION17-0
+   VALUE  "GGG"
+   COLOR  PINK
+   HEIGHT  45
+   WIDTH  25
+   OVAL  T
+
+     7.812   PROCEDURAL             CLEAR-BUFFER VISUAL
+     7.812   PROCEDURAL             CLEAR-BUFFER MANUAL
+     7.812   MOTOR                  CLICK-MOUSE
+     7.812   PROCEDURAL             CONFLICT-RESOLUTION
+     7.962   PROCEDURAL             CONFLICT-RESOLUTION
+     8.012   PROCEDURAL             CONFLICT-RESOLUTION
+Pressed B3m2
+     8.022   PROCEDURAL             CONFLICT-RESOLUTION
+     8.112   PROCEDURAL             CONFLICT-RESOLUTION
+     8.162   PROCEDURAL             PRODUCTION-FIRED NEXT
+     8.162   PROCEDURAL             CLEAR-BUFFER GOAL
+     8.162   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     8.162   VISION                 Find-location
+     8.162   VISION                 find-loc-failure
+     8.162   PROCEDURAL             CONFLICT-RESOLUTION
+     8.162   ------                 Stopped because no events left to process

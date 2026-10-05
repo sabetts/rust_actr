@@ -1,0 +1,18 @@
+(p decide-over                           (p decide-under
+    =goal>                                   =goal>
+      isa         try-strategy                 isa         try-strategy
+      state       choose-strategy              state       choose-strategy
+     - strategy   over                       -  strategy   under
+    =imaginal>                               =imaginal>
+      isa         encoding                     isa         encoding
+      goal-length =d                           goal-length =d
+      b-len       =d                           c-len       =d
+   ==>                                      ==>
+    =imaginal>                               =imaginal>
+    =goal>                                   =goal>
+      state    prepare-mouse                   state    prepare-mouse
+      strategy over                            strategy under
+    +visual-location>                        +visual-location>
+      isa      visual-location                 isa      visual-location
+      kind     oval                            kind     oval
+      value    "b")                            value    "c")

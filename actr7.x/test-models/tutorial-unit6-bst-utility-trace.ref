@@ -1,0 +1,153 @@
+     6.475   UTILITY                PROPAGATE-REWARD 20
+ Utility updates with Reward = 20.0   alpha = 0.2
+  Updating utility of production START-TRIAL
+   U(n-1) = 0.0   R(n) = 13.525 [20.0 - 6.475 seconds since selection]
+   U(n) = 2.705
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 0.0   R(n) = 13.575 [20.0 - 6.425 seconds since selection]
+   U(n) = 2.715
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 0.0   R(n) = 13.625 [20.0 - 6.375 seconds since selection]
+   U(n) = 2.7250001
+  Updating utility of production ENCODE-LINE-A
+   U(n-1) = 0.0   R(n) = 13.76 [20.0 - 6.24 seconds since selection]
+   U(n) = 2.752
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 2.715   R(n) = 13.809999 [20.0 - 6.19 seconds since selection]
+   U(n) = 4.934
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 2.7250001   R(n) = 13.860001 [20.0 - 6.14 seconds since selection]
+   U(n) = 4.952
+  Updating utility of production ENCODE-LINE-B
+   U(n-1) = 0.0   R(n) = 14.01 [20.0 - 5.99 seconds since selection]
+   U(n) = 2.802
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 4.934   R(n) = 14.059999 [20.0 - 5.94 seconds since selection]
+   U(n) = 6.7592
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 4.952   R(n) = 14.110001 [20.0 - 5.89 seconds since selection]
+   U(n) = 6.7836003
+  Updating utility of production ENCODE-LINE-C
+   U(n-1) = 0.0   R(n) = 14.245 [20.0 - 5.755 seconds since selection]
+   U(n) = 2.849
+  Updating utility of production FIND-NEXT-LINE
+   U(n-1) = 6.7592   R(n) = 14.295 [20.0 - 5.705 seconds since selection]
+   U(n) = 8.26636
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 6.7836003   R(n) = 14.344999 [20.0 - 5.655 seconds since selection]
+   U(n) = 8.29588
+  Updating utility of production ENCODE-LINE-GOAL
+   U(n-1) = 0.0   R(n) = 14.48 [20.0 - 5.52 seconds since selection]
+   U(n) = 2.896
+  Updating utility of production ENCODE-UNDER
+   U(n-1) = 0.0   R(n) = 14.615 [20.0 - 5.385 seconds since selection]
+   U(n) = 2.923
+  Updating utility of production ENCODE-OVER
+   U(n-1) = 0.0   R(n) = 14.75 [20.0 - 5.25 seconds since selection]
+   U(n) = 2.95
+  Updating utility of production FORCE-OVER
+   U(n-1) = 10.0   R(n) = 14.8 [20.0 - 5.2 seconds since selection]
+   U(n) = 10.96
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 0.0   R(n) = 14.85 [20.0 - 5.15 seconds since selection]
+   U(n) = 2.97
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 0.0   R(n) = 15.358 [20.0 - 4.642 seconds since selection]
+   U(n) = 3.0716
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 0.0   R(n) = 15.708 [20.0 - 4.292 seconds since selection]
+   U(n) = 3.1416001
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 8.29588   R(n) = 15.757999 [20.0 - 4.242 seconds since selection]
+   U(n) = 9.788304
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 0.0   R(n) = 15.893 [20.0 - 4.107 seconds since selection]
+   U(n) = 3.1786
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 0.0   R(n) = 16.028 [20.0 - 3.972 seconds since selection]
+   U(n) = 3.2056
+  Updating utility of production CONSIDER-C
+   U(n-1) = 0.0   R(n) = 16.078 [20.0 - 3.922 seconds since selection]
+   U(n) = 3.2155998
+  Updating utility of production CHOOSE-C
+   U(n-1) = 0.0   R(n) = 16.213 [20.0 - 3.787 seconds since selection]
+   U(n) = 3.2426
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 2.97   R(n) = 16.263 [20.0 - 3.737 seconds since selection]
+   U(n) = 5.6286
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 3.0716   R(n) = 16.713 [20.0 - 3.287 seconds since selection]
+   U(n) = 5.79988
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 3.1416001   R(n) = 17.063 [20.0 - 2.937 seconds since selection]
+   U(n) = 5.9258804
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 9.788304   R(n) = 17.112999 [20.0 - 2.887 seconds since selection]
+   U(n) = 11.253243
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 3.1786   R(n) = 17.248 [20.0 - 2.752 seconds since selection]
+   U(n) = 5.99248
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 3.2056   R(n) = 17.383 [20.0 - 2.617 seconds since selection]
+   U(n) = 6.04108
+  Updating utility of production CONSIDER-C
+   U(n-1) = 3.2155998   R(n) = 17.433 [20.0 - 2.567 seconds since selection]
+   U(n) = 6.05908
+  Updating utility of production CHOOSE-C
+   U(n-1) = 3.2426   R(n) = 17.568 [20.0 - 2.432 seconds since selection]
+   U(n) = 6.1076803
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 5.6286   R(n) = 17.618 [20.0 - 2.382 seconds since selection]
+   U(n) = 8.02648
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 5.79988   R(n) = 17.668 [20.0 - 2.332 seconds since selection]
+   U(n) = 8.173504
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 5.9258804   R(n) = 17.868 [20.0 - 2.132 seconds since selection]
+   U(n) = 8.314304
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 11.253243   R(n) = 17.918 [20.0 - 2.082 seconds since selection]
+   U(n) = 12.586195
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 5.99248   R(n) = 18.053 [20.0 - 1.947 seconds since selection]
+   U(n) = 8.404584
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 6.04108   R(n) = 18.188 [20.0 - 1.812 seconds since selection]
+   U(n) = 8.470464
+  Updating utility of production CONSIDER-C
+   U(n-1) = 6.05908   R(n) = 18.238 [20.0 - 1.762 seconds since selection]
+   U(n) = 8.494864
+  Updating utility of production CONSIDER-A
+   U(n-1) = 0.0   R(n) = 18.373 [20.0 - 1.627 seconds since selection]
+   U(n) = 3.6746
+  Updating utility of production CHOOSE-A
+   U(n-1) = 0.0   R(n) = 18.508 [20.0 - 1.492 seconds since selection]
+   U(n) = 3.7015998
+  Updating utility of production MOVE-MOUSE
+   U(n-1) = 8.02648   R(n) = 18.558 [20.0 - 1.442 seconds since selection]
+   U(n) = 10.132784
+  Updating utility of production CLICK-MOUSE
+   U(n-1) = 8.173504   R(n) = 19.045 [20.0 - 0.955 seconds since selection]
+   U(n) = 10.347803
+  Updating utility of production LOOK-FOR-CURRENT
+   U(n-1) = 8.314304   R(n) = 19.395 [20.0 - 0.605 seconds since selection]
+   U(n) = 10.530443
+  Updating utility of production ATTEND-LINE
+   U(n-1) = 12.586195   R(n) = 19.445 [20.0 - 0.555 seconds since selection]
+   U(n) = 13.957956
+  Updating utility of production ENCODE-LINE-CURRENT
+   U(n-1) = 8.404584   R(n) = 19.58 [20.0 - 0.42 seconds since selection]
+   U(n) = 10.6396675
+  Updating utility of production CALCULATE-DIFFERENCE
+   U(n-1) = 8.470464   R(n) = 19.715 [20.0 - 0.285 seconds since selection]
+   U(n) = 10.719371
+  Updating utility of production CHECK-FOR-DONE
+   U(n-1) = 0.0   R(n) = 19.765 [20.0 - 0.235 seconds since selection]
+   U(n) = 3.9529998
+  Updating utility of production FIND-DONE
+   U(n-1) = 0.0   R(n) = 19.815 [20.0 - 0.185 seconds since selection]
+   U(n) = 3.963
+  Updating utility of production READ-DONE
+   U(n-1) = 0.0   R(n) = 19.95 [20.0 - 0.05 seconds since selection]
+   U(n) = 3.9900002
+     6.475   ------                 Stopped because event limit reached

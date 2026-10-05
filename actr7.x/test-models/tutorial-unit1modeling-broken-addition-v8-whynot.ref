@@ -1,0 +1,18 @@
+? (whynot increment-count)
+
+Production INCREMENT-COUNT does NOT match.
+(P INCREMENT-COUNT
+   =GOAL>
+       SUM =SUM
+       COUNT =COUNT
+   =RETRIEVAL>
+       NUMBER =SUM
+       NEXT =NEWCOUNT
+ ==>
+   =GOAL>
+       COUNT =NEWCOUNT
+   +RETRIEVAL>
+       NUMBER =SUM
+)
+It fails because: 
+The value in the NUMBER slot of the chunk in the RETRIEVAL buffer does not satisfy the constraints.

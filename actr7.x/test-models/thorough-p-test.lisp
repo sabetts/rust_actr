@@ -1,0 +1,23 @@
+
+(defun run-it ()
+  (reset)
+  (dolist (x '(slot1 slot3 not-a-slot))
+    (dolist (y '(dummy1 merged dummy2 dummy3 dummy4 free "dummy1" "dummy2" t nil 3 5 7))
+      (mod-chunk-fct 'g1 `(slot2 ,x slot1 ,y))
+      (overwrite-buffer-chunk 'goal 'g1)
+      (model-output "~%~%############################~%")
+      (buffer-chunk goal)
+      (let ((matches (no-output (whynot)))
+            (dummy-num 1))
+        (dolist (z (list (cons "slot1" "P") (cons "p*-slot1" "P*") (cons "p*-implicit-slot" "P* indirect")))
+          (incf dummy-num)
+          (model-output "~%~a productions" (cdr z))
+          (model-output "           dummy1   dummy~X   \"dummy1\"   5        t      nil" dummy-num)
+          (dolist (a '("=" "-" "<" "<=" ">" ">="))
+            (model-output "test ~2A     ~{~9s~}" a (mapcar (lambda (x)
+                                                             (let ((name (intern (string-upcase (concatenate 'string (car z) a x)))))
+                                                               (if (find name matches) t nil)))
+                                                     '("chunk" "implicit-chunk" "string" "number" "t" "nil")))))))))
+
+(load-act-r-model "ACT-R:test-models;models;thorough-p-test.lisp")
+

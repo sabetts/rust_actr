@@ -1,0 +1,14 @@
+(p initial-retrieve
+   =goal>
+      ISA         is-member
+      object      =obj
+      category    =cat
+      judgment    nil
+==>
+   =goal>
+      judgment    pending
+   +retrieval>  
+      ISA         property
+      object      =obj
+      attribute   category
+)

@@ -1,0 +1,28 @@
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0-0 REQUESTED NIL 
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.050   PROCEDURAL             PRODUCTION-FIRED ATTEND 
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION 
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL 
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION0-0-0 NIL 
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0 
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.185   PROCEDURAL             PRODUCTION-FIRED REPORT 
+THE VALUE IS "a" 
+     0.185   PROCEDURAL             CLEAR-BUFFER VISUAL 
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.185   ------                 Stopped because no events left to process 
+     0.185   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1-0 REQUESTED NIL 
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.235   PROCEDURAL             PRODUCTION-FIRED ATTEND 
+     0.235   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION 
+     0.235   PROCEDURAL             CLEAR-BUFFER VISUAL 
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.320   VISION                 Encoding-complete VISUAL-LOCATION1-0-0 NIL 
+     0.320   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1 
+     0.320   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.370   PROCEDURAL             PRODUCTION-FIRED REPORT 
+THE VALUE IS "b" 
+     0.370   PROCEDURAL             CLEAR-BUFFER VISUAL 
+     0.370   PROCEDURAL             CONFLICT-RESOLUTION 
+     0.370   ------                 Stopped because no events left to process 

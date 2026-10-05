@@ -1,0 +1,85 @@
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED SPEAK
+     0.050   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   SPEECH                 SPEAK TEXT Hello
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   AUDIO                  new-sound
+     0.250   SPEECH                 SPEAK Hello
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.550   PROCEDURAL             PRODUCTION-FIRED SUBVOCALIZE
+     0.550   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.550   SPEECH                 SUBVOCALIZE TEXT Goodbye
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   AUDIO                  new-sound
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   ------                 Stopped because no events left to process
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED SPEAK
+     0.050   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   SPEECH                 SPEAK TEXT Hello
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   SPEECH                 SPEAK Hello
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   PROCEDURAL             PRODUCTION-FIRED SUBVOCALIZE
+     0.550   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.550   SPEECH                 SUBVOCALIZE TEXT Goodbye
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   ------                 Stopped because no events left to process
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED SPEAK
+     0.050   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   SPEECH                 SPEAK TEXT Hello
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   AUDIO                  new-sound
+     0.250   SPEECH                 SPEAK Hello
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.550   PROCEDURAL             PRODUCTION-FIRED SUBVOCALIZE
+     0.550   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.550   SPEECH                 SUBVOCALIZE TEXT Goodbye
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   ------                 Stopped because no events left to process
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED SPEAK
+     0.050   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   SPEECH                 SPEAK TEXT Hello
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   SPEECH                 SPEAK Hello
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   PROCEDURAL             PRODUCTION-FIRED SUBVOCALIZE
+     0.550   PROCEDURAL             CLEAR-BUFFER VOCAL
+     0.550   SPEECH                 SUBVOCALIZE TEXT Goodbye
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   AUDIO                  new-sound
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     1.100   PROCEDURAL             CONFLICT-RESOLUTION
+     1.100   ------                 Stopped because no events left to process

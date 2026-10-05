@@ -1,0 +1,14 @@
+(p cannot-recall
+    =goal>
+      isa      goal 
+      step     testing
+    ?retrieval>
+      buffer   failure
+    ?visual>
+      state    free
+   ==>
+    =goal>
+     step     read-study-item
+    +visual>
+     cmd      clear
+)

@@ -1,0 +1,9 @@
+Lisp:
+
+    (add-text-to-exp-window window letter :x 130 :y 150)
+  (add-text-to-exp-window window prompt :x 125 :y 150))
+
+Python:
+
+    actr.add_text_to_exp_window(window, letter, x=130, y=150)
+    actr.add_text_to_exp_window(window, prompt, x=125, y=150)

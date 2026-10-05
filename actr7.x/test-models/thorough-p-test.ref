@@ -1,0 +1,1436 @@
+#|Warning: Creating chunk DUMMY2 with no slots |#
+#|Warning: No production defined for (SLOT1<NIL =GOAL> ISA TEST < SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST < SLOT1 NIL) condition. |#
+#|Warning: A < test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production SLOT1<NIL --- |#
+#|Warning: No production defined for (SLOT1<=NIL =GOAL> ISA TEST <= SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST <= SLOT1 NIL) condition. |#
+#|Warning: A <= test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production SLOT1<=NIL --- |#
+#|Warning: No production defined for (SLOT1>NIL =GOAL> ISA TEST > SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST > SLOT1 NIL) condition. |#
+#|Warning: A > test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production SLOT1>NIL --- |#
+#|Warning: No production defined for (SLOT1>=NIL =GOAL> ISA TEST >= SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST >= SLOT1 NIL) condition. |#
+#|Warning: A >= test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production SLOT1>=NIL --- |#
+#|Warning: Creating chunk DUMMY3 with no slots |#
+#|Warning: No production defined for (P*-SLOT1<NIL =GOAL> ISA TEST < SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST < SLOT1 NIL) condition. |#
+#|Warning: A < test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production P*-SLOT1<NIL --- |#
+#|Warning: No production defined for (P*-SLOT1<=NIL =GOAL> ISA TEST <= SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST <= SLOT1 NIL) condition. |#
+#|Warning: A <= test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production P*-SLOT1<=NIL --- |#
+#|Warning: No production defined for (P*-SLOT1>NIL =GOAL> ISA TEST > SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST > SLOT1 NIL) condition. |#
+#|Warning: A > test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production P*-SLOT1>NIL --- |#
+#|Warning: No production defined for (P*-SLOT1>=NIL =GOAL> ISA TEST >= SLOT1 NIL ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST >= SLOT1 NIL) condition. |#
+#|Warning: A >= test for slot SLOT1 with a value of nil not allowed in chunk-spec. |#
+#|Warning: --- end of warnings for undefined production P*-SLOT1>=NIL --- |#
+#|Warning: Creating chunk DUMMY4 with no slots |#
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY1
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  MERGED
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY2
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY3
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY4
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  FREE
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  "dummy1"
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  "dummy2"
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  T
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  3
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  5
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  7
+   SLOT2  SLOT1
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY1
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  MERGED
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY2
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY3
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY4
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  FREE
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  "dummy1"
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  "dummy2"
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  T
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  3
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  5
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  7
+   SLOT2  SLOT3
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY1
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  MERGED
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      T        NIL      NIL      NIL      NIL      NIL      
+test -      NIL      T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY2
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY3
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      T        NIL      NIL      NIL      NIL      
+test -      T        NIL      T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  DUMMY4
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  FREE
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  "dummy1"
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      T        NIL      NIL      NIL      
+test -      T        T        NIL      T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  "dummy2"
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  T
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      T        NIL      
+test -      T        T        T        T        NIL      T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  3
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      T        NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  5
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      T        NIL      NIL      
+test -      T        T        T        NIL      T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      T        NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      
+
+
+############################
+
+GOAL: GOAL-CHUNK0 [G1]
+GOAL-CHUNK0
+   SLOT1  7
+   SLOT2  NOT-A-SLOT
+
+
+P productions
+           dummy1   dummy2   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* productions
+           dummy1   dummy3   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      NIL      
+test -      T        T        T        T        T        T        
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      T        NIL      NIL      
+test >=     NIL      NIL      NIL      T        NIL      NIL      
+
+P* indirect productions
+           dummy1   dummy4   "dummy1"   5        t      nil
+test =      NIL      NIL      NIL      NIL      NIL      T        
+test -      T        T        T        T        T        NIL      
+test <      NIL      NIL      NIL      NIL      NIL      NIL      
+test <=     NIL      NIL      NIL      NIL      NIL      NIL      
+test >      NIL      NIL      NIL      NIL      NIL      NIL      
+test >=     NIL      NIL      NIL      NIL      NIL      NIL      

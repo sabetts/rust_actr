@@ -1,0 +1,4 @@
+  (chunk-type a slot1)
+  (chunk-type b slot2)
+  (chunk-type (c (:include a)) slot3)
+  (chunk-type (d (:include a) (:include b)) slot4)

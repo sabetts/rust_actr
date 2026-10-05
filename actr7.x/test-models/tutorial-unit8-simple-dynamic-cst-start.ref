@@ -1,0 +1,19 @@
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+(P START
+   =GOAL>
+       CONTEXT DATA
+       DATA 10
+   ?IMAGINAL>
+       STATE FREE
+       BUFFER EMPTY
+ ==>
+   =GOAL>
+       CONTEXT DESTINATION
+   +IMAGINAL>
+       DATA1 10
+   +RETRIEVAL>
+       STEP FIRST
+)
+Parameters for production START:
+ :UTILITY  0.000
+ :U  0.000

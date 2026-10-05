@@ -1,0 +1,27 @@
+? (pm-issues-task "previous")
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-LETTER
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED ENCODE-LETTER
+     0.300   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     2.285   NONE                   pm-issue-display (vision exp-window Simple task) previous
+     2.285   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     2.285   VISION                 visicon-update
+     2.285   PROCEDURAL             CONFLICT-RESOLUTION
+     2.370   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     2.370   VISION                 No visual-object found
+     2.370   PROCEDURAL             CONFLICT-RESOLUTION
+     2.785   PROCEDURAL             CONFLICT-RESOLUTION
+     2.785   ------                 Stopped because no events left to process
+(previous NIL)

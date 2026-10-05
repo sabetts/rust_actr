@@ -1,0 +1,23 @@
+Get an updated version of sbcl and test that first.
+
+Run the build script on Linux to send the standalone zips to the server.
+
+Run the build batch file with two params: ACT-R version # and full path to the sbcl executable (if not on path)
+this:
+
+build 7.x sbcl
+
+
+ - download the current standalone .zip from the server
+ - get the r#
+ - unzip the current source files into a directory with the current r#
+ - copy the base files into an "ACT-R" directory in the r# directory
+ - run the indicated ccl to create the app and in the apps dir
+ - zip that into a file called win-standalone.zip
+
+Run the send batch file providing the version # to send the corresponding file to the server.
+
+send 7.x
+
+
+

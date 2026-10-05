@@ -1,0 +1,12 @@
+(P harvest-answer
+   =retrieval>
+      ISA         plus-fact
+      sum         =number
+   =imaginal>
+      isa         plus-fact
+   ?imaginal>
+      state       free
+  ==>
+   *imaginal>
+      sum         =number
+   +retrieval>    =number)

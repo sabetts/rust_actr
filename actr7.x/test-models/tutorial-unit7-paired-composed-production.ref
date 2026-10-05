@@ -1,0 +1,23 @@
+(P PRODUCTION0
+  "READ-PROBE & RECALL - IMAGINAL-CHUNK0-0"
+   =GOAL>
+       STEP ATTENDING-PROBE
+   =VISUAL>
+       VALUE "zinc"
+   ?VISUAL>
+       STATE FREE
+   ?MANUAL>
+       STATE FREE
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       STEP READ-STUDY-ITEM
+   +VISUAL>
+       CMD CLEAR
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY "9"
+   +IMAGINAL>
+       PROBE "zinc"
+)

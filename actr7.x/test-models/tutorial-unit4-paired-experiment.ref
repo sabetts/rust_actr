@@ -1,0 +1,16 @@
+? (paired-experiment 100)
+
+>>> paired.experiment(100)
+
+
+Latency:
+CORRELATION:  0.996
+MEAN DEVIATION:  0.099
+Trial    1       2       3       4       5       6       7       8
+        0.000   2.173   1.856   1.682   1.531   1.435   1.362   1.289
+
+Accuracy:
+CORRELATION:  0.994
+MEAN DEVIATION:  0.042
+Trial    1       2       3       4       5       6       7       8
+        0.000   0.555   0.764   0.858   0.905   0.935   0.952   0.964

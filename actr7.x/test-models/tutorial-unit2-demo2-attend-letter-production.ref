@@ -1,0 +1,14 @@
+(P attend-letter
+   =goal>
+      ISA         read-letters
+      step        find-location
+   =visual-location>
+   ?visual>
+      state       free
+==>
+   +visual>
+      cmd         move-attention
+      screen-pos  =visual-location
+   =goal>
+      step        attend
+)

@@ -1,0 +1,17 @@
+(p encode-arg1                       (p retrieve-operator
+   =goal>                               =goal>           
+     isa     task                         isa    task
+     step    attending                    state  =state
+   =visual>                               step   ready
+     isa     text                      ==>
+     value   =val                       +retrieval>
+   =imaginal>                             isa    operator
+     isa     args                         pre    =state
+     arg1    fill                       =goal>
+   ?imaginal>                             step   retrieving-operator)
+     state   free                     
+  ==>                                 
+   *imaginal>                         
+     arg1    =val                     
+   =goal>                             
+     step    ready)                   

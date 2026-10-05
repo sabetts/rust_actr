@@ -1,0 +1,36 @@
+(p encode-line-goal
+   =goal>
+      isa        try-strategy
+      state      attending
+   =imaginal>
+      isa        encoding
+      c-loc      =c
+      goal-loc   nil
+   =visual>
+      isa        line
+      screen-pos =pos
+      width      =length
+   ?visual>
+      state      free
+  ==>
+   =imaginal>
+      goal-loc   =pos
+      length     =length
+   =goal>
+      state      encode-under
+   +visual>
+      isa        move-attention
+      screen-pos =c)
+
+(p read-done
+   =goal>
+      isa    try-strategy
+      state  read-done
+   =visual>
+      isa    text
+      value  "done"
+  ==>
+   +goal>
+      isa    try-strategy
+      state  start)
+

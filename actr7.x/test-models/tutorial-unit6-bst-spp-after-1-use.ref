@@ -1,0 +1,24 @@
+Parameters for production FORCE-OVER:
+ :utility  7.666
+ :u  10.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production FORCE-UNDER:
+ :utility  9.705
+ :u  10.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production DECIDE-OVER:
+ :utility 15.355
+ :u  13.360
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production DECIDE-UNDER:
+ :utility    NIL
+ :u  13.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL

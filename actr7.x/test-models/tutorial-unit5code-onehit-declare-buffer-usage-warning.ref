@@ -1,0 +1,2 @@
+#|Warning: Productions test the MRESULT slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the MC1 slot in the GOAL buffer which is not requested or modified in any productions. |#

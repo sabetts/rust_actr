@@ -1,0 +1,16 @@
+(p retrieve-attribute                  (P direct-verify
+   =goal>                                 =goal>
+     ISA         test-attribute             ISA         test-attribute
+     object      =obj                       original    nil
+     attribute   =attr                      object      =obj
+     value       =val                       attribute   =attr
+     state       nil                        value       =val
+  ==>                                       state       attr-check
+   =goal>                                 =retrieval>
+     state       attr-check                 ISA         property
+   +retrieval>                              object      =obj
+     ISA         property                   =attr       =val
+     object      =obj                    ==>
+     - =attr     nil)                     =goal>
+                                            answer      yes
+                                            state       done)

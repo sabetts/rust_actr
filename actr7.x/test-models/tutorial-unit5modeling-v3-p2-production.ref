@@ -1,0 +1,11 @@
+  (p p2
+     =goal>
+       isa task-state
+       state r2
+     =retrieval>
+   ==>
+     =goal>
+       state r3
+     +retrieval>
+       isa simple-value
+       simple-value-chunk t)

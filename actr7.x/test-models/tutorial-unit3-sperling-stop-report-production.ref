@@ -1,0 +1,13 @@
+(p stop-report 
+   =goal>
+     isa     report-row
+     row     =row
+   ?retrieval>
+     buffer  failure
+   ?manual>
+     state   free
+==>
+   +manual>              
+     cmd     press-key       
+     key     space
+   -goal>)

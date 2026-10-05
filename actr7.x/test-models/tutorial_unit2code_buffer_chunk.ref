@@ -1,0 +1,9 @@
+>>> actr.buffer_chunk('goal','visual')
+GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   ARG1  FIVE
+   ARG2  TWO
+   SUM  SEVEN
+
+VISUAL: NIL 
+['GOAL-CHUNK0', None]

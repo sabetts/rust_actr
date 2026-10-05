@@ -1,0 +1,160 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL GOAL NIL
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-UNATTENDED-LETTER
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED ATTEND-LETTER
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.185   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   PROCEDURAL             PRODUCTION-FIRED ENCODE-LETTER
+     0.235   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.235   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.285   PROCEDURAL             PRODUCTION-FIRED FIND-UNATTENDED-LETTER
+     0.285   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.285   VISION                 Find-location
+     0.285   VISION                 find-loc-failure
+     0.285   PROCEDURAL             CONFLICT-RESOLUTION
+     0.435   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (LETTER "a")
+     0.435   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   PROCEDURAL             PRODUCTION-FIRED RESPOND
+     0.485   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.485   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.485   MOTOR                  PRESS-KEY KEY a
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.635   PROCEDURAL             CONFLICT-RESOLUTION
+     0.685   PROCEDURAL             CONFLICT-RESOLUTION
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  T    (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+
+     0.695   VISION                 visicon-update
+     0.695   PROCEDURAL             CONFLICT-RESOLUTION
+     0.780   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.780   VISION                 No visual-object found
+     0.780   PROCEDURAL             CONFLICT-RESOLUTION
+     0.785   PROCEDURAL             CONFLICT-RESOLUTION
+Name  Att  Loc   
+----  ---  ----  
+
+     0.845   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     0.845   VISION                 visicon-update
+     0.845   PROCEDURAL             CONFLICT-RESOLUTION
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION1  NEW  (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+
+     0.930   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.930   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1 NIL
+     0.930   PROCEDURAL             CONFLICT-RESOLUTION
+     0.930   ------                 Stopped because no events left to process
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION1  T    (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+
+VISUAL: VISUAL-CHUNK0 [TEXT1]
+VISUAL-CHUNK0
+   SCREEN-POS  VISUAL-LOCATION0-0
+   VALUE  "a"
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   TEXT  T
+
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL GOAL NIL
+     0.000   ------                 Stopped because event limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+VISUAL-LOCATION1  NEW  (455 456 1080)  T     TEXT  BLACK  7      "b"    10      0.19999999  
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-UNATTENDED-LETTER
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED ATTEND-LETTER
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.185   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   PROCEDURAL             PRODUCTION-FIRED ENCODE-LETTER
+     0.235   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.235   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.285   PROCEDURAL             PRODUCTION-FIRED FIND-UNATTENDED-LETTER
+     0.285   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.285   VISION                 Find-location
+     0.285   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
+     0.285   PROCEDURAL             CONFLICT-RESOLUTION
+     0.335   PROCEDURAL             PRODUCTION-FIRED ATTEND-LETTER
+     0.335   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.335   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.335   PROCEDURAL             CONFLICT-RESOLUTION
+     0.420   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     0.420   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     0.420   PROCEDURAL             CONFLICT-RESOLUTION
+     0.435   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (LETTER "a")
+     0.435   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   PROCEDURAL             PRODUCTION-FIRED ENCODE-LETTER
+     0.485   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.485   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED FIND-UNATTENDED-LETTER
+     0.535   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.535   VISION                 Find-location
+     0.535   VISION                 find-loc-failure
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.685   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (LETTER "b")
+     0.685   PROCEDURAL             CONFLICT-RESOLUTION
+     0.735   PROCEDURAL             PRODUCTION-FIRED RESPOND
+     0.735   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.735   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.735   MOTOR                  PRESS-KEY KEY b
+     0.735   PROCEDURAL             CONFLICT-RESOLUTION
+     0.985   PROCEDURAL             CONFLICT-RESOLUTION
+     1.035   PROCEDURAL             CONFLICT-RESOLUTION
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  T    (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+VISUAL-LOCATION1  T    (455 456 1080)  T     TEXT  BLACK  7      "b"    10      0.19999999  
+
+     1.135   VISION                 visicon-update
+     1.135   PROCEDURAL             CONFLICT-RESOLUTION
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION1  T    (455 456 1080)  T     TEXT  BLACK  7      "b"    10      0.19999999  
+
+     1.285   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+     1.285   VISION                 visicon-update
+     1.285   PROCEDURAL             CONFLICT-RESOLUTION
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION2  NEW  (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+VISUAL-LOCATION1  T    (455 456 1080)  T     TEXT  BLACK  7      "b"    10      0.19999999  
+
+     1.285   ------                 Stopped because no events left to process
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION2  NEW  (430 456 1080)  T     TEXT  BLACK  7      "a"    10      0.19999999  
+VISUAL-LOCATION1  T    (455 456 1080)  T     TEXT  BLACK  7      "b"    10      0.19999999  
+
+VISUAL: NIL 

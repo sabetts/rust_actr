@@ -1,0 +1,11 @@
+  (p p1
+     ?goal>
+       buffer empty
+   ==>
+     +goal>
+       isa task-state
+       state r2
+     +retrieval>
+       isa simple-value
+     - result nil
+       simple-value-chunk t)

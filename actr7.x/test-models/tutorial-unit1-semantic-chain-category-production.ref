@@ -1,0 +1,20 @@
+(P chain-category
+   =goal>
+      ISA         is-member
+      object      =obj1
+      category    =cat
+      judgment    pending
+   =retrieval>
+      ISA         property
+      object      =obj1
+      attribute   category
+      value       =obj2
+    - value       =cat
+==>
+   =goal>
+      object      =obj2
+   +retrieval>  
+      ISA         property
+      object      =obj2
+      attribute   category
+)

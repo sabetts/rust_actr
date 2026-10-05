@@ -1,0 +1,15 @@
+Name               Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+-----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0   NEW  (380 406 1080)  T     TEXT  BLACK  7      "V"    10      0.19999999  
+VISUAL-LOCATION1   NEW  (380 456 1080)  T     TEXT  BLACK  7      "C"    10      0.19999999  
+VISUAL-LOCATION2   NEW  (380 506 1080)  T     TEXT  BLACK  7      "W"    10      0.19999999  
+VISUAL-LOCATION3   NEW  (430 406 1080)  T     TEXT  BLACK  7      "N"    10      0.19999999  
+VISUAL-LOCATION4   NEW  (430 456 1080)  T     TEXT  BLACK  7      "R"    10      0.19999999  
+VISUAL-LOCATION5   NEW  (430 506 1080)  T     TEXT  BLACK  7      "J"    10      0.19999999  
+VISUAL-LOCATION6   NEW  (480 406 1080)  T     TEXT  BLACK  7      "T"    10      0.19999999  
+VISUAL-LOCATION7   NEW  (480 456 1080)  T     TEXT  BLACK  7      "Y"    10      0.19999999  
+VISUAL-LOCATION8   NEW  (480 506 1080)  T     TEXT  BLACK  7      "G"    10      0.19999999  
+VISUAL-LOCATION9   NEW  (530 406 1080)  T     TEXT  BLACK  7      "Z"    10      0.19999999  
+VISUAL-LOCATION10  NEW  (530 456 1080)  T     TEXT  BLACK  7      "K"    10      0.19999999  
+VISUAL-LOCATION11  NEW  (530 506 1080)  T     TEXT  BLACK  7      "F"    10      0.19999999  
+

@@ -1,0 +1,10 @@
+CORRELATION:  0.772
+MEAN DEVIATION: 18.155
+
+Trial 1     2     3     4     5     6     7     8     9     10    11    12    13    14    15    
+    22.0  50.0  61.0  77.0  94.0  32.0  85.0  83.0  61.0  42.0  30.0  21.0  63.0  63.0  54.0
+
+DECIDE-OVER : 13.2118
+DECIDE-UNDER: 10.8572
+FORCE-OVER  : 12.0410
+FORCE-UNDER : 6.6625

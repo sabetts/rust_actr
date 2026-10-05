@@ -1,0 +1,59 @@
+? (whynot-dm v1 v2 v3)
+>>> actr.whynot_dm('v1','v2','v3')
+
+Retrieval request made at time 0.050:
+ -  RESULT NIL
+    SIMPLE-VALUE-CHUNK T
+
+V1
+   RESULT  "true"
+   SIMPLE-VALUE-CHUNK  T
+
+Declarative parameters for chunk V1:
+ :Activation -2.875
+ :Permanent-Noise  0.000
+ :Base-Level -2.964
+ :Creation-Time -1500.000
+ :Reference-Count  1
+ :Source-Spread  0.000
+ :Sjis ((V1 2.0))
+ :Similarities ((V1 0.0))
+ :Last-Retrieval-Activation -3.142
+ :Last-Retrieval-Time  0.050
+
+V1 matched the request
+V1 was below the retrieval threshold 0.0
+
+V2
+   RESULT  "false"
+   SIMPLE-VALUE-CHUNK  T
+
+Declarative parameters for chunk V2:
+ :Activation -2.888
+ :Permanent-Noise  0.000
+ :Base-Level -2.964
+ :Creation-Time -1500.000
+ :Reference-Count  1
+ :Source-Spread  0.000
+ :Sjis ((V2 2.0))
+ :Similarities ((V2 0.0))
+ :Last-Retrieval-Activation -2.725
+ :Last-Retrieval-Time  0.050
+
+V2 matched the request
+V2 was below the retrieval threshold 0.0
+
+V3
+   SIMPLE-VALUE-CHUNK  T
+
+Declarative parameters for chunk V3:
+ :Activation -2.990
+ :Permanent-Noise  0.000
+ :Base-Level -2.964
+ :Creation-Time -1500.000
+ :Reference-Count  1
+ :Source-Spread  0.000
+ :Sjis ((V3 2.0))
+ :Similarities ((V3 0.0))
+
+V3 did not match the request

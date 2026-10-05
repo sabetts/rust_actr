@@ -1,0 +1,6 @@
+>>> onehit.hands(4,True)
+Model:  6 10  -> 16 (lose)   Opponent: 10  1 -> 21 (win )
+Model:  2  6  3  -> 11 (lose)   Opponent:  6  5  9 -> 20 (win )
+Model:  5  9  7  -> 21 (win )   Opponent:  3  6 10 -> 19 (lose)
+Model:  6  8  6  -> 20 (win )   Opponent:  2 10  3 -> 15 (lose)
+[2, 2, 0, 0]

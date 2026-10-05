@@ -1,0 +1,43 @@
+(p read-arg1
+   =goal>
+     isa        task
+     step       retrieving-operator
+   =retrieval>
+     isa        operator
+     action     read
+     arg1       create
+     post       =state
+   =visual-location>
+   ?visual>
+     state      free
+   ?imaginal>
+     state      free
+  ==>
+   +imaginal>
+     isa        args
+     arg1       fill
+   +visual>
+     cmd        move-attention
+     screen-pos =visual-location
+   =goal>
+     step       attending
+     state      =state)
+
+(p encode-arg1
+   =goal>
+     isa     task
+     step    attending
+   =visual>
+     isa     text
+     value   =val
+   =imaginal>
+     isa     args
+     arg1    fill
+   ?imaginal>
+     state   free
+  ==>
+   *imaginal>
+     arg1    =val
+   =goal>
+     step    ready)
+

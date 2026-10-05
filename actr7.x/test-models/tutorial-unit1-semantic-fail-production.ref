@@ -1,0 +1,13 @@
+(P fail
+   =goal>
+      ISA         is-member
+      object      =obj1
+      category    =cat  
+      judgment    pending
+    
+   ?retrieval>
+      buffer      failure
+==>
+   =goal>
+      judgment    no
+)

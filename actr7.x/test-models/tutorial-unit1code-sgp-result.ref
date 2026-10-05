@@ -1,0 +1,3 @@
+? (sgp :trace-detail :lf)
+:TRACE-DETAIL MEDIUM (default MEDIUM) : Determines which events show in the trace
+:LF 0.05 (default 1.0) : Latency Factor

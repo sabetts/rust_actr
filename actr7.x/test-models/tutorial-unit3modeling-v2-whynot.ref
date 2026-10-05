@@ -1,0 +1,18 @@
+
+Production RESPOND-NEXT does NOT match.
+(P RESPOND-NEXT
+   =IMAGINAL>
+       LETTER =LETTER
+   =VISUAL>
+       VALUE "next"
+   ?MANUAL>
+       STATE BUSY
+ ==>
+   +RETRIEVAL>
+       PREVIOUS =LETTER
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY =LETTER
+)
+It fails because: 
+The STATE BUSY query of the MANUAL buffer failed.

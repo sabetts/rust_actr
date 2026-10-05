@@ -1,0 +1,29 @@
+? (buffer-status goal visual)
+GOAL:
+  buffer empty          : T
+  buffer full           : NIL
+  buffer failure        : NIL
+  buffer requested      : NIL
+  buffer unrequested    : NIL
+  state free            : T
+  state busy            : NIL
+  state error           : NIL
+VISUAL:
+  buffer empty          : T
+  buffer full           : NIL
+  buffer failure        : NIL
+  buffer requested      : NIL
+  buffer unrequested    : NIL
+  state free            : T
+  state busy            : NIL
+  state error           : NIL
+  preparation free      : T
+  preparation busy      : NIL
+  processor free        : T
+  processor busy        : NIL
+  execution free        : T
+  execution busy        : NIL
+  last-command          : NONE
+  scene-change          : NIL
+  scene-change-value    : NIL
+(GOAL VISUAL)

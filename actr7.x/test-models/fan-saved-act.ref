@@ -1,0 +1,199 @@
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-PERSON
+     0.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.185   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-MEANING
+     0.235   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.235   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.235   DECLARATIVE            start-retrieval
+     0.235   DECLARATIVE            RETRIEVED-CHUNK LAWYER
+     0.235   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL LAWYER
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED ENCODE-PERSON
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.300   VISION                 Find-location
+     0.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
+     0.350   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.350   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.435   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     0.435   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     0.435   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-MEANING
+     0.485   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.485   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.485   DECLARATIVE            start-retrieval
+     0.485   DECLARATIVE            RETRIEVED-CHUNK STORE
+     0.485   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL STORE
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED ENCODE-LOCATION
+     0.535   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.585   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-FROM-PERSON
+     0.585   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.585   DECLARATIVE            start-retrieval
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     0.839   DECLARATIVE            RETRIEVED-CHUNK P13
+     0.839   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL P13
+     0.839   PROCEDURAL             CONFLICT-RESOLUTION
+     0.889   PROCEDURAL             PRODUCTION-FIRED YES
+     0.889   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.889   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.889   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.889   MOTOR                  PRESS-KEY KEY k
+     0.889   PROCEDURAL             CONFLICT-RESOLUTION
+     1.039   PROCEDURAL             CONFLICT-RESOLUTION
+     1.089   PROCEDURAL             CONFLICT-RESOLUTION
+     1.099   PROCEDURAL             CONFLICT-RESOLUTION
+     1.189   PROCEDURAL             CONFLICT-RESOLUTION
+     1.189   ------                 Stopped because no events left to process
+Computing activation for chunk P13
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (STORE LAWYER)
+    Spreading activation  0.45342642 from source STORE level  0.5 times Sji 0.90685284
+    Spreading activation  0.45342642 from source LAWYER level  0.5 times Sji 0.90685284
+Total spreading activation: 0.90685284
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P13 has an activation of: 0.90685284
+Chunk P1 did not match the request.
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-PERSON
+     0.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.185   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.235   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-MEANING
+     0.235   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.235   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.235   DECLARATIVE            start-retrieval
+     0.235   DECLARATIVE            RETRIEVED-CHUNK HIPPIE
+     0.235   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL HIPPIE
+     0.235   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED ENCODE-PERSON
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.300   VISION                 Find-location
+     0.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
+     0.350   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.350   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.435   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     0.435   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     0.435   PROCEDURAL             CONFLICT-RESOLUTION
+     0.485   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-MEANING
+     0.485   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.485   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.485   DECLARATIVE            start-retrieval
+     0.485   DECLARATIVE            RETRIEVED-CHUNK BANK
+     0.485   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL BANK
+     0.485   PROCEDURAL             CONFLICT-RESOLUTION
+     0.535   PROCEDURAL             PRODUCTION-FIRED ENCODE-LOCATION
+     0.535   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.535   PROCEDURAL             CONFLICT-RESOLUTION
+     0.585   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-FROM-PERSON
+     0.585   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.585   DECLARATIVE            start-retrieval
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     1.026   DECLARATIVE            RETRIEVED-CHUNK P3
+     1.026   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL P3
+     1.026   PROCEDURAL             CONFLICT-RESOLUTION
+     1.076   PROCEDURAL             PRODUCTION-FIRED YES
+     1.076   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     1.076   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     1.076   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.076   MOTOR                  PRESS-KEY KEY k
+     1.076   PROCEDURAL             CONFLICT-RESOLUTION
+     1.226   PROCEDURAL             CONFLICT-RESOLUTION
+     1.276   PROCEDURAL             CONFLICT-RESOLUTION
+     1.286   PROCEDURAL             CONFLICT-RESOLUTION
+     1.376   PROCEDURAL             CONFLICT-RESOLUTION
+     1.376   ------                 Stopped because no events left to process
+Chunk P3 matches
+Chunk P2 matches
+Chunk P1 matches
+Chunk P13 does not match
+Chunk P12 does not match
+Chunk P11 does not match
+Chunk P10 does not match
+Chunk P9 does not match
+Chunk P8 does not match
+Chunk P7 does not match
+Chunk P6 does not match
+Chunk P5 does not match
+Chunk P4 does not match
+Computing activation for chunk P3
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK HIPPIE)
+    Spreading activation  0.25069386 from source BANK level  0.5 times Sji 0.5013877
+    Spreading activation  0.10685283 from source HIPPIE level  0.5 times Sji 0.21370566
+Total spreading activation: 0.3575467
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P3 has an activation of: 0.3575467
+Computing activation for chunk P2
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK HIPPIE)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source HIPPIE level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P2 has an activation of: 0.10685283
+Computing activation for chunk P1
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK HIPPIE)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source HIPPIE level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P1 has an activation of: 0.10685283
+Chunk P3 with activation 0.3575467 is the best

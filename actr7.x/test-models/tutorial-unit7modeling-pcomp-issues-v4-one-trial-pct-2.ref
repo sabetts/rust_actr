@@ -1,0 +1,6 @@
+     0.185   PROCEDURAL             PRODUCTION-FIRED ATTEND-NUM-1
+Production Compilation process started for ATTEND-NUM-1
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production DETECT-TRIAL-START and ATTEND-NUM-1 cannot be composed.
+  Setting previous production to ATTEND-NUM-1.

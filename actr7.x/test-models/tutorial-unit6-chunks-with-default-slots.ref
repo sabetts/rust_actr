@@ -1,0 +1,23 @@
+? (define-chunks
+   (c1 isa a)
+   (c2 isa b)
+   (c3 isa b slot 3)
+   (c4 isa c)
+   (c5 isa c slot2 nil))
+(C1 C2 C3 C4 C5)
+
+? (pprint-chunks c1 c2 c3 c4 c5)
+C1
+
+C2
+   SLOT  1
+
+C3
+   SLOT  3
+
+C4
+   SLOT2  T
+
+C5
+
+(C1 C2 C3 C4 C5)

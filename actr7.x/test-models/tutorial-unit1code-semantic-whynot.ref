@@ -1,0 +1,34 @@
+? (whynot direct-verify fail)
+
+Production DIRECT-VERIFY does NOT match.
+(P DIRECT-VERIFY
+   =GOAL>
+       OBJECT =OBJ
+       CATEGORY =CAT
+       JUDGMENT PENDING
+   =RETRIEVAL>
+       OBJECT =OBJ
+       ATTRIBUTE CATEGORY
+       VALUE =CAT
+ ==>
+   =GOAL>
+       JUDGMENT YES
+)
+It fails because: 
+The GOAL buffer is empty.
+
+Production FAIL does NOT match.
+(P FAIL
+   =GOAL>
+       OBJECT =OBJ1
+       CATEGORY =CAT
+       JUDGMENT PENDING
+   ?RETRIEVAL>
+       BUFFER FAILURE
+ ==>
+   =GOAL>
+       JUDGMENT NO
+)
+It fails because: 
+The GOAL buffer is empty.
+NIL

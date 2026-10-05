@@ -1,0 +1,2 @@
+  (sgp :esc t :bll .5 :ol t :sim-hook "1hit-bj-number-sims" 
+       :cache-sim-hook-results t :er t :lf 0)

@@ -1,0 +1,3 @@
+         (window (open-exp-window "Sperling Experiment" :visible t))
+
+    window = actr.open_exp_window("Sperling Experiment", visible=True)

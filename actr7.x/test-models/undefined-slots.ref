@@ -1,0 +1,30 @@
+#|Warning: Slot STATE invalid for type OOPS but chunk-spec definition still created. |#
+#|Warning: Production A uses previously undefined slots (SLOT4 SLOT2). |#
+#|Warning: Production A tests invalid slot STATE for type OOPS. |#
+#|Warning: Productions test the SLOT1 slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the SLOT4 slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the STATE slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the SLOT2 slot in the GOAL buffer which is not requested or modified in any productions. |#
+
+Production B matches:
+(P B
+   =GOAL>
+       STATE NIL
+       SLOT2 T
+ ==>
+)
+#|Warning: Production A tests invalid slot STATE for type OOPS. |#
+#|Warning: Production A uses previously undefined slot SLOT2. |#
+#|Warning: Production A uses previously undefined slot SLOT4. |#
+#|Warning: Productions test the SLOT1 slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the SLOT4 slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the STATE slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the SLOT2 slot in the GOAL buffer which is not requested or modified in any productions. |#
+
+Production B matches:
+(P B
+   =GOAL>
+       STATE NIL
+       SLOT2 T
+ ==>
+)

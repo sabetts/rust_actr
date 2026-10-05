@@ -1,0 +1,3 @@
+  (add-dm (response-1 isa response key "s")
+          (response-2 isa response key "d")
+          (response-3 isa response key "f"))

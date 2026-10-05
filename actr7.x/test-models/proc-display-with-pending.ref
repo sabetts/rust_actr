@@ -1,0 +1,80 @@
+Name  Att  Loc   
+----  ---  ----  
+
+Pending additions:
+(VISUAL-LOCATION0 SIZE 0.19999999 DISTANCE 1080 SCREEN-Y 456 HEIGHT 10 VALUE "x" WIDTH 7 SCREEN-X 430 COLOR BLACK KIND TEXT TEXT T)
+
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA READ-LETTERS STEP START) NIL
+     0.000   VISION                 proc-display
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED FIND-UNATTENDED-LETTER
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.010   ------                 Stopped because time limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (430 456 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-UNATTENDED-LETTER
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   VISION                 Find-location
+     0.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED ATTEND-LETTER
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             QUERY-BUFFER-ACTION VISUAL
+     0.070   ------                 Stopped because time limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (430 456 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+
+Pending additions:
+(CHUNK0 SIZE 1.0 DISTANCE 1080 SCREEN-X 50 SCREEN-Y 30 COLOR GREEN)
+(CHUNK1 SIZE 1.0 DISTANCE 1080 SCREEN-X 30 SCREEN-Y 50 COLOR BLUE)
+
+     0.070   VISION                 proc-display
+     0.080   ------                 Stopped because time limit reached
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (430 456 1080)  T     TEXT  BLACK  7      "x"    10      0.19999999  
+
+Pending additions:
+(CHUNK0 SIZE 1.0 DISTANCE 1080 SCREEN-X 50 SCREEN-Y 30 COLOR GREEN)
+(CHUNK1 SIZE 1.0 DISTANCE 1080 SCREEN-X 30 SCREEN-Y 50 COLOR BLUE)
+
+     0.100   PROCEDURAL             PRODUCTION-FIRED ATTEND-LETTER
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.100   PROCEDURAL             MODULE-REQUEST VISUAL
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.100   VISION                 Move-attention VISUAL-LOCATION0-1 NIL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK1 NIL
+     0.100   VISION                 visicon-update
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+Name              Att  Loc             COLOR  SIZE        TEXT  KIND  WIDTH  VALUE  HEIGHT  
+----------------  ---  --------------  -----  ----------  ----  ----  -----  -----  ------
+CHUNK1            NEW  ( 30  50 1080)  BLUE   1.0                                           
+CHUNK0            NEW  ( 50  30 1080)  GREEN  1.0                                           
+VISUAL-LOCATION0  REQ  (430 456 1080)  BLACK  0.19999999  T     TEXT  7      "x"    10      
+
+Pending deletions:
+CHUNK0
+
+Pending modifications:
+(CHUNK1 COLOR BLACK VALUE "changed")
+
+     0.100   VISION                 proc-display
+     0.100   VISION                 visicon-update
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.110   ------                 Stopped because time limit reached
+Name              Att  Loc             COLOR  SIZE        VALUE      TEXT  KIND  WIDTH  HEIGHT  
+----------------  ---  --------------  -----  ----------  ---------  ----  ----  -----  ------
+CHUNK1            NEW  ( 30  50 1080)  BLACK  1.0         "changed"                             
+VISUAL-LOCATION0  REQ  (430 456 1080)  BLACK  0.19999999  "x"        T     TEXT  7      10      
+

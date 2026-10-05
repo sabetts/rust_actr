@@ -1,0 +1,91 @@
+(P A
+   =GOAL>
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   +IMAGINAL>
+)
+(P B
+   =GOAL>
+   =IMAGINAL>
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   *IMAGINAL>
+)
+(P C
+   =GOAL>
+   =IMAGINAL>
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   *IMAGINAL>
+   +IMAGINAL>
+)
+(P D
+   =GOAL>
+   ?VISUAL>
+       STATE FREE
+ ==>
+   +VISUAL>
+)
+(P E
+   =GOAL>
+ ==>
+   +RETRIEVAL>
+)
+(P F
+   =GOAL>
+   ?VISUAL>
+       STATE FREE
+   ?MANUAL>
+       STATE FREE
+ ==>
+   +VISUAL>
+   +VISUAL-LOCATION>
+   +MANUAL>
+)
+#|Warning: Production F already exists and it is being redefined. |#
+#|Warning: Production A makes a request to buffer IMAGINAL without a query in the conditions. |#
+#|Warning: Production C makes a request to buffer IMAGINAL without a query in the conditions. |#
+(P A
+   =GOAL>
+ ==>
+   +IMAGINAL>
+)
+(P B
+   =GOAL>
+   =IMAGINAL>
+ ==>
+   *IMAGINAL>
+)
+(P C
+   =GOAL>
+   =IMAGINAL>
+ ==>
+   *IMAGINAL>
+   +IMAGINAL>
+)
+(P D
+   =GOAL>
+   ?VISUAL>
+       STATE FREE
+ ==>
+   +VISUAL>
+)
+(P E
+   =GOAL>
+ ==>
+   +RETRIEVAL>
+)
+(P F
+   =GOAL>
+   ?VISUAL>
+       STATE FREE
+   ?MANUAL>
+       STATE FREE
+ ==>
+   +VISUAL>
+   +VISUAL-LOCATION>
+   +MANUAL>
+)

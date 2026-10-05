@@ -1,0 +1,15 @@
+(P direct-verify
+   =goal>
+      ISA         is-member
+      object      =obj
+      category    =cat
+      judgment    pending
+   =retrieval>
+      ISA         property
+      object      =obj
+      attribute   category
+      value       =cat
+==>
+   =goal>
+      judgment    yes
+)

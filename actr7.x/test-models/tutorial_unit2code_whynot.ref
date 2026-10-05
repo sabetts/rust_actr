@@ -1,0 +1,35 @@
+>>> actr.whynot('initialize-addition','increment-count')
+
+Production INITIALIZE-ADDITION does NOT match.
+(P INITIALIZE-ADDITION
+   =GOAL>
+       ARG1 =NUM1
+       ARG2 =NUM2
+       SUM NIL
+ ==>
+   =GOAL>
+       SUM =NUM1
+       COUNT ZERO
+   +RETRIEVAL>
+       NUMBER =NUM1
+)
+It fails because: 
+The chunk in the GOAL buffer has the slot SUM.
+
+Production INCREMENT-COUNT does NOT match.
+(P INCREMENT-COUNT
+   =GOAL>
+       SUM =SUM
+       COUNT =COUNT
+   =RETRIEVAL>
+       NUMBER =COUNT
+       NEXT =NEWCOUNT
+ ==>
+   =GOAL>
+       COUNT =NEWCOUNT
+   +RETRIEVAL>
+       NUMBER =SUM
+)
+It fails because: 
+The value in the NUMBER slot of the chunk in the RETRIEVAL buffer does not satisfy the constraints.
+['INCREMENT-SUM']

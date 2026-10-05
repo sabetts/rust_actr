@@ -1,0 +1,15 @@
+(P terminate-addition
+   =goal>
+      ISA         add
+      count       =num
+      arg2        =num
+      sum         =answer
+   =retrieval>
+      ISA         number
+      number      =answer
+  ==>
+   =goal>
+      ISA         add
+      count       nil
+   !output!       (=answer)
+)

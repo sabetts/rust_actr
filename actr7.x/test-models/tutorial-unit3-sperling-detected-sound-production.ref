@@ -1,0 +1,7 @@
+(p detected-sound
+   =aural-location>
+   ?aural>
+     state   free
+   ==>
+   +aural>
+     event   =aural-location)

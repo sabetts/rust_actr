@@ -1,0 +1,12 @@
+  (p retrieved-a-win
+     =goal>
+       isa task
+       state process-past-trial
+     =retrieval>
+       isa trial
+       result win
+       response =response
+     ==>
+     +retrieval> =response
+     =goal>
+       state respond)

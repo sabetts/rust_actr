@@ -1,0 +1,12 @@
+    34.610   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-PAST-TRIAL
+Production Compilation process started for RETRIEVE-PAST-TRIAL
+  Production ENCODE-NUM-2 and RETRIEVE-PAST-TRIAL are being composed.
+  Recreating production PRODUCTION2
+Parameters for production PRODUCTION2:
+ :utility  6.972
+ :u   5.281
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RETRIEVE-PAST-TRIAL.
+    38.932   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL IMAGINAL-CHUNK0-2

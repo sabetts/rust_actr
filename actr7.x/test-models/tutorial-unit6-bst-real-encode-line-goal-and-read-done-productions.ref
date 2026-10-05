@@ -1,0 +1,32 @@
+(P ENCODE-LINE-GOAL
+   =GOAL>
+       STATE ATTENDING
+   =IMAGINAL>
+       C-LOC =C
+       GOAL-LOC NIL
+   =VISUAL>
+       SCREEN-POS =POS
+       WIDTH =LENGTH
+       LINE T
+   ?VISUAL>
+       STATE FREE
+ ==>
+   =IMAGINAL>
+       GOAL-LOC =POS
+       LENGTH =LENGTH
+   =GOAL>
+       STATE ENCODE-UNDER
+   +VISUAL>
+       SCREEN-POS =C
+       CMD MOVE-ATTENTION
+)
+(P READ-DONE
+   =GOAL>
+       STATE READ-DONE
+   =VISUAL>
+       VALUE "done"
+       TEXT T
+ ==>
+   +GOAL>
+       STATE START
+)

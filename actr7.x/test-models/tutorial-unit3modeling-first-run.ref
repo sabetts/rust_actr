@@ -1,0 +1,40 @@
+? (pm-issues-task "next")
+>>> pm_issues.task('next')
+
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED FIND-LETTER
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED ENCODE-LETTER
+     0.300   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     2.285   NONE                   pm-issue-display (vision exp-window Simple task) next
+     2.285   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     2.285   VISION                 visicon-update
+     2.285   PROCEDURAL             CONFLICT-RESOLUTION
+     2.370   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     2.370   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1 NIL
+     2.370   PROCEDURAL             CONFLICT-RESOLUTION
+     2.420   PROCEDURAL             PRODUCTION-FIRED FIND-LETTER
+     2.420   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     2.420   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.420   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     2.420   PROCEDURAL             CONFLICT-RESOLUTION
+     2.505   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     2.505   VISION                 SET-BUFFER-CHUNK VISUAL TEXT2
+     2.505   PROCEDURAL             CONFLICT-RESOLUTION
+     2.620   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     2.620   PROCEDURAL             CONFLICT-RESOLUTION
+     2.670   PROCEDURAL             PRODUCTION-FIRED ENCODE-LETTER
+     2.670   PROCEDURAL             CLEAR-BUFFER VISUAL
+     2.670   PROCEDURAL             CONFLICT-RESOLUTION
+     2.670   ------                 Stopped because no events left to process

@@ -1,0 +1,11 @@
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED P1
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (STATE R2)
+     0.050   DECLARATIVE            start-retrieval
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.138   DECLARATIVE            RETRIEVED-CHUNK 2-1=1
+     0.138   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL 2-1=1
+     0.138   PROCEDURAL             CONFLICT-RESOLUTION
+     0.140   ------                 Stopped because time limit reached

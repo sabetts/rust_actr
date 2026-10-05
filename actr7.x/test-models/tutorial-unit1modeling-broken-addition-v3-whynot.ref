@@ -1,0 +1,17 @@
+? (whynot initialize-addition)
+
+Production INITIALIZE-ADDITION does NOT match.
+(P INITIALIZE-ADDITION
+   =GOAL>
+       ARG1 =NUM1
+       ARG2 =NUM2
+       SUM NIL
+ ==>
+   =GOAL>
+       SUM =NUM1
+       COUNT ZERO
+   +RETRIEVAL>
+       NUMBER =NUM1
+)
+It fails because: 
+The GOAL buffer is empty.

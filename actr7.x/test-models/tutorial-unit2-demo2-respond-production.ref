@@ -1,0 +1,16 @@
+(P respond
+   =goal>
+      ISA         read-letters
+      step        respond
+   =imaginal>
+      isa         array
+      letter      =letter
+   ?manual>   
+      state       free
+==>
+   =goal>
+      step        done
+   +manual>
+      cmd         press-key
+      key         =letter
+)

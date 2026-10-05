@@ -1,0 +1,31 @@
+#|Warning: RHS !bind!, !eval!, and/or !output! actions of production BAD-ORDER had to be reordered because of interdependencies of variables. |#
+#|Warning: If those actions have side effects check the actions carefully to ensure proper operation. |#
+#|Warning: Creating chunk NOT-A-CHUNK-YET with no slots |#
+#|Warning: No production defined for (CIRCULAR-REFERENCE-REJECTED =GOAL> ISA TEST SLOT1 2 ==> !BIND! =X (+ =Y 1) !BIND! =Y (- =Z 2) !BIND! =Z (+ =X 3)). |#
+#|Warning: Because there are circular variable bindings on the RHS. |#
+#|Warning: --- end of warnings for undefined production CIRCULAR-REFERENCE-REJECTED --- |#
+#|Warning: No production defined for (BAD-BUFFER-NAME-REJECTED =GOAL> ISA TEST SLOT1 2 =NOT-A-BUFFER> ISA TEST ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST SLOT1 2 =NOT-A-BUFFER> ISA TEST) condition. |#
+#|Warning: Invalid specs in call to define-chunk-spec - not enough arguments |#
+#|Warning: --- end of warnings for undefined production BAD-BUFFER-NAME-REJECTED --- |#
+#|Warning: No production defined for (MISSING-SEPARATOR-REJECTED =GOAL> ISA TEST SLOT1 2). |#
+#|Warning: Production is missing the ==> separator. |#
+#|Warning: --- end of warnings for undefined production MISSING-SEPARATOR-REJECTED --- |#
+#|Warning: No production defined for (UN-TESTED-MODIFY-REJECTED =GOAL> ISA TEST SLOT1 2 ==> =IMAGINAL> SLOT1 NIL). |#
+#|Warning: Buffer modification action for untested buffer (=IMAGINAL> SLOT1 NIL). |#
+#|Warning: --- end of warnings for undefined production UN-TESTED-MODIFY-REJECTED --- |#
+#|Warning: No production defined for (ILLEGAL-MODIFIER-REJECTED =GOAL> ISA TEST * SLOT1 2 ==>). |#
+#|Warning: Invalid syntax in (=GOAL> ISA TEST * SLOT1 2) condition. |#
+#|Warning: Invalid slot-name * in call to define-chunk-spec. |#
+#|Warning: --- end of warnings for undefined production ILLEGAL-MODIFIER-REJECTED --- |#
+#|Warning: No production defined for (UNKNOWN-RHS-ACTION-REJECTED =GOAL> ISA TEST SLOT1 2 ==> !WHATS-THIS! (+ =GOAL 3)). |#
+#|Warning: First item on RHS is not a valid command |#
+#|Warning: --- end of warnings for undefined production UNKNOWN-RHS-ACTION-REJECTED --- |#
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED BAD-ORDER
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED UNDEFINED-CHUNK
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED FINISH
+     0.150   ------                 BREAK-EVENT Stopped by !stop! 

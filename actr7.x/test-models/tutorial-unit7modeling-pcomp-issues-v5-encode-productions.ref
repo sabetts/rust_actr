@@ -1,0 +1,32 @@
+  (p encode-num-1
+     =goal>
+       isa task
+       state encode-num-1
+     =retrieval>
+       isa number
+       representation =number
+     =imaginal>
+       isa trial
+     ==>
+     =imaginal>
+       num1 =number
+     =goal>
+       state find-num-2
+     +visual-location>
+       isa visual-location
+       > screen-x current
+       :attended nil)
+  (p encode-num-2
+     =goal>
+       isa task
+       state encode-num-2
+     =retrieval>
+       isa number
+       representation =number
+     =imaginal>
+       isa trial
+     ==>
+     =imaginal>
+       num2 =number
+     =goal>
+       state retrieve-past-trial)

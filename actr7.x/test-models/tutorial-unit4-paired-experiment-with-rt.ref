@@ -1,0 +1,12 @@
+
+Latency:
+CORRELATION:  0.961
+MEAN DEVIATION:  1.124
+Trial    1       2       3       4       5       6       7       8
+        0.000   3.691   3.561   3.492   2.727   2.305   2.047   1.880
+
+Accuracy:
+CORRELATION:  0.880
+MEAN DEVIATION:  0.220
+Trial    1       2       3       4       5       6       7       8
+        0.000   0.100   0.260   0.925   1.000   1.000   1.000   1.000

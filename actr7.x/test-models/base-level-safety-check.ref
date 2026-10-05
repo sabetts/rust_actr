@@ -1,0 +1,376 @@
+--------------------------
+     0.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: NIL
+base-level value: 1.4978663
+Total base-level: 1.4978663
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 1.4978663
+Chunk A has the current best activation 1.4978663
+No chunk above the retrieval threshold: 5.0
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.007   DECLARATIVE            RETRIEVAL-FAILURE
+     0.007   PROCEDURAL             CONFLICT-RESOLUTION
+    50.000   ------                 Stopped because time limit reached
+    50.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 2 references (50.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: NIL
+base-level value: 1.5289993
+Total base-level: 1.5289993
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 1.5289993
+Chunk A has the current best activation 1.5289993
+No chunk above the retrieval threshold: 5.0
+    50.000   PROCEDURAL             CONFLICT-RESOLUTION
+    50.007   DECLARATIVE            RETRIEVAL-FAILURE
+    50.007   PROCEDURAL             CONFLICT-RESOLUTION
+   200.000   ------                 Stopped because time limit reached
+   230.000   ------                 Stopped because time limit reached
+   230.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 3 references (200.000 50.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: NIL
+base-level value: -1.1299546
+Total base-level: -1.1299546
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -1.1299546
+Chunk A has the current best activation -1.1299546
+No chunk above the retrieval threshold: 5.0
+   230.000   PROCEDURAL             CONFLICT-RESOLUTION
+   230.007   DECLARATIVE            RETRIEVAL-FAILURE
+   230.007   PROCEDURAL             CONFLICT-RESOLUTION
+   240.000   ------                 Stopped because time limit reached
+   245.000   ------                 Stopped because time limit reached
+   245.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 4 references (240.000 200.000 50.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: NIL
+base-level value: -0.31226993
+Total base-level: -0.31226993
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.31226993
+Chunk A has the current best activation -0.31226993
+No chunk above the retrieval threshold: 5.0
+   245.000   PROCEDURAL             CONFLICT-RESOLUTION
+   245.007   DECLARATIVE            RETRIEVAL-FAILURE
+   245.007   PROCEDURAL             CONFLICT-RESOLUTION
+   246.000   ------                 Stopped because time limit reached
+   296.000   ------                 Stopped because time limit reached
+   296.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 5 references (246.000 240.000 200.000 50.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: NIL
+base-level value: -0.69515824
+Total base-level: -0.69515824
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.69515824
+Chunk A has the current best activation -0.69515824
+No chunk above the retrieval threshold: 5.0
+   296.000   PROCEDURAL             CONFLICT-RESOLUTION
+   296.007   DECLARATIVE            RETRIEVAL-FAILURE
+   296.007   PROCEDURAL             CONFLICT-RESOLUTION
+   396.000   ------                 Stopped because time limit reached
+--------------------------
+     0.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 2.1910133
+Chunk A has the current best activation 2.1910133
+No chunk above the retrieval threshold: 5.0
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.007   DECLARATIVE            RETRIEVAL-FAILURE
+     0.007   PROCEDURAL             CONFLICT-RESOLUTION
+    50.000   ------                 Stopped because time limit reached
+    50.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 2 references ()
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.5697171
+Total base-level: -0.5697171
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.5697171
+Chunk A has the current best activation -0.5697171
+No chunk above the retrieval threshold: 5.0
+    50.000   PROCEDURAL             CONFLICT-RESOLUTION
+    50.007   DECLARATIVE            RETRIEVAL-FAILURE
+    50.007   PROCEDURAL             CONFLICT-RESOLUTION
+   200.000   ------                 Stopped because time limit reached
+   230.000   ------                 Stopped because time limit reached
+   230.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 3 references ()
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9272802
+Total base-level: -0.9272802
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.9272802
+Chunk A has the current best activation -0.9272802
+No chunk above the retrieval threshold: 5.0
+   230.000   PROCEDURAL             CONFLICT-RESOLUTION
+   230.007   DECLARATIVE            RETRIEVAL-FAILURE
+   230.007   PROCEDURAL             CONFLICT-RESOLUTION
+   240.000   ------                 Stopped because time limit reached
+   245.000   ------                 Stopped because time limit reached
+   245.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 4 references ()
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.6711876
+Total base-level: -0.6711876
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.6711876
+Chunk A has the current best activation -0.6711876
+No chunk above the retrieval threshold: 5.0
+   245.000   PROCEDURAL             CONFLICT-RESOLUTION
+   245.007   DECLARATIVE            RETRIEVAL-FAILURE
+   245.007   PROCEDURAL             CONFLICT-RESOLUTION
+   246.000   ------                 Stopped because time limit reached
+   296.000   ------                 Stopped because time limit reached
+   296.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 5 references ()
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.5425946
+Total base-level: -0.5425946
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.5425946
+Chunk A has the current best activation -0.5425946
+No chunk above the retrieval threshold: 5.0
+   296.000   PROCEDURAL             CONFLICT-RESOLUTION
+   296.007   DECLARATIVE            RETRIEVAL-FAILURE
+   296.007   PROCEDURAL             CONFLICT-RESOLUTION
+   396.000   ------                 Stopped because time limit reached
+--------------------------
+     0.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 1
+base-level value: 1.4978663
+Total base-level: 1.4978663
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 1.4978663
+Chunk A has the current best activation 1.4978663
+No chunk above the retrieval threshold: 5.0
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.007   DECLARATIVE            RETRIEVAL-FAILURE
+     0.007   PROCEDURAL             CONFLICT-RESOLUTION
+    50.000   ------                 Stopped because time limit reached
+    50.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 2 references (50.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 1
+base-level value: 1.5591923
+Total base-level: 1.5591923
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 1.5591923
+Chunk A has the current best activation 1.5591923
+No chunk above the retrieval threshold: 5.0
+    50.000   PROCEDURAL             CONFLICT-RESOLUTION
+    50.007   DECLARATIVE            RETRIEVAL-FAILURE
+    50.007   PROCEDURAL             CONFLICT-RESOLUTION
+   200.000   ------                 Stopped because time limit reached
+   230.000   ------                 Stopped because time limit reached
+   230.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 3 references (200.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 1
+base-level value: -0.97724986
+Total base-level: -0.97724986
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.97724986
+Chunk A has the current best activation -0.97724986
+No chunk above the retrieval threshold: 5.0
+   230.000   PROCEDURAL             CONFLICT-RESOLUTION
+   230.007   DECLARATIVE            RETRIEVAL-FAILURE
+   230.007   PROCEDURAL             CONFLICT-RESOLUTION
+   240.000   ------                 Stopped because time limit reached
+   245.000   ------                 Stopped because time limit reached
+   245.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 4 references (240.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 1
+base-level value: -0.24510312
+Total base-level: -0.24510312
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.24510312
+Chunk A has the current best activation -0.24510312
+No chunk above the retrieval threshold: 5.0
+   245.000   PROCEDURAL             CONFLICT-RESOLUTION
+   245.007   DECLARATIVE            RETRIEVAL-FAILURE
+   245.007   PROCEDURAL             CONFLICT-RESOLUTION
+   246.000   ------                 Stopped because time limit reached
+   296.000   ------                 Stopped because time limit reached
+   296.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 5 references (246.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 1
+base-level value: -0.7529633
+Total base-level: -0.7529633
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.7529633
+Chunk A has the current best activation -0.7529633
+No chunk above the retrieval threshold: 5.0
+   296.000   PROCEDURAL             CONFLICT-RESOLUTION
+   296.007   DECLARATIVE            RETRIEVAL-FAILURE
+   296.007   PROCEDURAL             CONFLICT-RESOLUTION
+   396.000   ------                 Stopped because time limit reached
+--------------------------
+     0.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 3
+base-level value: 1.4978663
+Total base-level: 1.4978663
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 1.4978663
+Chunk A has the current best activation 1.4978663
+No chunk above the retrieval threshold: 5.0
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.007   DECLARATIVE            RETRIEVAL-FAILURE
+     0.007   PROCEDURAL             CONFLICT-RESOLUTION
+    50.000   ------                 Stopped because time limit reached
+    50.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 2 references (50.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 3
+base-level value: 1.5289993
+Total base-level: 1.5289993
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 1.5289993
+Chunk A has the current best activation 1.5289993
+No chunk above the retrieval threshold: 5.0
+    50.000   PROCEDURAL             CONFLICT-RESOLUTION
+    50.007   DECLARATIVE            RETRIEVAL-FAILURE
+    50.007   PROCEDURAL             CONFLICT-RESOLUTION
+   200.000   ------                 Stopped because time limit reached
+   230.000   ------                 Stopped because time limit reached
+   230.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 3 references (200.000 50.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 3
+base-level value: -1.1299546
+Total base-level: -1.1299546
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -1.1299546
+Chunk A has the current best activation -1.1299546
+No chunk above the retrieval threshold: 5.0
+   230.000   PROCEDURAL             CONFLICT-RESOLUTION
+   230.007   DECLARATIVE            RETRIEVAL-FAILURE
+   230.007   PROCEDURAL             CONFLICT-RESOLUTION
+   240.000   ------                 Stopped because time limit reached
+   245.000   ------                 Stopped because time limit reached
+   245.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 4 references (240.000 200.000 50.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 3
+base-level value: -0.30730557
+Total base-level: -0.30730557
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.30730557
+Chunk A has the current best activation -0.30730557
+No chunk above the retrieval threshold: 5.0
+   245.000   PROCEDURAL             CONFLICT-RESOLUTION
+   245.007   DECLARATIVE            RETRIEVAL-FAILURE
+   245.007   PROCEDURAL             CONFLICT-RESOLUTION
+   246.000   ------                 Stopped because time limit reached
+   296.000   ------                 Stopped because time limit reached
+   296.000   DECLARATIVE            START-RETRIEVAL
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 5 references (246.000 240.000 200.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: 3
+base-level value: -0.6438849
+Total base-level: -0.6438849
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.6438849
+Chunk A has the current best activation -0.6438849
+No chunk above the retrieval threshold: 5.0
+   296.000   PROCEDURAL             CONFLICT-RESOLUTION
+   296.007   DECLARATIVE            RETRIEVAL-FAILURE
+   296.007   PROCEDURAL             CONFLICT-RESOLUTION
+   396.000   ------                 Stopped because time limit reached

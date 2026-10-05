@@ -1,0 +1,11 @@
+    22.139   PROCEDURAL             PRODUCTION-FIRED RESPOND
+Production Compilation process started for RESPOND
+  Production NO-PAST-TRIAL and RESPOND are being composed.
+  Recreating production PRODUCTION3
+Parameters for production PRODUCTION3:
+ :utility  2.376
+ :u   2.857
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RESPOND.

@@ -1,0 +1,21 @@
+(p associate
+    =goal>
+      isa      goal
+      step     attending-target
+   =visual>
+      isa      visual-object
+      value    =val
+   =imaginal>
+      isa      pair
+      probe    =probe
+   ?visual>
+      state    free
+  ==>
+   =imaginal>
+      answer   =val
+   -imaginal>
+   =goal>
+      step     start  
+   +visual>
+      cmd      clear
+)

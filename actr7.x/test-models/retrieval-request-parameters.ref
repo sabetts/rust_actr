@@ -1,0 +1,316 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED NORMAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  0.0 from source C2 level  1.0 times Sji 0.0
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.47628218
+Adding permanent noise 0.0
+Chunk T1 has an activation of: 2.6672955
+Chunk T1 has the current best activation 2.6672955
+Computing activation for chunk T2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  1.9013877 from source C2 level  1.0 times Sji 1.9013877
+Total spreading activation: 1.9013877
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C2
+  similarity: -0.5
+  effective similarity value is -0.5
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -0.5
+Adding transient noise 0.17775598
+Adding permanent noise 0.0
+Chunk T2 has an activation of: 3.770157
+Chunk T2 is now the current best with activation 3.770157
+Chunk T2 with activation 3.770157 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.073   DECLARATIVE            RETRIEVED-CHUNK T2
+     0.073   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL T2
+     0.073   PROCEDURAL             CONFLICT-RESOLUTION
+     0.073   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED CHANGE-THRESHOLD
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  0.0 from source C2 level  1.0 times Sji 0.0
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.47628218
+Adding permanent noise 0.0
+Chunk T1 has an activation of: 2.6672955
+Chunk T1 has the current best activation 2.6672955
+Computing activation for chunk T2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  1.9013877 from source C2 level  1.0 times Sji 1.9013877
+Total spreading activation: 1.9013877
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C2
+  similarity: -0.5
+  effective similarity value is -0.5
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -0.5
+Adding transient noise 0.17775598
+Adding permanent noise 0.0
+Chunk T2 has an activation of: 3.770157
+Chunk T2 is now the current best with activation 3.770157
+No chunk above the retrieval threshold: 10.0
+     0.050   DECLARATIVE            RETRIEVAL-FAILURE
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED NO-BLL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  0.0 from source C2 level  1.0 times Sji 0.0
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.47628218
+Adding permanent noise 0.0
+Chunk T1 has an activation of: 0.47628218
+Chunk T1 has the current best activation 0.47628218
+Computing activation for chunk T2
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  1.9013877 from source C2 level  1.0 times Sji 1.9013877
+Total spreading activation: 1.9013877
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C2
+  similarity: -0.5
+  effective similarity value is -0.5
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -0.5
+Adding transient noise 0.17775598
+Adding permanent noise 0.0
+Chunk T2 has an activation of: 1.5791436
+Chunk T2 is now the current best with activation 1.5791436
+Chunk T2 with activation 1.5791436 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED NO-MAS
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.47628218
+Adding permanent noise 0.0
+Chunk T1 has an activation of: 2.6672955
+Chunk T1 has the current best activation 2.6672955
+Computing activation for chunk T2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C2
+  similarity: -0.5
+  effective similarity value is -0.5
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -0.5
+Adding transient noise 0.17775598
+Adding permanent noise 0.0
+Chunk T2 has an activation of: 1.8687693
+Chunk T1 with activation 2.6672955 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED NO-MP
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Chunk T2 does not match
+Chunk T1 matches
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  0.0 from source C2 level  1.0 times Sji 0.0
+Total spreading activation: 0.0
+Adding transient noise 0.47628218
+Adding permanent noise 0.0
+Chunk T1 has an activation of: 2.6672955
+Chunk T1 has the current best activation 2.6672955
+Chunk T1 with activation 2.6672955 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G1 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED NO-ANS
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  0.0 from source C2 level  1.0 times Sji 0.0
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk T1 has an activation of: 2.1910133
+Chunk T1 has the current best activation 2.1910133
+Computing activation for chunk T2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer GOAL chunk GOAL-CHUNK0
+    sources of activation are: (C2)
+    Spreading activation  1.9013877 from source C2 level  1.0 times Sji 1.9013877
+Total spreading activation: 1.9013877
+Computing partial matching component
+  comparing slot S1
+  Requested: = C1  Chunk's slot value: C2
+  similarity: -0.5
+  effective similarity value is -0.5
+  comparing slot S2
+  Requested: = C1  Chunk's slot value: C1
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -0.5
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk T2 has an activation of: 3.592401
+Chunk T2 is now the current best with activation 3.592401
+Chunk T2 with activation 3.592401 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.078   DECLARATIVE            RETRIEVED-CHUNK T2
+     0.078   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL T2
+     0.078   PROCEDURAL             CONFLICT-RESOLUTION
+     0.078   ------                 Stopped because no events left to process

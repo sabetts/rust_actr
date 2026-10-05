@@ -1,0 +1,70 @@
+The package.json file in examples/connections/nodejs has been updated to also build the arm64 version now.
+Don't need any special steps, but leaving this here as a reference.
+
+Used instructions here to install it: https://dev.to/themodernpk/install-node-on-macos-m1-274d
+
+but then installed v18 afterwards (as shown below)
+
+Installed v.18
+
+
+db30@Daniels-Mac-mini nodejs % nvm install v18.12.0
+Downloading and installing node v18.12.0...
+Downloading https://nodejs.org/dist/v18.12.0/node-v18.12.0-darwin-arm64.tar.xz...
+######################################################################### 100.0%
+Computing checksum with shasum -a 256
+Checksums matched!
+Now using node v18.12.0 (npm v8.19.2)
+db30@Daniels-Mac-mini nodejs % node
+Welcome to Node.js v18.12.0.
+Type ".help" for more information.
+> 
+(To exit, press Ctrl+C again or Ctrl+D or type .exit)
+db30@Daniels-Mac-mini nodejs % npm install -g pkg
+
+added 125 packages, and audited 126 packages in 9s
+
+22 packages are looking for funding
+  run `npm fund` for details
+
+1 moderate severity vulnerability
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+db30@Daniels-Mac-mini nodejs % npm install --save express
+
+added 64 packages, and audited 65 packages in 9s
+
+12 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+db30@Daniels-Mac-mini nodejs % npm install --save socket.io
+
+added 23 packages, and audited 88 packages in 2s
+
+12 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+db30@Daniels-Mac-mini nodejs % pkg .
+> pkg@5.8.1
+> Fetching base Node.js binaries to PKG_CACHE_PATH
+  fetched-v18.5.0-macos-arm64         [====================] 100%
+
+db30@Daniels-Mac-mini nodejs % ls -l
+total 100648
+-rw-r--r--   1 db30  staff     91822 Jul 12 11:03 environment.html
+-rw-r--r--   1 db30  staff     19176 Jul 12 11:03 environment.js
+-rw-r--r--   1 db30  staff      4332 Jul 12 11:03 expwindow.html
+-rw-r--r--   1 db30  staff       403 Jul 12 11:03 goal.html
+-rwxr-xr-x   1 db30  staff  51308320 Jul 12 13:01 html-environment
+-rw-r--r--   1 db30  staff      3599 Jul 12 11:03 index.html
+drwxr-xr-x  79 db30  staff      2528 Jul 12 13:00 node_modules
+-rw-r--r--   1 db30  staff     63739 Jul 12 13:00 package-lock.json
+-rw-r--r--@  1 db30  staff       517 Jul 12 13:00 package.json
+-rw-r--r--@  1 db30  staff      3540 Jul 12 11:03 readme.txt
+-rw-r--r--   1 db30  staff     10015 Jul 12 11:03 relay-virtual-view.js
+-rw-r--r--   1 db30  staff      3298 Jul 12 11:03 simple.js

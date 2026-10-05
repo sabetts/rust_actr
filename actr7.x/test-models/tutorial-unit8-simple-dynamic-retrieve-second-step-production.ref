@@ -1,0 +1,13 @@
+  (p retrieve-second-step
+     =goal>
+       isa     fact
+       context =slot
+       data    =x
+     =imaginal>
+     =retrieval>
+       isa     step
+       =slot   =target
+       step    second
+    ==>
+     =imaginal>
+       =target =x)

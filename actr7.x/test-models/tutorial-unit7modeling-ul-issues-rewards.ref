@@ -1,0 +1,2 @@
+  (spp response-matches :reward 4)
+  (spp response-doesnt-match :reward 0)

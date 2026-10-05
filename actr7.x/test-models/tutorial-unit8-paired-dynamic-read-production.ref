@@ -1,0 +1,22 @@
+(p read
+   =goal>
+     isa        task
+     step       retrieving-operator
+   =retrieval>
+     isa        operator
+     action     read
+     label      =destination
+     post       =state
+   =visual-location>
+   ?visual>
+     state      free
+   ?imaginal>
+     buffer     full
+  ==>
+   +visual>
+     isa        move-attention
+     screen-pos =visual-location
+   =goal>
+     context    =destination
+     step       process
+     state      =state)
