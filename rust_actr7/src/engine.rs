@@ -6052,6 +6052,31 @@ mod tests {
         );
     }
 
+    /// The bounded `!eval!`/`!bind!` evaluator: pure operators, variables,
+    /// quotes, `mp-time`, and loud failure for unknown heads.
+    #[test]
+    fn eval_evaluator() {
+        use crate::sexpr::parse_all;
+        let e = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        let mut b = Bindings::new();
+        b.insert("X".to_string(), Value::Int(3));
+        let one = |s: &str| parse_all(s).unwrap().pop().unwrap();
+        let t = Value::Sym("T".to_string());
+        assert_eq!(e.eval_expr(&one("(> (mp-time) .4)"), &b).unwrap(), Value::Nil);
+        assert_eq!(e.eval_expr(&one("(> (mp-time) -1)"), &b).unwrap(), t);
+        assert_eq!(
+            e.eval_expr(&one("(not (equal =x 'blue))"), &b).unwrap(),
+            t
+        );
+        assert_eq!(e.eval_expr(&one("(+ =x 1)"), &b).unwrap(), Value::Int(4));
+        assert_eq!(e.eval_expr(&one("(null =x)"), &b).unwrap(), Value::Nil);
+        assert_eq!(
+            e.eval_expr(&one("(and (> =x 2) (< =x 4))"), &b).unwrap(),
+            t
+        );
+        assert!(e.eval_expr(&one("(this-needs-a-real-lisp)"), &b).is_err());
+    }
+
     /// `render_production` reproduces the `:cst` instantiation block
     /// (`tutorial-unit8-simple-ppm-model-initial-run.ref`).
     #[test]
