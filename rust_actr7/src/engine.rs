@@ -187,6 +187,9 @@ struct Config {
     act: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
     crt: bool,
+    /// Retrieval finsts: how many / how long (`:recently-retrieved`).
+    num_finsts: usize,
+    finst_span_ms: i64,
     dat_ms: i64,
     attention_ms: i64,
     imaginal_delay_ms: i64,
@@ -497,6 +500,9 @@ impl Config {
                 Some((_, got)) => return Err(bad(format!("bad :act {got:?}"))),
             },
             crt: sgp_bool(&m.params, ":CRT"),
+            num_finsts: sgp_num(&m.params, ":DECLARATIVE-NUM-FINSTS", 4.0)? as usize,
+            finst_span_ms: (sgp_num(&m.params, ":DECLARATIVE-FINST-SPAN", 3.0)? * 1000.0)
+                .round() as i64,
             bll,
             ol,
             act_scale,
@@ -874,6 +880,8 @@ pub struct Engine {
     chunk_alias: HashMap<String, String>,
     /// `!stop!` was executed: end the run with a BREAK-EVENT.
     stopped: bool,
+    /// Recently-retrieved chunk finsts: `(name, time_ms)`, newest last.
+    finsts: Vec<(String, i64)>,
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
@@ -960,6 +968,7 @@ impl Engine {
             c_fan_out: HashMap::new(),
             chunk_alias: HashMap::new(),
             stopped: false,
+            finsts: Vec::new(),
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
             visual_busy: false,
@@ -1058,6 +1067,7 @@ impl Engine {
         self.c_fan_out.clear();
         self.chunk_alias.clear();
         self.stopped = false;
+        self.finsts.clear();
         self.vl_copies.clear();
         self.obj_built.clear();
         self.visual_busy = false;
@@ -1632,6 +1642,7 @@ impl Engine {
                 }
                 self.dm_busy = false;
                 self.buffers.get_mut("RETRIEVAL").unwrap().busy = false;
+                self.add_finst(&name);
                 self.now(
                     Prio::Max,
                     Out::Low,
@@ -2285,30 +2296,22 @@ impl Engine {
             Value::Sym(s) => Some(s.as_str()),
             _ => None,
         };
-        match (a_name, b_name) {
-            (Some(x), Some(y))
-                if self.dm.iter().any(|c| c.name.as_deref() == Some(x))
-                    && self.dm.iter().any(|c| c.name.as_deref() == Some(y)) =>
+        // Explicit similarities are keyed by the (symbol) values, not by DM
+        // membership: ACT-R registers slot values as undefined chunks, so
+        // `set-similarities (pink red -.4)` applies to plain symbols.
+        if let (Some(x), Some(y)) = (a_name, b_name) {
+            if let Some(v) = self
+                .sims
+                .get(&(x.to_string(), y.to_string()))
+                .or_else(|| self.sims.get(&(y.to_string(), x.to_string())))
             {
-                if let Some(v) = self
-                    .sims
-                    .get(&(x.to_string(), y.to_string()))
-                    .or_else(|| self.sims.get(&(y.to_string(), x.to_string())))
-                {
-                    return *v;
-                }
-                if x == y {
-                    return self.cfg.ms;
-                }
-                self.cfg.md
+                return *v;
             }
-            _ => {
-                if a == b {
-                    self.cfg.ms
-                } else {
-                    self.cfg.md
-                }
-            }
+        }
+        if a == b {
+            self.cfg.ms
+        } else {
+            self.cfg.md
         }
     }
 
@@ -2353,6 +2356,10 @@ impl Engine {
                 req_filled.push(s);
             }
         }
+        let recent_req = want_slots
+            .iter()
+            .find(|(s, _)| s == ":RECENTLY-RETRIEVED")
+            .map(|(_, v)| v.clone());
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
         for idx in 0..self.dm.len() {
@@ -2364,6 +2371,14 @@ impl Engine {
                 && req_empty.iter().all(|s| c.get(s) == Value::Nil);
             if !sig_ok {
                 continue;
+            }
+            // `:recently-retrieved nil` excludes chunks retrieved within the
+            // finst span; `t` requires one (declarative finsts).
+            if let Some(rv) = &recent_req {
+                let want_recent = !matches!(rv, Value::Nil);
+                if want_recent != self.is_recent(&cname) {
+                    continue;
+                }
             }
             if !partial {
                 // ACT-R retrieval does not test the request's `isa`; the
@@ -2422,6 +2437,7 @@ impl Engine {
                             + bl_equation(
                                 self.time_ms,
                                 &refs,
+                                count as f32,
                                 creation,
                                 bll,
                                 &self.cfg.ol,
@@ -2439,12 +2455,12 @@ impl Engine {
             if self.act_medium() {
                 self.out(format!("Total base-level: {}", lisp_f(base)));
             }
-            let mut a = base;
-            // Spreading activation (0 unless `:mas` is set): sources are
-            // the chunk-valued slots of the spread buffers.
-            if c.name.is_some() {
-                a += self.spreading_activation(&cname);
-            }
+            let spread = if c.name.is_some() {
+                self.spreading_activation(&cname)
+            } else {
+                0.0
+            };
+            let mut a = base + spread;
             // Partial matching: `=` slots add `mp * similarity`; `-` slots
             // add `mp * md` only when the chunk's value matches the
             // negated value (similarity == ms), per
@@ -3002,6 +3018,7 @@ enum Ol {
 fn bl_equation(
     now_ms: i64,
     refs: &[i64],
+    count: f32,
     creation_ms: i64,
     decay: f32,
     ol: &Ol,
@@ -3017,12 +3034,12 @@ fn bl_equation(
     match ol {
         Ol::Off => value.ln() + act_scale,
         Ol::Num(ol) => {
-            if refs.len() as f64 > *ol {
+            if count as f64 > *ol {
                 // (+ 1.0 minus-decay)
                 let denom = 1.0f32 - decay;
                 let a = (now_ms - creation_ms).max(0) as f32;
                 let b = (now_ms - last_ref).max(0) as f32;
-                value += ((refs.len() as f32 - *ol as f32) * (a.powf(denom) - b.powf(denom)))
+                value += ((count - *ol as f32) * (a.powf(denom) - b.powf(denom)))
                     / ((last_ref - creation_ms).max(50) as f32 * denom);
             }
             value.ln() + act_scale
@@ -3030,16 +3047,37 @@ fn bl_equation(
         Ol::On => {
             // NOTE: unlike the other branches, this one adds NO
             // act-scale (declarative-memory.lisp:2725). The units table
-            // caught an early draft that added it.
-            // ms->seconds is (/ x 1000.0), single-float.
+            // caught an early draft that added it. Uses the reference
+            // *count* `n` (not the list length — under `:ol t` merges
+            // clear the list but keep counting).
             let t = ((now_ms - creation_ms).max(0) as f32 / 1000.0).max(0.05);
             let denom = 1.0f32 - decay;
-            (refs.len() as f32 * t.powf(-decay) / denom).ln()
+            (count * t.powf(-decay) / denom).ln()
         }
     }
 }
 
 impl Engine {
+    /// Whether `name` was retrieved within the current finst span.
+    fn is_recent(&self, name: &str) -> bool {
+        let now = self.time_ms;
+        self.finsts
+            .iter()
+            .any(|(n, t)| n == name && now - t <= self.cfg.finst_span_ms)
+    }
+
+    /// Record a retrieval finst (newest last, capped at
+    /// `:declarative-num-finsts`).
+    fn add_finst(&mut self, name: &str) {
+        self.finsts.retain(|(n, _)| n != name);
+        self.finsts.push((name.to_string(), self.time_ms));
+        let cap = self.cfg.num_finsts;
+        if self.finsts.len() > cap {
+            let drop = self.finsts.len() - cap;
+            self.finsts.drain(0..drop);
+        }
+    }
+
     /// Resolve a chunk name through merge aliases (`merging-test`).
     fn resolve_alias(&self, n: &str) -> String {
         let mut cur = n.to_string();
@@ -3645,7 +3683,8 @@ mod tests {
                         got => panic!("bad RESULT: {got:?}"),
                     };
                     assert_eq!(refs.len(), *n as usize, "row {f:?}");
-                    let got = bl_equation(now_ms, &refs, *ct, *bll as f32, &ol, *scale as f32);
+                    let got =
+                        bl_equation(now_ms, &refs, *n as f32, *ct, *bll as f32, &ol, *scale as f32);
                     let tol = 1e-5 * want.abs().max(1.0);
                     assert!(
                         (got - want).abs() <= tol,

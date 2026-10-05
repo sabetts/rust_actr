@@ -879,3 +879,29 @@ the same result through `true-chunk-name-fct`. Two related rules:
 - `!stop!` ends the run immediately with
   `------ BREAK-EVENT Stopped by !stop!` (no normal stop line).
 `merging-test` is green.
+
+## 90. Base-level uses the reference *count*, not the list length (verified)
+
+`compute-references` (`declarative-memory.lisp:2695`) takes `n` (reference
+count) and the reference list separately. Under `:ol t`, merges clear the
+list but keep incrementing the count, so the optimized-learning branch
+`ln(n * t^-d / (1-d))` must use `n`. The engine wrongly used `refs.len()`,
+which went to `ln(0) = -inf` for a chunk merged before re-retrieval; that
+accidentally made `v4-p3-run`/`v6-run-p3` pass. `bl_equation` now takes the
+count explicitly (the LAT units table passes `n`).
+
+## 91. Retrieval finsts and `:recently-retrieved` (verified)
+
+`?:recently-retrieved` is a request parameter, not a slot: `:recently-retrieved
+nil` excludes chunks retrieved within `:declarative-finst-span` (default
+3.0 s), tracked over the last `:declarative-num-finsts` (default 4) retrievals;
+`t` requires one. A success records a finst at completion time. Without this,
+v4/v6 would re-retrieve the just-retrieved `V2` (its base-level is highest).
+`tutorial-unit5modeling-v4-p3-run` and `v6-run-p3` are green.
+
+## 92. Explicit similarities apply to plain symbols (verified)
+
+`set-similarities (pink red -.4)` names symbols that are not DM chunks; ACT-R
+resolves them as (undefined) chunks and consults the explicit similarity
+before `ms`/`md`. The engine now checks the explicit similarity table first
+for any symbol pair, not only DM chunks.
