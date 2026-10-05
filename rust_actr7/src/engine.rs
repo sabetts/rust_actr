@@ -264,6 +264,10 @@ pub struct DeviceSetup {
     /// file's `set-similarities` (which must run post-reset: reset
     /// rebuilds chunk structs, wiping table state set at load).
     pub sims: Vec<(String, String, f32)>,
+    /// The task clears the window from its `output-key` handler
+    /// (`clear-exp-window`, e.g. the demo2 task), so the clear happens
+    /// at the moment of a keypress rather than at a scripted time.
+    pub clear_on_keypress: bool,
 }
 
 /// A visicon feature: what the device shows and vision can find.
@@ -390,6 +394,36 @@ fn key_table() -> HashMap<String, KeySpec> {
                 theta: -1.57,
             },
         ),
+        // QWERTY letter rows (`other-files/keyboard.lisp`). Punch-style
+        // home keys (A S D F J K L) have no explicit polar geometry; use
+        // the home position as a stand-in.
+        ("Q".to_string(), KeySpec { hand: "LEFT", finger: "PINKIE", r: 1.0, theta: -1.57 }),
+        ("W".to_string(), KeySpec { hand: "LEFT", finger: "RING", r: 1.0, theta: -1.57 }),
+        ("E".to_string(), KeySpec { hand: "LEFT", finger: "MIDDLE", r: 1.0, theta: -1.57 }),
+        ("R".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: -1.57 }),
+        ("T".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.41, theta: -0.79 }),
+        ("Y".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.41, theta: -2.36 }),
+        ("U".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: -1.57 }),
+        ("I".to_string(), KeySpec { hand: "RIGHT", finger: "MIDDLE", r: 1.0, theta: -1.57 }),
+        ("O".to_string(), KeySpec { hand: "RIGHT", finger: "RING", r: 1.0, theta: -1.57 }),
+        ("P".to_string(), KeySpec { hand: "RIGHT", finger: "PINKIE", r: 1.0, theta: -1.57 }),
+        ("A".to_string(), KeySpec { hand: "LEFT", finger: "PINKIE", r: 1.0, theta: 0.0 }),
+        ("S".to_string(), KeySpec { hand: "LEFT", finger: "RING", r: 1.0, theta: 0.0 }),
+        ("D".to_string(), KeySpec { hand: "LEFT", finger: "MIDDLE", r: 1.0, theta: 0.0 }),
+        ("F".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: 0.0 }),
+        ("G".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: 0.0 }),
+        ("H".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: 3.14 }),
+        ("J".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: 0.0 }),
+        ("K".to_string(), KeySpec { hand: "RIGHT", finger: "MIDDLE", r: 1.0, theta: 0.0 }),
+        ("L".to_string(), KeySpec { hand: "RIGHT", finger: "RING", r: 1.0, theta: 0.0 }),
+        ("Z".to_string(), KeySpec { hand: "LEFT", finger: "PINKIE", r: 1.0, theta: 1.57 }),
+        ("X".to_string(), KeySpec { hand: "LEFT", finger: "RING", r: 1.0, theta: 1.57 }),
+        ("C".to_string(), KeySpec { hand: "LEFT", finger: "MIDDLE", r: 1.0, theta: 1.57 }),
+        ("V".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: 1.57 }),
+        ("B".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.41, theta: 0.79 }),
+        ("N".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.41, theta: 2.36 }),
+        ("M".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: 1.57 }),
+        ("SPACE".to_string(), KeySpec { hand: "LEFT", finger: "THUMB", r: 1.0, theta: 0.0 }),
     ])
 }
 
@@ -953,6 +987,11 @@ pub struct Engine {
     /// Visual-object names per kind: KIND -> objects so far.
     obj_built: HashMap<String, u64>,
     visual_busy: bool,
+    /// Location copy named in the last `move-attention`, re-encoded when
+    /// the window changes underneath it.
+    last_attention: Option<String>,
+    /// Device clears the window on each keypress (task `output-key` handler).
+    clear_on_keypress: bool,
     man_prep_busy: bool,
     man_exec_busy: bool,
     imag_busy: bool,
@@ -1001,6 +1040,7 @@ impl Engine {
             end,
             rewards,
             sims,
+            clear_on_keypress,
         } = device;
         let mut eng = Engine {
             model,
@@ -1048,6 +1088,8 @@ impl Engine {
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
             visual_busy: false,
+            last_attention: None,
+            clear_on_keypress,
             man_prep_busy: false,
             man_exec_busy: false,
             imag_busy: false,
@@ -1159,6 +1201,7 @@ impl Engine {
         self.vl_copies.clear();
         self.obj_built.clear();
         self.visual_busy = false;
+        self.last_attention = None;
         self.man_prep_busy = false;
         self.man_exec_busy = false;
         self.imag_busy = false;
@@ -2019,6 +2062,7 @@ impl Engine {
                 if show {
                     self.emit("VISION", format!("Move-attention {loc} NIL"));
                 }
+                self.last_attention = Some(loc.clone());
                 self.visual_busy = true;
                 let at = self.time_ms + self.cfg.attention_ms;
                 self.push(
@@ -2178,6 +2222,27 @@ impl Engine {
                         "KEYBOARD",
                         format!("output-key {} {}", self.model.name, key.to_lowercase()),
                     );
+                }
+                if self.clear_on_keypress {
+                    // `clear-exp-window` from the task's output-key handler:
+                    // drop the visicon, re-display, and re-encode the
+                    // attended location (which now finds no object).
+                    self.pending_clears.push(self.time_ms);
+                    self.now_m(
+                        Prio::Num(-100),
+                        Out::Always,
+                        true,
+                        Event::ProcDisplay,
+                    );
+                    if let Some(loc) = self.last_attention.clone() {
+                        let at = self.time_ms + self.cfg.attention_ms;
+                        self.push(
+                            at,
+                            Prio::Num(0),
+                            Out::Medium,
+                            Event::EncodingComplete { loc },
+                        );
+                    }
                 }
             }
             Event::FinishMovement { req_ms } => {
@@ -5246,7 +5311,17 @@ impl Engine {
 
     /// Attention landed: build the TEXT object and fill the buffer.
     fn encoding_complete(&mut self, loc: String) -> Result<(), EngineError> {
-        let idx = self.resolve_loc(&loc)?;
+        let idx = match self.resolve_loc(&loc) {
+            Ok(i) if i < self.features.len() => i,
+            _ => {
+                // The attended object disappeared before the encoding
+                // landed (e.g. the window was cleared underneath it):
+                // vision reports no object and leaves VISUAL unchanged.
+                self.emit("VISION", "No visual-object found".into());
+                self.visual_busy = false;
+                return Ok(());
+            }
+        };
         let feat = self.features[idx].clone();
         let k = self.obj_built.entry(feat.kind.clone()).or_insert(0);
         let name = format!("{}{}", feat.kind, *k);
@@ -5293,7 +5368,10 @@ impl Feature {
 /// requests match everything; unknown slots error.
 fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineError> {
     for (s, v) in want {
-        match (s.as_str(), v) {
+        // Request parameters are written with a leading colon (`:attended`,
+        // `:nearest`, ...); treat them as the plain slot for matching.
+        let s = s.trim_start_matches(':');
+        match (s, v) {
             ("ISA", _) => {}
             ("ATTENDED", Value::Sym(x)) if x == "T" => {
                 if !feat.attended {
@@ -5301,6 +5379,11 @@ fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineE
                 }
             }
             ("ATTENDED", Value::Sym(x)) if x == "NIL" => {
+                if feat.attended {
+                    return Ok(false);
+                }
+            }
+            ("ATTENDED", Value::Nil) => {
                 if feat.attended {
                     return Ok(false);
                 }

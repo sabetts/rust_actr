@@ -1125,3 +1125,52 @@ the **only** test constrains the buffer chunk's type: a request-built
 forever. With other slot tests the `isa` line only carries slot indices,
 so the tests decide (as before).
 
+
+## 113. `+visual-location>` request parameters keep their colon (verified)
+
+Models write request parameters with a leading colon (`+visual-location>
+:attended nil`).  The loader keeps the name as `:ATTENDED` and parses
+`nil` to `Value::Nil`, while the engine's feature matcher keys on the
+bare slot name.  `loc_matches` must strip the leading `:` and treat
+`Value::Nil` the same as the symbol `NIL` for `:attended` (unattended
+only).  Until this was handled, `demo2` died with `visual-location slot
+(":ATTENDED", Nil)`.  (`core-modules/vision.lisp` request-parameter
+handling vs. our chunk-spec slot path.)
+
+## 114. Bare-symbol slot values make undefined chunks (verified)
+
+`get-true-slot-value-name` (`framework/chunks.lisp:1106`) calls
+`create-undefined-chunk` for any alphanumeric, non-keyword symbol used
+as a chunk slot value.  So `(add-dm (g value 1 color red))` creates a
+slotless chunk `RED`.  A later `+retrieval> =c` (with `=c` bound to
+`red`) runs `define-chunk-spec-fct (RED)`; since `(length specs) = 1`
+and `RED` is a chunk, `chunk-name-to-chunk-spec` (`chunk-spec.lisp:473`)
+copies its (empty) filled slots, i.e. the request matches *any* chunk.
+That is why `retain-indirect-retrievals` retrieves `G` rather than
+failing.  Our engine currently errors (`direct_retrieval` of a non-DM
+name), so that spec is still blocked (the surrounding `:cia`/`:rir`
+compilation trace is a separate, larger gap).
+
+## 115. The demo2 task clears the window on a keypress (verified)
+
+`tutorial/lisp/demo2.lisp`'s `respond-to-key-press` handler calls
+`clear-exp-window`, so the clear is tied to the `output-key` action, not
+to a scripted time.  `DeviceSetup::clear_on_keypress` models that in the
+`OutputKey` handler: it queues a clear, re-runs `proc-display`, and
+schedules an `EncodingComplete` for the last `move-attention` location
+85 ms later.  Because that object is gone, `encoding_complete` now emits
+`No visual-object found` (leaving `VISUAL` empty) instead of erroring.
+The device text (`V` at 125,150) and the flag live in
+`golden/test-models/specs/demo2.device.sexp`, loaded by the test harness.
+Motor timing for `press-key V` required adding the QWERTY letter geometry
+from `other-files/keyboard.lisp` (`V` = left index, r 1.0, θ 1.57).
+
+## 116. `:randomize-time` is a whole-engine latency feature (verified)
+
+`demo2-randomized` sets `(ssp :starting-parameters (… :randomize-time
+t …))`, which makes *every* `randomize-time-ms` call (`random.lisp:541`,
+`time/3` uniform jitter drawn from the model RNG) vary production action
+time, visual encoding latency, and motor prep/execution.  Reproducing it
+needs a matching RNG-draw order across modules, so `demo2-randomized` is
+left out of the allowlist even though its device setup is identical to
+`demo2`.

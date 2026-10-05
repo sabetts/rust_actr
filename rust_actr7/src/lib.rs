@@ -41,7 +41,7 @@
 //!   (`actr7.x/test-models/`) is integrated as a second oracle:
 //!   `golden/regen-specs.sh` extracts runner specs, `tests/test_models.rs`
 //!   diffs engine output against `.ref` with ACT-R's comparator, and
-//!   `golden/test-models/enabled.txt` is the green allowlist (8 specs so
+//!   `golden/test-models/enabled.txt` is the green allowlist (31 specs so
 //!   far). This milestone added per-spec trace module width
 //!   (`max-module-name-length` overrides), integer-vs-float slot printing,
 //!   and a scripted driver (`run_model_steps`: repeated `run`, `goal-focus`,
@@ -85,7 +85,12 @@
 //!   evaluator (pure operators + `safe-` variants; unknown heads error)
 //!   made `dynamic-slot-compilation` green. A bounded task-file `defun`
 //!   interpreter plus the sole-`isa` matching rule made `bind-test` and
-//!   `remote-bind-test` green. Remaining: task-supplied commands
+//!   `remote-bind-test` green. A `:ACT` `:sgp` arm enabled the unit5-v3
+//!   activation trace (`tutorial-unit5modeling-v3-first-run`). A scripted
+//!   device window for the test-model corpus (an `ADD-TEXT` sidecar,
+//!   `:attended`/`nil` request-parameter matching, the QWERTY key table,
+//!   and a `clear_on_keypress` behavior that re-encodes the vanished
+//!   attended object) made `demo2` green. Remaining: task-supplied commands
 //!   (`grouped`), production validation (`test-bad-productions`, blocked
 //!   by cross-test warning state), `!eval!` timing (`dynamic-real-time`),
 //!   other `require-extra` behaviors (associative-learning/act-touch/

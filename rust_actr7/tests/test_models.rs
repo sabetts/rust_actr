@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 
 use actr_engine::sexpr::{parse_all, Sexp};
 use actr_engine::trace::Detail;
-use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, Step};
+use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
 
 // ---------------------------------------------------------------- spec model
 
@@ -364,13 +364,55 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
     None
 }
 
+/// Per-spec device sidecar `<name>.device.sexp` in the specs dir, mirroring
+/// the task file's post-reset `add-text-to-exp-window` / `clear-exp-window`
+/// calls (same form as `tests/golden.rs`): `((ADD-TEXT ms "text" x y) ...)`,
+/// plus optional `(CLEAR ms)`, `(END ms)`, `(REWARD ms v)`, `(SIMILARITY a b v)`.
+fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
+    let path = specs_dir().join(format!("{name}.device.sexp"));
+    if !path.is_file() {
+        return Ok(DeviceSetup::default());
+    }
+    let src = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let forms = parse_all(&src).map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut device = DeviceSetup::default();
+    for form in &forms {
+        let v = list(form).ok_or_else(|| format!("bad device form in {}: {form:?}", path.display()))?;
+        let op = v.first().and_then(|s| s.as_sym()).unwrap_or("");
+        let ms = || as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms".to_string());
+        match op {
+            "ADD-TEXT" => device.texts.push(DeviceText {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
+                x: as_i64(v.get(3).ok_or("missing x")?).ok_or("bad x")?,
+                y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
+            }),
+            "CLEAR" => device.clears.push(ms()?),
+            "CLEAR-ON-KEYPRESS" => device.clear_on_keypress = true,
+            "END" => device.end = Some(ms()?),
+            "REWARD" => device.rewards.push((
+                ms()?,
+                as_i64(v.get(2).ok_or("missing reward")?).ok_or("bad reward")? as f32,
+            )),
+            "SIMILARITY" => device.sims.push((
+                as_str(v.get(1).ok_or("missing a")?).ok_or("bad a")?.to_uppercase(),
+                as_str(v.get(2).ok_or("missing b")?).ok_or("bad b")?.to_uppercase(),
+                as_i64(v.get(3).ok_or("missing v")?).ok_or("bad v")? as f32,
+            )),
+            other => return Err(format!("bad device op {other} in {}", path.display())),
+        }
+    }
+    Ok(device)
+}
+
 fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     let seed = spec
         .run_seeds
         .first()
         .copied()
         .ok_or("no run seed")?;
-    let actual = run_model_steps(root, &spec.models, seed, &spec.steps, &DeviceSetup::default())
+    let device = load_spec_device(&spec.name)?;
+    let actual = run_model_steps(root, &spec.models, seed, &spec.steps, &device)
         .map_err(|e| format!("engine error: {e}"))?;
     Ok(normalize(&actual))
 }
