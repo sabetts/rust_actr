@@ -1049,3 +1049,17 @@ Test drivers may interleave `(sgp :key value)` steps between runs
 model body's parameters, so the order `(reset)` then `(sgp …)` is what
 selects per-run behavior; the engine now applies these overrides live.
 
+## 108. `*buffer>` and indirect-action validity (verified)
+
+`*buffer>` (`buffer-mod-request`) applies the same change as `=buffer>`
+but its `MOD-BUFFER-CHUNK` is traced under the *buffer's* module
+(`GOAL MOD-BUFFER-CHUNK GOAL`), not `PROCEDURAL`. A production with an RHS
+`+buffer> =var` (a single chunk-spec variable) is an *indirect action*;
+with `:cia nil` it is invalid for compilation — the trace reads
+`Production X is not valid for compilation / because it has an indirect
+action with the BUFFER buffer`. Whole-chunk retrieval requests
+(`+retrieval> =goal`) retrieve the named chunk directly and a `+goal>` of
+one prints the referenced chunk's slots (`(COLOR RED VALUE 3)`), not the
+name. Run 1 (`:cia nil`) of `indirect-action-compilation` is reproduced;
+run 2 needs the full indirect-action composition + installation below.
+

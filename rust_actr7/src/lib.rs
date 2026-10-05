@@ -78,9 +78,13 @@
 //!   `ppm-compilation` green. Runtime `:sgp` driver steps plus partial-match
 //!   annotations/utility in the `:cst` trace made the `simple-ppm` family
 //!   green (`simple-ppm-test`, `…-ppm-run`, `…-medium-chosen-run`).
-//!   Remaining: `!bind!`/`!eval!`, other `require-extra` behaviors
-//!   (associative-learning/act-touch/z-threads/extended-motor),
-//!   `schedule-event` scaffolding, and multi-model traces.
+//!   `*buffer>` modification requests and indirect-action validity
+//!   (`:cia`) cover run 1 of `indirect-action-compilation`; the
+//!   indirect-action (cia/rir) composition and installing compiled
+//!   productions into the runtime remain. Remaining: `!bind!`/`!eval!`,
+//!   other `require-extra` behaviors (associative-learning/act-touch/
+//!   z-threads/extended-motor), `schedule-event` scaffolding, and
+//!   multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
