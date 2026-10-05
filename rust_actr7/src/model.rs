@@ -154,6 +154,8 @@ pub struct Production {
     /// `(spp <name> :reward R)`: propagated as a reward when the production
     /// is selected (`commands/procedural-cmds.lisp`).
     pub reward: Option<f32>,
+    /// `(spp <name> :at S)`: production action time override in seconds.
+    pub at: Option<f32>,
 }
 
 /// Collect `add-act-r-command` name→function aliases from a task file
@@ -630,6 +632,7 @@ fn parse_production(form: &Sexp) -> Result<Production, LoadError> {
         lhs: parse_lhs(&body[..split])?,
         rhs: parse_rhs(&body[split + 1..])?,
         reward: None,
+        at: None,
     })
 }
 
@@ -995,6 +998,10 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                 if k == ":REWARD" {
                     if let Some(r) = sexp_f64(v) {
                         prod.reward = Some(r as f32);
+                    }
+                } else if k == ":AT" {
+                    if let Some(a) = sexp_f64(v) {
+                        prod.at = Some(a as f32);
                     }
                 }
             }

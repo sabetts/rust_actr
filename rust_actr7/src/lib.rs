@@ -41,7 +41,7 @@
 //!   (`actr7.x/test-models/`) is integrated as a second oracle:
 //!   `golden/regen-specs.sh` extracts runner specs, `tests/test_models.rs`
 //!   diffs engine output against `.ref` with ACT-R's comparator, and
-//!   `golden/test-models/enabled.txt` is the green allowlist (34 specs so
+//!   `golden/test-models/enabled.txt` is the green allowlist (35 specs so
 //!   far). This milestone added per-spec trace module width
 //!   (`max-module-name-length` overrides), integer-vs-float slot printing,
 //!   and a scripted driver (`run_model_steps`: repeated `run`, `goal-focus`,
@@ -96,6 +96,9 @@
 //!   `declare-buffer-usage`, `(spp :reward R)` propagation and its `:ult`
 //!   update trace made the `ul-issues` cluster green (fixing the extractor's
 //!   stray runtime `:goal-focus` steps and a `run_secs` event-drop bug).
+//!   The `TEMPORAL` module (tick/noise dynamics, `isa time`/`isa clear`
+//!   requests, `:record-ticks`, `delete-event` via heap retain) and
+//!   `(spp :at S)` action-time overrides made `test-temporal` green.
 //!   Remaining: task-supplied commands
 //!   (`grouped`), production validation (`test-bad-productions`, blocked
 //!   by cross-test warning state), `!eval!` timing (`dynamic-real-time`),

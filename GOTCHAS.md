@@ -1212,3 +1212,27 @@ chunk is `isa response`), and `(spp <prod> :reward R)` schedules a
 per-production utility update (formats from
 `modules/utility-and-reward-1.lisp:441-461`).  `act-r-random` forced the
 RNG into a `RefCell` so the `&self` evaluator can draw.
+
+## 120. Temporal module: tick dynamics and cancellation (verified)
+
+`test-temporal` needs the `TEMPORAL` buffer and `modules/temporal.lisp`'s
+timer.  `+temporal> isa time` places `(isa time ticks 0)` (priority
+-1000, after the request's implicit clear) and arms `next-time-tick`;
+`+temporal> isa clear` stops it.  Interval details that matter:
+- The one-time *start increment* is drawn only on the **first** request
+  (`(when (null time-start-increment) …)`), so a restart reuses it — the
+  first run and the post-`read` restart share one value.
+- Each tick: `t *= 1.1`, then `t = max(1, t + act-r-noise(0.015·t))`,
+  scheduled at `round(t)` ms (defaults `:time-noise .015`, `:time-mult
+  1.1`, start `11 ms`).
+- `:record-ticks t` traces `MODULE-MOD-REQUEST` + `MOD-BUFFER-CHUNK`;
+  `nil` traces only `MOD-BUFFER-CHUNK` (and lets the armed CR wake).
+- A new request `delete-event`s the pending increment.  Our `BinaryHeap`
+  has no removal, so `temporal_request` uses `BinaryHeap::retain` to drop
+  pending `TemporalTick`s — merely ignoring a stale tick still leaves it
+  in the queue and delays the run's "no events left" terminator (and a
+  stale tick would otherwise wake CR).  A generation counter makes a
+  surviving stale tick inert.
+
+`(spp <prod> :at S)` overrides a production's action time (`wait` fires
+at 8.0 s, not 50 ms); parsed alongside `:reward`.

@@ -38,3 +38,4 @@ demo2
 tutorial-unit7modeling-ul-issues-first-run
 tutorial-unit7modeling-ul-issues-first-run-with-ult
 tutorial-unit7modeling-ul-issues-second-run
+test-temporal

@@ -211,6 +211,14 @@ struct Config {
     ga: f32,
     /// Imaginal buffer source spread (`:imaginal-activation`, default 1.0).
     imaginal_activation: f32,
+    /// Temporal module `:time-noise` (default 0.015).
+    time_noise: f32,
+    /// Temporal module `:time-mult` (default 1.1).
+    time_mult: f32,
+    /// Temporal module `:time-master-start-increment` in ms (default 11).
+    time_start_ms: f32,
+    /// Temporal module `:record-ticks` (default t).
+    record_ticks: bool,
     /// Activation trace (`:act`); see [`Act`].
     act: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
@@ -570,6 +578,15 @@ impl Config {
             nsji: sgp_bool(&m.params, ":NSJI"),
             ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
             imaginal_activation: sgp_single(&m.params, ":IMAGINAL-ACTIVATION")?.unwrap_or(1.0),
+            time_noise: sgp_single(&m.params, ":TIME-NOISE")?.unwrap_or(0.015),
+            time_mult: sgp_single(&m.params, ":TIME-MULT")?.unwrap_or(1.1),
+            time_start_ms: (sgp_num(&m.params, ":TIME-MASTER-START-INCREMENT", 0.011)? * 1000.0)
+                as f32,
+            record_ticks: match m.params.iter().find(|(k, _)| k == ":RECORD-TICKS") {
+                None => true,
+                Some((_, Sexp::Sym(s))) => s != "NIL",
+                Some(_) => true,
+            },
             act: match m.params.iter().find(|(k, _)| k == ":ACT") {
                 None => None,
                 Some((_, Sexp::Sym(s))) if s == "NIL" => None,
@@ -848,6 +865,15 @@ enum Event {
     VisualClear,
     /// Run-full-time dummy: keeps the run going to the time limit.
     Dummy,
+    /// Temporal module tick: emits the "Incrementing time ticks to N"
+    /// detail, bumps the count, and schedules the next tick. A stale `gen`
+    /// (a newer request cancelled it) is ignored.
+    TemporalTick {
+        gen: u64,
+        details: String,
+    },
+    /// Temporal `isa clear` request: emits `TEMPORAL Clear`, drops the timer.
+    TemporalClear,
     /// Utility reward propagation (output medium).
     PropagateReward {
         value: f32,
@@ -1014,6 +1040,16 @@ pub struct Engine {
     man_prep_busy: bool,
     man_exec_busy: bool,
     imag_busy: bool,
+    /// Temporal module: current tick interval (ms), tick count, the
+    /// one-time start increment (ms), and a generation counter that cancels
+    /// a pending tick when a new request arrives.
+    temporal_tick: f32,
+    temporal_ticks: u64,
+    temporal_start: Option<f32>,
+    temporal_gen: u64,
+    /// Set by a handler whose event must not wake conflict resolution
+    /// (e.g. a tick cancelled by a newer temporal request).
+    event_silent: bool,
     /// Blending module busy/error flags (`blending-module-busy/-error`).
     blending_busy: bool,
     blending_error: bool,
@@ -1112,6 +1148,11 @@ impl Engine {
             man_prep_busy: false,
             man_exec_busy: false,
             imag_busy: false,
+            temporal_tick: 0.0,
+            temporal_ticks: 0,
+            temporal_start: None,
+            temporal_gen: 0,
+            event_silent: false,
             blending_busy: false,
             blending_error: false,
             compiled_count: 0,
@@ -1196,6 +1237,7 @@ impl Engine {
             "VISUAL",
             "VISUAL-LOCATION",
             "MANUAL",
+            "TEMPORAL",
         ] {
             self.buffers.insert(b.to_string(), Buffer::empty());
         }
@@ -1224,6 +1266,11 @@ impl Engine {
         self.man_prep_busy = false;
         self.man_exec_busy = false;
         self.imag_busy = false;
+        self.temporal_tick = 0.0;
+        self.temporal_ticks = 0;
+        self.temporal_start = None;
+        self.temporal_gen = 0;
+        self.event_silent = false;
         self.blending_busy = false;
         self.blending_error = false;
         self.compiled_count = 0;
@@ -1631,7 +1678,9 @@ impl Engine {
             // Armed conflict-resolution wakes after any later
             // non-maintenance event (`conditions-met`); the arming CR
             // itself does not count.
-            if !is_cr && !maintenance {
+            let silent = self.event_silent;
+            self.event_silent = false;
+            if !is_cr && !maintenance && !silent {
                 self.changed();
             }
         }
@@ -1743,6 +1792,7 @@ impl Engine {
             }
             ":UL" => self.cfg.ul = truthy,
             ":ULT" => self.cfg.ult = truthy,
+            ":RECORD-TICKS" => self.cfg.record_ticks = truthy,
             ":IU" => {
                 if let Some(x) = num(val) {
                     self.cfg.iu = x;
@@ -1895,6 +1945,9 @@ impl Engine {
                             self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
                         }
                     }
+                    "TEMPORAL" => {
+                        self.temporal_request(spec)?;
+                    }
                     "BLENDING" => {
                         // blending-request: clear the error flag, mark busy,
                         // and schedule the real work at priority -3000 so
@@ -2041,7 +2094,11 @@ impl Engine {
                 for buffer in self.exec_prods[prod].implicit_queries.clone() {
                     self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
                 }
-                let at = self.time_ms + self.cfg.dat_ms;
+                let action_ms = self.model.productions[prod]
+                    .at
+                    .map(|s| (s * 1000.0).round() as i64)
+                    .unwrap_or(self.cfg.dat_ms);
+                let at = self.time_ms + action_ms;
                 self.push(
                     at,
                     Prio::Num(0),
@@ -2149,6 +2206,26 @@ impl Engine {
                 );
             }
             Event::Dummy => {}
+            Event::TemporalTick { gen, details } => {
+                if gen == self.temporal_gen {
+                    if show {
+                        self.emit("TEMPORAL", details);
+                    }
+                    self.temporal_tick(show)?;
+                } else {
+                    // Cancelled by a newer request (`delete-event`): it must
+                    // not wake conflict resolution.
+                    self.event_silent = true;
+                }
+            }
+            Event::TemporalClear => {
+                if show {
+                    self.emit("TEMPORAL", "Clear".into());
+                }
+                let b = self.buffer_mut("TEMPORAL");
+                b.chunk = None;
+                b.failed = false;
+            }
             Event::PropagateReward { value } => {
                 if show {
                     self.emit("UTILITY", format!("PROPAGATE-REWARD {value}"));
@@ -2513,6 +2590,126 @@ impl Engine {
         buf.chunk = Some(inst);
         buf.busy = false;
         buf.failed = false;
+        Ok(())
+    }
+
+    /// `+temporal>` request (`modules/temporal.lisp:186`): `isa clear`
+    /// stops the timer; `isa time` (re)starts it, placing `(isa time
+    /// ticks 0)` and arming the first tick.
+    fn temporal_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        let (ctype, slots) = match &spec {
+            NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
+            _ => return Err(unimpl("non-spec temporal request")),
+        };
+        // Any request cancels the pending tick (`delete-event`).
+        self.temporal_gen += 1;
+        self.queue
+            .retain(|q| !matches!(q.event, Event::TemporalTick { .. }));
+        let gen = self.temporal_gen;
+        let is_clear = ctype.eq_ignore_ascii_case("CLEAR")
+            || slots.iter().any(|(s, v)| {
+                (s == "CLEAR" && *v != Value::Nil)
+                    || (s == "CMD" && matches!(v, Value::Sym(x) if x == "CLEAR"))
+            });
+        if is_clear {
+            self.now(Prio::Num(0), Out::Medium, Event::TemporalClear);
+            return Ok(());
+        }
+        // `schedule-set-buffer-chunk 'temporal (isa time) 0 :priority -1000`
+        // — lands after the production's implicit clear.
+        self.now(
+            Prio::Num(-1000),
+            Out::Low,
+            Event::SetBuffer {
+                buffer: "TEMPORAL".to_string(),
+                chunk: NewChunk::Spec {
+                    ctype: "TIME".to_string(),
+                    slots: vec![("TICKS".to_string(), Value::Int(0))],
+                    neg: Vec::new(),
+                    rels: Vec::new(),
+                    bare: true,
+                },
+                requested: true,
+                shown: None,
+            },
+        );
+        // The start increment is drawn only on the first request
+        // (`(when (null time-start-increment) ...)`).
+        let start = match self.temporal_start {
+            Some(s) => s,
+            None => {
+                let master = self.cfg.time_start_ms as f64;
+                let s = (master
+                    + self
+                        .rng
+                        .borrow_mut()
+                        .noise((master * 5.0 * self.cfg.time_noise as f64) as f32)
+                        as f64)
+                    .max(1.0) as f32;
+                self.temporal_start = Some(s);
+                s
+            }
+        };
+        let tick = (start as f64
+            + self.rng.borrow_mut().noise(self.cfg.time_noise * start) as f64)
+            .max(1.0) as f32;
+        self.temporal_tick = tick;
+        self.temporal_ticks = 0;
+        let at = self.time_ms + tick.round() as i64;
+        self.push(
+            at,
+            Prio::Min,
+            Out::Medium,
+            Event::TemporalTick {
+                gen,
+                details: "Incrementing time ticks to 1".to_string(),
+            },
+        );
+        Ok(())
+    }
+
+    /// One temporal tick (`next-time-tick`, `modules/temporal.lisp:231`):
+    /// bump the count, grow and jitter the interval, update the buffer, and
+    /// arm the next tick.
+    fn temporal_tick(&mut self, show: bool) -> Result<(), EngineError> {
+        let has_ticks = self
+            .buffers
+            .get("TEMPORAL")
+            .and_then(|b| b.chunk.as_ref())
+            .map(|c| matches!(c.get("TICKS"), Value::Int(_) | Value::Num(_)))
+            .unwrap_or(false);
+        if !has_ticks {
+            return Ok(());
+        }
+        self.temporal_ticks += 1;
+        let ticks = self.temporal_ticks;
+        let mut t = self.temporal_tick * self.cfg.time_mult;
+        t = (t + self.rng.borrow_mut().noise(self.cfg.time_noise * t)).max(1.0);
+        self.temporal_tick = t;
+        if self.cfg.record_ticks && show {
+            self.emit("TEMPORAL", "MODULE-MOD-REQUEST TEMPORAL".into());
+        }
+        if let Some(b) = self.buffers.get_mut("TEMPORAL") {
+            if let Some(c) = b.chunk.as_mut() {
+                match c.slots.iter_mut().find(|(k, _)| k == "TICKS") {
+                    Some((_, old)) => *old = Value::Int(ticks as i64),
+                    None => c.slots.push(("TICKS".to_string(), Value::Int(ticks as i64))),
+                }
+            }
+        }
+        if show {
+            self.emit("TEMPORAL", "MOD-BUFFER-CHUNK TEMPORAL".into());
+        }
+        let at = self.time_ms + t.round() as i64;
+        self.push(
+            at,
+            Prio::Min,
+            Out::Medium,
+            Event::TemporalTick {
+                gen: self.temporal_gen,
+                details: format!("Incrementing time ticks to {}", ticks + 1),
+            },
+        );
         Ok(())
     }
 
@@ -6368,6 +6565,7 @@ mod tests {
         let probe = Production {
             name: "PROBE".to_string(),
             reward: None,
+            at: None,
             lhs: vec![LhsItem::Match {
                 buffer: "GOAL".to_string(),
                 tests: vec![SlotTest {
@@ -6543,6 +6741,7 @@ mod tests {
         let prod = Production {
             name: "SMALL".to_string(),
             reward: None,
+            at: None,
             lhs: vec![LhsItem::Match {
                 buffer: "GOAL".to_string(),
                 tests: vec![
