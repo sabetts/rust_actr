@@ -490,8 +490,32 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
             }
             "CHUNK-TYPE" => model.chunk_types.push(parse_chunk_type(f)?),
             "ADD-DM" => {
+                let mut anon = 0u64;
                 for e in &items[1..] {
-                    model.chunks.push(parse_dm_entry(e)?);
+                    let named_or_typed = match e {
+                        Sexp::List(p) => {
+                            matches!(p.as_slice(), [Sexp::Sym(_)])
+                                || matches!(
+                                    p.as_slice(),
+                                    [Sexp::Sym(_), Sexp::Sym(isa), Sexp::Sym(_), ..] if isa == "ISA"
+                                )
+                        }
+                        _ => false,
+                    };
+                    if named_or_typed {
+                        model.chunks.push(parse_dm_entry(e)?);
+                    } else if let Sexp::List(p) = e {
+                        // Anonymous slot-value list (`(add-dm (value t))`):
+                        // a default-CHUNK chunk auto-named `CHUNK{k}`.
+                        model.chunks.push(Chunk {
+                            name: format!("CHUNK{anon}"),
+                            ctype: Some("CHUNK".to_string()),
+                            slots: parse_pairs_plain(p)?,
+                        });
+                        anon += 1;
+                    } else {
+                        return structural(format!("bad add-dm entry: {e:?}"));
+                    }
                 }
             }
             "DEFINE-CHUNKS" => {

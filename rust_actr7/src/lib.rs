@@ -52,9 +52,10 @@
 //!   spreading (`:mas`, with DM fan tables) and signature-based
 //!   partial-matching candidacy — the unit5 modeling cluster now runs
 //!   (5 specs green), and `:act` activation traces plus request-spec
-//!   `=buffer` chunk copies made `sji-merge` green. Remaining: `:crt`
-//!   conflict-resolution text, unnamed `add-dm` auto-naming,
-//!   `!bind!`/`!eval!`, `require-extra`, and multi-model traces.
+//!   `=buffer` chunk copies made `sji-merge` green; `:crt`
+//!   conflict-resolution text and unnamed `add-dm` auto-naming made
+//!   `buffer-queries` green. Remaining: `!bind!`/`!eval!`,
+//!   `require-extra`, `schedule-event` scaffolding, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):

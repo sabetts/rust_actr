@@ -185,6 +185,8 @@ struct Config {
     imaginal_activation: f32,
     /// Activation trace (`:act`); see [`Act`].
     act: Option<Act>,
+    /// Conflict-resolution trace (`:crt`).
+    crt: bool,
     dat_ms: i64,
     attention_ms: i64,
     imaginal_delay_ms: i64,
@@ -494,6 +496,7 @@ impl Config {
                 }),
                 Some((_, got)) => return Err(bad(format!("bad :act {got:?}"))),
             },
+            crt: sgp_bool(&m.params, ":CRT"),
             bll,
             ol,
             act_scale,
@@ -1935,9 +1938,16 @@ impl Engine {
         // when `:er` is nil, per `conflict-resolution` source.
         let mut best_u: Option<f32> = None;
         let mut tied: Vec<(usize, Bindings)> = Vec::new();
+        let crt = self.cfg.crt;
+        let mut matched: Vec<String> = Vec::new();
         for ep in self.exec_prods.clone() {
-            let prod = &self.model.productions[ep.index];
-            if let Some(b) = self.match_prod(prod, &ep.implicit_queries)? {
+            let pname = self.model.productions[ep.index].name.clone();
+            if crt {
+                self.out(format!("Trying production: {pname}"));
+            }
+            let prod = self.model.productions[ep.index].clone();
+            if let Some(b) = self.match_prod(&prod, &ep.implicit_queries)? {
+                matched.push(pname);
                 let mut u = self.utilities[ep.index];
                 if self.cfg.egs != 0.0 {
                     u += self.rng.noise(self.cfg.egs);
@@ -1954,6 +1964,15 @@ impl Engine {
                     Some(cur) if u == cur => tied.push((ep.index, b)),
                     _ => {}
                 }
+            } else if crt {
+                self.out("Fails because: ".to_string());
+                let reason = self.crt_failure_reason(&prod);
+                self.out(reason);
+            }
+        }
+        if crt {
+            for name in &matched {
+                self.out(format!("Production {name} matches"));
             }
         }
         let winner = match tied.len() {
@@ -1979,6 +1998,48 @@ impl Engine {
             }
         }
         Ok(())
+    }
+
+    /// First failing condition reason for `:crt` (`failure-reason-string`,
+    /// procedural.lisp:1981). Covers the buffer/state query cases the
+    /// corpus exercises; other condition kinds fall back to a generic line.
+    fn crt_failure_reason(&self, prod: &Production) -> String {
+        for item in &prod.lhs {
+            if let LhsItem::Query { buffer, queries } = item {
+                for (attr, val) in queries {
+                    let ok = match (attr.as_str(), val) {
+                        ("BUFFER", Pattern::Sym(s)) if s == "FAILURE" => {
+                            self.buffers.get(buffer).map(|b| b.failed).unwrap_or(false)
+                        }
+                        ("BUFFER", Pattern::Sym(s)) if s == "EMPTY" => self
+                            .buffers
+                            .get(buffer)
+                            .and_then(|b| b.chunk.as_ref())
+                            .is_none(),
+                        ("BUFFER", Pattern::Sym(s)) if s == "FULL" => self
+                            .buffers
+                            .get(buffer)
+                            .and_then(|b| b.chunk.as_ref())
+                            .is_some(),
+                        ("STATE", Pattern::Sym(s)) if s == "FREE" => {
+                            self.query_free(buffer).unwrap_or(false)
+                        }
+                        ("STATE", Pattern::Sym(s)) if s == "BUSY" => {
+                            !self.query_free(buffer).unwrap_or(false)
+                        }
+                        _ => true,
+                    };
+                    if !ok {
+                        let v = match val {
+                            Pattern::Sym(s) => s.clone(),
+                            other => format!("{other:?}"),
+                        };
+                        return format!("The {} {} query of the {} buffer failed.", attr, v, buffer);
+                    }
+                }
+            }
+        }
+        "The production did not match.".to_string()
     }
 
     fn match_prod(
@@ -3221,6 +3282,11 @@ impl ChunkInst {
         match &self.name {
             Some(n) => n.clone(),
             None => {
+                // `chunk-spec-to-chunk-def` (chunk-spec.lisp:1207): an empty
+                // request spec collapses to the default `(ISA CHUNK)`.
+                if self.bare && self.slots.is_empty() {
+                    return "(ISA CHUNK)".to_string();
+                }
                 let mut parts: Vec<String> = Vec::new();
                 if !self.bare {
                     parts.push("ISA".to_string());

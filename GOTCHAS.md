@@ -820,3 +820,17 @@ float prints `.0` (`lisp_f`). `sji-merge` (`:act t`) is green.
 Still unimplemented: `:crt` conflict-resolution text (`Trying production …`,
 `Fails because: …`), which `buffer-queries` needs along with unnamed `add-dm`
 auto-naming.
+
+## 85. `:crt` conflict-resolution text + unnamed `add-dm` (verified)
+
+`:crt` (procedural.lisp:2098) makes conflict resolution test **all**
+productions in definition order, printing `Trying production: NAME` for each,
+`Fails because: ` + a `failure-reason-string` line on failure, then
+`Production NAME matches` for every member of the conflict set. The common
+reason is a failed query: `The BUFFER {VALUE} query of the {BUFFER} buffer
+failed.` (also `STATE`). Separately, an `add-dm` entry that is neither a bare
+name nor `NAME ISA TYPE …` is an **anonymous** slot-value list
+(`(add-dm (value t))`) and gets the default CHUNK type with auto-name
+`CHUNK{k}`. Also, `chunk-spec-to-chunk-def` collapses a slot-less request spec
+to `(ISA CHUNK)` — a goal/imaginal request SET with slots prints slots-only,
+an empty one prints `(ISA CHUNK)`. `buffer-queries` (`:crt t`) is green.
