@@ -140,6 +140,7 @@ struct Config {
     egs: f32,
     dat_ms: i64,
     attention_ms: i64,
+    imaginal_delay_ms: i64,
     feat_prep_ms: i64,
     init_ms: i64,
     burst_ms: i64,
@@ -184,11 +185,114 @@ struct Feature {
 /// M5a seeds Q; digits etc. join with device-task goldens.
 #[derive(Debug, Clone)]
 struct KeySpec {
+    hand: &'static str,
+    finger: &'static str,
     r: f32,
+    theta: f32,
 }
 
 fn key_table() -> HashMap<String, KeySpec> {
-    HashMap::from([("Q".to_string(), KeySpec { r: 1.0 })])
+    HashMap::from([
+        (
+            "Q".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "PINKIE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "0".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "PINKIE",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "1".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "PINKIE",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "2".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "RING",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "3".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "MIDDLE",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "4".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "5".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 2.24,
+                theta: -1.11,
+            },
+        ),
+        (
+            "6".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 2.24,
+                theta: -2.03,
+            },
+        ),
+        (
+            "7".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "8".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "9".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+    ])
 }
 
 fn sgp_num(params: &[(String, Sexp)], key: &str, default: f64) -> Result<f64, EngineError> {
@@ -269,6 +373,9 @@ impl Config {
         if sgp_bool(&m.params, ":AUTO-ATTEND") {
             return Err(unimpl(":auto-attend"));
         }
+        if sgp_bool(&m.params, ":VIDT") {
+            return Err(unimpl(":vidt variable imaginal delay"));
+        }
         match m.params.iter().find(|(k, _)| k == ":OPTIMIZE-VISUAL") {
             Some((_, Sexp::Sym(s))) if s == "NIL" => {
                 return Err(unimpl(":optimize-visual nil"));
@@ -308,6 +415,7 @@ impl Config {
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
             attention_ms: secs_to_ms(":VISUAL-ATTENTION-LATENCY", 0.085)?,
+            imaginal_delay_ms: secs_to_ms(":IMAGINAL-DELAY", 0.2)?,
             feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
             burst_ms: secs_to_ms(":MOTOR-BURST-TIME", 0.05)?,
@@ -365,6 +473,10 @@ struct ChunkInst {
     name: Option<String>,
     ctype: String,
     slots: Vec<(String, Value)>,
+    /// Print slots-only (`(PROBE "bank")`) instead of with ISA.
+    /// Set for request-built specs (chunk-spec-to-chunk-def drops ISA
+    /// and type); goal-focus lists print with ISA.
+    bare: bool,
 }
 
 impl ChunkInst {
@@ -441,6 +553,9 @@ enum NewChunk {
     Spec {
         ctype: String,
         slots: Vec<(String, Value)>,
+        /// Request-built specs print slots-only (`(PROBE "bank")`);
+        /// goal-focus lists print with ISA. See chunk-spec-to-chunk-def.
+        bare: bool,
     },
     /// A fully-built instance (visual locations/objects, goal specs
     /// with generated names): placed as-is, never DM-resolved.
@@ -453,6 +568,10 @@ enum Event {
         buffer: String,
         chunk: NewChunk,
         requested: bool,
+        /// Name shown in the trace when it differs from the stored
+        /// chunk (visual-location SETs store a copy but print the
+        /// requested name).
+        shown: Option<String>,
     },
     ClearBuffer {
         buffer: String,
@@ -504,9 +623,21 @@ enum Event {
     MoveAttention {
         loc: String,
     },
+    /// Imaginal request delay elapsed: free the module and place the chunk.
+    ImaginalDone {
+        spec: NewChunk,
+    },
     /// Attention landed: build the visual object.
     EncodingComplete {
         loc: String,
+    },
+    /// `+visual> cmd clear` direct event (output low); the buffer
+    /// itself is cleared by the request-rule implicit event.
+    VisualClear,
+    /// Preparation-state release after a module clear. High-detail
+    /// only; matters because executing it wakes armed CR.
+    ChangeState {
+        module: String,
     },
     /// Manual style request (only press-key in M5a).
     PressKey {
@@ -606,18 +737,24 @@ pub struct Engine {
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
     feat_seq: u64,
-    /// Location-name dedup: base -> constructions so far.
+    /// Location-name copy counter: requested base -> copies made.
+    /// Every visual-location SET stores a copy (`VISUAL-LOCATION0`
+    /// requested twice lands `-0-0` then `-0-1` in the buffer) while
+    /// the trace shows the requested name. (Goal/retrieval SETs are
+    /// never name-referenced, so their copies — if any — are
+    /// unobservable and skipped.)
     vl_built: HashMap<String, u64>,
-    /// Request-spec copies: copy name -> feature index. Struct-valued
-    /// `=buffer` references in request/modify specs are copied with a
-    /// `-k` suffix (`Move-attention VISUAL-LOCATION0-1`); the copy
-    /// resolves back to the feature for attention/encoding.
+    /// SET-copy name -> feature index, resolving copies back for
+    /// attention and encoding.
     vl_copies: HashMap<String, usize>,
     /// Visual-object names per kind: KIND -> objects so far.
     obj_built: HashMap<String, u64>,
     visual_busy: bool,
     man_prep_busy: bool,
     man_exec_busy: bool,
+    imag_busy: bool,
+    /// Last press-key geometry, for preparation differences.
+    last_press: Option<(String, String, f32, f32)>,
 }
 
 impl Engine {
@@ -640,11 +777,16 @@ impl Engine {
                 name: Some(c.name.clone()),
                 ctype: c.ctype.clone().unwrap_or_default(),
                 slots,
+                bare: false,
             });
         }
         let mut buffers = HashMap::new();
         buffers.insert("GOAL".to_string(), Buffer::empty());
         buffers.insert("RETRIEVAL".to_string(), Buffer::empty());
+        buffers.insert("IMAGINAL".to_string(), Buffer::empty());
+        buffers.insert("VISUAL".to_string(), Buffer::empty());
+        buffers.insert("VISUAL-LOCATION".to_string(), Buffer::empty());
+        buffers.insert("MANUAL".to_string(), Buffer::empty());
 
         let mut exec_prods = Vec::new();
         for (index, prod) in model.productions.iter().enumerate() {
@@ -693,6 +835,8 @@ impl Engine {
             visual_busy: false,
             man_prep_busy: false,
             man_exec_busy: false,
+            imag_busy: false,
+            last_press: None,
         };
         // Reset: device proc-display (maintenance) processes anything
         // already due, then the initial goal, then conflict resolution.
@@ -710,6 +854,7 @@ impl Engine {
                     buffer: "GOAL".to_string(),
                     chunk,
                     requested: false,
+                    shown: None,
                 },
             );
         }
@@ -784,7 +929,7 @@ impl Engine {
     fn changed(&mut self) {
         if self.cr_armed {
             self.cr_armed = false;
-            self.now(Prio::Num(0), Out::Medium, Event::ConflictResolution);
+            self.now(Prio::Min, Out::Medium, Event::ConflictResolution);
         }
     }
 
@@ -826,10 +971,12 @@ impl Engine {
                 buffer,
                 chunk,
                 requested,
+                shown,
             } => {
                 let inst = self.instantiate(&buffer, chunk)?;
                 if show {
-                    let mut details = format!("SET-BUFFER-CHUNK {buffer} {}", inst.show());
+                    let text = shown.unwrap_or_else(|| inst.show());
+                    let mut details = format!("SET-BUFFER-CHUNK {buffer} {text}");
                     if !requested {
                         details.push_str(" NIL");
                     }
@@ -904,6 +1051,15 @@ impl Engine {
                     "MANUAL" => {
                         self.manual_request(spec)?;
                     }
+                    "IMAGINAL" => {
+                        // imaginal-request: busy requests are ignored
+                        // (warning to stdout in Lisp, nothing in trace).
+                        if !self.imag_busy {
+                            self.imag_busy = true;
+                            let at = self.time_ms + self.cfg.imaginal_delay_ms;
+                            self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
+                        }
+                    }
                     got => {
                         return Err(unimpl(format!("request to buffer {got}")));
                     }
@@ -931,6 +1087,7 @@ impl Engine {
                         buffer: "RETRIEVAL".to_string(),
                         chunk: NewChunk::Named(name),
                         requested: true,
+                        shown: None,
                     },
                 );
             }
@@ -1021,6 +1178,20 @@ impl Engine {
                 }
                 // Buffer failure was set when the search failed.
             }
+            Event::ImaginalDone { spec } => {
+                // set-imaginal-free + goal-style-request, both invisible.
+                self.imag_busy = false;
+                self.now(
+                    Prio::Num(-1000),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "IMAGINAL".to_string(),
+                        chunk: spec,
+                        requested: true,
+                        shown: None,
+                    },
+                );
+            }
             Event::MoveAttention { loc } => {
                 if show {
                     self.emit("VISION", format!("Move-attention {loc} NIL"));
@@ -1040,13 +1211,62 @@ impl Engine {
                 }
                 self.encoding_complete(loc)?;
             }
+            Event::VisualClear => {
+                if show {
+                    self.emit("VISION", "CLEAR".into());
+                }
+                self.visual_busy = false;
+                // pm-module clear also frees preparation state 50 ms
+                // later via an (at most high-detail) change-state event;
+                // executing it wakes an armed conflict-resolution.
+                // Details inferred from the scheduled params; no golden
+                // shows this line yet (high-detail visual clears only).
+                let at = self.time_ms + self.cfg.feat_prep_ms;
+                self.push(
+                    at,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::ChangeState {
+                        module: "VISION".to_string(),
+                    },
+                );
+            }
+            Event::ChangeState { module } => {
+                if show {
+                    self.emit(
+                        &module,
+                        "CHANGE-STATE :LAST NONE :PREP FREE :PROC FREE".into(),
+                    );
+                }
+            }
             Event::PressKey { key, req_ms } => {
                 if show {
                     self.emit("MOTOR", format!("PRESS-KEY KEY {key}"));
                 }
-                // Fresh movement: all features prepared.
+                // Preparation features: 5 fresh, else hfrt differences
+                // vs the last press (hand 3, finger 2, else r/theta).
+                let spec = Self::key_spec(&key)?;
+                let feats = match &self.last_press {
+                    None => 5,
+                    Some((h, f, r, t)) => {
+                        if *h != spec.hand {
+                            3
+                        } else if *f != spec.finger {
+                            2
+                        } else {
+                            (if *r != spec.r { 1 } else { 0 })
+                                + (if *t != spec.theta { 1 } else { 0 })
+                        }
+                    }
+                };
+                self.last_press = Some((
+                    spec.hand.to_string(),
+                    spec.finger.to_string(),
+                    spec.r,
+                    spec.theta,
+                ));
                 self.man_prep_busy = true;
-                let prep = 5 * self.cfg.feat_prep_ms;
+                let prep = feats as i64 * self.cfg.feat_prep_ms;
                 let at = self.time_ms + prep;
                 self.push(
                     at,
@@ -1152,10 +1372,11 @@ impl Engine {
                 .find(|c| c.name.as_deref() == Some(name.as_str()))
                 .cloned()
                 .ok_or_else(|| bad(format!("no chunk named {name}"))),
-            NewChunk::Spec { ctype, slots } => Ok(ChunkInst {
+            NewChunk::Spec { ctype, slots, bare } => Ok(ChunkInst {
                 name: None,
                 ctype,
                 slots,
+                bare,
             }),
             NewChunk::Instance(inst) => Ok(inst),
         }
@@ -1299,6 +1520,7 @@ impl Engine {
         match buffer {
             "VISUAL" => Ok(!self.visual_busy),
             "MANUAL" => Ok(!self.man_prep_busy && !self.man_exec_busy),
+            "IMAGINAL" => Ok(!self.imag_busy),
             _ => Ok(!self
                 .buffers
                 .get(buffer)
@@ -1328,7 +1550,7 @@ impl Engine {
                 RhsAction::Modify { buffer, slots } => {
                     let mut sub = Vec::new();
                     for (s, p) in slots {
-                        sub.push((s.clone(), self.subst_req(p, bindings)?));
+                        sub.push((s.clone(), self.subst(p, bindings)?));
                     }
                     self.now(
                         Prio::Num(100),
@@ -1385,7 +1607,7 @@ impl Engine {
                     "retrieval request cannot be a buffer instance".to_string()
                 ));
             }
-            NewChunk::Spec { ctype, slots } => (ctype.clone(), slots.clone()),
+            NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
         };
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
@@ -1524,7 +1746,7 @@ impl Engine {
     /// move-attention in M5a (plus finst assignment later).
     fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         let (slots, ctype_ok) = match &spec {
-            NewChunk::Spec { ctype, slots } => (slots.clone(), ctype.is_empty()),
+            NewChunk::Spec { ctype, slots, .. } => (slots.clone(), ctype.is_empty()),
             _ => return Err(unimpl("non-spec visual request")),
         };
         let _ = ctype_ok;
@@ -1550,6 +1772,13 @@ impl Engine {
                 }
                 let _ = scale;
                 self.now(Prio::Num(0), Out::Always, Event::MoveAttention { loc });
+                Ok(())
+            }
+            // `+visual> cmd clear`: direct clear event (output low);
+            // the buffer itself is cleared by the request-rule implicit
+            // ClearBuffer already queued at firing.
+            Some("CLEAR") => {
+                self.now(Prio::Num(0), Out::Low, Event::VisualClear);
                 Ok(())
             }
             got => Err(unimpl(format!("visual command {got:?}"))),
@@ -1641,20 +1870,8 @@ impl Engine {
             .is_none();
         if empty {
             if let Some(feat) = self.newest_feature() {
-                let inst = ChunkInst {
-                    name: Some(feat.name.clone()),
-                    ctype: "VISUAL-LOCATION".to_string(),
-                    slots: feat.loc_slots(),
-                };
-                self.now(
-                    Prio::Num(10),
-                    Out::Low,
-                    Event::SetBuffer {
-                        buffer: "VISUAL-LOCATION".to_string(),
-                        chunk: NewChunk::Instance(inst),
-                        requested: false,
-                    },
-                );
+                let base = feat.name.clone();
+                self.place_vl(&base, false)?;
             }
         }
         self.now(Prio::Num(0), Out::Medium, Event::VisiconUpdate);
@@ -1663,6 +1880,43 @@ impl Engine {
             let at = next.at_ms;
             self.push(at, Prio::Num(-100), Out::Always, Event::ProcDisplay);
         }
+        Ok(())
+    }
+
+    /// Place a visual-location chunk for a feature: the trace shows the
+    /// requested base name, but the buffer holds a `-k` copy (which is
+    /// what later requests bind). Aliased back to the feature.
+    fn place_vl(&mut self, base: &str, requested: bool) -> Result<(), EngineError> {
+        let idx = self
+            .features
+            .iter()
+            .position(|f| f.name == base)
+            .ok_or_else(|| bad(format!("no such visicon feature {base}")))?;
+        let feat = self.features[idx].clone();
+        // Copy counter starts at 0 and advances after use
+        // (`new-name-fct` semantics; existing-name skips cannot occur
+        // in fresh models).
+        let n = *self.vl_built.entry(base.to_string()).or_insert(0);
+        self.vl_built.insert(base.to_string(), n + 1);
+        let copy = format!("{base}-{n}");
+        self.vl_copies.insert(copy.clone(), idx);
+        let inst = ChunkInst {
+            name: Some(copy),
+            ctype: "VISUAL-LOCATION".to_string(),
+            slots: feat.loc_slots(),
+            bare: false,
+        };
+        self.buffer_mut("VISUAL-LOCATION").failed = false;
+        self.now(
+            Prio::Num(10),
+            Out::Low,
+            Event::SetBuffer {
+                buffer: "VISUAL-LOCATION".to_string(),
+                chunk: NewChunk::Instance(inst),
+                requested,
+                shown: Some(base.to_string()),
+            },
+        );
         Ok(())
     }
 
@@ -1719,24 +1973,9 @@ impl Engine {
             .find(|f| f.name == names[pick])
             .cloned()
             .unwrap();
-        // The found feature chunk itself fills the buffer (find-or-build
-        // reuses it: the golden shows the same VISUAL-LOCATION0 name the
-        // onset stuffing used, not a deduped copy).
-        let inst = ChunkInst {
-            name: Some(feat.name.clone()),
-            ctype: "VISUAL-LOCATION".to_string(),
-            slots: feat.loc_slots(),
-        };
+        let base = feat.name.clone();
         self.buffer_mut("VISUAL-LOCATION").failed = false;
-        self.now(
-            Prio::Num(10),
-            Out::Low,
-            Event::SetBuffer {
-                buffer: "VISUAL-LOCATION".to_string(),
-                chunk: NewChunk::Instance(inst),
-                requested: true,
-            },
-        );
+        self.place_vl(&base, true)?;
         Ok(())
     }
 
@@ -1751,6 +1990,7 @@ impl Engine {
             name: Some(name),
             ctype: "VISUAL-OBJECT".to_string(),
             slots: vec![("VALUE".to_string(), Value::Str(feat.value.clone()))],
+            bare: false,
         };
         if let Ok(idx) = self.resolve_loc(&loc) {
             self.features[idx].attended = true;
@@ -1763,6 +2003,7 @@ impl Engine {
                 buffer: "VISUAL".to_string(),
                 chunk: NewChunk::Instance(inst),
                 requested: true,
+                shown: None,
             },
         );
         Ok(())
@@ -1770,9 +2011,8 @@ impl Engine {
 }
 
 /// Screen-pos name a location chunk carries after attention bookkeeping.
-/// M5a observes `VISUAL-LOCATION0-1`: constructions after the first gain
-/// a `-k` suffix. (The exact naming-module rule behind the suffix is
-/// verified by goldens, not derived here.)
+/// Trace shows requested base names; buffers hold `-k` copies recorded
+/// in `vl_copies`.
 impl Feature {
     fn loc_slots(&self) -> Vec<(String, Value)> {
         vec![
@@ -1967,53 +2207,27 @@ fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
             Ok(NewChunk::Spec {
                 ctype: ctype.clone(),
                 slots: out,
+                bare: false,
             })
         }
     }
 }
 
 impl Engine {
-    fn concretize(&mut self, spec: &ChunkDesc, b: &Bindings) -> Result<NewChunk, EngineError> {
+    fn concretize(&self, spec: &ChunkDesc, b: &Bindings) -> Result<NewChunk, EngineError> {
         match spec {
             ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
             ChunkDesc::Spec { ctype, slots } => {
                 let mut out = Vec::new();
                 for (s, p) in slots {
-                    out.push((s.clone(), self.subst_req(p, b)?));
+                    out.push((s.clone(), self.subst(p, b)?));
                 }
                 Ok(NewChunk::Spec {
                     ctype: ctype.clone(),
                     slots: out,
+                    bare: true,
                 })
             }
-        }
-    }
-
-    /// Request/modify-spec substitution: struct-valued `=buffer`
-    /// references are copied with a `-k` suffix (as `Move-attention
-    /// VISUAL-LOCATION0-1` shows); plain variables and literals pass
-    /// through. The copy resolves back via `vl_copies`.
-    fn subst_req(&mut self, p: &Pattern, b: &Bindings) -> Result<Value, EngineError> {
-        match p {
-            Pattern::Var(v) => {
-                if let Some(val) = b.get(v) {
-                    return Ok(val.clone());
-                }
-                if let Some(chunk) = self.buffers.get(v).and_then(|buf| buf.chunk.as_ref()) {
-                    if let Some(name) = &chunk.name {
-                        let base = name.clone();
-                        let n = self.vl_built.entry(base.clone()).or_insert(0);
-                        *n += 1;
-                        let copy = format!("{base}-{n}");
-                        if let Some(idx) = self.features.iter().position(|f| f.name == base) {
-                            self.vl_copies.insert(copy.clone(), idx);
-                        }
-                        return Ok(Value::Sym(copy));
-                    }
-                }
-                Err(bad(format!("unbound variable ={v} on RHS")))
-            }
-            other => Value::from_pattern(other),
         }
     }
 }
@@ -2106,15 +2320,16 @@ impl ChunkInst {
         match &self.name {
             Some(n) => n.clone(),
             None => {
-                let mut s = format!("(ISA {}", self.ctype);
-                for (k, v) in &self.slots {
-                    s.push(' ');
-                    s.push_str(k);
-                    s.push(' ');
-                    s.push_str(&v.show());
+                let mut parts: Vec<String> = Vec::new();
+                if !self.bare {
+                    parts.push("ISA".to_string());
+                    parts.push(self.ctype.clone());
                 }
-                s.push(')');
-                s
+                for (k, v) in &self.slots {
+                    parts.push(k.clone());
+                    parts.push(v.show());
+                }
+                format!("({})", parts.join(" "))
             }
         }
     }
@@ -2139,6 +2354,7 @@ mod tests {
             name: None,
             ctype: ctype.into(),
             slots: slots.into_iter().map(|(s, v)| (s.into(), v)).collect(),
+            bare: false,
         }
     }
 

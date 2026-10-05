@@ -399,3 +399,59 @@ seconds; `output-key` prints under KEYBOARD with the device's
 (lowercase) key name. Phase lines are high-detail-only; PRESS-KEY is
 always shown. Later presses need per-key (hand finger r theta) +
 `feat-differences` prep math — only Q is tabled so far.
+
+---
+
+# M5b findings: paired task (all verified: golden byte-match)
+
+## 44. Imaginal = delayed goal-style buffer (200 ms default)
+
+`+imaginal>` sets busy and schedules invisible `set-imaginal-free`
+plus invisible `goal-style-request` at +delay, which SETs at priority
+−1000 with the request spec printed slots-only (no ISA/type — same
+`chunk-spec-to-chunk-def` rule as #18's imaginal case generalized:
+goal-focus lists print WITH ISA, request specs print slots-only).
+Busy requests are silently ignored (stdout warning only).
+`=imaginal>` modify goes through the standard immediate MOD path
+(the dedicated mod-request fn is for direct commands, not `=`).
+`:imaginal-delay` supported, `:vidt` refused.
+
+## 45. `+visual> clear` is a direct event plus implicit buffer clear
+
+No `MODULE-REQUEST` line is hidden here — the production action
+schedules the `clear` event directly (priority 0, output low, prints
+`VISION CLEAR`), while the request-rule implicit ClearBuffer handles
+the buffer itself. The clear also releases preparation state 50 ms
+later via an invisible-at-medium `change-state` event whose execution
+wakes armed conflict-resolution (hence otherwise inexplicable CRs
+like paired's 3.241).
+
+## 46. Armed-CR trigger priority is `:min`, not 0
+
+`schedule-event-after-change` hardcodes `:min :min`
+(scheduling.lisp:1434). The engine initially woke with priority 0,
+which misordered the imaginal SET (−1000) after the CR. One-line fix,
+caught by golden diff.
+
+## 47. SET-to-visual-location stores a `-k` copy, shows the base name
+
+Every VL SET lands `VISUAL-LOCATION{i}-k` (per-base counter from 0,
+`new-name-fct` semantics) while printing the requested base name;
+later `screen-pos` binds the copy's name (`Move-attention
+VISUAL-LOCATION0-1`, `Encoding-complete ...`, study `-1-0`). Find
+reuses the feature (no separate construction copy) — onset stuffing
+and find each consume exactly one suffix. Goal/retrieval SET copies
+(if any) are unobservable (never name-referenced) and skipped.
+
+## 48. Digit keys + preparation differences
+
+Key table extended with 0–9 hand/finger/r/theta from the keyboard
+specs; repeat presses use hfrt `feat-differences` (hand 3, finger 2,
+else r/theta diffs) instead of the fresh 5 features. All peck-recoil
+digits land on exec 150 / finish 300 with margin (fitts 99.1 < 100).
+
+## 49. Time-limit stops are real goldens now
+
+Paired-static idles after learning and ends `Stopped because time
+limit reached` at the run limit — the first golden exercising that
+variant (previously only the no-events-left path was covered).

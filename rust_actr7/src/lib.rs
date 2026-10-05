@@ -20,8 +20,13 @@
 //!   onset stuffing, visual-location find, move-attention + encoding,
 //!   manual press-key pipeline (prep/init/output/finish), implicit
 //!   `?buffer> state free` queries. `attend` golden byte-exact.
-//! - Next: imaginal buffer + multi-item visicon + scheduled stimuli
-//!   toward the paired task (M5b).
+//! - M5b (done): imaginal buffer, `+visual> clear`, digit keys +
+//!   prep differences, VL SET-copy naming. `paired-static` golden
+//!   (failed recall → study → learned recall → keypress → idle stop)
+//!   byte-exact.
+//! - Next: multi-trial task loops (need task-script eval or richer
+//!   sidecars: response-contingent stimuli), audio/speech, `:mp`,
+//!   production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
@@ -94,6 +99,7 @@ mod tests {
             "noisy-count-7",
             "bll-count",
             "attend",
+            "paired-static",
         ] {
             let trace = crate_dir()
                 .join("golden")

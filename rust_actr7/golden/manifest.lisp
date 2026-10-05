@@ -23,4 +23,7 @@
  ;; Static single-item visual task (model + task files + device sidecar):
  ;; find, attend, read, press-key. First device golden.
  ("attend" "user-loads;attend-test.lisp" (100 0) 10 "user-loads;attend-task.lisp")
+ ;; Static paired-associate first trial (model + task files + device
+ ;; sidecar): failed recall, study encoding, learned recall, keypress.
+ ("paired-static" "tutorial;unit4;paired-model.lisp" (200 4) 14 "user-loads;paired-task.lisp")
 )
