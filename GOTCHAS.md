@@ -988,3 +988,24 @@ substituted (`value =val` prints as `VALUE SMALL`). The checked-in
 `modules/utility-and-reward-1.lisp` also prints `:at` and spacing that the
 ref omits — as with blending's `~f`/`~S`, match the ref.
 
+## 102. `:ppm` is procedural partial matching (verified)
+
+`:ppm` (a number) lets a failing LHS **equality** test still match when
+`similarity(requested, actual) > :md` (default -1.0), recording the
+mismatch (`test-slot`, `procedural.lisp:1774`); utility is adjusted by
+`ppm * Σ similarity` via the `ppm-offset` utility offset
+(`:2373`). Negated/inequality tests are not partial-matched. This is
+what makes `ppm-compilation`'s `p0..p22` chain fire despite `slot`
+never changing.
+
+## 103. `goal-focus-fct` / `(car (define-chunks …))` (verified)
+
+Model bodies may set the initial goal with `(goal-focus-fct (car
+(define-chunks DEF)))`: define the chunk(s) in the chunk table, then
+focus the first. Anonymous `(isa TYPE slots…)` definitions are
+auto-named `TYPE{index}` (`TEST0`, `TEST1`, …); the `ppm-compilation`
+event skeleton matches the ref with this alone. An invalid definition
+(e.g. an odd slot count) warns and yields nil, leaving the goal unset —
+read from `define-chunks`/`car` semantics (code-read; the corpus spec it
+affects is otherwise blocked).
+

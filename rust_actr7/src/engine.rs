@@ -120,6 +120,10 @@ impl Value {
 
 type Bindings = HashMap<String, Value>;
 
+/// `(buffer, slot, requested, actual, similarity)` recorded by procedural
+/// partial matching (`:ppm`) for one mismatched LHS equality test.
+type PpmMismatch = (String, String, Value, Value, f32);
+
 impl Engine {
     /// Substitute a RHS pattern: bound variables first, then
     /// `=buffer` whole-chunk references (the buffer's chunk name),
@@ -174,6 +178,10 @@ struct Config {
     mp: Option<f32>,
     ms: f32,
     md: f32,
+    /// `:ppm` — procedural partial matching penalty factor. When set, LHS
+    /// equality tests may mismatch when the value similarity exceeds `:md`,
+    /// and utility is adjusted by `ppm * Σ similarities`.
+    ppm: Option<f32>,
     /// Maximum associative strength (`:mas`). `Some` enables spreading.
     mas: Option<f32>,
     /// `:nsji` — do not clamp negative Sji at 0.
@@ -496,6 +504,7 @@ impl Config {
             mp: sgp_single(&m.params, ":MP")?,
             ms: sgp_single(&m.params, ":MS")?.unwrap_or(0.0),
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
+            ppm: sgp_single(&m.params, ":PPM")?,
             mas: sgp_single(&m.params, ":MAS")?,
             nsji: sgp_bool(&m.params, ":NSJI"),
             ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
@@ -2091,8 +2100,15 @@ impl Engine {
                 self.out(format!("Trying production: {pname}"));
             }
             let prod = self.model.productions[ep.index].clone();
-            if let Some(b) = self.match_prod(&prod, &ep.implicit_queries)? {
+            let mut mism: Vec<PpmMismatch> = Vec::new();
+            if let Some(b) = self.match_prod(&prod, &ep.implicit_queries, &mut mism)? {
                 let mut u = self.utilities[ep.index];
+                // `ppm-offset` (procedural.lisp:2373): penalty is
+                // `:ppm * Σ similarity` over the mismatched slots (the
+                // similarities are negative, so this lowers utility).
+                if let Some(p) = self.cfg.ppm {
+                    u += p * mism.iter().map(|m| m.4).sum::<f32>();
+                }
                 if self.cfg.egs != 0.0 {
                     u += self.rng.noise(self.cfg.egs);
                 }
@@ -2213,10 +2229,11 @@ impl Engine {
         &self,
         prod: &Production,
         implicit_queries: &[String],
+        ppm: &mut Vec<PpmMismatch>,
     ) -> Result<Option<Bindings>, EngineError> {
         let mut b = Bindings::new();
         for item in &prod.lhs {
-            if self.match_item(item, &mut b)?.is_none() {
+            if self.match_item(item, &mut b, ppm)?.is_none() {
                 return Ok(None);
             }
         }
@@ -2228,7 +2245,12 @@ impl Engine {
         Ok(Some(b))
     }
 
-    fn match_item(&self, item: &LhsItem, b: &mut Bindings) -> Result<Option<()>, EngineError> {
+    fn match_item(
+        &self,
+        item: &LhsItem,
+        b: &mut Bindings,
+        ppm: &mut Vec<PpmMismatch>,
+    ) -> Result<Option<()>, EngineError> {
         match item {
             LhsItem::Match { buffer, tests } => {
                 let buf = self
@@ -2250,11 +2272,13 @@ impl Engine {
                     // ACT-R `test-var-slot`: the slot *name* itself may be an
                     // LHS variable (`=attr =val`), substituted from bindings.
                     let slot = self.resolve_slot_name(&t.slot, b);
+                    let got = chunk.get(&slot);
                     let ok = match t.op {
                         SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
-                            self.rel_test(t.op, &t.value, &chunk.get(&slot))
+                            self.rel_test(t.op, &t.value, &got)
                         }
-                        _ => self.test_value(&t.value, &chunk.get(&slot), &mut *b, t.op.negated())?,
+                        SlotOp::Neg => self.test_value(&t.value, &got, &mut *b, true)?,
+                        SlotOp::Eq => self.match_eq(buffer, &slot, &t.value, &got, b, ppm)?,
                     };
                     if !ok {
                         return Ok(None);
@@ -2301,6 +2325,75 @@ impl Engine {
             }
         }
         Ok(Some(()))
+    }
+
+    /// LHS `=` equality test with procedural partial matching (`:ppm`).
+    /// An exact miss may still pass when the value similarity is strictly
+    /// greater than `:md`; the mismatch is recorded for the utility penalty
+    /// (`test-slot`, procedural.lisp:1774).
+    fn match_eq(
+        &self,
+        buffer: &str,
+        slot: &str,
+        pat: &Pattern,
+        got: &Value,
+        b: &mut Bindings,
+        ppm: &mut Vec<PpmMismatch>,
+    ) -> Result<bool, EngineError> {
+        match pat {
+            Pattern::Var(v) => match b.get(v) {
+                Some(prev) => {
+                    if self.value_eq(prev, got) {
+                        Ok(true)
+                    } else {
+                        let prev = prev.clone();
+                        Ok(self.ppm_fallback(buffer, slot, &prev, got, ppm))
+                    }
+                }
+                None => {
+                    // A fresh `slot =var` requires the slot to be filled.
+                    if *got == Value::Nil {
+                        Ok(false)
+                    } else {
+                        b.insert(v.clone(), got.clone());
+                        Ok(true)
+                    }
+                }
+            },
+            other => {
+                let want = Value::from_pattern(other)?;
+                if self.value_eq(&want, got) {
+                    Ok(true)
+                } else {
+                    Ok(self.ppm_fallback(buffer, slot, &want, got, ppm))
+                }
+            }
+        }
+    }
+
+    /// Record a `:ppm` partial match when `similarity(want, got) > :md`.
+    fn ppm_fallback(
+        &self,
+        buffer: &str,
+        slot: &str,
+        want: &Value,
+        got: &Value,
+        ppm: &mut Vec<PpmMismatch>,
+    ) -> bool {
+        if let Some(_p) = self.cfg.ppm {
+            let sim = self.similarity(want, got);
+            if sim > self.cfg.md {
+                ppm.push((
+                    buffer.to_string(),
+                    slot.to_string(),
+                    want.clone(),
+                    got.clone(),
+                    sim,
+                ));
+                return true;
+            }
+        }
+        false
     }
 
     /// `?buffer> state free`: module busy flags for perceptual-motor
@@ -4592,13 +4685,13 @@ mod tests {
         ));
         let start = e.model.productions[0].clone();
         let b = e
-            .match_prod(&start, &[])
+            .match_prod(&start, &[], &mut Vec::new())
             .unwrap()
             .expect("START should match");
         assert_eq!(b.get("NUM1"), Some(&sym("TWO")));
         // INCREMENT needs =retrieval>: absent, no match.
         let inc = e.model.productions[1].clone();
-        assert!(e.match_prod(&inc, &[]).unwrap().is_none());
+        assert!(e.match_prod(&inc, &[], &mut Vec::new()).unwrap().is_none());
         // Retrieval TWO (number TWO next THREE): full match, NUM2=THREE.
         e.buffers.get_mut("RETRIEVAL").unwrap().chunk = Some(inst(
             "NUMBER",
@@ -4606,7 +4699,7 @@ mod tests {
         ));
         // Goal still count-less: `count =num1` fails on nil... START's
         // `count nil` passes but increment needs a real count.
-        assert!(e.match_prod(&inc, &[]).unwrap().is_none());
+        assert!(e.match_prod(&inc, &[], &mut Vec::new()).unwrap().is_none());
         // Advance the goal as START's firing would: count=TWO.
         e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
             "COUNT-FROM",
@@ -4616,12 +4709,12 @@ mod tests {
                 ("COUNT", sym("TWO")),
             ],
         ));
-        let b = e.match_prod(&inc, &[]).unwrap().expect("INCREMENT matches");
+        let b = e.match_prod(&inc, &[], &mut Vec::new()).unwrap().expect("INCREMENT matches");
         assert_eq!(b.get("NUM1"), Some(&sym("TWO")));
         assert_eq!(b.get("NUM2"), Some(&sym("THREE")));
         // STOP needs count=end: not yet.
         let stop = e.model.productions[2].clone();
-        assert!(e.match_prod(&stop, &[]).unwrap().is_none());
+        assert!(e.match_prod(&stop, &[], &mut Vec::new()).unwrap().is_none());
     }
 
     #[test]
@@ -4638,9 +4731,9 @@ mod tests {
         ));
         let fail = e.model.productions[3].clone();
         // Retrieval merely empty is not failure.
-        assert!(e.match_prod(&fail, &[]).unwrap().is_none());
+        assert!(e.match_prod(&fail, &[], &mut Vec::new()).unwrap().is_none());
         e.buffers.get_mut("RETRIEVAL").unwrap().failed = true;
-        assert!(e.match_prod(&fail, &[]).unwrap().is_some());
+        assert!(e.match_prod(&fail, &[], &mut Vec::new()).unwrap().is_some());
     }
 
     /// SBCL `~S` single-float rendering (the blending trace's arbiter):

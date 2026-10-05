@@ -71,10 +71,13 @@
 //!   values, log-sum-exp blended activation, and the `:blt` trace) — making
 //!   `blending` green. The `:cst` conflict-set trace (instantiated
 //!   `print-production-text` plus production parameters) made
-//!   `tutorial-unit8-simple-ppm-model-initial-run` green. Remaining:
-//!   `!bind!`/`!eval!`, other `require-extra` behaviors
-//!   (associative-learning/act-touch/z-threads/extended-motor),
-//!   `schedule-event` scaffolding, and multi-model traces.
+//!   `tutorial-unit8-simple-ppm-model-initial-run` green. Production
+//!   compilation is underway: `:ppm` procedural partial matching and the
+//!   `goal-focus-fct`/`(car (define-chunks …))` model-body form are in
+//!   (the `ppm-compilation` event skeleton matches its ref), and the
+//!   composition/`pct` trace remains. Remaining: `!bind!`/`!eval!`, other
+//!   `require-extra` behaviors (associative-learning/act-touch/z-threads/
+//!   extended-motor), `schedule-event` scaffolding, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):

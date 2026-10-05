@@ -482,6 +482,78 @@ fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
     }
 }
 
+/// Define one `define-chunks` entry in the model's chunk table and return
+/// the chunk name. Anonymous `(isa TYPE slots...)` entries are named
+/// `TYPE{index}` (`TYPE0`, `TYPE1`, ...) like ACT-R.
+fn define_chunk_table_entry(e: &Sexp, model: &mut Model) -> Result<String, LoadError> {
+    match e {
+        Sexp::Sym(n) => {
+            model.defined_chunks.push(Chunk {
+                name: n.clone(),
+                ctype: None,
+                slots: Vec::new(),
+            });
+            Ok(n.clone())
+        }
+        Sexp::List(p) => {
+            if matches!(p.as_slice(), [Sexp::Sym(isa), Sexp::Sym(_), ..] if isa == "ISA") {
+                let ctype = p[1].as_sym().unwrap_or_default().to_string();
+                let slots = parse_pairs_plain(&p[2..])?;
+                let idx = model
+                    .defined_chunks
+                    .iter()
+                    .filter(|c| c.ctype.as_deref() == Some(ctype.as_str()))
+                    .count();
+                let name = format!("{ctype}{idx}");
+                model.defined_chunks.push(Chunk {
+                    name: name.clone(),
+                    ctype: Some(ctype),
+                    slots,
+                });
+                Ok(name)
+            } else {
+                let c = parse_dm_entry(e)?;
+                let name = c.name.clone();
+                model.defined_chunks.push(c);
+                Ok(name)
+            }
+        }
+        got => structural(format!("bad define-chunks entry: {got:?}")),
+    }
+}
+
+/// Recognize `(car (define-chunks DEF...))` (the `goal-focus-fct` idiom):
+/// define the chunks and return the first name. `Some(None)` means the form
+/// matched but no chunk could be defined.
+fn car_define_chunks(
+    arg: &Sexp,
+    model: &mut Model,
+) -> Result<Option<Option<String>>, LoadError> {
+    let items = match arg {
+        Sexp::List(v) => v,
+        _ => return Ok(None),
+    };
+    if items.len() != 2 || items[0].as_sym() != Some("CAR") {
+        return Ok(None);
+    }
+    let dc = match &items[1] {
+        Sexp::List(v) => v,
+        _ => return Ok(None),
+    };
+    if dc.first().and_then(|s| s.as_sym()) != Some("DEFINE-CHUNKS") {
+        return Ok(None);
+    }
+    let mut first = None;
+    for e in &dc[1..] {
+        if let Ok(name) = define_chunk_table_entry(e, model) {
+            if first.is_none() {
+                first = Some(name);
+            }
+        }
+    }
+    Ok(Some(first))
+}
+
 fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
     let body = match form {
         Sexp::List(items) => match items.as_slice() {
@@ -561,30 +633,29 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
             "DEFINE-CHUNKS" => {
                 // Named chunks that live in the model's chunk table but not
                 // in declarative memory (`framework/chunks.lisp:1129`).
+                // Anonymous `(isa TYPE ...)` entries are auto-named
+                // `TYPE{index}`, as ACT-R does.
                 for e in &items[1..] {
-                    match e {
-                        Sexp::Sym(n) => model.defined_chunks.push(Chunk {
-                            name: n.clone(),
-                            ctype: None,
-                            slots: Vec::new(),
-                        }),
-                        Sexp::List(_) => model.defined_chunks.push(parse_dm_entry(e)?),
-                        got => {
-                            return structural(format!("bad define-chunks entry: {got:?}"));
-                        }
-                    }
+                    define_chunk_table_entry(e, &mut model)?;
                 }
             }
-            "GOAL-FOCUS" => {
+            "GOAL-FOCUS" | "GOAL-FOCUS-FCT" => {
                 if items.len() != 2 {
                     return structural("goal-focus takes exactly one argument");
                 }
-                let desc = match &items[1] {
-                    Sexp::List(spec) => parse_chunk_desc(spec)?,
-                    Sexp::Sym(n) => ChunkDesc::Named(n.clone()),
-                    got => return structural(format!("bad goal-focus arg: {got:?}")),
-                };
-                model.initial_goal = Some(desc);
+                // `(goal-focus-fct (car (define-chunks DEF)))`: define the
+                // chunk(s), then focus the first. Errors in the definition
+                // leave the goal unset (ACT-R warns and `(car nil)` is nil).
+                if let Some(name) = car_define_chunks(&items[1], &mut model)? {
+                    model.initial_goal = name.map(ChunkDesc::Named);
+                } else {
+                    let desc = match &items[1] {
+                        Sexp::List(spec) => parse_chunk_desc(spec)?,
+                        Sexp::Sym(n) => ChunkDesc::Named(n.clone()),
+                        got => return structural(format!("bad goal-focus arg: {got:?}")),
+                    };
+                    model.initial_goal = Some(desc);
+                }
             }
             // `(set-similarities (a b v) ...)`: explicit Sji between named
             // chunks (`commands/dm-commands.lisp:513`). Values are stored
