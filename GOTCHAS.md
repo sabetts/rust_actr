@@ -777,10 +777,46 @@ request's **filled/empty slot masks** — not by chunk type
 `add-slot-spec-to-chunk-spec` (chunk-spec.lisp:758): `= V` (V non-nil) marks
 the slot filled; `= nil` marks it empty; `- nil` marks it filled; `- V`
 (non-nil) imposes no signature constraint. Slots with a nil request value are
-signature-only (no testable slot, so they do not score). The engine now
-applies exactly this under `:mp` (and keeps type+value filtering for exact
-matching), which is why `+retrieval> isa simple-value - result nil` can
-retrieve the `math-fact` `2-1=1`. This turned unit5 `first-run` and
-`v4-p3-run` green. Not yet handled: `:act t` activation-trace text (needed by
-`sji-merge`), and `v6-run-p3` misses only by ~1 ms at the run limit (float
+signature-only (no testable slot, so they do not score). **This filter runs in
+exact mode too** — `chunk-list` is signature-filtered before the type/value
+scan, so a non-signature chunk is skipped silently (no "does not match" line).
+This is why `+retrieval> isa simple-value - result nil` can retrieve the
+`math-fact` `2-1=1`, and it turned unit5 `first-run`/`v4-p3-run` green.
+Not yet handled: `v6-run-p3` misses only by ~1 ms at the run limit (float
 brittleness, not candidacy).
+
+## 82. Request slot names can be LHS variables (verified)
+
+`+retrieval> ... - =attr nil`: the *slot name* is `=attr`, not a literal
+slot — it resolves against the goal binding to e.g. `CATEGORY`. Slot names
+must be substituted against bindings when a request spec is concretized
+(`resolve_slot_name`), or the signature mask references a nonexistent slot.
+Needed by `semantic-dynamic`.
+
+## 83. Request specs copy `=buffer` chunk values (`-k`), with copy fan-out (verified)
+
+In goal/imaginal `+`/`=` specs, an unbound `=buffer` reference is copied to
+`NAME-k` (GOTCHA #41), deduped **within one firing** so a modify and a request
+referencing the same buffer share `NAME-0`. A copy is a named, non-DM chunk:
+its fan-out starts at 0 and `c-fan-out` = the source's fan-out at copy time
+(`copy-from-chunk-function chunk-fan-out`). Sji for a non-DM source uses
+`(fan-out + max(1, c-fan-out)) / count` (`chunk-fan-j-to-i`), which is exactly
+what yields `sji-merge`'s `A-0` Sji `4.306853`. Also: `chunk-filled-slots-list`
+is the chunk's internal list, built by prepending, so the spreading-source
+order is **reverse insertion** (`(A-0 DONE)`, not `(DONE A-0)`).
+
+## 84. `:act` emits timestamp-free activation trace (verified)
+
+`dm-act-level` (`declarative-memory.lisp:1042`): `low` shows for any truthy
+`act`, `medium` unless `:act low`, `high` only for `act` `high`/`t`. The trace
+is `model-output` text interleaved with the event trace (so it lives in
+`out_lines` without a timestamp/module prefix): match reporting,
+`Computing activation for chunk X`, base-level (`Computing base-level`,
+`Starting with blc:`, `Total base-level:`), spreading (buffer/spread/sources/
+per-source Sji, `Total spreading activation:`), noise, `Chunk X has an
+activation of:`, and the best-selection lines. `~f` on an integer-valued
+float prints `.0` (`lisp_f`). `sji-merge` (`:act t`) is green.
+
+Still unimplemented: `:crt` conflict-resolution text (`Trying production …`,
+`Fails because: …`), which `buffer-queries` needs along with unnamed `add-dm`
+auto-naming.

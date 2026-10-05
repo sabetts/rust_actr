@@ -49,10 +49,12 @@
 //!   `semantic` trace green. Added `define-chunks`, model-body
 //!   `declare-buffer-usage`/`spp`/`set-base-levels`/`set-similarities`,
 //!   `?buffer> buffer empty|full`, `+goal>` requests, `-` request slots, and
-//!   spreading (`:mas`, with DM fan tables) — the unit5 modeling cluster now
-//!   runs (5 specs green). Remaining: `:act` activation-trace text,
-//!   `:crt` conflict-resolution text, `!bind!`/`!eval!`, `require-extra`,
-//!   and multi-model traces.
+//!   spreading (`:mas`, with DM fan tables) and signature-based
+//!   partial-matching candidacy — the unit5 modeling cluster now runs
+//!   (5 specs green), and `:act` activation traces plus request-spec
+//!   `=buffer` chunk copies made `sji-merge` green. Remaining: `:crt`
+//!   conflict-resolution text, unnamed `add-dm` auto-naming,
+//!   `!bind!`/`!eval!`, `require-extra`, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):

@@ -51,8 +51,10 @@ the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
 `define-chunks` named chunks, model-body
 `declare-buffer-usage`/`spp`/`set-base-levels`/`set-similarities`,
 `?buffer> buffer empty|full`, `+goal>` requests, `-` request slots, spreading
-(`:mas`), and signature-based partial-matching candidacy are handled. The
-next gaps are `:act`/`:crt` trace text; see `../../GOTCHAS.md` #81.
+(`:mas`), signature-based partial-matching candidacy, request-spec `=buffer`
+chunk copies, and `:act` activation traces are handled. The next gaps are
+`:crt` conflict-resolution text and unnamed `add-dm` auto-naming; see
+`../../GOTCHAS.md` #81–84.
 
 ## Regenerate
 

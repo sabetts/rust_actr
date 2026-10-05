@@ -145,6 +145,17 @@ impl Engine {
 
 // ---------------------------------------------------------------- config
 
+/// Activation trace level (`:act`). `dm-act-level` (`declarative-memory.lisp:1042`):
+/// `low` shows for any truthy act, `medium` unless `:act low`, `high` only
+/// for `:act high`/`t`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Act {
+    T,
+    High,
+    Medium,
+    Low,
+}
+
 #[derive(Debug, Clone)]
 struct Config {
     detail: Detail,
@@ -172,6 +183,8 @@ struct Config {
     ga: f32,
     /// Imaginal buffer source spread (`:imaginal-activation`, default 1.0).
     imaginal_activation: f32,
+    /// Activation trace (`:act`); see [`Act`].
+    act: Option<Act>,
     dat_ms: i64,
     attention_ms: i64,
     imaginal_delay_ms: i64,
@@ -469,6 +482,18 @@ impl Config {
             nsji: sgp_bool(&m.params, ":NSJI"),
             ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
             imaginal_activation: sgp_single(&m.params, ":IMAGINAL-ACTIVATION")?.unwrap_or(1.0),
+            act: match m.params.iter().find(|(k, _)| k == ":ACT") {
+                None => None,
+                Some((_, Sexp::Sym(s))) if s == "NIL" => None,
+                Some((_, Sexp::Sym(s))) => Some(match s.as_str() {
+                    "T" => Act::T,
+                    "HIGH" => Act::High,
+                    "MEDIUM" => Act::Medium,
+                    "LOW" => Act::Low,
+                    got => return Err(bad(format!("bad :act {got}"))),
+                }),
+                Some((_, got)) => return Err(bad(format!("bad :act {got:?}"))),
+            },
             bll,
             ol,
             act_scale,
@@ -837,6 +862,10 @@ pub struct Engine {
     feat_seq: u64,
     /// Location-name copy counter: requested base -> copies made.
     copy_count: HashMap<String, u64>,
+    /// Copy fan-out (`c-fan-out`): a copied chunk's source fan-out at copy
+    /// time, used for Sji when the source is not in DM
+    /// (`chunk-fan-j-to-i`, declarative-memory.lisp:2554).
+    c_fan_out: HashMap<String, u32>,
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
@@ -920,6 +949,7 @@ impl Engine {
             features: Vec::new(),
             feat_seq: 0,
             copy_count: HashMap::new(),
+            c_fan_out: HashMap::new(),
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
             visual_busy: false,
@@ -1015,6 +1045,7 @@ impl Engine {
         self.features.clear();
         self.feat_seq = 0;
         self.copy_count.clear();
+        self.c_fan_out.clear();
         self.vl_copies.clear();
         self.obj_built.clear();
         self.visual_busy = false;
@@ -1104,8 +1135,15 @@ impl Engine {
             return *v;
         }
         if let Some(cnt) = self.fan_in.get(i).and_then(|m| m.get(j)) {
-            let fan_out = self.fan_out.get(j).copied().unwrap_or(0) as f32;
-            let val = mas - (fan_out / *cnt as f32).ln();
+            // `chunk-fan-j-to-i` (declarative-memory.lisp:2554): DM chunks
+            // use fan-out directly; copies/non-DM add `max(1, c-fan-out)`.
+            let fo = self.fan_out.get(j).copied().unwrap_or(0) as f32;
+            let eff = if self.dm.iter().any(|c| c.name.as_deref() == Some(j)) {
+                fo
+            } else {
+                fo + self.c_fan_out.get(j).copied().unwrap_or(0).max(1) as f32
+            };
+            let val = mas - (eff / *cnt as f32).ln();
             return if self.cfg.nsji { val } else { val.max(0.0) };
         }
         0.0
@@ -1116,10 +1154,14 @@ impl Engine {
     /// sji(source, candidate)`. Goal spread is `:ga` (default 0), imaginal
     /// is `:imaginal-activation` (default 1.0); other buffer spreads
     /// default 0.
-    fn spreading_activation(&self, candidate: &str) -> f32 {
+    fn spreading_activation(&mut self, candidate: &str) -> f32 {
         let Some(mas) = self.cfg.mas else {
             return 0.0;
         };
+        let verbose = self.act_medium();
+        if verbose {
+            self.out("Computing activation spreading from buffers".to_string());
+        }
         let mut total = 0.0f32;
         for (buffer, spread) in [
             ("GOAL", self.cfg.ga),
@@ -1128,21 +1170,53 @@ impl Engine {
             if spread == 0.0 {
                 continue;
             }
-            let Some(chunk) = self.buffers.get(buffer).and_then(|b| b.chunk.as_ref()) else {
+            let Some(chunk) = self.buffers.get(buffer).and_then(|b| b.chunk.as_ref()).cloned() else {
                 continue;
             };
+            // `chunk-filled-slots-list-fct` returns the chunk's internal
+            // slot list, which is built by prepending (reverse insertion).
             let js: Vec<String> = chunk
                 .slots
                 .iter()
+                .rev()
                 .filter_map(|(_, v)| self.chunk_name_of(v))
                 .collect();
             if js.is_empty() {
                 continue;
             }
+            if verbose {
+                let cname = chunk
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("{buffer}-CHUNK0"));
+                self.out(format!(
+                    "  Spreading {} from buffer {} chunk {}",
+                    lisp_f(spread),
+                    buffer,
+                    cname
+                ));
+                self.out(format!(
+                    "    sources of activation are: ({})",
+                    js.join(" ")
+                ));
+            }
             let level = spread / js.len() as f32;
             for j in &js {
-                total += level * self.compute_sji(j, candidate, mas);
+                let sji = self.compute_sji(j, candidate, mas);
+                if verbose {
+                    self.out(format!(
+                        "    Spreading activation  {} from source {} level  {} times Sji {}",
+                        lisp_f(level * sji),
+                        j,
+                        lisp_f(level),
+                        lisp_f(sji)
+                    ));
+                }
+                total += level * sji;
             }
+        }
+        if verbose {
+            self.out(format!("Total spreading activation: {}", lisp_f(total)));
         }
         total
     }
@@ -1184,6 +1258,30 @@ impl Engine {
             &details,
             self.cfg.module_width,
         ));
+    }
+
+    /// Raw command/`model-output` line (no timestamp/module formatting),
+    /// interleaved with the trace like ACT-R's `model-output`.
+    fn out(&mut self, s: String) {
+        if self.trace_on {
+            self.out_lines.push(s);
+        }
+    }
+
+    /// `:act` visibility by level (`dm-act-level`).
+    fn act_low(&self) -> bool {
+        self.cfg.act.is_some()
+    }
+
+    fn act_medium(&self) -> bool {
+        matches!(
+            self.cfg.act,
+            Some(Act::T) | Some(Act::High) | Some(Act::Medium)
+        )
+    }
+
+    fn act_high(&self) -> bool {
+        matches!(self.cfg.act, Some(Act::T) | Some(Act::High))
     }
 
     fn buffer_mut(&mut self, name: &str) -> &mut Buffer {
@@ -1993,6 +2091,10 @@ impl Engine {
 
     fn fire(&mut self, prod_idx: usize, bindings: &Bindings) -> Result<(), EngineError> {
         let prod = self.model.productions[prod_idx].clone();
+        // Copies of chunk-valued `=buffer` refs are deduped within one
+        // firing (GOTCHA #41): a modify and a request referencing the same
+        // buffer share `NAME-0`.
+        let mut copied: HashMap<String, String> = HashMap::new();
         // `!output!` binds run during firing, before action events.
         for action in &prod.rhs {
             if let RhsAction::Output { args } = action {
@@ -2010,9 +2112,10 @@ impl Engine {
         for action in &prod.rhs {
             match action {
                 RhsAction::Modify { buffer, slots } => {
+                    let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
-                        sub.push((s.clone(), self.subst(p, bindings)?));
+                        sub.push((s.clone(), self.rhs_value(p, bindings, copy, &mut copied)?));
                     }
                     self.now(
                         Prio::Num(100),
@@ -2024,7 +2127,8 @@ impl Engine {
                     );
                 }
                 RhsAction::Request { buffer, spec } => {
-                    let concrete = self.concretize(spec, bindings)?;
+                    let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
+                    let concrete = self.concretize(spec, bindings, copy, &mut copied)?;
                     let var_slots = match spec {
                         ChunkDesc::Spec { slots, .. } => slots
                             .iter()
@@ -2155,46 +2259,59 @@ impl Engine {
         let mut tied: Vec<ChunkInst> = Vec::new();
         for idx in 0..self.dm.len() {
             let c = self.dm[idx].clone();
-            if partial {
-                let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
-                    && req_empty.iter().all(|s| c.get(s) == Value::Nil);
-                if !sig_ok {
-                    continue;
-                }
-            } else {
-                if !want_type.is_empty() && c.ctype != want_type {
-                    continue;
-                }
-                let mut ok = true;
-                for (s, v) in &want_slots {
-                    if s.starts_with(':') {
-                        continue;
-                    }
-                    if c.get(s) != *v {
-                        ok = false;
-                        break;
-                    }
-                }
-                if ok {
-                    for (s, v) in &want_neg {
+            let cname = c.name.clone().unwrap_or_default();
+            // The signature filter applies in exact and partial modes
+            // (`chunk-list` at declarative-memory.lisp:1125).
+            let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
+                && req_empty.iter().all(|s| c.get(s) == Value::Nil);
+            if !sig_ok {
+                continue;
+            }
+            if !partial {
+                let matched = if !want_type.is_empty() && c.ctype != want_type {
+                    false
+                } else {
+                    let mut ok = true;
+                    for (s, v) in &want_slots {
                         if s.starts_with(':') {
                             continue;
                         }
-                        if c.get(s) == *v {
+                        if c.get(s) != *v {
                             ok = false;
                             break;
                         }
                     }
-                }
-                if !ok {
+                    if ok {
+                        for (s, v) in &want_neg {
+                            if s.starts_with(':') {
+                                continue;
+                            }
+                            if c.get(s) == *v {
+                                ok = false;
+                                break;
+                            }
+                        }
+                    }
+                    ok
+                };
+                if !matched {
+                    if self.act_high() {
+                        self.out(format!("Chunk {cname} does not match"));
+                    }
                     continue;
                 }
+                if self.act_medium() {
+                    self.out(format!("Chunk {cname} matches"));
+                }
             }
-            // A = base-level + spreading (0) + partial matching +
-            // activation noise. Base-level comes from the decay equation
-            // when :bll is set, else blc (or a chunk override, which no
-            // golden uses). Noise drawn per candidate in DM order.
-            let mut a = match self.cfg.bll {
+            if self.act_medium() {
+                self.out(format!("Computing activation for chunk {cname}"));
+                self.out("Computing base-level".to_string());
+            }
+            // A = base-level + spreading + partial matching + activation
+            // noise. Base-level from the decay equation when :bll is set,
+            // else blc. Noise drawn per candidate in DM order.
+            let base = match self.cfg.bll {
                 Some(bll) => {
                     let (refs, creation, count) = {
                         let h = &self.hist[idx];
@@ -2216,12 +2333,21 @@ impl Engine {
                             )
                     }
                 }
-                None => self.cfg.blc,
+                None => {
+                    if self.act_medium() {
+                        self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                    }
+                    self.cfg.blc
+                }
             };
+            if self.act_medium() {
+                self.out(format!("Total base-level: {}", lisp_f(base)));
+            }
+            let mut a = base;
             // Spreading activation (0 unless `:mas` is set): sources are
             // the chunk-valued slots of the spread buffers.
-            if let Some(name) = &c.name {
-                a += self.spreading_activation(name);
+            if c.name.is_some() {
+                a += self.spreading_activation(&cname);
             }
             // Partial matching: `=` slots add `mp * similarity`; `-` slots
             // add `mp * md` only when the chunk's value matches the
@@ -2245,20 +2371,48 @@ impl Engine {
                     }
                 }
             }
-            a += match self.cfg.ans {
+            let noise = match self.cfg.ans {
                 Some(s) => self.rng.noise(s),
                 None => 0.0,
             };
+            if self.act_medium() {
+                self.out(format!("Adding transient noise {}", lisp_f(noise)));
+                self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+            }
+            a += noise;
+            if self.act_low() {
+                self.out(format!("Chunk {cname} has an activation of: {}", lisp_f(a)));
+            }
             match best_a {
                 None => {
+                    if self.act_medium() {
+                        self.out(format!(
+                            "Chunk {cname} has the current best activation {}",
+                            lisp_f(a)
+                        ));
+                    }
                     best_a = Some(a);
                     tied = vec![c.clone()];
                 }
                 Some(cur) if a > cur => {
+                    if self.act_medium() {
+                        self.out(format!(
+                            "Chunk {cname} is now the current best with activation {}",
+                            lisp_f(a)
+                        ));
+                    }
                     best_a = Some(a);
                     tied = vec![c.clone()];
                 }
-                Some(cur) if a == cur => tied.push(c.clone()),
+                Some(cur) if a == cur => {
+                    if self.act_medium() {
+                        self.out(format!(
+                            "Chunk {cname} matches the current best activation {}",
+                            lisp_f(a)
+                        ));
+                    }
+                    tied.push(c.clone());
+                }
                 _ => {}
             }
         }
@@ -2281,6 +2435,15 @@ impl Engine {
                 Some(tied.into_iter().next().unwrap())
             }
         };
+        if self.act_low() {
+            if let Some(w) = &best {
+                let wname = w.name.clone().unwrap_or_default();
+                self.out(format!(
+                    "Chunk {wname} with activation {} is the best",
+                    lisp_f(best_a.unwrap_or(0.0))
+                ));
+            }
+        }
         let act = best_a.unwrap_or(0.0);
         let gen = self.dm_gen;
         match best {
@@ -2701,6 +2864,15 @@ fn lisp_round(x: f32) -> i64 {
     }
 }
 
+/// Lisp `~f` for a single-float: integer-valued floats get a `.0`.
+fn lisp_f(x: f32) -> String {
+    if x.is_finite() && x.fract() == 0.0 {
+        format!("{x:.1}")
+    } else {
+        format!("{x}")
+    }
+}
+
 /// Distribute `m` references evenly from `end` back toward `start`
 /// (`even-references`, commands/dm-commands.lisp:639). Integer ms.
 fn even_references(start: i64, end: i64, m: usize) -> Vec<i64> {
@@ -2858,17 +3030,97 @@ fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
 }
 
 impl Engine {
-    fn concretize(&self, spec: &ChunkDesc, b: &Bindings) -> Result<NewChunk, EngineError> {
+    /// Slot names may themselves be LHS variables (`- =attr nil`), resolved
+    /// against the current bindings when a request is concretized.
+    fn resolve_slot_name(&self, s: &str, b: &Bindings) -> String {
+        if let Some(var) = s.strip_prefix('=') {
+            if let Some(Value::Sym(name)) = b.get(var) {
+                return name.clone();
+            }
+        }
+        s.to_string()
+    }
+
+    /// Copy a chunk to `{name}-{k}` (GOTCHA #41): the copy is a named,
+    /// non-DM chunk whose copy fan-out is the source's fan-out at copy
+    /// time (`copy-from-chunk-function chunk-fan-out`).
+    fn copy_chunk(&mut self, name: &str) -> String {
+        let n = *self.copy_count.entry(name.to_string()).or_insert(0);
+        self.copy_count.insert(name.to_string(), n + 1);
+        let copy = format!("{name}-{n}");
+        if let Some(src) = self
+            .dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+            .cloned()
+            .or_else(|| self.named.get(name).cloned())
+        {
+            let mut inst = src;
+            inst.name = Some(copy.clone());
+            self.named.insert(copy.clone(), inst);
+        }
+        self.chunk_names.insert(copy.clone());
+        let fo = self.fan_out.get(name).copied().unwrap_or(0);
+        self.c_fan_out.insert(copy.clone(), fo);
+        self.fan_out.entry(copy.clone()).or_insert(0);
+        copy
+    }
+
+    /// RHS value substitution. When `copy` is set (goal/imaginal specs),
+    /// an unbound `=buffer` reference resolves to a fresh `-k` copy of the
+    /// buffer's chunk (GOTCHA #41), deduped within the firing via `copied`.
+    fn rhs_value(
+        &mut self,
+        p: &Pattern,
+        b: &Bindings,
+        copy: bool,
+        copied: &mut HashMap<String, String>,
+    ) -> Result<Value, EngineError> {
+        if copy {
+            if let Pattern::Var(v) = p {
+                if !b.contains_key(v) {
+                    if let Some(chunk) = self.buffers.get(v).and_then(|buf| buf.chunk.as_ref()) {
+                        if let Some(name) = chunk.name.clone() {
+                            let c = match copied.get(&name) {
+                                Some(x) => x.clone(),
+                                None => {
+                                    let x = self.copy_chunk(&name);
+                                    copied.insert(name.clone(), x.clone());
+                                    x
+                                }
+                            };
+                            return Ok(Value::Sym(c));
+                        }
+                    }
+                }
+            }
+        }
+        self.subst(p, b)
+    }
+
+    fn concretize(
+        &mut self,
+        spec: &ChunkDesc,
+        b: &Bindings,
+        copy: bool,
+        copied: &mut HashMap<String, String>,
+    ) -> Result<NewChunk, EngineError> {
         match spec {
             ChunkDesc::Named(n) => Ok(NewChunk::Named(n.clone())),
             ChunkDesc::Spec { ctype, slots, neg } => {
                 let mut out = Vec::new();
                 for (s, p) in slots {
-                    out.push((s.clone(), self.subst(p, b)?));
+                    out.push((
+                        self.resolve_slot_name(s, b),
+                        self.rhs_value(p, b, copy, copied)?,
+                    ));
                 }
                 let mut negv = Vec::new();
                 for (s, p) in neg {
-                    negv.push((s.clone(), self.subst(p, b)?));
+                    negv.push((
+                        self.resolve_slot_name(s, b),
+                        self.rhs_value(p, b, copy, copied)?,
+                    ));
                 }
                 Ok(NewChunk::Spec {
                     ctype: ctype.clone(),
