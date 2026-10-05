@@ -186,6 +186,9 @@ struct Config {
     act: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
     crt: bool,
+    /// Conflict-set trace (`:cst`): print each matching production's
+    /// instantiation and parameters at conflict resolution.
+    cst: bool,
     /// Blending extra enabled (`require-extra "blending"`): installs the
     /// `BLENDING` buffer and its request/query handling.
     blending: bool,
@@ -510,6 +513,7 @@ impl Config {
                 Some((_, got)) => return Err(bad(format!("bad :act {got:?}"))),
             },
             crt: sgp_bool(&m.params, ":CRT"),
+            cst: sgp_bool(&m.params, ":CST"),
             blending: m
                 .required_extras
                 .iter()
@@ -2080,7 +2084,7 @@ impl Engine {
         let mut best_u: Option<f32> = None;
         let mut tied: Vec<(usize, Bindings)> = Vec::new();
         let crt = self.cfg.crt;
-        let mut matched: Vec<String> = Vec::new();
+        let mut matched: Vec<(usize, Bindings)> = Vec::new();
         for ep in self.exec_prods.clone() {
             let pname = self.model.productions[ep.index].name.clone();
             if crt {
@@ -2088,11 +2092,11 @@ impl Engine {
             }
             let prod = self.model.productions[ep.index].clone();
             if let Some(b) = self.match_prod(&prod, &ep.implicit_queries)? {
-                matched.push(pname);
                 let mut u = self.utilities[ep.index];
                 if self.cfg.egs != 0.0 {
                     u += self.rng.noise(self.cfg.egs);
                 }
+                matched.push((ep.index, b.clone()));
                 match best_u {
                     None => {
                         best_u = Some(u);
@@ -2112,8 +2116,26 @@ impl Engine {
             }
         }
         if crt {
-            for name in &matched {
+            for (idx, _) in &matched {
+                let name = &self.model.productions[*idx].name;
                 self.out(format!("Production {name} matches"));
+            }
+        }
+        // `:cst t`: print the conflict set's production instantiations and
+        // their parameters (procedural.lisp:2283; `print-instantiation`).
+        if self.cfg.cst && self.trace_on {
+            let mut lines: Vec<String> = Vec::new();
+            for (idx, b) in &matched {
+                let prod = &self.model.productions[*idx];
+                lines.push(render_production(prod, b));
+                lines.push(format!("Parameters for production {}:", prod.name));
+                if self.cfg.esc {
+                    lines.push(format!(" :utility {}", fmt_6_3(self.utilities[*idx])));
+                }
+                lines.push(format!(" :u {}", fmt_6_3(0.0)));
+            }
+            for l in lines {
+                self.out(l);
             }
         }
         let winner = match tied.len() {
@@ -3363,6 +3385,143 @@ fn show_values(vals: &[Value]) -> String {
     )
 }
 
+/// `~6,3F` — fixed 3 decimals, minimum width 6 (space padded).
+fn fmt_6_3(x: f32) -> String {
+    format!("{:>6.3}", x)
+}
+
+/// Instantiate a pattern for `print-production-text`: bound variables show
+/// their value, unbound ones keep `=NAME`.
+fn show_pat(p: &Pattern, b: &Bindings) -> String {
+    match p {
+        Pattern::Var(v) => match b.get(v) {
+            Some(val) => val.show(),
+            None => format!("={v}"),
+        },
+        other => Value::from_pattern(other).map(|v| v.show()).unwrap_or_default(),
+    }
+}
+
+/// Instantiate a raw RHS `!output!`/`!action!` argument.
+fn show_sexp_arg(a: &Sexp, b: &Bindings) -> String {
+    match a {
+        Sexp::Sym(s) => {
+            if let Some(var) = s.strip_prefix('=') {
+                match b.get(var) {
+                    Some(val) => val.show(),
+                    None => s.clone(),
+                }
+            } else {
+                s.clone()
+            }
+        }
+        Sexp::Int(i) => i.to_string(),
+        Sexp::Float(x) => Value::Num(*x).show(),
+        Sexp::Str(s) => format!("{s:?}"),
+        Sexp::List(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(|i| show_sexp_arg(i, b))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
+    }
+}
+
+fn slot_op_str(op: SlotOp) -> &'static str {
+    match op {
+        SlotOp::Eq => "=",
+        SlotOp::Neg => "-",
+        SlotOp::Gt => ">",
+        SlotOp::Lt => "<",
+        SlotOp::Ge => ">=",
+        SlotOp::Le => "<=",
+    }
+}
+
+/// `print-production-text` with instantiations (`procedural.lisp:2441`):
+/// the `(P NAME …)` block shown by `:cst`. `isa` is the chunk type, not a
+/// slot, so it is not printed among the conditions.
+fn render_production(prod: &Production, b: &Bindings) -> String {
+    let mut s = format!("(P {}\n", prod.name);
+    for item in &prod.lhs {
+        match item {
+            LhsItem::Match { buffer, tests } => {
+                s.push_str(&format!("   ={buffer}>\n"));
+                for t in tests {
+                    if t.slot == "ISA" {
+                        continue;
+                    }
+                    let val = show_pat(&t.value, b);
+                    if t.op == SlotOp::Eq {
+                        s.push_str(&format!("       {} {val}\n", t.slot));
+                    } else {
+                        s.push_str(&format!(
+                            "    {:<2} {} {val}\n",
+                            slot_op_str(t.op),
+                            t.slot
+                        ));
+                    }
+                }
+            }
+            LhsItem::Query { buffer, queries } => {
+                s.push_str(&format!("   ?{buffer}>\n"));
+                for (attr, val) in queries {
+                    s.push_str(&format!("       {attr} {}\n", show_pat(val, b)));
+                }
+            }
+        }
+    }
+    s.push_str(" ==>\n");
+    for a in &prod.rhs {
+        match a {
+            RhsAction::Modify { buffer, slots } => {
+                s.push_str(&format!("   ={buffer}>\n"));
+                for (name, val) in slots {
+                    s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                }
+            }
+            RhsAction::Request { buffer, spec } => match spec {
+                ChunkDesc::Named(n) => s.push_str(&format!("   +{buffer}> {n}\n")),
+                ChunkDesc::Spec {
+                    slots, neg, rels, ..
+                } => {
+                    s.push_str(&format!("   +{buffer}>\n"));
+                    for (name, val) in slots {
+                        if name == "ISA" {
+                            continue;
+                        }
+                        s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                    }
+                    for (name, val) in neg {
+                        s.push_str(&format!("    -  {name} {}\n", show_pat(val, b)));
+                    }
+                    for (name, val, op) in rels {
+                        s.push_str(&format!(
+                            "    {:<2} {name} {}\n",
+                            slot_op_str(*op),
+                            show_pat(val, b)
+                        ));
+                    }
+                }
+            },
+            RhsAction::Clear { buffer } => s.push_str(&format!("   -{buffer}>\n")),
+            RhsAction::Output { args } => {
+                let body: Vec<String> = args.iter().map(|a| show_sexp_arg(a, b)).collect();
+                s.push_str(&format!("   !OUTPUT! {}\n", body.join(" ")));
+            }
+            RhsAction::Other { head, args } => {
+                let name = head.trim_matches('!');
+                let body: Vec<String> = args.iter().map(|a| show_sexp_arg(a, b)).collect();
+                s.push_str(&format!("   !{name}! {}\n", body.join(" ")));
+            }
+        }
+    }
+    s.push(')');
+    s
+}
+
 fn is_number(v: &Value) -> bool {
     matches!(v, Value::Int(_) | Value::Num(_))
 }
@@ -4498,6 +4657,50 @@ mod tests {
         assert_eq!(lisp_s_f32(-0.9), "-0.9");
         assert_eq!(lisp_s_f32(0.0), "0.0");
         assert_eq!(lisp_s_f32(2.0), "2.0");
+    }
+
+    /// `render_production` reproduces the `:cst` instantiation block
+    /// (`tutorial-unit8-simple-ppm-model-initial-run.ref`).
+    #[test]
+    fn render_production_instantiated() {
+        use crate::model::{LhsItem, Pattern as Pat, Production, RhsAction, SlotTest};
+        let prod = Production {
+            name: "SMALL".to_string(),
+            lhs: vec![LhsItem::Match {
+                buffer: "GOAL".to_string(),
+                tests: vec![
+                    SlotTest {
+                        slot: "ISA".to_string(),
+                        value: Pat::Sym("TEST".to_string()),
+                        op: SlotOp::Eq,
+                    },
+                    SlotTest {
+                        slot: "VALUE".to_string(),
+                        value: Pat::Sym("SMALL".to_string()),
+                        op: SlotOp::Eq,
+                    },
+                    SlotTest {
+                        slot: "VALUE".to_string(),
+                        value: Pat::Var("VAL".to_string()),
+                        op: SlotOp::Eq,
+                    },
+                ],
+            }],
+            rhs: vec![
+                RhsAction::Output {
+                    args: vec![Sexp::Sym("=VAL".to_string())],
+                },
+                RhsAction::Clear {
+                    buffer: "GOAL".to_string(),
+                },
+            ],
+        };
+        let mut b = Bindings::new();
+        b.insert("VAL".to_string(), Value::Sym("SMALL".to_string()));
+        assert_eq!(
+            render_production(&prod, &b),
+            "(P SMALL\n   =GOAL>\n       VALUE SMALL\n       VALUE SMALL\n ==>\n   !OUTPUT! SMALL\n   -GOAL>\n)"
+        );
     }
 
     /// Row-by-row against `golden/units/tables/latency.sexp`: 802

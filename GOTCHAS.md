@@ -977,3 +977,14 @@ fixed notation SBCL `~f` would produce from the same control strings.
 Reproduce `~S`/`~A` semantics for the blended values (see `lisp_s_f32`);
 the ref, not the source's `~f`, is the arbiter.
 
+## 101. `:cst` prints the conflict set with instantiations (verified)
+
+With `:cst t` and `:v t`, every production in the conflict set is printed at
+conflict resolution as its instantiated `(P NAME …)` text plus a parameter
+block (`procedural.lisp:2283`, `print-instantiation`; the params come from
+the utility module's `production-parameter-fct`). `isa` is the chunk type,
+not a slot, so it is omitted from the condition lines; bound `=vars` are
+substituted (`value =val` prints as `VALUE SMALL`). The checked-in
+`modules/utility-and-reward-1.lisp` also prints `:at` and spacing that the
+ref omits — as with blending's `~f`/`~S`, match the ref.
+

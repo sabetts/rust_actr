@@ -69,8 +69,11 @@
 //!   candidacy in DM-alist order, softmax probabilities at temperature
 //!   `:tmp`/`√2·:ans`, numeric weighted averages, similarity-based chunk
 //!   values, log-sum-exp blended activation, and the `:blt` trace) — making
-//!   `blending` green. Remaining: `!bind!`/`!eval!`, other `require-extra`
-//!   behaviors (associative-learning/act-touch/z-threads/extended-motor),
+//!   `blending` green. The `:cst` conflict-set trace (instantiated
+//!   `print-production-text` plus production parameters) made
+//!   `tutorial-unit8-simple-ppm-model-initial-run` green. Remaining:
+//!   `!bind!`/`!eval!`, other `require-extra` behaviors
+//!   (associative-learning/act-touch/z-threads/extended-motor),
 //!   `schedule-event` scaffolding, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!

@@ -21,5 +21,6 @@ tutorial-unit5modeling-v6-run-p3
 sji-merge
 buffer-queries
 blending
+tutorial-unit8-simple-ppm-model-initial-run
 semantic-dynamic
 merging-test
