@@ -166,6 +166,10 @@ pub struct DeviceText {
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
+    /// Window clears at ms (clear-exp-window): all features removed.
+    pub clears: Vec<i64>,
+    /// Run-full-time dummy: keep running to this ms, then time-limit stop.
+    pub end: Option<i64>,
 }
 
 /// A visicon feature: what the device shows and vision can find.
@@ -634,6 +638,8 @@ enum Event {
     /// `+visual> cmd clear` direct event (output low); the buffer
     /// itself is cleared by the request-rule implicit event.
     VisualClear,
+    /// Run-full-time dummy: keeps the run going to the time limit.
+    Dummy,
     /// Preparation-state release after a module clear. High-detail
     /// only; matters because executing it wakes armed CR.
     ChangeState {
@@ -655,6 +661,10 @@ enum Event {
         key: String,
         req_ms: i64,
     },
+    /// Keyboard `output-key`: maintenance class (never wakes CR).
+    OutputKey {
+        key: String,
+    },
     FinishMovement {
         req_ms: i64,
     },
@@ -665,6 +675,9 @@ struct Queued {
     prio: Prio,
     seq: u64,
     out: Out,
+    /// Maintenance-class events never wake armed conflict-resolution
+    /// (`conditions-met` requires non-maintenance).
+    maintenance: bool,
     event: Event,
 }
 
@@ -734,6 +747,8 @@ pub struct Engine {
     dm_busy: bool,
     /// Scripted device items not yet shown, by appearance time.
     pending_texts: Vec<DeviceText>,
+    /// Scripted window clears not yet applied, sorted.
+    pending_clears: Vec<i64>,
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
     feat_seq: u64,
@@ -822,6 +837,11 @@ impl Engine {
                 v.sort_by_key(|t| t.at_ms);
                 v
             },
+            pending_clears: {
+                let mut v = device.clears;
+                v.sort_unstable();
+                v
+            },
             features: Vec::new(),
             feat_seq: 0,
             copy_count: HashMap::new(),
@@ -836,7 +856,10 @@ impl Engine {
         // Reset: device proc-display (maintenance) processes anything
         // already due, then the initial goal, then conflict resolution.
         if !eng.pending_texts.is_empty() && eng.pending_texts[0].at_ms <= 0 {
-            eng.push(0, Prio::Num(-100), Out::Always, Event::ProcDisplay);
+            eng.push_m(0, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
+        }
+        if let Some(end) = device.end {
+            eng.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
         }
         // Reset: restore the initial goal, then conflict resolution.
         if let Some(goal) = eng.model.initial_goal.clone() {
@@ -858,6 +881,10 @@ impl Engine {
     }
 
     fn push(&mut self, time_ms: i64, prio: Prio, out: Out, event: Event) {
+        self.push_m(time_ms, prio, out, false, event);
+    }
+
+    fn push_m(&mut self, time_ms: i64, prio: Prio, out: Out, maintenance: bool, event: Event) {
         let seq = self.seq;
         self.seq += 1;
         self.queue.push(Queued {
@@ -865,6 +892,7 @@ impl Engine {
             prio,
             seq,
             out,
+            maintenance,
             event,
         });
     }
@@ -872,6 +900,11 @@ impl Engine {
     fn now(&mut self, prio: Prio, out: Out, event: Event) {
         let t = self.time_ms;
         self.push(t, prio, out, event);
+    }
+
+    fn now_m(&mut self, prio: Prio, out: Out, maintenance: bool, event: Event) {
+        let t = self.time_ms;
+        self.push_m(t, prio, out, maintenance, event);
     }
 
     fn emit(&mut self, module: &str, details: String) {
@@ -941,7 +974,15 @@ impl Engine {
         loop {
             let next = match self.queue.pop() {
                 None => {
-                    self.emit("------", "Stopped because no events left to process".into());
+                    // Queue empty before the limit: out of events; at or
+                    // past the limit (run-full-time dummy consumed):
+                    // time limit reached, like Lisp `run`.
+                    if self.time_ms >= self.limit_ms {
+                        self.time_ms = self.limit_ms;
+                        self.emit("------", "Stopped because time limit reached".into());
+                    } else {
+                        self.emit("------", "Stopped because no events left to process".into());
+                    }
                     break;
                 }
                 Some(q) => q,
@@ -954,13 +995,12 @@ impl Engine {
             self.time_ms = next.time_ms;
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
+            let maintenance = next.maintenance;
             self.exec(next.event, show)?;
-            // Armed conflict-resolution wakes after ANY later event
-            // (`schedule-event-after-change` with wait-condition :any:
-            // visicon-update is explicitly non-maintenance for this,
-            // and motor events wake it too — see the attend golden).
-            // The arming CR itself does not count as the next event.
-            if !is_cr {
+            // Armed conflict-resolution wakes after any later
+            // non-maintenance event (`conditions-met`); the arming CR
+            // itself does not count.
+            if !is_cr && !maintenance {
                 self.changed();
             }
         }
@@ -1235,6 +1275,7 @@ impl Engine {
                     },
                 );
             }
+            Event::Dummy => {}
             Event::ChangeState { module } => {
                 if show {
                     self.emit(
@@ -1312,7 +1353,7 @@ impl Engine {
                 self.push(
                     t + exec_ms,
                     Prio::Num(0),
-                    Out::Always,
+                    Out::Never,
                     Event::MotorNotify { key, req_ms },
                 );
                 self.push(
@@ -1331,6 +1372,10 @@ impl Engine {
                 }
             }
             Event::MotorNotify { key, req_ms } => {
+                self.now_m(Prio::Num(0), Out::Always, true, Event::OutputKey { key });
+                let _ = req_ms;
+            }
+            Event::OutputKey { key } => {
                 if show {
                     // The device reports its own key name (lowercase as
                     // specified in the keyboard table).
@@ -1339,7 +1384,6 @@ impl Engine {
                         format!("output-key {} {}", self.model.name, key.to_lowercase()),
                     );
                 }
-                let _ = req_ms;
             }
             Event::FinishMovement { req_ms } => {
                 if show {
@@ -1855,6 +1899,18 @@ impl Engine {
                 true
             }
         });
+        let mut cleared = false;
+        self.pending_clears.retain(|c| {
+            if *c <= now {
+                cleared = true;
+                false
+            } else {
+                true
+            }
+        });
+        if cleared {
+            self.features.clear();
+        }
         for t in due {
             let n = self.feat_seq;
             self.feat_seq += 1;
@@ -1880,10 +1936,16 @@ impl Engine {
             }
         }
         self.now(Prio::Num(0), Out::Medium, Event::VisiconUpdate);
-        // Schedule the next wave if items remain.
+        // Schedule the next wave for remaining texts or clears.
+        let mut next_at: Option<i64> = None;
         if let Some(next) = self.pending_texts.first() {
-            let at = next.at_ms;
-            self.push(at, Prio::Num(-100), Out::Always, Event::ProcDisplay);
+            next_at = Some(next.at_ms);
+        }
+        if let Some(clear) = self.pending_clears.first() {
+            next_at = Some(next_at.map_or(*clear, |n| n.min(*clear)));
+        }
+        if let Some(at) = next_at {
+            self.push_m(at, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
         Ok(())
     }

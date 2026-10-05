@@ -482,3 +482,27 @@ merges land `IMAGINAL-CHUNK0-{k}` copies in DM (bank→`-0-0`,
 card→`-0-1` in harvest order) — the names later `RETRIEVED-CHUNK`
 lines print. The engine names unnamed harvest merges
 `{BUFFER}-CHUNK0-{k}` via the shared copy counter.
+
+---
+
+# M7 findings: full paired task (all verified: golden byte-match)
+
+## 53. Maintenance never wakes armed CR — with one false friend
+
+A decisive probe (maintenance vs regular dummies at 1.5/1.6 s) shows
+only the regular dummy wakes CR (`conditions-met` requires
+non-maintenance). The engine tracks event class and triggers solely
+on regular events. The one exception-looking case, `output-key`
+(maintenance) followed by CR@0.635, is actually the invisible regular
+`notify-motor-device` waking it — hence the split into
+notify/output-key events.
+
+## 54. Fixed segments + clears replicate the real task — no contingency
+
+The real `paired-task` runs fixed 5 s prompt/study halves and scores
+afterward; responses never steer timing. The golden mirrors it with
+`CLEAR`/`ADD-TEXT` sidecar actions and a Lisp stub of scheduled
+events under a single run, plus an `END` dummy on both sides so the
+tail reaches the time limit identically (`run` prints the time-limit
+line when the queue empties exactly at the limit — verified in
+source, now covered by golden).

@@ -27,8 +27,12 @@
 //! - M6 (done): multi-trial paired (`paired-2x2`, 2 pairs × 2 blocks,
 //!   fixed 60 s schedule): harvest-named pair chunks, hand-change prep
 //!   differences, long-run RNG/learning stability. Byte-exact.
-//! - Next: response-contingent task scripting (sidecar ON-KEY rules or
-//!   task-script eval), audio/speech, `:mp`, production compilation.
+//! - M7 (done): full paired task (`paired-full`, 2 pairs, 5 s prompt +
+//!   study segments with window clears, single 20 s run): CLEAR/END
+//!   sidecar actions, maintenance event classes, time-limit tail.
+//!   Byte-exact.
+//! - Next: audio/speech devices, `:mp` partial matching, `:ul`
+//!   utility learning, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
@@ -103,6 +107,7 @@ mod tests {
             "attend",
             "paired-static",
             "paired-2x2",
+            "paired-full",
         ] {
             let trace = crate_dir()
                 .join("golden")

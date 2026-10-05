@@ -194,23 +194,31 @@ fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
     }
     let src = fs::read_to_string(&sidecar).map_err(|e| format!("{}: {e}", sidecar.display()))?;
     // Minimal reader (the crate's sexpr parser lives behind the lib boundary).
-    let mut texts = Vec::new();
+    let mut device = DeviceSetup::default();
     for form in split_forms(&src) {
         let parts = split_atoms(&form)
             .ok_or_else(|| format!("bad device form in {}: {form}", sidecar.display()))?;
         match parts.as_slice() {
             [op, ms, text, x, y] if op == "ADD-TEXT" => {
-                texts.push(DeviceText {
+                device.texts.push(DeviceText {
                     at_ms: ms.parse().map_err(|_| format!("bad ms in {form}"))?,
                     text: unquote(text).ok_or_else(|| format!("bad text in {form}"))?,
                     x: x.parse().map_err(|_| format!("bad x in {form}"))?,
                     y: y.parse().map_err(|_| format!("bad y in {form}"))?,
                 });
             }
+            [op, ms] if op == "CLEAR" => {
+                device
+                    .clears
+                    .push(ms.parse().map_err(|_| format!("bad ms in {form}"))?);
+            }
+            [op, ms] if op == "END" => {
+                device.end = Some(ms.parse().map_err(|_| format!("bad ms in {form}"))?);
+            }
             _ => return Err(format!("bad device form in {}: {form}", sidecar.display())),
         }
     }
-    Ok(DeviceSetup { texts })
+    Ok(device)
 }
 
 /// Split top-level `(...)` forms (no nesting needed here).

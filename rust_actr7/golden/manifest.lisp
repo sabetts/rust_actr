@@ -26,6 +26,9 @@
  ;; Static paired-associate first trial (model + task files + device
  ;; sidecar): failed recall, study encoding, learned recall, keypress.
  ("paired-static" "tutorial;unit4;paired-model.lisp" (200 4) 14 "user-loads;paired-task.lisp")
+ ;; Full paired task: 2 pairs, 5 s prompt/study segments with clears,
+ ;; single 20 s run (model + task + sidecar with CLEAR/END actions).
+ ("paired-full" "tutorial;unit4;paired-model.lisp" (200 4) 20 "user-loads;pairedfull-task.lisp")
  ;; Two pairs x two blocks, fixed 60 s schedule (model + task + sidecar).
  ;; Exercises long-run learning: repeated retrievals, rising base-levels.
  ("paired-2x2" "tutorial;unit4;paired-model.lisp" (200 4) 60 "user-loads;paired2-task.lisp")
