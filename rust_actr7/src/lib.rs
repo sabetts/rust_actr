@@ -57,8 +57,9 @@
 //!   `buffer-queries` green; and LHS variable slot names, `slot =var`
 //!   requiring filled, named-merge renaming, and type-free `isa` matching
 //!   made `semantic-dynamic` green. Remaining: `!bind!`/`!eval!`,
-//!   `require-extra`, `schedule-event` scaffolding, chunk-valued RHS
-//!   references (`merging-test`), and multi-model traces.
+//!   `require-extra`, `schedule-event` scaffolding, and multi-model traces.
+//!   Chunk-valued references + merge aliasing and `!stop!` made
+//!   `merging-test` green.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):

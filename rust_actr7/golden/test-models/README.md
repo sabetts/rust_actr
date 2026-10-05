@@ -53,8 +53,9 @@ the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
 `?buffer> buffer empty|full`, `+goal>` requests, `-` request slots, spreading
 (`:mas`), signature-based candidacy, request-spec `=buffer` chunk copies,
 `:act`/`:crt` traces, unnamed `add-dm` auto-naming, LHS variable slot names,
-and type-free `isa` matching are handled. The next gaps are
-`!bind!`/`!eval!` and `require-extra`; see `../../GOTCHAS.md` #81–88.
+and type-free `isa` matching, chunk-valued references + merge aliasing, and
+`!stop!` are handled. The next gaps are `!bind!`/`!eval!` and
+`require-extra`; see `../../GOTCHAS.md` #81–89.
 
 ## Regenerate
 

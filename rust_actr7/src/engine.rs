@@ -869,6 +869,11 @@ pub struct Engine {
     /// time, used for Sji when the source is not in DM
     /// (`chunk-fan-j-to-i`, declarative-memory.lisp:2554).
     c_fan_out: HashMap<String, u32>,
+    /// Buffer chunk name -> final DM chunk name, for chunk references that
+    /// were merged into an existing DM chunk (`merging-test`).
+    chunk_alias: HashMap<String, String>,
+    /// `!stop!` was executed: end the run with a BREAK-EVENT.
+    stopped: bool,
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
@@ -953,6 +958,8 @@ impl Engine {
             feat_seq: 0,
             copy_count: HashMap::new(),
             c_fan_out: HashMap::new(),
+            chunk_alias: HashMap::new(),
+            stopped: false,
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
             visual_busy: false,
@@ -1049,6 +1056,8 @@ impl Engine {
         self.feat_seq = 0;
         self.copy_count.clear();
         self.c_fan_out.clear();
+        self.chunk_alias.clear();
+        self.stopped = false;
         self.vl_copies.clear();
         self.obj_built.clear();
         self.visual_busy = false;
@@ -1316,6 +1325,17 @@ impl Engine {
                     }
                     Ol::On => h.refs.clear(),
                 }
+                // A buffer chunk referenced elsewhere (a goal slot) merges
+                // into an existing DM chunk: alias the buffer name to the DM
+                // name so `value B` matches the stored reference
+                // (`merging-test`).
+                if let Some(dm_name) = self.dm[i].name.clone() {
+                    if let Some(n) = chunk.name.clone() {
+                        if n != dm_name {
+                            self.chunk_alias.insert(n, dm_name);
+                        }
+                    }
+                }
             }
             None => {
                 // Unnamed buffer contents (imaginal/goal request specs)
@@ -1412,6 +1432,11 @@ impl Engine {
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
+            if self.stopped {
+                self.queue.clear();
+                self.emit("------", "BREAK-EVENT Stopped by !stop!".into());
+                break;
+            }
             // Armed conflict-resolution wakes after any later
             // non-maintenance event (`conditions-met`); the arming CR
             // itself does not count.
@@ -2092,7 +2117,7 @@ impl Engine {
                     // ACT-R `test-var-slot`: the slot *name* itself may be an
                     // LHS variable (`=attr =val`), substituted from bindings.
                     let slot = self.resolve_slot_name(&t.slot, b);
-                    if !test_value(&t.value, &chunk.get(&slot), &mut *b, t.negated)? {
+                    if !self.test_value(&t.value, &chunk.get(&slot), &mut *b, t.negated)? {
                         return Ok(None);
                     }
                 }
@@ -2167,13 +2192,26 @@ impl Engine {
                 }
                 self.out_lines.push(text);
             } else if let RhsAction::Other { head, .. } = action {
-                return Err(unimpl(format!("RHS {head} needs a Lisp evaluator")));
+                // `!stop!` ends the run with a BREAK-EVENT.
+                if head == "!STOP!" {
+                    self.stopped = true;
+                } else {
+                    return Err(unimpl(format!("RHS {head} needs a Lisp evaluator")));
+                }
             }
+        }
+        if self.stopped {
+            return Ok(());
         }
         // Explicit actions in RHS order, then implicit harvest clears.
         for action in &prod.rhs {
             match action {
                 RhsAction::Modify { buffer, slots } => {
+                    // An empty `=buffer>` (no slots) is a no-op: ACT-R
+                    // schedules no MOD event for it (e.g. `merging-test` P2).
+                    if slots.is_empty() {
+                        continue;
+                    }
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
@@ -3001,35 +3039,58 @@ fn bl_equation(
     }
 }
 
-/// Match one slot test; returns whether it passes.
-fn test_value(
-    pat: &Pattern,
-    got: &Value,
-    b: &mut Bindings,
-    negated: bool,
-) -> Result<bool, EngineError> {
-    let ok = match pat {
-        Pattern::Nil => *got == Value::Nil,
-        Pattern::Var(v) => match b.get(v) {
-            Some(prev) => prev == got,
-            None => {
-                // A LHS `slot =var` requires the slot to be filled
-                // (`add-slot-spec-to-chunk-spec` sets the signature's
-                // filled bit); an empty slot does not bind.
-                if *got == Value::Nil {
-                    false
-                } else {
-                    b.insert(v.clone(), got.clone());
-                    true
-                }
+impl Engine {
+    /// Resolve a chunk name through merge aliases (`merging-test`).
+    fn resolve_alias(&self, n: &str) -> String {
+        let mut cur = n.to_string();
+        for _ in 0..8 {
+            match self.chunk_alias.get(&cur) {
+                Some(next) if *next != cur => cur = next.clone(),
+                _ => break,
             }
-        },
-        Pattern::Sym(s) => *got == Value::Sym(s.clone()),
-        Pattern::Int(i) => *got == Value::Int(*i),
-        Pattern::Num(x) => *got == Value::Num(*x),
-        Pattern::Str(s) => *got == Value::Str(s.clone()),
-    };
-    Ok(if negated { !ok } else { ok })
+        }
+        cur
+    }
+
+    /// Value equality with chunk-name aliases applied to `Sym`s.
+    fn value_eq(&self, a: &Value, b: &Value) -> bool {
+        match (a, b) {
+            (Value::Sym(x), Value::Sym(y)) => self.resolve_alias(x) == self.resolve_alias(y),
+            _ => a == b,
+        }
+    }
+
+    /// Match one slot test; returns whether it passes.
+    fn test_value(
+        &self,
+        pat: &Pattern,
+        got: &Value,
+        b: &mut Bindings,
+        negated: bool,
+    ) -> Result<bool, EngineError> {
+        let ok = match pat {
+            Pattern::Nil => *got == Value::Nil,
+            Pattern::Var(v) => match b.get(v) {
+                Some(prev) => self.value_eq(prev, got),
+                None => {
+                    // A LHS `slot =var` requires the slot to be filled
+                    // (`add-slot-spec-to-chunk-spec` sets the signature's
+                    // filled bit); an empty slot does not bind.
+                    if *got == Value::Nil {
+                        false
+                    } else {
+                        b.insert(v.clone(), got.clone());
+                        true
+                    }
+                }
+            },
+            Pattern::Sym(s) => self.value_eq(got, &Value::Sym(s.clone())),
+            Pattern::Int(i) => *got == Value::Int(*i),
+            Pattern::Num(x) => *got == Value::Num(*x),
+            Pattern::Str(s) => *got == Value::Str(s.clone()),
+        };
+        Ok(if negated { !ok } else { ok })
+    }
 }
 
 impl Engine {
@@ -3144,18 +3205,40 @@ impl Engine {
         if copy {
             if let Pattern::Var(v) = p {
                 if !b.contains_key(v) {
-                    if let Some(chunk) = self.buffers.get(v).and_then(|buf| buf.chunk.as_ref()) {
-                        if let Some(name) = chunk.name.clone() {
-                            let c = match copied.get(&name) {
-                                Some(x) => x.clone(),
-                                None => {
-                                    let x = self.copy_chunk(&name);
-                                    copied.insert(name.clone(), x.clone());
-                                    x
+                    let named = self
+                        .buffers
+                        .get(v)
+                        .and_then(|buf| buf.chunk.as_ref())
+                        .and_then(|c| c.name.clone());
+                    if let Some(name) = named {
+                        let c = match copied.get(&name) {
+                            Some(x) => x.clone(),
+                            None => {
+                                let x = self.copy_chunk(&name);
+                                copied.insert(name.clone(), x.clone());
+                                x
+                            }
+                        };
+                        return Ok(Value::Sym(c));
+                    }
+                    // Unnamed spec-created buffer chunk: give it its reuse
+                    // name (`BUFFER-CHUNK0`) so the reference is stable and
+                    // can be aliased when it later merges into DM.
+                    let has_chunk = self
+                        .buffers
+                        .get(v)
+                        .map(|buf| buf.chunk.is_some())
+                        .unwrap_or(false);
+                    if has_chunk {
+                        let reuse = format!("{v}-CHUNK0");
+                        if let Some(buf) = self.buffers.get_mut(v) {
+                            if let Some(c) = buf.chunk.as_mut() {
+                                if c.name.is_none() {
+                                    c.name = Some(reuse.clone());
                                 }
-                            };
-                            return Ok(Value::Sym(c));
+                            }
                         }
+                        return Ok(Value::Sym(reuse));
                     }
                 }
             }

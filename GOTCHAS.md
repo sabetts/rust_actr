@@ -865,3 +865,17 @@ semantic-dynamic retrieves the `CHUNK`-typed imaginal chunk for a request with
 The engine now ignores `isa`/`want_type` in retrieval candidacy and in LHS
 matching; the per-slot tests reproduce the signature (GOTCHA #81 refined).
 `semantic-dynamic` is green.
+
+## 89. Chunk-valued references, merge aliasing, and `!stop!` (verified)
+
+`=goal> value =imaginal` stores a reference to the imaginal buffer's chunk,
+not a literal. The buffer chunk is named (lazily, `BUFFER-CHUNK0`, reuse
+naming) so the reference is stable; when the buffer later clears and that
+chunk merges into an existing DM chunk (`merging-test`'s `b`), the engine
+records an alias `BUFFER-CHUNK0 -> b` and `value b` then matches. ACT-R gets
+the same result through `true-chunk-name-fct`. Two related rules:
+- An empty `=buffer>` modify (no slots) is a **no-op**: ACT-R schedules no
+  `MOD-BUFFER-CHUNK` event for it (`merging-test` P2's `=imaginal>`).
+- `!stop!` ends the run immediately with
+  `------ BREAK-EVENT Stopped by !stop!` (no normal stop line).
+`merging-test` is green.
