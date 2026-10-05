@@ -1668,6 +1668,19 @@ impl Engine {
             ":ER" => self.cfg.er = truthy,
             ":CRT" => self.cfg.crt = truthy,
             ":CST" => self.cfg.cst = truthy,
+            ":ACT" => {
+                self.cfg.act = match val {
+                    Sexp::Sym(s) if s == "NIL" => None,
+                    Sexp::Sym(s) => Some(match s.as_str() {
+                        "T" => Act::T,
+                        "HIGH" => Act::High,
+                        "MEDIUM" => Act::Medium,
+                        "LOW" => Act::Low,
+                        _ => return Err(bad(format!("bad :act {s}"))),
+                    }),
+                    _ => return Err(bad(format!("bad :act {val:?}"))),
+                };
+            }
             ":NSJI" => self.cfg.nsji = truthy,
             ":GA" => {
                 if let Some(x) = num(val) {
