@@ -31,8 +31,11 @@
 //!   study segments with window clears, single 20 s run): CLEAR/END
 //!   sidecar actions, maintenance event classes, time-limit tail.
 //!   Byte-exact.
-//! - Next: audio/speech devices, `:mp` partial matching, `:ul`
-//!   utility learning, production compilation.
+//! - M8 (done): partial matching — signature candidacy, similarity
+//!   scoring with var-skipping, `mp-test` golden (similarity decides
+//!   between two non-matching candidates). Byte-exact.
+//! - Next: audio/speech devices, `:ul` utility learning, production
+//!   compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
@@ -108,6 +111,7 @@ mod tests {
             "paired-static",
             "paired-2x2",
             "paired-full",
+            "mp-test",
         ] {
             let trace = crate_dir()
                 .join("golden")

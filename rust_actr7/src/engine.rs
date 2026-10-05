@@ -138,6 +138,9 @@ struct Config {
     act_scale: f32,
     ans: Option<f32>,
     egs: f32,
+    mp: Option<f32>,
+    ms: f32,
+    md: f32,
     dat_ms: i64,
     attention_ms: i64,
     imaginal_delay_ms: i64,
@@ -170,6 +173,10 @@ pub struct DeviceSetup {
     pub clears: Vec<i64>,
     /// Run-full-time dummy: keep running to this ms, then time-limit stop.
     pub end: Option<i64>,
+    /// Chunk similarities `(a, b, value)`, mirrored from the task
+    /// file's `set-similarities` (which must run post-reset: reset
+    /// rebuilds chunk structs, wiping table state set at load).
+    pub sims: Vec<(String, String, f32)>,
 }
 
 /// A visicon feature: what the device shows and vision can find.
@@ -329,8 +336,8 @@ fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
 
 impl Config {
     fn from_model(m: &Model) -> Result<Config, EngineError> {
-        // Still beyond reach: spreading, partial matching, utility learning.
-        for key in [":MAS", ":MP", ":PAS", ":UL"] {
+        // Still beyond reach: spreading, utility learning.
+        for key in [":MAS", ":PAS", ":UL"] {
             if let Some((_, v)) = m.params.iter().find(|(k, _)| k == key) {
                 if !matches!(v, Sexp::Sym(s) if s == "NIL") {
                     return Err(unimpl(format!("subsymbolic parameter {key}")));
@@ -413,6 +420,9 @@ impl Config {
             rt: sgp_single(&m.params, ":RT")?.unwrap_or(0.0),
             blc: sgp_single(&m.params, ":BLC")?.unwrap_or(0.0),
             ans: sgp_single(&m.params, ":ANS")?.filter(|s| *s > 0.0),
+            mp: sgp_single(&m.params, ":MP")?,
+            ms: sgp_single(&m.params, ":MS")?.unwrap_or(0.0),
+            md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
             bll,
             ol,
             act_scale,
@@ -587,9 +597,13 @@ enum Event {
     ModuleRequest {
         buffer: String,
         spec: NewChunk,
+        /// Slots whose request value was a variable (skipped by
+        /// partial matching, which only scores constants).
+        var_slots: Vec<String>,
     },
     StartRetrieval {
         spec: NewChunk,
+        var_slots: Vec<String>,
     },
     RetrievedChunk {
         name: String,
@@ -745,6 +759,9 @@ pub struct Engine {
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
+    /// Chunk similarities, as given (lookup tries both orders;
+    /// mirrors set-similarities).
+    sims: HashMap<(String, String), f32>,
     /// Scripted device items not yet shown, by appearance time.
     pending_texts: Vec<DeviceText>,
     /// Scripted window clears not yet applied, sorted.
@@ -832,6 +849,11 @@ impl Engine {
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
+            sims: device
+                .sims
+                .iter()
+                .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
+                .collect(),
             pending_texts: {
                 let mut v = device.texts;
                 v.sort_by_key(|t| t.at_ms);
@@ -1069,7 +1091,11 @@ impl Engine {
                 }
                 self.changed();
             }
-            Event::ModuleRequest { buffer, spec } => {
+            Event::ModuleRequest {
+                buffer,
+                spec,
+                var_slots,
+            } => {
                 if show {
                     self.emit("PROCEDURAL", format!("MODULE-REQUEST {buffer}"));
                 }
@@ -1083,7 +1109,7 @@ impl Engine {
                         self.now(
                             Prio::Num(-2000),
                             Out::Medium,
-                            Event::StartRetrieval { spec },
+                            Event::StartRetrieval { spec, var_slots },
                         );
                     }
                     "VISUAL-LOCATION" => {
@@ -1109,11 +1135,11 @@ impl Engine {
                     }
                 }
             }
-            Event::StartRetrieval { spec } => {
+            Event::StartRetrieval { spec, var_slots } => {
                 if show {
                     self.emit("DECLARATIVE", "start-retrieval".into());
                 }
-                self.start_retrieval(spec)?;
+                self.start_retrieval(spec, &var_slots)?;
             }
             Event::RetrievedChunk { name, gen } => {
                 if gen != self.dm_gen {
@@ -1612,12 +1638,21 @@ impl Engine {
                 }
                 RhsAction::Request { buffer, spec } => {
                     let concrete = self.concretize(spec, bindings)?;
+                    let var_slots = match spec {
+                        ChunkDesc::Spec { slots, .. } => slots
+                            .iter()
+                            .filter(|(_, p)| matches!(p, Pattern::Var(_)))
+                            .map(|(s, _)| s.clone())
+                            .collect(),
+                        _ => Vec::new(),
+                    };
                     self.now(
                         Prio::Num(50),
                         explicit_out(self.cfg.rhst),
                         Event::ModuleRequest {
                             buffer: buffer.clone(),
                             spec: concrete,
+                            var_slots,
                         },
                     );
                 }
@@ -1646,7 +1681,47 @@ impl Engine {
         Ok(())
     }
 
-    fn start_retrieval(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+    /// Chunk similarity for partial matching (`chunks-similarity`):
+    /// explicit table value (either direction), else `ms` for
+    /// identical/equal values, else `md`. Chunkhood is DM membership
+    /// (an approximation documented in GOTCHAS).
+    fn similarity(&self, a: &Value, b: &Value) -> f32 {
+        let a_name = match a {
+            Value::Sym(s) => Some(s.as_str()),
+            _ => None,
+        };
+        let b_name = match b {
+            Value::Sym(s) => Some(s.as_str()),
+            _ => None,
+        };
+        match (a_name, b_name) {
+            (Some(x), Some(y))
+                if self.dm.iter().any(|c| c.name.as_deref() == Some(x))
+                    && self.dm.iter().any(|c| c.name.as_deref() == Some(y)) =>
+            {
+                if let Some(v) = self
+                    .sims
+                    .get(&(x.to_string(), y.to_string()))
+                    .or_else(|| self.sims.get(&(y.to_string(), x.to_string())))
+                {
+                    return *v;
+                }
+                if x == y {
+                    return self.cfg.ms;
+                }
+                self.cfg.md
+            }
+            _ => {
+                if a == b {
+                    self.cfg.ms
+                } else {
+                    self.cfg.md
+                }
+            }
+        }
+    }
+
+    fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
         let (want_type, want_slots) = match &spec {
             NewChunk::Named(n) => {
                 return Err(unimpl(format!("single-item retrieval request {n}")));
@@ -1658,6 +1733,10 @@ impl Engine {
             }
             NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
         };
+        // Partial matching (mp set, esc on): candidacy is type +
+        // slot presence only; `=` values score activation instead of
+        // filtering. Otherwise exact matching as before.
+        let partial = self.cfg.esc && self.cfg.mp.is_some();
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
         for idx in 0..self.dm.len() {
@@ -1667,7 +1746,18 @@ impl Engine {
             }
             let mut ok = true;
             for (s, v) in &want_slots {
-                if &c.get(s) != v {
+                if s.starts_with(':') {
+                    continue;
+                }
+                let got = c.get(s);
+                if partial {
+                    // Presence only (nil-valued constraints never occur:
+                    // the loader rejects `-` in requests).
+                    if got == Value::Nil {
+                        ok = false;
+                        break;
+                    }
+                } else if got != *v {
                     ok = false;
                     break;
                 }
@@ -1675,12 +1765,11 @@ impl Engine {
             if !ok {
                 continue;
             }
-            // A = base-level + activation noise (mas/mp unimplemented,
-            // default off). Base-level comes from the decay equation
+            // A = base-level + spreading (0) + partial matching +
+            // activation noise. Base-level comes from the decay equation
             // when :bll is set, else blc (or a chunk override, which no
-            // golden uses). Drawn per candidate in DM order, exactly as
-            // `start-retrieval` computes activation over the chunk set.
-            let base = match self.cfg.bll {
+            // golden uses). Noise drawn per candidate in DM order.
+            let mut a = match self.cfg.bll {
                 Some(bll) => {
                     let (refs, creation, count) = {
                         let h = &self.hist[idx];
@@ -1704,11 +1793,21 @@ impl Engine {
                 }
                 None => self.cfg.blc,
             };
-            let a = base
-                + match self.cfg.ans {
-                    Some(s) => self.rng.noise(s),
-                    None => 0.0,
-                };
+            // Partial matching: mp * similarity per constant,
+            // non-keyword `=` slot (request vars are skipped, as are
+            // `-` slots, which the loader rejects in requests).
+            if let Some(mp) = self.cfg.mp {
+                for (s, v) in &want_slots {
+                    if s.starts_with(':') || var_slots.contains(s) {
+                        continue;
+                    }
+                    a += mp * self.similarity(v, &c.get(s));
+                }
+            }
+            a += match self.cfg.ans {
+                Some(s) => self.rng.noise(s),
+                None => 0.0,
+            };
             match best_a {
                 None => {
                     best_a = Some(a);

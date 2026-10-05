@@ -506,3 +506,25 @@ events under a single run, plus an `END` dummy on both sides so the
 tail reaches the time limit identically (`run` prints the time-limit
 line when the queue empties exactly at the limit — verified in
 source, now covered by golden).
+
+---
+
+# M8 findings: partial matching (all verified: golden byte-match)
+
+## 55. Candidacy is exact without `:mp`, signature-only with it
+
+`start-retrieval` tests `=` values exactly iff `esc` is off or `mp`
+is off; with both on, candidates need only type + slot presence, and
+`=` values score `mp*similarity` into activation. Request vars are
+skipped (spec-level, so the engine threads pre-substitution slot
+names through the request events). `-` slots and inequalities in
+requests stay refused at load.
+
+## 56. Similarities live on model structs — set them post-reset
+
+`set-similarities` needs named chunks and writes model-table structs
+that reset rebuilds, so the task file must call it in `task-setup`
+(post-reset), mirrored by sidecar `SIMILARITY` rows. Engine keys by
+name (both directions); chunkhood is DM membership (approximation).
+Sidecar symbols fold to uppercase like everything else — a lowercase
+miss once zeroed every similarity to `:md` (loud failure, fixed).

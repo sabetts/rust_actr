@@ -194,6 +194,12 @@ fn parse_pairs(forms: &[Sexp]) -> Result<Vec<SlotTest>, LoadError> {
             Some(Sexp::Sym(t)) => t.clone(),
             got => return structural(format!("slot name expected, got {got:?}")),
         };
+        // Inequality modifiers (>, <, >=, <=) are valid ACT-R but
+        // unimplemented: refuse loudly instead of treating the
+        // modifier as a slot name and silently never matching.
+        if [">", "<", ">=", "<="].contains(&slot.as_str()) {
+            return structural(format!("inequality tests not implemented: {slot}"));
+        }
         let value = match forms.get(i + 1) {
             Some(v) => Pattern::from_sexp(v)?,
             None => return structural(format!("value missing for slot {slot}")),
