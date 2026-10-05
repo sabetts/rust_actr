@@ -728,6 +728,9 @@ enum Event {
     ModBuffer {
         buffer: String,
         slots: Vec<(String, Value)>,
+        /// Trace module: `PROCEDURAL` for `=buffer>`, the buffer's owning
+        /// module for `*buffer>` (`buffer-mod-request`).
+        module: String,
     },
     ModuleRequest {
         buffer: String,
@@ -1722,9 +1725,13 @@ impl Engine {
                 }
                 self.changed();
             }
-            Event::ModBuffer { buffer, slots } => {
+            Event::ModBuffer {
+                buffer,
+                slots,
+                module,
+            } => {
                 if show {
-                    self.emit("PROCEDURAL", format!("MOD-BUFFER-CHUNK {buffer}"));
+                    self.emit(&module, format!("MOD-BUFFER-CHUNK {buffer}"));
                 }
                 let b = self.buffer_mut(&buffer);
                 let chunk = b
@@ -1795,7 +1802,10 @@ impl Engine {
                         // goal-style-request: delay 0, priority -1000, so the
                         // new goal lands after the production's clears
                         // (`support/goal-style-module.lisp:245`). Request
-                        // specs print slots-only (GOTCHA #44).
+                        // specs print slots-only (GOTCHA #44); a whole-chunk
+                        // reference (`+goal> =retrieval`) prints the
+                        // referenced chunk's slots.
+                        let shown = self.named_chunk_shown(&spec);
                         self.push(
                             self.time_ms,
                             Prio::Num(-1000),
@@ -1804,7 +1814,7 @@ impl Engine {
                                 buffer: "GOAL".to_string(),
                                 chunk: spec,
                                 requested: true,
-                                shown: None,
+                                shown,
                             },
                         );
                     }
@@ -2578,6 +2588,28 @@ impl Engine {
                         Event::ModBuffer {
                             buffer: buffer.clone(),
                             slots: sub,
+                            module: "PROCEDURAL".to_string(),
+                        },
+                    );
+                }
+                RhsAction::ModifyRequest { buffer, slots } => {
+                    // `*buffer>` (`buffer-mod-request`): apply the change
+                    // and trace it under the buffer's module.
+                    if slots.is_empty() {
+                        continue;
+                    }
+                    let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
+                    let mut sub = Vec::new();
+                    for (s, p) in slots {
+                        sub.push((s.clone(), self.rhs_value(p, bindings, copy, &mut copied)?));
+                    }
+                    self.now(
+                        Prio::Num(100),
+                        Out::Medium,
+                        Event::ModBuffer {
+                            buffer: buffer.clone(),
+                            slots: sub,
+                            module: buffer_module(buffer),
                         },
                     );
                 }
@@ -2630,10 +2662,88 @@ impl Engine {
         Ok(())
     }
 
-    /// Chunk similarity for partial matching (`chunks-similarity`):
-    /// explicit table value (either direction), else `ms` for
-    /// identical/equal values, else `md`. Chunkhood is DM membership
-    /// (an approximation documented in GOTCHAS).
+    /// First reason a production is invalid for compilation
+    /// (`invalid-compilation-reason`, production-compilation.lisp:1243).
+    /// `None` means valid. With `:cia` off, any indirect action invalidates.
+    fn invalid_compilation_reason(&self, idx: usize) -> Option<String> {
+        let prod = &self.model.productions[idx];
+        if let Some(buf) = indirect_action_buffer_name(prod) {
+            if !self.cfg.cia {
+                return Some(format!(
+                    "it has an indirect action with the {buf} buffer"
+                ));
+            }
+        }
+        None
+    }
+
+    /// `valid-1st-p` (`production-compilation.lisp:1315`): a production can
+    /// become the "previous" only if it has no `!stop!` and no duplicate
+    /// buffer action of the same kind.
+    fn valid_first_production(&self, idx: usize) -> bool {
+        let prod = &self.model.productions[idx];
+        for a in &prod.rhs {
+            match a {
+                RhsAction::Other { head, .. } if head == "!STOP!" => return false,
+                _ => {}
+            }
+        }
+        let mut seen: Vec<(char, &str)> = Vec::new();
+        for a in &prod.rhs {
+            let key = match a {
+                RhsAction::Modify { buffer, .. } => Some(('=', buffer.as_str())),
+                RhsAction::ModifyRequest { buffer, .. } => Some(('=', buffer.as_str())),
+                RhsAction::Request { buffer, .. } => Some(('+', buffer.as_str())),
+                _ => None,
+            };
+            if let Some(k) = key {
+                if seen.contains(&k) {
+                    return false;
+                }
+                seen.push(k);
+            }
+        }
+        true
+    }
+
+    /// `invalid-1st-p-reason` (`production-compilation.lisp:1326`).
+    fn invalid_first_reason(&self, idx: usize) -> String {
+        let prod = &self.model.productions[idx];
+        for a in &prod.rhs {
+            if let RhsAction::Other { head, .. } = a {
+                if head == "!STOP!" {
+                    return "it has a !stop! action".to_string();
+                }
+            }
+        }
+        let mut seen: Vec<(char, String)> = Vec::new();
+        for a in &prod.rhs {
+            let kv = match a {
+                RhsAction::Modify { buffer, .. } | RhsAction::ModifyRequest { buffer, .. } => {
+                    Some(('=', buffer.clone()))
+                }
+                RhsAction::Request { buffer, .. } => Some(('+', buffer.clone())),
+                _ => None,
+            };
+            if let Some(k) = kv {
+                if seen.contains(&k) {
+                    return match k.0 {
+                        '=' => format!(
+                            "it has multiple modification actions for the {} buffer",
+                            k.1
+                        ),
+                        _ => format!(
+                            "it has multiple requests to the {} buffer",
+                            k.1
+                        ),
+                    };
+                }
+                seen.push(k);
+            }
+        }
+        "of unknown reason. (This should not happen. Please report this issue.)".to_string()
+    }
+
     /// `compile-productions` (`production-compilation.lisp:1129`): compose
     /// the previous fired production with the current one and emit the
     /// `:epl`/`:pct` trace. This port covers the goal-style test+modify
@@ -2649,6 +2759,17 @@ impl Engine {
             self.out(format!(
                 "Production Compilation process started for {p2name}"
             ));
+        }
+        // `valid-compilation-production` (`production-compilation.lisp:1188`).
+        if let Some(reason) = self.invalid_compilation_reason(idx) {
+            if trace {
+                self.out(format!(
+                    "  Production {p2name} is not valid for compilation"
+                ));
+                self.out(format!("   because {reason}"));
+            }
+            self.prev_prod = None;
+            return;
         }
         if let Some((p1_idx, p1_bindings)) = self.prev_prod.clone() {
             let p1name = self.model.productions[p1_idx].name.clone();
@@ -2683,11 +2804,22 @@ impl Engine {
         } else if trace {
             self.out("  No previous production to compose with.".to_string());
         }
-        self.prev_prod = Some((idx, bindings.clone()));
-        self.prev_prod_ms = self.time_ms;
-        if trace {
-            let name = self.model.productions[idx].name.clone();
-            self.out(format!("  Setting previous production to {name}."));
+        // `handle-check-valid-1st-p` (`production-compilation.lisp:1338`).
+        if self.valid_first_production(idx) {
+            self.prev_prod = Some((idx, bindings.clone()));
+            self.prev_prod_ms = self.time_ms;
+            if trace {
+                let name = self.model.productions[idx].name.clone();
+                self.out(format!("  Setting previous production to {name}."));
+            }
+        } else {
+            if trace {
+                self.out(format!(
+                    "  Production {p2name} is not valid as a first production for compilation"
+                ));
+                self.out(format!("   because {}", self.invalid_first_reason(idx)));
+            }
+            self.prev_prod = None;
         }
     }
 
@@ -2855,6 +2987,25 @@ impl Engine {
         } else {
             self.cfg.md
         }
+    }
+
+    /// For a whole-chunk request (`+goal> =retrieval`), the trace shows the
+    /// referenced chunk's slots (`(COLOR RED VALUE 3)`), sorted by name.
+    fn named_chunk_shown(&self, spec: &NewChunk) -> Option<String> {
+        if let NewChunk::Named(n) = spec {
+            if let Some(c) = self.dm.iter().find(|c| c.name.as_deref() == Some(n.as_str())) {
+                let mut slots: Vec<(String, String)> =
+                    c.slots.iter().map(|(k, v)| (k.clone(), v.show())).collect();
+                slots.sort_by(|a, b| a.0.cmp(&b.0));
+                let mut parts = Vec::new();
+                for (k, v) in slots {
+                    parts.push(k);
+                    parts.push(v);
+                }
+                return Some(format!("({})", parts.join(" ")));
+            }
+        }
+        None
     }
 
     /// Direct retrieval of a named chunk (`+retrieval> =goal`): activation
@@ -3933,6 +4084,35 @@ fn render_compiled(
     s
 }
 
+/// The module a buffer's events are traced under (`:module` of a scheduled
+/// buffer event).
+fn buffer_module(buffer: &str) -> String {
+    match buffer {
+        "RETRIEVAL" => "DECLARATIVE".to_string(),
+        "VISUAL" | "VISUAL-LOCATION" => "VISION".to_string(),
+        "MANUAL" => "MOTOR".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// The buffer of an indirect action: an RHS `=`/`*`/`+` statement whose
+/// definition is a single chunk-spec variable (`+retrieval> =goal`).
+/// (`indirect-action-buffer-name`, production-compilation.lisp:1280`.)
+fn indirect_action_buffer_name(prod: &Production) -> Option<String> {
+    for a in &prod.rhs {
+        if let RhsAction::Request {
+            buffer,
+            spec: ChunkDesc::Named(n),
+        } = a
+        {
+            if n.starts_with('=') {
+                return Some(buffer.clone());
+            }
+        }
+    }
+    None
+}
+
 /// `(A B C)` from a slice of values (`~S` of a list).
 fn show_values(vals: &[Value]) -> String {
     format!(
@@ -4049,6 +4229,12 @@ fn render_production(prod: &Production, b: &Bindings, partials: &[PpmMismatch]) 
         match a {
             RhsAction::Modify { buffer, slots } => {
                 s.push_str(&format!("   ={buffer}>\n"));
+                for (name, val) in slots {
+                    s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                }
+            }
+            RhsAction::ModifyRequest { buffer, slots } => {
+                s.push_str(&format!("   *{buffer}>\n"));
                 for (name, val) in slots {
                     s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
                 }
@@ -4976,6 +5162,9 @@ fn implicit_clears(prod: &Production, exempt: &[String]) -> Vec<String> {
     for a in &prod.rhs {
         match a {
             RhsAction::Modify { buffer, .. } => targeted.push(('=', buffer.clone())),
+            RhsAction::ModifyRequest { buffer, .. } => {
+                targeted.push(('=', buffer.clone()))
+            }
             RhsAction::Request { buffer, .. } => targeted.push(('+', buffer.clone())),
             RhsAction::Clear { buffer } => targeted.push(('-', buffer.clone())),
             RhsAction::Output { .. } | RhsAction::Other { .. } => {}

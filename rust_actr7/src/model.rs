@@ -108,6 +108,13 @@ pub enum RhsAction {
         buffer: String,
         slots: Vec<(String, Pattern)>,
     },
+    /// `*goal> <slot value>...` — buffer modification request
+    /// (`buffer-mod-request`); same change as `=`, but traced under the
+    /// buffer's module and usable on untested buffers.
+    ModifyRequest {
+        buffer: String,
+        slots: Vec<(String, Pattern)>,
+    },
     /// `+retrieval> ISA number number =num2`
     Request { buffer: String, spec: ChunkDesc },
     /// `-goal>`
@@ -360,7 +367,11 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
         if let Some((op, buffer)) = buffer_ref(&head) {
             let buffer = buffer.to_string();
             match op {
-                '=' | '*' => actions.push(RhsAction::Modify {
+                '=' => actions.push(RhsAction::Modify {
+                    buffer,
+                    slots: parse_pairs_plain(body)?,
+                }),
+                '*' => actions.push(RhsAction::ModifyRequest {
                     buffer,
                     slots: parse_pairs_plain(body)?,
                 }),
