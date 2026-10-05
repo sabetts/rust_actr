@@ -75,9 +75,12 @@
 //!   compilation (`:ppm` procedural partial matching, the
 //!   `goal-focus-fct`/`(car (define-chunks …))` model form, and the
 //!   `:epl`/`:pct` composition/trace for the goal test+modify case) made
-//!   `ppm-compilation` green. Remaining: `!bind!`/`!eval!`, other
-//!   `require-extra` behaviors (associative-learning/act-touch/z-threads/
-//!   extended-motor), `schedule-event` scaffolding, and multi-model traces.
+//!   `ppm-compilation` green. Runtime `:sgp` driver steps plus partial-match
+//!   annotations/utility in the `:cst` trace made the `simple-ppm` family
+//!   green (`simple-ppm-test`, `…-ppm-run`, `…-medium-chosen-run`).
+//!   Remaining: `!bind!`/`!eval!`, other `require-extra` behaviors
+//!   (associative-learning/act-touch/z-threads/extended-motor),
+//!   `schedule-event` scaffolding, and multi-model traces.
 //! - Next: audio/speech devices, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
@@ -161,6 +164,8 @@ pub enum Step {
     Seed((u64, u64)),
     /// `(sgp :trace-detail X)`.
     SetDetail(trace::Detail),
+    /// `(sgp :key value)` for any other parameter (applied at run time).
+    Sgp(String, sexpr::Sexp),
     /// `(reset)`.
     Reset,
 }
@@ -204,6 +209,7 @@ pub fn run_model_steps(
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),
             Step::SetDetail(d) => eng.set_detail(*d),
+            Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
         }
     }

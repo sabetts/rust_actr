@@ -242,7 +242,7 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                         },
                         // `:v` is already encoded in each Run step's trace flag.
                         ":V" => {}
-                        other => note(&mut unsupported, format!("sgp {other}")),
+                        other => steps.push(Step::Sgp(other.to_string(), val.clone())),
                     }
                     i += 2;
                 }

@@ -1031,3 +1031,21 @@ duplicates and keeps the *later*, preserving the surviving elements'
 order. The production-compilation condition union depends on this
 (`[SLOT small, STATE p2] + [SLOT small]` ⇒ `[STATE p2, SLOT small]`).
 
+## 106. `:cst` partial-match annotations and utility (verified)
+
+Under `:ppm`, `print-production-text` annotates a partially matched `=`
+slot as `NAME [requested, actual, similarity]`
+(`procedural.lisp:2536`, from `production-partial-matched-slots`). The
+`Parameters for production` block prints `:utility` as the production's
+*conflict value* — base + `ppm·Σsim` + the `:egs` transient noise drawn in
+that conflict resolution (`small`=0.000/`medium`=-0.500 at `:ppm 1`; with
+`:egs 1` and a chosen seed, -1.534/3.296) — and `:u` as the learned
+component (0.000 here).
+
+## 107. Runtime `:sgp` driver steps (verified)
+
+Test drivers may interleave `(sgp :key value)` steps between runs
+(`:ppm`, `:egs`, `:cia`, `:rir`, `:lf`, `:seed`, …). `reset` re-reads the
+model body's parameters, so the order `(reset)` then `(sgp …)` is what
+selects per-run behavior; the engine now applies these overrides live.
+

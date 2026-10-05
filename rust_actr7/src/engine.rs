@@ -188,6 +188,10 @@ struct Config {
     pct: bool,
     /// Production-compilation `:tt` (max seconds between composed fires).
     tt_ms: i64,
+    /// Production-compilation `:cia` (compile indirect actions).
+    cia: bool,
+    /// Production-compilation `:rir` (retain indirect retrievals).
+    rir: bool,
     /// Maximum associative strength (`:mas`). `Some` enables spreading.
     mas: Option<f32>,
     /// `:nsji` — do not clamp negative Sji at 0.
@@ -514,6 +518,8 @@ impl Config {
             epl: sgp_bool(&m.params, ":EPL"),
             pct: sgp_bool(&m.params, ":PCT"),
             tt_ms: (sgp_num(&m.params, ":TT", 2.0)? * 1000.0).round() as i64,
+            cia: sgp_bool(&m.params, ":CIA"),
+            rir: sgp_bool(&m.params, ":RIR"),
             mas: sgp_single(&m.params, ":MAS")?,
             nsji: sgp_bool(&m.params, ":NSJI"),
             ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
@@ -1582,6 +1588,92 @@ impl Engine {
         self.cfg.detail = detail;
     }
 
+    /// `(sgp :key value)` mid-driver. Known parameters update the live
+    /// config; unknown ones are accepted (no-op) so specs are not rejected.
+    pub fn apply_sgp(&mut self, key: &str, val: &Sexp) -> Result<(), EngineError> {
+        let num = |v: &Sexp| -> Option<f32> {
+            match v {
+                Sexp::Int(i) => Some(*i as f32),
+                Sexp::Float(x) => Some(*x as f32),
+                _ => None,
+            }
+        };
+        let truthy = !matches!(val, Sexp::Sym(s) if s == "NIL");
+        match key.to_uppercase().as_str() {
+            ":PPM" => self.cfg.ppm = num(val),
+            ":EGS" => self.cfg.egs = num(val).unwrap_or(0.0),
+            ":CIA" => self.cfg.cia = truthy,
+            ":RIR" => self.cfg.rir = truthy,
+            ":EPL" => self.cfg.epl = truthy,
+            ":PCT" => self.cfg.pct = truthy,
+            ":LF" => {
+                if let Some(x) = num(val) {
+                    self.cfg.lf_ms = (x * 1000.0).round() as i64;
+                }
+            }
+            ":ESC" => self.cfg.esc = truthy,
+            ":RT" => {
+                if let Some(x) = num(val) {
+                    self.cfg.rt = x;
+                }
+            }
+            ":ANS" => self.cfg.ans = num(val).filter(|x| *x > 0.0),
+            ":MP" => self.cfg.mp = num(val),
+            ":MD" => {
+                if let Some(x) = num(val) {
+                    self.cfg.md = x;
+                }
+            }
+            ":MS" => {
+                if let Some(x) = num(val) {
+                    self.cfg.ms = x;
+                }
+            }
+            ":MAS" => self.cfg.mas = num(val),
+            ":BLC" => {
+                if let Some(x) = num(val) {
+                    self.cfg.blc = x;
+                }
+            }
+            ":BLL" => {
+                self.cfg.bll = num(val).filter(|b| *b > 0.0);
+                self.cfg.act_scale = match self.cfg.bll {
+                    Some(b) => (0.001f32).powf(-b).ln(),
+                    None => 0.0,
+                };
+            }
+            ":UL" => self.cfg.ul = truthy,
+            ":IU" => {
+                if let Some(x) = num(val) {
+                    self.cfg.iu = x;
+                }
+            }
+            ":ALPHA" => {
+                if let Some(x) = num(val) {
+                    self.cfg.alpha = x;
+                }
+            }
+            ":ER" => self.cfg.er = truthy,
+            ":CRT" => self.cfg.crt = truthy,
+            ":CST" => self.cfg.cst = truthy,
+            ":NSJI" => self.cfg.nsji = truthy,
+            ":GA" => {
+                if let Some(x) = num(val) {
+                    self.cfg.ga = x;
+                }
+            }
+            ":DAT" => {
+                if let Some(x) = num(val) {
+                    self.cfg.dat_ms = (x * 1000.0).round() as i64;
+                }
+            }
+            // `:UTILITY-OFFSETS`, seeds, etc. accepted without an observable
+            // effect here (the ppm offset is implicit in `:ppm`).
+            _ => {}
+        }
+        Ok(())
+    }
+
     /// `(sgp :seed (S C))`: init + discard, same as construction.
     pub fn set_seed(&mut self, seed: (u64, u64)) {
         self.rng.set_seed(seed.0, seed.1);
@@ -2113,7 +2205,7 @@ impl Engine {
         let mut best_u: Option<f32> = None;
         let mut tied: Vec<(usize, Bindings)> = Vec::new();
         let crt = self.cfg.crt;
-        let mut matched: Vec<(usize, Bindings)> = Vec::new();
+        let mut matched: Vec<(usize, Bindings, f32, Vec<PpmMismatch>)> = Vec::new();
         for ep in self.exec_prods.clone() {
             let pname = self.model.productions[ep.index].name.clone();
             if crt {
@@ -2132,7 +2224,7 @@ impl Engine {
                 if self.cfg.egs != 0.0 {
                     u += self.rng.noise(self.cfg.egs);
                 }
-                matched.push((ep.index, b.clone()));
+                matched.push((ep.index, b.clone(), u, mism));
                 match best_u {
                     None => {
                         best_u = Some(u);
@@ -2152,7 +2244,7 @@ impl Engine {
             }
         }
         if crt {
-            for (idx, _) in &matched {
+            for (idx, _, _, _) in &matched {
                 let name = &self.model.productions[*idx].name;
                 self.out(format!("Production {name} matches"));
             }
@@ -2161,12 +2253,12 @@ impl Engine {
         // their parameters (procedural.lisp:2283; `print-instantiation`).
         if self.cfg.cst && self.trace_on {
             let mut lines: Vec<String> = Vec::new();
-            for (idx, b) in &matched {
+            for (idx, b, u, mism) in &matched {
                 let prod = &self.model.productions[*idx];
-                lines.push(render_production(prod, b));
+                lines.push(render_production(prod, b, mism));
                 lines.push(format!("Parameters for production {}:", prod.name));
                 if self.cfg.esc {
-                    lines.push(format!(" :utility {}", fmt_6_3(self.utilities[*idx])));
+                    lines.push(format!(" :utility {}", fmt_6_3(*u)));
                 }
                 lines.push(format!(" :u {}", fmt_6_3(0.0)));
             }
@@ -3858,7 +3950,7 @@ fn slot_op_str(op: SlotOp) -> &'static str {
 /// `print-production-text` with instantiations (`procedural.lisp:2441`):
 /// the `(P NAME …)` block shown by `:cst`. `isa` is the chunk type, not a
 /// slot, so it is not printed among the conditions.
-fn render_production(prod: &Production, b: &Bindings) -> String {
+fn render_production(prod: &Production, b: &Bindings, partials: &[PpmMismatch]) -> String {
     let mut s = format!("(P {}\n", prod.name);
     for item in &prod.lhs {
         match item {
@@ -3870,7 +3962,22 @@ fn render_production(prod: &Production, b: &Bindings) -> String {
                     }
                     let val = show_pat(&t.value, b);
                     if t.op == SlotOp::Eq {
-                        s.push_str(&format!("       {} {val}\n", t.slot));
+                        // `production-statement-text` annotates a partial
+                        // match as `NAME [requested, actual, similarity]`.
+                        let ann = partials.iter().find(|(pb, ps, req, _, _)| {
+                            pb == buffer && ps == &t.slot && req.show() == val
+                        });
+                        if let Some((_, _, _, actual, sim)) = ann {
+                            s.push_str(&format!(
+                                "       {} [{}, {}, {}]\n",
+                                t.slot,
+                                val,
+                                actual.show(),
+                                lisp_s_f32(*sim)
+                            ));
+                        } else {
+                            s.push_str(&format!("       {} {val}\n", t.slot));
+                        }
                     } else {
                         s.push_str(&format!(
                             "    {:<2} {} {val}\n",
@@ -5126,7 +5233,7 @@ mod tests {
         let mut b = Bindings::new();
         b.insert("VAL".to_string(), Value::Sym("SMALL".to_string()));
         assert_eq!(
-            render_production(&prod, &b),
+            render_production(&prod, &b, &[]),
             "(P SMALL\n   =GOAL>\n       VALUE SMALL\n       VALUE SMALL\n ==>\n   !OUTPUT! SMALL\n   -GOAL>\n)"
         );
     }
