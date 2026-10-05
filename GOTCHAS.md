@@ -455,3 +455,30 @@ digits land on exec 150 / finish 300 with margin (fitts 99.1 < 100).
 Paired-static idles after learning and ends `Stopped because time
 limit reached` at the run limit — the first golden exercising that
 variant (previously only the no-events-left path was covered).
+
+---
+
+# M6 findings: multi-trial paired (all verified: golden byte-match)
+
+## 50. Trial reconstruction from CR spacing
+
+Post-keypress CR wakes decode invisible motor phases exactly: trial-3
+(left-hand "1", fresh prep) shows change/prep/init/output/finish wakes
+at +50/+250/+300/+400/+550; trial-4 ("0", right hand) shows
++50/+200/+250/+350/+500 — prep differences (hand change) move every
+later phase. Any prep-math error shifts the whole tail; the golden
+pins it.
+
+## 51. hfrt prep differences need maxfeats 5, not 4
+
+`num-possible-feats` is 1+slots (general-pm.lisp:783), so peck-recoil
+gives hand 4, finger 3, else r/theta diffs. An initial maxfeats-4
+guess failed the golden by exactly one 50 ms prep step.
+
+## 52. Learned pair chunks are reuse-copy named
+
+Imaginal spec requests fill the `IMAGINAL-CHUNK0` reuse chunk; harvest
+merges land `IMAGINAL-CHUNK0-{k}` copies in DM (bank→`-0-0`,
+card→`-0-1` in harvest order) — the names later `RETRIEVED-CHUNK`
+lines print. The engine names unnamed harvest merges
+`{BUFFER}-CHUNK0-{k}` via the shared copy counter.

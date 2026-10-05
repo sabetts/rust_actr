@@ -738,12 +738,7 @@ pub struct Engine {
     features: Vec<Feature>,
     feat_seq: u64,
     /// Location-name copy counter: requested base -> copies made.
-    /// Every visual-location SET stores a copy (`VISUAL-LOCATION0`
-    /// requested twice lands `-0-0` then `-0-1` in the buffer) while
-    /// the trace shows the requested name. (Goal/retrieval SETs are
-    /// never name-referenced, so their copies — if any — are
-    /// unobservable and skipped.)
-    vl_built: HashMap<String, u64>,
+    copy_count: HashMap<String, u64>,
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
@@ -829,7 +824,7 @@ impl Engine {
             },
             features: Vec::new(),
             feat_seq: 0,
-            vl_built: HashMap::new(),
+            copy_count: HashMap::new(),
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
             visual_busy: false,
@@ -894,7 +889,7 @@ impl Engine {
     /// reference (`merge-reference-list/count`); fresh contents are
     /// added with creation=now, refs=(now), count=1. Buffers in
     /// `:ignore-buffers` skip this; no golden sets it.
-    fn merge_into_dm(&mut self, chunk: ChunkInst) {
+    fn merge_into_dm(&mut self, mut chunk: ChunkInst, buffer: &str) {
         let now = self.time_ms;
         let found = self
             .dm
@@ -915,6 +910,15 @@ impl Engine {
                 }
             }
             None => {
+                // Unnamed buffer contents (imaginal/goal request specs)
+                // land as reuse-chunk copies: {BUFFER}-CHUNK0-{k}, which
+                // is the name later retrievals print.
+                if chunk.name.is_none() {
+                    let base = format!("{buffer}-CHUNK0");
+                    let n = *self.copy_count.entry(base.clone()).or_insert(0);
+                    self.copy_count.insert(base.clone(), n + 1);
+                    chunk.name = Some(format!("{base}-{n}"));
+                }
                 self.dm.push(chunk);
                 self.hist.push(History {
                     creation_ms: now,
@@ -1004,7 +1008,7 @@ impl Engine {
                 // merges into DM, gaining a reference
                 // (`merge-chunk-into-dm`). Empty clears merge nothing.
                 if let Some(chunk) = cleared {
-                    self.merge_into_dm(chunk);
+                    self.merge_into_dm(chunk, &buffer);
                 }
                 self.changed();
             }
@@ -1244,15 +1248,16 @@ impl Engine {
                     self.emit("MOTOR", format!("PRESS-KEY KEY {key}"));
                 }
                 // Preparation features: 5 fresh, else hfrt differences
-                // vs the last press (hand 3, finger 2, else r/theta).
+                // vs the last press (maxfeats is 1+4 slots = 5: hand 4,
+                // finger 3, else r/theta diffs).
                 let spec = Self::key_spec(&key)?;
                 let feats = match &self.last_press {
                     None => 5,
                     Some((h, f, r, t)) => {
                         if *h != spec.hand {
-                            3
+                            4
                         } else if *f != spec.finger {
-                            2
+                            3
                         } else {
                             (if *r != spec.r { 1 } else { 0 })
                                 + (if *t != spec.theta { 1 } else { 0 })
@@ -1896,8 +1901,8 @@ impl Engine {
         // Copy counter starts at 0 and advances after use
         // (`new-name-fct` semantics; existing-name skips cannot occur
         // in fresh models).
-        let n = *self.vl_built.entry(base.to_string()).or_insert(0);
-        self.vl_built.insert(base.to_string(), n + 1);
+        let n = *self.copy_count.entry(base.to_string()).or_insert(0);
+        self.copy_count.insert(base.to_string(), n + 1);
         let copy = format!("{base}-{n}");
         self.vl_copies.insert(copy.clone(), idx);
         let inst = ChunkInst {

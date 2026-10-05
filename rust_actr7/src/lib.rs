@@ -24,9 +24,11 @@
 //!   prep differences, VL SET-copy naming. `paired-static` golden
 //!   (failed recall → study → learned recall → keypress → idle stop)
 //!   byte-exact.
-//! - Next: multi-trial task loops (need task-script eval or richer
-//!   sidecars: response-contingent stimuli), audio/speech, `:mp`,
-//!   production compilation.
+//! - M6 (done): multi-trial paired (`paired-2x2`, 2 pairs × 2 blocks,
+//!   fixed 60 s schedule): harvest-named pair chunks, hand-change prep
+//!   differences, long-run RNG/learning stability. Byte-exact.
+//! - Next: response-contingent task scripting (sidecar ON-KEY rules or
+//!   task-script eval), audio/speech, `:mp`, production compilation.
 //!
 //! Contract (mirrors `golden/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
@@ -100,6 +102,7 @@ mod tests {
             "bll-count",
             "attend",
             "paired-static",
+            "paired-2x2",
         ] {
             let trace = crate_dir()
                 .join("golden")
