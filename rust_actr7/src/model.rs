@@ -1081,6 +1081,7 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
                             | "DEFPARAMETER"
                             | "DEFCONSTANT"
                             | "DEFMACRO"
+                            | "DEFMETHOD"
                             | "ADD-ACT-R-COMMAND"
                     ) => {}
                 got => return structural(format!("unexpected top-level form: {got:?}")),
