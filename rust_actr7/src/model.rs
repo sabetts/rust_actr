@@ -296,6 +296,10 @@ pub struct Model {
     /// not reuse a single chunk (`buffers.lisp:1920`); each request makes a
     /// fresh chunk. Stored upper-cased.
     pub no_reuse_buffers: Vec<String>,
+    /// Warning blocks from productions rejected by the validator. ACT-R
+    /// re-evaluates the model body on `reset`, so these are re-emitted then
+    /// (not at load, where the warning monitor isn't installed yet).
+    pub reset_warnings: Vec<String>,
 }
 
 impl Model {
@@ -331,6 +335,24 @@ pub enum LoadError {
     Io(std::io::Error),
     Parse(crate::sexpr::ParseError),
     Structural(String),
+    /// A production rejected by ACT-R's validator. The warning block is
+    /// re-emitted on every model-body re-evaluation (`reset`), not at load
+    /// (`model-tester.cl:351` installs its warning monitor after `load`).
+    RejectedProduction(Vec<String>),
+}
+
+/// Lisp `~s`-ish printing of a read form (symbols are already upcased).
+pub fn sexp_lisp(s: &Sexp) -> String {
+    match s {
+        Sexp::Sym(t) => t.clone(),
+        Sexp::Int(i) => i.to_string(),
+        Sexp::Float(x) => format!("{x}"),
+        Sexp::Str(x) => format!("{x:?}"),
+        Sexp::List(v) => format!(
+            "({})",
+            v.iter().map(sexp_lisp).collect::<Vec<_>>().join(" ")
+        ),
+    }
 }
 
 impl fmt::Display for LoadError {
@@ -339,6 +361,7 @@ impl fmt::Display for LoadError {
             LoadError::Io(e) => write!(f, "io: {e}"),
             LoadError::Parse(e) => write!(f, "{e}"),
             LoadError::Structural(m) => write!(f, "structural: {m}"),
+            LoadError::RejectedProduction(w) => write!(f, "rejected production: {}", w.join(" ")),
         }
     }
 }
@@ -432,6 +455,32 @@ pub fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
         if let Some(name) = forms[0].as_sym() {
             if name != "ISA" {
                 return Ok(ChunkDesc::Named(name.to_string()));
+            }
+        }
+        // A single list `(head slot value ...)` whose head is not `isa`: a
+        // chunk-spec naming a chunk (or chunk-type) in the head
+        // (`define-chunk-spec-fct`, chunk-spec.lisp:434). Request parameters
+        // like `:mp-value` ride along as `:`-slots (skipped by matching).
+        if let Sexp::List(items) = &forms[0] {
+            if let Some(head) = items.first().and_then(|x| x.as_sym()) {
+                if head != "ISA" {
+                    let mut slots = Vec::new();
+                    let mut neg = Vec::new();
+                    let mut rels = Vec::new();
+                    for t in parse_pairs(&items[1..])? {
+                        match t.op {
+                            SlotOp::Eq => slots.push((t.slot, t.value)),
+                            SlotOp::Neg => neg.push((t.slot, t.value)),
+                            other => rels.push((t.slot, t.value, other)),
+                        }
+                    }
+                    return Ok(ChunkDesc::Spec {
+                        ctype: head.to_string(),
+                        slots,
+                        neg,
+                        rels,
+                    });
+                }
             }
         }
     }
@@ -675,10 +724,59 @@ fn parse_production(form: &Sexp) -> Result<Production, LoadError> {
         .iter()
         .position(|s| matches!(s, Sexp::Sym(t) if t == "==>"))
         .ok_or_else(|| LoadError::Structural(format!("production {name} has no `==>`")))?;
+    let rhs_forms = &body[split + 1..];
+    let rhs = parse_rhs(rhs_forms)?;
+    // Reject a request parameter with a modifier other than `=`
+    // (`+retrieval> isa test - :mp-value nil`, `production-parsing.lisp`).
+    for a in &rhs {
+        if let RhsAction::Request { buffer, spec } = a {
+            if let ChunkDesc::Spec { neg, rels, .. } = spec {
+                let bad = neg.iter().any(|(s, _)| s.starts_with(':'))
+                    || rels.iter().any(|(s, _, _)| s.starts_with(':'));
+                if bad {
+                    let prod_text = format!(
+                        "({})",
+                        items[1..]
+                            .iter()
+                            .map(sexp_lisp)
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    );
+                    let head_sym = format!("+{}>", buffer.to_uppercase());
+                    let req_text = match rhs_forms
+                        .iter()
+                        .position(|s| matches!(s, Sexp::Sym(t) if t == &head_sym))
+                    {
+                        Some(i) => {
+                            let mut end = i + 1;
+                            while end < rhs_forms.len() && !is_action_head(&rhs_forms[end]) {
+                                end += 1;
+                            }
+                            format!(
+                                "({})",
+                                rhs_forms[i..end]
+                                    .iter()
+                                    .map(sexp_lisp)
+                                    .collect::<Vec<_>>()
+                                    .join(" ")
+                            )
+                        }
+                        None => head_sym,
+                    };
+                    return Err(LoadError::RejectedProduction(vec![
+                        format!("No production defined for {prod_text}."),
+                        format!("Invalid buffer request {req_text}."),
+                        "Request parameters may not use a modifier other than =.".to_string(),
+                        format!("--- end of warnings for undefined production {name} ---"),
+                    ]));
+                }
+            }
+        }
+    }
     Ok(Production {
         name: name.clone(),
         lhs: parse_lhs(&body[..split])?,
-        rhs: parse_rhs(&body[split + 1..])?,
+        rhs,
         reward: None,
         at: None,
     })
@@ -896,6 +994,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
         visloc_default: Vec::new(),
         pfct: Vec::new(),
         no_reuse_buffers: Vec::new(),
+        reset_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -1105,7 +1204,11 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                     .scheduled_events
                     .push(((at * 1000.0).round() as i64, command, params));
             }
-            "P" => model.productions.push(parse_production(f)?),
+            "P" => match parse_production(f) {
+                Ok(p) => model.productions.push(p),
+                Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
+                Err(e) => return Err(e),
+            },
             // `(p-fct \`(name ... ,*var* ...))`: a backquoted production with
             // model-file `defparameter` substitutions.
             "P-FCT" => {

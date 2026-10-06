@@ -1111,7 +1111,6 @@ per-test to match `test-bad-productions` therefore regresses
 capture was abandoned.
 
 ## 112. Task-file `defun`s + the sole-`isa` rule (verified)
-
 `bind-test`/`remote-bind-test` call task helpers (`single-bind` = `1+`,
 `multi-bind` = `values` of the goal chunk's `slot1`/`slot2`, the latter by
 name or as a remote command string). A `models/X.lisp` model's sibling
@@ -1889,6 +1888,29 @@ table is `correlation`/`mean-deviation` (`act-gui-interface.lisp:1567`/`:1600`,
 
 `associative-learning` (7242 lines) is byte-exact and now in `enabled.txt`
 (44 specs).
+
+## 146. `test-mp-value-req-param`: request params, DM scan order, reset warnings
+
+A request spec can name a chunk: `+retrieval> (b :mp-value 2)` is the chunk
+`b` used as the request (its slots become the request slots) plus request
+parameters (`define-chunk-spec-fct`, `chunk-spec.lisp:434`). `:mp-value`
+overrides `:mp` for that request (`nil` disables partial matching); an invalid
+value or a repeat aborts the request with `Invalid retrieval request.` and a
+second warning.
+
+The `:act` trace pins the DM scan order. `dm-chunks` is reverse-insertion
+(`chunk-list`), and the exact-match scan walks it directly while partial
+matching uses `(nreverse chunk-list)` (`declarative-memory.lisp:1308`/`:1349`),
+so the match/no-match lines come out newest-first but the partial-match
+activation lines come out oldest-first — and all the match/no-match lines are
+printed *before* any activation line (`:1314`).
+
+Production validation runs on the model body, which ACT-R re-evaluates on
+`reset`; a rejected production's warning block (e.g. a request parameter with a
+modifier other than `=`) therefore reappears at each reset, not at load — the
+load-time warnings are dropped because the tester installs its warning monitor
+*after* `(load file)` (GOTCHA #111). `test-mp-value-req-param` (477 lines) is
+byte-exact and now in `enabled.txt` (45 specs).
 
 
 

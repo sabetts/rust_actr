@@ -1944,6 +1944,11 @@ impl Engine {
         };
         eng.reset()?;
         eng.cfg.module_width = module_width;
+        // The construction reset is not part of the recorded trace: ACT-R
+        // installs its monitors after the model is loaded, so any warnings it
+        // emitted (e.g. the validator's) are dropped. The spec's own `(reset)`
+        // step re-emits them.
+        eng.out_lines.clear();
         // Skin off the task's non-replayed setup draws (device sidecar).
         for _ in 0..consume_rng {
             eng.rng.borrow_mut().next_u32();
@@ -1997,6 +2002,11 @@ impl Engine {
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
+        // ACT-R re-evaluates the model body on reset, so the validator's
+        // rejection warnings reappear here (the load-time ones are dropped).
+        for w in self.model.reset_warnings.clone() {
+            self.emit_warning(&w);
+        }
         self.dm = Vec::new();
         for c in &self.model.chunks {
             self.dm.push(chunk_inst(c)?);
@@ -8015,6 +8025,36 @@ impl Engine {
             };
             return self.start_retrieval(expanded, var_slots);
         }
+        // A spec whose "type" names a DM chunk (e.g. `(b :mp-value 2)`)
+        // expands to that chunk's slots plus the request parameters
+        // (`define-chunk-spec-fct` with a chunk name, chunk-spec.lisp:437).
+        if let NewChunk::Spec {
+            ctype,
+            slots,
+            neg,
+            rels,
+            ..
+        } = &spec
+        {
+            if !ctype.is_empty() {
+                if let Some(chunk) = self
+                    .dm
+                    .iter()
+                    .find(|c| c.name.as_deref() == Some(ctype.as_str()))
+                {
+                    let mut merged = chunk.slots.clone();
+                    merged.extend(slots.clone());
+                    let expanded = NewChunk::Spec {
+                        ctype: String::new(),
+                        slots: merged,
+                        neg: neg.clone(),
+                        rels: rels.clone(),
+                        bare: true,
+                    };
+                    return self.start_retrieval(expanded, var_slots);
+                }
+            }
+        }
         let (want_slots, want_neg) = match &spec {
             NewChunk::Named(_) => unreachable!(),
             NewChunk::Instance(_) => {
@@ -8024,12 +8064,42 @@ impl Engine {
             }
             NewChunk::Spec { slots, neg, .. } => (slots.clone(), neg.clone()),
         };
+        // `:mp-value` request parameter (`+retrieval> isa test :mp-value 3`)
+        // overrides `:mp` for this request; `nil` disables partial matching.
+        let mp_req = want_slots
+            .iter()
+            .find(|(s, _)| s == ":MP-VALUE")
+            .map(|(_, v)| v.clone());
+        let mp = match &mp_req {
+            Some(Value::Nil) => None,
+            Some(Value::Num(x)) => Some(*x as f32),
+            Some(Value::Int(i)) => Some(*i as f32),
+            _ => self.cfg.mp,
+        };
+        // Validate the `:mp-value` parameter (`declarative-memory.lisp`):
+        // an invalid value or a repeat aborts the request with a warning.
+        if want_slots.iter().filter(|(s, _)| s == ":MP-VALUE").count() > 1 {
+            self.emit_warning("Invalid retrieval request.");
+            self.emit_warning(":mp-value parameter used more than once.");
+            self.dm_busy = false;
+            self.buffers.get_mut("RETRIEVAL").unwrap().busy = false;
+            return Ok(());
+        }
+        if let Some(v) = &mp_req {
+            if !matches!(v, Value::Nil | Value::Num(_) | Value::Int(_)) {
+                self.emit_warning("Invalid retrieval request.");
+                self.emit_warning(":mp-value parameter's value can only be nil or a number.");
+                self.dm_busy = false;
+                self.buffers.get_mut("RETRIEVAL").unwrap().busy = false;
+                return Ok(());
+            }
+        }
         // Partial matching (mp set, esc on): candidacy is the request's
         // slot signature — required-filled and required-empty slot names —
         // NOT the chunk type (`slots-vector-match-signature`,
         // framework/chunk-spec.lisp:895). `=`/`-` values score activation
         // instead of filtering. Otherwise exact matching as before.
-        let partial = self.cfg.esc && self.cfg.mp.is_some();
+        let partial = self.cfg.esc && mp.is_some();
         // Signature masks from `add-slot-spec-to-chunk-spec`
         // (chunk-spec.lisp:758): `= V` (V non-nil) -> filled; `= nil` ->
         // empty; `- nil` -> filled; `- V` (V non-nil) -> no constraint.
@@ -8082,7 +8152,12 @@ impl Engine {
         }
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
-        for idx in 0..self.dm.len() {
+        // `chunk-list` (the DM hash-table order) is reverse-insertion.
+        let order: Vec<usize> = (0..self.dm.len()).rev().collect();
+        // Pass 1 — candidacy: ACT-R prints every match/no-match line before
+        // any activation line (`declarative-memory.lisp:1314`).
+        let mut candidates: Vec<usize> = Vec::new();
+        for idx in order {
             let c = self.dm[idx].clone();
             let cname = c.name.clone().unwrap_or_default();
             // The signature filter applies in exact and partial modes
@@ -8135,6 +8210,19 @@ impl Engine {
                     self.out(format!("Chunk {cname} matches"));
                 }
             }
+            candidates.push(idx);
+        }
+        // Pass 2 — activation. Exact matching keeps `chunk-list` order;
+        // partial matching uses `(nreverse chunk-list)`
+        // (`declarative-memory.lisp:1349`).
+        let act_order: Vec<usize> = if partial {
+            candidates.iter().rev().cloned().collect()
+        } else {
+            candidates.clone()
+        };
+        for idx in act_order {
+            let c = self.dm[idx].clone();
+            let cname = c.name.clone().unwrap_or_default();
             if self.act_medium() {
                 self.out(format!("Computing activation for chunk {cname}"));
                 self.out("Computing base-level".to_string());
@@ -8195,7 +8283,7 @@ impl Engine {
             // `partial-matching` (`declarative-memory.lisp:2596`). Slots
             // with a nil request value are signature-only (no testable
             // slot), so they do not score.
-            if let Some(mp) = self.cfg.mp {
+            if let Some(mp) = mp {
                 let show = self.act_medium();
                 if show {
                     self.out("Computing partial matching component".to_string());
