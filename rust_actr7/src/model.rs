@@ -285,6 +285,9 @@ pub struct Model {
     /// `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`: the default
     /// chunk type per buffer, used by `set-buffer-chunk`.
     pub buffer_decls: Vec<(String, String)>,
+    /// Model-body `(set-visloc-default slot value ...)`: default constraints
+    /// for an unconstrained visual-location request (`vision.lisp:2107`).
+    pub visloc_default: Vec<(String, Sexp)>,
 }
 
 #[derive(Debug)]
@@ -817,6 +820,7 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
         productions: Vec::new(),
         scheduled_events: Vec::new(),
         buffer_decls: Vec::new(),
+        visloc_default: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -948,6 +952,17 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                     model.buffer_decls.push((b.to_uppercase(), t.to_uppercase()));
                 }
             }
+            // `(set-visloc-default <slot> <value> ...)`: default constraints
+            // for an unconstrained visual-location request.
+            "SET-VISLOC-DEFAULT" => {
+                let mut i = 1;
+                while i + 1 < items.len() {
+                    if let Some(k) = items[i].as_sym() {
+                        model.visloc_default.push((k.to_uppercase(), items[i + 1].clone()));
+                    }
+                    i += 2;
+                }
+            }
             // `(spp <production> :param value ...)` — production-level
             // parameters (`:reward`, `:at`). Collected and applied after the
             // body so they may precede their production.
@@ -1061,7 +1076,12 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
                 Some(Sexp::Sym(h))
                     if matches!(
                         h.as_str(),
-                        "DEFUN" | "DEFVAR" | "DEFPARAMETER" | "DEFCONSTANT" | "DEFMACRO"
+                        "DEFUN"
+                            | "DEFVAR"
+                            | "DEFPARAMETER"
+                            | "DEFCONSTANT"
+                            | "DEFMACRO"
+                            | "ADD-ACT-R-COMMAND"
                     ) => {}
                 got => return structural(format!("unexpected top-level form: {got:?}")),
             },
