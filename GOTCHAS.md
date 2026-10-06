@@ -1281,3 +1281,25 @@ Two findings from working the spec:
   first copy to be `-0`; our shared copy counter starts at 0, and starting
   at 1 regresses `sji-merge`.  `retain-indirect-retrievals` therefore stays
   out of `enabled.txt`; the retrieval fix is committed as groundwork.
+
+## 123. M1: retrieval copies its chunk; `+retrieval> =var` expands (verified)
+
+Three coupled fixes made `retain-indirect-retrievals` **run 1 match
+exactly** (lines 1-104):
+- **`set-buffer-chunk` copies the retrieved chunk.** The retrieval buffer
+  holds `G-0`, then `G-1`, … (one `copy-chunk-fct` per retrieval; verified
+  by wrapping `copy-chunk-fct` under SBCL), while the trace shows the
+  source name `G`.  A `=retrieval` reference is then used **verbatim** (no
+  second copy), so `+imaginal> value =retrieval` yields `G-1`.
+- **`named_chunk_shown` must see copies** — it now falls back to the
+  `self.named` copy table, not just DM, so `+goal> =retrieval` still prints
+  the referenced chunk's slots (`(COLOR RED VALUE 3)`).
+- **`+retrieval> =var` expands the referenced chunk to its slot spec**
+  (`chunk-name-to-chunk-spec`), retrieving by matching rather than by name.
+  This is what makes the indirect `+retrieval> =goal` work once the goal is
+  a spec-built (unnamed) chunk; `direct_retrieval` was removed.
+
+No enabled spec regressed.  M2 (composed-production instantiation:
+`color =c` → `color red`, and expanding the indirect `+retrieval> =c` action
+to `+RETRIEVAL> COLOR RED`) is the next milestone; `retain` stays disabled
+until M2/M3 land.

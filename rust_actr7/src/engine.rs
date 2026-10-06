@@ -2045,14 +2045,17 @@ impl Engine {
                 self.dm_busy = false;
                 self.buffers.get_mut("RETRIEVAL").unwrap().busy = false;
                 self.add_finst(&name);
+                // `set-buffer-chunk` copies the retrieved chunk (`buffer-copy`),
+                // so the buffer holds `G-k` while the trace shows the source.
+                let copy = self.copy_chunk(&name);
                 self.now(
                     Prio::Max,
                     Out::Low,
                     Event::SetBuffer {
                         buffer: "RETRIEVAL".to_string(),
-                        chunk: NewChunk::Named(name),
+                        chunk: NewChunk::Named(copy),
                         requested: true,
-                        shown: None,
+                        shown: Some(name),
                     },
                 );
             }
@@ -4142,7 +4145,12 @@ impl Engine {
     /// referenced chunk's slots (`(COLOR RED VALUE 3)`), sorted by name.
     fn named_chunk_shown(&self, spec: &NewChunk) -> Option<String> {
         if let NewChunk::Named(n) = spec {
-            if let Some(c) = self.dm.iter().find(|c| c.name.as_deref() == Some(n.as_str())) {
+            if let Some(c) = self
+                .dm
+                .iter()
+                .find(|c| c.name.as_deref() == Some(n.as_str()))
+                .or_else(|| self.named.get(n.as_str()))
+            {
                 let mut slots: Vec<(String, String)> =
                     c.slots.iter().map(|(k, v)| (k.clone(), v.show())).collect();
                 slots.sort_by(|a, b| a.0.cmp(&b.0));
@@ -4157,73 +4165,35 @@ impl Engine {
         None
     }
 
-    /// Direct retrieval of a named chunk (`+retrieval> =goal`): activation
-    /// (base + spreading + noise) determines threshold and latency; a
-    /// missing chunk fails after the failure wait.
-    fn direct_retrieval(&mut self, name: &str) -> Result<(), EngineError> {
-        let gen = self.dm_gen;
-        match self.dm.iter().position(|c| c.name.as_deref() == Some(name)) {
-            Some(i) => {
-                let (act, _base) = self.compute_blending_activation(i, &[], &[]);
-                if self.cfg.esc && act < self.cfg.rt {
-                    let wait = failure_wait(&self.cfg);
-                    self.push(
-                        self.time_ms + wait,
-                        Prio::Num(0),
-                        Out::Low,
-                        Event::RetrievalFailure { gen },
-                    );
-                } else {
-                    let wait = if self.cfg.esc {
-                        latency(self.cfg.lf_ms, self.cfg.le, act)
-                    } else {
-                        0
-                    };
-                    self.push(
-                        self.time_ms + wait,
-                        Prio::Num(0),
-                        Out::Medium,
-                        Event::RetrievedChunk {
-                            name: name.to_string(),
-                            gen,
-                        },
-                    );
-                }
-            }
-            None => {
-                let wait = failure_wait(&self.cfg);
-                self.push(
-                    self.time_ms + wait,
-                    Prio::Num(0),
-                    Out::Low,
-                    Event::RetrievalFailure { gen },
-                );
-            }
-        }
-        Ok(())
-    }
-
     fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
-        // A whole-chunk request (`+retrieval> =goal`) retrieves the named
-        // chunk directly (`direct-request`), not by slot matching. A name
-        // that is not a chunk — e.g. `=c` bound to a bare-symbol slot value
-        // like `red` — expands via `chunk-name-to-chunk-spec` to that
-        // (slotless) chunk's spec, i.e. an unconstrained request matching
-        // any chunk.
+        // A whole-chunk request (`+retrieval> =goal`) expands the referenced
+        // chunk to its slot spec (`chunk-name-to-chunk-spec`) and retrieves
+        // by matching; a name that is not a chunk (e.g. `=c` bound to a
+        // bare-symbol slot value like `red`) expands to an unconstrained
+        // request matching any chunk.
         if let NewChunk::Named(n) = &spec {
-            let known = self.dm.iter().any(|c| c.name.as_deref() == Some(n.as_str()))
-                || self.named.contains_key(n);
-            if known {
-                return self.direct_retrieval(n);
-            }
-            let empty = NewChunk::Spec {
-                ctype: String::new(),
-                slots: Vec::new(),
-                neg: Vec::new(),
-                rels: Vec::new(),
-                bare: true,
+            let chunk = self
+                .dm
+                .iter()
+                .find(|c| c.name.as_deref() == Some(n.as_str()))
+                .or_else(|| self.named.get(n.as_str()));
+            let expanded = match chunk {
+                Some(c) => NewChunk::Spec {
+                    ctype: String::new(),
+                    slots: c.slots.clone(),
+                    neg: Vec::new(),
+                    rels: Vec::new(),
+                    bare: true,
+                },
+                None => NewChunk::Spec {
+                    ctype: String::new(),
+                    slots: Vec::new(),
+                    neg: Vec::new(),
+                    rels: Vec::new(),
+                    bare: true,
+                },
             };
-            return self.start_retrieval(empty, var_slots);
+            return self.start_retrieval(expanded, var_slots);
         }
         let (want_slots, want_neg) = match &spec {
             NewChunk::Named(_) => unreachable!(),
@@ -6355,6 +6325,12 @@ impl Engine {
                         .and_then(|buf| buf.chunk.as_ref())
                         .and_then(|c| c.name.clone());
                     if let Some(name) = named {
+                        // The retrieval buffer already holds a copy (`G-k`
+                        // from `set-buffer-chunk`), so a reference to it is
+                        // used verbatim rather than copied again.
+                        if v == "RETRIEVAL" {
+                            return Ok(Value::Sym(name));
+                        }
                         let c = match copied.get(&name) {
                             Some(x) => x.clone(),
                             None => {
