@@ -1912,6 +1912,43 @@ load-time warnings are dropped because the tester installs its warning monitor
 *after* `(load file)` (GOTCHA #111). `test-mp-value-req-param` (477 lines) is
 byte-exact and now in `enabled.txt` (45 specs).
 
+## 147. `test-bad-productions`: validator warnings are reset-scoped, not load-scoped
+
+GOTCHA #111 is wrong on the mechanism. The `Creating chunk …` and rejection
+warnings are not dropped on load and surfaced later by global suppression
+state — they are re-emitted every time ACT-R re-evaluates the model body,
+which `reset-model` does (`model.lisp:983`). A spec whose driver never resets
+(`semantic`, `tutorial-unit1-tutor-model-trace` — both `:RESETS 0`) shows
+none, while a spec with a `(:RESET)` step shows them once per reset
+(`tutorial-unit1-semantic-warnings` is `semantic` with `(reset)` as its whole
+driver and *does* show `CATEGORY`/`PENDING`/`YES`/`NO`). The `reset_warnings`
+mechanism built for `test-mp-value-req-param` (GOTCHA #146) is the right one;
+`test-bad-productions` just needs the full ordered block.
+
+The block is assembled from the production scan in file order
+(`production-parsing.lisp`):
+- the `sort-for-bind-order` (`:1810`) reorder warning (BAD-ORDER's `!eval!`
+  precedes its `!bind!`);
+- `create-undefined-chunk` (`chunks.lisp:850`) for RHS/LHS slot values that
+  name no chunk. `nil` is skipped — the `eq t` guard at `:1380` is the only
+  literal one, yet BAD-ORDER's `slot1 nil` yields no `NIL` warning. The
+  module-default chunks (`create-model-default-chunks`, `model.lisp:755` —
+  `FREE`/`BUSY`/`EMPTY`/`FIND-LOCATION`/…, plus the touch and
+  extended-motor-actions extras' command names) count as defined; demo2's
+  `step find-location` does not warn for exactly this reason;
+- one rejection block per invalid production: `bad-production-exit` (`:397`)
+  prints `No production defined for (NAME …).`, the specific reason, the
+  *reversed* captured `define-chunk-spec` warnings, then
+  `--- end of warnings …`. `bad-condition-exit`/`bad-action-exit` feed their
+  message into the capture, so for BAD-BUFFER-NAME the order is
+  `Invalid syntax …` then `Invalid specs in call to define-chunk-spec …`.
+  `MISSING-ISA-REJECTED` is accepted. The production text is `(NAME <rest>)`
+  printed like `~s` (the existing `sexp_lisp`).
+
+The validator is now total rather than erroring: the engine warns and skips.
+`test-bad-productions` (31 lines) is byte-exact and in `enabled.txt` (46
+specs).
+
 
 
 

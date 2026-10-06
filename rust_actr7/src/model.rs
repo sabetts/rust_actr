@@ -317,7 +317,7 @@ impl Model {
             }
             let mut form = vec![Sexp::Sym("P".to_string())];
             form.extend(list);
-            if let Ok(p) = parse_production(&Sexp::List(form)) {
+            if let Ok(p) = parse_production(&Sexp::List(form), &[]) {
                 if let Some(existing) = self
                     .productions
                     .iter_mut()
@@ -402,6 +402,672 @@ fn is_action_head(s: &Sexp) -> bool {
     match s {
         Sexp::Sym(t) => buffer_ref(t).is_some() || (t.starts_with('!') && t.ends_with('!')),
         _ => false,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Production validation (`production-parsing.lisp` / `chunk-spec.lisp`).
+//
+// ACT-R never hard-errors on a malformed production: it warns and skips it
+// (`create-production`, production-parsing.lisp:393). The warning block is
+// replayed on every model-body re-evaluation, so the engine collects it at
+// load and re-emits it from `Engine::reset`.
+// ---------------------------------------------------------------------------
+
+/// ACT-R `!cmd!` names (`command-symbol-p`, production-parsing.lisp:1879).
+const BANG_COMMANDS: &[&str] = &[
+    "EVAL", "SAFE-EVAL", "BIND", "SAFE-BIND", "MV-BIND", "STOP", "OUTPUT",
+];
+
+/// Buffers that exist in every model: the module defaults plus the ones the
+/// extras define (`define-buffer`, and the tracker/threads extras).
+fn is_known_buffer(name: &str, extra: &[String]) -> bool {
+    matches!(
+        name,
+        "GOAL"
+            | "RETRIEVAL"
+            | "IMAGINAL"
+            | "VISUAL"
+            | "VISUAL-LOCATION"
+            | "MANUAL"
+            | "MANUAL-LEFT"
+            | "MANUAL-RIGHT"
+            | "VOCAL"
+            | "AURAL"
+            | "AURAL-LOCATION"
+            | "TEMPORAL"
+            | "BLENDING"
+            | "TRACKER"
+            | "IMAGINAL-ACTION"
+            | "MOTOR"
+            | "SPEECH"
+            | "EMMA"
+    ) || extra.iter().any(|b| b == name)
+}
+
+/// `command-symbol-p` (production-parsing.lisp:1877): a buffer head whose
+/// buffer exists, or a `!cmd!` whose command is known.
+fn is_command_symbol(s: &Sexp, extra: &[String]) -> bool {
+    let Some(t) = s.as_sym() else { return false };
+    let n = t.len();
+    if n <= 2 {
+        return false;
+    }
+    let first = t.as_bytes()[0] as char;
+    let last = t.as_bytes()[n - 1] as char;
+    if first == '!' && last == '!' {
+        return BANG_COMMANDS.contains(&t[1..n - 1].to_uppercase().as_str());
+    }
+    if last == '>' && "=+-?*@".contains(first) {
+        return is_known_buffer(&t[1..n - 1].to_uppercase(), extra);
+    }
+    false
+}
+
+/// `segment-production` (production-parsing.lisp:1865): split `forms` at each
+/// command head. `Some(vec![])` for an empty body; `None` when the first form
+/// is not a command (`:error`).
+fn segment_production(forms: &[Sexp], extra: &[String]) -> Option<Vec<Vec<Sexp>>> {
+    if forms.is_empty() {
+        return Some(Vec::new());
+    }
+    let starts: Vec<usize> = forms
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| is_command_symbol(s, extra))
+        .map(|(i, _)| i)
+        .collect();
+    if starts.first().copied() != Some(0) {
+        return None;
+    }
+    let mut segs = Vec::new();
+    for k in 0..starts.len() {
+        let end = starts.get(k + 1).copied().unwrap_or(forms.len());
+        segs.push(forms[starts[k]..end].to_vec());
+    }
+    Some(segs)
+}
+
+fn is_var_sym(t: &str) -> bool {
+    t.len() > 1 && t.starts_with('=')
+}
+
+/// `chunk-spec-variable-p` (misc-utils.lisp:1480).
+fn is_var(s: &Sexp) -> bool {
+    s.as_sym().map(is_var_sym).unwrap_or(false)
+}
+
+/// `find-variables` (production-parsing.lisp:1831).
+fn find_variables(s: &Sexp) -> Vec<String> {
+    match s {
+        Sexp::List(v) => {
+            let mut out: Vec<String> = Vec::new();
+            for e in v {
+                for x in find_variables(e) {
+                    if !out.contains(&x) {
+                        out.push(x);
+                    }
+                }
+            }
+            out
+        }
+        Sexp::Sym(t) if is_var_sym(t) => vec![t.clone()],
+        _ => Vec::new(),
+    }
+}
+
+/// Render a segment the way `~s` prints it: `(=GOAL> ISA TEST ...)`.
+fn seg_text(seg: &[Sexp]) -> String {
+    format!(
+        "({})",
+        seg.iter().map(sexp_lisp).collect::<Vec<_>>().join(" ")
+    )
+}
+
+/// `process-slots-specs` (chunk-spec.lisp:600): the warning that makes a
+/// chunk-spec invalid, or `None` when it is well-formed.
+fn chunk_spec_warning(specs: &[Sexp]) -> Option<String> {
+    let mut i = 0;
+    while i < specs.len() {
+        let mut modifier = "=";
+        if let Some(Sexp::Sym(t)) = specs.get(i) {
+            if matches!(t.as_str(), "=" | "-" | ">" | "<" | ">=" | "<=") {
+                modifier = t.as_str();
+                i += 1;
+            }
+        }
+        if i >= specs.len() {
+            return Some("Invalid specs in call to define-chunk-spec - not enough arguments".into());
+        }
+        match &specs[i] {
+            Sexp::Sym(name) => {
+                if name == "NIL" {
+                    return Some("Cannot use nil as a slot name.".into());
+                }
+                if name.starts_with(':') && modifier != "=" {
+                    return Some(
+                        "Request parameters may not use a modifier other than =.".into(),
+                    );
+                }
+                let valid = is_var_sym(name)
+                    || name.starts_with(':')
+                    || name
+                        .chars()
+                        .next()
+                        .map(|c| c.is_ascii_alphanumeric())
+                        .unwrap_or(false);
+                if !valid {
+                    return Some(format!(
+                        "Invalid slot-name {} in call to define-chunk-spec.",
+                        name
+                    ));
+                }
+            }
+            other => {
+                return Some(format!(
+                    "Invalid slot-name {} in call to define-chunk-spec.",
+                    sexp_lisp(other)
+                ));
+            }
+        }
+        i += 1;
+        if i >= specs.len() {
+            return Some("Invalid specs in call to define-chunk-spec - not enough arguments".into());
+        }
+        i += 1;
+    }
+    None
+}
+
+/// `define-chunk-spec-fct` (chunk-spec.lisp:434): strip a leading `isa TYPE`.
+fn define_chunk_spec_warning(definition: &[Sexp]) -> Option<String> {
+    match definition {
+        [Sexp::Sym(isa), _, rest @ ..] if isa == "ISA" => chunk_spec_warning(rest),
+        _ => chunk_spec_warning(definition),
+    }
+}
+
+/// `parse-conditions` (production-parsing.lisp:1491): the rejection block, or
+/// `None` when the LHS is well-formed.
+fn validate_lhs(lhs: &[Sexp], extra: &[String]) -> Option<Vec<String>> {
+    let segs = match segment_production(lhs, extra) {
+        Some(s) => s,
+        None => return Some(vec!["First item on LHS is not a valid command".into()]),
+    };
+    for seg in &segs {
+        let head = seg[0].as_sym().unwrap_or_default();
+        let op = head.chars().next().unwrap_or(' ');
+        let definition = &seg[1..];
+        match op {
+            '=' => {
+                if definition.len() == 1 {
+                    return Some(vec![format!(
+                        "Insufficient conditions specified in {}",
+                        seg_text(seg)
+                    )]);
+                }
+                if definition.is_empty() {
+                    continue;
+                }
+                if let Some(w) = define_chunk_spec_warning(definition) {
+                    return Some(vec![
+                        format!("Invalid syntax in {} condition.", seg_text(seg)),
+                        w,
+                    ]);
+                }
+            }
+            '?' => {
+                if definition.len() < 2 {
+                    return Some(vec![format!(
+                        "Insufficient conditions specified in {}",
+                        seg_text(seg)
+                    )]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// `parse-actions` (production-parsing.lisp:1602): the rejection block, or
+/// `None` when the RHS is well-formed.
+fn validate_rhs(rhs: &[Sexp], lhs: &[Sexp], extra: &[String]) -> Option<Vec<String>> {
+    let segs = match segment_production(rhs, extra) {
+        Some(s) => s,
+        None => return Some(vec!["First item on RHS is not a valid command".into()]),
+    };
+    // Buffers tested with `=` on the LHS (`parse-actions`, :1671).
+    let tested: Vec<String> = segment_production(lhs, extra)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|seg| {
+            let h = seg[0].as_sym()?;
+            if h.starts_with('=') {
+                Some(h[1..h.len() - 1].to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+    for seg in &segs {
+        let head = seg[0].as_sym().unwrap_or_default();
+        let op = head.chars().next().unwrap_or(' ');
+        let target = &head[1..head.len().saturating_sub(1)];
+        let definition = &seg[1..];
+        match op {
+            '=' | '*' => {
+                // A modification needs the buffer tested on the LHS.
+                if !definition.is_empty() && !tested.iter().any(|t| t == target) {
+                    return Some(vec![format!(
+                        "Buffer modification action for untested buffer {}.",
+                        seg_text(seg)
+                    )]);
+                }
+                if definition.len() >= 2 {
+                    if let Some(w) = define_chunk_spec_warning(definition) {
+                        return Some(vec![
+                            format!("Invalid buffer modification {}.", seg_text(seg)),
+                            w,
+                        ]);
+                    }
+                }
+            }
+            '+' => {
+                if definition.is_empty() {
+                    continue;
+                }
+                if definition.len() == 1 {
+                    let chunk = &definition[0];
+                    if is_var(chunk) {
+                        continue;
+                    }
+                    if let Sexp::List(l) = chunk {
+                        if l.len() > 1 {
+                            if let Some(w) = chunk_spec_warning(&l[1..]) {
+                                return Some(vec![
+                                    format!("Invalid indirect request list: {}.  Must be a list with a chunk or variable and a valid request parameters settings.", seg_text(seg)),
+                                    w,
+                                ]);
+                            }
+                        }
+                        continue;
+                    }
+                    // A bare chunk name: valid when it names a chunk, which
+                    // the loader cannot check here, so accept.
+                    continue;
+                }
+                if let Some(w) = define_chunk_spec_warning(definition) {
+                    return Some(vec![
+                        format!("Invalid buffer request {}.", seg_text(seg)),
+                        w,
+                    ]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// `circular-references` (misc-utils.lisp:1465) over the RHS bind
+/// dependencies (production-parsing.lisp:661).
+fn circular_rhs(rhs: &[Sexp], extra: &[String]) -> bool {
+    let Some(segs) = segment_production(rhs, extra) else {
+        return false;
+    };
+    let mut adj: HashMap<String, Vec<String>> = HashMap::new();
+    for seg in &segs {
+        let head = seg[0].as_sym().unwrap_or_default();
+        if !head.starts_with('!') {
+            continue;
+        }
+        let target = head[1..head.len() - 1].to_uppercase();
+        let definition = &seg[1..];
+        match target.as_str() {
+            "BIND" | "SAFE-BIND" => {
+                if let Some(v) = definition.first().and_then(|s| s.as_sym()) {
+                    let d = definition.get(1).map(find_variables).unwrap_or_default();
+                    adj.insert(v.to_string(), d);
+                }
+            }
+            "MV-BIND" => {
+                if let Some(Sexp::List(bv)) = definition.first() {
+                    let d = definition.get(1).map(find_variables).unwrap_or_default();
+                    for v in bv {
+                        if let Some(n) = v.as_sym() {
+                            adj.insert(n.to_string(), d.clone());
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    fn dfs(
+        node: &str,
+        adj: &HashMap<String, Vec<String>>,
+        visiting: &mut Vec<String>,
+    ) -> bool {
+        if visiting.iter().any(|x| x == node) {
+            return true;
+        }
+        visiting.push(node.to_string());
+        if let Some(ns) = adj.get(node) {
+            for n in ns {
+                if dfs(n, adj, visiting) {
+                    return true;
+                }
+            }
+        }
+        visiting.pop();
+        false
+    }
+    let nodes: Vec<String> = adj.keys().cloned().collect();
+    nodes
+        .iter()
+        .any(|n| dfs(n, &adj, &mut Vec::new()))
+}
+
+/// Build the rejection block (`bad-production-exit`, production-parsing.lisp:397).
+fn reject_production(prod_text: &str, name: &str, msgs: &[String]) -> LoadError {
+    let mut block = vec![format!("No production defined for {prod_text}.")];
+    block.extend(msgs.iter().cloned());
+    block.push(format!(
+        "--- end of warnings for undefined production {name} ---"
+    ));
+    LoadError::RejectedProduction(block)
+}
+
+/// The value forms of a `slot value` list (skipping modifiers and a leading
+/// `isa TYPE`).
+fn slot_values(forms: &[Sexp]) -> Vec<&Sexp> {
+    let mut i = 0;
+    if matches!(forms.first(), Some(Sexp::Sym(s)) if s == "ISA") {
+        i = 2;
+    }
+    let mut out = Vec::new();
+    while i < forms.len() {
+        if let Some(Sexp::Sym(t)) = forms.get(i) {
+            if matches!(t.as_str(), "=" | "-" | ">" | "<" | ">=" | "<=") {
+                i += 1;
+            }
+        }
+        if i + 1 < forms.len() {
+            out.push(&forms[i + 1]);
+        }
+        i += 2;
+    }
+    out
+}
+
+/// A production slot value that names no chunk (`create-undefined-chunk`,
+/// chunks.lisp:850). `nil` is skipped — the ref shows no `NIL` warning even
+/// though `eq t` is the only literal guard (production-parsing.lisp:1380).
+fn is_undefined_chunk_value(t: &str, known: &[String]) -> bool {
+    if t == "NIL" || t == "T" {
+        return false;
+    }
+    if t.starts_with(':') || t.starts_with('=') {
+        return false;
+    }
+    if t
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_digit())
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    if MODULE_DEFAULT_CHUNKS.contains(&t) {
+        return false;
+    }
+    !known.iter().any(|k| k == t)
+}
+
+/// Chunks every model starts with (`create-model-default-chunks`,
+/// model.lisp:755): the module-defined command/colour/state names, plus the
+/// touch/motor action names the extras add. Verified against SBCL — a
+/// production value naming one of these does not warn.
+const MODULE_DEFAULT_CHUNKS: &[&str] = &[
+    "ASSIGN-FINST",
+    "BLACK",
+    "BLUE",
+    "BOX",
+    "BROWN",
+    "BUSY",
+    "CHAR-PRIMITIVE",
+    "CLEAR",
+    "CLEAR-ALL-FINSTS",
+    "CLEAR-SCENE-CHANGE",
+    "CLICK-MOUSE",
+    "CLOCKWISE",
+    "COUNTERCLOCKWISE",
+    "CURRENT",
+    "CURRENT-DISTANCE",
+    "CURRENT-X",
+    "CURRENT-Y",
+    "CYAN",
+    "DARK-BLUE",
+    "DARK-CYAN",
+    "DARK-GRAY",
+    "DARK-GREEN",
+    "DARK-MAGENTA",
+    "DARK-RED",
+    "DARK-YELLOW",
+    "DIGIT",
+    "EMPTY",
+    "ERROR",
+    "EXECUTE",
+    "EXTERNAL",
+    "FAILURE",
+    "FIND-LOCATION",
+    "FIND-SOUND",
+    "FREE",
+    "FULL",
+    "GRAY",
+    "GREEN",
+    "HAND-TO-HOME",
+    "HAND-TO-JOYSTICK1",
+    "HAND-TO-JOYSTICK2",
+    "HAND-TO-KEYPAD",
+    "HAND-TO-MOUSE",
+    "HAND-TO-TOUCH",
+    "HIGH",
+    "HIGHEST",
+    "HIT-KEY",
+    "HOLD-KEY",
+    "HOLD-MOUSE",
+    "HOLD-PECK",
+    "HOLD-PUNCH",
+    "INDEX",
+    "INDEX-THUMB",
+    "INTERNAL",
+    "LEFT",
+    "LIGHT-BLUE",
+    "LIGHT-GRAY",
+    "LINE",
+    "LOW",
+    "LOWEST",
+    "MAGENTA",
+    "MIDDLE",
+    "MOVE-ATTENTION",
+    "MOVE-CURSOR",
+    "MOVE-FINGER-TO-HOME",
+    "MOVE-HAND-TOUCH",
+    "MOVE-TO-KEY",
+    "NEW",
+    "OVAL",
+    "PECK",
+    "PECK-RECOIL",
+    "PINCH",
+    "PINK",
+    "PINKIE",
+    "POINT-FINGER",
+    "POINT-HAND-AT-KEY",
+    "PREPARE",
+    "PRESS-KEY",
+    "PUNCH",
+    "PURPLE",
+    "RED",
+    "RELEASE",
+    "RELEASE-ALL-FINGERS",
+    "RELEASE-KEY",
+    "RELEASE-KEY-TO-HOME",
+    "RELEASE-MOUSE",
+    "RELEASE-RECOIL",
+    "REQUESTED",
+    "RIGHT",
+    "RING",
+    "ROTATE",
+    "SELF",
+    "SET-AUDLOC-DEFAULT",
+    "SET-VISLOC-DEFAULT",
+    "SOUND",
+    "SPEAK",
+    "SPEECH",
+    "START-TRACKING",
+    "SUBVOCALIZE",
+    "SWIPE",
+    "TAP",
+    "TAP-HOLD",
+    "TAP-RELEASE",
+    "TEXT",
+    "THUMB",
+    "TONE",
+    "TYPE-KEY",
+    "UNREQUESTED",
+    "WHITE",
+    "WORD",
+];
+
+/// The `create-undefined-chunk` warnings for one production's scans
+/// (production-parsing.lisp:1369/1389). `known` accumulates the created names.
+fn undefined_chunk_warnings(
+    lhs: &[Sexp],
+    rhs: &[Sexp],
+    known: &mut Vec<String>,
+    extra: &[String],
+) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut check = |v: &Sexp, known: &mut Vec<String>| {
+        if let Sexp::Sym(t) = v {
+            if is_undefined_chunk_value(t, known) {
+                out.push(format!("Creating chunk {} with no slots", t));
+                known.push(t.clone());
+            }
+        }
+    };
+    if let Some(segs) = segment_production(lhs, extra) {
+        for seg in &segs {
+            let head = seg[0].as_sym().unwrap_or_default();
+            let op = head.chars().next().unwrap_or(' ');
+            if op != '=' && op != '?' {
+                continue;
+            }
+            for v in slot_values(&seg[1..]) {
+                check(v, known);
+            }
+        }
+    }
+    if let Some(segs) = segment_production(rhs, extra) {
+        for seg in &segs {
+            let head = seg[0].as_sym().unwrap_or_default();
+            let op = head.chars().next().unwrap_or(' ');
+            let definition = &seg[1..];
+            match op {
+                '=' | '@' => {
+                    for v in slot_values(definition) {
+                        check(v, known);
+                    }
+                }
+                '+' | '*' => {
+                    if definition.len() == 1 {
+                        match &definition[0] {
+                            Sexp::Sym(v) => check(&Sexp::Sym(v.clone()), known),
+                            Sexp::List(l) => {
+                                if let Some(v) = l.first().and_then(|s| s.as_sym()) {
+                                    check(&Sexp::Sym(v.to_string()), known);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    out
+}
+
+/// `sort-for-bind-order` (production-parsing.lisp:1810): the reorder warning
+/// block when the RHS `!bind!`/`!eval!`/`!output!` order changes.
+fn reorder_warning(name: &str, rhs: &[Sexp], extra: &[String]) -> Vec<String> {
+    let Some(segs) = segment_production(rhs, extra) else {
+        return Vec::new();
+    };
+    let mut items: Vec<(Vec<String>, Vec<String>)> = Vec::new();
+    for seg in &segs {
+        let head = seg[0].as_sym().unwrap_or_default();
+        if !head.starts_with('!') {
+            continue;
+        }
+        let target = head[1..head.len() - 1].to_uppercase();
+        let definition = &seg[1..];
+        match target.as_str() {
+            "BIND" | "SAFE-BIND" => {
+                let v = definition
+                    .first()
+                    .and_then(|s| s.as_sym())
+                    .map(str::to_string);
+                let d = definition.get(1).map(find_variables).unwrap_or_default();
+                items.push((v.into_iter().collect(), d));
+            }
+            "MV-BIND" => {
+                let names: Vec<String> = match definition.first() {
+                    Some(Sexp::List(bv)) => bv
+                        .iter()
+                        .filter_map(|s| s.as_sym().map(str::to_string))
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                let d = definition.get(1).map(find_variables).unwrap_or_default();
+                items.push((names, d));
+            }
+            "EVAL" | "SAFE-EVAL" | "OUTPUT" => {
+                let d = definition.first().map(find_variables).unwrap_or_default();
+                items.push((Vec::new(), d));
+            }
+            _ => {}
+        }
+    }
+    let original = items.clone();
+    let mut result: Vec<(Vec<String>, Vec<String>)> = Vec::new();
+    for x in items {
+        let pos = result.iter().position(|y| {
+            if x.0.len() == 1 {
+                y.1.iter().any(|d| d == &x.0[0])
+            } else if x.0.len() > 1 {
+                x.0.iter().any(|v| y.1.contains(v))
+            } else {
+                false
+            }
+        });
+        match pos {
+            Some(i) => result.insert(i, x),
+            None => result.push(x),
+        }
+    }
+    if result != original {
+        vec![
+            format!(
+                "RHS !bind!, !eval!, and/or !output! actions of production {name} had to be reordered because of interdependencies of variables."
+            ),
+            "If those actions have side effects check the actions carefully to ensure proper operation.".to_string(),
+        ]
+    } else {
+        Vec::new()
     }
 }
 
@@ -705,12 +1371,12 @@ pub fn parse_production_text(text: &str) -> Result<Production, LoadError> {
     let forms = crate::sexpr::parse_all(text)
         .map_err(|e| LoadError::Structural(e.to_string()))?;
     match forms.first() {
-        Some(f) => parse_production(f),
+        Some(f) => parse_production(f, &[]),
         None => structural("empty production text"),
     }
 }
 
-fn parse_production(form: &Sexp) -> Result<Production, LoadError> {
+fn parse_production(form: &Sexp, extra_buffers: &[String]) -> Result<Production, LoadError> {
     let items = match form {
         Sexp::List(items) => items,
         _ => return structural("production must be a list"),
@@ -720,62 +1386,44 @@ fn parse_production(form: &Sexp) -> Result<Production, LoadError> {
         got => return structural(format!("`(p name ...)` expected, got {got:?}")),
     };
     let _ = head;
-    let split = body
+    let prod_text = format!(
+        "({})",
+        items[1..]
+            .iter()
+            .map(sexp_lisp)
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
+    let Some(split) = body
         .iter()
         .position(|s| matches!(s, Sexp::Sym(t) if t == "==>"))
-        .ok_or_else(|| LoadError::Structural(format!("production {name} has no `==>`")))?;
+    else {
+        return Err(reject_production(
+            &prod_text,
+            name,
+            &["Production is missing the ==> separator.".to_string()],
+        ));
+    };
+    let lhs_forms = &body[..split];
     let rhs_forms = &body[split + 1..];
+    if let Some(w) = validate_lhs(lhs_forms, extra_buffers) {
+        return Err(reject_production(&prod_text, name, &w));
+    }
+    if let Some(w) = validate_rhs(rhs_forms, lhs_forms, extra_buffers) {
+        return Err(reject_production(&prod_text, name, &w));
+    }
+    let lhs = parse_lhs(lhs_forms)?;
     let rhs = parse_rhs(rhs_forms)?;
-    // Reject a request parameter with a modifier other than `=`
-    // (`+retrieval> isa test - :mp-value nil`, `production-parsing.lisp`).
-    for a in &rhs {
-        if let RhsAction::Request { buffer, spec } = a {
-            if let ChunkDesc::Spec { neg, rels, .. } = spec {
-                let bad = neg.iter().any(|(s, _)| s.starts_with(':'))
-                    || rels.iter().any(|(s, _, _)| s.starts_with(':'));
-                if bad {
-                    let prod_text = format!(
-                        "({})",
-                        items[1..]
-                            .iter()
-                            .map(sexp_lisp)
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    );
-                    let head_sym = format!("+{}>", buffer.to_uppercase());
-                    let req_text = match rhs_forms
-                        .iter()
-                        .position(|s| matches!(s, Sexp::Sym(t) if t == &head_sym))
-                    {
-                        Some(i) => {
-                            let mut end = i + 1;
-                            while end < rhs_forms.len() && !is_action_head(&rhs_forms[end]) {
-                                end += 1;
-                            }
-                            format!(
-                                "({})",
-                                rhs_forms[i..end]
-                                    .iter()
-                                    .map(sexp_lisp)
-                                    .collect::<Vec<_>>()
-                                    .join(" ")
-                            )
-                        }
-                        None => head_sym,
-                    };
-                    return Err(LoadError::RejectedProduction(vec![
-                        format!("No production defined for {prod_text}."),
-                        format!("Invalid buffer request {req_text}."),
-                        "Request parameters may not use a modifier other than =.".to_string(),
-                        format!("--- end of warnings for undefined production {name} ---"),
-                    ]));
-                }
-            }
-        }
+    if circular_rhs(rhs_forms, extra_buffers) {
+        return Err(reject_production(
+            &prod_text,
+            name,
+            &["Because there are circular variable bindings on the RHS.".to_string()],
+        ));
     }
     Ok(Production {
         name: name.clone(),
-        lhs: parse_lhs(&body[..split])?,
+        lhs,
         rhs,
         reward: None,
         at: None,
@@ -999,6 +1647,9 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
     let mut spp_calls: Vec<(String, Vec<(String, Sexp)>)> = Vec::new();
+    // Chunks ACT-R would have created via `create-undefined-chunk` while
+    // scanning productions (`chunks.lisp:850`); later productions see them.
+    let mut created_chunks: Vec<String> = Vec::new();
     for f in forms {
         let items = match f {
             Sexp::List(items) => items,
@@ -1204,11 +1855,50 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                     .scheduled_events
                     .push(((at * 1000.0).round() as i64, command, params));
             }
-            "P" => match parse_production(f) {
-                Ok(p) => model.productions.push(p),
-                Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
-                Err(e) => return Err(e),
-            },
+            "P" => {
+                let extra: Vec<String> =
+                    model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
+                match parse_production(f, &extra) {
+                    Ok(p) => {
+                        let mut known: Vec<String> = model
+                            .chunks
+                            .iter()
+                            .map(|c| c.name.clone())
+                            .chain(model.defined_chunks.iter().map(|c| c.name.clone()))
+                            .chain(created_chunks.iter().cloned())
+                            .collect();
+                        if let Sexp::List(list) = f {
+                            let body = &list[2..];
+                            if let Some(split) = body
+                                .iter()
+                                .position(|s| matches!(s, Sexp::Sym(t) if t == "==>"))
+                            {
+                                let lhs = &body[..split];
+                                let rhs = &body[split + 1..];
+                                model
+                                    .reset_warnings
+                                    .extend(reorder_warning(&p.name, rhs, &extra));
+                                model.reset_warnings.extend(undefined_chunk_warnings(
+                                    lhs,
+                                    rhs,
+                                    &mut known,
+                                    &extra,
+                                ));
+                            }
+                        }
+                        created_chunks = known
+                            .into_iter()
+                            .filter(|k| {
+                                !model.chunks.iter().any(|c| &c.name == k)
+                                    && !model.defined_chunks.iter().any(|c| &c.name == k)
+                            })
+                            .collect();
+                        model.productions.push(p);
+                    }
+                    Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
+                    Err(e) => return Err(e),
+                }
+            }
             // `(p-fct \`(name ... ,*var* ...))`: a backquoted production with
             // model-file `defparameter` substitutions.
             "P-FCT" => {
@@ -1217,9 +1907,15 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                     let sub = substitute_commas(list, defs);
                     let mut form = vec![Sexp::Sym("P".to_string())];
                     form.extend(sub);
-                    model
-                        .productions
-                        .push(parse_production(&Sexp::List(form))?);
+                    let extra: Vec<String> =
+                        model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
+                    match parse_production(&Sexp::List(form), &extra) {
+                        Ok(p) => model.productions.push(p),
+                        Err(LoadError::RejectedProduction(w)) => {
+                            model.reset_warnings.extend(w)
+                        }
+                        Err(e) => return Err(e),
+                    }
                 }
             }
             // `(install-device ...)`: task device setup (the spec's device
@@ -1528,7 +2224,7 @@ mod tests {
     #[test]
     fn structural_errors_are_loud() {
         // `==>` missing.
-        assert!(parse_production(&parse_all("(p x =goal> ISA y)").unwrap()[0]).is_err());
+        assert!(parse_production(&parse_all("(p x =goal> ISA y)").unwrap()[0], &[]).is_err());
         // Odd slot/value count.
         assert!(parse_pairs(&[Sexp::Sym("A".into())]).is_err());
         // Clear with args.
