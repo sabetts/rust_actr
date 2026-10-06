@@ -2298,9 +2298,10 @@ impl Engine {
             };
             // `chunk-filled-slots-list-fct` returns the chunk's internal slot
             // list, which is built by prepending (reverse insertion) — except
-            // for the associative-learning imaginal chunks, whose typeless
-            // spec keeps the written order (the ref's Sji trace order).
-            let js: Vec<String> = if self.cfg.al_eal.is_some() {
+            // that a bare request spec is itself reversed by
+            // `chunk-spec-to-chunk-def`, so the associative-learning imaginal
+            // probes come out in written order (the ref's Sji trace order).
+            let js: Vec<String> = if self.cfg.al_eal.is_some() && chunk.bare {
                 chunk
                     .slots
                     .iter()
@@ -2803,7 +2804,10 @@ impl Engine {
         self.al_initial_presentation()?;
         self.al_drop_out()?;
         self.al_drop_out()?;
-        // TODO(A3): time-to-retrieve-at-start, output table.
+        // `time-to-retrieve-at-start` + `output-person-location`
+        // (`al-fan-study.lisp:382`/`:467`).
+        let data = self.al_time_to_retrieve();
+        self.al_output_person_location(&data);
         Ok(())
     }
 
@@ -3355,6 +3359,183 @@ impl Engine {
             sji = 0.0;
         }
         sji
+    }
+
+    /// `time-to-retrieve-at-start` (`al-fan-study.lisp:382`): for each target
+    /// and foil, compute the activation of every matching chunk (which prints
+    /// the Sji traces) and convert it to a retrieval time; returns the 18
+    /// averaged cells.
+    fn al_time_to_retrieve(&mut self) -> Vec<f64> {
+        // `(set-buffer-chunk 'imaginal (car (define-chunks (isa
+        // comprehend-sentence relation in))))`. The slot order matches the
+        // ref's source order in the Sji trace (arg1 arg2 relation).
+        let ctx = ChunkInst {
+            name: Some("COMPREHEND-SENTENCE0".to_string()),
+            ctype: "COMPREHEND-SENTENCE".to_string(),
+            slots: vec![
+                ("RELATION".to_string(), Value::Sym("IN".to_string())),
+                ("ARG1".to_string(), Value::Nil),
+                ("ARG2".to_string(), Value::Nil),
+            ],
+            bare: false,
+        };
+        self.buffer_mut("IMAGINAL").chunk = Some(ctx);
+        let lf = self.cfg.lf_ms as f64 / 1000.0;
+        let mut data: Vec<Vec<Vec<Vec<f64>>>> = vec![vec![vec![Vec::new(); 2]; 3]; 3];
+        let mut items: Vec<(String, String, usize, usize, bool)> = Vec::new();
+        for (p, pl, pf, lf) in &self.al_targets {
+            items.push((p.clone(), pl.clone(), *pf as usize, *lf as usize, true));
+        }
+        for (p, pl, pf, lf) in &self.al_foils {
+            items.push((p.clone(), pl.clone(), *pf as usize, *lf as usize, false));
+        }
+        for (person, place, pf, lfan, is_target) in &items {
+            if let Some(c) = self.buffers.get_mut("IMAGINAL").and_then(|b| b.chunk.as_mut()) {
+                for (s, v) in c.slots.iter_mut() {
+                    if s.as_str() == "ARG1" {
+                        *v = Value::Sym(person.to_uppercase());
+                    } else if s.as_str() == "ARG2" {
+                        *v = Value::Sym(place.to_uppercase());
+                    }
+                }
+            }
+            let ap = self.al_sdm_sdp(Some(person), None);
+            let al = self.al_sdm_sdp(None, Some(place));
+            let act_p = ap.iter().cloned().fold(f64::MIN, f64::max);
+            let act_l = al.iter().cloned().fold(f64::MIN, f64::max);
+            let idx = if *is_target { 0 } else { 1 };
+            data[pf - 1][lfan - 1][idx].push(0.845 + lf * (-act_p).exp());
+            data[pf - 1][lfan - 1][idx].push(0.845 + lf * (-act_l).exp());
+        }
+        let mut d = vec![0.0f64; 18];
+        for pf in 0..3 {
+            for lf in 0..3 {
+                for tf in 0..2 {
+                    let v = &data[pf][lf][tf];
+                    d[pf + 3 * lf + 9 * tf] = v.iter().sum::<f64>() / v.len() as f64;
+                }
+            }
+        }
+        d
+    }
+
+    /// `(sdm-fct (list slot value '- other nil))` + `(sdp-fct (list name :name
+    /// :activation))` (`dm-commands.lisp:491`/`:667`): the activation of every
+    /// chunk with `slot = value` and `other` filled, in DM order.
+    fn al_sdm_sdp(&mut self, arg1: Option<&str>, arg2: Option<&str>) -> Vec<f64> {
+        let a1 = arg1.map(|s| s.to_uppercase());
+        let a2 = arg2.map(|s| s.to_uppercase());
+        let candidates: Vec<String> = self
+            .dm
+            .iter()
+            .filter(|c| {
+                if let Some(v) = &a1 {
+                    if c.get("ARG1") != Value::Sym(v.clone()) {
+                        return false;
+                    }
+                    if c.get("ARG2") == Value::Nil {
+                        return false;
+                    }
+                }
+                if let Some(v) = &a2 {
+                    if c.get("ARG2") != Value::Sym(v.clone()) {
+                        return false;
+                    }
+                    if c.get("ARG1") == Value::Nil {
+                        return false;
+                    }
+                }
+                true
+            })
+            .filter_map(|c| c.name.clone())
+            .collect();
+        candidates
+            .iter()
+            .map(|n| self.al_sdp_activation(n))
+            .collect()
+    }
+
+    /// `compute-activation` for a named DM chunk with an empty request spec
+    /// (`dm-commands.lisp:738`): base-level + spreading (no partial matching,
+    /// `:ans` is nil).
+    fn al_sdp_activation(&mut self, name: &str) -> f64 {
+        let Some(idx) = self
+            .dm
+            .iter()
+            .position(|c| c.name.as_deref() == Some(name))
+        else {
+            return f64::MIN;
+        };
+        let base = match self.cfg.bll {
+            Some(bll) => {
+                let (refs, creation, count) = {
+                    let h = &self.hist[idx];
+                    (h.refs.clone(), h.creation_ms, h.count)
+                };
+                if count == 0 {
+                    -999999.0
+                } else {
+                    self.cfg.blc
+                        + bl_equation(
+                            self.time_ms,
+                            &refs,
+                            count as f32,
+                            creation,
+                            bll,
+                            &self.cfg.ol,
+                            self.cfg.act_scale,
+                        )
+                }
+            }
+            None => self.hist[idx].fixed_base.unwrap_or(self.cfg.blc),
+        };
+        let spread = self.spreading_activation(name);
+        (base + spread) as f64
+    }
+
+    /// `output-person-location` (`al-fan-study.lisp:467`): the correlation and
+    /// RMSD against the experimental data plus the TARGETS/FOILS table.
+    fn al_output_person_location(&mut self, d: &[f64]) {
+        let data = [
+            1.11, 1.17, 1.22, 1.17, 1.20, 1.22, 1.15, 1.23, 1.36, 1.20, 1.22, 1.26, 1.25,
+            1.36, 1.29, 1.26, 1.47, 1.47,
+        ];
+        let n = d.len() as f64;
+        let sum_r: f64 = d.iter().sum();
+        let sum_d: f64 = data.iter().sum();
+        let sum_r2: f64 = d.iter().map(|x| x * x).sum();
+        let sum_d2: f64 = data.iter().map(|x| x * x).sum();
+        let sum_rd: f64 = d.iter().zip(data.iter()).map(|(a, b)| a * b).sum();
+        let avg_r = sum_r / n;
+        let avg_d = sum_d / n;
+        let corr = (sum_rd / n - avg_r * avg_d)
+            / ((sum_r2 / n - avg_r * avg_r).sqrt() * (sum_d2 / n - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / n).sqrt();
+        self.out_lines
+            .push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines
+            .push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines.push("TARGETS:".to_string());
+        self.out_lines
+            .push("                         Person fan".to_string());
+        self.out_lines
+            .push("  Location      1             2             3".to_string());
+        self.out_lines.push("    fan".to_string());
+        for i in 0..3 {
+            let vals: Vec<String> = (0..3).map(|j| format!("{:8.3}", d[j + i * 3])).collect();
+            self.out_lines
+                .push(format!("     {}    {}", i + 1, vals.join("      ")));
+        }
+        self.out_lines.push(String::new());
+        self.out_lines.push(String::new());
+        self.out_lines.push("FOILS:".to_string());
+        for i in 0..3 {
+            let vals: Vec<String> = (0..3)
+                .map(|j| format!("{:8.3}", d[j + (i + 3) * 3]))
+                .collect();
+            self.out_lines
+                .push(format!("     {}    {}", i + 1, vals.join("      ")));
+        }
     }
 
     /// `(goal-focus-fct (car (define-chunks-fct '(...))))`: define a named

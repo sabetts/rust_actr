@@ -1873,7 +1873,22 @@ plain `expt`/`exp`/`log`. But SBCL computes those on a single-float argument in
 `exp_coerced` (and the final `log_coerced`) — matching SBCL exactly.
 
 With that, the whole two-pass drop-out (208 Sji traces) is byte-exact through
-line 3339; `time-to-retrieve-at-start`/`sdp`/`sdm` remain (A3–A4).
+line 3339.
+
+`time-to-retrieve-at-start` (`al-fan-study.lisp:382`) then sets a
+`comprehend-sentence` context chunk in the imaginal buffer and, for each target
+and foil, runs `sdm-fct`/`sdp-fct` (`dm-commands.lisp:491`/`:667`): the
+activation is base-level + spreading with an *empty* request spec (no partial
+matching, and `:ans` defaults to nil, so no noise), and `sdp :activation`
+recomputes it (`:738`) — the 324 final Sji traces. The source order is again
+`chunk-filled-slots-list-fct`: the typed context chunk's internal list is
+reverse-insertion `(arg2 arg1 relation)`, while a bare request spec is reversed
+by `chunk-spec-to-chunk-def` and so comes out in written order. The results
+table is `correlation`/`mean-deviation` (`act-gui-interface.lisp:1567`/`:1600`,
+`~6,3F`) over the 18 averaged cells, and `*task-intercept*` is 0.845 s.
+
+`associative-learning` (7242 lines) is byte-exact and now in `enabled.txt`
+(44 specs).
 
 
 
