@@ -1630,6 +1630,25 @@ lands inline, and the second `(run 10)` resumes with `BUFFER-READ-ACTION GOAL`.
 `zz` test4 is byte-exact through line 2211 (the second run's first
 `CONFLICT-RESOLUTION`).
 
+## 138. `zz` test4: `all-fingers-to-home` is a two-handed style
+
+`all-fingers-to-home` (`motor-extension.lisp:2257`) is the only movement whose
+`hand` is `both`, which needs a `both` flag through the exec bookkeeping:
+`maybe-execute-movement` requires *both* exec stages free (`:1106`), and
+`finish-movement-dual` frees both (`:1201`). Its prep is `num-to-prepare`, not
+`num-possible-feats`: `num-to-prepare :around` (`:2265`) drops the direction,
+and `theta` is unset, so the count is `hand` + `r` = 2 (0.100 s) even though
+`num-possible-feats` is 5. Its exec is
+`max(init, randomize(max(.2, fitts(mouse-coeff, r, 4.0))))` and finish is
+`init + exec` (`:2349`), so with both hands already home (`r = 0`) exec is the
+0.2 s floor. `queue-output-events` (`:2363`) emits an
+`ALL-FINGERS-TO-HOME <hand>` details line per hand at exec; a held finger (here
+`x`) is released at `init + key-release-time` (2.040), and both hands are reset
+to the home row.
+
+`zz` test4 is **byte-exact through line 2310** — test1–test4 plus every
+summary. Tests 5–9 (M5–M8) remain.
+
 
 
 

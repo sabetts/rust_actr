@@ -397,6 +397,8 @@ enum ZzKind {
     },
     /// `hand-to-mouse`/`hand-to-home` (`hand-ply`).
     Hand { to_mouse: bool, r: f32, theta: f32 },
+    /// `all-fingers-to-home`: both hands to the home row.
+    AllHome { hands: Vec<usize> },
 }
 
 /// extended-motor-actions: the last prepared movement's features, for
@@ -421,6 +423,8 @@ struct ZzPending {
     key: String,
     req_ms: i64,
     hand: usize,
+    /// `hand BOTH` (`all-fingers-to-home`): occupies both exec stages.
+    both: bool,
     style: String,
     /// Time offsets from the start of execution.
     exec_ms: i64,
@@ -1249,6 +1253,12 @@ enum Event {
         theta: f32,
         to_mouse: bool,
     },
+    /// extended-motor-actions: `all-fingers-to-home` prep complete.
+    ZzAllHomePrep {
+        req_ms: i64,
+        hands: Vec<usize>,
+        r: f32,
+    },
     /// extended-motor-actions: mouse movement preparation complete.
     ZzMousePrep {        cmd: String,
         req_ms: i64,
@@ -1329,6 +1339,8 @@ enum Event {
         req_ms: i64,
         /// extended-motor-actions: the hand whose processor stage frees.
         hand: usize,
+        /// extended-motor-actions: `hand BOTH` (`all-fingers-to-home`).
+        both: bool,
         /// extended-motor-actions: the movement's style name.
         style: String,
     },
@@ -1348,6 +1360,8 @@ enum Event {
         req_ms: i64,
         /// extended-motor-actions: the hand whose execution stage frees.
         hand: usize,
+        /// extended-motor-actions: `hand BOTH` (`all-fingers-to-home`).
+        both: bool,
         /// extended-motor-actions: the movement's style name.
         style: String,
     },
@@ -3725,6 +3739,7 @@ impl Engine {
                     key: key.clone(),
                     req_ms,
                     hand,
+                    both: false,
                     style: style.clone(),
                     exec_ms,
                     finish_ms,
@@ -3802,10 +3817,44 @@ impl Engine {
                     key: String::new(),
                     req_ms,
                     hand: 1,
+                    both: false,
                     style: "HAND-PLY".to_string(),
                     exec_ms: exec,
                     finish_ms: finish,
                     kind: ZzKind::Hand { to_mouse, r, theta },
+                });
+                self.zz_maybe_execute();
+            }
+            Event::ZzAllHomePrep { req_ms, hands, r } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!(
+                            "PREPARATION-COMPLETE {}{}",
+                            Self::secs_str(req_ms),
+                            self.zz_style_suffix_hand("ALL-FINGERS-TO-HOME", 1, true)
+                        ),
+                    );
+                }
+                self.man_prep_busy = false;
+                let init = self.cfg.init_ms;
+                // `all-fingers-to-home` (`motor-extension.lisp:2349`): exec is
+                // `max(init, randomize(max(.2, fitts(mouse-coeff, r, 4.0))))`;
+                // finish is `init + exec`.
+                let fit = (self.cfg.touch_cursor_coeff * (r / 4.0 + 0.5).log2())
+                    .max(self.cfg.min_fitts_ms as f32 / 1000.0);
+                let m = 0.2f32.max(fit);
+                let exec = init.max((m * 1000.0).round() as i64);
+                let finish = init + exec;
+                self.man_exec_queue.push(ZzPending {
+                    key: String::new(),
+                    req_ms,
+                    hand: 1,
+                    both: true,
+                    style: "ALL-FINGERS-TO-HOME".to_string(),
+                    exec_ms: exec,
+                    finish_ms: finish,
+                    kind: ZzKind::AllHome { hands },
                 });
                 self.zz_maybe_execute();
             }
@@ -3863,6 +3912,7 @@ impl Engine {
                     Event::InitiationComplete {
                         req_ms,
                         hand: 1,
+                        both: false,
                         style: style.clone(),
                     },
                 );
@@ -3891,6 +3941,7 @@ impl Engine {
                     Event::FinishMovement {
                         req_ms,
                         hand: 1,
+                        both: false,
                         style,
                     },
                 );
@@ -4275,6 +4326,7 @@ impl Engine {
                         key,
                         req_ms,
                         hand,
+                        both: false,
                         style: class,
                         exec_ms,
                         finish_ms,
@@ -4291,6 +4343,7 @@ impl Engine {
                         Event::InitiationComplete {
                             req_ms,
                             hand: 1,
+                            both: false,
                             style: String::new(),
                         },
                     );
@@ -4307,6 +4360,7 @@ impl Engine {
                         Event::FinishMovement {
                             req_ms,
                             hand: 1,
+                            both: false,
                             style: String::new(),
                         },
                     );
@@ -4315,6 +4369,7 @@ impl Engine {
             Event::InitiationComplete {
                 req_ms,
                 hand,
+                both,
                 style,
             } => {
                 if show {
@@ -4323,7 +4378,7 @@ impl Engine {
                         format!(
                             "INITIATION-COMPLETE {}{}",
                             Self::secs_str(req_ms),
-                            self.zz_style_suffix_for(&style, hand)
+                            self.zz_style_suffix_hand(&style, hand, both)
                         ),
                     );
                 }
@@ -4419,6 +4474,7 @@ impl Engine {
             Event::FinishMovement {
                 req_ms,
                 hand,
+                both,
                 style,
             } => {
                 if show {
@@ -4427,12 +4483,12 @@ impl Engine {
                         format!(
                             "FINISH-MOVEMENT {}{}",
                             Self::secs_str(req_ms),
-                            self.zz_style_suffix_for(&style, hand)
+                            self.zz_style_suffix_hand(&style, hand, both)
                         ),
                     );
                 }
                 if self.cfg.zz_ext {
-                    if self.cfg.zz_two_exec {
+                    if self.cfg.zz_two_exec && !both {
                         self.man_exec[hand] = false;
                     } else {
                         self.man_exec[0] = false;
@@ -5615,10 +5671,22 @@ impl Engine {
 
     /// `style X hand Y` suffix from an explicit `(style, hand)`.
     fn zz_style_suffix_for(&self, style: &str, hand: usize) -> String {
+        self.zz_style_suffix_hand(style, hand, false)
+    }
+
+    /// `style X hand Y` suffix, with `BOTH` for the two-handed styles
+    /// (`all-fingers-to-home`).
+    fn zz_style_suffix_hand(&self, style: &str, hand: usize, both: bool) -> String {
         if !self.cfg.zz_ext {
             return String::new();
         }
-        let h = if hand == 0 { "LEFT" } else { "RIGHT" };
+        let h = if both {
+            "BOTH"
+        } else if hand == 0 {
+            "LEFT"
+        } else {
+            "RIGHT"
+        };
         format!(" style {style} hand {h}")
     }
 
@@ -9133,20 +9201,26 @@ impl Engine {
             let mut i = 0;
             while i < self.man_exec_queue.len() {
                 let p = self.man_exec_queue[i].clone();
-                let free = if self.cfg.zz_two_exec {
+                let free = if self.cfg.zz_two_exec && !p.both {
                     !self.man_exec[p.hand]
                 } else {
                     !self.man_exec[0] && !self.man_exec[1]
                 };
                 if free {
                     self.man_exec_queue.remove(i);
-                    if self.cfg.zz_two_exec {
+                    if self.cfg.zz_two_exec && !p.both {
                         self.man_exec[p.hand] = true;
                     } else {
                         self.man_exec[0] = true;
                         self.man_exec[1] = true;
                     }
-                    let hand_name = if p.hand == 0 { "LEFT" } else { "RIGHT" };
+                    let hand_name = if p.both {
+                        "BOTH"
+                    } else if p.hand == 0 {
+                        "LEFT"
+                    } else {
+                        "RIGHT"
+                    };
                     self.zz_last_style =
                         Some((p.style.clone(), p.style.clone(), hand_name.to_string()));
                     let t = self.time_ms;
@@ -9157,6 +9231,7 @@ impl Engine {
                         Event::InitiationComplete {
                             req_ms: p.req_ms,
                             hand: p.hand,
+                            both: p.both,
                             style: p.style.clone(),
                         },
                     );
@@ -9167,6 +9242,7 @@ impl Engine {
                         Event::FinishMovement {
                             req_ms: p.req_ms,
                             hand: p.hand,
+                            both: p.both,
                             style: p.style.clone(),
                         },
                     );
@@ -9288,6 +9364,64 @@ impl Engine {
                             };
                             let off = self.zz_hands[p.hand].offsets[0];
                             self.zz_hands[p.hand].loc = (target.0 - off.0, target.1 - off.1);
+                        }
+                        ZzKind::AllHome { hands } => {
+                            // `queue-output-events` (`motor-extension.lisp:2363`):
+                            // a `ALL-FINGERS-TO-HOME <hand>` details line per
+                            // hand at exec, and the hand reset to home.
+                            for h in &hands {
+                                self.push(
+                                    t + p.exec_ms,
+                                    Prio::Num(0),
+                                    Out::Low,
+                                    Event::Emit {
+                                        module: "MOTOR".to_string(),
+                                        line: format!(
+                                            "ALL-FINGERS-TO-HOME {}",
+                                            if *h == 0 { "LEFT" } else { "RIGHT" }
+                                        ),
+                                    },
+                                );
+                            }
+                            for h in &hands {
+                                // Auto-release any held/down finger, then reset
+                                // the hand to the home row (`prepare-features`,
+                                // `motor-extension.lisp:2271`).
+                                let held: Vec<(usize, String)> = (0..5)
+                                    .filter_map(|f| {
+                                        self.zz_hands[*h].held[f].clone().map(|k| (f, k))
+                                    })
+                                    .collect();
+                                for (f, k) in held {
+                                    self.push(
+                                        t + self.cfg.init_ms + self.cfg.zz_krt_ms,
+                                        Prio::Num(0),
+                                        Out::Always,
+                                        Event::ZzKeyOutput {
+                                            key: k,
+                                            down: false,
+                                            hand: *h,
+                                            finger: f,
+                                        },
+                                    );
+                                    self.zz_hands[*h].held[f] = None;
+                                }
+                                if self.zz_mouse_down {
+                                    self.zz_mouse_down = false;
+                                    self.push(
+                                        t + self.cfg.init_ms + self.cfg.zz_krt_ms,
+                                        Prio::Num(0),
+                                        Out::Always,
+                                        Event::ZzMouseRelease { req_ms: p.req_ms },
+                                    );
+                                }
+                                self.zz_hands[*h].loc = if *h == 0 { (4, 4) } else { (7, 4) };
+                                self.zz_hands[*h].offsets = if *h == 0 {
+                                    LEFT_FINGER_OFFSETS
+                                } else {
+                                    RIGHT_FINGER_OFFSETS
+                                };
+                            }
                         }
                     }
                     ran = true;
@@ -9561,10 +9695,91 @@ impl Engine {
                 self.zz_extended_finger_keyboard(cmd, &key, "RELEASE", "RELEASE")
             }
             "MOVE-FINGER-TO-HOME" => self.zz_move_finger_to_home(slots),
+            "ALL-FINGERS-TO-HOME" => self.zz_all_fingers_to_home(slots),
             "HAND-TO-MOUSE" => self.zz_hand_to(true),
             "HAND-TO-HOME" => self.zz_hand_to(false),
             _ => Ok(()),
         }
+    }
+
+    /// `all-fingers-to-home` (`motor-extension.lisp:2401`): move whichever
+    /// hands are not already at the home row.
+    fn zz_all_fingers_to_home(
+        &mut self,
+        _slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
+        let req_ms = self.time_ms;
+        let mut hands: Vec<usize> = Vec::new();
+        for h in 0..2 {
+            if self.zz_hand_needs_home(h) {
+                hands.push(h);
+            }
+        }
+        if hands.is_empty() {
+            return Ok(());
+        }
+        // `r` = max hand-ply distance to the home row (`:2317`/`:2346`).
+        let r = hands
+            .iter()
+            .map(|h| {
+                let home = if *h == 0 { (4, 4) } else { (7, 4) };
+                let cur = self.zz_hands[*h].loc;
+                let dx = (home.0 - cur.0) as f64;
+                let dy = (home.1 - cur.1) as f64;
+                (dx * dx + dy * dy).sqrt() as f32
+            })
+            .fold(0.0f32, f32::max);
+        // `compute-prep-time`: the previous style-name differs (`peck` vs
+        // `all-home`), so `num-to-prepare` = hand + r minus the direction
+        // (`:2265`) = 2.
+        let feats = 2i64;
+        self.zz_last_style = Some((
+            "ALL-FINGERS-TO-HOME".to_string(),
+            "ALL-HOME".to_string(),
+            "BOTH".to_string(),
+        ));
+        self.zz_last_move = Some(ZzMoveInfo {
+            style_name: "ALL-HOME".to_string(),
+            hand: 1,
+            finger: 4,
+            r,
+            theta: 0.0,
+            maxfeats: 5,
+            hfrt: true,
+        });
+        self.man_prep_busy = true;
+        self.man_last_prep = Some(1);
+        self.zz_last_cmd[0] = "ALL-FINGERS-TO-HOME".to_string();
+        self.zz_last_cmd[1] = "ALL-FINGERS-TO-HOME".to_string();
+        self.man_proc[0] = true;
+        self.man_proc[1] = true;
+        let prep = feats * self.cfg.feat_prep_ms;
+        self.push(
+            self.time_ms + prep,
+            Prio::Num(0),
+            Out::Always,
+            Event::ZzAllHomePrep { req_ms, hands, r },
+        );
+        Ok(())
+    }
+
+    /// `all-fingers-to-home` (`motor-extension.lisp:2419`): whether a hand
+    /// needs moving — off the home location, any finger down, or a finger off
+    /// its home position.
+    fn zz_hand_needs_home(&self, h: usize) -> bool {
+        let home_loc = if h == 0 { (4, 4) } else { (7, 4) };
+        if self.zz_hands[h].loc != home_loc {
+            return true;
+        }
+        for f in 0..5 {
+            if self.zz_hands[h].down[f] {
+                return true;
+            }
+            if self.zz_finger_loc(h, f) != self.zz_home_position(h, f) {
+                return true;
+            }
+        }
+        false
     }
 
     /// `move-finger-to-home` (`motor-extension.lisp:2222`): if the finger is
