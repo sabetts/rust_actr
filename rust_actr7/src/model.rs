@@ -1127,7 +1127,17 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
             // imaginal/associative-learning source buffers create a fresh
             // chunk per request.
             "BUFFER-REQUIRES-COPIES" => {
-                if let Some(b) = items.get(1).and_then(|x| x.as_sym()) {
+                // `(buffer-requires-copies 'imaginal)`: the argument arrives
+                // as `(QUOTE IMAGINAL)`.
+                let name = items.get(1).and_then(|x| match x {
+                    Sexp::Sym(s) => Some(s.clone()),
+                    Sexp::List(q) => match q.as_slice() {
+                        [Sexp::Sym(q), Sexp::Sym(s)] if q == "QUOTE" => Some(s.clone()),
+                        _ => None,
+                    },
+                    _ => None,
+                });
+                if let Some(b) = name {
                     model.no_reuse_buffers.push(b.to_uppercase());
                 }
             }

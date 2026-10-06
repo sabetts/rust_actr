@@ -2717,7 +2717,9 @@ impl Engine {
         // .08, :al-prior-w 2.5 (A2).
         self.al_create_initial_chunks();
         self.al_initial_presentation()?;
-        // TODO(A1): drop-out ×2, time-to-retrieve-at-start, output table.
+        self.al_drop_out()?;
+        self.al_drop_out()?;
+        // TODO(A3): time-to-retrieve-at-start, output table.
         Ok(())
     }
 
@@ -2734,25 +2736,34 @@ impl Engine {
         result
     }
 
-    /// `create-stims` (`al-fan-study.lisp:245`): permute people/places, build
-    /// the sentence/target/foil index lists, then the filler permutes (kept so
-    /// the RNG stream stays aligned even though the fillers are unused).
-    fn al_create_stims(&mut self) {
-        let people: Vec<String> = [
+    /// The stimulus word lists (`al-fan-study.lisp:220`), before permutation.
+    fn al_people_list() -> [&'static str; 16] {
+        [
             "hippie", "guard", "earl", "giant", "captain", "debutante", "fireman",
             "lawyer", "wizard", "clerk", "writer", "doctor", "teacher", "boxer",
             "queen", "singer",
         ]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-        let places: Vec<String> = [
+    }
+
+    fn al_places_list() -> [&'static str; 16] {
+        [
             "beach", "castle", "dungeon", "forest", "park", "church", "cave", "bank",
             "store", "tower", "lake", "stadium", "casino", "school", "diner", "office",
         ]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    }
+
+    /// `create-stims` (`al-fan-study.lisp:245`): permute people/places, build
+    /// the sentence/target/foil index lists, then the filler permutes (kept so
+    /// the RNG stream stays aligned even though the fillers are unused).
+    fn al_create_stims(&mut self) {
+        let people: Vec<String> = Self::al_people_list()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let places: Vec<String> = Self::al_places_list()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         self.al_people = self.al_permute(&people);
         self.al_places = self.al_permute(&places);
         let s_idx: [(usize, usize, i64, i64); 26] = [
@@ -2888,6 +2899,100 @@ impl Engine {
                 trace: false,
             },
         );
+    }
+
+    /// `(module-request 'imaginal (relation in arg1 X))`: the drop-out probe
+    /// (no `arg2`).
+    fn al_imaginal_probe(&mut self, arg1: &str) {
+        let spec = NewChunk::Spec {
+            ctype: String::new(),
+            slots: vec![
+                ("RELATION".to_string(), Value::Sym("IN".to_string())),
+                ("ARG1".to_string(), Value::Sym(arg1.to_uppercase())),
+            ],
+            neg: Vec::new(),
+            rels: Vec::new(),
+            bare: true,
+        };
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::ModuleRequest {
+                buffer: "IMAGINAL".to_string(),
+                spec,
+                var_slots: Vec::new(),
+                trace: false,
+            },
+        );
+    }
+
+    /// `(module-request 'retrieval (relation in arg1 X arg2 Y))`.
+    fn al_retrieval_request(&mut self, arg1: &str, arg2: &str) {
+        let spec = NewChunk::Spec {
+            ctype: String::new(),
+            slots: vec![
+                ("RELATION".to_string(), Value::Sym("IN".to_string())),
+                ("ARG1".to_string(), Value::Sym(arg1.to_uppercase())),
+                ("ARG2".to_string(), Value::Sym(arg2.to_uppercase())),
+            ],
+            neg: Vec::new(),
+            rels: Vec::new(),
+            bare: true,
+        };
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::ModuleRequest {
+                buffer: "RETRIEVAL".to_string(),
+                spec,
+                var_slots: Vec::new(),
+                trace: false,
+            },
+        );
+    }
+
+    /// `(run-full-time secs)` (`scheduling.lisp:986`): schedule a
+    /// `:min`-priority maintenance dummy at the limit so the run always
+    /// reaches it (`Stopped because time limit reached`).
+    fn al_run_full_time(&mut self, secs: f64) -> Result<(), EngineError> {
+        let limit = self.time_ms + (secs * 1000.0).round() as i64;
+        self.push_m(limit, Prio::Min, Out::Never, true, Event::Dummy);
+        self.run_secs(secs)
+    }
+
+    /// `drop-out` (`al-fan-study.lisp:349`): present each probe once, then
+    /// retrieve every sentence it appeared in, 20 s each.
+    fn al_drop_out(&mut self) -> Result<(), EngineError> {
+        // `(set-parameter-value :lf 0)` for the study phase; restored after.
+        let lf = self.cfg.lf_ms;
+        self.cfg.lf_ms = 0;
+        // `(permute-list (append (copy-list *people*) (copy-list *places*)))`:
+        // the *original* lists, not the `create-stims` permutations.
+        let mut all: Vec<String> = Self::al_people_list()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        all.extend(Self::al_places_list().iter().map(|s| s.to_string()));
+        let order = self.al_permute(&all);
+        for x in &order {
+            // `(erase-buffer 'imaginal)`: silent, and the removed chunk does
+            // not merge into DM.
+            self.buffer_mut("IMAGINAL").chunk = None;
+            self.al_imaginal_probe(x);
+            self.run_secs(0.2)?;
+            let matching: Vec<(String, String)> = self
+                .al_sentences
+                .iter()
+                .filter(|(p, pl, _, _)| p == x || pl == x)
+                .map(|(p, pl, _, _)| (p.clone(), pl.clone()))
+                .collect();
+            for (p, pl) in matching {
+                self.al_retrieval_request(&p, &pl);
+                self.al_run_full_time(20.0)?;
+            }
+        }
+        self.cfg.lf_ms = lf;
+        Ok(())
     }
 
     /// `(goal-focus-fct (car (define-chunks-fct '(...))))`: define a named
