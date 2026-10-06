@@ -916,6 +916,8 @@ enum Event {
     PressKey {
         key: String,
         req_ms: i64,
+        /// `isa press-key key X` form (no `cmd`): fewer prepared features.
+        isa: bool,
     },
     PreparationComplete {
         key: String,
@@ -941,6 +943,10 @@ enum Event {
     Speak {
         text: String,
     },
+    /// Audio module: a sound begins (`new-sound`).
+    NewSound,
+    /// Audio module: the sound's aural location is set.
+    AuralLocation,
     /// Threads extra: clear the specific goal chunk a production matched
     /// (emits `CLEAR-BUFFER GOAL`, removes it from the goal set).
     ClearGoalThread {
@@ -1080,6 +1086,8 @@ pub struct Engine {
     goal_set: Vec<ChunkInst>,
     /// Speech module: the vocal buffer is busy speaking/subvocalizing.
     vocal_busy: bool,
+    /// Audio module: sounds emitted so far (`AUDIO-EVENT{n}`).
+    audio_events: u64,
     /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
     name_count: HashMap<String, u64>,
     /// SET-copy name -> feature index, resolving copies back for
@@ -1204,6 +1212,7 @@ impl Engine {
             finsts: Vec::new(),
             goal_set: Vec::new(),
             vocal_busy: false,
+            audio_events: 0,
             name_count: HashMap::new(),
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
@@ -1335,6 +1344,7 @@ impl Engine {
         self.finsts.clear();
         self.goal_set.clear();
         self.vocal_busy = false;
+        self.audio_events = 0;
         self.name_count.clear();
         self.vl_copies.clear();
         self.obj_built.clear();
@@ -2061,10 +2071,36 @@ impl Engine {
             Event::Speak { text } => {
                 self.emit("SPEECH", format!("SPEAK TEXT {text}"));
                 self.vocal_busy = true;
-                let dur = (150.0f32)
+                // Speech initiation (exec time) then articulation.
+                let exec = 200;
+                let art = (150.0f32)
                     .max(150.0 * text.chars().count() as f32 / 3.0)
                     .round() as i64;
-                self.push(self.time_ms + dur, Prio::Num(0), Out::Never, Event::VocalFree);
+                self.push(self.time_ms + exec, Prio::Num(0), Out::Medium, Event::NewSound);
+                self.push(
+                    self.time_ms + exec + art,
+                    Prio::Num(0),
+                    Out::Never,
+                    Event::VocalFree,
+                );
+            }
+            Event::NewSound => {
+                self.emit("AUDIO", "new-sound".to_string());
+                // Aural detection/recode delay.
+                self.push(
+                    self.time_ms + 300,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::AuralLocation,
+                );
+            }
+            Event::AuralLocation => {
+                let n = self.audio_events;
+                self.audio_events += 1;
+                self.emit(
+                    "AUDIO",
+                    format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{n} NIL"),
+                );
             }
             Event::ClearGoalThread { name } => {
                 if show {
@@ -2527,7 +2563,7 @@ impl Engine {
                     );
                 }
             }
-            Event::PressKey { key, req_ms } => {
+            Event::PressKey { key, req_ms, isa } => {
                 if show {
                     self.emit("MOTOR", format!("PRESS-KEY KEY {key}"));
                 }
@@ -2536,7 +2572,13 @@ impl Engine {
                 // finger 3, else r/theta diffs).
                 let spec = Self::key_spec(&key)?;
                 let feats = match &self.last_press {
-                    None => 5,
+                    None => {
+                        if isa {
+                            2
+                        } else {
+                            5
+                        }
+                    }
                     Some((h, f, r, t)) => {
                         if *h != spec.hand {
                             4
@@ -6511,7 +6553,15 @@ impl Engine {
             (Some("PRESS-KEY"), Some(k)) => {
                 Self::key_spec(&k)?;
                 let req_ms = self.time_ms;
-                self.now(Prio::Num(0), Out::Low, Event::PressKey { key: k, req_ms });
+                // `cmd press-key` vs `isa press-key` (no cmd).
+                let isa = !slots
+                    .iter()
+                    .any(|(s, _)| s == "CMD");
+                self.now(
+                    Prio::Num(0),
+                    Out::Low,
+                    Event::PressKey { key: k, req_ms, isa },
+                );
                 Ok(())
             }
             got => Err(unimpl(format!("manual request {got:?}"))),
