@@ -2927,8 +2927,8 @@ impl Engine {
                         ("BUFFER", Pattern::Sym(s)) if s == "EMPTY" => self
                             .buffers
                             .get(buffer)
-                            .and_then(|b| b.chunk.as_ref())
-                            .is_none(),
+                            .map(|b| b.chunk.is_none() && !b.failed)
+                            .unwrap_or(false),
                         ("BUFFER", Pattern::Sym(s)) if s == "FULL" => self
                             .buffers
                             .get(buffer)
@@ -3052,11 +3052,11 @@ impl Engine {
                                 .failed
                         }
                         ("BUFFER", Pattern::Sym(s)) if s == "EMPTY" => {
-                            self.buffers
+                            let b = self
+                                .buffers
                                 .get(buffer)
-                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
-                                .chunk
-                                .is_none()
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?;
+                            b.chunk.is_none() && !b.failed
                         }
                         ("BUFFER", Pattern::Sym(s)) if s == "FULL" => {
                             self.buffers
@@ -3316,6 +3316,18 @@ impl Engine {
                 Ok(Value::Nil)
             }
             "MP-TIME" => Ok(Value::Num(self.time_ms as f64 / 1000.0)),
+            "PUSH" => {
+                // Task bookkeeping (`record-response` pushes onto a task
+                // variable); the state is not part of the trace.
+                let mut out = Value::Nil;
+                for (i, a) in args.iter().enumerate() {
+                    let v = self.eval_expr(a, b)?;
+                    if i == 0 {
+                        out = v;
+                    }
+                }
+                Ok(out)
+            }
             "ACT-R-RANDOM" => {
                 let lim = self.eval_expr(args.first().ok_or("act-r-random needs a limit")?, b)?;
                 match lim {
@@ -3344,6 +3356,12 @@ impl Engine {
     /// Remote-command call by name (a string head). No commands are
     /// registered yet, so these fail loudly rather than silently.
     fn eval_command(&self, name: &str, _args: &[Sexp], _b: &Bindings) -> Result<Value, String> {
+        // A registered task command (`add-act-r-command`): its side effects
+        // (e.g. recording a response in the task's own variable) are not
+        // part of the trace, so a no-op matches.
+        if self.user_fns.contains_key(&name.to_uppercase()) {
+            return Ok(Value::Nil);
+        }
         Err(format!("unsupported eval command \"{name}\""))
     }
 
@@ -4479,6 +4497,29 @@ impl Engine {
             .iter()
             .find(|(s, _)| s == ":RECENTLY-RETRIEVED")
             .map(|(_, v)| v.clone());
+        // `:recently-retrieved nil` removes the marked candidates
+        // (`declarative-memory.lisp:1192`), tracing the header followed by
+        // each (DM order, newest chunk first).
+        let mut recent_removed: Vec<String> = Vec::new();
+        if let Some(rv) = &recent_req {
+            if matches!(rv, Value::Nil) {
+                for idx in (0..self.dm.len()).rev() {
+                    let c = &self.dm[idx];
+                    let cname = c.name.clone().unwrap_or_default();
+                    let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
+                        && req_empty.iter().all(|s| c.get(s) == Value::Nil);
+                    if sig_ok && self.is_recent(&cname) {
+                        recent_removed.push(cname);
+                    }
+                }
+                if self.act_high() {
+                    self.out("Removing recently retrieved chunks:".to_string());
+                    for n in &recent_removed {
+                        self.out(n.clone());
+                    }
+                }
+            }
+        }
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
         for idx in 0..self.dm.len() {
@@ -4595,19 +4636,62 @@ impl Engine {
             // with a nil request value are signature-only (no testable
             // slot), so they do not score.
             if let Some(mp) = self.cfg.mp {
+                let show = self.act_medium();
+                if show {
+                    self.out("Computing partial matching component".to_string());
+                }
+                let mut total = 0.0f32;
                 for (s, v) in &want_slots {
-                    if s.starts_with(':') || var_slots.contains(s) || *v == Value::Nil {
+                    if s.starts_with(':') || *v == Value::Nil {
                         continue;
                     }
-                    a += mp * self.similarity(v, &c.get(s));
+                    let cv = c.get(s);
+                    let sim = self.similarity(v, &cv);
+                    let simd = mp * sim;
+                    if show {
+                        self.out(format!("  comparing slot {s}"));
+                        self.out(format!(
+                            "  Requested: = {}  Chunk's slot value: {}",
+                            v.show(),
+                            cv.show()
+                        ));
+                        self.out(format!("  similarity: {}", lisp_f(sim)));
+                        self.out(format!("  effective similarity value is {}", lisp_f(simd)));
+                    }
+                    total += simd;
+                    a += simd;
                 }
                 for (s, v) in &want_neg {
-                    if s.starts_with(':') || var_slots.contains(s) || *v == Value::Nil {
+                    if s.starts_with(':') || *v == Value::Nil {
                         continue;
                     }
-                    if self.similarity(v, &c.get(s)) == self.cfg.ms {
-                        a += mp * self.cfg.md;
+                    let cv = c.get(s);
+                    let sim = self.similarity(v, &cv);
+                    if show {
+                        self.out(format!("  comparing slot {s}"));
+                        self.out(format!(
+                            "  Requested: - {}  Chunk's slot value: {}",
+                            v.show(),
+                            cv.show()
+                        ));
+                        self.out(format!("  similarity: {}", lisp_f(sim)));
                     }
+                    if sim == self.cfg.ms {
+                        let simd = mp * self.cfg.md;
+                        if show {
+                            self.out(format!(
+                                "  effective similarity value is {}",
+                                lisp_f(simd)
+                            ));
+                        }
+                        total += simd;
+                        a += simd;
+                    } else if show {
+                        self.out("  negation test with similarity not ms has no effect".to_string());
+                    }
+                }
+                if show {
+                    self.out(format!("Total similarity score {}", lisp_f(total)));
                 }
             }
             let noise = match self.cfg.ans {
@@ -4674,16 +4758,28 @@ impl Engine {
                 Some(tied.into_iter().next().unwrap())
             }
         };
+        let act = best_a.unwrap_or(0.0);
+        let below = self.cfg.esc && act < self.cfg.rt;
         if self.act_low() {
-            if let Some(w) = &best {
-                let wname = w.name.clone().unwrap_or_default();
-                self.out(format!(
-                    "Chunk {wname} with activation {} is the best",
-                    lisp_f(best_a.unwrap_or(0.0))
-                ));
+            match &best {
+                Some(_) if below => {
+                    self.out(format!(
+                        "No chunk above the retrieval threshold: {}",
+                        lisp_f(self.cfg.rt)
+                    ));
+                }
+                Some(w) => {
+                    let wname = w.name.clone().unwrap_or_default();
+                    self.out(format!(
+                        "Chunk {wname} with activation {} is the best",
+                        lisp_f(act)
+                    ));
+                }
+                None => {
+                    self.out("No matching chunk found retrieval failure".to_string());
+                }
             }
         }
-        let act = best_a.unwrap_or(0.0);
         let gen = self.dm_gen;
         match best {
             None => {

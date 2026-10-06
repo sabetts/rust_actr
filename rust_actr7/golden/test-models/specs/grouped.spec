@@ -1,1 +1,1 @@
-(:NAME "grouped" :REF "grouped.ref" :MODELS ("tutorial;lisp;grouped.lisp" "tutorial;unit5;grouped-model.lisp") :SEED-SET T :RUNS ((20 (77093543977 39813) T 22)) :STEPS ((:RESET) (:RUN 20 (77093543977 39813) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)
+(:NAME "grouped" :REF "grouped.ref" :MODELS ("tutorial;lisp;grouped.lisp" "tutorial;unit5;grouped-model.lisp") :SEED-SET T :RUNS ((20 (77093543977 39813) T 22)) :STEPS ((:RESET) (:SGP :ACT T) (:RUN 20 (77093543977 39813) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

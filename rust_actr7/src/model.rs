@@ -166,11 +166,11 @@ pub fn parse_commands(src: &str) -> HashMap<String, String> {
     let Ok(forms) = parse_all(src) else {
         return map;
     };
-    for f in forms {
-        if let Sexp::List(items) = &f {
-            if items.first().and_then(|s| s.as_sym()) != Some("ADD-ACT-R-COMMAND") {
-                continue;
-            }
+    fn walk(f: &Sexp, map: &mut HashMap<String, String>) {
+        let Sexp::List(items) = f else {
+            return;
+        };
+        if items.first().and_then(|s| s.as_sym()) == Some("ADD-ACT-R-COMMAND") {
             let name = items.get(1).and_then(|s| match s {
                 Sexp::Str(s) | Sexp::Sym(s) => Some(s.clone()),
                 _ => None,
@@ -187,6 +187,12 @@ pub fn parse_commands(src: &str) -> HashMap<String, String> {
                 map.insert(name.to_uppercase(), fname.to_uppercase());
             }
         }
+        for x in items {
+            walk(x, map);
+        }
+    }
+    for f in &forms {
+        walk(f, &mut map);
     }
     map
 }

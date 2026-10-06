@@ -1378,3 +1378,30 @@ The tail of run 3 needed four more rules:
 
 `retain-indirect-retrievals` is now byte-exact across all three runs —
 **37 specs** enabled.
+
+## 127. `grouped`: PPM/finst retrieval traces + command eval
+
+`grouped` needed several DM-trace details (all `:act t`, set by the test
+stub's `:testing-function grouped-test`, which extraction missed — the spec
+now carries `(:SGP :ACT T)`):
+- **`!eval!` command dispatch**: `(add-act-r-command "name" 'fn)` is found
+  recursively (it lives inside `grouped-recall`), and a string-headed
+  `!eval!` resolves the command; `push` is accepted as untraced task
+  bookkeeping.
+- **`partial-matching` `:full` trace**: `Computing partial matching
+  component`, then per testable slot `  comparing slot X`, `  Requested: =
+  V  Chunk's slot value: W`, `  similarity: S`, `  effective similarity
+  value is mp·S`, and `Total similarity score` (`declarative-memory.lisp:
+  2590-2622`).  Variable-valued request slots (`parent =list`) must **not**
+  be skipped — they are instantiated by runtime.
+- **Finst removal**: `:recently-retrieved nil` traces `Removing recently
+  retrieved chunks:` at act high followed by each removed candidate (DM
+  reverse order, i.e. newest chunk first).
+- **Threshold messages** at act low: `No chunk above the retrieval
+  threshold: {rt}` (best below `:rt`) or `No matching chunk found retrieval
+  failure` (no candidates) instead of `Chunk X … is the best`.
+- **`buffer empty` is false while the buffer holds a failure**, so a
+  production requiring an empty retrieval buffer does not refire after a
+  retrieval failure (this is what ends `grouped` at 17.214).
+
+`grouped` is now byte-exact (1192 lines) — **38 specs**.

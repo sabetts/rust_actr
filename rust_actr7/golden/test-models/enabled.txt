@@ -41,3 +41,4 @@ tutorial-unit7modeling-ul-issues-second-run
 test-temporal
 demo2-randomized
 retain-indirect-retrievals
+grouped
