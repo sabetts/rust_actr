@@ -307,6 +307,12 @@ struct Config {
     zz_cdd: Option<f64>,
     /// `:peck-strike-distance` (`*psd*`).
     zz_psd: Option<f32>,
+    /// associative-learning extra: `:eal` (decay; `nil` disables the module),
+    /// `:al-prior-p`, `:al-prior-w`, `:al-show`.
+    al_eal: Option<f32>,
+    al_prior_p: f32,
+    al_prior_w: f32,
+    al_show: bool,
     /// `:default-punch-delay`/`:fast-punch-delay`/`:slow-punch-delay`
     /// (`*dpd*`/`*fpd*`/`*spd*`, `motor-extension.lisp:1482`).
     zz_dpd_ms: i64,
@@ -790,6 +796,25 @@ const RIGHT_FINGER_OFFSETS: [(i64, i64); 5] = [(0, 0), (1, 0), (2, 0), (3, 0), (
 /// real finger index.
 const ZZ_DUMMY_FINGER: usize = usize::MAX;
 
+/// associative-learning: the learned state attached to one chunk
+/// (`associative-learning.lisp:205`+, the `al-ni-count`/`al-cj-*`/… extended
+/// slots).
+#[derive(Debug, Clone, Default)]
+struct AlChunk {
+    /// `al-ni-count` / `al-ni-refs`: times this chunk was the needed item.
+    ni_count: i64,
+    ni_refs: Vec<i64>,
+    /// `al-cj-count` / `al-cj-refs`: times this chunk was in the context.
+    cj_count: i64,
+    cj_refs: Vec<i64>,
+    /// `al-ni+cj-count` / `al-ni+cj-refs`: per needed-item `i` while this
+    /// chunk was in the context (alists keyed by `i`'s true name).
+    ni_cj_count: Vec<(String, i64)>,
+    ni_cj_refs: Vec<(String, Vec<i64>)>,
+    /// `associated-js` (only used by the `sdp` reporting path).
+    associated_js: Vec<String>,
+}
+
 /// extended-motor-actions: a hand's current keyboard position.
 #[derive(Debug, Clone)]
 struct ZzHand {
@@ -919,7 +944,7 @@ impl Config {
             Some(b) => (0.001f32).powf(-b).ln(),
             None => 0.0,
         };
-        Ok(Config {
+        let mut cfg = Config {
             detail,
             esc: sgp_bool(&m.params, ":ESC"),
             lf_ms,
@@ -1034,6 +1059,14 @@ impl Config {
             zz_krt_ms: 40,
             zz_cdd: None,
             zz_psd: None,
+            al_eal: sgp_single(&m.params, ":EAL")?,
+            al_prior_p: sgp_single(&m.params, ":AL-PRIOR-P")?.unwrap_or(0.01),
+            al_prior_w: sgp_single(&m.params, ":AL-PRIOR-W")?.unwrap_or(10.0),
+            // The module's `:al-show` default is `t`.
+            al_show: match m.params.iter().find(|(k, _)| k == ":AL-SHOW") {
+                Some((_, Sexp::Sym(s))) if s == "NIL" => false,
+                _ => true,
+            },
             zz_dpd_ms: 75,
             zz_fpd_ms: 50,
             zz_spd_ms: 100,
@@ -1048,7 +1081,14 @@ impl Config {
             do_not_query,
             do_not_harvest,
             module_width: MODULE_WIDTH,
-        })
+        };
+        // `al-params` (`associative-learning.lisp:421`): enabling `:eal` sets
+        // `:mas` to π so spreading activation runs (the module replaces the
+        // Sji values via its hook).
+        if cfg.al_eal.is_some() {
+            cfg.mas = Some(std::f32::consts::PI);
+        }
+        Ok(cfg)
     }
 }
 
@@ -1300,7 +1340,12 @@ enum Event {
     },
     /// tracker task: `choose` re-prompts the visicon feature.
     Choose,
-    /// extended-motor-actions: a keyboard style's preparation complete.
+    /// associative-learning: `al-buffer-cleared`
+    /// (`associative-learning.lisp:667`) scheduled at priority 5.
+    AlBufferCleared {
+        chunk: String,
+    },
+    /// `zz-extended-motor-actions`: a keyboard style's preparation complete.
     ZzKeyPrep {
         cmd: String,
         style: String,
@@ -1683,6 +1728,14 @@ pub struct Engine {
     al_targets: Vec<(String, String, i64, i64)>,
     al_foils: Vec<(String, String, i64, i64)>,
     al_fillers: Vec<(String, String, i64, i64)>,
+    /// associative-learning module state (`associative-learning.lisp`).
+    al_chunks: HashMap<String, AlChunk>,
+    al_total_count: i64,
+    al_total_refs: Vec<i64>,
+    al_total_creation_time: i64,
+    /// `al-module-last-retrieval-contexts`: the source-buffer chunks at the
+    /// last retrieval request.
+    al_last_contexts: Vec<String>,
     imag_busy: bool,
     /// Temporal module: current tick interval (ms), tick count, the
     /// one-time start increment (ms), and a generation counter that cancels
@@ -1858,6 +1911,11 @@ impl Engine {
             al_targets: Vec::new(),
             al_foils: Vec::new(),
             al_fillers: Vec::new(),
+            al_chunks: HashMap::new(),
+            al_total_count: 0,
+            al_total_refs: Vec::new(),
+            al_total_creation_time: 0,
+            al_last_contexts: Vec::new(),
             imag_busy: false,
             temporal_tick: 0.0,
             temporal_ticks: 0,
@@ -2038,6 +2096,12 @@ impl Engine {
         self.zz_prepared = None;
         self.zz_breaks.clear();
         self.zz_break_hit = false;
+        // `primary-al-reset` (`associative-learning.lisp:364`).
+        self.al_chunks.clear();
+        self.al_total_count = 0;
+        self.al_total_refs.clear();
+        self.al_total_creation_time = 0;
+        self.al_last_contexts.clear();
         self.zz_mouse_down = false;
         // The virtual mouse cursor's current/device positions
         // (`mouse.lisp:178`/`:192`).
@@ -2180,7 +2244,12 @@ impl Engine {
     /// `compute-sji` (`declarative-memory.lisp:2536`): an explicit
     /// similarity wins; otherwise, when the source `j` occurs in `i`'s
     /// fan-in, `mas - ln(fan-out(j)/count)`, clamped at 0 unless `:nsji`.
-    fn compute_sji(&self, j: &str, i: &str, mas: f32) -> f32 {
+    fn compute_sji(&mut self, j: &str, i: &str, mas: f32) -> f32 {
+        // associative-learning's `:sji-hook` (`compute-learned-sji`) replaces
+        // the default Sji when the module is enabled (`:eal`).
+        if self.cfg.al_eal.is_some() {
+            return self.al_compute_learned_sji(j, i);
+        }
         if let Some(v) = self
             .sims
             .get(&(j.to_string(), i.to_string()))
@@ -2227,14 +2296,24 @@ impl Engine {
             let Some(chunk) = self.buffers.get(buffer).and_then(|b| b.chunk.as_ref()).cloned() else {
                 continue;
             };
-            // `chunk-filled-slots-list-fct` returns the chunk's internal
-            // slot list, which is built by prepending (reverse insertion).
-            let js: Vec<String> = chunk
-                .slots
-                .iter()
-                .rev()
-                .filter_map(|(_, v)| self.chunk_name_of(v))
-                .collect();
+            // `chunk-filled-slots-list-fct` returns the chunk's internal slot
+            // list, which is built by prepending (reverse insertion) — except
+            // for the associative-learning imaginal chunks, whose typeless
+            // spec keeps the written order (the ref's Sji trace order).
+            let js: Vec<String> = if self.cfg.al_eal.is_some() {
+                chunk
+                    .slots
+                    .iter()
+                    .filter_map(|(_, v)| self.chunk_name_of(v))
+                    .collect()
+            } else {
+                chunk
+                    .slots
+                    .iter()
+                    .rev()
+                    .filter_map(|(_, v)| self.chunk_name_of(v))
+                    .collect()
+            };
             if js.is_empty() {
                 continue;
             }
@@ -2714,7 +2793,12 @@ impl Engine {
         self.reset()?;
         self.rng.borrow_mut().set_seed(1, 0);
         // `(set-parameter-value …)`: :lf .75, :al-show t, :ol t, :al-prior-p
-        // .08, :al-prior-w 2.5 (A2).
+        // .08, :al-prior-w 2.5 (`approach-1-results`).
+        self.cfg.lf_ms = 750;
+        self.cfg.al_show = true;
+        self.cfg.ol = Ol::On;
+        self.cfg.al_prior_p = 0.08;
+        self.cfg.al_prior_w = 2.5;
         self.al_create_initial_chunks();
         self.al_initial_presentation()?;
         self.al_drop_out()?;
@@ -2993,6 +3077,284 @@ impl Engine {
         }
         self.cfg.lf_ms = lf;
         Ok(())
+    }
+
+    /// Whether `buffer` is a source buffer for associative learning: a
+    /// non-zero spread, not retrieval (`finish-al-reset`,
+    /// `associative-learning.lisp:376`).
+    fn al_is_source_buffer(&self, buffer: &str) -> bool {
+        match buffer {
+            "GOAL" => self.cfg.ga != 0.0,
+            "IMAGINAL" => self.cfg.imaginal_activation != 0.0,
+            _ => false,
+        }
+    }
+
+    /// `source-buffer-chunks` (`associative-learning.lisp:633`).
+    fn al_source_buffer_chunks(&self) -> Vec<String> {
+        let mut r = Vec::new();
+        for buffer in ["GOAL", "IMAGINAL"] {
+            if !self.al_is_source_buffer(buffer) {
+                continue;
+            }
+            if let Some(chunk) = self.buffers.get(buffer).and_then(|b| b.chunk.as_ref()) {
+                for (_, v) in &chunk.slots {
+                    if let Some(name) = self.chunk_name_of(v) {
+                        r.push(name);
+                    }
+                }
+            }
+        }
+        r
+    }
+
+    /// The chunk-valued slots of the DM chunk named `name` (the `self-sources`
+    /// of `al-buffer-cleared`, `associative-learning.lisp:673`).
+    fn al_chunk_sources(&self, name: &str) -> Vec<String> {
+        self.dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+            .map(|c| {
+                c.slots
+                    .iter()
+                    .filter_map(|(_, v)| self.chunk_name_of(v))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// `chunk-creation-time` for the DM chunk named `name`.
+    fn dm_creation_time(&self, name: &str) -> i64 {
+        self.dm
+            .iter()
+            .position(|c| c.name.as_deref() == Some(name))
+            .map(|i| self.hist[i].creation_ms)
+            .unwrap_or(0)
+    }
+
+    fn al_ni_cj_count(&self, j: &str, i: &str) -> i64 {
+        self.al_chunks
+            .get(j)
+            .and_then(|c| c.ni_cj_count.iter().find(|(n, _)| n == i))
+            .map(|(_, v)| *v)
+            .unwrap_or(0)
+    }
+
+    fn al_ni_cj_refs(&self, j: &str, i: &str) -> Vec<i64> {
+        self.al_chunks
+            .get(j)
+            .and_then(|c| c.ni_cj_refs.iter().find(|(n, _)| n == i))
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    }
+
+    /// `(model-output ...)` from the associative-learning module: a raw line
+    /// with no timestamp/module prefix.
+    fn al_out(&mut self, line: String) {
+        self.out_lines.push(line);
+    }
+
+    /// `update-al-parameters` (`associative-learning.lisp:712`).
+    fn al_update(&mut self, i: &str, js: &[String]) {
+        let ct = self.time_ms;
+        let ol = self.cfg.ol.clone();
+        self.al_total_count += 1;
+        al_needed_refs(&ol, &mut self.al_total_refs, ct);
+        {
+            let c = self.al_chunks.entry(i.to_string()).or_default();
+            c.ni_count += 1;
+            al_needed_refs(&ol, &mut c.ni_refs, ct);
+        }
+        for j in js {
+            // `(pushnew j (chunk-associated-js i))`.
+            {
+                let ci = self.al_chunks.entry(i.to_string()).or_default();
+                if !ci.associated_js.iter().any(|x| x == j) {
+                    ci.associated_js.insert(0, j.clone());
+                }
+            }
+            let cj = self.al_chunks.entry(j.clone()).or_default();
+            cj.cj_count += 1;
+            al_needed_refs(&ol, &mut cj.cj_refs, ct);
+            match cj.ni_cj_count.iter_mut().find(|(n, _)| n == i) {
+                Some(e) => e.1 += 1,
+                None => cj.ni_cj_count.insert(0, (i.to_string(), 1)),
+            }
+            match cj.ni_cj_refs.iter_mut().find(|(n, _)| n == i) {
+                Some(e) => al_needed_refs(&ol, &mut e.1, ct),
+                None => {
+                    let mut r = Vec::new();
+                    al_needed_refs(&ol, &mut r, ct);
+                    cj.ni_cj_refs.insert(0, (i.to_string(), r));
+                }
+            }
+        }
+    }
+
+    /// `compute-learned-sji` (`associative-learning.lisp:288`): the learned Sji
+    /// between needed item `i` and context chunk `j`, printing the module's
+    /// detailed trace when `:al-show`/`:act` is on.
+    fn al_compute_learned_sji(&mut self, j: &str, i: &str) -> f32 {
+        let Some(eal) = self.cfg.al_eal else {
+            return 0.0;
+        };
+        let p = self.cfg.al_prior_p;
+        let w = self.cfg.al_prior_w;
+        let decay = eal;
+        let scale = 0.001f32.powf(-eal).ln();
+        let now = self.time_ms;
+        let ol = self.cfg.ol.clone();
+
+        let nicj_count = self.al_ni_cj_count(j, i);
+        let nicj_refs = self.al_ni_cj_refs(j, i);
+        let (ni_count, ni_refs) = self
+            .al_chunks
+            .get(i)
+            .map(|c| (c.ni_count, c.ni_refs.clone()))
+            .unwrap_or((0, Vec::new()));
+        let not_ni_refs: Vec<i64> = self
+            .al_total_refs
+            .iter()
+            .filter(|r| !ni_refs.contains(r))
+            .cloned()
+            .collect();
+        let (cj_count, cj_refs) = self
+            .al_chunks
+            .get(j)
+            .map(|c| (c.cj_count, c.cj_refs.clone()))
+            .unwrap_or((0, Vec::new()));
+        let not_nicj_refs: Vec<i64> = cj_refs
+            .iter()
+            .filter(|r| !nicj_refs.contains(r))
+            .cloned()
+            .collect();
+        let creation_i = self.dm_creation_time(i);
+        let creation_j = self.dm_creation_time(j);
+        let total = self.al_total_count;
+        let total_creation = self.al_total_creation_time;
+
+        let f_not_ni = if total - ni_count == 0 {
+            0.0
+        } else {
+            let ol2 = if not_ni_refs.is_empty() {
+                Ol::On
+            } else {
+                ol.clone()
+            };
+            exp_coerced(bl_equation(
+                now,
+                &not_ni_refs,
+                (total - ni_count) as f32,
+                total_creation,
+                decay,
+                &ol2,
+                scale,
+            ))
+        };
+        let f_ni = if ni_count == 0 {
+            0.0
+        } else {
+            exp_coerced(bl_equation(
+                now,
+                &ni_refs,
+                ni_count as f32,
+                creation_i,
+                decay,
+                &ol,
+                scale,
+            ))
+        };
+        let f_not_nicj = if cj_count - nicj_count == 0 {
+            0.0
+        } else {
+            let ol2 = if not_nicj_refs.is_empty() {
+                Ol::On
+            } else {
+                ol.clone()
+            };
+            exp_coerced(bl_equation(
+                now,
+                &not_nicj_refs,
+                (cj_count - nicj_count) as f32,
+                creation_j,
+                decay,
+                &ol2,
+                scale,
+            ))
+        };
+        let f_nicj = if nicj_count == 0 {
+            0.0
+        } else {
+            exp_coerced(bl_equation(
+                now,
+                &nicj_refs,
+                nicj_count as f32,
+                creation_i,
+                decay,
+                &ol,
+                scale,
+            ))
+        };
+        let pcjni = (p * w + f_nicj) / (w + f_ni);
+        let pcj_not_ni = (p * w + f_not_nicj) / (w + f_not_ni);
+        let mut sji = log_coerced(pcjni / pcj_not_ni);
+
+        if self.cfg.al_show || self.cfg.act.is_some() {
+            self.al_out(format!(
+                "     Computing Sji from {} to {} with the decay set to {} prior probability {} and prior weight {}",
+                j,
+                i,
+                lisp_f(decay),
+                lisp_f(p),
+                lisp_f(w)
+            ));
+            self.al_out(format!("      F(Ni&Cj) = {}", lisp_f(f_nicj)));
+            if nicj_count != 0 {
+                self.al_out(format!(
+                    "      {} was needed while {} was in the context {} times with history {}",
+                    i,
+                    j,
+                    nicj_count,
+                    al_history(&nicj_refs)
+                ));
+            } else {
+                self.al_out(format!(
+                    "      {} was needed while {} was in the context 0 times with history nil",
+                    i, j
+                ));
+            }
+            self.al_out(format!("      F(Ni) = {}", lisp_f(f_ni)));
+            self.al_out(format!(
+                "        {} was needed {} times with history {}",
+                i,
+                ni_count,
+                al_history(&ni_refs)
+            ));
+            self.al_out(format!("      F(~Ni&Cj) = {}", lisp_f(f_not_nicj)));
+            self.al_out(format!(
+                "        Retrieval of something other than {} while {} was in the context {} times with history {}",
+                i,
+                j,
+                cj_count - nicj_count,
+                al_history(&not_nicj_refs)
+            ));
+            self.al_out(format!("      F(~Ni) = {}", lisp_f(f_not_ni)));
+            self.al_out(format!(
+                "        Retrieval of something other than {} happened {} times with history {}",
+                i,
+                total - ni_count,
+                al_history(&not_ni_refs)
+            ));
+            self.al_out(format!("      P(Cj|Ni) = {}", lisp_f(pcjni)));
+            self.al_out(format!("      P(Cj|~Ni) = {}", lisp_f(pcj_not_ni)));
+            self.al_out(format!("      Sji = {}", lisp_f(sji)));
+        }
+
+        // `:nsji`: `nil` (the default) clamps negatives to 0; `t` keeps them.
+        if sji < 0.0 && !self.cfg.nsji {
+            sji = 0.0;
+        }
+        sji
     }
 
     /// `(goal-focus-fct (car (define-chunks-fct '(...))))`: define a named
@@ -3884,9 +4246,38 @@ impl Engine {
                 // merges into DM, gaining a reference
                 // (`merge-chunk-into-dm`). Empty clears merge nothing.
                 if let Some(chunk) = cleared {
+                    // `al-check-cleared-chunks` (`associative-learning.lisp:562`):
+                    // a source buffer's clear schedules the parameter update at
+                    // priority 5 (after the merge, before a retrieval's -2000).
+                    let al = if self.cfg.al_eal.is_some() && self.al_is_source_buffer(&buffer) {
+                        Some(chunk.name.clone())
+                    } else {
+                        None
+                    };
                     self.merge_into_dm(chunk, &buffer);
+                    if let Some(name) = al {
+                        let true_name = name
+                            .as_ref()
+                            .and_then(|n| self.chunk_alias.get(n).cloned())
+                            .or(name);
+                        if let Some(true_name) = true_name {
+                            self.now(
+                                Prio::Num(5),
+                                Out::Never,
+                                Event::AlBufferCleared { chunk: true_name },
+                            );
+                        }
+                    }
                 }
                 self.changed();
+            }
+            Event::AlBufferCleared { chunk } => {
+                // `al-buffer-cleared` (`associative-learning.lisp:667`): update
+                // with the chunk's own sources plus the other source buffers.
+                self.event_silent = true;
+                let mut js = self.al_chunk_sources(&chunk);
+                js.extend(self.al_source_buffer_chunks());
+                self.al_update(&chunk, &js);
             }
             Event::ModBuffer {
                 buffer,
@@ -4042,6 +4433,12 @@ impl Engine {
                 if show {
                     self.emit("DECLARATIVE", "start-retrieval".into());
                 }
+                // `retrieval-request-hook` → `al-chunk-retrieval-request`
+                // (`associative-learning.lisp:644`): record the source-buffer
+                // chunks the retrieval will learn from.
+                if self.cfg.al_eal.is_some() {
+                    self.al_last_contexts = self.al_source_buffer_chunks();
+                }
                 self.start_retrieval(spec, &var_slots)?;
             }
             Event::RetrievedChunk { name, gen } => {
@@ -4054,6 +4451,13 @@ impl Engine {
                 self.dm_busy = false;
                 self.buffers.get_mut("RETRIEVAL").unwrap().busy = false;
                 self.add_finst(&name);
+                // `retrieved-chunk-hook` → `al-chunk-retrieved`
+                // (`associative-learning.lisp:655`): learn from the retrieved
+                // chunk and the context recorded at the request.
+                if self.cfg.al_eal.is_some() {
+                    let ctx = self.al_last_contexts.clone();
+                    self.al_update(&name, &ctx);
+                }
                 // `set-buffer-chunk` copies the retrieved chunk (`buffer-copy`),
                 // so the buffer holds `G-k` while the trace shows the source.
                 let copy = self.copy_chunk(&name);
@@ -11836,8 +12240,54 @@ fn bl_equation(
             // clear the list but keep counting).
             let t = ((now_ms - creation_ms).max(0) as f32 / 1000.0).max(0.05);
             let denom = 1.0f32 - decay;
-            (count * t.powf(-decay) / denom).ln()
+            // `expt-coerced` (`misc-utils.lisp:515`): SBCL's `expt` on singles
+            // goes through the double `(exp (* y (log x)))` and coerces, which
+            // differs from Rust's `f32::powf` by an ulp (the refs adjudicate).
+            let p = ((-decay as f64) * (t as f64).ln()).exp() as f32;
+            (((count * p / denom) as f64).ln()) as f32
         }
+    }
+}
+
+/// `exp-coerced` (`misc-utils.lisp:554`): SBCL's `exp` on a single-float
+/// computes in double and rounds, which differs from Rust's `f32::exp` by an
+/// ulp (the associative-learning refs adjudicate).
+fn exp_coerced(x: f32) -> f32 {
+    ((x as f64).exp()) as f32
+}
+
+/// `log-coerced` (`misc-utils.lisp:580`): SBCL's `log` on a single-float
+/// computes in double and rounds.
+fn log_coerced(x: f32) -> f32 {
+    ((x as f64).ln()) as f32
+}
+
+/// `needed-times` (`associative-learning.lisp:704`): with `:ol t` the history
+/// lists are never populated (they stay `nil`), which is why every
+/// `… with history NIL` line is nil.
+fn al_needed_refs(ol: &Ol, refs: &mut Vec<i64>, ct: i64) {
+    if matches!(ol, Ol::On) {
+        return;
+    }
+    refs.insert(0, ct);
+    if let Ol::Num(n) = ol {
+        let keep = (*n as usize).min(refs.len());
+        refs.truncate(keep);
+    }
+}
+
+/// `~s` of a reference history list (`NIL` when empty).
+fn al_history(refs: &[i64]) -> String {
+    if refs.is_empty() {
+        "NIL".to_string()
+    } else {
+        format!(
+            "({})",
+            refs.iter()
+                .map(|r| r.to_string())
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
     }
 }
 

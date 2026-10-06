@@ -1846,6 +1846,35 @@ production's request goes through `schedule-module-request` and traces.
 A0 is byte-exact through line 131 (the 26-sentence initial presentation);
 `drop-out`/`time-to-retrieve` remain (A1–A4).
 
+## 145. `associative-learning`: the module, and SBCL's double-then-round floats
+
+The learning state is the module's extended per-chunk slots
+(`al-ni-count`/`al-ni-refs`, `al-cj-count`/`al-cj-refs`,
+`al-ni+cj-count`/`al-ni+cj-refs`, `associated-js`;
+`associative-learning.lisp:205`+). Three hooks drive it: a source buffer's
+clear schedules `al-buffer-cleared` at **priority 5**
+(`al-check-cleared-chunks`, `:562` — after the DM merge, before a retrieval's
+`-2000`), `al-chunk-retrieval-request` (`:644`) snapshots the source-buffer
+chunks, and `al-chunk-retrieved` (`:655`) calls `update-al-parameters`
+(`:712`). Enabling `:eal` sets `:mas` to π (`al-params`, `:421`) and installs
+`compute-learned-sji` as the DM `:sji-hook`, so `compute-sji`
+(`declarative-memory.lisp:2536`) calls it per *source* `j` of each spreading
+buffer — the trace order is the buffer's source order, and
+`compute-learned-sji`'s printed values are `exp(compute-references …)`.
+
+The Sji arithmetic is where the refs pin down SBCL's float behaviour. ACT-R's
+`expt-coerced`/`exp-coerced`/`log-coerced` (`misc-utils.lisp:515`/`:554`/`:580`)
+are *no-ops* when `*read-default-float-format*` is `single-float` — they call
+plain `expt`/`exp`/`log`. But SBCL computes those on a single-float argument in
+**double precision and rounds the result to single**, which differs from Rust's
+`f32::powf`/`f32::exp`/`f32::ln` by an ulp. Several Sji values are off by
+1 ULP until the `ol t` branch of `bl_equation` computes
+`(exp (* y (log x)))` and the `log` in `f64`, and the caller exponentiates via
+`exp_coerced` (and the final `log_coerced`) — matching SBCL exactly.
+
+With that, the whole two-pass drop-out (208 Sji traces) is byte-exact through
+line 3339; `time-to-retrieve-at-start`/`sdp`/`sdm` remain (A3–A4).
+
 
 
 
