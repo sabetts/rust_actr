@@ -1472,3 +1472,37 @@ armed CR — the same bump, with the dynamic CR loop produced by the engine's
 normal mechanism. The rest of the model is untouched.
 
 `dynamic-real-time` is byte-exact — **40 specs**.
+
+## 132. `act-touch`: the touch device + 8 motor styles
+
+`act-touch` carries its task code in the model file (`touch-demo-model.lisp`,
+which mixes top-level `add-act-r-command`/`defun` with `define-model`), so the
+loader now tolerates top-level `add-act-r-command` and model-body
+`set-visloc-default`. The stub's `run-touch-demo t` setup is not captured by
+the extractor, so the spec carries hand-added steps: `(:EMIT-WARNING …)` (the
+`start-hand-at-touch` banner), `(:START-HAND-AT-TOUCH RIGHT)`,
+`(:MOD-FOCUS DEVICE T)`, `(:ADD-VISICON …)` and `(:MODIFY-VISICON 3000 …)`.
+
+The subsystem (`extras/act-touch/act-touch.lisp`): a `punch`-like PM flow per
+style, all `feat-prep-time`-scaled:
+- `move-hand-touch` (touch-ply): exec = init + `fitts(cursor-coeff, r, w)`,
+  finish = exec + burst; `w` is `approach-width` (the loc's width/height, or
+  the 1° default → 19 px); dragging multiplies the coeff by `2^0.8`.
+- `tap`/`tap-hold`/`tap-release`: exec from `fitts(peck-coeff, angle(ppi·height), 1)`.
+- `swipe`/`pinch`/`rotate` (index-thumb): exec = init + max(burst,
+  `fitts(peck-coeff, d, ppi·thumb-width)`), finish = exec + burst + that max,
+  with `d` = r, `|start-end|`, `½·diameter·|rotation|`.
+The device's `touch-*` signals are maintenance events; the task monitors
+(`demo-point` etc.) print the `model … moved/tapped/…` lines. `approach-width`
+and `pm-angle-to-pixels` round to integer pixels, which the timings depend on.
+
+Two reference-semantics fixes fell out:
+- A `=goal> … loc =visual-location` modify references the visual-location
+  chunk **verbatim** — it is already a per-request copy, so no `-k` copy
+  (otherwise the goal's loc became `CHUNK0-0-0`).
+- A non-copy `=imaginal` reference names an unnamed spec chunk `CHUNK{n}`
+  (`new-name-fct`), matching the ref's `LOC CHUNK1`.
+- A visual-location chunk keeps the position it was stuffed with even after
+  `modify-visicon-features` moves the underlying feature (`vl_xy`).
+
+`act-touch` is byte-exact (527 lines) — **41 specs**.

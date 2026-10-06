@@ -228,6 +228,51 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 Some(ms) => steps.push(Step::DummyEvent(ms)),
                 None => note(&mut unsupported, format!("dummy-event {st:?}")),
             },
+            ":EMIT-WARNING" => match v.get(1) {
+                Some(Sexp::Str(s)) => steps.push(Step::EmitWarning(s.clone())),
+                other => note(&mut unsupported, format!("emit-warning {other:?}")),
+            },
+            ":START-HAND-AT-TOUCH" => match v.get(1).and_then(|x| x.as_sym()) {
+                Some(h) => steps.push(Step::StartHandAtTouch(h.to_string())),
+                None => note(&mut unsupported, format!("start-hand-at-touch {st:?}")),
+            },
+            ":MOD-FOCUS" => {
+                let mut slots = Vec::new();
+                let mut i = 1;
+                while i + 1 < v.len() {
+                    match v[i].as_sym() {
+                        Some(k) => slots.push((k.to_string(), v[i + 1].clone())),
+                        None => note(&mut unsupported, format!("mod-focus {st:?}")),
+                    }
+                    i += 2;
+                }
+                steps.push(Step::ModFocus(slots));
+            }
+            ":ADD-VISICON" => {
+                let mut slots = Vec::new();
+                for it in &v[1..] {
+                    if let Sexp::List(p) = it {
+                        if let Some(k) = p.first().and_then(|x| x.as_sym()) {
+                            if let Some(val) = p.get(1) {
+                                slots.push((k.to_string(), val.clone()));
+                            }
+                        }
+                    }
+                }
+                steps.push(Step::AddVisicon(slots));
+            }
+            ":MODIFY-VISICON" => {
+                let at = v.get(1).and_then(as_i64);
+                let name = v.get(2).and_then(|x| x.as_sym()).map(str::to_string);
+                let x = v.get(3).and_then(as_i64);
+                let y = v.get(4).and_then(as_i64);
+                match (at, name, x, y) {
+                    (Some(at_ms), Some(name), Some(x), Some(y)) => {
+                        steps.push(Step::ModifyVisicon { at_ms, name, x, y })
+                    }
+                    _ => note(&mut unsupported, format!("modify-visicon {st:?}")),
+                }
+            }
             ":BUFFER-CHUNK" => {
                 let mut names = Vec::new();
                 for it in &v[1..] {

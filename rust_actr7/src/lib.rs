@@ -207,6 +207,21 @@ pub enum Step {
     BufferChunk(Vec<String>),
     /// Schedule a no-op event at absolute model time (real-time slack hook).
     DummyEvent(i64),
+    /// Emit a raw task warning line.
+    EmitWarning(String),
+    /// `(start-hand-at-touch <hand>)`.
+    StartHandAtTouch(String),
+    /// `(mod-focus slot value ...)`.
+    ModFocus(Vec<(String, sexpr::Sexp)>),
+    /// `(add-visicon-features (slot value) ...)`.
+    AddVisicon(Vec<(String, sexpr::Sexp)>),
+    /// `(modify-visicon-features ...)` at an absolute time.
+    ModifyVisicon {
+        at_ms: i64,
+        name: String,
+        x: i64,
+        y: i64,
+    },
 }
 
 /// Run a scripted sequence of steps over one or more model files (the
@@ -277,6 +292,16 @@ pub fn run_model_steps(
             Step::Reset => eng.reset()?,
             Step::BufferChunk(buffers) => eng.print_buffer_chunk(buffers),
             Step::DummyEvent(at_ms) => eng.schedule_dummy(*at_ms),
+            Step::EmitWarning(msg) => eng.emit_warning(msg),
+            Step::StartHandAtTouch(hand) => eng.start_hand_at_touch(hand),
+            Step::ModFocus(slots) => eng.mod_focus(slots),
+            Step::AddVisicon(slots) => eng.add_visicon(slots),
+            Step::ModifyVisicon {
+                at_ms,
+                name,
+                x,
+                y,
+            } => eng.schedule_modify_visicon(*at_ms, name, *x, *y),
         }
     }
     Ok(eng.output())

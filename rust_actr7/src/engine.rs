@@ -108,6 +108,24 @@ impl Value {
         }
     }
 
+    /// A literal `Sexp` as a stored value (for `mod-focus` etc.).
+    fn from_sexp(s: &Sexp) -> Result<Value, EngineError> {
+        match s {
+            Sexp::Sym(x) if x == "NIL" => Ok(Value::Nil),
+            Sexp::Sym(x) => Ok(Value::Sym(x.clone())),
+            Sexp::Int(i) => Ok(Value::Int(*i)),
+            Sexp::Float(x) => Ok(Value::Num(*x)),
+            Sexp::Str(x) => Ok(Value::Str(x.clone())),
+            Sexp::List(v) => {
+                let mut out = Vec::new();
+                for e in v {
+                    out.push(Value::from_sexp(e)?);
+                }
+                Ok(Value::List(out))
+            }
+        }
+    }
+
     /// Lisp `~S` printing, as used by `!output!` and SET-BUFFER-CHUNK specs.
     fn show(&self) -> String {
         match self {
@@ -259,6 +277,20 @@ struct Config {
     /// `key-closure-time` (`motor.lisp:477`, default 0.01): the punch style's
     /// exec time is `init + closure` (`motor.lisp:938`).
     key_closure_ms: i64,
+    /// act-touch module (`extras/act-touch/act-touch.lisp`): enabled by
+    /// `(require-extra "act-touch")`.
+    touch: bool,
+    touch_ppi: f32,
+    touch_height: f32,
+    touch_finger_spacing: f32,
+    touch_thumb_width: f32,
+    touch_peck_coeff: f32,
+    touch_cursor_coeff: f32,
+    touch_swipe_speed: i64,
+    touch_rotate_width: f32,
+    touch_drag_delay: bool,
+    touch_left_start: (i64, i64),
+    touch_right_start: (i64, i64),
     peck_fitts: f32,
     min_fitts_ms: i64,
     rhst: bool,
@@ -316,6 +348,9 @@ struct Feature {
     value: String,
     x: i64,
     y: i64,
+    /// `width`/`height` slots (0 when absent) for `approach-width`.
+    width: i64,
+    height: i64,
     tstamp_ms: i64,
     attended: bool,
 }
@@ -328,6 +363,29 @@ struct KeySpec {
     finger: &'static str,
     r: f32,
     theta: f32,
+}
+
+/// act-touch: a computed touch movement (`extras/act-touch/act-touch.lisp`).
+/// Times are relative to the request; `signal`/`monitor` are the exact trace
+/// and task-output lines emitted at execution time.
+#[derive(Debug, Clone)]
+struct TouchPlan {
+    req_ms: i64,
+    prep_ms: i64,
+    init_ms: i64,
+    exec_ms: i64,
+    finish_ms: i64,
+    signal: String,
+    signal_module: String,
+    monitor: String,
+    hand: String,
+    finger: String,
+    down_at_init: bool,
+    down_at_exec: bool,
+    up_at_exec: bool,
+    up_at_exec_burst: bool,
+    move_to: Option<(i64, i64)>,
+    put_hand: bool,
 }
 
 fn key_table() -> HashMap<String, KeySpec> {
@@ -666,6 +724,21 @@ impl Config {
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
             burst_ms: secs_to_ms(":MOTOR-BURST-TIME", 0.05)?,
             key_closure_ms: secs_to_ms(":KEY-CLOSURE-TIME", 0.01)?,
+            touch: m
+                .required_extras
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case("act-touch")),
+            touch_ppi: sgp_single(&m.params, ":PIXELS-PER-INCH")?.unwrap_or(72.0),
+            touch_height: sgp_single(&m.params, ":FINGER-HEIGHT")?.unwrap_or(1.0),
+            touch_finger_spacing: sgp_single(&m.params, ":FINGER-SPACING")?.unwrap_or(0.75),
+            touch_thumb_width: sgp_single(&m.params, ":THUMB-WIDTH")?.unwrap_or(1.0),
+            touch_peck_coeff: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
+            touch_cursor_coeff: sgp_single(&m.params, ":CURSOR-FITTS-COEFF")?.unwrap_or(0.1),
+            touch_swipe_speed: sgp_single(&m.params, ":SWIPE-SPEED")?.unwrap_or(3.0) as i64,
+            touch_rotate_width: sgp_single(&m.params, ":TOUCH-ROTATE-WIDTH")?.unwrap_or(5.0),
+            touch_drag_delay: sgp_bool(&m.params, ":TOUCH-DRAG-DELAY"),
+            touch_left_start: (0, 300),
+            touch_right_start: (1024, 300),
             peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
             min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
             rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
@@ -911,6 +984,43 @@ enum Event {
     /// non-maintenance for a real-time slack hook's `(schedule-event <t> 'fn)`
     /// no-op, which is hidden at medium but wakes an armed CR.
     Dummy,
+    /// A deferred trace line (`schedule-event-now` from a request handler).
+    Emit {
+        module: String,
+        line: String,
+    },
+    /// `(mod-focus slot value ...)`: goal-module modification
+    /// (`goal.lisp:346`), traced as `GOAL-MODIFICATION`.
+    ModFocus {
+        slots: Vec<(String, Value)>,
+    },
+    /// `(modify-visicon-features ...)`: move a visicon feature
+    /// (`vision.lisp`); hidden at medium, updates the feature's position.
+    ModifyVisicon {
+        name: String,
+        x: i64,
+        y: i64,
+    },
+    /// act-touch: `preparation-complete` for a touch movement.
+    TouchPrep {
+        plan: Box<TouchPlan>,
+    },
+    /// act-touch: `initiation-complete`.
+    TouchInit {
+        plan: Box<TouchPlan>,
+    },
+    /// act-touch: execution — the device signal + task monitor output.
+    TouchSignal {
+        plan: Box<TouchPlan>,
+    },
+    /// act-touch: a scheduled finger-up.
+    TouchUp {
+        plan: Box<TouchPlan>,
+    },
+    /// act-touch: `finish-movement`.
+    TouchFinish {
+        plan: Box<TouchPlan>,
+    },
     /// Temporal module tick: emits the "Incrementing time ticks to N"
     /// detail, bumps the count, and schedules the next tick. A stale `gen`
     /// (a newer request cancelled it) is ignored.
@@ -1155,6 +1265,16 @@ pub struct Engine {
     last_press: Option<(String, String, String, f32, f32)>,
     /// Last spoken text, for the `speak` style's preparation differences.
     last_speak: Option<String>,
+    /// act-touch: which hands are on the touch device (left=0, right=1).
+    touch_hands: [bool; 2],
+    /// act-touch: finger positions `[hand][finger] = (x, y, z)`, z=1 up.
+    touch_fingers: [[(i64, i64, i64); 5]; 2],
+    /// act-touch: `(style, hand, finger, r, theta)` of the last prepared
+    /// movement, for `compute-prep-time` differences.
+    touch_last: Option<(String, String, String, f32, f32)>,
+    /// Visual-location copy name → its captured `(screen-x, screen-y)`
+    /// (the chunk keeps its position even if the feature later moves).
+    vl_xy: HashMap<String, (i64, i64)>,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
     trace_on: bool,
     /// Task-file `defun`s available to `!eval!`/`!bind!`.
@@ -1262,6 +1382,10 @@ impl Engine {
             prev_prod_ms: 0,
             last_press: None,
             last_speak: None,
+            touch_hands: [false, false],
+            touch_fingers: [[(0, 0, 1); 5]; 2],
+            touch_last: None,
+            vl_xy: HashMap::new(),
             trace_on: true,
             user_fns: HashMap::new(),
         };
@@ -1375,6 +1499,7 @@ impl Engine {
         self.audio_events = 0;
         self.name_count.clear();
         self.vl_copies.clear();
+        self.vl_xy.clear();
         self.obj_built.clear();
         self.visual_busy = false;
         self.last_attention = None;
@@ -1393,6 +1518,9 @@ impl Engine {
         self.prev_prod_ms = 0;
         self.last_press = None;
         self.last_speak = None;
+        self.touch_hands = [false, false];
+        self.touch_fingers = [[(0, 0, 1); 5]; 2];
+        self.touch_last = None;
         self.exec_prods = self
             .model
             .productions
@@ -1935,6 +2063,72 @@ impl Engine {
         self.push(at_ms, Prio::Num(0), Out::Always, Event::Dummy);
     }
 
+    /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
+    /// stub's "Installing a default touch device…" banner.
+    pub fn emit_warning(&mut self, msg: &str) {
+        self.out_lines.push(format!("#|Warning: {msg} |#"));
+    }
+
+    /// `(mod-focus slot value ...)`: schedule a goal modification at the
+    /// current time (`goal.lisp:346`, priority `:max`).
+    pub fn mod_focus(&mut self, slots: &[(String, Sexp)]) {
+        let mut out = Vec::new();
+        for (k, v) in slots {
+            if let Ok(val) = Value::from_sexp(v) {
+                out.push((k.to_uppercase(), val));
+            }
+        }
+        self.now(Prio::Num(0), Out::Medium, Event::ModFocus { slots: out });
+    }
+
+    /// `(add-visicon-features (slot value) ...)`: add a visicon feature and
+    /// re-run `proc-display` at the current time. The chunk is auto-named
+    /// `CHUNK{n}` (`new-name-fct`).
+    pub fn add_visicon(&mut self, slots: &[(String, Sexp)]) {
+        let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
+        self.name_count.insert("CHUNK".to_string(), n + 1);
+        let mut x = 0i64;
+        let mut y = 0i64;
+        let mut w = 0i64;
+        let mut ht = 0i64;
+        for (k, v) in slots {
+            match (k.to_uppercase().as_str(), v) {
+                ("SCREEN-X", Sexp::Int(i)) => x = *i,
+                ("SCREEN-Y", Sexp::Int(i)) => y = *i,
+                ("WIDTH", Sexp::Int(i)) => w = *i,
+                ("HEIGHT", Sexp::Int(i)) => ht = *i,
+                _ => {}
+            }
+        }
+        self.features.push(Feature {
+            name: format!("CHUNK{n}"),
+            kind: "VISUAL-LOCATION".to_string(),
+            value: String::new(),
+            x,
+            y,
+            width: w,
+            height: ht,
+            tstamp_ms: self.time_ms,
+            attended: false,
+        });
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
+    /// `(modify-visicon-features (feature screen-x X screen-y Y))`: move the
+    /// named feature at absolute model time `at_ms`.
+    pub fn schedule_modify_visicon(&mut self, at_ms: i64, name: &str, x: i64, y: i64) {
+        self.push(
+            at_ms,
+            Prio::Num(0),
+            Out::Never,
+            Event::ModifyVisicon {
+                name: name.to_string(),
+                x,
+                y,
+            },
+        );
+    }
+
     /// Trace on/off (`:v`), used by scripted drivers that hide segments.
     pub fn set_trace(&mut self, on: bool) {
         self.trace_on = on;
@@ -2023,6 +2217,39 @@ impl Engine {
             }
             ":VPFT" => self.cfg.vpft = truthy,
             ":VIDT" => self.cfg.vidt = truthy,
+            ":TOUCH-DRAG-DELAY" => self.cfg.touch_drag_delay = truthy,
+            ":LEFT-START" => {
+                if let Sexp::List(v) = val {
+                    if let (Some(a), Some(b)) = (
+                        v.first().and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                        v.get(1).and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                    ) {
+                        self.cfg.touch_left_start = (a, b);
+                    }
+                }
+            }
+            ":RIGHT-START" => {
+                if let Sexp::List(v) = val {
+                    if let (Some(a), Some(b)) = (
+                        v.first().and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                        v.get(1).and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                    ) {
+                        self.cfg.touch_right_start = (a, b);
+                    }
+                }
+            }
             ":IU" => {
                 if let Some(x) = num(val) {
                     self.cfg.iu = x;
@@ -2606,6 +2833,135 @@ impl Engine {
                 );
             }
             Event::Dummy => {}
+            Event::Emit { module, line } => {
+                if show {
+                    self.emit(&module, line);
+                }
+            }
+            Event::ModFocus { slots } => {
+                if show {
+                    self.emit("GOAL", "GOAL-MODIFICATION".into());
+                }
+                if let Some(c) = self.buffers.get_mut("GOAL").and_then(|b| b.chunk.as_mut()) {
+                    for (k, v) in slots {
+                        match c.slots.iter_mut().find(|(s, _)| s == &k) {
+                            Some((_, old)) => *old = v.clone(),
+                            None => c.slots.push((k.clone(), v.clone())),
+                        }
+                    }
+                }
+                self.changed();
+            }
+            Event::ModifyVisicon { name, x, y } => {
+                if let Some(f) = self.features.iter_mut().find(|f| f.name == name) {
+                    f.x = x;
+                    f.y = y;
+                    f.tstamp_ms = self.time_ms;
+                }
+                // `modify-visicon-features` triggers a visicon update and
+                // `proc-display` (`vision.lisp`), re-stuffing the location.
+                self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+            }
+            Event::TouchPrep { plan } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!("PREPARATION-COMPLETE {}", Self::secs_str(plan.req_ms)),
+                    );
+                }
+                self.man_prep_busy = false;
+                self.man_exec_busy = true;
+                let t = self.time_ms;
+                self.push(
+                    t + plan.init_ms,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::TouchInit { plan: plan.clone() },
+                );
+                self.push(
+                    t + plan.exec_ms,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::TouchSignal { plan: plan.clone() },
+                );
+                if plan.up_at_exec {
+                    self.push(
+                        t + plan.exec_ms,
+                        Prio::Num(-1),
+                        Out::Never,
+                        Event::TouchUp { plan: plan.clone() },
+                    );
+                } else if plan.up_at_exec_burst {
+                    self.push(
+                        t + plan.exec_ms + self.cfg.burst_ms,
+                        Prio::Num(-1),
+                        Out::Never,
+                        Event::TouchUp { plan: plan.clone() },
+                    );
+                }
+                self.push(
+                    t + plan.finish_ms,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::TouchFinish { plan },
+                );
+            }
+            Event::TouchInit { plan } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!("INITIATION-COMPLETE {}", Self::secs_str(plan.req_ms)),
+                    );
+                }
+                if plan.down_at_init {
+                    if let (Some(h), Some(f)) = (
+                        Self::touch_hand_idx(&plan.hand),
+                        Self::touch_finger_idx(&plan.finger),
+                    ) {
+                        self.touch_fingers[h][f].2 = 0;
+                    }
+                }
+            }
+            Event::TouchSignal { plan } => {
+                self.emit(&plan.signal_module, plan.signal.clone());
+                if !plan.monitor.is_empty() {
+                    self.out_lines.push(plan.monitor.clone());
+                }
+                if let (Some(h), Some(f)) = (
+                    Self::touch_hand_idx(&plan.hand),
+                    Self::touch_finger_idx(&plan.finger),
+                ) {
+                    if plan.down_at_exec {
+                        self.touch_fingers[h][f].2 = 0;
+                    }
+                    if plan.up_at_exec {
+                        self.touch_fingers[h][f].2 = 1;
+                    }
+                    if let Some((x, y)) = plan.move_to {
+                        self.touch_fingers[h][0] = (x, y, self.touch_fingers[h][0].2);
+                    }
+                    if plan.put_hand {
+                        self.start_hand_at_touch(&plan.hand);
+                    }
+                }
+            }
+            Event::TouchUp { plan } => {
+                if let (Some(h), Some(f)) = (
+                    Self::touch_hand_idx(&plan.hand),
+                    Self::touch_finger_idx(&plan.finger),
+                ) {
+                    self.touch_fingers[h][f].2 = 1;
+                }
+            }
+            Event::TouchFinish { plan } => {
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!("FINISH-MOVEMENT {}", Self::secs_str(plan.req_ms)),
+                    );
+                }
+                self.man_exec_busy = false;
+            }
             Event::TemporalTick { gen, details } => {
                 if gen == self.temporal_gen {
                     if show {
@@ -4053,6 +4409,9 @@ impl Engine {
                     if slots.is_empty() {
                         continue;
                     }
+                    // A `=buffer>` modify stores chunk-valued refs by
+                    // reference unless the ref is an unnamed spec chunk
+                    // (`paired-2x2`), matching `instantiate-chunk-spec`.
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
@@ -6654,6 +7013,446 @@ impl Engine {
         }
     }
 
+    /// act-touch: hand index (left=0, right=1).
+    fn touch_hand_idx(hand: &str) -> Option<usize> {
+        match hand.to_uppercase().as_str() {
+            "LEFT" => Some(0),
+            "RIGHT" => Some(1),
+            _ => None,
+        }
+    }
+
+    /// act-touch: finger index (`index middle ring pinkie thumb`).
+    fn touch_finger_idx(finger: &str) -> Option<usize> {
+        match finger.to_uppercase().as_str() {
+            "INDEX" => Some(0),
+            "MIDDLE" => Some(1),
+            "RING" => Some(2),
+            "PINKIE" => Some(3),
+            "THUMB" => Some(4),
+            _ => None,
+        }
+    }
+
+    fn touch_any_finger_down(&self, h: usize) -> bool {
+        self.touch_fingers[h].iter().any(|f| f.2 == 0)
+    }
+
+    /// A visual location's `(width, height)` (0,0 when absent).
+    fn loc_wh(&self, name: &str) -> (i64, i64) {
+        if let Some(&idx) = self.vl_copies.get(name) {
+            return (self.features[idx].width, self.features[idx].height);
+        }
+        if let Some(f) = self.features.iter().find(|f| f.name == name) {
+            return (f.width, f.height);
+        }
+        (0, 0)
+    }
+
+    /// A chunk-valued slot's `(screen-x, screen-y, name)` (`chunk-to-visual-position`).
+    fn chunk_xy_name(&self, v: &Value) -> Option<(i64, i64, String)> {
+        let name = match v {
+            Value::Sym(s) | Value::Str(s) => s.clone(),
+            _ => return None,
+        };
+        if self.vl_copies.contains_key(&name) {
+            if let Some(&(x, y)) = self.vl_xy.get(&name) {
+                return Some((x, y, name));
+            }
+        }
+        if let Some(idx) = self.features.iter().position(|f| f.name == name) {
+            let f = &self.features[idx];
+            return Some((f.x, f.y, name));
+        }
+        let chunk = self
+            .named
+            .get(&name)
+            .cloned()
+            .or_else(|| self.dm.iter().find(|c| c.name.as_deref() == Some(&name)).cloned())
+            .or_else(|| {
+                self.buffers
+                    .values()
+                    .find_map(|b| b.chunk.as_ref().filter(|c| c.name.as_deref() == Some(&name)).cloned())
+            });
+        let c = chunk?;
+        let slot = |k: &str| -> Option<i64> {
+            c.slots.iter().find(|(s, _)| s == k).and_then(|(_, v)| match v {
+                Value::Int(i) => Some(*i),
+                Value::Num(x) => Some(*x as i64),
+                _ => None,
+            })
+        };
+        Some((slot("SCREEN-X")?, slot("SCREEN-Y")?, name))
+    }
+
+    /// `(start-hand-at-touch [hand])`: put a hand on the touch device at its
+    /// configured start position (`act-touch.lisp:500`). The standard finger
+    /// offsets (`motor.lisp:508`) place the index finger at the start.
+    pub fn start_hand_at_touch(&mut self, hand: &str) {
+        let Some(h) = Self::touch_hand_idx(hand) else {
+            return;
+        };
+        let (sx, sy) = if h == 0 {
+            self.cfg.touch_left_start
+        } else {
+            self.cfg.touch_right_start
+        };
+        let dist = self.cfg.touch_ppi * self.cfg.touch_finger_spacing;
+        // (index, middle, ring, pinkie, thumb) standard offsets, mirrored
+        // for the left hand.
+        let offs: [(f32, f32); 5] = if h == 0 {
+            [(0.0, 0.0), (-1.0, 0.0), (-2.0, 0.0), (-3.0, 0.0), (1.0, 2.0)]
+        } else {
+            [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (3.0, 0.0), (-1.0, 2.0)]
+        };
+        for (i, (dx, dy)) in offs.iter().enumerate() {
+            self.touch_fingers[h][i] = (
+                (sx as f32 + dx * dist).round() as i64,
+                (sy as f32 + dy * dist).round() as i64,
+                1,
+            );
+        }
+        self.touch_hands[h] = true;
+    }
+
+    /// A touch movement request (`act-touch.lisp`): compute the style's
+    /// prep/exec/finish and schedule the device signal, monitor output and
+    /// finger state changes.
+    fn touch_request(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+        let req_ms = self.time_ms;
+        let mut cmd = String::new();
+        let mut hand = "RIGHT".to_string();
+        let mut finger = "INDEX".to_string();
+        let mut loc: Option<(i64, i64, String)> = None;
+        let mut object_given = false;
+        let mut r_req: Option<f64> = None;
+        let mut theta_req: Option<f64> = None;
+        let mut num_fngrs: i64 = 1;
+        let mut swipe_speed: Option<i64> = None;
+        let mut start_width = 0.0f32;
+        let mut end_width = 0.0f32;
+        let mut rotation = 0.0f32;
+        let mut disp: Vec<(String, String)> = Vec::new();
+        for (s, v) in slots {
+            disp.push((s.clone(), v.show()));
+            match s.as_str() {
+                "CMD" => {
+                    if let Value::Sym(c) = v {
+                        cmd = c.to_uppercase();
+                    }
+                }
+                "HAND" => hand = name_of(v),
+                "FINGER" => finger = name_of(v),
+                "LOC" => loc = self.chunk_xy_name(v),
+                "OBJECT" => {
+                    object_given = true;
+                    if loc.is_none() {
+                        loc = self.chunk_xy_name(v);
+                    }
+                }
+                "R" => r_req = num_of(v),
+                "THETA" => theta_req = num_of(v),
+                "NUM-FNGRS" => num_fngrs = num_of(v).unwrap_or(1.0) as i64,
+                "SWIPE-SPEED" => swipe_speed = num_of(v).map(|x| x as i64),
+                "START-WIDTH" => start_width = num_of(v).unwrap_or(0.0) as f32,
+                "END-WIDTH" => end_width = num_of(v).unwrap_or(0.0) as f32,
+                "ROTATION" => rotation = num_of(v).unwrap_or(0.0) as f32,
+                _ => {}
+            }
+        }
+        let h = Self::touch_hand_idx(&hand)
+            .ok_or_else(|| unimpl(format!("touch hand {hand}")))?;
+        let init = self.cfg.init_ms;
+        let burst = self.cfg.burst_ms;
+        let feat = self.cfg.feat_prep_ms;
+        let model = self.model.name.to_uppercase();
+        let min_fitts = self.cfg.min_fitts_ms as f32 / 1000.0;
+
+        // Style name + fresh feature count + feat-differences parameters.
+        let (style, fresh, nf) = match cmd.as_str() {
+            "MOVE-HAND-TOUCH" => ("TOUCH-PLY", 4i64, 4i64),
+            "TAP" => ("TAP", 3, 3),
+            "TAP-HOLD" => ("TAP-HOLD", 3, 3),
+            "TAP-RELEASE" => ("TAP-RELEASE", 3, 3),
+            "SWIPE" => ("SWIPE", 7, 7),
+            "PINCH" => ("PINCH", 5, 5),
+            "ROTATE" => ("ROTATE", 4, 4),
+            "HAND-TO-TOUCH" => ("HAND-TO-TOUCH", 4, 4),
+            other => return Err(unimpl(format!("touch command {other}"))),
+        };
+        let feats = match &self.touch_last {
+            None => fresh,
+            Some((ls, lh, lf, lr, lt)) if ls == style => {
+                if lh != &hand {
+                    nf - 1
+                } else if lf != &finger {
+                    nf - 2
+                } else {
+                    // `rotate`/`pinch` leave r/theta unset (`nil`), so
+                    // `distance=`/`direction=` report both as different;
+                    // `tap` has no r/theta slots at all.
+                    match style {
+                        "ROTATE" | "PINCH" => 2,
+                        "TAP" | "TAP-HOLD" | "TAP-RELEASE" => 0,
+                        _ => {
+                            let mut n = 0;
+                            if (*lr - r_req.unwrap_or(0.0) as f32).abs() > 1e-4 {
+                                n += 1;
+                            }
+                            if (*lt - theta_req.unwrap_or(0.0) as f32).abs() > 1e-4 {
+                                n += 1;
+                            }
+                            n
+                        }
+                    }
+                }
+            }
+            Some(_) => fresh,
+        };
+        self.touch_last = Some((
+            style.to_string(),
+            hand.clone(),
+            finger.clone(),
+            r_req.unwrap_or(0.0) as f32,
+            theta_req.unwrap_or(0.0) as f32,
+        ));
+        let prep_ms = feats * feat;
+        let _ = object_given;
+
+        // Per-style exec/finish and device signal.
+        let mut plan = TouchPlan {
+            req_ms,
+            prep_ms,
+            init_ms: init,
+            exec_ms: 0,
+            finish_ms: 0,
+            signal: String::new(),
+            signal_module: "TOUCH-INTERFACE".to_string(),
+            monitor: String::new(),
+            hand: hand.clone(),
+            finger: finger.clone(),
+            down_at_init: false,
+            down_at_exec: false,
+            up_at_exec: false,
+            up_at_exec_burst: false,
+            move_to: None,
+            put_hand: false,
+        };
+        let fitts = |coef: f32, d: f32, w: f32| -> f32 {
+            (coef * (d / w + 0.5).log2()).max(min_fitts)
+        };
+        let get = |k: &str| -> String {
+            disp.iter()
+                .find(|(s, _)| s == k)
+                .map(|(_, v)| v.clone())
+                .unwrap_or_default()
+        };
+        match cmd.as_str() {
+            "MOVE-HAND-TOUCH" => {
+                let Some((tx, ty, _lname)) = loc else {
+                    return Err(unimpl("move-hand-touch without a location"));
+                };
+                let (cx, cy) = (self.touch_fingers[h][0].0, self.touch_fingers[h][0].1);
+                let dx = (tx - cx) as f32;
+                let dy = (ty - cy) as f32;
+                let r = (dx * dx + dy * dy).sqrt();
+                let theta = dy.atan2(dx);
+                // `approach-width` (`vision.lisp:3717`): use the loc's
+                // width/height if present, else the 1° default.
+                let (fw, fh) = self.loc_wh(&_lname);
+                let w = if fw > 0 && fh > 0 {
+                    let (x, y) = (fw as f32, fh as f32);
+                    let critical = (y / x).atan();
+                    let mut th = theta.abs();
+                    if th > std::f32::consts::FRAC_PI_2 {
+                        th = std::f32::consts::PI - th;
+                    }
+                    let ret = if th == 0.0 {
+                        x
+                    } else if th == std::f32::consts::FRAC_PI_2 {
+                        y
+                    } else if th <= critical {
+                        x / th.cos()
+                    } else {
+                        y / (std::f32::consts::FRAC_PI_2 - th).cos()
+                    };
+                    ret.round()
+                } else {
+                    // `approach-width` default (1°) → `pm-angle-to-pixels`
+                    // rounds to 19 px.
+                    19.0
+                };
+                let mut coef = self.cfg.touch_cursor_coeff;
+                if self.cfg.touch_drag_delay && self.touch_any_finger_down(h) {
+                    coef *= 2.0f32.powf(0.8);
+                }
+                let t = fitts(coef, r, w);
+                plan.exec_ms = init + (t * 1000.0).round() as i64;
+                plan.finish_ms = plan.exec_ms + burst;
+                plan.signal = format!("touch-point {model} {hand} {tx} {ty}");
+                plan.monitor =
+                    format!("model {model} moved the {hand} hand to point {tx} , {ty}");
+                plan.move_to = Some((tx, ty));
+            }
+            "TAP" | "TAP-HOLD" => {
+                let angle = (2.0f32
+                    * ((self.cfg.touch_ppi * self.cfg.touch_height) / 2.0
+                        / (self.cfg.touch_ppi * 15.0))
+                        .atan())
+                .to_degrees();
+                let t = fitts(self.cfg.touch_peck_coeff, angle, 1.0);
+                plan.exec_ms = init + (burst as f32).max(t * 1000.0).round() as i64;
+                plan.finish_ms = plan.exec_ms + burst;
+                let (fx, fy) = {
+                    let fi = Self::touch_finger_idx(&finger).unwrap_or(0);
+                    (self.touch_fingers[h][fi].0, self.touch_fingers[h][fi].1)
+                };
+                plan.down_at_exec = true;
+                if cmd == "TAP" {
+                    plan.up_at_exec_burst = true;
+                }
+                let sig = if cmd == "TAP" { "touch-tap" } else { "touch-tap-hold" };
+                plan.signal = format!("{sig} {model} {hand} {finger} {fx} {fy}");
+                let verb = if cmd == "TAP" {
+                    format!("tapped the {finger} finger on the {hand} hand at point {fx} , {fy}")
+                } else {
+                    format!("tapped and held the {finger} finger on the {hand} hand at point {fx} , {fy}")
+                };
+                plan.monitor = format!("model {model} {verb}");
+            }
+            "TAP-RELEASE" => {
+                plan.exec_ms = init + burst;
+                plan.finish_ms = plan.exec_ms + burst;
+                let fi = Self::touch_finger_idx(&finger).unwrap_or(0);
+                let (fx, fy) = (self.touch_fingers[h][fi].0, self.touch_fingers[h][fi].1);
+                plan.up_at_exec = true;
+                plan.signal = format!("touch-tap-release {model} {hand} {finger} {fx} {fy}");
+                plan.monitor = format!(
+                    "model {model} released the {finger} finger on the {hand} hand at point {fx} , {fy}"
+                );
+            }
+            "SWIPE" => {
+                let r = r_req.unwrap_or(0.0) as f32;
+                let theta = theta_req.unwrap_or(0.0) as f32;
+                let w = self.cfg.touch_ppi * self.cfg.touch_thumb_width;
+                let mv = (burst as f32 / 1000.0).max(fitts(self.cfg.touch_peck_coeff, r, w));
+                let exec = init as f32 / 1000.0 + (burst as f32 / 1000.0).max(mv);
+                plan.exec_ms = (exec * 1000.0).round() as i64;
+                plan.finish_ms = ((exec + burst as f32 / 1000.0 + mv) * 1000.0).round() as i64;
+                plan.down_at_init = true;
+                plan.up_at_exec_burst = true;
+                let speed = swipe_speed.unwrap_or(self.cfg.touch_swipe_speed);
+                let r_disp = get("R");
+                let t_disp = get("THETA");
+                plan.signal = format!(
+                    "touch-swipe {model} {hand} {finger} {r_disp} {t_disp} {num_fngrs} {speed}"
+                );
+                plan.monitor = format!(
+                    "model {model} swiped {num_fngrs} fingers on the {hand} hand starting with the {finger} finger a distance of {} in the {} direction at speed {}",
+                    lisp_s_f32(r), lisp_s_f32(theta), lisp_s_f32(speed as f32)
+                );
+            }
+            "PINCH" => {
+                let mv = (burst as f32 / 1000.0)
+                    .max(fitts(self.cfg.touch_peck_coeff, (start_width - end_width).abs(), self.cfg.touch_ppi * self.cfg.touch_thumb_width));
+                let exec = init as f32 / 1000.0 + (burst as f32 / 1000.0).max(mv);
+                plan.exec_ms = (exec * 1000.0).round() as i64;
+                plan.finish_ms = ((exec + burst as f32 / 1000.0 + mv) * 1000.0).round() as i64;
+                plan.down_at_init = true;
+                plan.up_at_exec_burst = true;
+                plan.signal = format!(
+                    "touch-pinch {model} {hand} {finger} {} {}",
+                    start_width as i64, end_width as i64
+                );
+                plan.monitor = format!(
+                    "model {model} pinched with the {finger} finger on the {hand} hand from a width of {} to {}",
+                    lisp_s_f32(start_width), lisp_s_f32(end_width)
+                );
+            }
+            "ROTATE" => {
+                let diameter = 54.0f32 * 5.0f32.sqrt();
+                let w = 0.5 * diameter * std::f32::consts::PI * (1.0 / 180.0) * self.cfg.touch_rotate_width;
+                let mv = (burst as f32 / 1000.0)
+                    .max(fitts(self.cfg.touch_peck_coeff, 0.5 * diameter * rotation.abs(), w));
+                let exec = init as f32 / 1000.0 + (burst as f32 / 1000.0).max(mv);
+                plan.exec_ms = (exec * 1000.0).round() as i64;
+                plan.finish_ms = ((exec + burst as f32 / 1000.0 + mv) * 1000.0).round() as i64;
+                plan.down_at_init = true;
+                plan.up_at_exec_burst = true;
+                plan.signal = format!(
+                    "touch-rotate {model} {hand} {finger} {}",
+                    lisp_s_f32(rotation)
+                );
+                plan.monitor = format!(
+                    "model {model} rotated with the {finger} finger on the {hand} hand  {} radians",
+                    lisp_s_f32(rotation)
+                );
+            }
+            "HAND-TO-TOUCH" => {
+                // to-touch-ply (hand-ply): exec = init + fitts(mouse, r, twidth).
+                let r = 5.3851647f32;
+                let theta = 1.19029f32;
+                let t = fitts(self.cfg.touch_cursor_coeff, r, 4.0);
+                plan.exec_ms = init + (t * 1000.0).round() as i64;
+                plan.finish_ms = plan.exec_ms + burst;
+                plan.signal_module = "MOTOR".to_string();
+                plan.signal = format!("MOVE-A-HAND {hand} {} {}", lisp_s_f32(r), lisp_s_f32(theta));
+                plan.put_hand = true;
+            }
+            _ => unreachable!(),
+        }
+        let trace = match cmd.as_str() {
+            "MOVE-HAND-TOUCH" => {
+                format!("MOVE-HAND-TOUCH OBJECT NIL LOC {} HAND {hand}", get("LOC"))
+            }
+            "TAP" | "TAP-HOLD" | "TAP-RELEASE" => {
+                format!("{cmd} HAND {hand} FINGER {finger}")
+            }
+            "PINCH" => format!(
+                "PINCH HAND {hand} FINGER {finger} START-WIDTH {} END-WIDTH {}",
+                get("START-WIDTH"),
+                get("END-WIDTH")
+            ),
+            "ROTATE" => format!(
+                "ROTATE HAND {hand} FINGER {finger} ROTATION {}",
+                get("ROTATION")
+            ),
+            "SWIPE" => {
+                let mut s = format!(
+                    "SWIPE HAND {hand} FINGER {finger} R {} THETA {} NUM-FNGRS {}",
+                    get("R"),
+                    get("THETA"),
+                    get("NUM-FNGRS")
+                );
+                if disp.iter().any(|(k, _)| k == "SWIPE-SPEED") {
+                    s.push_str(&format!(" SWIPE-SPEED {}", get("SWIPE-SPEED")));
+                }
+                s
+            }
+            "HAND-TO-TOUCH" => "HAND-TO-TOUCH".to_string(),
+            _ => String::new(),
+        };
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: trace,
+            },
+        );
+        self.man_prep_busy = true;
+        let at = self.time_ms + plan.prep_ms;
+        self.push(
+            at,
+            Prio::Num(0),
+            Out::Always,
+            Event::TouchPrep {
+                plan: Box::new(plan),
+            },
+        );
+        Ok(())
+    }
+
     /// Manual request routing: only press-key in M5a.
     fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         let (ctype, slots) = match &spec {
@@ -6663,15 +7462,29 @@ impl Engine {
         // `isa press-key key X` (no `cmd`).
         let mut cmd: Option<String> = if ctype.eq_ignore_ascii_case("PRESS-KEY") {
             Some("PRESS-KEY".to_string())
+        } else if self.cfg.touch {
+            // act-touch request chunk types (`tap`, `swipe`, ...) carry the
+            // command as their type name (`extend-manual-requests-fct`).
+            let t = ctype.to_uppercase();
+            if matches!(
+                t.as_str(),
+                "TAP" | "TAP-HOLD" | "TAP-RELEASE" | "SWIPE" | "PINCH" | "ROTATE"
+                    | "MOVE-HAND-TOUCH" | "HAND-TO-TOUCH"
+            ) {
+                Some(t)
+            } else {
+                None
+            }
         } else {
             None
         };
         let mut key: Option<String> = None;
         for (s, v) in &slots {
             match (s.as_str(), v) {
-                ("CMD", Value::Sym(c)) => cmd = Some(c.clone()),
+                ("CMD", Value::Sym(c)) => cmd = Some(c.to_uppercase()),
                 ("KEY", Value::Sym(k)) => key = Some(k.clone()),
                 ("KEY", Value::Str(k)) => key = Some(k.clone()),
+                _ if self.cfg.touch => {}
                 got => {
                     return Err(unimpl(format!("manual request slot {got:?}")));
                 }
@@ -6691,6 +7504,16 @@ impl Engine {
                     Event::PressKey { key: k, req_ms, isa },
                 );
                 Ok(())
+            }
+            (Some(c), None)
+                if self.cfg.touch
+                    && matches!(
+                        c,
+                        "TAP" | "TAP-HOLD" | "TAP-RELEASE" | "SWIPE" | "PINCH" | "ROTATE"
+                            | "MOVE-HAND-TOUCH" | "HAND-TO-TOUCH"
+                    ) =>
+            {
+                self.touch_request(&slots)
             }
             got => Err(unimpl(format!("manual request {got:?}"))),
         }
@@ -6753,6 +7576,8 @@ impl Engine {
                 value: t.text.clone(),
                 x: t.x,
                 y: t.y,
+                width: 0,
+                height: 0,
                 tstamp_ms: now,
                 attended: false,
             });
@@ -6800,6 +7625,7 @@ impl Engine {
         self.copy_count.insert(base.to_string(), n + 1);
         let copy = format!("{base}-{n}");
         self.vl_copies.insert(copy.clone(), idx);
+        self.vl_xy.insert(copy.clone(), (feat.x, feat.y));
         let inst = ChunkInst {
             name: Some(copy),
             ctype: "VISUAL-LOCATION".to_string(),
@@ -7025,8 +7851,25 @@ fn lisp_f(x: f32) -> String {
 /// rendered fixed for decimal exponents in `-3..=6` and in `m.mmmmmmeN`
 /// form otherwise (e.g. `3.7122225e-6`, `1.0e7`). The blending trace prints
 /// its floats with this form (the refs are the arbiter).
-fn lisp_s_f32(x: f32) -> String {
-    if !x.is_finite() {
+/// A symbol/string value's name (act-touch slot helpers).
+fn name_of(v: &Value) -> String {
+    match v {
+        Value::Sym(s) | Value::Str(s) => s.clone(),
+        _ => String::new(),
+    }
+}
+
+/// A numeric value as `f64`, if it is one.
+fn num_of(v: &Value) -> Option<f64> {
+    match v {
+        Value::Int(i) => Some(*i as f64),
+        Value::Num(x) => Some(*x),
+        _ => None,
+    }
+}
+
+/// `~f`/`~a` single-float display for the touch signals.
+fn lisp_s_f32(x: f32) -> String {    if !x.is_finite() {
         return format!("{x}");
     }
     if x == 0.0 {
@@ -7369,6 +8212,12 @@ impl Engine {
                         if v == "RETRIEVAL" {
                             return Ok(Value::Sym(name));
                         }
+                        // A visual-location chunk is already a per-request
+                        // copy (`VISUAL-LOCATION0-1`), so `=goal> … loc
+                        // =visual-location` references it verbatim.
+                        if v == "VISUAL-LOCATION" {
+                            return Ok(Value::Sym(name));
+                        }
                         let c = match copied.get(&name) {
                             Some(x) => x.clone(),
                             None => {
@@ -7397,6 +8246,32 @@ impl Engine {
                             }
                         }
                         return Ok(Value::Sym(reuse));
+                    }
+                }
+            }
+        }
+        // A non-copy `=buffer` reference to an unnamed spec chunk: the
+        // module names it (`CHUNK{n}`, `new-name-fct`) so it can be
+        // referenced (`=imaginal` in act-touch).
+        if !copy {
+            if let Pattern::Var(v) = p {
+                if !b.contains_key(v) {
+                    let unnamed = self
+                        .buffers
+                        .get(v)
+                        .and_then(|buf| buf.chunk.as_ref())
+                        .map(|c| c.name.is_none())
+                        .unwrap_or(false);
+                    if unnamed {
+                        let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
+                        self.name_count.insert("CHUNK".to_string(), n + 1);
+                        let name = format!("CHUNK{n}");
+                        if let Some(buf) = self.buffers.get_mut(v) {
+                            if let Some(c) = buf.chunk.as_mut() {
+                                c.name = Some(name.clone());
+                            }
+                        }
+                        return Ok(Value::Sym(name));
                     }
                 }
             }
