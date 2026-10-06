@@ -217,6 +217,8 @@ pub enum Step {
     AddVisicon(Vec<(String, sexpr::Sexp)>),
     /// tracker task setup: add the prompt feature.
     TrackerSetup(Vec<(String, sexpr::Sexp)>),
+    /// `zz-extended-motor-actions` task driver (`run-test`/`testN`).
+    ZzDriver,
     /// `(modify-visicon-features ...)` at an absolute time.
     ModifyVisicon {
         at_ms: i64,
@@ -299,6 +301,7 @@ pub fn run_model_steps(
             Step::ModFocus(slots) => eng.mod_focus(slots),
             Step::AddVisicon(slots) => eng.add_visicon(slots),
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
+            Step::ZzDriver => eng.zz_driver()?,
             Step::ModifyVisicon {
                 at_ms,
                 name,

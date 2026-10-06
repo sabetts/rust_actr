@@ -294,6 +294,15 @@ struct Config {
     /// tracker extra (`extras/tracker/tracker.lisp`).
     tracker: bool,
     trace_tracker: bool,
+    /// extended-motor-actions extra (`extras/extended-motor-actions`): a
+    /// dual-execution motor module plus new styles/devices.
+    zz_ext: bool,
+    /// Driver state for the `zz` task (`*dp*`/`*de*`/`*query*`/…).
+    zz_two_proc: bool,
+    zz_two_exec: bool,
+    zz_query: String,
+    zz_kct_ms: i64,
+    zz_krt_ms: i64,
     peck_fitts: f32,
     min_fitts_ms: i64,
     rhst: bool,
@@ -368,6 +377,17 @@ struct KeySpec {
     finger: &'static str,
     r: f32,
     theta: f32,
+}
+
+/// extended-motor-actions: a movement waiting for its hand's execution stage.
+#[derive(Debug, Clone)]
+struct ZzPending {
+    key: String,
+    req_ms: i64,
+    hand: usize,
+    style: String,
+    exec_ms: i64,
+    finish_ms: i64,
 }
 
 /// tracker extra: a learned value tracker (`extras/tracker/tracker.lisp`).
@@ -788,6 +808,15 @@ impl Config {
                 .iter()
                 .any(|e| e.eq_ignore_ascii_case("tracker")),
             trace_tracker: sgp_bool(&m.params, ":TRACE-TRACKER"),
+            zz_ext: m
+                .required_extras
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case("extended-motor-actions")),
+            zz_two_proc: false,
+            zz_two_exec: false,
+            zz_query: "STATE".to_string(),
+            zz_kct_ms: 10,
+            zz_krt_ms: 40,
             peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
             min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
             rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
@@ -1107,6 +1136,10 @@ enum Event {
     },
     InitiationComplete {
         req_ms: i64,
+        /// extended-motor-actions: the hand whose processor stage frees.
+        hand: usize,
+        /// extended-motor-actions: the movement's style name.
+        style: String,
     },
     MotorNotify {
         key: String,
@@ -1116,8 +1149,16 @@ enum Event {
     OutputKey {
         key: String,
     },
+    /// extended-motor-actions: `keyboard-with-release` `release-key` signal.
+    ReleaseKey {
+        key: String,
+    },
     FinishMovement {
         req_ms: i64,
+        /// extended-motor-actions: the hand whose execution stage frees.
+        hand: usize,
+        /// extended-motor-actions: the movement's style name.
+        style: String,
     },
     /// Speech module: the vocal buffer finished its utterance.
     VocalFree,
@@ -1292,6 +1333,15 @@ pub struct Engine {
     clear_on_keypress: bool,
     man_prep_busy: bool,
     man_exec_busy: bool,
+    /// extended-motor-actions: per-hand processor busy (left=0, right=1).
+    man_proc: [bool; 2],
+    /// extended-motor-actions: per-hand execution busy.
+    man_exec: [bool; 2],
+    /// extended-motor-actions: movements waiting for an execution stage.
+    man_exec_queue: Vec<ZzPending>,
+    /// extended-motor-actions: the last movement's `(style, hand)` for the
+    /// `style X hand Y` event details.
+    zz_last_style: Option<(String, String)>,
     imag_busy: bool,
     /// Temporal module: current tick interval (ms), tick count, the
     /// one-time start increment (ms), and a generation counter that cancels
@@ -1431,6 +1481,10 @@ impl Engine {
             clear_on_keypress,
             man_prep_busy: false,
             man_exec_busy: false,
+            man_proc: [false, false],
+            man_exec: [false, false],
+            man_exec_queue: Vec::new(),
+            zz_last_style: None,
             imag_busy: false,
             temporal_tick: 0.0,
             temporal_ticks: 0,
@@ -1485,7 +1539,20 @@ impl Engine {
     /// intentionally NOT reseeded (GOTCHAS #5/#35); scripted `:seed` steps
     /// handle that. Trace history (`out_lines`) is preserved.
     pub fn reset(&mut self) -> Result<(), EngineError> {
+        // Driver-set extended-motor-actions params survive a reset.
+        let zz = (
+            self.cfg.zz_two_proc,
+            self.cfg.zz_two_exec,
+            self.cfg.zz_query.clone(),
+            self.cfg.zz_kct_ms,
+            self.cfg.zz_krt_ms,
+        );
         self.cfg = Config::from_model(&self.model)?;
+        self.cfg.zz_two_proc = zz.0;
+        self.cfg.zz_two_exec = zz.1;
+        self.cfg.zz_query = zz.2;
+        self.cfg.zz_kct_ms = zz.3;
+        self.cfg.zz_krt_ms = zz.4;
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
@@ -1577,6 +1644,16 @@ impl Engine {
         self.last_attention = None;
         self.man_prep_busy = false;
         self.man_exec_busy = false;
+        self.man_proc = [false, false];
+        self.man_exec = [false, false];
+        self.man_exec_queue.clear();
+        self.zz_last_style = None;
+        // ACT-R re-evaluates the model body on reset (`model.lisp:983`);
+        // re-parse `p-fct` productions with the current `*query*`.
+        if !self.model.pfct.is_empty() {
+            let q = self.cfg.zz_query.clone();
+            self.model.reparse_pfct(&q);
+        }
         self.imag_busy = false;
         self.temporal_tick = 0.0;
         self.temporal_ticks = 0;
@@ -2089,6 +2166,58 @@ impl Engine {
                 shown: None,
             },
         );
+        Ok(())
+    }
+
+    /// `zz-extended-motor-actions` task driver (`test-model.lisp:65`):
+    /// reproduce `run-test`/`testN` (the extractor only records the
+    /// `run`/`reset` calls).
+    pub fn zz_driver(&mut self) -> Result<(), EngineError> {
+        self.zz_test1()?;
+        Ok(())
+    }
+
+    fn zz_test1(&mut self) -> Result<(), EngineError> {
+        for hand in ["same", "diff"] {
+            for query in ["state", "processor", "preparation"] {
+                for processors in [true, false] {
+                    for executions in [true, false] {
+                        self.cfg.zz_two_proc = processors;
+                        self.cfg.zz_two_exec = executions;
+                        self.cfg.zz_query = query.to_uppercase();
+                        self.reset()?;
+                        self.out_lines
+                            .push("########################".to_string());
+                        self.out_lines.push(format!(
+                            "\"{} hand {} processors {} executions query {}\"",
+                            hand.to_uppercase(),
+                            if processors { 2 } else { 1 },
+                            if executions { 2 } else { 1 },
+                            query.to_uppercase()
+                        ));
+                        self.out_lines
+                            .push("########################".to_string());
+                        // `(goal-focus-fct (car (define-chunks-fct '((isa goal test test1 param HAND))))`:
+                        // the chunk is named (`GOAL0`) and focused by name.
+                        let k = *self.name_count.entry("GOAL".to_string()).or_insert(0);
+                        self.name_count.insert("GOAL".to_string(), k + 1);
+                        let name = format!("GOAL{k}");
+                        let inst = ChunkInst {
+                            name: Some(name.clone()),
+                            ctype: "GOAL".to_string(),
+                            slots: vec![
+                                ("TEST".to_string(), Value::Sym("TEST1".to_string())),
+                                ("PARAM".to_string(), Value::Sym(hand.to_uppercase())),
+                            ],
+                            bare: false,
+                        };
+                        self.named.insert(name.clone(), inst);
+                        self.goal_focus(&ChunkDesc::Named(name))?;
+                        self.run_secs(10.0)?;
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
@@ -3181,6 +3310,18 @@ impl Engine {
                     spec.theta,
                 ));
                 self.man_prep_busy = true;
+                if self.cfg.zz_ext {
+                    let style = if key_is_punch(&key) { "PUNCH" } else { "PECK-RECOIL" };
+                    self.zz_last_style = Some((style.to_string(), spec.hand.to_string()));
+                    if self.cfg.zz_two_proc {
+                        if let Some(h) = Self::touch_hand_idx(spec.hand) {
+                            self.man_proc[h] = true;
+                        }
+                    } else {
+                        self.man_proc[0] = true;
+                        self.man_proc[1] = true;
+                    }
+                }
                 let prep_s = feats as f32 * self.cfg.feat_prep_ms as f32 / 1000.0;
                 let prep = (self.randomize_secs(prep_s) * 1000.0).round() as i64;
                 let at = self.time_ms + prep;
@@ -3195,11 +3336,14 @@ impl Engine {
                 if show {
                     self.emit(
                         "MOTOR",
-                        format!("PREPARATION-COMPLETE {}", Self::secs_str(req_ms)),
+                        format!(
+                            "PREPARATION-COMPLETE {}{}",
+                            Self::secs_str(req_ms),
+                            self.zz_style_suffix()
+                        ),
                     );
                 }
                 self.man_prep_busy = false;
-                self.man_exec_busy = true;
                 // `punch` (`motor.lisp:938`/`944`): exec = init + key-closure,
                 // finish = init + burst + burst (no Fitts term).
                 // `peck-recoil`: exec = init + max(burst, randomize(move)),
@@ -3226,32 +3370,75 @@ impl Engine {
                         (finish_s * 1000.0).round() as i64,
                     )
                 };
-                let t = self.time_ms;
-                self.push(
-                    t + self.cfg.init_ms,
-                    Prio::Num(0),
-                    Out::Always,
-                    Event::InitiationComplete { req_ms },
-                );
-                self.push(
-                    t + exec_ms,
-                    Prio::Num(0),
-                    Out::Never,
-                    Event::MotorNotify { key, req_ms },
-                );
-                self.push(
-                    t + finish_ms,
-                    Prio::Num(0),
-                    Out::Always,
-                    Event::FinishMovement { req_ms },
-                );
+                if self.cfg.zz_ext {
+                    // Queue for the hand's execution stage (`maybe-execute-movement`).
+                    let (style, hand_name) = self
+                        .zz_last_style
+                        .clone()
+                        .unwrap_or_else(|| ("PECK-RECOIL".to_string(), "RIGHT".to_string()));
+                    let hand = Self::touch_hand_idx(&hand_name).unwrap_or(1);
+                    self.man_exec_queue.push(ZzPending {
+                        key,
+                        req_ms,
+                        hand,
+                        style,
+                        exec_ms,
+                        finish_ms,
+                    });
+                    self.zz_maybe_execute();
+                } else {
+                    self.man_exec_busy = true;
+                    let t = self.time_ms;
+                    self.push(
+                        t + self.cfg.init_ms,
+                        Prio::Num(0),
+                        Out::Always,
+                        Event::InitiationComplete {
+                            req_ms,
+                            hand: 1,
+                            style: String::new(),
+                        },
+                    );
+                    self.push(
+                        t + exec_ms,
+                        Prio::Num(0),
+                        Out::Never,
+                        Event::MotorNotify { key, req_ms },
+                    );
+                    self.push(
+                        t + finish_ms,
+                        Prio::Num(0),
+                        Out::Always,
+                        Event::FinishMovement {
+                            req_ms,
+                            hand: 1,
+                            style: String::new(),
+                        },
+                    );
+                }
             }
-            Event::InitiationComplete { req_ms } => {
+            Event::InitiationComplete {
+                req_ms,
+                hand,
+                style,
+            } => {
                 if show {
                     self.emit(
                         "MOTOR",
-                        format!("INITIATION-COMPLETE {}", Self::secs_str(req_ms)),
+                        format!(
+                            "INITIATION-COMPLETE {}{}",
+                            Self::secs_str(req_ms),
+                            self.zz_style_suffix_for(&style, hand)
+                        ),
                     );
+                }
+                if self.cfg.zz_ext {
+                    if self.cfg.zz_two_proc {
+                        self.man_proc[hand] = false;
+                    } else {
+                        self.man_proc[0] = false;
+                        self.man_proc[1] = false;
+                    }
                 }
             }
             Event::MotorNotify { key, req_ms } => {
@@ -3283,6 +3470,16 @@ impl Engine {
                         Event::Choose,
                     );
                 }
+                if self.cfg.zz_ext {
+                    // `keyboard-with-release` (`motor-extension.lisp:612`):
+                    // a `release-key` signal `key-release-time` later.
+                    self.push(
+                        self.time_ms + self.cfg.zz_krt_ms,
+                        Prio::Num(0),
+                        Out::Always,
+                        Event::ReleaseKey { key: key.clone() },
+                    );
+                }
                 if self.clear_on_keypress {
                     // `clear-exp-window` from the task's output-key handler:
                     // drop the visicon, re-display, and re-encode the
@@ -3305,14 +3502,40 @@ impl Engine {
                     }
                 }
             }
-            Event::FinishMovement { req_ms } => {
+            Event::ReleaseKey { key } => {
+                if show {
+                    self.emit(
+                        "KEYBOARD",
+                        format!("release-key {} {}", self.model.name, key.to_lowercase()),
+                    );
+                }
+            }
+            Event::FinishMovement {
+                req_ms,
+                hand,
+                style,
+            } => {
                 if show {
                     self.emit(
                         "MOTOR",
-                        format!("FINISH-MOVEMENT {}", Self::secs_str(req_ms)),
+                        format!(
+                            "FINISH-MOVEMENT {}{}",
+                            Self::secs_str(req_ms),
+                            self.zz_style_suffix_for(&style, hand)
+                        ),
                     );
                 }
-                self.man_exec_busy = false;
+                if self.cfg.zz_ext {
+                    if self.cfg.zz_two_exec {
+                        self.man_exec[hand] = false;
+                    } else {
+                        self.man_exec[0] = false;
+                        self.man_exec[1] = false;
+                    }
+                    self.zz_maybe_execute();
+                } else {
+                    self.man_exec_busy = false;
+                }
             }
             Event::Command { name, params } => {
                 if show {
@@ -3995,6 +4218,19 @@ impl Engine {
                         }
                         ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
+                        // extended-motor-actions adds per-stage queries.
+                        ("PROCESSOR", Pattern::Sym(s)) if s == "FREE" => {
+                            self.query_processor_free(buffer)?
+                        }
+                        ("PROCESSOR", Pattern::Sym(s)) if s == "BUSY" => {
+                            !self.query_processor_free(buffer)?
+                        }
+                        ("PREPARATION", Pattern::Sym(s)) if s == "FREE" => {
+                            self.query_prep_free(buffer)?
+                        }
+                        ("PREPARATION", Pattern::Sym(s)) if s == "BUSY" => {
+                            !self.query_prep_free(buffer)?
+                        }
                         // `?buffer> error t/nil`: only blending carries an
                         // error flag (`query-module`, modules.lisp:798).
                         ("ERROR", Pattern::Nil) => !self.buffer_error(buffer),
@@ -4435,9 +4671,18 @@ impl Engine {
     /// buffers, buffer flag otherwise. (Motor free = neither preparing
     /// nor executing; visual free = no attention shift in flight.)
     fn query_free(&self, buffer: &str) -> Result<bool, EngineError> {
-        match buffer {
-            "VISUAL" => Ok(!self.visual_busy),
-            "MANUAL" => Ok(!self.man_prep_busy && !self.man_exec_busy),
+        match buffer {            "VISUAL" => Ok(!self.visual_busy),
+            "MANUAL" => {
+                if self.cfg.zz_ext {
+                    Ok(!self.man_prep_busy
+                        && !self.man_proc[0]
+                        && !self.man_proc[1]
+                        && !self.man_exec[0]
+                        && !self.man_exec[1])
+                } else {
+                    Ok(!self.man_prep_busy && !self.man_exec_busy)
+                }
+            }
             "IMAGINAL" => Ok(!self.imag_busy),
             "TRACKER" => Ok(true),
             "VOCAL" => Ok(!self.vocal_busy),
@@ -4447,6 +4692,42 @@ impl Engine {
                 .get(buffer)
                 .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
                 .busy),
+        }
+    }
+
+    /// `style X hand Y` suffix for motor events when the extended-motor-actions
+    /// module is loaded (`motor-extension.lisp:979`).
+    fn zz_style_suffix(&self) -> String {
+        if !self.cfg.zz_ext {
+            return String::new();
+        }
+        match &self.zz_last_style {
+            Some((style, hand)) => format!(" style {style} hand {hand}"),
+            None => String::new(),
+        }
+    }
+
+    /// `style X hand Y` suffix from an explicit `(style, hand)`.
+    fn zz_style_suffix_for(&self, style: &str, hand: usize) -> String {
+        if !self.cfg.zz_ext {
+            return String::new();
+        }
+        let h = if hand == 0 { "LEFT" } else { "RIGHT" };
+        format!(" style {style} hand {h}")
+    }
+
+    /// `?manual> processor free/busy` (extended-motor-actions).
+    fn query_processor_free(&self, buffer: &str) -> Result<bool, EngineError> {        match buffer {
+            "MANUAL" => Ok(!self.man_proc[0] && !self.man_proc[1]),
+            _ => self.query_free(buffer),
+        }
+    }
+
+    /// `?manual> preparation free/busy` (extended-motor-actions).
+    fn query_prep_free(&self, buffer: &str) -> Result<bool, EngineError> {
+        match buffer {
+            "MANUAL" => Ok(!self.man_prep_busy),
+            _ => self.query_free(buffer),
         }
     }
 
@@ -7935,6 +8216,71 @@ impl Engine {
             }
         }
         self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
+    /// extended-motor-actions `maybe-execute-movement`
+    /// (`motor-extension.lisp:1069`): run queued movements whose hand's
+    /// execution stage is free.
+    fn zz_maybe_execute(&mut self) {
+        loop {
+            let mut ran = false;
+            let mut i = 0;
+            while i < self.man_exec_queue.len() {
+                let p = self.man_exec_queue[i].clone();
+                let free = if self.cfg.zz_two_exec {
+                    !self.man_exec[p.hand]
+                } else {
+                    !self.man_exec[0] && !self.man_exec[1]
+                };
+                if free {
+                    self.man_exec_queue.remove(i);
+                    if self.cfg.zz_two_exec {
+                        self.man_exec[p.hand] = true;
+                    } else {
+                        self.man_exec[0] = true;
+                        self.man_exec[1] = true;
+                    }
+                    let hand_name = if p.hand == 0 { "LEFT" } else { "RIGHT" };
+                    self.zz_last_style = Some((p.style.clone(), hand_name.to_string()));
+                    let t = self.time_ms;
+                    self.push(
+                        t + self.cfg.init_ms,
+                        Prio::Num(0),
+                        Out::Always,
+                        Event::InitiationComplete {
+                            req_ms: p.req_ms,
+                            hand: p.hand,
+                            style: p.style.clone(),
+                        },
+                    );
+                    self.push(
+                        t + p.exec_ms,
+                        Prio::Num(0),
+                        Out::Never,
+                        Event::MotorNotify {
+                            key: p.key,
+                            req_ms: p.req_ms,
+                        },
+                    );
+                    self.push(
+                        t + p.finish_ms,
+                        Prio::Num(0),
+                        Out::Always,
+                        Event::FinishMovement {
+                            req_ms: p.req_ms,
+                            hand: p.hand,
+                            style: p.style.clone(),
+                        },
+                    );
+                    ran = true;
+                    break;
+                }
+                i += 1;
+            }
+            if !ran {
+                break;
+            }
+        }
     }
 
     /// Manual request routing: only press-key in M5a.

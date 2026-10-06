@@ -288,6 +288,38 @@ pub struct Model {
     /// Model-body `(set-visloc-default slot value ...)`: default constraints
     /// for an unconstrained visual-location request (`vision.lisp:2107`).
     pub visloc_default: Vec<(String, Sexp)>,
+    /// Model-body `(p-fct \`(... ,*var* ...))` raw production lists: ACT-R
+    /// re-evaluates the model body on `reset` (`model.lisp:983`), so
+    /// `,*query*` picks up the current `defparameter` value.
+    pub pfct: Vec<Vec<Sexp>>,
+}
+
+impl Model {
+    /// Re-parse the `p-fct` productions with `query` substituted for
+    /// `,*query*` (ACT-R re-evaluates the model body on `reset`).
+    pub fn reparse_pfct(&mut self, query: &str) {
+        for raw in &self.pfct {
+            let mut list = raw.clone();
+            for e in list.iter_mut() {
+                if let Sexp::Sym(s) = e {
+                    if s.trim_start_matches(',').eq_ignore_ascii_case("*QUERY*") {
+                        *e = Sexp::Sym(query.to_uppercase());
+                    }
+                }
+            }
+            let mut form = vec![Sexp::Sym("P".to_string())];
+            form.extend(list);
+            if let Ok(p) = parse_production(&Sexp::List(form)) {
+                if let Some(existing) = self
+                    .productions
+                    .iter_mut()
+                    .find(|x| x.name.eq_ignore_ascii_case(&p.name))
+                {
+                    *existing = p;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -858,6 +890,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
         scheduled_events: Vec::new(),
         buffer_decls: Vec::new(),
         visloc_default: Vec::new(),
+        pfct: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -1072,6 +1105,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
             // model-file `defparameter` substitutions.
             "P-FCT" => {
                 if let Some(Sexp::List(list)) = items.get(2) {
+                    model.pfct.push(list.clone());
                     let sub = substitute_commas(list, defs);
                     let mut form = vec![Sexp::Sym("P".to_string())];
                     form.extend(sub);
