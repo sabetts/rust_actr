@@ -1717,6 +1717,39 @@ requested hand(s) that need it, and the style's `hand` is `both` only when
 `zz` test5 is **byte-exact through line 2893** — test1–test5 plus every
 summary. Tests 6–9 (M6–M8) remain.
 
+## 141. `zz` test6: `type-key`, output-key scheduling, and finger freeing
+
+`type-key` (`motor-extension.lisp:2142`) is `extended-finger-keyboard` with
+`same-loc-action punch` / `move-loc-action peck-recoil`: from a non-home
+position it strikes the key and **recoils back to where the finger started**.
+So `peck-recoil`'s `prepare-features` (`:1776`) leaves the finger offset
+unchanged — the engine must not move it to the key the way `peck`/`point-finger`
+do. Its `compute-finish-time` (`:1792`) is
+`init + first-move-time + burst + max(burst, move-time)`: a second full move leg
+back, unlike `peck`'s `init + move-time + burst`.
+
+The keyboard device emits `output-key`/`release-key` by **scheduling a separate
+event** (`keyboard.lisp:503` `schedule-event-now "output-key"`), not inline in
+`set-finger-down`/`set-finger-up`. So at one time, a movement's key output lands
+*after* any event already queued at that time: test6 has a `preparation-complete`
+(queued at 0.450 by the type-key request) print before the `peck-recoil`'s
+`output-key` (whose `set-finger-down` was queued earlier at 0.450 by the
+perform, but which only schedules the output when it runs at 0.600). Emitting
+the trace inline in the engine gets the order backwards.
+
+`finish-movement-dual` (`:1200`) frees the movement's fingers **before**
+`maybe-execute-movement` starts the next movement on that hand. The engine
+models this as the finish handler clearing the hand's finger-busy set before
+re-dispatching; a separate free event scheduled at the finish would run after
+the next movement re-marks the same finger busy.
+
+The dual-execution module also exposes per-finger queries
+(`?manual-left> index free`/`down`, `motor-extension.lisp:1306`), backed by the
+hand tracker's finger-busy / finger-down state.
+
+`zz` test6 is **byte-exact through line 3034** — test1–test6 plus every
+summary. Tests 7–9 (M7–M8) remain.
+
 
 
 

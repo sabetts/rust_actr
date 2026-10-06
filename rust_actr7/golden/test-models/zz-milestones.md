@@ -10,8 +10,8 @@ summary block per sub-run (`PRESSED`/`RELEASED`/`CLICKED`/`UNCLICKED`/`Held`/
 
 ## Status
 
-**Byte-exact through line 2893** — test1–test5 complete including every summary.
-The remaining output (2894–3568) is tests 6–9 (M6–M8).
+**Byte-exact through line 3034** — test1–test6 complete including every summary.
+The remaining output (3035–3568) is tests 7–9 (M7–M8).
 
 Reference line ranges (each range is a test's trace plus its trailing summary;
 the summary prints the test's description, so a description line belongs to the
@@ -22,8 +22,8 @@ test *above* it):
 | test1–3 | 1–2017 |
 | test4 | 2018–2310 |
 | test5 | 2311–2893 |
-| test6 | 2894–3020 |
-| test7 | 3021–3185 |
+| test6 | 2894–3034 |
+| test7 | 3035–3185 |
 | test8 | 3186–3373 |
 | test9 | 3374–3568 |
 
@@ -72,10 +72,14 @@ The largest and foundational piece.
 - **Exit met**: test5 byte-exact through line 2893 including its summary
   (commit `62fea19`; GOTCHA #140).
 
-## M6 — type-key from a non-home position  (test6, 127 lines)
-- `type-key`, `move-to-key` (finger relocation before the peck).
+## M6 — type-key from a non-home position  (test6, 141 lines)  **Done**
+- `type-key` (a `peck-recoil` that recoils to the finger's start), the
+  deferred `output-key` scheduling, and `finish-movement-dual`'s finger
+  freeing before the next movement.
+- **Exit met**: test6 byte-exact through line 3034 including its summary
+  (GOTCHA #141).
 
-## M7 — delayed punch  (test7, 165 lines)
+## M7 — delayed punch  (test7, 151 lines)
 - `delayed-punch`, `:default-punch-delay`/`:fast-punch-delay`/`:slow-punch-delay`.
 
 ## M8 — all-fingers-to-home + release-all  (tests 8/9, 195 lines)

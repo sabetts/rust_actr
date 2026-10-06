@@ -1304,12 +1304,6 @@ enum Event {
         hand: usize,
         finger: usize,
     },
-    /// extended-motor-actions: mark a finger free when a movement finishes
-    /// (`motor-extension.lisp:1205`).
-    ZzFingerFree {
-        hand: usize,
-        finger: usize,
-    },
     /// extended-motor-actions: `hand-to-mouse`/`hand-to-home` prep complete.
     ZzHandPrep {
         req_ms: i64,
@@ -2650,6 +2644,7 @@ impl Engine {
         self.zz_test3()?;
         self.zz_test4()?;
         self.zz_test5()?;
+        self.zz_test6()?;
         Ok(())
     }
 
@@ -2830,6 +2825,27 @@ impl Engine {
             self.zz_buffer_status();
             self.zz_print_finger_locs();
         }
+        self.zz_summarize();
+        Ok(())
+    }
+
+    /// `test6` (`test-model.lisp:202`): a single `(run 10)` exercising
+    /// `type-key` from a non-home position, then the buffer/finger dump.
+    fn zz_test6(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Some type-key actions from non-home position.".to_string(),
+        ));
+        self.reset()?;
+        self.zz_goal_focus(
+            "GOAL",
+            vec![("TEST".to_string(), Value::Sym("TEST6".to_string()))],
+        )?;
+        self.run_secs(10.0)?;
+        self.zz_buffer_status();
+        self.zz_print_finger_locs();
         self.zz_summarize();
         Ok(())
     }
@@ -3849,10 +3865,17 @@ impl Engine {
                     // strike time, finish is the full move time (they differ
                     // only when `peck-strike-distance` is set).
                     "HOLD-PECK" => (init + strike, None, init + move_ms),
-                    "PECK" | "PECK-RECOIL" => (
+                    "PECK" => (
                         init + strike,
                         Some(init + move_ms + self.cfg.zz_krt_ms),
                         init + move_ms + burst,
+                    ),
+                    // `peck-recoil` (`motor-extension.lisp:1792`): finish adds a
+                    // second full move time (strike out and recoil back).
+                    "PECK-RECOIL" => (
+                        init + strike,
+                        Some(init + move_ms + self.cfg.zz_krt_ms),
+                        init + move_ms + burst + move_ms,
                     ),
                     "HOLD-PUNCH" => (init + kct, None, init + burst),
                     "PUNCH" => (
@@ -3897,15 +3920,16 @@ impl Engine {
                 // (`motor-extension.lisp:2120`).
                 let target = loc.or_else(|| key_xy(&key));
                 if let Some(kl) = target {
-                    if style != "RELEASE" {
+                    // `peck`/`point-finger`/`hold-peck` leave the finger at the
+                    // key; `peck-recoil` returns it to where it started
+                    // (`updated-pos` is the start, `motor-extension.lisp:1776`),
+                    // and `release` doesn't move it.
+                    if !matches!(style.as_str(), "RELEASE" | "PECK-RECOIL") {
                         let (hx, hy) = self.zz_hands[hand].loc;
                         self.zz_hands[hand].offsets[finger] = (kl.0 - hx, kl.1 - hy);
                     }
                 }
                 self.zz_maybe_execute();
-            }
-            Event::ZzFingerFree { hand, finger } => {
-                self.zz_hands[hand].busy[finger] = false;
             }
             Event::ZzKeyOutput {
                 key,
@@ -3913,10 +3937,19 @@ impl Engine {
                 hand,
                 finger,
             } => {
+                // `set-finger-down`/`set-finger-up` (`motor-extension.lisp:1579`/
+                // `:1593`) update the tracker and then `notify-motor-device`,
+                // which *schedules* `output-key`/`release-key`
+                // (`keyboard.lisp:503`) — so the trace is a separate event whose
+                // sequence lands after events already queued at this time.
                 let name = if down { "output-key" } else { "release-key" };
-                self.emit(
-                    "KEYBOARD",
-                    format!("{name} {} {}", self.model.name, key.to_lowercase()),
+                self.now(
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::Emit {
+                        module: "KEYBOARD".to_string(),
+                        line: format!("{name} {} {}", self.model.name, key.to_lowercase()),
+                    },
                 );
                 // The finger goes down/up at execution time (`set-finger-down`
                 // / `set-finger-up`).
@@ -4698,6 +4731,17 @@ impl Engine {
                         self.man_exec[0] = false;
                         self.man_exec[1] = false;
                     }
+                    // `finish-movement-dual` (`motor-extension.lisp:1205`)
+                    // frees the movement's fingers *before*
+                    // `maybe-execute-movement` starts the next movement on the
+                    // hand, so the free must precede the re-dispatch.
+                    if both {
+                        for h in 0..2 {
+                            self.zz_hands[h].busy = [false; 5];
+                        }
+                    } else {
+                        self.zz_hands[hand].busy = [false; 5];
+                    }
                     self.zz_maybe_execute();
                 } else {
                     self.man_exec_busy = false;
@@ -5397,6 +5441,22 @@ impl Engine {
                         ("PREPARATION", Pattern::Sym(s)) if s == "BUSY" => {
                             !self.query_prep_free(buffer)?
                         }
+                        // `?manual-left> index free/down` etc.
+                        (attr, Pattern::Sym(s))
+                            if matches!(
+                                attr,
+                                "INDEX" | "MIDDLE" | "RING" | "PINKIE" | "THUMB"
+                            ) =>
+                        {
+                            match s.as_str() {
+                                "FREE" => self.query_finger_free(buffer, attr)?,
+                                "BUSY" => !self.query_finger_free(buffer, attr)?,
+                                "DOWN" => self.query_finger_down(buffer, attr)?,
+                                _ => {
+                                    return Err(unimpl(format!("query ?{buffer}> {attr} {val:?}")))
+                                }
+                            }
+                        }
                         // `?buffer> error t/nil`: only blending carries an
                         // error flag (`query-module`, modules.lisp:798).
                         ("ERROR", Pattern::Nil) => !self.buffer_error(buffer),
@@ -5907,6 +5967,31 @@ impl Engine {
             "MANUAL" => Ok(!self.man_prep_busy),
             _ => self.query_free(buffer),
         }
+    }
+
+    /// `?manual-left> index free` (`motor-extension.lisp:1306`): whether a
+    /// hand's finger is free (not busy with a movement).
+    fn query_finger_free(&self, buffer: &str, finger: &str) -> Result<bool, EngineError> {
+        let hand = match buffer {
+            "MANUAL-LEFT" => 0usize,
+            "MANUAL-RIGHT" => 1,
+            _ => return self.query_free(buffer),
+        };
+        let f = Self::touch_finger_idx(finger)
+            .ok_or_else(|| bad(format!("unknown finger {finger}")))?;
+        Ok(!self.zz_hands[hand].busy[f])
+    }
+
+    /// `?manual-left> index down`: whether a hand's finger is held down.
+    fn query_finger_down(&self, buffer: &str, finger: &str) -> Result<bool, EngineError> {
+        let hand = match buffer {
+            "MANUAL-LEFT" => 0usize,
+            "MANUAL-RIGHT" => 1,
+            _ => return self.query_free(buffer),
+        };
+        let f = Self::touch_finger_idx(finger)
+            .ok_or_else(|| bad(format!("unknown finger {finger}")))?;
+        Ok(self.zz_hands[hand].down[f])
     }
 
     /// `?buffer> error t/nil`: only the blending module tracks an error
@@ -9519,18 +9604,9 @@ impl Engine {
                                 );
                             }
                             // `perform-movement` marks the finger busy
-                            // (`motor-extension.lisp:1186`); `finish-movement`
-                            // frees it (`:1205`).
+                            // (`motor-extension.lisp:1186`); the finish handler
+                            // frees it before the next movement starts (`:1205`).
                             self.zz_hands[p.hand].busy[finger] = true;
-                            self.push(
-                                t + p.finish_ms,
-                                Prio::Num(0),
-                                Out::Never,
-                                Event::ZzFingerFree {
-                                    hand: p.hand,
-                                    finger,
-                                },
-                            );
                         }
                         ZzKind::Hand { to_mouse, r, theta } => {
                             self.push(
