@@ -42,3 +42,4 @@ test-temporal
 demo2-randomized
 retain-indirect-retrievals
 grouped
+z-threads

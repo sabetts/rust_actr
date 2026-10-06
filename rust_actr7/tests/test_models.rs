@@ -224,6 +224,19 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 steps.push(Step::GoalFocus(desc));
             }
             ":RESET" => steps.push(Step::Reset),
+            ":BUFFER-CHUNK" => {
+                let mut names = Vec::new();
+                for it in &v[1..] {
+                    match it {
+                        Sexp::Sym(s) => names.push(s.clone()),
+                        Sexp::Str(s) => names.push(s.clone()),
+                        other => note(&mut unsupported, format!("buffer-chunk {other:?}")),
+                    }
+                }
+                if !names.is_empty() {
+                    steps.push(Step::BufferChunk(names));
+                }
+            }
             ":SGP" | ":SSP" => {
                 let mut i = 1;
                 while i + 1 < v.len() {

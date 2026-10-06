@@ -202,6 +202,13 @@ disable/enable, breakpoints); not trace-only drivers.")
       (when (stringp file) (push file *models*))))
   (apply (gethash 'load-act-r-model *orig-fns*) args))
 
+(defun w-buffer-chunk (names)
+  ;; Task drivers often end with `(buffer-chunk ...)`; record it so the
+  ;; spec can reproduce the command-layer dump (z-threads).
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*))
+    (push (cons :buffer-chunk names) *steps*))
+  (call-orig 'buffer-chunk-fct names))
+
 (defun install-wrappers ()
   (wrap-fn 'run #'w-run)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
@@ -209,7 +216,8 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'sgp-fct #'w-sgp)
   (wrap-fn 'ssp-fct #'w-ssp)
   (wrap-fn 'actr-load #'w-actr-load)
-  (wrap-fn 'load-act-r-model #'w-load-model))
+  (wrap-fn 'load-act-r-model #'w-load-model)
+  (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk))
 
 ;;; ---------------------------------------------------------------- extraction
 

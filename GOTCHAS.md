@@ -1405,3 +1405,50 @@ now carries `(:SGP :ACT T)`):
   retrieval failure (this is what ends `grouped` at 17.214).
 
 `grouped` is now byte-exact (1192 lines) — **38 specs**.
+
+## 128. `press-key` key→style: `punch` vs `peck-recoil`
+
+`+manual> isa press-key key =k` is not one movement. The request chunk's
+`cmd` is `press-key`, whose `handle-style-request` calls the `press-key`
+*function* (`other-files/keyboard.lisp:541`), which looks up `key->cmd` and
+dispatches the **underlying** style. Home-row keys (`a s d f j k l ;`,
+`space`) map to `(punch :hand H :finger F)` (`keyboard.lisp:320-329`) — a
+`defStyle punch () hand finger` (`motor.lisp:935`) with only 2 feature
+slots, so a fresh movement prepares `num-to-prepare` = 3 features = 150 ms,
+`exec = init + key-closure-time` (`motor.lisp:938`, 50+10 = 60 ms) and
+`finish = init + burst + burst` (`motor.lisp:944`, 150 ms). Every other key
+maps to `(peck-recoil :hand H :finger F :r R :theta T)` (5 features =
+250 ms, Fitts-based exec/finish). `feat-differences` also differs:
+`punch` is `hand→2 / finger→1 / 0` (`motor.lisp:950`), `peck` is
+`hand→4 / finger→3 / r+theta` (`motor.lisp:970`). `demo2`'s `v` is a
+peck-recoil; `z-threads`' `a` is a punch, which is why its first press
+prepares in 100 ms and later same-key presses prepare in 0 ms.
+
+## 129. Speech and the hear-self audio onset
+
+The `speak` style (`speech.lisp:276`) prepares 3 features (150 ms), then
+`exec-time = init-time` (50 ms) and `finish-time = exec + articulation`
+(`speech.lisp:281/285`). At the request, the module schedules
+`preparation-complete` at `+prep`; at that event it schedules
+`initiation-complete` at `+init`, the hear-self sound at `+init` (its onset
+equals exec), and `finish-movement` at `+exec+art`. This is what puts the
+`SPEECH`-derived CRs at prep-complete and initiation-complete, and the
+`AUDIO new-sound` at `exec` after prep (not at the request). `AURAL-LOCATION`
+is set by `stuff-sound-buffer` only while the buffer is empty
+(`audio.lisp:716`), so only the first sound of a run produces a
+`SET-BUFFER-CHUNK AURAL-LOCATION` line even though `new-sound` repeats.
+
+## 130. `buffer-chunk` task output is part of the ref
+
+`z-threads`' task (`extras/threads/sample.lisp`) ends with
+`(buffer-chunk goal)`, so its `.ref` has four non-trace lines after the
+`Stopped` terminator. They are reproduced by a `Step::BufferChunk` driver
+step (`:BUFFER-CHUNK GOAL` in the spec; recorded by the extractor's
+`buffer-chunk-fct` wrapper). Two details: the header format is
+`~S: ~S ~@[[~s]~]~@[ {~{~s~^ ~}}~]` (`framework/buffers.lisp:893`), i.e. a
+trailing space before the `{...}` set; and the goal multi-buffer set comes
+from `get-m-buffer-chunks` → `hash-table-keys` (`misc-utils.lisp:657`),
+which `push`es while walking the table, so SBCL's insertion-order walk
+yields the set in **reverse** insertion order (`{CHUNK1 CHUNK0 INITIAL0}`).
+
+`z-threads` is now byte-exact (104 lines) — **39 specs**.

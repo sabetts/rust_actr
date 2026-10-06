@@ -256,6 +256,9 @@ struct Config {
     feat_prep_ms: i64,
     init_ms: i64,
     burst_ms: i64,
+    /// `key-closure-time` (`motor.lisp:477`, default 0.01): the punch style's
+    /// exec time is `init + closure` (`motor.lisp:938`).
+    key_closure_ms: i64,
     peck_fitts: f32,
     min_fitts_ms: i64,
     rhst: bool,
@@ -461,6 +464,17 @@ fn key_table() -> HashMap<String, KeySpec> {
     ])
 }
 
+/// Keys whose `key->cmd` mapping is a `punch` movement (`other-files/keyboard.lisp`
+/// ASDF row and space): the finger is already home, so no polar geometry is
+/// prepared. Everything else is a `peck-recoil` with hand/finger/r/theta.
+/// Punch prepares 3 features (hand, finger, and the implicit `+1`), peck 5.
+fn key_is_punch(key: &str) -> bool {
+    matches!(
+        key.to_uppercase().as_str(),
+        "A" | "S" | "D" | "F" | "J" | "K" | "L" | ";" | "SPACE"
+    )
+}
+
 fn sgp_num(params: &[(String, Sexp)], key: &str, default: f64) -> Result<f64, EngineError> {
     match params.iter().find(|(k, _)| k == key) {
         None => Ok(default),
@@ -651,6 +665,7 @@ impl Config {
             feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
             burst_ms: secs_to_ms(":MOTOR-BURST-TIME", 0.05)?,
+            key_closure_ms: secs_to_ms(":KEY-CLOSURE-TIME", 0.01)?,
             peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
             min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
             rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
@@ -943,6 +958,13 @@ enum Event {
     Speak {
         text: String,
     },
+    /// Speech module: `speak` preparation completed; queues initiation,
+    /// the hear-self sound onset, and the finish.
+    SpeechPrep {
+        text: String,
+    },
+    /// Speech module: `initiation-complete` (procedural released).
+    SpeechInit,
     /// Audio module: a sound begins (`new-sound`).
     NewSound,
     /// Audio module: the sound's aural location is set.
@@ -1126,8 +1148,11 @@ pub struct Engine {
     /// `(index, bindings, whole-chunk requests)` at the previous fire.
     prev_prod: Option<(usize, Bindings, Vec<(String, String)>)>,
     prev_prod_ms: i64,
-    /// Last press-key geometry, for preparation differences.
-    last_press: Option<(String, String, f32, f32)>,
+    /// Last press-key `(key, hand, finger, r, theta)`, for preparation
+    /// differences (style is recovered from the key).
+    last_press: Option<(String, String, String, f32, f32)>,
+    /// Last spoken text, for the `speak` style's preparation differences.
+    last_speak: Option<String>,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
     trace_on: bool,
     /// Task-file `defun`s available to `!eval!`/`!bind!`.
@@ -1234,6 +1259,7 @@ impl Engine {
             prev_prod: None,
             prev_prod_ms: 0,
             last_press: None,
+            last_speak: None,
             trace_on: true,
             user_fns: HashMap::new(),
         };
@@ -1364,6 +1390,7 @@ impl Engine {
         self.prev_prod = None;
         self.prev_prod_ms = 0;
         self.last_press = None;
+        self.last_speak = None;
         self.exec_prods = self
             .model
             .productions
@@ -1863,6 +1890,42 @@ impl Engine {
         Ok(())
     }
 
+    /// `(buffer-chunk <name>...)`: append the command-layer buffer dump the
+    /// task driver prints after a run (`framework/buffers.lisp:881` +
+    /// `framework/chunks.lisp:736`). Only the fields the corpus exercises:
+    /// the buffer/chunk header (with the multi-buffer set for threads goals)
+    /// and each slot. Not a trace line, so it is appended verbatim.
+    pub fn print_buffer_chunk(&mut self, buffers: &[String]) {
+        for name in buffers {
+            let bname = name.to_uppercase();
+            let chunk = self.buffers.get(&bname).and_then(|b| b.chunk.clone());
+            let cname = chunk
+                .as_ref()
+                .and_then(|c| c.name.clone())
+                .unwrap_or_default();
+            let mut header = format!("{bname}: {cname} ");
+            if self.cfg.threads && bname == "GOAL" {
+                // `hash-table-keys` (`misc-utils.lisp:657`) pushes while
+                // walking the goal m-buffer set; SBCL visits these small
+                // tables in insertion order, so the printed set is reversed.
+                let mut set: Vec<String> =
+                    self.goal_set.iter().filter_map(|c| c.name.clone()).collect();
+                set.reverse();
+                header.push_str(&format!(" {{{}}}", set.join(" ")));
+            }
+            self.out_lines.push(header);
+            if let Some(c) = chunk {
+                self.out_lines.push(cname);
+                for (k, v) in &c.slots {
+                    self.out_lines.push(format!("   {k}  {}", v.show()));
+                }
+                // `pprint-a-chunk` ends with `~%` and `command-output` adds
+                // one more newline: a trailing blank line.
+                self.out_lines.push(String::new());
+            }
+        }
+    }
+
     /// Trace on/off (`:v`), used by scripted drivers that hide segments.
     pub fn set_trace(&mut self, on: bool) {
         self.trace_on = on;
@@ -2071,28 +2134,64 @@ impl Engine {
             Event::Speak { text } => {
                 self.emit("SPEECH", format!("SPEAK TEXT {text}"));
                 self.vocal_busy = true;
-                // Speech initiation (exec time) then articulation.
-                let exec = 200;
+                // `speak` preparation (`speech.lisp:278`/`291`): 3 features
+                // for a fresh style, else 0 for the same text, 2 otherwise.
+                let feats = match self.last_speak.as_deref() {
+                    None => 3,
+                    Some(prev) if prev.eq_ignore_ascii_case(&text) => 0,
+                    Some(_) => 2,
+                };
+                self.last_speak = Some(text.clone());
+                let prep = feats * self.cfg.feat_prep_ms;
+                self.push(
+                    self.time_ms + prep,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::SpeechPrep { text },
+                );
+            }
+            Event::SpeechPrep { text } => {
+                // `perform-movement`: initiation-complete at init-time, then
+                // finish at exec + articulation (`speech.lisp:281`/`285`).
+                // The hear-self sound onset equals the exec time.
+                let init = self.cfg.init_ms;
                 let art = (150.0f32)
                     .max(150.0 * text.chars().count() as f32 / 3.0)
                     .round() as i64;
-                self.push(self.time_ms + exec, Prio::Num(0), Out::Medium, Event::NewSound);
+                let finish = init + art;
                 self.push(
-                    self.time_ms + exec + art,
+                    self.time_ms + init,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::SpeechInit,
+                );
+                self.push(
+                    self.time_ms + init,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::NewSound,
+                );
+                self.push(
+                    self.time_ms + finish,
                     Prio::Num(0),
                     Out::Never,
                     Event::VocalFree,
                 );
             }
+            Event::SpeechInit => {}
             Event::NewSound => {
                 self.emit("AUDIO", "new-sound".to_string());
-                // Aural detection/recode delay.
-                self.push(
-                    self.time_ms + 300,
-                    Prio::Num(0),
-                    Out::Medium,
-                    Event::AuralLocation,
-                );
+                // `stuff-sound-buffer` only sets AURAL-LOCATION while the
+                // buffer is empty (`audio.lisp:716`); later sounds leave the
+                // first location in place. Aural detection/recode delay.
+                if self.audio_events == 0 {
+                    self.push(
+                        self.time_ms + 300,
+                        Prio::Num(0),
+                        Out::Medium,
+                        Event::AuralLocation,
+                    );
+                }
             }
             Event::AuralLocation => {
                 let n = self.audio_events;
@@ -2563,24 +2662,33 @@ impl Engine {
                     );
                 }
             }
-            Event::PressKey { key, req_ms, isa } => {
+            Event::PressKey { key, req_ms, isa: _isa } => {
                 if show {
                     self.emit("MOTOR", format!("PRESS-KEY KEY {key}"));
                 }
-                // Preparation features: 5 fresh, else hfrt differences
-                // vs the last press (maxfeats is 1+4 slots = 5: hand 4,
-                // finger 3, else r/theta diffs).
+                // Preparation features. `key->cmd` maps home-row keys to the
+                // `punch` style (`motor.lisp:935`, slots hand/finger) and the
+                // rest to `peck-recoil` (slots hand/finger/r/theta). Fresh
+                // movement uses `num-to-prepare` (`general-pm.lisp:790`); a
+                // repeat uses the style's `feat-differences`
+                // (`motor.lisp:950`/`970`).
                 let spec = Self::key_spec(&key)?;
+                let punch = key_is_punch(&key);
+                let prep_feats = |p: bool| if p { 3 } else { 5 };
                 let feats = match &self.last_press {
-                    None => {
-                        if isa {
-                            2
-                        } else {
-                            5
-                        }
-                    }
-                    Some((h, f, r, t)) => {
-                        if *h != spec.hand {
+                    None => prep_feats(punch),
+                    Some((pk, h, f, r, t)) => {
+                        if key_is_punch(pk) != punch {
+                            prep_feats(punch)
+                        } else if punch {
+                            if *h != spec.hand {
+                                2
+                            } else if *f != spec.finger {
+                                1
+                            } else {
+                                0
+                            }
+                        } else if *h != spec.hand {
                             4
                         } else if *f != spec.finger {
                             3
@@ -2591,6 +2699,7 @@ impl Engine {
                     }
                 };
                 self.last_press = Some((
+                    key.to_uppercase(),
                     spec.hand.to_string(),
                     spec.finger.to_string(),
                     spec.r,
@@ -2616,22 +2725,32 @@ impl Engine {
                 }
                 self.man_prep_busy = false;
                 self.man_exec_busy = true;
-                // peck-recoil: exec = init + max(burst, move-time),
-                // finish = exec + burst + max(burst, move-time),
-                // all in seconds, rounded to ms at scheduling.
-                let spec = Self::key_spec(&key)?;
-                let burst_s = self.cfg.burst_ms as f32 / 1000.0;
-                let fit = (self.cfg.peck_fitts * (spec.r + 0.5).log2())
-                    .max(self.cfg.min_fitts_ms as f32 / 1000.0);
-                let move_s = burst_s.max(fit);
-                // peck-recoil: exec = init + max(burst, randomize-time(move)),
-                // finish = exec + burst + max(burst, randomize-time(move)).
-                let exec_s = self.cfg.init_ms as f32 / 1000.0
-                    + burst_s.max(self.randomize_secs(move_s));
-                let finish_s = exec_s + burst_s + burst_s.max(self.randomize_secs(move_s));
-                // Lisp rounds seconds->ms at scheduling time.
-                let exec_ms = (exec_s * 1000.0).round() as i64;
-                let finish_ms = (finish_s * 1000.0).round() as i64;
+                // `punch` (`motor.lisp:938`/`944`): exec = init + key-closure,
+                // finish = init + burst + burst (no Fitts term).
+                // `peck-recoil`: exec = init + max(burst, randomize(move)),
+                // finish = exec + burst + max(burst, randomize(move)), with
+                // move = max(burst, fitts(r)) (`motor.lisp:1019`/`1028`).
+                let (exec_ms, finish_ms) = if key_is_punch(&key) {
+                    (
+                        self.cfg.init_ms + self.cfg.key_closure_ms,
+                        self.cfg.init_ms + self.cfg.burst_ms + self.cfg.burst_ms,
+                    )
+                } else {
+                    let spec = Self::key_spec(&key)?;
+                    let burst_s = self.cfg.burst_ms as f32 / 1000.0;
+                    let fit = (self.cfg.peck_fitts * (spec.r + 0.5).log2())
+                        .max(self.cfg.min_fitts_ms as f32 / 1000.0);
+                    let move_s = burst_s.max(fit);
+                    let exec_s = self.cfg.init_ms as f32 / 1000.0
+                        + burst_s.max(self.randomize_secs(move_s));
+                    let finish_s =
+                        exec_s + burst_s + burst_s.max(self.randomize_secs(move_s));
+                    // Lisp rounds seconds->ms at scheduling time.
+                    (
+                        (exec_s * 1000.0).round() as i64,
+                        (finish_s * 1000.0).round() as i64,
+                    )
+                };
                 let t = self.time_ms;
                 self.push(
                     t + self.cfg.init_ms,

@@ -203,6 +203,8 @@ pub enum Step {
     Sgp(String, sexpr::Sexp),
     /// `(reset)`.
     Reset,
+    /// `(buffer-chunk <name>...)`: the task driver's final buffer dump.
+    BufferChunk(Vec<String>),
 }
 
 /// Run a scripted sequence of steps over one or more model files (the
@@ -271,6 +273,7 @@ pub fn run_model_steps(
             Step::SetDetail(d) => eng.set_detail(*d),
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
+            Step::BufferChunk(buffers) => eng.print_buffer_chunk(buffers),
         }
     }
     Ok(eng.output())
