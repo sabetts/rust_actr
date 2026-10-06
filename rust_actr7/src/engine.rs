@@ -1202,6 +1202,9 @@ enum Event {
     },
     ClearBuffer {
         buffer: String,
+        /// Trace module: `PROCEDURAL` for production clears, `NONE` for a
+        /// scheduled `clear-buffer` (`buffers.lisp:1265`).
+        module: String,
     },
     ModBuffer {
         buffer: String,
@@ -1216,6 +1219,10 @@ enum Event {
         /// Slots whose request value was a variable (skipped by
         /// partial matching, which only scores constants).
         var_slots: Vec<String>,
+        /// Whether to print `MODULE-REQUEST <buffer>`: production requests do
+        /// (`schedule-module-request`, output medium), a task's
+        /// `module-request` does not.
+        trace: bool,
     },
     StartRetrieval {
         spec: NewChunk,
@@ -1668,6 +1675,14 @@ pub struct Engine {
     zz_breaks: Vec<String>,
     /// Set when the current run hit one of the `zz_breaks` productions.
     zz_break_hit: bool,
+    /// `associative-learning` driver: permuted people/places and the
+    /// `create-stims` lists (`al-fan-study.lisp:245`).
+    al_people: Vec<String>,
+    al_places: Vec<String>,
+    al_sentences: Vec<(String, String, i64, i64)>,
+    al_targets: Vec<(String, String, i64, i64)>,
+    al_foils: Vec<(String, String, i64, i64)>,
+    al_fillers: Vec<(String, String, i64, i64)>,
     imag_busy: bool,
     /// Temporal module: current tick interval (ms), tick count, the
     /// one-time start increment (ms), and a generation counter that cancels
@@ -1837,6 +1852,12 @@ impl Engine {
             zz_prepared: None,
             zz_breaks: Vec::new(),
             zz_break_hit: false,
+            al_people: Vec::new(),
+            al_places: Vec::new(),
+            al_sentences: Vec::new(),
+            al_targets: Vec::new(),
+            al_foils: Vec::new(),
+            al_fillers: Vec::new(),
             imag_busy: false,
             temporal_tick: 0.0,
             temporal_ticks: 0,
@@ -2675,6 +2696,200 @@ impl Engine {
         Ok(())
     }
 
+    // ------------------------------------------------ associative-learning
+
+    /// `associative-learning` task driver: `run-it`
+    /// (`test-models/associative-learning.lisp`) →
+    /// `(approach-1-results 1 .75 :prior-p .08 :prior-w 2.5 :show t)`.
+    ///
+    /// `create-stims` runs before `reset`, so it consumes the stream left by
+    /// the model's initial reset; `reset` re-applies the model's
+    /// `:starting-parameters (:seed (1 0) …)` (`central-parameters.lisp:131`),
+    /// so `initial-presentation` starts from a fresh `(1 0)` stream.
+    pub fn al_driver(&mut self) -> Result<(), EngineError> {
+        // The model's `define-model` reset applied the `:starting-parameters`
+        // seed, so `create-stims` starts from a fresh `(1 0)` stream.
+        self.rng.borrow_mut().set_seed(1, 0);
+        self.al_create_stims();
+        self.reset()?;
+        self.rng.borrow_mut().set_seed(1, 0);
+        // `(set-parameter-value …)`: :lf .75, :al-show t, :ol t, :al-prior-p
+        // .08, :al-prior-w 2.5 (A2).
+        self.al_create_initial_chunks();
+        self.al_initial_presentation()?;
+        // TODO(A1): drop-out ×2, time-to-retrieve-at-start, output table.
+        Ok(())
+    }
+
+    /// `permute-list` (`random.lisp:562`): each pick is consed onto the front,
+    /// so the result is the reverse of the pick order.
+    fn al_permute<T: Clone>(&mut self, items: &[T]) -> Vec<T> {
+        let mut temp: Vec<T> = items.to_vec();
+        let mut result: Vec<T> = Vec::new();
+        while !temp.is_empty() {
+            let i = self.rng.borrow_mut().random_int(temp.len() as u64) as usize;
+            let item = temp.remove(i);
+            result.insert(0, item);
+        }
+        result
+    }
+
+    /// `create-stims` (`al-fan-study.lisp:245`): permute people/places, build
+    /// the sentence/target/foil index lists, then the filler permutes (kept so
+    /// the RNG stream stays aligned even though the fillers are unused).
+    fn al_create_stims(&mut self) {
+        let people: Vec<String> = [
+            "hippie", "guard", "earl", "giant", "captain", "debutante", "fireman",
+            "lawyer", "wizard", "clerk", "writer", "doctor", "teacher", "boxer",
+            "queen", "singer",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        let places: Vec<String> = [
+            "beach", "castle", "dungeon", "forest", "park", "church", "cave", "bank",
+            "store", "tower", "lake", "stadium", "casino", "school", "diner", "office",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        self.al_people = self.al_permute(&people);
+        self.al_places = self.al_permute(&places);
+        let s_idx: [(usize, usize, i64, i64); 26] = [
+            (0, 0, 1, 1), (1, 1, 1, 1), (2, 2, 1, 1),
+            (3, 3, 2, 1), (4, 4, 2, 1), (5, 5, 2, 1),
+            (6, 6, 3, 1), (7, 7, 3, 1), (8, 8, 3, 1),
+            (9, 9, 1, 2), (10, 10, 1, 2), (11, 11, 1, 2),
+            (12, 12, 1, 3), (13, 13, 1, 3), (14, 14, 1, 3),
+            (4, 10, 2, 2), (15, 15, 2, 2),
+            (6, 9, 3, 2), (7, 15, 3, 2), (8, 11, 3, 2),
+            (3, 12, 2, 3), (15, 13, 2, 3), (5, 14, 2, 3),
+            (6, 12, 3, 3), (7, 13, 3, 3), (8, 14, 3, 3),
+        ];
+        let t_idx: [(usize, usize, i64, i64); 9] = [
+            (0, 0, 1, 1), (9, 9, 1, 2), (12, 12, 1, 3),
+            (3, 3, 2, 1), (4, 10, 2, 2), (15, 13, 2, 3),
+            (6, 6, 3, 1), (7, 15, 3, 2), (8, 14, 3, 3),
+        ];
+        let f_idx: [(usize, usize, i64, i64); 18] = [
+            (0, 3, 1, 1), (9, 10, 1, 2), (12, 13, 1, 3),
+            (3, 0, 2, 1), (4, 9, 2, 2), (15, 12, 2, 3),
+            (6, 0, 3, 1), (7, 9, 3, 2), (8, 12, 3, 3),
+            (0, 6, 1, 1), (9, 15, 1, 2), (12, 14, 1, 3),
+            (3, 6, 2, 1), (4, 15, 2, 2), (15, 14, 2, 3),
+            (6, 3, 3, 1), (7, 10, 3, 2), (8, 13, 3, 3),
+        ];
+        let build = |idx: &[(usize, usize, i64, i64)],
+                     people: &[String],
+                     places: &[String]| -> Vec<(String, String, i64, i64)> {
+            idx.iter()
+                .map(|(a, b, pf, lf)| (people[*a].clone(), places[*b].clone(), *pf, *lf))
+                .collect()
+        };
+        self.al_sentences = build(&s_idx, &self.al_people, &self.al_places);
+        self.al_targets = build(&t_idx, &self.al_people, &self.al_places);
+        self.al_foils = build(&f_idx, &self.al_people, &self.al_places);
+        self.al_fillers.clear();
+        for _ in 0..6 {
+            let op = self.al_permute(&[1usize, 2, 5, 10, 11, 13, 14]);
+            let pl = self.al_permute(&[1usize, 2, 4, 5, 7, 8, 11]);
+            for (x, y) in op.iter().zip(pl.iter()) {
+                self.al_fillers.push((
+                    self.al_people[*x].clone(),
+                    self.al_places[*y].clone(),
+                    -1,
+                    -1,
+                ));
+            }
+        }
+    }
+
+    /// `create-initial-chunks` (`al-fan-study.lisp:327`): a named `meaning`
+    /// chunk for each person/place plus `in`.
+    fn al_create_initial_chunks(&mut self) {
+        let words: Vec<String> = self
+            .al_people
+            .iter()
+            .chain(self.al_places.iter())
+            .cloned()
+            .chain(std::iter::once("in".to_string()))
+            .collect();
+        for w in &words {
+            self.al_add_meaning(w);
+        }
+    }
+
+    fn al_add_meaning(&mut self, word: &str) {
+        let name = word.to_uppercase();
+        if self.dm.iter().any(|c| c.name.as_deref() == Some(name.as_str())) {
+            return;
+        }
+        let inst = ChunkInst {
+            name: Some(name.clone()),
+            ctype: "MEANING".to_string(),
+            slots: vec![("WORD".to_string(), Value::Str(word.to_string()))],
+            bare: false,
+        };
+        self.dm.push(inst.clone());
+        self.hist.push(History {
+            creation_ms: 0,
+            refs: vec![0],
+            count: 1,
+            fixed_base: None,
+        });
+        self.named.insert(name.clone(), inst);
+        self.chunk_names.insert(name.clone());
+        *self.fan_out.entry(name).or_insert(0) += 1;
+    }
+
+    /// `initial-presentation` (`al-fan-study.lisp:338`): present a random
+    /// ordering of the study sentences, 10 s each.
+    fn al_initial_presentation(&mut self) -> Result<(), EngineError> {
+        let sentences = self.al_sentences.clone();
+        let presented = self.al_permute(&sentences);
+        for (person, place, _pf, _lf) in &presented {
+            self.al_imaginal_request(person, place);
+            // `(schedule-clear-buffer 'imaginal 1.5)`.
+            self.push(
+                self.time_ms + 1500,
+                Prio::Num(0),
+                Out::Low,
+                Event::ClearBuffer {
+                    buffer: "IMAGINAL".to_string(),
+                    module: "NONE".to_string(),
+                },
+            );
+            self.run_secs(10.0)?;
+        }
+        Ok(())
+    }
+
+    /// `(module-request 'imaginal (define-chunk-spec-fct …))` with the
+    /// `(relation in arg1 X arg2 Y)` spec.
+    fn al_imaginal_request(&mut self, arg1: &str, arg2: &str) {
+        let spec = NewChunk::Spec {
+            ctype: String::new(),
+            slots: vec![
+                ("RELATION".to_string(), Value::Sym("IN".to_string())),
+                ("ARG1".to_string(), Value::Sym(arg1.to_uppercase())),
+                ("ARG2".to_string(), Value::Sym(arg2.to_uppercase())),
+            ],
+            neg: Vec::new(),
+            rels: Vec::new(),
+            bare: true,
+        };
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::ModuleRequest {
+                buffer: "IMAGINAL".to_string(),
+                spec,
+                var_slots: Vec::new(),
+                trace: false,
+            },
+        );
+    }
+
     /// `(goal-focus-fct (car (define-chunks-fct '(...))))`: define a named
     /// chunk (`{CTYPE}{n}`) and focus it.
     fn zz_goal_focus(
@@ -3384,9 +3599,25 @@ impl Engine {
                 requested,
                 shown,
             } => {
-                let inst = self.instantiate(&buffer, chunk)?;
+                let mut inst = self.instantiate(&buffer, chunk)?;
+                // `set-buffer-chunk` on a buffer with `reuse?` nil (a
+                // `buffer-requires-copies` buffer) converts the spec with
+                // `define-chunks-fct` and so creates a fresh chunk auto-named
+                // `CHUNK{k}` (`buffers.lisp:1360`); the trace still prints the
+                // spec/chunk-def, so capture it before naming.
+                let text = shown.unwrap_or_else(|| inst.show());
+                if inst.name.is_none()
+                    && self
+                        .model
+                        .no_reuse_buffers
+                        .iter()
+                        .any(|b| b == &buffer)
+                {
+                    let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
+                    self.name_count.insert("CHUNK".to_string(), n + 1);
+                    inst.name = Some(format!("CHUNK{n}"));
+                }
                 if show {
-                    let text = shown.unwrap_or_else(|| inst.show());
                     let mut details = format!("SET-BUFFER-CHUNK {buffer} {text}");
                     if !requested {
                         details.push_str(" NIL");
@@ -3532,9 +3763,9 @@ impl Engine {
                 self.buffer_mut("GOAL").failed = false;
                 self.changed();
             }
-            Event::ClearBuffer { buffer } => {
+            Event::ClearBuffer { buffer, module } => {
                 if show {
-                    self.emit("PROCEDURAL", format!("CLEAR-BUFFER {buffer}"));
+                    self.emit(&module, format!("CLEAR-BUFFER {buffer}"));
                 }
                 let cleared = self.buffer_mut(&buffer).chunk.take();
                 if buffer == "GOAL" && self.cfg.threads {
@@ -3585,9 +3816,17 @@ impl Engine {
                 buffer,
                 spec,
                 var_slots,
+                trace,
             } => {
-                if show {
+                if show && trace {
                     self.emit("PROCEDURAL", format!("MODULE-REQUEST {buffer}"));
+                }
+                if !trace {
+                    // A task `module-request` dispatches straight to the
+                    // module (`request-module`, `modules.lisp:819`); it is not
+                    // a buffer change, so it must not wake conflict resolution
+                    // (the module's own set/clear does that).
+                    self.event_silent = true;
                 }
                 match buffer.as_str() {
                     "RETRIEVAL" => {
@@ -6285,6 +6524,7 @@ impl Engine {
                             buffer: buffer.clone(),
                             spec: concrete,
                             var_slots,
+                            trace: true,
                         },
                     );
                 }
@@ -6294,6 +6534,7 @@ impl Engine {
                         Out::Medium,
                         Event::ClearBuffer {
                             buffer: buffer.clone(),
+                            module: "PROCEDURAL".to_string(),
                         },
                     );
                 }
@@ -6316,6 +6557,7 @@ impl Engine {
                 Out::Medium,
                 Event::ClearBuffer {
                     buffer: buffer.clone(),
+                    module: "PROCEDURAL".to_string(),
                 },
             );
         }

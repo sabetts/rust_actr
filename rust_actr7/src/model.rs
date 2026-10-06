@@ -292,6 +292,10 @@ pub struct Model {
     /// re-evaluates the model body on `reset` (`model.lisp:983`), so
     /// `,*query*` picks up the current `defparameter` value.
     pub pfct: Vec<Vec<Sexp>>,
+    /// Model-body `(buffer-requires-copies '<buffer>)`: the named buffers do
+    /// not reuse a single chunk (`buffers.lisp:1920`); each request makes a
+    /// fresh chunk. Stored upper-cased.
+    pub no_reuse_buffers: Vec<String>,
 }
 
 impl Model {
@@ -891,6 +895,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
         buffer_decls: Vec::new(),
         visloc_default: Vec::new(),
         pfct: Vec::new(),
+        no_reuse_buffers: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -1117,6 +1122,15 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
             // `(install-device ...)`: task device setup (the spec's device
             // sidecar models the observable effects).
             "INSTALL-DEVICE" => {}
+            // `(buffer-requires-copies 'buffer)`: the named buffer will not
+            // reuse a single chunk (`buffers.lisp:1920`). Recorded so the
+            // imaginal/associative-learning source buffers create a fresh
+            // chunk per request.
+            "BUFFER-REQUIRES-COPIES" => {
+                if let Some(b) = items.get(1).and_then(|x| x.as_sym()) {
+                    model.no_reuse_buffers.push(b.to_uppercase());
+                }
+            }
             got => return structural(format!("unknown model body form: {got}")),
         }
     }

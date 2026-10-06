@@ -275,6 +275,7 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 steps.push(Step::TrackerSetup(slots));
             }
             ":ZZ-DRIVER" => steps.push(Step::ZzDriver),
+            ":AL-DRIVER" => steps.push(Step::AlDriver),
             ":MODIFY-VISICON" => {
                 let at = v.get(1).and_then(as_i64);
                 let name = v.get(2).and_then(|x| x.as_sym()).map(str::to_string);
@@ -437,7 +438,7 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
     if !spec
         .steps
         .iter()
-        .any(|s| matches!(s, Step::Run { .. } | Step::ZzDriver))
+        .any(|s| matches!(s, Step::Run { .. } | Step::ZzDriver | Step::AlDriver))
     {
         return Some("no run step".into());
     }

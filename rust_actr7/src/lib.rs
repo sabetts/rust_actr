@@ -219,6 +219,8 @@ pub enum Step {
     TrackerSetup(Vec<(String, sexpr::Sexp)>),
     /// `zz-extended-motor-actions` task driver (`run-test`/`testN`).
     ZzDriver,
+    /// `associative-learning` task driver (`run-it`/`approach-1-results`).
+    AlDriver,
     /// `(modify-visicon-features ...)` at an absolute time.
     ModifyVisicon {
         at_ms: i64,
@@ -302,6 +304,7 @@ pub fn run_model_steps(
             Step::AddVisicon(slots) => eng.add_visicon(slots),
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
+            Step::AlDriver => eng.al_driver()?,
             Step::ModifyVisicon {
                 at_ms,
                 name,

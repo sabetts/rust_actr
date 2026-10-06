@@ -1809,6 +1809,43 @@ the same deferred-output ordering as GOTCHA #141.
 `zz-extended-motor-actions` spec (3568 lines) passes and is now in
 `enabled.txt`.
 
+## 144. `associative-learning`: the ref *is* reproducible — `:starting-parameters`
+
+The spec records seed `(100 0)`, but that is `extract-specs.lisp`'s
+**canonical stand-in** for a run whose effective seed did not match a literal
+`:seed` in the sources (`canon-runs`); it assumes such a run is RNG-independent.
+This test is not: `run-it` → `approach-1-results` calls `create-stims`, whose
+`permute-list`s fix every stimulus. The real seed is `(1 0)`, from the stub's
+
+```lisp
+(ssp :starting-parameters (:seed (1 0) :model-warnings nil :testing-function set-testing-traces))
+```
+
+`:starting-parameters` **is** a valid system parameter
+(`central-parameters.lisp:131`), and its reset handler re-applies the stored
+params (`(sgp-fct *user-default-parameter-list*)`, `:143`) — so `:seed (1 0)`
+is set on **every** model reset. That is the crux: `approach-1-results` runs
+`(create-stims)` *before* `(reset)`, so `create-stims` consumes the stream left
+by the model's `define-model` reset, then `reset` **reseeds** to `(1 0)` and
+`initial-presentation` starts a fresh `(1 0)` stream. Both halves matter: the
+people/places permutation comes from the pre-reset stream and the sentence
+permutation from the post-reset one. `permute-list` (`random.lisp:562`) conses
+each pick onto the front, so the result is the *reverse* of the pick order.
+
+`(buffer-requires-copies 'imaginal)` (`al-fan-study.lisp:201`) turns off the
+imaginal buffer's reuse flag, so each `set-buffer-chunk` spec is converted with
+`define-chunks-fct` and gets a fresh auto-named `CHUNK{k}`
+(`buffers.lisp:1360`) — hence `CHUNK0…CHUNK25` — while the trace still prints
+the spec/chunk-def (`buffers.lisp:1432`).
+
+A task-level `module-request` dispatches straight to the module
+(`request-module`, `modules.lisp:819`): no `MODULE-REQUEST` trace line and no
+conflict-resolution arming (the module's later set/clear does that). Only a
+production's request goes through `schedule-module-request` and traces.
+
+A0 is byte-exact through line 131 (the 26-sentence initial presentation);
+`drop-out`/`time-to-retrieve` remain (A1–A4).
+
 
 
 
