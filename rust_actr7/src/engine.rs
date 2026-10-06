@@ -3894,6 +3894,18 @@ impl Engine {
                 } else {
                     (Vec::new(), Vec::new())
                 };
+                let reason = indirect_safe_bind_reason(&self.model.productions[p1_idx], &retain1)
+                    .or_else(|| {
+                        indirect_safe_bind_reason(&self.model.productions[idx], &retain2)
+                    });
+                if let Some(reason) = reason {
+                    if trace {
+                        self.out(format!(
+                            "  Production {p1name} and {p2name} cannot be composed"
+                        ));
+                        self.out(format!("   because {reason}"));
+                    }
+                } else {
                 let (lhs, rhs, dropped) = self.compose_pair(
                     p1_idx,
                     &p1_bindings,
@@ -3928,6 +3940,7 @@ impl Engine {
                 }
                 self.install_compiled(&cname, &lhs, &rhs);
                 self.compiled_count += 1;
+                }
             }
         } else if trace {
             self.out("  No previous production to compose with.".to_string());
@@ -4027,8 +4040,11 @@ impl Engine {
             }
             s
         };
-        let indirect_vars1 = collect(&p1_acts, retain1);
-        let indirect_vars2 = collect(&p2_acts, retain2);
+        let indirect_vars = {
+            let mut s = collect(&p1_acts, retain1);
+            s.extend(collect(&p2_acts, retain2));
+            s
+        };
         // A variable not unified across the pair, but resolved by an
         // indirect action, is instantiated from the firing bindings.
         let subst = |v: &SlotVal, b: &Bindings, ivars: &HashSet<String>| -> SlotVal {
@@ -4069,8 +4085,8 @@ impl Engine {
                 })
                 .collect::<Vec<_>>()
         };
-        let p1_lhs = apply_lhs(&p1_lhs, b1, &indirect_vars1);
-        let p2_lhs = apply_lhs(&p2_lhs, b2, &indirect_vars2);
+        let p1_lhs = apply_lhs(&p1_lhs, b1, &indirect_vars);
+        let p2_lhs = apply_lhs(&p2_lhs, b2, &indirect_vars);
         let inst_acts = |acts: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
                          b: &Bindings,
                          ivars: &HashSet<String>| {
@@ -4088,8 +4104,8 @@ impl Engine {
                 })
                 .collect::<Vec<_>>()
         };
-        let p1_acts = inst_acts(&p1_acts, b1, &indirect_vars1);
-        let p2_acts = inst_acts(&p2_acts, b2, &indirect_vars2);
+        let p1_acts = inst_acts(&p1_acts, b1, &indirect_vars);
+        let p2_acts = inst_acts(&p2_acts, b2, &indirect_vars);
 
         let mut buffers: Vec<String> = Vec::new();
         let add_buf = |buffers: &mut Vec<String>, b: &str| {
@@ -4098,7 +4114,7 @@ impl Engine {
             }
         };
         for (b, _) in p1_lhs.iter().chain(&p2_lhs) {
-            if !b.starts_with('?') {
+            if !b.starts_with('?') && !b.starts_with('!') {
                 add_buf(&mut buffers, b);
             }
         }
@@ -4164,6 +4180,18 @@ impl Engine {
                 lhs.push((b.clone(), remove_dup_keep_last(s.clone())));
             }
         }
+        // `!bind!`/`!safe-bind!` conditions are prepended
+        // (`post-conditions`, production-compilation.lisp:1742).
+        let mut binds: Vec<(String, Vec<(String, SlotVal)>)> = Vec::new();
+        for (b, s) in p1_lhs.iter().chain(&p2_lhs) {
+            if b.starts_with('!') {
+                binds.push((b.clone(), s.clone()));
+            }
+        }
+        if !binds.is_empty() {
+            binds.extend(lhs);
+            lhs = binds;
+        }
 
         let mut rhs: Vec<(String, Vec<(String, String)>)> = Vec::new();
         let mut dropped: Vec<String> = Vec::new();
@@ -4210,6 +4238,9 @@ impl Engine {
             // p1 requests: kept unless p2 tests the buffer; an indirect
             // request (`+retrieval> =c`) expands to the referenced chunk's
             // spec.
+            let p2_reqs_buf = p2_acts
+                .iter()
+                .any(|(op, bb, _, _)| bb == buf && (*op == '+' || *op == 'r'));
             for (s, var) in acts_for(&p1_acts, buf, &['+', 'r']) {
                 if p2_tests {
                     if reqs1.iter().any(|(bb, _)| bb == buf) {
@@ -4229,11 +4260,20 @@ impl Engine {
                             dropped.push(n);
                         }
                     }
+                } else if p2_reqs_buf {
+                    // Both productions request the buffer; p1's request is
+                    // superseded by p2's (no dropped-chunk note).
                 } else if retain1.contains(buf) {
                     // `:rir`: keep the indirect retrieval request as its
-                    // variable (`+RETRIEVAL> =C`).
+                    // variable (`+RETRIEVAL> =C`), or its instantiated value
+                    // when the variable is also being resolved.
                     if let Some(v) = &var {
-                        rhs.push((format!("+{buf}> ={v}"), Vec::new()));
+                        let shown = if indirect_vars.contains(v) && b1.contains_key(v) {
+                            b1[v].show()
+                        } else {
+                            format!("={v}")
+                        };
+                        rhs.push((format!("+{buf}> {shown}"), Vec::new()));
                     }
                 } else {
                     let slots = match &var {
@@ -4250,7 +4290,12 @@ impl Engine {
             for (s, var) in acts_for(&p2_acts, buf, &['+', 'r']) {
                 if retain2.contains(buf) {
                     if let Some(v) = &var {
-                        rhs.push((format!("+{buf}> ={v}"), Vec::new()));
+                        let shown = if indirect_vars.contains(v) && b2.contains_key(v) {
+                            b2[v].show()
+                        } else {
+                            format!("={v}")
+                        };
+                        rhs.push((format!("+{buf}> {shown}"), Vec::new()));
                         continue;
                     }
                 }
@@ -5351,6 +5396,13 @@ fn prod_lhs_slots(p: &Production, _b: &Bindings) -> Vec<(String, Vec<(String, Sl
                 .collect();
             slots.sort_by(|a, b| a.0.cmp(&b.0));
             out.push((buffer.clone(), slots));
+        } else if let LhsItem::Bind { var, value, safe } = item {
+            // A `!safe-bind!`/`!bind!` condition joins the composed LHS.
+            let token = if *safe { "!SAFE-BIND!" } else { "!BIND!" };
+            out.push((
+                token.to_string(),
+                vec![(format!("={var}"), SlotVal::Lit(sexp_lisp(value)))],
+            ));
         } else if let LhsItem::Query { buffer, queries } = item {
             // State/failure queries (`?imaginal> state free`).
             let mut slots: Vec<(String, SlotVal)> = queries
@@ -5493,6 +5545,14 @@ fn render_compiled(
 ) -> String {
     let mut s = format!("(P {name}\n  \"{doc}\"\n");
     for (token, slots) in lhs {
+        if token.starts_with('!') {
+            let args: Vec<String> = slots
+                .iter()
+                .map(|(n, v)| format!("{n} {}", v.render()))
+                .collect();
+            s.push_str(&format!("   {token} {}\n", args.join(" ")));
+            continue;
+        }
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {
             s.push_str(&format!("       {n} {}\n", v.render()));
@@ -5612,6 +5672,43 @@ fn compute_retain_buffers(p1: &Production, p2: &Production) -> (Vec<String>, Vec
         }
     }
     (retain1, retain2)
+}
+
+/// Render a raw `Sexp` the way Lisp prints it (for `!bind!` definitions).
+fn sexp_lisp(e: &Sexp) -> String {
+    match e {
+        Sexp::Sym(s) => s.clone(),
+        Sexp::Str(s) => format!("{s:?}"),
+        Sexp::Int(i) => i.to_string(),
+        Sexp::Float(x) => lisp_s_f32(*x as f32),
+        Sexp::List(v) => format!(
+            "({})",
+            v.iter().map(sexp_lisp).collect::<Vec<_>>().join(" ")
+        ),
+    }
+}
+
+/// `produce-composition-representation`'s early return
+/// (`production-compilation.lisp:2258`): a non-retained indirect request
+/// whose variable is bound by a LHS `!safe-bind!` blocks composition.
+fn indirect_safe_bind_reason(p: &Production, retain: &[String]) -> Option<String> {
+    let bind_vars = production_bind_vars(p);
+    for a in &p.rhs {
+        if let RhsAction::Request {
+            buffer,
+            spec: ChunkDesc::Named(n),
+        } = a
+        {
+            if let Some(v) = n.strip_prefix('=') {
+                if !retain.contains(buffer) && bind_vars.contains(&v.to_uppercase()) {
+                    return Some(format!(
+                        "an indirect request with buffer {buffer} uses a variable from a LHS !safe-bind!"
+                    ));
+                }
+            }
+        }
+    }
+    None
 }
 
 /// True for a buffer name (an RHS `=BUFFER` reference rather than a slot

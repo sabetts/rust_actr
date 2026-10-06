@@ -41,7 +41,7 @@
 //!   (`actr7.x/test-models/`) is integrated as a second oracle:
 //!   `golden/regen-specs.sh` extracts runner specs, `tests/test_models.rs`
 //!   diffs engine output against `.ref` with ACT-R's comparator, and
-//!   `golden/test-models/enabled.txt` is the green allowlist (36 specs so
+//!   `golden/test-models/enabled.txt` is the green allowlist (37 specs so
 //!   far). This milestone added per-spec trace module width
 //!   (`max-module-name-length` overrides), integer-vs-float slot printing,
 //!   and a scripted driver (`run_model_steps`: repeated `run`, `goal-focus`,
@@ -101,6 +101,11 @@
 //!   `(spp :at S)` action-time overrides made `test-temporal` green.
 //!   `:randomize-time` (`:vpft`/`:vidt`) jitter for production, vision,
 //!   imaginal and motor latencies made `demo2-randomized` green.
+//!   The full `:cia`/`:rir` production-compilation engine (composed
+//!   productions instantiate indirect-action variables, expand indirect
+//!   requests to chunk specs, retain indirect retrievals under `:rir`, and
+//!   handle `!bind!` composition conditions) made
+//!   `retain-indirect-retrievals` green across all three runs.
 //!   Remaining: task-supplied commands
 //!   (`grouped`), production validation (`test-bad-productions`, blocked
 //!   by cross-test warning state), `!eval!` timing (`dynamic-real-time`),

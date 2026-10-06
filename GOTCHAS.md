@@ -1356,3 +1356,25 @@ Still open (PRODUCTION4-7 + the I&J "cannot be composed" reason):
   message ("an indirect request with buffer RETRIEVAL uses a variable from
   a LHS !safe-bind!").
 `retain` stays disabled.
+
+## 126. M3 (`:rir`) complete: run 3 matches, `retain` green
+
+The tail of run 3 needed four more rules:
+- **Substitute the union of indirect vars globally.**  The same variable on
+  both sides (E's and F's `=c`) is resolved once, and ACT-R re-substitutes
+  it across the whole composed rep.  Combined with **`remove-duplicates`
+  keeping the *last* occurrence**, this is what turns `[COLOR =C, VALUE 5] +
+  [COLOR =C]` into `[VALUE 5, COLOR RED]` — explaining why PRODUCTION4's
+  goal slots are value-first while PRODUCTION0's are color-first.
+- A **retained request renders its instantiated value** (`+RETRIEVAL> RED`)
+  when its variable is also resolved elsewhere, otherwise `=var`.
+- When **both productions request a buffer**, p1's request is superseded by
+  p2's without a dropped-chunk note (`"H & I"`, not `"H & I - G"`).
+- **LHS `!bind!`/`!safe-bind!` conditions join the composed LHS**, prepended
+  and printed one line (`!SAFE-BIND! =R (QUOTE RED)`); and a non-retained
+  indirect request whose variable is a LHS safe-bind blocks composition with
+  `an indirect request with buffer RETRIEVAL uses a variable from a LHS
+  !safe-bind!`.
+
+`retain-indirect-retrievals` is now byte-exact across all three runs —
+**37 specs** enabled.
