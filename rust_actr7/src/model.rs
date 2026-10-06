@@ -795,8 +795,45 @@ fn car_define_chunks(
     Ok(Some(first))
 }
 
-fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
-    let body = match form {
+/// Substitute backquote-comma symbols (`,*VAR*`) with model-file
+/// `defparameter` values (unwrapping a leading `QUOTE`).
+fn substitute_commas(list: &[Sexp], defs: &std::collections::HashMap<String, Sexp>) -> Vec<Sexp> {
+    list.iter().map(|e| subst_commas(e, defs)).collect()
+}
+
+fn subst_commas(e: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Sexp {
+    match e {
+        Sexp::Sym(s) if s.starts_with(',') => {
+            let name = s.trim_start_matches(',').to_uppercase();
+            match defs.get(&name) {
+                Some(Sexp::List(v)) if v.first().and_then(|x| x.as_sym()) == Some("QUOTE") => {
+                    v.get(1).cloned().unwrap_or(Sexp::Sym("NIL".to_string()))
+                }
+                Some(v) => v.clone(),
+                None => Sexp::Sym("NIL".to_string()),
+            }
+        }
+        Sexp::List(v) => Sexp::List(v.iter().map(|x| subst_commas(x, defs)).collect()),
+        other => other.clone(),
+    }
+}
+
+/// Substitute a bare symbol that names a model-file `defparameter`
+/// (`sgp-fct`'s `(list :k *var* ...)`).
+fn subst_bare(e: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Sexp {
+    match e {
+        Sexp::Sym(s) => match defs.get(&s.to_uppercase()) {
+            Some(Sexp::List(v)) if v.first().and_then(|x| x.as_sym()) == Some("QUOTE") => {
+                v.get(1).cloned().unwrap_or(Sexp::Sym("NIL".to_string()))
+            }
+            Some(v) => v.clone(),
+            None => e.clone(),
+        },
+        other => other.clone(),
+    }
+}
+
+fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Result<Model, LoadError> {    let body = match form {
         Sexp::List(items) => match items.as_slice() {
             [Sexp::Sym(h), Sexp::Sym(name), rest @ ..] if h == "DEFINE-MODEL" => {
                 (name.clone(), rest)
@@ -846,6 +883,23 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                         got => return structural(format!("sgp key must be a symbol: {got:?}")),
                     };
                     model.params.push((key, kv[1].clone()));
+                }
+            }
+            // `(sgp-fct (list :key value ...))`: same as `sgp`.
+            "SGP-FCT" => {
+                if let Some(Sexp::List(args)) = items.get(1) {
+                    if args.first().and_then(|x| x.as_sym()) == Some("LIST") {
+                        let rest = &args[1..];
+                        let mut i = 0;
+                        while i + 1 < rest.len() {
+                            if let Some(k) = rest[i].as_sym() {
+                                model
+                                    .params
+                                    .push((k.to_string(), subst_bare(&rest[i + 1], defs)));
+                            }
+                            i += 2;
+                        }
+                    }
                 }
             }
             "CHUNK-TYPE" => model.chunk_types.push(parse_chunk_type(f)?),
@@ -1014,6 +1068,21 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                     .push(((at * 1000.0).round() as i64, command, params));
             }
             "P" => model.productions.push(parse_production(f)?),
+            // `(p-fct \`(name ... ,*var* ...))`: a backquoted production with
+            // model-file `defparameter` substitutions.
+            "P-FCT" => {
+                if let Some(Sexp::List(list)) = items.get(2) {
+                    let sub = substitute_commas(list, defs);
+                    let mut form = vec![Sexp::Sym("P".to_string())];
+                    form.extend(sub);
+                    model
+                        .productions
+                        .push(parse_production(&Sexp::List(form))?);
+                }
+            }
+            // `(install-device ...)`: task device setup (the spec's device
+            // sidecar models the observable effects).
+            "INSTALL-DEVICE" => {}
             got => return structural(format!("unknown model body form: {got}")),
         }
     }
@@ -1059,6 +1128,7 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
     let src = fs::read_to_string(path).map_err(LoadError::Io)?;
     let mut models = Vec::new();
     let mut required_extras: Vec<String> = Vec::new();
+    let mut defs: std::collections::HashMap<String, Sexp> = std::collections::HashMap::new();
     for form in parse_all(&src)? {
         match &form {
             Sexp::List(items) => match items.first() {
@@ -1070,7 +1140,9 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
                         required_extras.push(n.clone());
                     }
                 }
-                Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => models.push(parse_model(&form)?),
+                Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => {
+                    models.push(parse_model(&form, &defs)?)
+                }
                 // Task-file data alongside a model (`defun`/`defvar`/...):
                 // skipped, not treated as a model form.
                 Some(Sexp::Sym(h))
@@ -1083,7 +1155,20 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
                             | "DEFMACRO"
                             | "DEFMETHOD"
                             | "ADD-ACT-R-COMMAND"
-                    ) => {}
+                    ) =>
+                {
+                    // Model-file `defparameter`/`defvar` values feed `p-fct`
+                    // backquote substitutions.
+                    if matches!(h.as_str(), "DEFPARAMETER" | "DEFVAR") {
+                        if let Some(Sexp::Sym(n)) = items.get(1) {
+                            let v = items
+                                .get(2)
+                                .cloned()
+                                .unwrap_or(Sexp::Sym("NIL".to_string()));
+                            defs.insert(n.to_uppercase(), v);
+                        }
+                    }
+                }
                 got => return structural(format!("unexpected top-level form: {got:?}")),
             },
             got => return structural(format!("unexpected top-level form: {got:?}")),

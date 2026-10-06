@@ -613,6 +613,17 @@ impl Config {
                 "LOW" => Detail::Low,
                 got => return Err(bad(format!("bad :trace-detail {got}"))),
             },
+            // `(quote high)` from `sgp-fct` with `'high`.
+            Some((_, Sexp::List(v)))
+                if v.len() == 2 && v[0].as_sym() == Some("QUOTE") =>
+            {
+                match v[1].as_sym() {
+                    Some("HIGH") => Detail::High,
+                    Some("MEDIUM") => Detail::Medium,
+                    Some("LOW") => Detail::Low,
+                    got => return Err(bad(format!("bad :trace-detail {got:?}"))),
+                }
+            }
             Some((_, got)) => return Err(bad(format!("bad :trace-detail {got:?}"))),
         };
         // `:lf` is stored as integer ms: (round (* x 1000)).
