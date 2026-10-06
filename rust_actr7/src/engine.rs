@@ -1339,6 +1339,9 @@ pub struct Engine {
     man_exec: [bool; 2],
     /// extended-motor-actions: movements waiting for an execution stage.
     man_exec_queue: Vec<ZzPending>,
+    /// extended-motor-actions: recorded `(kind, time_ms, key)` for the
+    /// `display-data` summary (`:pressed`/`:released`/…).
+    zz_data: Vec<(String, i64, String)>,
     /// extended-motor-actions: the last movement's `(style, hand)` for the
     /// `style X hand Y` event details.
     zz_last_style: Option<(String, String)>,
@@ -1484,6 +1487,7 @@ impl Engine {
             man_proc: [false, false],
             man_exec: [false, false],
             man_exec_queue: Vec::new(),
+            zz_data: Vec::new(),
             zz_last_style: None,
             imag_busy: false,
             temporal_tick: 0.0,
@@ -2169,6 +2173,72 @@ impl Engine {
         Ok(())
     }
 
+    /// `summarize-tests`/`display-data` (`test-model.lisp:84`): print one
+    /// `#####` block per recorded `:test` marker.
+    fn zz_summarize(&mut self) {
+        let data = std::mem::take(&mut self.zz_data);
+        let mut i = 0;
+        while i < data.len() {
+            if data[i].0 == "TEST" {
+                let details = data[i].2.clone();
+                let mut j = i + 1;
+                while j < data.len() && data[j].0 != "TEST" {
+                    j += 1;
+                }
+                let events: Vec<(String, i64, String)> = data[i + 1..j].to_vec();
+                self.zz_display_data(&details, &events);
+                i = j;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// `display-data` (`test-model.lisp:91`): the `#####` summary block.
+    fn zz_display_data(&mut self, details: &str, events: &[(String, i64, String)]) {
+        self.out_lines.push("#####".to_string());
+        self.out_lines.push(format!("\"{details}\""));
+        self.out_lines.push("#####".to_string());
+        for action in ["PRESSED", "RELEASED", "CLICKED", "UNCLICKED"] {
+            let mut line = format!(" {action}:");
+            let mut last: Option<i64> = None;
+            let entries: Vec<(i64, String)> = events
+                .iter()
+                .filter(|(k, _, _)| k == action)
+                .map(|(_, t, key)| (*t, key.clone()))
+                .collect();
+            for (t, key) in entries {
+                let delta = last.map(|l| (t - l) as f64 / 1000.0);
+                line.push_str(&format!(
+                    "\n   {:>7.3} {:?}        {}",
+                    t as f64 / 1000.0,
+                    key,
+                    delta.map(|d| format!("({d:.3})")).unwrap_or_default()
+                ));
+                last = Some(t);
+            }
+            self.out_lines.push(line);
+        }
+        self.out_lines.push(" Held:".to_string());
+        let presses: Vec<(i64, String)> = events
+            .iter()
+            .filter(|(k, _, _)| k == "PRESSED")
+            .map(|(_, t, key)| (*t, key.clone()))
+            .collect();
+        for (t, key) in presses {
+            let release = events
+                .iter()
+                .find(|(k, t2, k2)| k == "RELEASED" && k2 == &key && *t2 >= t);
+            let held = release.map(|(_, t2, _)| (*t2 - t) as f64 / 1000.0);
+            self.out_lines.push(format!(
+                "  {:?}        {}",
+                key,
+                held.map(|h| format!("{h:.3}")).unwrap_or_default()
+            ));
+        }
+        self.out_lines.push(" Clicked:".to_string());
+    }
+
     /// `zz-extended-motor-actions` task driver (`test-model.lisp:65`):
     /// reproduce `run-test`/`testN` (the extractor only records the
     /// `run`/`reset` calls).
@@ -2213,11 +2283,20 @@ impl Engine {
                         };
                         self.named.insert(name.clone(), inst);
                         self.goal_focus(&ChunkDesc::Named(name))?;
+                        let d = format!(
+                            "{} hand {} processors {} executions query {}",
+                            hand.to_uppercase(),
+                            if processors { 2 } else { 1 },
+                            if executions { 2 } else { 1 },
+                            query.to_uppercase()
+                        );
+                        self.zz_data.push(("TEST".to_string(), 0, d));
                         self.run_secs(10.0)?;
                     }
                 }
             }
         }
+        self.zz_summarize();
         Ok(())
     }
 
@@ -3471,6 +3550,8 @@ impl Engine {
                     );
                 }
                 if self.cfg.zz_ext {
+                    self.zz_data
+                        .push(("PRESSED".to_string(), self.time_ms, key.clone()));
                     // `keyboard-with-release` (`motor-extension.lisp:612`):
                     // a `release-key` signal `key-release-time` later.
                     self.push(
@@ -3508,6 +3589,10 @@ impl Engine {
                         "KEYBOARD",
                         format!("release-key {} {}", self.model.name, key.to_lowercase()),
                     );
+                }
+                if self.cfg.zz_ext {
+                    self.zz_data
+                        .push(("RELEASED".to_string(), self.time_ms, key.clone()));
                 }
             }
             Event::FinishMovement {
