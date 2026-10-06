@@ -3723,11 +3723,14 @@ impl Engine {
                         output: cmd != "MOVE-TO-KEY",
                     },
                 });
-                // Move the hand/finger to the key (the *next* location).
+                // `move-a-finger` (`motor.lisp:712`) shifts the finger's
+                // *offset*; the hand loc is unchanged (only `move-hand` moves
+                // it). The next same/move test reads `hand-loc + finger-offset`
+                // (`motor-extension.lisp:2120`).
                 if let Some(kl) = key_xy(&key) {
-                    let off = self.zz_hands[hand].offsets[finger];
                     if style != "RELEASE" {
-                        self.zz_hands[hand].loc = (kl.0 - off.0, kl.1 - off.1);
+                        let (hx, hy) = self.zz_hands[hand].loc;
+                        self.zz_hands[hand].offsets[finger] = (kl.0 - hx, kl.1 - hy);
                     }
                 }
                 self.zz_maybe_execute();

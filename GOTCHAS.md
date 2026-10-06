@@ -1577,3 +1577,25 @@ base motor module doesn't provide:
 `zz` test3 is byte-exact through line 2016 (test1 + test2 + test3); tests
 4–9 (M4–M8) remain.
 
+## 135. `zz` test4: `move-a-finger` shifts the finger offset, not the hand
+
+`hit-key` (`motor-extension.lisp:2153`) is `extended-finger-keyboard` with
+`move-loc-action peck`; the same/move decision (`:2121`) compares
+`key->loc` against `finger-loc-m … :current nil`, which is
+`hand-pos-loc + finger-offset`. The two movement primitives differ:
+`move-hand` (`motor.lisp:763`) changes `hand-pos-loc`, while `move-finger`
+(`:712`) changes the **finger's offset** via `polar-move-xy` and leaves the
+hand loc alone. Writing the hand loc (`loc = key - offset`) drags the whole
+hand: after `hit-key i` (right middle, `(8,3)`) the right hand would sit at
+`(7,3)`, so `hit-key n` (right index) computes `r = √5 = 2.236` instead of the
+oracle's `√2 = 1.414`. The fix is `offsets[finger] = key_loc - hand.loc`,
+applied at preparation-complete (the base `update-prepared` sets the
+`next-loc` there, so the following request sees it). `RELEASE` is excluded
+(it doesn't move a finger).
+
+With hand locs pinned at left `(4,4)`/right `(7,4)` and only offsets moving,
+test4's five hit-keys fall out exactly: `t` `r=√2`, `r` `r=1.0`, `i` `r=1.0`,
+`f` `r=1.0`, `n` `r=√2` (the `√2` cases strike in 82 ms, the `1.0` cases in
+77 ms). `zz` test4 is byte-exact through line 2120 (hit-key run).
+
+
