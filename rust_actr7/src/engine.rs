@@ -3886,8 +3886,23 @@ impl Engine {
                     ));
                 }
             } else {
-                let (lhs, rhs, dropped) =
-                    self.compose_pair(p1_idx, &p1_bindings, &p1_reqs, idx, bindings);
+                let (retain1, retain2) = if self.cfg.cia && self.cfg.rir {
+                    compute_retain_buffers(
+                        &self.model.productions[p1_idx],
+                        &self.model.productions[idx],
+                    )
+                } else {
+                    (Vec::new(), Vec::new())
+                };
+                let (lhs, rhs, dropped) = self.compose_pair(
+                    p1_idx,
+                    &p1_bindings,
+                    &p1_reqs,
+                    idx,
+                    bindings,
+                    &retain1,
+                    &retain2,
+                );
                 let cname = format!("PRODUCTION{}", self.compiled_count);
                 if trace {
                     self.out(format!(
@@ -3950,6 +3965,8 @@ impl Engine {
         reqs1: &[(String, String)],
         i2: usize,
         b2: &Bindings,
+        retain1: &[String],
+        retain2: &[String],
     ) -> (
         Vec<(String, Vec<(String, SlotVal)>)>,
         Vec<(String, Vec<(String, String)>)>,
@@ -3994,25 +4011,30 @@ impl Engine {
         // Only variables referenced by an *indirect* request (`+buffer> =c`,
         // not `+goal> =retrieval`) are resolved from the firings; other
         // variables stay symbolic (compiled productions are not otherwise
-        // specialized — cf. `ppm-compilation`).
-        let mut indirect_vars: HashSet<String> = HashSet::new();
-        for acts in [&p1_acts, &p2_acts] {
-            for (op, _buf, _slots, var) in acts {
+        // specialized — cf. `ppm-compilation`). With `:rir`, a retained
+        // retrieval request keeps its variable.
+        let collect = |acts: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
+                       retain: &[String]| {
+            let mut s: HashSet<String> = HashSet::new();
+            for (op, buf, _slots, var) in acts {
                 if *op == 'r' {
                     if let Some(v) = var {
-                        if !is_buffer_name(v) {
-                            indirect_vars.insert(v.clone());
+                        if !is_buffer_name(v) && !retain.contains(buf) {
+                            s.insert(v.clone());
                         }
                     }
                 }
             }
-        }
+            s
+        };
+        let indirect_vars1 = collect(&p1_acts, retain1);
+        let indirect_vars2 = collect(&p2_acts, retain2);
         // A variable not unified across the pair, but resolved by an
         // indirect action, is instantiated from the firing bindings.
-        let subst = |v: &SlotVal, b: &Bindings| -> SlotVal {
+        let subst = |v: &SlotVal, b: &Bindings, ivars: &HashSet<String>| -> SlotVal {
             match v {
                 SlotVal::Var(n) => {
-                    if indirect_vars.contains(n) && b.contains_key(n) {
+                    if ivars.contains(n) && b.contains_key(n) {
                         SlotVal::Lit(b[n].show())
                     } else if let Some(m) = map.get(n) {
                         m.clone()
@@ -4033,22 +4055,25 @@ impl Engine {
                 SlotVal::Lit(s) => SlotVal::Lit(s.clone()),
             }
         };
-        let apply_lhs = |lhs: &[(String, Vec<(String, SlotVal)>)], b: &Bindings| {
+        let apply_lhs = |lhs: &[(String, Vec<(String, SlotVal)>)],
+                         b: &Bindings,
+                         ivars: &HashSet<String>| {
             lhs.iter()
                 .map(|(buf, s)| {
                     (
                         buf.clone(),
                         s.iter()
-                            .map(|(n, v)| (n.clone(), subst(v, b)))
+                            .map(|(n, v)| (n.clone(), subst(v, b, ivars)))
                             .collect::<Vec<_>>(),
                     )
                 })
                 .collect::<Vec<_>>()
         };
-        let p1_lhs = apply_lhs(&p1_lhs, b1);
-        let p2_lhs = apply_lhs(&p2_lhs, b2);
+        let p1_lhs = apply_lhs(&p1_lhs, b1, &indirect_vars1);
+        let p2_lhs = apply_lhs(&p2_lhs, b2, &indirect_vars2);
         let inst_acts = |acts: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
-                         b: &Bindings| {
+                         b: &Bindings,
+                         ivars: &HashSet<String>| {
             acts.iter()
                 .map(|(op, buf, slots, var)| {
                     (
@@ -4056,15 +4081,15 @@ impl Engine {
                         buf.clone(),
                         slots
                             .iter()
-                            .map(|(n, v)| (n.clone(), subst(v, b)))
+                            .map(|(n, v)| (n.clone(), subst(v, b, ivars)))
                             .collect::<Vec<_>>(),
                         var.clone(),
                     )
                 })
                 .collect::<Vec<_>>()
         };
-        let p1_acts = inst_acts(&p1_acts, b1);
-        let p2_acts = inst_acts(&p2_acts, b2);
+        let p1_acts = inst_acts(&p1_acts, b1, &indirect_vars1);
+        let p2_acts = inst_acts(&p2_acts, b2, &indirect_vars2);
 
         let mut buffers: Vec<String> = Vec::new();
         let add_buf = |buffers: &mut Vec<String>, b: &str| {
@@ -4204,6 +4229,12 @@ impl Engine {
                             dropped.push(n);
                         }
                     }
+                } else if retain1.contains(buf) {
+                    // `:rir`: keep the indirect retrieval request as its
+                    // variable (`+RETRIEVAL> =C`).
+                    if let Some(v) = &var {
+                        rhs.push((format!("+{buf}> ={v}"), Vec::new()));
+                    }
                 } else {
                     let slots = match &var {
                         Some(v) => self
@@ -4217,6 +4248,12 @@ impl Engine {
             }
             // p2 requests.
             for (s, var) in acts_for(&p2_acts, buf, &['+', 'r']) {
+                if retain2.contains(buf) {
+                    if let Some(v) = &var {
+                        rhs.push((format!("+{buf}> ={v}"), Vec::new()));
+                        continue;
+                    }
+                }
                 if let Some(v) = var {
                     let slots = if let Some(chunk) = reqs1
                         .iter()
@@ -5530,6 +5567,51 @@ fn goal_composable(u1: u32, u2: u32) -> bool {
             | (4, 0)
             | (0, 44) | (0, 40) | (0, 13) | (0, 12) | (0, 9) | (0, 8) | (0, 4)
     )
+}
+
+/// The buffers an action targets.
+fn rhs_buffer(a: &RhsAction) -> Option<String> {
+    match a {
+        RhsAction::Request { buffer, .. }
+        | RhsAction::Modify { buffer, .. }
+        | RhsAction::ModifyRequest { buffer, .. }
+        | RhsAction::Clear { buffer } => Some(buffer.clone()),
+        _ => None,
+    }
+}
+
+/// `compute-retain-buffers` (`production-compilation.lisp:2170`): with
+/// `:cia`+`:rir`, which productions keep their indirect retrieval request
+/// (rendered `+RETRIEVAL> =var`) rather than expanding it.
+fn compute_retain_buffers(p1: &Production, p2: &Production) -> (Vec<String>, Vec<String>) {
+    let mut retain1 = Vec::new();
+    let mut retain2 = Vec::new();
+    let mut buffers: Vec<String> = Vec::new();
+    for a in p1.rhs.iter().chain(p2.rhs.iter()) {
+        if let Some(b) = rhs_buffer(a) {
+            if !buffers.contains(&b) {
+                buffers.push(b);
+            }
+        }
+    }
+    for x in &buffers {
+        // Only retrieval-style buffers.
+        if x != "RETRIEVAL" {
+            continue;
+        }
+        let u1 = buffer_usage(p1, x);
+        let u2 = buffer_usage(p2, x);
+        match u2 {
+            4 | 12 | 20 | 28 => retain2.push(x.clone()),
+            8 | 24 => {}
+            _ => {
+                if matches!(u1, 4 | 12 | 20 | 28) {
+                    retain1.push(x.clone());
+                }
+            }
+        }
+    }
+    (retain1, retain2)
 }
 
 /// True for a buffer name (an RHS `=BUFFER` reference rather than a slot

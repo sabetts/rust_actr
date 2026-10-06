@@ -1333,3 +1333,26 @@ until M2/M3 land.
 Run 3 (`:cia t :rir t`) still differs: `:rir` retains indirect retrievals
 with its own rendering rules (`+RETRIEVAL> =C` vs `+RETRIEVAL> RED` vs
 dropped) that are not yet modelled.  `retain` stays disabled.
+
+## 125. M3 (`:rir`) partial: retain-buffer selection implemented
+
+`retain-indirect-retrievals` run 3 now matches **PRODUCTION0-3** (lines
+299-417).  Implemented `compute-retain-buffers`
+(`production-compilation.lisp:2170`): with `:cia`+`:rir`, a retrieval-style
+buffer is *retained* by whichever production requests it, per the p2 usage
+code — `(4 12 20 28)` retains p2, `(8 24)` retains neither, else p1 if it
+requests.  A retained request renders as `+RETRIEVAL> =var` (its variable)
+and its variable is **not** instantiated; a non-retained one expands as
+before.  Guarded by `cfg.cia && cfg.rir`, so no other spec is affected.
+
+Still open (PRODUCTION4-7 + the I&J "cannot be composed" reason):
+- `PRODUCTION4` (E&F) expects LHS `VALUE 5 / COLOR RED` (value before
+  color) while `PRODUCTION0` expects `COLOR RED / VALUE 1` — the composed
+  slot order is not a plain name sort, and `sort-production-slots` sorts by
+  op then name, which does not explain it.
+- `PRODUCTION4` also renders `+RETRIEVAL> RED` (neither `=C` nor
+  `COLOR RED`), and `PRODUCTION7` carries a `!SAFE-BIND! =R (QUOTE RED)`
+  condition in the composed LHS, plus the `I & J cannot be composed`
+  message ("an indirect request with buffer RETRIEVAL uses a variable from
+  a LHS !safe-bind!").
+`retain` stays disabled.
