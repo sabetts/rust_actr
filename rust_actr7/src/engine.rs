@@ -307,6 +307,11 @@ struct Config {
     zz_cdd: Option<f64>,
     /// `:peck-strike-distance` (`*psd*`).
     zz_psd: Option<f32>,
+    /// `:default-punch-delay`/`:fast-punch-delay`/`:slow-punch-delay`
+    /// (`*dpd*`/`*fpd*`/`*spd*`, `motor-extension.lisp:1482`).
+    zz_dpd_ms: i64,
+    zz_fpd_ms: i64,
+    zz_spd_ms: i64,
     peck_fitts: f32,
     min_fitts_ms: i64,
     rhst: bool,
@@ -1026,6 +1031,9 @@ impl Config {
             zz_krt_ms: 40,
             zz_cdd: None,
             zz_psd: None,
+            zz_dpd_ms: 75,
+            zz_fpd_ms: 50,
+            zz_spd_ms: 100,
             peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
             min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
             rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
@@ -1295,6 +1303,8 @@ enum Event {
         /// derives it from `key` (keyboard styles), `Some` passes a home
         /// position (`move-finger-to-home`).
         loc: Option<(i64, i64)>,
+        /// `delayed-punch`'s release delay (`delay` slot); 0 for other styles.
+        delay_ms: i64,
         req_ms: i64,
     },
     /// extended-motor-actions: keyboard `output-key`/`release-key` signal.
@@ -1882,6 +1892,9 @@ impl Engine {
             self.cfg.zz_krt_ms,
             self.cfg.zz_cdd,
             self.cfg.zz_psd,
+            self.cfg.zz_dpd_ms,
+            self.cfg.zz_fpd_ms,
+            self.cfg.zz_spd_ms,
         );
         self.cfg = Config::from_model(&self.model)?;
         self.cfg.zz_two_proc = zz.0;
@@ -1891,6 +1904,9 @@ impl Engine {
         self.cfg.zz_krt_ms = zz.4;
         self.cfg.zz_cdd = zz.5;
         self.cfg.zz_psd = zz.6;
+        self.cfg.zz_dpd_ms = zz.7;
+        self.cfg.zz_fpd_ms = zz.8;
+        self.cfg.zz_spd_ms = zz.9;
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
@@ -2645,6 +2661,7 @@ impl Engine {
         self.zz_test4()?;
         self.zz_test5()?;
         self.zz_test6()?;
+        self.zz_test7()?;
         Ok(())
     }
 
@@ -2678,6 +2695,11 @@ impl Engine {
         self.cfg.zz_two_proc = false;
         self.cfg.zz_two_exec = true;
         self.cfg.zz_query = "STATE".to_string();
+        // `run-test` (`test-model.lisp:73`): `*dpd* .075` / `*fpd* .05` /
+        // `*spd* .1`.
+        self.cfg.zz_dpd_ms = 75;
+        self.cfg.zz_fpd_ms = 50;
+        self.cfg.zz_spd_ms = 100;
     }
 
     fn zz_test1(&mut self) -> Result<(), EngineError> {
@@ -2846,6 +2868,39 @@ impl Engine {
         self.run_secs(10.0)?;
         self.zz_buffer_status();
         self.zz_print_finger_locs();
+        self.zz_summarize();
+        Ok(())
+    }
+
+    /// `test7` (`test-model.lisp:212`): two runs of `delayed-punch` actions,
+    /// the second with faster punch-delay parameters.
+    fn zz_test7(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Default timed delayed-punch actions".to_string(),
+        ));
+        self.reset()?;
+        self.zz_goal_focus(
+            "CHUNK",
+            vec![("TEST".to_string(), Value::Sym("TEST7".to_string()))],
+        )?;
+        self.run_secs(10.0)?;
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Faster timed delayed-punch actions".to_string(),
+        ));
+        self.cfg.zz_dpd_ms = 50;
+        self.cfg.zz_fpd_ms = 25;
+        self.cfg.zz_spd_ms = 70;
+        self.reset()?;
+        self.zz_goal_focus(
+            "CHUNK",
+            vec![("TEST".to_string(), Value::Sym("TEST7".to_string()))],
+        )?;
+        self.run_secs(10.0)?;
         self.zz_summarize();
         Ok(())
     }
@@ -3837,6 +3892,7 @@ impl Engine {
                 r,
                 theta,
                 loc,
+                delay_ms,
                 req_ms,
             } => {
                 if show {
@@ -3878,6 +3934,13 @@ impl Engine {
                         init + move_ms + burst + move_ms,
                     ),
                     "HOLD-PUNCH" => (init + kct, None, init + burst),
+                    // `delayed-punch` (`motor-extension.lisp:2657`): the release
+                    // (exec2) and finish are pushed out by the `delay` slot.
+                    "DELAYED-PUNCH" => (
+                        init + kct,
+                        Some(init + kct + delay_ms),
+                        init + kct + delay_ms + burst,
+                    ),
                     "PUNCH" => (
                         init + kct,
                         Some(init + self.cfg.zz_krt_ms),
@@ -9892,7 +9955,7 @@ impl Engine {
             "PECK" | "PECK-RECOIL" | "HOLD-PECK" | "POINT-FINGER" | "RELEASE-RECOIL" => {
                 ("PECK", 5, true)
             }
-            "PUNCH" | "HOLD-PUNCH" | "RELEASE" => ("PUNCH", 3, false),
+            "PUNCH" | "HOLD-PUNCH" | "RELEASE" | "DELAYED-PUNCH" => ("PUNCH", 3, false),
             // `hand-ply` (`motor.lisp:1091`): `ply`'s `num-possible-feats`
             // `:around` drops the `:dummy` finger, so 4 features to prepare.
             "HAND-PLY" => ("PLY", 4, true),
@@ -9961,13 +10024,13 @@ impl Engine {
         };
         let finger_loc = self.zz_finger_loc(hand, finger);
         if key_loc == finger_loc {
-            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0, Some(key_loc))
+            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0, Some(key_loc), 0)
         } else {
             let dx = (key_loc.0 - finger_loc.0) as f64;
             let dy = (key_loc.1 - finger_loc.1) as f64;
             let r = (dx * dx + dy * dy).sqrt() as f32;
             let theta = dy.atan2(dx) as f32;
-            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta, Some(key_loc))
+            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta, Some(key_loc), 0)
         }
     }
 
@@ -9983,6 +10046,7 @@ impl Engine {
         r: f32,
         theta: f32,
         loc: Option<(i64, i64)>,
+        delay_ms: i64,
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
         let (style_name, maxfeats, hfrt) = Self::zz_style_info(class);
@@ -10027,6 +10091,7 @@ impl Engine {
                 r,
                 theta,
                 loc,
+                delay_ms,
                 req_ms,
             },
         );
@@ -10098,7 +10163,7 @@ impl Engine {
         // A direct style has no `key` slot; the device names the output from
         // the finger's location (`motor.lisp:960`).
         let key = xy_key(target.0, target.1).unwrap_or("").to_string();
-        self.zz_key_request(cmd, cmd, &key, hand, finger, r, theta, Some(target))
+        self.zz_key_request(cmd, cmd, &key, hand, finger, r, theta, Some(target), 0)
     }
 
     /// `handle-style-request` details (`motor.lisp:1459`): the style name
@@ -10279,6 +10344,7 @@ impl Engine {
             r,
             theta,
             Some(home),
+            0,
         )
     }
 
@@ -10307,6 +10373,7 @@ impl Engine {
                 0.0,
                 0.0,
                 None,
+                0,
             )
         } else {
             let dx = (home.0 - finger_loc.0) as f64;
@@ -10322,6 +10389,7 @@ impl Engine {
                 r,
                 theta,
                 Some(home),
+                0,
             )
         }
     }
@@ -10555,6 +10623,62 @@ impl Engine {
         )
     }
 
+    /// `delayed-punch` (`motor-extension.lisp:2699`): a punch whose release is
+    /// `delay` after the strike (no `key-release-time`). `delay` is
+    /// `default`/`fast`/`slow`/a positive number (`parse-delay-time`, `:2685`).
+    fn zz_delayed_punch(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+        let hand = slots
+            .iter()
+            .find(|(s, _)| s == "HAND")
+            .and_then(|(_, v)| Self::touch_hand_idx(&name_of(v)))
+            .unwrap_or(1);
+        let finger = slots
+            .iter()
+            .find(|(s, _)| s == "FINGER")
+            .and_then(|(_, v)| Self::touch_finger_idx(&name_of(v)))
+            .unwrap_or(0);
+        // `parse-delay-time` (`:2685`): nil/`default` -> default; a positive
+        // number as-is; `slow`/`fast` -> the named delays.
+        let delay_ms = match slots.iter().find(|(s, _)| s == "DELAY").map(|(_, v)| v) {
+            None => self.cfg.zz_dpd_ms,
+            Some(Value::Sym(s)) if s.eq_ignore_ascii_case("DEFAULT") => self.cfg.zz_dpd_ms,
+            Some(Value::Sym(s)) if s.eq_ignore_ascii_case("FAST") => self.cfg.zz_fpd_ms,
+            Some(Value::Sym(s)) if s.eq_ignore_ascii_case("SLOW") => self.cfg.zz_spd_ms,
+            Some(v) => num_of(v)
+                .filter(|x| *x > 0.0)
+                .map(|x| (x * 1000.0).round() as i64)
+                .unwrap_or(self.cfg.zz_dpd_ms),
+        };
+        let delay_str = lisp_s_f32(delay_ms as f32 / 1000.0);
+        let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
+        let finger_name = ["INDEX", "MIDDLE", "RING", "PINKIE", "THUMB"][finger];
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: format!(
+                    "DELAYED-PUNCH HAND {hand_name} FINGER {finger_name} DELAY {delay_str}"
+                ),
+            },
+        );
+        // The device names the key from the finger's location (`motor.lisp:960`);
+        // `delayed-punch` doesn't move the finger.
+        let floc = self.zz_finger_loc(hand, finger);
+        let key = xy_key(floc.0, floc.1).unwrap_or("").to_string();
+        self.zz_key_request(
+            "DELAYED-PUNCH",
+            "DELAYED-PUNCH",
+            &key,
+            hand,
+            finger,
+            0.0,
+            0.0,
+            None,
+            delay_ms,
+        )
+    }
+
     /// Manual request routing: only press-key in M5a.
     fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         let (ctype, slots) = match &spec {
@@ -10578,7 +10702,7 @@ impl Engine {
                     | "HAND-TO-MOUSE" | "HAND-TO-HOME"
                     | "HOLD-PUNCH" | "HOLD-PECK" | "PUNCH" | "PECK" | "PECK-RECOIL"
                     | "POINT-FINGER" | "RELEASE"
-                    | "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY"
+                    | "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY" | "DELAYED-PUNCH"
             ) {
                 Some(t)
             } else {
@@ -10661,6 +10785,7 @@ impl Engine {
             (Some("POINT-HAND-AT-KEY"), _) if self.cfg.zz_ext => {
                 self.zz_point_hand_at_key(&slots)
             }
+            (Some("DELAYED-PUNCH"), _) if self.cfg.zz_ext => self.zz_delayed_punch(&slots),
             got => Err(unimpl(format!("manual request {got:?}"))),
         }
     }

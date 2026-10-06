@@ -1750,6 +1750,35 @@ hand tracker's finger-busy / finger-down state.
 `zz` test6 is **byte-exact through line 3034** — test1–test6 plus every
 summary. Tests 7–9 (M7–M8) remain.
 
+## 142. `zz` test7: `delayed-punch` and its three delay parameters
+
+`delayed-punch` (`motor-extension.lisp:2647`) subclasses `punch`: the strike is
+still `init + key-closure-time`, but the **release** is `init + kct + delay`
+(exec2, `:2657`) and finish is `init + kct + delay + burst` (`:2664`) — the
+`delay` replaces `key-release-time`, it does not add to it. `delay` is parsed by
+`parse-delay-time` (`:2685`): nil/`default` → `default-punch-delay`, `fast` →
+`fast-punch-delay`, `slow` → `slow-punch-delay`, a positive number as-is.
+The request trace is a `schedule-event-now 'prepare-movement` with explicit
+`:details` (`:2713`), so it prints `DELAYED-PUNCH HAND <h> FINGER <f> DELAY <d>`
+with the parsed delay via `~f`; like the direct styles it appears before the
+request's `CONFLICT-RESOLUTION`.
+
+The three delays are model parameters (`:default-punch-delay`/`:fast-`/
+`:slow-punch-delay`, `:1482`) set from the `*dpd*`/`*fpd*`/`*spd*` specials.
+`test7` (`test-model.lisp:212`) runs twice, changing those specials for the
+second run — and `define-model` re-reads them on `reset`, so the driver-set
+delays must survive a reset (the engine keeps them alongside the other `zz`
+driver params).
+
+`test7`'s goal is `(define-chunks (test test7))` — no `isa` — so ACT-R
+auto-names it `CHUNK0` with **no chunk type** (`chunks.lisp:1192`: `new-name-fct
+"CHUNK"`). The production's `isa goal` still matches because a `ISA` test that
+is not the production's *only* LHS test is ignored
+(`match_chunk_tests`, `only_isa`).
+
+`zz` test7 is **byte-exact through line 3226** — test1–test7 plus every
+summary. Tests 8–9 (M8) remain.
+
 
 
 
