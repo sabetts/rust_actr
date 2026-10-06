@@ -935,6 +935,17 @@ enum Event {
     FinishMovement {
         req_ms: i64,
     },
+    /// Speech module: the vocal buffer finished its utterance.
+    VocalFree,
+    /// Speech module: an utterance starts (`SPEAK TEXT ...`).
+    Speak {
+        text: String,
+    },
+    /// Threads extra: clear the specific goal chunk a production matched
+    /// (emits `CLEAR-BUFFER GOAL`, removes it from the goal set).
+    ClearGoalThread {
+        name: String,
+    },
     /// Threads extra: overwrite the goal multi-buffer's *visible* chunk
     /// without clearing the rest of the goal set (`OVERWRITE-BUFFER-CHUNK`).
     OverwriteBuffer {
@@ -1067,6 +1078,8 @@ pub struct Engine {
     finsts: Vec<(String, i64)>,
     /// Threads extra: the goal multi-buffer's ordered chunk set.
     goal_set: Vec<ChunkInst>,
+    /// Speech module: the vocal buffer is busy speaking/subvocalizing.
+    vocal_busy: bool,
     /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
     name_count: HashMap<String, u64>,
     /// SET-copy name -> feature index, resolving copies back for
@@ -1190,6 +1203,7 @@ impl Engine {
             stopped: false,
             finsts: Vec::new(),
             goal_set: Vec::new(),
+            vocal_busy: false,
             name_count: HashMap::new(),
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
@@ -1296,6 +1310,7 @@ impl Engine {
             "VISUAL-LOCATION",
             "MANUAL",
             "TEMPORAL",
+            "VOCAL",
         ] {
             self.buffers.insert(b.to_string(), Buffer::empty());
         }
@@ -1319,6 +1334,7 @@ impl Engine {
         self.stopped = false;
         self.finsts.clear();
         self.goal_set.clear();
+        self.vocal_busy = false;
         self.name_count.clear();
         self.vl_copies.clear();
         self.obj_built.clear();
@@ -1797,6 +1813,7 @@ impl Engine {
                 }
             };
             let first = self.goal_set.is_empty();
+            self.goal_set.push(inst.clone());
             if first {
                 self.now(
                     Prio::Max,
@@ -2037,6 +2054,36 @@ impl Engine {
                 self.buffer_mut(&buffer).failed = false;
                 self.changed();
             }
+            Event::VocalFree => {
+                self.vocal_busy = false;
+                self.changed();
+            }
+            Event::Speak { text } => {
+                self.emit("SPEECH", format!("SPEAK TEXT {text}"));
+                self.vocal_busy = true;
+                let dur = (150.0f32)
+                    .max(150.0 * text.chars().count() as f32 / 3.0)
+                    .round() as i64;
+                self.push(self.time_ms + dur, Prio::Num(0), Out::Never, Event::VocalFree);
+            }
+            Event::ClearGoalThread { name } => {
+                if show {
+                    self.emit("PROCEDURAL", "CLEAR-BUFFER GOAL".to_string());
+                }
+                self.goal_set
+                    .retain(|g| g.name.as_deref() != Some(name.as_str()));
+                if self
+                    .buffers
+                    .get("GOAL")
+                    .and_then(|b| b.chunk.as_ref())
+                    .and_then(|c| c.name.as_deref())
+                    == Some(name.as_str())
+                {
+                    self.buffer_mut("GOAL").chunk = None;
+                }
+                self.buffer_mut("GOAL").failed = false;
+                self.changed();
+            }
             Event::ClearBuffer { buffer } => {
                 if show {
                     self.emit("PROCEDURAL", format!("CLEAR-BUFFER {buffer}"));
@@ -2124,6 +2171,9 @@ impl Engine {
                     }
                     "TEMPORAL" => {
                         self.temporal_request(spec)?;
+                    }
+                    "VOCAL" => {
+                        self.vocal_request(spec)?;
                     }
                     "BLENDING" => {
                         // blending-request: clear the error flag, mark busy,
@@ -2803,6 +2853,35 @@ impl Engine {
         Ok(())
     }
 
+    /// Speech module `+vocal>` request (`core-modules/speech.lisp`):
+    /// `isa speak string X` (or `cmd speak`) emits `SPEAK TEXT X` and holds
+    /// the vocal buffer busy for the articulation time.
+    fn vocal_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        let (ctype, slots) = match &spec {
+            NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
+            _ => (String::new(), Vec::new()),
+        };
+        let text = slots
+            .iter()
+            .find(|(s, _)| s == "STRING")
+            .and_then(|(_, v)| match v {
+                Value::Str(s) | Value::Sym(s) => Some(s.clone()),
+                _ => None,
+            });
+        let is_speak = ctype.eq_ignore_ascii_case("SPEAK")
+            || slots.iter().any(|(s, v)| {
+                s == "CMD" && matches!(v, Value::Sym(x) if x.eq_ignore_ascii_case("SPEAK"))
+            });
+        if is_speak {
+            if let Some(t) = text {
+                // The `speak` action is scheduled at default priority so the
+                // request's implicit clear-buffer precedes it.
+                self.now(Prio::Num(0), Out::Medium, Event::Speak { text: t });
+            }
+        }
+        Ok(())
+    }
+
     /// `+temporal>` request (`modules/temporal.lisp:186`): `isa clear`
     /// stops the timer; `isa time` (re)starts it, placing `(isa time
     /// ticks 0)` and arming the first tick.
@@ -2933,7 +3012,7 @@ impl Engine {
     /// M5a seeds Q; digits join with device-task goldens.
     fn key_spec(key: &str) -> Result<KeySpec, EngineError> {
         key_table()
-            .get(key)
+            .get(&key.to_uppercase())
             .cloned()
             .ok_or_else(|| unimpl(format!("press-key for unknown key {key}")))
     }
@@ -3157,8 +3236,6 @@ impl Engine {
                 }
                 continue;
             }
-            // ACT-R `test-var-slot`: the slot *name* itself may be an
-            // LHS variable (`=attr =val`), substituted from bindings.
             let slot = self.resolve_slot_name(&t.slot, b);
             let got = chunk.get(&slot);
             let ok = match t.op {
@@ -3173,6 +3250,30 @@ impl Engine {
             }
         }
         Ok(true)
+    }
+
+    /// Threads extra: the goal chunk a production matches (the first in the
+    /// goal set satisfying its `=goal>` conditions), for the matched-chunk
+    /// clear.
+    fn threaded_goal_match(&self, prod: &Production) -> Option<String> {
+        for item in &prod.lhs {
+            if let LhsItem::Match { buffer, tests } = item {
+                if buffer == "GOAL" {
+                    let only_isa = tests.iter().all(|t| t.slot == "ISA");
+                    for c in &self.goal_set {
+                        let mut b = Bindings::new();
+                        let mut ppm = Vec::new();
+                        if self
+                            .match_chunk_tests(c, buffer, tests, only_isa, &mut b, &mut ppm)
+                            .unwrap_or(false)
+                        {
+                            return c.name.clone();
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     fn match_item(
@@ -3686,6 +3787,7 @@ impl Engine {
             "VISUAL" => Ok(!self.visual_busy),
             "MANUAL" => Ok(!self.man_prep_busy && !self.man_exec_busy),
             "IMAGINAL" => Ok(!self.imag_busy),
+            "VOCAL" => Ok(!self.vocal_busy),
             "BLENDING" => Ok(!self.blending_busy),
             _ => Ok(!self
                 .buffers
@@ -3858,6 +3960,12 @@ impl Engine {
             }
         }
         for buffer in &self.exec_prods[prod_idx].implicit_clears.clone() {
+            if buffer == "GOAL" && self.cfg.threads {
+                if let Some(name) = self.threaded_goal_match(&prod) {
+                    self.now(Prio::Num(10), Out::Medium, Event::ClearGoalThread { name });
+                    continue;
+                }
+            }
             self.now(
                 Prio::Num(10),
                 Out::Medium,
@@ -6378,11 +6486,16 @@ impl Engine {
 
     /// Manual request routing: only press-key in M5a.
     fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
-        let slots = match &spec {
-            NewChunk::Spec { slots, .. } => slots.clone(),
+        let (ctype, slots) = match &spec {
+            NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
             _ => return Err(unimpl("non-spec manual request")),
         };
-        let mut cmd: Option<String> = None;
+        // `isa press-key key X` (no `cmd`).
+        let mut cmd: Option<String> = if ctype.eq_ignore_ascii_case("PRESS-KEY") {
+            Some("PRESS-KEY".to_string())
+        } else {
+            None
+        };
         let mut key: Option<String> = None;
         for (s, v) in &slots {
             match (s.as_str(), v) {
