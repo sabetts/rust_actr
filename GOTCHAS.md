@@ -1611,5 +1611,25 @@ shift` (`*psd*` nil) has `exec == finish == 0.450`, while test4's `hold-key x`
 (`exec = init + key-closure`, `finish = init + burst`). `zz` test4 is
 byte-exact through line 2124 (hold-key x).
 
+## 137. `zz` test4: `point-finger`, the `pbreak` printer, and an invisible CR
+
+`move-finger-to-home` (`motor-extension.lisp:2222`) resolves to `point-finger`
+when the finger is off home. `point-finger` (`:2036`) is the odd style out:
+its exec is `max(init-time, move-time)` (not `init + strike`), it emits no
+`output-key`, and its `set-hand-position` (`:2053`) carries **no `:details`** —
+yet it still wakes conflict resolution, so a bare `CONFLICT-RESOLUTION` lands
+at exec (1.750 in test4). Model that as an invisible, non-maintenance event at
+exec; `run_secs` calls `changed()` for any non-CR event regardless of `Out`.
+
+The `test4-7` break (`procedural.lisp:2318`) prints the selected production
+with its bindings, then `BREAK-EVENT PRODUCTION TEST4-7`. The printer
+(`print-production-text`, `:2441`) drops the `isa` slot from `=buf>` tests and
+renders a `+buf>` request's chunk-type as `CMD <type>`; `pbreak` halts the run
+before the buffer reads, so the driver's `buffer-status` + `finger-loc-m` dump
+lands inline, and the second `(run 10)` resumes with `BUFFER-READ-ACTION GOAL`.
+`zz` test4 is byte-exact through line 2211 (the second run's first
+`CONFLICT-RESOLUTION`).
+
+
 
 

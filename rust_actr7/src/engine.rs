@@ -1223,6 +1223,10 @@ enum Event {
         finger: usize,
         r: f32,
         theta: f32,
+        /// Absolute target location for the finger-offset update; `None`
+        /// derives it from `key` (keyboard styles), `Some` passes a home
+        /// position (`move-finger-to-home`).
+        loc: Option<(i64, i64)>,
         req_ms: i64,
     },
     /// extended-motor-actions: keyboard `output-key`/`release-key` signal.
@@ -3671,6 +3675,7 @@ impl Engine {
                 finger,
                 r,
                 theta,
+                loc,
                 req_ms,
             } => {
                 if show {
@@ -3684,6 +3689,7 @@ impl Engine {
                     );
                 }
                 let _ = theta;
+                let _ = cmd;
                 self.man_prep_busy = false;
                 let init = self.cfg.init_ms;
                 let burst = self.cfg.burst_ms;
@@ -3710,7 +3716,9 @@ impl Engine {
                         init + burst + burst,
                     ),
                     "RELEASE" => (init + self.cfg.zz_krt_ms, None, init + burst),
-                    "POINT-FINGER" => (init + strike, None, init + move_ms),
+                    // `point-finger` (`motor-extension.lisp:2036`): exec is
+                    // `max(init, move-time)`, finish `init + move-time`.
+                    "POINT-FINGER" => (init.max(move_ms), None, init + move_ms),
                     _ => (init, None, init + burst),
                 };
                 self.man_exec_queue.push(ZzPending {
@@ -3723,14 +3731,17 @@ impl Engine {
                     kind: ZzKind::Key {
                         finger,
                         exec2_ms,
-                        output: cmd != "MOVE-TO-KEY",
+                        // `point-finger` produces no `output-key`
+                        // (`motor-extension.lisp:2052`).
+                        output: style != "POINT-FINGER",
                     },
                 });
                 // `move-a-finger` (`motor.lisp:712`) shifts the finger's
                 // *offset*; the hand loc is unchanged (only `move-hand` moves
                 // it). The next same/move test reads `hand-loc + finger-offset`
                 // (`motor-extension.lisp:2120`).
-                if let Some(kl) = key_xy(&key) {
+                let target = loc.or_else(|| key_xy(&key));
+                if let Some(kl) = target {
                     if style != "RELEASE" {
                         let (hx, hy) = self.zz_hands[hand].loc;
                         self.zz_hands[hand].offsets[finger] = (kl.0 - hx, kl.1 - hy);
@@ -9188,6 +9199,16 @@ impl Engine {
                                         finger,
                                     },
                                 );
+                            } else {
+                                // `point-finger`'s `set-hand-position`
+                                // (`motor-extension.lisp:2053`) has no details
+                                // but still wakes conflict resolution.
+                                self.push(
+                                    t + p.exec_ms,
+                                    Prio::Num(0),
+                                    Out::Never,
+                                    Event::Dummy,
+                                );
                             }
                             if let Some(e2) = exec2_ms {
                                 self.push(
@@ -9421,13 +9442,13 @@ impl Engine {
         };
         let finger_loc = self.zz_finger_loc(hand, finger);
         if key_loc == finger_loc {
-            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0)
+            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0, Some(key_loc))
         } else {
             let dx = (key_loc.0 - finger_loc.0) as f64;
             let dy = (key_loc.1 - finger_loc.1) as f64;
             let r = (dx * dx + dy * dy).sqrt() as f32;
             let theta = dy.atan2(dx) as f32;
-            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta)
+            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta, Some(key_loc))
         }
     }
 
@@ -9442,6 +9463,7 @@ impl Engine {
         finger: usize,
         r: f32,
         theta: f32,
+        loc: Option<(i64, i64)>,
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
         let (style_name, maxfeats, hfrt) = Self::zz_style_info(class);
@@ -9514,6 +9536,7 @@ impl Engine {
                 finger,
                 r,
                 theta,
+                loc,
                 req_ms,
             },
         );
@@ -9537,10 +9560,53 @@ impl Engine {
             "RELEASE-KEY" | "RELEASE-KEY-TO-HOME" => {
                 self.zz_extended_finger_keyboard(cmd, &key, "RELEASE", "RELEASE")
             }
+            "MOVE-FINGER-TO-HOME" => self.zz_move_finger_to_home(slots),
             "HAND-TO-MOUSE" => self.zz_hand_to(true),
             "HAND-TO-HOME" => self.zz_hand_to(false),
             _ => Ok(()),
         }
+    }
+
+    /// `move-finger-to-home` (`motor-extension.lisp:2222`): if the finger is
+    /// not already home, `point-finger` it back.
+    fn zz_move_finger_to_home(
+        &mut self,
+        slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
+        let Some(hand) = slots
+            .iter()
+            .find(|(s, _)| s == "HAND")
+            .and_then(|(_, v)| Self::touch_hand_idx(&name_of(v)))
+        else {
+            return Ok(());
+        };
+        let Some(finger) = slots
+            .iter()
+            .find(|(s, _)| s == "FINGER")
+            .and_then(|(_, v)| Self::touch_finger_idx(&name_of(v)))
+        else {
+            return Ok(());
+        };
+        let home = self.zz_home_position(hand, finger);
+        let cur = self.zz_finger_loc(hand, finger);
+        if home == cur {
+            // `:2236`: warning only, no movement.
+            return Ok(());
+        }
+        let dx = (home.0 - cur.0) as f64;
+        let dy = (home.1 - cur.1) as f64;
+        let r = (dx * dx + dy * dy).sqrt() as f32;
+        let theta = dy.atan2(dx) as f32;
+        self.zz_key_request(
+            "MOVE-FINGER-TO-HOME",
+            "POINT-FINGER",
+            "",
+            hand,
+            finger,
+            r,
+            theta,
+            Some(home),
+        )
     }
 
     /// `hand-to-mouse`/`hand-to-home` (a `hand-ply`): move the right hand to
