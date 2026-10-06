@@ -3679,7 +3679,7 @@ impl Engine {
                         format!(
                             "PREPARATION-COMPLETE {}{}",
                             Self::secs_str(req_ms),
-                            self.zz_style_suffix()
+                            self.zz_style_suffix_for(&style, hand)
                         ),
                     );
                 }
@@ -3770,7 +3770,7 @@ impl Engine {
                         format!(
                             "PREPARATION-COMPLETE {}{}",
                             Self::secs_str(req_ms),
-                            self.zz_style_suffix()
+                            self.zz_style_suffix_for("HAND-PLY", 1)
                         ),
                     );
                 }
