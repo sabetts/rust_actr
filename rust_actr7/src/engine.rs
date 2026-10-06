@@ -4205,9 +4205,25 @@ impl Engine {
 
     fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
         // A whole-chunk request (`+retrieval> =goal`) retrieves the named
-        // chunk directly (`direct-request`), not by slot matching.
+        // chunk directly (`direct-request`), not by slot matching. A name
+        // that is not a chunk — e.g. `=c` bound to a bare-symbol slot value
+        // like `red` — expands via `chunk-name-to-chunk-spec` to that
+        // (slotless) chunk's spec, i.e. an unconstrained request matching
+        // any chunk.
         if let NewChunk::Named(n) = &spec {
-            return self.direct_retrieval(n);
+            let known = self.dm.iter().any(|c| c.name.as_deref() == Some(n.as_str()))
+                || self.named.contains_key(n);
+            if known {
+                return self.direct_retrieval(n);
+            }
+            let empty = NewChunk::Spec {
+                ctype: String::new(),
+                slots: Vec::new(),
+                neg: Vec::new(),
+                rels: Vec::new(),
+                bare: true,
+            };
+            return self.start_retrieval(empty, var_slots);
         }
         let (want_slots, want_neg) = match &spec {
             NewChunk::Named(_) => unreachable!(),

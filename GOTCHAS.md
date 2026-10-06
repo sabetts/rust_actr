@@ -1262,3 +1262,22 @@ said `:SGP NIL`).  Getting the ref requires:
 
 Instrumenting ACT-R (wrapping `randomize-time[-ms]` under SBCL) pinned the
 exact draw sequence, which is what made this tractable.
+
+## 122. `retain-indirect-retrievals`: run 1 now matches, compiler still needed
+
+Two findings from working the spec:
+- **`+retrieval> =c` with an unresolved binding is an unconstrained
+  request** (verified under SBCL: `define-chunk-spec-fct (list 'red)`
+  expands to `(COLOR RED)`, matching `G`).  `start_retrieval` now treats a
+  `NewChunk::Named` that is neither a DM nor a named chunk as an empty
+  spec (match any) instead of `direct_retrieval`-failing.  With that, run 1
+  (`:cia nil`, lines 1-85: the model plus the "not valid for compilation"
+  messages) reproduces exactly.
+- **Runs 2-3 need the `:cia`/`:rir` composition of indirect retrieval
+  actions**, which the engine does not implement — the composed production
+  instantiates the indirect action's variable (`color =c` → `color red`).
+  Also unresolved: ACT-R's first chunk *copy* here is `G-1` (because
+  `G-0` already exists from the retrieval), while `sji-merge` needs the
+  first copy to be `-0`; our shared copy counter starts at 0, and starting
+  at 1 regresses `sji-merge`.  `retain-indirect-retrievals` therefore stays
+  out of `enabled.txt`; the retrieval fix is committed as groundwork.
