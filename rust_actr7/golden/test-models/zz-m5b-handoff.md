@@ -1,5 +1,10 @@
 # `zz` M5b handoff — `prepare` / `execute` (test5-8/5-9)
 
+> **SUPERSEDED — M5 is complete (commit `62fea19`).** test5 is byte-exact
+> through line 2893. This note is kept only as a source-reference for the
+> `prepare`/`execute` mechanics; the next milestone is M6 (test6,
+> `type-key`). See `zz-milestones.md`.
+
 ## Baseline
 
 - Repo: `/data/sabetts/actr_transpile`

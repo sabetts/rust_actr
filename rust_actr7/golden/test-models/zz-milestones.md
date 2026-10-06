@@ -8,9 +8,24 @@ summary block per sub-run (`PRESSED`/`RELEASED`/`CLICKED`/`UNCLICKED`/`Held`/
 `Clicked`). Module: `extras/extended-motor-actions/motor-extension.lisp`
 (2737 lines) — a redefined motor module plus ~18 new styles/commands.
 
-Reference line ranges: test1 1–1751, test2 1752–2000, test3 2001–2284,
-test4 2285–2871, test5 2872–3020, test6 3021–3185, test7 3186–3373,
-test8 3374–3548, test9 3549–3568.
+## Status
+
+**Byte-exact through line 2893** — test1–test5 complete including every summary.
+The remaining output (2894–3568) is tests 6–9 (M6–M8).
+
+Reference line ranges (each range is a test's trace plus its trailing summary;
+the summary prints the test's description, so a description line belongs to the
+test *above* it):
+
+| test | lines |
+|------|-------|
+| test1–3 | 1–2017 |
+| test4 | 2018–2310 |
+| test5 | 2311–2893 |
+| test6 | 2894–3020 |
+| test7 | 3021–3185 |
+| test8 | 3186–3373 |
+| test9 | 3374–3568 |
 
 ## M0 — Loader + task-driver scaffolding  (mostly done)
 - Loader: top-level `defmethod`; model-body `sgp-fct`/`p-fct` (backquoted,
@@ -43,18 +58,24 @@ The largest and foundational piece.
 - `release-key`/`release-key-to-home`/`release-mouse`, `:key-release-time`
   (release when the hand moves away).
 
-## M4 — hold-peck + strike distance  (test4, 587 lines)
-- `hit-key`/`hold-key`/`hold-peck`/`move-to-key`/`point-hand-at-key`,
-  the two-phase `prepare`/`execute`, `:peck-strike-distance`,
-  `movement-strike-time`, `pbreak`/`buffer-status`.
+## M4 — hold-peck + strike distance  (test4, 293 lines)  **Done**
+- `hit-key`/`hold-key`/`hold-peck`/`move-to-key`, `point-finger`,
+  `:peck-strike-distance`, `movement-strike-time`, `pbreak`/`buffer-status`.
+- **Exit met**: test4 byte-exact through line 2310 (commits `bf309c4`,
+  `d17dd7d`, `eaadeba`, `fdf2545`, `824b605`).
 
-## M5 — finger / hand movement  (test5, 149 lines)
-- `move-finger-to-home`, `all-fingers-to-home`, `hand-to-home`, `hand-to-mouse`.
+## M5 — finger / hand movement  (test5, 583 lines)  **Done**
+- `move-finger-to-home`, `all-fingers-to-home`, `hand-to-home`,
+  `hand-to-mouse` (M4c-1/M5a), then the two-phase `prepare`/`execute`,
+  `point-hand-at-key`, and the `all-fingers-to-home hand <h>` restriction
+  (M5b–M5d).
+- **Exit met**: test5 byte-exact through line 2893 including its summary
+  (commit `62fea19`; GOTCHA #140).
 
-## M6 — type-key from a non-home position  (test6, 165 lines)
+## M6 — type-key from a non-home position  (test6, 127 lines)
 - `type-key`, `move-to-key` (finger relocation before the peck).
 
-## M7 — delayed punch  (test7, 188 lines)
+## M7 — delayed punch  (test7, 165 lines)
 - `delayed-punch`, `:default-punch-delay`/`:fast-punch-delay`/`:slow-punch-delay`.
 
 ## M8 — all-fingers-to-home + release-all  (tests 8/9, 195 lines)
