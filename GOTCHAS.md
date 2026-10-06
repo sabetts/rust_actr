@@ -1649,6 +1649,35 @@ to the home row.
 `zz` test4 is **byte-exact through line 2310** — test1–test4 plus every
 summary. Tests 5–9 (M5–M8) remain.
 
+## 139. `zz` test5: the run loop, direct styles, and release/release-recoil
+
+`test5` (`test-model.lisp:188`) drives `(do ((time (run 10) (run 10))) ((= time
+0.0)) ...)`: each `(run 10)` halts at a `pbreak` (test5-5/5-9/5-11/5-12) and
+the body dumps `buffer-status` + finger locations after every run that
+processed anything. The terminator is a run that executes **zero** events (the
+queue is already empty), which still prints `Stopped because no events left to
+process` — so the last dump is followed by one extra stop line.
+
+Direct style requests (`isa hold-punch hand left finger ring`) go through
+`handle-style-request` (`motor.lisp:1447`), which traces
+`<STYLE> HAND <h> FINGER <f> [R <r> THETA <theta>]` before preparing. The
+device names `output-key` from the **finger's location** (`motor.lisp:960`),
+not a request slot, so a direct `hold-punch` (which has no `key`) outputs the
+key under the finger.
+
+`release` and `release-recoil` are the mirror of punch/peck: no `output-key`,
+a `release-key` at **exec** (`init + key-release-time`,
+`motor-extension.lisp:1953`/`:1991`), and `release-recoil`'s finish is
+`init + move-time + burst`. `release-key-to-home` (`:2183`) is same-loc only:
+it emits `release` when the finger is home, else `release-recoil` with the
+polar vector to home (and does nothing when the finger is off the key).
+`reset-hand-tracker` (`:1263`) seeds `last-command` to `NONE`, and the
+`pbreak` printer lists a `+buf>` request's slots **before** its `CMD <type>`.
+
+`zz` test5 is byte-exact through line 2519 (test5-7); `prepare`/`execute`
+remain.
+
+
 
 
 

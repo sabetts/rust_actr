@@ -393,7 +393,10 @@ enum ZzKind {
     Key {
         finger: usize,
         exec2_ms: Option<i64>,
+        /// `output-key` (finger down) at exec.
         output: bool,
+        /// `release-key` (finger up) at exec — `release`/`release-recoil`.
+        release_exec: bool,
     },
     /// `hand-to-mouse`/`hand-to-home` (`hand-ply`).
     Hand { to_mouse: bool, r: f32, theta: f32 },
@@ -692,6 +695,52 @@ fn key_xy(key: &str) -> Option<(i64, i64)> {
 }
 
 /// `key->hand&finger` (`keyboard.lisp` `key->cmd` → the style's hand/finger).
+/// A key's canonical lowercase name at absolute `(x, y)` — the inverse of
+/// [`key_xy`], used to name the device's `output-key` from the finger position
+/// (`motor.lisp:960`).
+fn xy_key(x: i64, y: i64) -> Option<&'static str> {
+    let s = match (x, y) {
+        (1, 2) => "1",
+        (2, 2) => "2",
+        (3, 2) => "3",
+        (4, 2) => "4",
+        (5, 2) => "5",
+        (6, 2) => "6",
+        (7, 2) => "7",
+        (8, 2) => "8",
+        (9, 2) => "9",
+        (10, 2) => "0",
+        (1, 3) => "q",
+        (2, 3) => "w",
+        (3, 3) => "e",
+        (4, 3) => "r",
+        (5, 3) => "t",
+        (6, 3) => "y",
+        (7, 3) => "u",
+        (8, 3) => "i",
+        (9, 3) => "o",
+        (10, 3) => "p",
+        (1, 4) => "a",
+        (2, 4) => "s",
+        (3, 4) => "d",
+        (4, 4) => "f",
+        (5, 4) => "g",
+        (6, 4) => "h",
+        (7, 4) => "j",
+        (8, 4) => "k",
+        (9, 4) => "l",
+        (1, 5) => "z",
+        (2, 5) => "x",
+        (3, 5) => "c",
+        (4, 5) => "v",
+        (5, 5) => "b",
+        (6, 5) => "n",
+        (7, 5) => "m",
+        _ => return None,
+    };
+    Some(s)
+}
+
 fn key_hand_finger(key: &str) -> Option<(usize, usize)> {
     let (hand, finger) = match key.to_uppercase().as_str() {
         "`" | "BACKQUOTE" | "1" | "Q" | "A" | "Z" | "TAB" | "CAPS-LOCK" | "SHIFT"
@@ -1570,9 +1619,9 @@ pub struct Engine {
     /// extended-motor-actions: the last prepared movement for feature-prep
     /// timing (`compute-prep-time`).
     zz_last_move: Option<ZzMoveInfo>,
-    /// extended-motor-actions: a `pbreak` production name that halts the run.
-    zz_break: Option<String>,
-    /// Set when the current run hit the `zz_break` production.
+    /// extended-motor-actions: `pbreak` production names that halt a run.
+    zz_breaks: Vec<String>,
+    /// Set when the current run hit one of the `zz_breaks` productions.
     zz_break_hit: bool,
     imag_busy: bool,
     /// Temporal module: current tick interval (ms), tick count, the
@@ -1717,7 +1766,7 @@ impl Engine {
             man_exec: [false, false],
             man_exec_queue: Vec::new(),
             man_last_prep: None,
-            zz_last_cmd: [String::new(), String::new()],
+            zz_last_cmd: ["NONE".to_string(), "NONE".to_string()],
             zz_data: Vec::new(),
             zz_mouse_pos: (0, 0, 1080),
             zz_mouse_cursor: (28, 2),
@@ -1740,7 +1789,7 @@ impl Engine {
             ],
             zz_last_style: None,
             zz_last_move: None,
-            zz_break: None,
+            zz_breaks: Vec::new(),
             zz_break_hit: false,
             imag_busy: false,
             temporal_tick: 0.0,
@@ -1909,10 +1958,11 @@ impl Engine {
         self.man_exec = [false, false];
         self.man_exec_queue.clear();
         self.man_last_prep = None;
-        self.zz_last_cmd = [String::new(), String::new()];
+        // `reset-hand-tracker` (`motor-extension.lisp:1263`) sets both to `none`.
+        self.zz_last_cmd = ["NONE".to_string(), "NONE".to_string()];
         self.zz_last_style = None;
         self.zz_last_move = None;
-        self.zz_break = None;
+        self.zz_breaks.clear();
         self.zz_break_hit = false;
         self.zz_mouse_down = false;
         // The virtual mouse cursor's current/device positions
@@ -2324,7 +2374,15 @@ impl Engine {
     /// (`framework/scheduling.lisp:816`, which bounds each run relative to
     /// the current model time).
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
+        self.zz_run_step(secs).map(|_| ())
+    }
+
+    /// Like `run_secs`, but reports whether any event was executed. The
+    /// `zz` task driver loops `(run 10)` until it returns 0 (`test-model.lisp`
+    /// `test5`): a run that processes nothing is the terminator.
+    fn zz_run_step(&mut self, secs: f64) -> Result<bool, EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
+        let mut processed = false;
         loop {
             // Peek so an event beyond the limit stays queued for a later
             // `run` (ACT-R bounds each run relative to the current time and
@@ -2355,6 +2413,7 @@ impl Engine {
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
+            processed = true;
             if self.zz_break_hit {
                 self.zz_break_hit = false;
                 break;
@@ -2373,7 +2432,7 @@ impl Engine {
                 self.changed();
             }
         }
-        Ok(())
+        Ok(processed)
     }
 
     /// All trace emitted so far, newline-terminated (empty if none).
@@ -2555,6 +2614,7 @@ impl Engine {
         self.zz_test2()?;
         self.zz_test3()?;
         self.zz_test4()?;
+        self.zz_test5()?;
         Ok(())
     }
 
@@ -2695,13 +2755,46 @@ impl Engine {
             "GOAL",
             vec![("TEST".to_string(), Value::Sym("TEST4".to_string()))],
         )?;
-        self.zz_break = Some("TEST4-7".to_string());
+        self.zz_breaks = vec!["TEST4-7".to_string()];
         self.run_secs(10.0)?;
         self.zz_buffer_status();
         self.zz_print_finger_locs();
         self.run_secs(10.0)?;
         self.zz_buffer_status();
         self.zz_print_finger_locs();
+        self.zz_summarize();
+        Ok(())
+    }
+
+    /// `test5` (`test-model.lisp:188`): `(do ((time (run 10) (run 10))) ((= time
+    /// 0.0)) ...)` — each run stops at a `pbreak`, and the body dumps the
+    /// manual buffers and finger locations after every non-empty run.
+    fn zz_test5(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Move the fingers and hands around".to_string(),
+        ));
+        self.reset()?;
+        self.zz_goal_focus(
+            "GOAL",
+            vec![("TEST".to_string(), Value::Sym("TEST5".to_string()))],
+        )?;
+        self.zz_breaks = vec![
+            "TEST5-5".to_string(),
+            "TEST5-9".to_string(),
+            "TEST5-11".to_string(),
+            "TEST5-12".to_string(),
+        ];
+        loop {
+            let ran = self.zz_run_step(10.0)?;
+            if !ran {
+                break;
+            }
+            self.zz_buffer_status();
+            self.zz_print_finger_locs();
+        }
         self.zz_summarize();
         Ok(())
     }
@@ -2814,11 +2907,14 @@ impl Engine {
                 RhsAction::Request { buffer, spec } => {
                     lines.push(format!("   +{buffer}>"));
                     if let ChunkDesc::Spec { ctype, slots, .. } = spec {
-                        if !ctype.is_empty() {
-                            lines.push(format!("       CMD {ctype}"));
-                        }
+                        // `production-statement-text` (`procedural.lisp:2555`)
+                        // prints the spec's slots, then the request type as
+                        // `CMD`.
                         for (slot, val) in slots {
                             lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                        }
+                        if !ctype.is_empty() {
+                            lines.push(format!("       CMD {ctype}"));
                         }
                     }
                 }
@@ -3531,7 +3627,7 @@ impl Engine {
                 }
                 // `pbreak` (`procedural.lisp:2318`): print the instantiation,
                 // emit a break event, and halt the run before the reads.
-                if self.zz_break.as_deref() == Some(name.as_str()) {
+                if self.zz_breaks.iter().any(|b| b == &name) {
                     self.zz_print_instantiation(prod, &bindings);
                     self.emit("------", format!("BREAK-EVENT PRODUCTION {name}"));
                     self.zz_break_hit = true;
@@ -3730,6 +3826,13 @@ impl Engine {
                         init + burst + burst,
                     ),
                     "RELEASE" => (init + self.cfg.zz_krt_ms, None, init + burst),
+                    // `release-recoil` (`motor-extension.lisp:1991`): a peck
+                    // that releases at exec and recoils home.
+                    "RELEASE-RECOIL" => (
+                        init + self.cfg.zz_krt_ms,
+                        None,
+                        init + move_ms + burst,
+                    ),
                     // `point-finger` (`motor-extension.lisp:2036`): exec is
                     // `max(init, move-time)`, finish `init + move-time`.
                     "POINT-FINGER" => (init.max(move_ms), None, init + move_ms),
@@ -3746,9 +3849,11 @@ impl Engine {
                     kind: ZzKind::Key {
                         finger,
                         exec2_ms,
-                        // `point-finger` produces no `output-key`
-                        // (`motor-extension.lisp:2052`).
-                        output: style != "POINT-FINGER",
+                        // `point-finger` and the release styles produce no
+                        // `output-key`; `release`/`release-recoil` emit a
+                        // `release-key` at exec instead.
+                        output: !matches!(style.as_str(), "POINT-FINGER" | "RELEASE" | "RELEASE-RECOIL"),
+                        release_exec: matches!(style.as_str(), "RELEASE" | "RELEASE-RECOIL"),
                     },
                 });
                 // `move-a-finger` (`motor.lisp:712`) shifts the finger's
@@ -9262,6 +9367,7 @@ impl Engine {
                             finger,
                             exec2_ms,
                             output,
+                            release_exec,
                         } => {
                             if output {
                                 self.push(
@@ -9271,6 +9377,20 @@ impl Engine {
                                     Event::ZzKeyOutput {
                                         key: p.key.clone(),
                                         down: true,
+                                        hand: p.hand,
+                                        finger,
+                                    },
+                                );
+                            } else if release_exec {
+                                // `release`/`release-recoil` put the finger up
+                                // at exec (`motor-extension.lisp:1968`/`:2012`).
+                                self.push(
+                                    t + p.exec_ms,
+                                    Prio::Num(0),
+                                    Out::Always,
+                                    Event::ZzKeyOutput {
+                                        key: p.key.clone(),
+                                        down: false,
                                         hand: p.hand,
                                         finger,
                                     },
@@ -9553,7 +9673,9 @@ impl Engine {
     /// (`motor-extension.lisp:1861`+ / `motor.lisp:984`).
     fn zz_style_info(class: &str) -> (&'static str, i64, bool) {
         match class {
-            "PECK" | "PECK-RECOIL" | "HOLD-PECK" | "POINT-FINGER" => ("PECK", 5, true),
+            "PECK" | "PECK-RECOIL" | "HOLD-PECK" | "POINT-FINGER" | "RELEASE-RECOIL" => {
+                ("PECK", 5, true)
+            }
             "PUNCH" | "HOLD-PUNCH" | "RELEASE" => ("PUNCH", 3, false),
             _ => ("PLY", 3, false),
         }
@@ -9691,15 +9813,90 @@ impl Engine {
             "MOVE-TO-KEY" => {
                 self.zz_extended_finger_keyboard(cmd, &key, "POINT-FINGER", "POINT-FINGER")
             }
-            "RELEASE-KEY" | "RELEASE-KEY-TO-HOME" => {
-                self.zz_extended_finger_keyboard(cmd, &key, "RELEASE", "RELEASE")
-            }
+            "RELEASE-KEY" => self.zz_extended_finger_keyboard(cmd, &key, "RELEASE", "RELEASE"),
+            "RELEASE-KEY-TO-HOME" => self.zz_release_key_to_home(&key),
             "MOVE-FINGER-TO-HOME" => self.zz_move_finger_to_home(slots),
             "ALL-FINGERS-TO-HOME" => self.zz_all_fingers_to_home(slots),
             "HAND-TO-MOUSE" => self.zz_hand_to(true),
             "HAND-TO-HOME" => self.zz_hand_to(false),
             _ => Ok(()),
         }
+    }
+
+    /// A direct style request (`handle-style-request`, `motor.lisp:1447`):
+    /// trace the request, then schedule the style with the spec's features.
+    fn zz_direct_style(
+        &mut self,
+        cmd: &str,
+        slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
+        let hand = slots
+            .iter()
+            .find(|(s, _)| s == "HAND")
+            .and_then(|(_, v)| Self::touch_hand_idx(&name_of(v)))
+            .unwrap_or(0);
+        let finger = slots
+            .iter()
+            .find(|(s, _)| s == "FINGER")
+            .and_then(|(_, v)| Self::touch_finger_idx(&name_of(v)))
+            .unwrap_or(0);
+        let r = slots
+            .iter()
+            .find(|(s, _)| s == "R")
+            .and_then(|(_, v)| num_of(v))
+            .unwrap_or(0.0) as f32;
+        let theta = slots
+            .iter()
+            .find(|(s, _)| s == "THETA")
+            .and_then(|(_, v)| num_of(v))
+            .unwrap_or(0.0) as f32;
+        self.zz_direct_style_trace(cmd, hand, finger, r, theta);
+        // `move-a-finger` shifts the offset by the polar vector.
+        let cur = self.zz_finger_loc(hand, finger);
+        let target = if r == 0.0 {
+            cur
+        } else {
+            (
+                (cur.0 as f32 + r * theta.cos()).round() as i64,
+                (cur.1 as f32 + r * theta.sin()).round() as i64,
+            )
+        };
+        // A direct style has no `key` slot; the device names the output from
+        // the finger's location (`motor.lisp:960`).
+        let key = xy_key(target.0, target.1).unwrap_or("").to_string();
+        self.zz_key_request(cmd, cmd, &key, hand, finger, r, theta, Some(target))
+    }
+
+    /// `handle-style-request` details (`motor.lisp:1459`): the style name
+    /// followed by its feature slots.
+    fn zz_direct_style_trace(
+        &mut self,
+        class: &str,
+        hand: usize,
+        finger: usize,
+        r: f32,
+        theta: f32,
+    ) {
+        let h = if hand == 0 { "LEFT" } else { "RIGHT" };
+        let f = ["INDEX", "MIDDLE", "RING", "PINKIE", "THUMB"][finger];
+        let (_, _, hfrt) = Self::zz_style_info(class);
+        let line = if hfrt {
+            format!(
+                "{class} HAND {h} FINGER {f} R {} THETA {}",
+                lisp_s_f32(r),
+                lisp_s_f32(theta)
+            )
+        } else {
+            format!("{class} HAND {h} FINGER {f}")
+        };
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line,
+            },
+        );
     }
 
     /// `all-fingers-to-home` (`motor-extension.lisp:2401`): move whichever
@@ -9824,6 +10021,50 @@ impl Engine {
         )
     }
 
+    /// `release-key-to-home` (`motor-extension.lisp:2183`): release the key
+    /// under the finger, recoiling to home if the finger is off home.
+    fn zz_release_key_to_home(&mut self, key: &str) -> Result<(), EngineError> {
+        let Some((hand, finger)) = key_hand_finger(key) else {
+            return Ok(());
+        };
+        let Some(key_loc) = key_xy(key) else {
+            return Ok(());
+        };
+        let finger_loc = self.zz_finger_loc(hand, finger);
+        if key_loc != finger_loc {
+            // `:2195`: warning only, no action.
+            return Ok(());
+        }
+        let home = self.zz_home_position(hand, finger);
+        if home == finger_loc {
+            self.zz_key_request(
+                "RELEASE-KEY-TO-HOME",
+                "RELEASE",
+                key,
+                hand,
+                finger,
+                0.0,
+                0.0,
+                None,
+            )
+        } else {
+            let dx = (home.0 - finger_loc.0) as f64;
+            let dy = (home.1 - finger_loc.1) as f64;
+            let r = (dx * dx + dy * dy).sqrt() as f32;
+            let theta = dy.atan2(dx) as f32;
+            self.zz_key_request(
+                "RELEASE-KEY-TO-HOME",
+                "RELEASE-RECOIL",
+                key,
+                hand,
+                finger,
+                r,
+                theta,
+                Some(home),
+            )
+        }
+    }
+
     /// `hand-to-mouse`/`hand-to-home` (a `hand-ply`): move the right hand to
     /// the mouse / home, auto-releasing any held key.
     fn zz_hand_to(&mut self, to_mouse: bool) -> Result<(), EngineError> {
@@ -9905,6 +10146,9 @@ impl Engine {
                     | "HOLD-KEY" | "HIT-KEY" | "TYPE-KEY" | "MOVE-TO-KEY" | "RELEASE-KEY"
                     | "RELEASE-KEY-TO-HOME" | "MOVE-FINGER-TO-HOME" | "ALL-FINGERS-TO-HOME"
                     | "HAND-TO-MOUSE" | "HAND-TO-HOME"
+                    | "HOLD-PUNCH" | "HOLD-PECK" | "PUNCH" | "PECK" | "PECK-RECOIL"
+                    | "POINT-FINGER" | "RELEASE"
+                    | "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY"
             ) {
                 Some(t)
             } else {
@@ -9971,6 +10215,24 @@ impl Engine {
                     ) =>
             {
                 self.zz_key_cmd(c, &slots)
+            }
+            (Some(c), _)
+                if self.cfg.zz_ext
+                    && matches!(
+                        c,
+                        "HOLD-PUNCH" | "HOLD-PECK" | "PUNCH" | "PECK" | "PECK-RECOIL"
+                            | "POINT-FINGER" | "RELEASE"
+                    ) =>
+            {
+                self.zz_direct_style(c, &slots)
+            }
+            (Some(c), _)
+                if self.cfg.zz_ext
+                    && matches!(c, "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY") =>
+            {
+                // TODO(M5b/M5c): dual-stage `prepare`/`execute` and
+                // `point-hand-at-key` are not yet implemented.
+                Ok(())
             }
             got => Err(unimpl(format!("manual request {got:?}"))),
         }
