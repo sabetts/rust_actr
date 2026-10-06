@@ -1506,3 +1506,36 @@ Two reference-semantics fixes fell out:
   `modify-visicon-features` moves the underlying feature (`vl_xy`).
 
 `act-touch` is byte-exact (527 lines) — **41 specs**.
+
+## 133. `tracker`: the learning module and its single-float math
+
+`tracker` (the `simple.lisp` choice-learning task) needs the tracker extra's
+request/update machinery:
+- A `+tracker>` request (`tracker.lisp:608`) generates the initial guess:
+  `generate-tracker-choices` (uniform `min`…`max`), `tracker-prior-statistics`,
+  then `tracker-genQuadValue` — a Boltzmann choice over the quadratic
+  `params`, traced as `Tracker … generating value …` / `Choices` / `Probs` /
+  `Chosen result is …`. The value is written to the control buffer with
+  `schedule-mod-buffer-chunk` (priority -2000, under `TRACKER`).
+- A `set-buffer-chunk`/`mod-buffer-chunk` watcher accumulates `good`/`bad`
+  evidence (`Tracker … updating the current … value`).
+- A scheduled `update-tracker` (`tracker.lisp:1298`) runs `update-stats` →
+  `calc-quad` → `genQuadValue`, traced as `… updating the equation` /
+  `new equation is …`. **Draw order differs by call site**: creation draws
+  `genQuadValue`'s `act-r-random` *before* the next-update delay, but
+  `update-tracker` draws the delay *before* `genQuadValue`.
+- The math is **single-float** (`ms->seconds` returns one): the statistics and
+  the quadratic fit must accumulate in `f32` or the 4th digit drifts. The
+  temperature, however, is an exact rational in ACT-R
+  (`init/(1+active/scale)`), so it must be computed in `f64` and coerced —
+  `~f` then prints `0.8494733`, not `0.84947336`.
+- `generate-tracker-choices` returns integers, and the control value keeps
+  that type (`press-key key 1`, not `1.0`).
+
+The stub's `run-test` setup is hand-added to the spec: a `(:TRACKER-SETUP …)`
+step adds the `prompt` feature and arms the keypress→`correct`/`wrong`→
+`choose` prompt cycling; the visicon feature carries its extra slots
+(`prompt`) into the visual-location chunk. The spec's seed is the stub's
+`(57531033409 0)`, not the recorded `(100 0)`.
+
+`tracker` is byte-exact (322 lines) — **42 specs**.

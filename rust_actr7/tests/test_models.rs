@@ -261,6 +261,19 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 }
                 steps.push(Step::AddVisicon(slots));
             }
+            ":TRACKER-SETUP" => {
+                let mut slots = Vec::new();
+                for it in &v[1..] {
+                    if let Sexp::List(p) = it {
+                        if let Some(k) = p.first().and_then(|x| x.as_sym()) {
+                            if let Some(val) = p.get(1) {
+                                slots.push((k.to_string(), val.clone()));
+                            }
+                        }
+                    }
+                }
+                steps.push(Step::TrackerSetup(slots));
+            }
             ":MODIFY-VISICON" => {
                 let at = v.get(1).and_then(as_i64);
                 let name = v.get(2).and_then(|x| x.as_sym()).map(str::to_string);

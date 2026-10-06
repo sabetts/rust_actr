@@ -291,6 +291,9 @@ struct Config {
     touch_drag_delay: bool,
     touch_left_start: (i64, i64),
     touch_right_start: (i64, i64),
+    /// tracker extra (`extras/tracker/tracker.lisp`).
+    tracker: bool,
+    trace_tracker: bool,
     peck_fitts: f32,
     min_fitts_ms: i64,
     rhst: bool,
@@ -351,6 +354,8 @@ struct Feature {
     /// `width`/`height` slots (0 when absent) for `approach-width`.
     width: i64,
     height: i64,
+    /// Additional slots (`prompt` etc.) preserved in the visual-location.
+    extra: Vec<(String, Value)>,
     tstamp_ms: i64,
     attended: bool,
 }
@@ -365,12 +370,40 @@ struct KeySpec {
     theta: f32,
 }
 
+/// tracker extra: a learned value tracker (`extras/tracker/tracker.lisp`).
+#[derive(Debug, Clone)]
+struct Tracker {
+    name: String,
+    active: bool,
+    control_buffer: String,
+    control_slot: String,
+    choices: Vec<f64>,
+    /// `(N, SX1, SX2, SX3, SX4, SYg, SX1Yg, SX2Yg, SYb, SX1Yb, SX2Yb)`.
+    statistics: Vec<f64>,
+    params: [f64; 3],
+    init_temp: f64,
+    temperature: f64,
+    delay: f64,
+    scale_temp_ms: f64,
+    active_time: i64,
+    good_buffer: Option<String>,
+    good_slot: Option<String>,
+    good_weight: f64,
+    good_value: f64,
+    bad_buffer: Option<String>,
+    bad_slot: Option<String>,
+    bad_weight: f64,
+    bad_value: f64,
+    last_update: i64,
+    setting: f64,
+    update_gen: u64,
+}
+
 /// act-touch: a computed touch movement (`extras/act-touch/act-touch.lisp`).
 /// Times are relative to the request; `signal`/`monitor` are the exact trace
 /// and task-output lines emitted at execution time.
 #[derive(Debug, Clone)]
-struct TouchPlan {
-    req_ms: i64,
+struct TouchPlan {    req_ms: i64,
     prep_ms: i64,
     init_ms: i64,
     exec_ms: i64,
@@ -739,6 +772,11 @@ impl Config {
             touch_drag_delay: sgp_bool(&m.params, ":TOUCH-DRAG-DELAY"),
             touch_left_start: (0, 300),
             touch_right_start: (1024, 300),
+            tracker: m
+                .required_extras
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case("tracker")),
+            trace_tracker: sgp_bool(&m.params, ":TRACE-TRACKER"),
             peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
             min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
             rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
@@ -989,6 +1027,12 @@ enum Event {
         module: String,
         line: String,
     },
+    /// tracker extra: a scheduled `update-tracker`.
+    TrackerUpdate {
+        gen: u64,
+    },
+    /// tracker task: `choose` re-prompts the visicon feature.
+    Choose,
     /// `(mod-focus slot value ...)`: goal-module modification
     /// (`goal.lisp:346`), traced as `GOAL-MODIFICATION`.
     ModFocus {
@@ -1275,6 +1319,14 @@ pub struct Engine {
     /// Visual-location copy name → its captured `(screen-x, screen-y)`
     /// (the chunk keeps its position even if the feature later moves).
     vl_xy: HashMap<String, (i64, i64)>,
+    /// tracker extra: live trackers.
+    trackers: Vec<Tracker>,
+    /// tracker extra: generation counter for scheduled update events.
+    tracker_gen: u64,
+    /// tracker extra: the task's visicon feature (prompt cycling).
+    tracker_task: bool,
+    tracker_feature: Option<String>,
+    tracker_target: String,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
     trace_on: bool,
     /// Task-file `defun`s available to `!eval!`/`!bind!`.
@@ -1386,6 +1438,11 @@ impl Engine {
             touch_fingers: [[(0, 0, 1); 5]; 2],
             touch_last: None,
             vl_xy: HashMap::new(),
+            trackers: Vec::new(),
+            tracker_gen: 0,
+            tracker_task: false,
+            tracker_feature: None,
+            tracker_target: "2".to_string(),
             trace_on: true,
             user_fns: HashMap::new(),
         };
@@ -1500,6 +1557,10 @@ impl Engine {
         self.name_count.clear();
         self.vl_copies.clear();
         self.vl_xy.clear();
+        self.trackers.clear();
+        self.tracker_gen = 0;
+        self.tracker_task = false;
+        self.tracker_feature = None;
         self.obj_built.clear();
         self.visual_busy = false;
         self.last_attention = None;
@@ -2091,13 +2152,19 @@ impl Engine {
         let mut y = 0i64;
         let mut w = 0i64;
         let mut ht = 0i64;
+        let mut extra: Vec<(String, Value)> = Vec::new();
         for (k, v) in slots {
-            match (k.to_uppercase().as_str(), v) {
+            let ku = k.to_uppercase();
+            match (ku.as_str(), v) {
                 ("SCREEN-X", Sexp::Int(i)) => x = *i,
                 ("SCREEN-Y", Sexp::Int(i)) => y = *i,
                 ("WIDTH", Sexp::Int(i)) => w = *i,
                 ("HEIGHT", Sexp::Int(i)) => ht = *i,
-                _ => {}
+                _ => {
+                    if let Ok(val) = Value::from_sexp(v) {
+                        extra.push((ku, val));
+                    }
+                }
             }
         }
         self.features.push(Feature {
@@ -2108,6 +2175,7 @@ impl Engine {
             y,
             width: w,
             height: ht,
+            extra,
             tstamp_ms: self.time_ms,
             attended: false,
         });
@@ -2483,15 +2551,23 @@ impl Engine {
                 if show {
                     self.emit(&module, format!("MOD-BUFFER-CHUNK {buffer}"));
                 }
-                let b = self.buffer_mut(&buffer);
-                let chunk = b
-                    .chunk
-                    .as_mut()
-                    .ok_or_else(|| bad(format!("MOD-BUFFER-CHUNK with empty {buffer}")))?;
-                for (s, v) in slots {
-                    match chunk.slots.iter_mut().find(|(k, _)| k == &s) {
-                        Some((_, old)) => *old = v,
-                        None => chunk.slots.push((s, v)),
+                {
+                    let b = self.buffer_mut(&buffer);
+                    let chunk = b
+                        .chunk
+                        .as_mut()
+                        .ok_or_else(|| bad(format!("MOD-BUFFER-CHUNK with empty {buffer}")))?;
+                    for (s, v) in slots.iter() {
+                        match chunk.slots.iter_mut().find(|(k, _)| k == s) {
+                            Some((_, old)) => *old = v.clone(),
+                            None => chunk.slots.push((s.clone(), v.clone())),
+                        }
+                    }
+                }
+                if self.cfg.tracker {
+                    let names: Vec<String> = slots.iter().map(|(s, _)| s.clone()).collect();
+                    for s in names {
+                        self.tracker_check_buffer_changes(&buffer, Some(&s));
                     }
                 }
                 self.changed();
@@ -2538,6 +2614,11 @@ impl Engine {
                             };
                             let at = self.time_ms + delay;
                             self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
+                        }
+                    }
+                    "TRACKER" => {
+                        if let NewChunk::Spec { slots, .. } = spec {
+                            self.tracker_request(&slots)?;
                         }
                     }
                     "TEMPORAL" => {
@@ -2837,6 +2918,24 @@ impl Engine {
                 if show {
                     self.emit(&module, line);
                 }
+            }
+            Event::TrackerUpdate { gen } => {
+                if gen == self.tracker_gen {
+                    if show {
+                        if let Some(t) = self.trackers.first() {
+                            self.emit(
+                                "TRACKER",
+                                format!("update-tracker {} {}", t.name, t.control_slot),
+                            );
+                        }
+                    }
+                    self.tracker_update()?;
+                } else {
+                    self.event_silent = true;
+                }
+            }
+            Event::Choose => {
+                self.tracker_set_prompt("CHOOSE");
             }
             Event::ModFocus { slots } => {
                 if show {
@@ -3155,6 +3254,22 @@ impl Engine {
                     self.emit(
                         "KEYBOARD",
                         format!("output-key {} {}", self.model.name, key.to_lowercase()),
+                    );
+                }
+                if self.tracker_task {
+                    // `response` monitor (`simple.lisp:29`): prompt correct/
+                    // wrong, then re-prompt `choose` 5 s later.
+                    let prompt = if key == self.tracker_target {
+                        "CORRECT"
+                    } else {
+                        "WRONG"
+                    };
+                    self.tracker_set_prompt(prompt);
+                    self.push(
+                        self.time_ms + 5000,
+                        Prio::Num(0),
+                        Out::Never,
+                        Event::Choose,
                     );
                 }
                 if self.clear_on_keypress {
@@ -4313,6 +4428,7 @@ impl Engine {
             "VISUAL" => Ok(!self.visual_busy),
             "MANUAL" => Ok(!self.man_prep_busy && !self.man_exec_busy),
             "IMAGINAL" => Ok(!self.imag_busy),
+            "TRACKER" => Ok(true),
             "VOCAL" => Ok(!self.vocal_busy),
             "BLENDING" => Ok(!self.blending_busy),
             _ => Ok(!self
@@ -7453,6 +7569,363 @@ impl Engine {
         Ok(())
     }
 
+    /// tracker extra: choices uniformly spaced from `min` to `max`
+    /// (`generate-tracker-choices`).
+    fn tracker_choices(n: usize, min: f64, max: f64) -> Vec<f64> {
+        let interval = max - min;
+        let step = interval / (n as f64 - 1.0);
+        let mut out = Vec::new();
+        let mut val = min;
+        for i in 0..n {
+            out.push(val);
+            if i + 1 < n {
+                val = max.min(val + step);
+            }
+        }
+        out
+    }
+
+    /// tracker extra: initial experience statistics (`tracker-prior-statistics`).
+    fn tracker_prior_stats(choices: &[f64]) -> Vec<f64> {
+        let mut s = vec![0.0f64; 11];
+        for &v in choices {
+            s[0] += 1.0;
+            s[1] += v;
+            s[2] += v * v;
+            s[3] += v * v * v;
+            s[4] += v * v * v * v;
+        }
+        s
+    }
+
+    /// tracker extra: `+tracker>` create request (`tracker.lisp:608`).
+    fn tracker_request(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+        let get = |k: &str| slots.iter().find(|(s, _)| s == k).map(|(_, v)| v.clone());
+        let name_of = |v: &Value| match v {
+            Value::Sym(s) | Value::Str(s) => s.clone(),
+            _ => String::new(),
+        };
+        let num_of = |v: &Value| match v {
+            Value::Int(i) => Some(*i as f64),
+            Value::Num(x) => Some(*x),
+            _ => None,
+        };
+        let control_slot = get("CONTROL-SLOT").map(|v| name_of(&v)).unwrap_or_default();
+        let good_slot = get("GOOD-SLOT").map(|v| name_of(&v));
+        let bad_slot = get("BAD-SLOT").map(|v| name_of(&v));
+        let min = get("MIN").and_then(|v| num_of(&v)).unwrap_or(0.0);
+        let max = get("MAX").and_then(|v| num_of(&v)).unwrap_or(1.0);
+        let count = get("CONTROL-COUNT").and_then(|v| num_of(&v)).unwrap_or(21.0) as usize;
+        let delay = get("DELAY").and_then(|v| num_of(&v)).unwrap_or(10.0);
+        let temp = get("TEMP").and_then(|v| num_of(&v)).unwrap_or(1.0);
+        let scale = get("SCALE").and_then(|v| num_of(&v)).unwrap_or(180.0);
+        let good_weight = get("GOOD-WEIGHT").and_then(|v| num_of(&v)).unwrap_or(1.0);
+        let bad_weight = get("BAD-WEIGHT").and_then(|v| num_of(&v)).unwrap_or(-1.0);
+        let control_buffer = "GOAL".to_string();
+        let values_buffer = "IMAGINAL".to_string();
+        let now = self.time_ms;
+        let n = *self.name_count.entry("TRACKER".to_string()).or_insert(0);
+        self.name_count.insert("TRACKER".to_string(), n + 1);
+        let name = format!("TRACKER{n}");
+        let choices = Self::tracker_choices(count, min, max);
+        let statistics = Self::tracker_prior_stats(&choices);
+        let idx = self.trackers.len();
+        self.trackers.push(Tracker {
+            name,
+            active: true,
+            control_buffer: control_buffer.clone(),
+            control_slot: control_slot.clone(),
+            choices,
+            statistics,
+            params: [0.0; 3],
+            init_temp: temp,
+            temperature: temp,
+            delay,
+            scale_temp_ms: scale * 1000.0,
+            active_time: 0,
+            good_buffer: good_slot.as_ref().map(|_| values_buffer.clone()),
+            good_slot,
+            good_weight,
+            good_value: 0.0,
+            bad_buffer: bad_slot.as_ref().map(|_| values_buffer.clone()),
+            bad_slot,
+            bad_weight,
+            bad_value: 0.0,
+            last_update: now,
+            setting: 0.0,
+            update_gen: 0,
+        });
+        let setting = self.tracker_gen_quad_value(idx);
+        self.trackers[idx].last_update = self.time_ms;
+        self.trackers[idx].setting = setting;
+        // `schedule-mod-buffer-chunk` at priority -2000, under TRACKER.
+        self.now(
+            Prio::Num(-2000),
+            Out::Medium,
+            Event::ModBuffer {
+                buffer: control_buffer,
+                slots: vec![(control_slot, num_value(setting))],
+                module: "TRACKER".to_string(),
+            },
+        );
+        self.tracker_schedule_update(idx, now);
+        Ok(())
+    }
+
+    /// tracker extra: `create-update-tracker-event` (`tracker.lisp:578`).
+    fn tracker_schedule_update(&mut self, idx: usize, from_ms: i64) {
+        let delay = self.trackers[idx].delay;
+        let p = self.rng.borrow_mut().random_float(1.0) as f64;
+        let t = (p.ln() * -delay).clamp(1.0, 60.0);
+        let at = from_ms + (t * 1000.0).round() as i64;
+        self.tracker_gen += 1;
+        let gen = self.tracker_gen;
+        self.trackers[idx].update_gen = gen;
+        let name = self.trackers[idx].name.clone();
+        let slot = self.trackers[idx].control_slot.clone();
+        self.push(
+            at,
+            Prio::Num(0),
+            Out::Always,
+            Event::TrackerUpdate { gen },
+        );
+        let _ = (name, slot);
+    }
+
+    /// tracker extra: Boltzmann choice + trace (`tracker-genQuadValue`).
+    fn tracker_gen_quad_value(&mut self, idx: usize) -> f64 {
+        let choices = self.trackers[idx].choices.clone();
+        let temperature = self.trackers[idx].temperature;
+        let params = self.trackers[idx].params;
+        let ys: Vec<f64> = choices
+            .iter()
+            .map(|&x| params[0] + x * params[1] + x * x * params[2])
+            .collect();
+        let max = ys.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let vals: Vec<f64> = ys.iter().map(|&y| ((y - max) / temperature).exp()).collect();
+        let sum: f64 = vals.iter().sum();
+        let probs: Vec<f64> = vals.iter().map(|&v| v / sum).collect();
+        let p = self.rng.borrow_mut().random_float(1.0) as f64;
+        if self.cfg.trace_tracker {
+            let name = self.trackers[idx].name.clone();
+            let cb = self.trackers[idx].control_buffer.clone();
+            let cs = self.trackers[idx].control_slot.clone();
+            self.out_lines.push(format!(
+                "Tracker {name} generating value for buffer {cb} slot {cs} with temperature {}:",
+                lisp_s_f32(temperature as f32)
+            ));
+            let w = choices
+                .iter()
+                .map(|x| format!("{x:.3}").len())
+                .max()
+                .unwrap_or(5);
+            let fmt = |xs: &[f64]| -> String {
+                xs.iter()
+                    .map(|x| format!("{x:>w$.3}", w = w))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            };
+            self.out_lines.push(format!("  Choices: {}", fmt(&choices)));
+            self.out_lines.push(format!("  Probs:   {}", fmt(&probs)));
+        }
+        let mut result = *choices.last().unwrap();
+        let mut cumsum = 0.0;
+        for i in 0..choices.len() {
+            cumsum += probs[i];
+            if p < cumsum {
+                result = choices[i];
+                break;
+            }
+        }
+        if self.cfg.trace_tracker {
+            self.out_lines
+                .push(format!(" Chosen result is {}", lisp_s_f32(result as f32)));
+        }
+        result
+    }
+
+    /// tracker extra: `update-tracker` (`tracker.lisp:1298`).
+    fn tracker_update(&mut self) -> Result<(), EngineError> {
+        for idx in 0..self.trackers.len() {
+            if !self.trackers[idx].active {
+                continue;
+            }
+            self.tracker_update_stats(idx, false);
+            self.tracker_calc_quad(idx);
+            // `create-update-tracker-event` draws the next delay BEFORE
+            // `genQuadValue` in `update-tracker` (`tracker.lisp:1303`).
+            self.tracker_schedule_update(idx, self.time_ms);
+            if self.cfg.trace_tracker {
+                let name = self.trackers[idx].name.clone();
+                let cs = self.trackers[idx].control_slot.clone();
+                let p = self.trackers[idx].params;
+                self.out_lines.push(format!(
+                    "Tracker {name} for {cs} slot updating the equation"
+                ));
+                self.out_lines.push(format!(
+                    "  new equation is {} + {}x + {}x^2",
+                    lisp_s_f32(p[0] as f32),
+                    lisp_s_f32(p[1] as f32),
+                    lisp_s_f32(p[2] as f32)
+                ));
+            }
+            let setting = self.tracker_gen_quad_value(idx);
+            self.trackers[idx].setting = setting;
+            self.trackers[idx].last_update = self.time_ms;
+            let cb = self.trackers[idx].control_buffer.clone();
+            let cs = self.trackers[idx].control_slot.clone();
+            self.now(
+                Prio::Num(-2000),
+                Out::Medium,
+                Event::ModBuffer {
+                    buffer: cb,
+                    slots: vec![(cs, num_value(setting))],
+                    module: "TRACKER".to_string(),
+                },
+            );
+        }
+        Ok(())
+    }
+
+    /// tracker extra: `tracker-update-stats` (`tracker.lisp:1338`). ACT-R
+    /// accumulates in single-float (`ms->seconds` returns one).
+    fn tracker_update_stats(&mut self, idx: usize, skip: bool) {
+        let weight = ((self.time_ms - self.trackers[idx].last_update) as f32 / 1000.0).max(0.05);
+        let weight2 = 1.0f32;
+        let x = self.trackers[idx].setting as f32;
+        let x2 = x * x;
+        let good_y = self.trackers[idx].good_value as f32 / weight;
+        let bad_y = self.trackers[idx].bad_value as f32 / weight;
+        let current: [f32; 11] = [
+            1.0,
+            x,
+            x2,
+            x * x2,
+            x2 * x2,
+            good_y,
+            x * good_y,
+            x2 * good_y,
+            bad_y,
+            x * bad_y,
+            x2 * bad_y,
+        ];
+        let old: Vec<f32> = self.trackers[idx].statistics.iter().map(|v| *v as f32).collect();
+        let new: Vec<f32> = if skip {
+            old.iter().map(|o| weight2 * o).collect()
+        } else {
+            current
+                .iter()
+                .zip(old.iter())
+                .map(|(c, o)| weight * c + weight2 * o)
+                .collect()
+        };
+        self.trackers[idx].good_value = 0.0;
+        self.trackers[idx].bad_value = 0.0;
+        if !skip {
+            self.trackers[idx].active_time += self.time_ms - self.trackers[idx].last_update;
+            // ACT-R computes this as an exact rational; keep f64 precision
+            // so the single-float coercion matches (`~f` in the trace).
+            self.trackers[idx].temperature = self.trackers[idx].init_temp
+                * self.trackers[idx].scale_temp_ms
+                / (self.trackers[idx].scale_temp_ms + self.trackers[idx].active_time as f64);
+        }
+        self.trackers[idx].statistics = new.iter().map(|v| *v as f64).collect();
+    }
+
+    /// tracker extra: least-squares quadratic fit (`tracker-calc-quad`).
+    fn tracker_calc_quad(&mut self, idx: usize) {
+        let s: Vec<f32> = self.trackers[idx].statistics.iter().map(|v| *v as f32).collect();
+        let wg = self.trackers[idx].good_weight as f32;
+        let wb = self.trackers[idx].bad_weight as f32;
+        let n = s[0];
+        let (sx1, sx2, sx3, sx4) = (s[1], s[2], s[3], s[4]);
+        let sy = wg * s[5] + wb * s[8];
+        let sx1y = wg * s[6] + wb * s[9];
+        let sx2y = wg * s[7] + wb * s[10];
+        let lx2 = sx2 - sx1 * sx1 / n;
+        let lx3 = sx3 - sx1 * sx2 / n;
+        let lx4 = sx4 - sx2 * sx2 / n;
+        let lx1y = sx1y - sx1 * sy / n;
+        let lx2y = sx2y - sx2 * sy / n;
+        let denom = lx2 * lx4 - lx3 * lx3;
+        if denom == 0.0 {
+            return;
+        }
+        let p2 = (lx4 * lx1y - lx3 * lx2y) / denom;
+        let p3 = (lx2 * lx2y - lx3 * lx1y) / denom;
+        let p1 = (sy - p2 * sx1 - p3 * sx2) / n;
+        self.trackers[idx].params = [p1 as f64, p2 as f64, p3 as f64];
+    }
+
+    /// tracker extra: buffer-change watcher (`tracker-check-for-buffer-changes`).
+    fn tracker_check_buffer_changes(&mut self, buffer: &str, slot: Option<&str>) {
+        if !self.cfg.tracker || self.trackers.is_empty() {
+            return;
+        }
+        for idx in 0..self.trackers.len() {
+            if !self.trackers[idx].active {
+                continue;
+            }
+            let good = self.trackers[idx].good_buffer.as_deref() == Some(buffer);
+            let bad = self.trackers[idx].bad_buffer.as_deref() == Some(buffer);
+            if !good && !bad {
+                continue;
+            }
+            let which_good = good
+                && slot
+                    .map(|s| Some(s) == self.trackers[idx].good_slot.as_deref())
+                    .unwrap_or(false);
+            let which_bad = bad
+                && slot
+                    .map(|s| Some(s) == self.trackers[idx].bad_slot.as_deref())
+                    .unwrap_or(false);
+            if !which_good && !which_bad {
+                continue;
+            }
+            let name = self.trackers[idx].name.clone();
+            let cs = self.trackers[idx].control_slot.clone();
+            let which = if which_good { "GOOD" } else { "BAD" };
+            if self.cfg.trace_tracker {
+                self.out_lines.push(format!(
+                    "Tracker {name} for {cs} updating the current {which} value"
+                ));
+                self.out_lines.push(format!(
+                    " Updating event occurred in the {which} slot of the {buffer} buffer"
+                ));
+                self.out_lines.push("  updating with value 1.0".to_string());
+            }
+            if which_good {
+                self.trackers[idx].good_value += 1.0;
+            } else {
+                self.trackers[idx].bad_value += 1.0;
+            }
+        }
+    }
+
+    /// tracker extra: the `run-test` setup (`simple.lisp:38`) — add the
+    /// prompt feature and arm the keypress/choose prompt cycling.
+    pub fn tracker_setup(&mut self, slots: &[(String, Sexp)]) {
+        self.tracker_task = true;
+        let before = self.features.len();
+        self.add_visicon(slots);
+        if self.features.len() > before {
+            self.tracker_feature = Some(self.features[before].name.clone());
+        }
+    }
+
+    /// tracker task: set the visicon feature's `prompt` and re-display.
+    fn tracker_set_prompt(&mut self, prompt: &str) {
+        if let Some(name) = self.tracker_feature.clone() {
+            if let Some(f) = self.features.iter_mut().find(|f| f.name == name) {
+                match f.extra.iter_mut().find(|(k, _)| k == "PROMPT") {
+                    Some((_, v)) => *v = Value::Sym(prompt.to_string()),
+                    None => f.extra.push(("PROMPT".to_string(), Value::Sym(prompt.to_string()))),
+                }
+            }
+        }
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
     /// Manual request routing: only press-key in M5a.
     fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         let (ctype, slots) = match &spec {
@@ -7484,6 +7957,8 @@ impl Engine {
                 ("CMD", Value::Sym(c)) => cmd = Some(c.to_uppercase()),
                 ("KEY", Value::Sym(k)) => key = Some(k.clone()),
                 ("KEY", Value::Str(k)) => key = Some(k.clone()),
+                ("KEY", Value::Int(i)) => key = Some(i.to_string()),
+                ("KEY", Value::Num(x)) => key = Some(lisp_s_f32(*x as f32)),
                 _ if self.cfg.touch => {}
                 got => {
                     return Err(unimpl(format!("manual request slot {got:?}")));
@@ -7578,6 +8053,7 @@ impl Engine {
                 y: t.y,
                 width: 0,
                 height: 0,
+                extra: Vec::new(),
                 tstamp_ms: now,
                 attended: false,
             });
@@ -7751,12 +8227,14 @@ impl Engine {
 /// in `vl_copies`.
 impl Feature {
     fn loc_slots(&self) -> Vec<(String, Value)> {
-        vec![
+        let mut v = vec![
             ("KIND".to_string(), Value::Sym(self.kind.clone())),
             ("VALUE".to_string(), Value::Str(self.value.clone())),
             ("SCREEN-X".to_string(), Value::Num(self.x as f64)),
             ("SCREEN-Y".to_string(), Value::Num(self.y as f64)),
-        ]
+        ];
+        v.extend(self.extra.iter().cloned());
+        v
     }
 }
 
@@ -7865,6 +8343,16 @@ fn num_of(v: &Value) -> Option<f64> {
         Value::Int(i) => Some(*i as f64),
         Value::Num(x) => Some(*x),
         _ => None,
+    }
+}
+
+/// A numeric value, as an integer when integral (ACT-R preserves the
+/// `generate-tracker-choices` integer choices).
+fn num_value(x: f64) -> Value {
+    if x.fract() == 0.0 && x.abs() < 9e15 {
+        Value::Int(x as i64)
+    } else {
+        Value::Num(x)
     }
 }
 

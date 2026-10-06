@@ -215,6 +215,8 @@ pub enum Step {
     ModFocus(Vec<(String, sexpr::Sexp)>),
     /// `(add-visicon-features (slot value) ...)`.
     AddVisicon(Vec<(String, sexpr::Sexp)>),
+    /// tracker task setup: add the prompt feature.
+    TrackerSetup(Vec<(String, sexpr::Sexp)>),
     /// `(modify-visicon-features ...)` at an absolute time.
     ModifyVisicon {
         at_ms: i64,
@@ -296,6 +298,7 @@ pub fn run_model_steps(
             Step::StartHandAtTouch(hand) => eng.start_hand_at_touch(hand),
             Step::ModFocus(slots) => eng.mod_focus(slots),
             Step::AddVisicon(slots) => eng.add_visicon(slots),
+            Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ModifyVisicon {
                 at_ms,
                 name,
