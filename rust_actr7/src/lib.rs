@@ -205,6 +205,8 @@ pub enum Step {
     Reset,
     /// `(buffer-chunk <name>...)`: the task driver's final buffer dump.
     BufferChunk(Vec<String>),
+    /// Schedule a no-op event at absolute model time (real-time slack hook).
+    DummyEvent(i64),
 }
 
 /// Run a scripted sequence of steps over one or more model files (the
@@ -274,6 +276,7 @@ pub fn run_model_steps(
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
             Step::BufferChunk(buffers) => eng.print_buffer_chunk(buffers),
+            Step::DummyEvent(at_ms) => eng.schedule_dummy(*at_ms),
         }
     }
     Ok(eng.output())

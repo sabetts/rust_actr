@@ -907,7 +907,9 @@ enum Event {
     /// `+visual> cmd clear` direct event (output low); the buffer
     /// itself is cleared by the request-rule implicit event.
     VisualClear,
-    /// Run-full-time dummy: keeps the run going to the time limit.
+    /// Run-full-time dummy: keeps the run going to the time limit. Also used
+    /// non-maintenance for a real-time slack hook's `(schedule-event <t> 'fn)`
+    /// no-op, which is hidden at medium but wakes an armed CR.
     Dummy,
     /// Temporal module tick: emits the "Incrementing time ticks to N"
     /// detail, bumps the count, and schedules the next tick. A stale `gen`
@@ -1924,6 +1926,13 @@ impl Engine {
                 self.out_lines.push(String::new());
             }
         }
+    }
+
+    /// Schedule a no-op event at absolute model time `at_ms` (a real-time
+    /// slack hook's `(schedule-event .5 'fn)`, `meta-process.lisp`): hidden at
+    /// medium but wakes an armed conflict-resolution.
+    pub fn schedule_dummy(&mut self, at_ms: i64) {
+        self.push(at_ms, Prio::Num(0), Out::Always, Event::Dummy);
     }
 
     /// Trace on/off (`:v`), used by scripted drivers that hide segments.

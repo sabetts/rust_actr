@@ -224,6 +224,10 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 steps.push(Step::GoalFocus(desc));
             }
             ":RESET" => steps.push(Step::Reset),
+            ":DUMMY-EVENT" => match v.get(1).and_then(as_i64) {
+                Some(ms) => steps.push(Step::DummyEvent(ms)),
+                None => note(&mut unsupported, format!("dummy-event {st:?}")),
+            },
             ":BUFFER-CHUNK" => {
                 let mut names = Vec::new();
                 for it in &v[1..] {
