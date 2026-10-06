@@ -1677,6 +1677,46 @@ polar vector to home (and does nothing when the finger is off the key).
 `zz` test5 is byte-exact through line 2519 (test5-7); `prepare`/`execute`
 remain.
 
+## 140. `zz` test5: `prepare`/`execute`, `point-hand-at-key`, and the `hand` slot
+
+`prepare` (`general-pm.lisp:562`) builds a `hand-ply`, sets `exec-immediate-p`
+nil, and prepares it; `preparation-complete` (`motor-extension.lisp:1019`)
+therefore does **not** queue it — it frees the processor and waits. `execute`
+(`:580`) appends the *same* instance to the exec queue, so its
+`exec`/`finish` times are re-based to the `execute` event, not to
+prep-complete (2.700 → INIT 2.750, `MOVE-A-HAND` 2.850, FINISH 2.900).
+
+The `PREPARE` trace is not an explicit details string: `pm-module-request`
+(`motor.lisp:1423`) schedules `'prepare` with no `:details`, so
+`format-event` (`events.lisp:263`) falls back to action + params. That prints
+the request's **raw** slot values, so `r 1` is the integer `1` and `theta 3.14`
+is `3.14` — unlike a computed polar, which prints `1.0`/`-1.5707964`. `r`/`theta`
+are therefore pre-rendered per movement, not formatted from the `f32`.
+
+`point-hand-at-key` (`keyboard.lisp:653`) is a front-end for `point-hand`
+(`motor.lisp:1149`), which makes a **`hand-ply`** (style-name `PLY`). So its
+prep is `feat-differences` against the preceding `prepare`'s `hand-ply`, not
+`num-to-prepare`: only `theta` changed (1 feature, 0.050 s). Its
+`MOVE-A-HAND` details use the polar computed from the hand loc to the key, and
+`hand-ply` moves the hand **loc** by `polar-move-xy` (`misc-utils.lisp:1142`,
+each axis rounded) — the finger offsets are untouched, so only the hand loc
+changes.
+
+In the extension, `hfrt-movement` is **redefined** to inherit
+`hf-movement` → `dual-hand-movement-style` (`motor-extension.lisp:1633`), so
+`hand-ply` and `all-fingers-to-home` get `release-if-down :free` and
+`finger-based-style t` even though `motor.lisp:968` defines `hfrt-movement` off
+plain `movement-style`.
+
+`all-fingers-to-home` (`:2401`) honors the `hand` slot: it moves only the
+requested hand(s) that need it, and the style's `hand` is `both` only when
+**both** requested hands need moving, else the single hand. test5-12's
+`hand right` therefore moves only the right hand and updates only its
+`last-command`; a no-slot request (test4/test8) is `both`.
+
+`zz` test5 is **byte-exact through line 2893** — test1–test5 plus every
+summary. Tests 6–9 (M6–M8) remain.
+
 
 
 

@@ -400,6 +400,15 @@ enum ZzKind {
     },
     /// `hand-to-mouse`/`hand-to-home` (`hand-ply`).
     Hand { to_mouse: bool, r: f32, theta: f32 },
+    /// `prepare`/`execute`/`point-hand-at-key`: a `hand-ply` that moves the
+    /// hand *loc* by a polar vector (`motor.lisp:1096`/`:1149`). `r`/`theta`
+    /// are pre-rendered because a `prepare` request's `r 1` prints as an
+    /// integer (`1`) while a computed polar prints as a float (`1.0`).
+    HandPly {
+        target: (i64, i64),
+        r: String,
+        theta: String,
+    },
     /// `all-fingers-to-home`: both hands to the home row.
     AllHome { hands: Vec<usize> },
 }
@@ -766,6 +775,12 @@ fn key_hand_finger(key: &str) -> Option<(usize, usize)> {
 /// (`motor.lisp:508`): `(index, middle, ring, pinkie, thumb)`.
 const LEFT_FINGER_OFFSETS: [(i64, i64); 5] = [(0, 0), (-1, 0), (-2, 0), (-3, 0), (1, 2)];
 const RIGHT_FINGER_OFFSETS: [(i64, i64); 5] = [(0, 0), (1, 0), (2, 0), (3, 0), (-1, 2)];
+
+/// `hand-ply` and `all-fingers-to-home` set `finger :dummy`
+/// (`motor.lisp:1063`, `motor-extension.lisp:2263`); a sentinel lets
+/// `feat-differences` compare two dummies as equal without colliding with a
+/// real finger index.
+const ZZ_DUMMY_FINGER: usize = usize::MAX;
 
 /// extended-motor-actions: a hand's current keyboard position.
 #[derive(Debug, Clone)]
@@ -1302,6 +1317,20 @@ enum Event {
         theta: f32,
         to_mouse: bool,
     },
+    /// extended-motor-actions: `prepare`/`execute`/`point-hand-at-key`
+    /// (`hand-ply`) prep complete. `deferred` marks a `prepare` whose
+    /// execution waits for an `execute` request (`general-pm.lisp:562`).
+    ZzHandPlyPrep {
+        class: String,
+        hand: usize,
+        r: f32,
+        theta: f32,
+        r_str: String,
+        theta_str: String,
+        target: (i64, i64),
+        req_ms: i64,
+        deferred: bool,
+    },
     /// extended-motor-actions: `all-fingers-to-home` prep complete.
     ZzAllHomePrep {
         req_ms: i64,
@@ -1619,6 +1648,10 @@ pub struct Engine {
     /// extended-motor-actions: the last prepared movement for feature-prep
     /// timing (`compute-prep-time`).
     zz_last_move: Option<ZzMoveInfo>,
+    /// extended-motor-actions: a `prepare`d movement awaiting `execute`
+    /// (`general-pm.lisp:562`/`:580`); the movement is prepared but not queued
+    /// for execution until `execute` arrives.
+    zz_prepared: Option<ZzPending>,
     /// extended-motor-actions: `pbreak` production names that halt a run.
     zz_breaks: Vec<String>,
     /// Set when the current run hit one of the `zz_breaks` productions.
@@ -1789,6 +1822,7 @@ impl Engine {
             ],
             zz_last_style: None,
             zz_last_move: None,
+            zz_prepared: None,
             zz_breaks: Vec::new(),
             zz_break_hit: false,
             imag_busy: false,
@@ -1962,6 +1996,7 @@ impl Engine {
         self.zz_last_cmd = ["NONE".to_string(), "NONE".to_string()];
         self.zz_last_style = None;
         self.zz_last_move = None;
+        self.zz_prepared = None;
         self.zz_breaks.clear();
         self.zz_break_hit = false;
         self.zz_mouse_down = false;
@@ -3930,14 +3965,78 @@ impl Engine {
                 });
                 self.zz_maybe_execute();
             }
-            Event::ZzAllHomePrep { req_ms, hands, r } => {
+            Event::ZzHandPlyPrep {
+                class,
+                hand,
+                r,
+                theta,
+                r_str,
+                theta_str,
+                target,
+                req_ms,
+                deferred,
+            } => {
                 if show {
                     self.emit(
                         "MOTOR",
                         format!(
                             "PREPARATION-COMPLETE {}{}",
                             Self::secs_str(req_ms),
-                            self.zz_style_suffix_hand("ALL-FINGERS-TO-HOME", 1, true)
+                            self.zz_style_suffix_hand(&class, hand, false)
+                        ),
+                    );
+                }
+                let _ = theta;
+                self.man_prep_busy = false;
+                let init = self.cfg.init_ms;
+                let burst = self.cfg.burst_ms;
+                // `hand-ply` (`motor.lisp:1084`): exec = init + fitts with the
+                // mouse coefficient and the default target width (1.0); finish
+                // = exec + burst.
+                let fit = (self.cfg.touch_cursor_coeff * (r + 0.5).log2())
+                    .max(self.cfg.min_fitts_ms as f32 / 1000.0);
+                let exec = init + (fit * 1000.0).round() as i64;
+                let finish = exec + burst;
+                let pending = ZzPending {
+                    key: String::new(),
+                    req_ms,
+                    hand,
+                    both: false,
+                    style: class,
+                    exec_ms: exec,
+                    finish_ms: finish,
+                    kind: ZzKind::HandPly {
+                        target,
+                        r: r_str,
+                        theta: theta_str,
+                    },
+                };
+                if deferred {
+                    // `preparation-complete` (`motor-extension.lisp:1019`): a
+                    // non-immediate movement is not queued, and its processor is
+                    // freed here rather than at `initiation-complete`.
+                    self.zz_prepared = Some(pending);
+                    if self.cfg.zz_two_proc {
+                        self.man_proc[hand] = false;
+                    } else {
+                        self.man_proc[0] = false;
+                        self.man_proc[1] = false;
+                    }
+                } else {
+                    self.man_exec_queue.push(pending);
+                    self.zz_maybe_execute();
+                }
+            }
+            Event::ZzAllHomePrep { req_ms, hands, r } => {
+                let both = hands.len() == 2;
+                let hand = if both { 1 } else { hands[0] };
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!(
+                            "PREPARATION-COMPLETE {}{}",
+                            Self::secs_str(req_ms),
+                            self.zz_style_suffix_hand("ALL-FINGERS-TO-HOME", hand, both)
                         ),
                     );
                 }
@@ -3954,8 +4053,8 @@ impl Engine {
                 self.man_exec_queue.push(ZzPending {
                     key: String::new(),
                     req_ms,
-                    hand: 1,
-                    both: true,
+                    hand,
+                    both,
                     style: "ALL-FINGERS-TO-HOME".to_string(),
                     exec_ms: exec,
                     finish_ms: finish,
@@ -9485,6 +9584,47 @@ impl Engine {
                             let off = self.zz_hands[p.hand].offsets[0];
                             self.zz_hands[p.hand].loc = (target.0 - off.0, target.1 - off.1);
                         }
+                        ZzKind::HandPly { target, r, theta } => {
+                            // `queue-output-events` (`motor.lisp:1078`): the
+                            // details are `move-a-hand <hand> <r> <theta>`.
+                            self.push(
+                                t + p.exec_ms,
+                                Prio::Num(0),
+                                Out::Low,
+                                Event::Emit {
+                                    module: "MOTOR".to_string(),
+                                    line: format!(
+                                        "MOVE-A-HAND {} {} {}",
+                                        if p.hand == 0 { "LEFT" } else { "RIGHT" },
+                                        r,
+                                        theta
+                                    ),
+                                },
+                            );
+                            // `perform-movement` (`motor-extension.lisp:1163`):
+                            // a `hand-ply` releases any held finger
+                            // `key-release-time` after initiation.
+                            let held: Vec<(usize, String)> = (0..5)
+                                .filter_map(|f| {
+                                    self.zz_hands[p.hand].held[f].clone().map(|k| (f, k))
+                                })
+                                .collect();
+                            for (f, k) in held {
+                                self.push(
+                                    t + self.cfg.init_ms + self.cfg.zz_krt_ms,
+                                    Prio::Num(0),
+                                    Out::Always,
+                                    Event::ZzKeyOutput {
+                                        key: k,
+                                        down: false,
+                                        hand: p.hand,
+                                        finger: f,
+                                    },
+                                );
+                                self.zz_hands[p.hand].held[f] = None;
+                            }
+                            self.zz_hands[p.hand].loc = target;
+                        }
                         ZzKind::AllHome { hands } => {
                             // `queue-output-events` (`motor-extension.lisp:2363`):
                             // a `ALL-FINGERS-TO-HOME <hand>` details line per
@@ -9677,7 +9817,54 @@ impl Engine {
                 ("PECK", 5, true)
             }
             "PUNCH" | "HOLD-PUNCH" | "RELEASE" => ("PUNCH", 3, false),
+            // `hand-ply` (`motor.lisp:1091`): `ply`'s `num-possible-feats`
+            // `:around` drops the `:dummy` finger, so 4 features to prepare.
+            "HAND-PLY" => ("PLY", 4, true),
             _ => ("PLY", 3, false),
+        }
+    }
+
+    /// `feat-differences` (`motor.lisp:970`) / `compute-prep-time`
+    /// (`general-pm.lisp:670`): how many features need preparing given the
+    /// previously prepared movement.
+    fn zz_feat_differences(
+        &self,
+        style_name: &str,
+        maxfeats: i64,
+        hand: usize,
+        finger: usize,
+        r: f32,
+        theta: f32,
+    ) -> i64 {
+        match &self.zz_last_move {
+            None => maxfeats,
+            Some(prev) if prev.style_name != style_name => maxfeats,
+            Some(prev) if prev.hfrt => {
+                let maxfeats = prev.maxfeats;
+                if prev.hand != hand {
+                    maxfeats - 1
+                } else if prev.finger != finger {
+                    maxfeats - 2
+                } else {
+                    let mut n = 0;
+                    if (prev.r - r).abs() >= 2.0 {
+                        n += 1;
+                    }
+                    if !direction_eq(prev.theta, theta) {
+                        n += 1;
+                    }
+                    n
+                }
+            }
+            Some(prev) => {
+                if prev.hand != hand {
+                    2
+                } else if prev.finger != finger {
+                    1
+                } else {
+                    0
+                }
+            }
         }
     }
 
@@ -9725,36 +9912,7 @@ impl Engine {
         let (style_name, maxfeats, hfrt) = Self::zz_style_info(class);
         // `compute-prep-time`/`feat-differences` (`general-pm.lisp:670`,
         // `motor.lisp:970`).
-        let feats = match &self.zz_last_move {
-            None => maxfeats,
-            Some(prev) if prev.style_name != style_name => maxfeats,
-            Some(prev) if prev.hfrt => {
-                let maxfeats = prev.maxfeats;
-                if prev.hand != hand {
-                    maxfeats - 1
-                } else if prev.finger != finger {
-                    maxfeats - 2
-                } else {
-                    let mut n = 0;
-                    if (prev.r - r).abs() >= 2.0 {
-                        n += 1;
-                    }
-                    if !direction_eq(prev.theta, theta) {
-                        n += 1;
-                    }
-                    n
-                }
-            }
-            Some(prev) => {
-                if prev.hand != hand {
-                    2
-                } else if prev.finger != finger {
-                    1
-                } else {
-                    0
-                }
-            }
-        };
+        let feats = self.zz_feat_differences(style_name, maxfeats, hand, finger, r, theta);
         let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
         self.zz_last_style = Some((
             class.to_string(),
@@ -9899,15 +10057,27 @@ impl Engine {
         );
     }
 
-    /// `all-fingers-to-home` (`motor-extension.lisp:2401`): move whichever
-    /// hands are not already at the home row.
+    /// `all-fingers-to-home` (`motor-extension.lisp:2401`): move the requested
+    /// hand (or both) if it is not already at the home row.
     fn zz_all_fingers_to_home(
         &mut self,
-        _slots: &[(String, Value)],
+        slots: &[(String, Value)],
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
+        // `:2405`: no `hand` slot means both hands; otherwise the named hand
+        // (`both` is the two-hand case).
+        let hand_slot = slots
+            .iter()
+            .find(|(s, _)| s == "HAND")
+            .map(|(_, v)| name_of(v).to_uppercase());
+        let candidates: Vec<usize> = match hand_slot.as_deref() {
+            None | Some("BOTH") => vec![0, 1],
+            Some("LEFT") => vec![0],
+            Some("RIGHT") => vec![1],
+            Some(_) => return Ok(()),
+        };
         let mut hands: Vec<usize> = Vec::new();
-        for h in 0..2 {
+        for h in candidates {
             if self.zz_hand_needs_home(h) {
                 hands.push(h);
             }
@@ -9915,6 +10085,8 @@ impl Engine {
         if hands.is_empty() {
             return Ok(());
         }
+        let both = hands.len() == 2;
+        let single = if both { 1 } else { hands[0] };
         // `r` = max hand-ply distance to the home row (`:2317`/`:2346`).
         let r = hands
             .iter()
@@ -9933,11 +10105,17 @@ impl Engine {
         self.zz_last_style = Some((
             "ALL-FINGERS-TO-HOME".to_string(),
             "ALL-HOME".to_string(),
-            "BOTH".to_string(),
+            if both {
+                "BOTH".to_string()
+            } else if single == 0 {
+                "LEFT".to_string()
+            } else {
+                "RIGHT".to_string()
+            },
         ));
         self.zz_last_move = Some(ZzMoveInfo {
             style_name: "ALL-HOME".to_string(),
-            hand: 1,
+            hand: single,
             finger: 4,
             r,
             theta: 0.0,
@@ -9945,11 +10123,18 @@ impl Engine {
             hfrt: true,
         });
         self.man_prep_busy = true;
-        self.man_last_prep = Some(1);
-        self.zz_last_cmd[0] = "ALL-FINGERS-TO-HOME".to_string();
-        self.zz_last_cmd[1] = "ALL-FINGERS-TO-HOME".to_string();
-        self.man_proc[0] = true;
-        self.man_proc[1] = true;
+        self.man_last_prep = Some(single);
+        for h in &hands {
+            self.zz_last_cmd[*h] = "ALL-FINGERS-TO-HOME".to_string();
+        }
+        if self.cfg.zz_two_proc {
+            for h in &hands {
+                self.man_proc[*h] = true;
+            }
+        } else {
+            self.man_proc[0] = true;
+            self.man_proc[1] = true;
+        }
         let prep = feats * self.cfg.feat_prep_ms;
         self.push(
             self.time_ms + prep,
@@ -10125,6 +10310,175 @@ impl Engine {
         Ok(())
     }
 
+    /// Schedule a `hand-ply` (a `ply` that moves the hand loc) movement.
+    /// Used by `prepare`/`execute` and `point-hand-at-key`
+    /// (`motor.lisp:1096`/`:1149`). `r_str`/`theta_str` are the pre-rendered
+    /// `~a` spellings for the `MOVE-A-HAND` details; `deferred` marks a
+    /// `prepare` whose execution waits for an `execute` request.
+    #[allow(clippy::too_many_arguments)]
+    fn zz_hand_ply_request(
+        &mut self,
+        class: &str,
+        hand: usize,
+        r: f32,
+        theta: f32,
+        r_str: String,
+        theta_str: String,
+        target: (i64, i64),
+        deferred: bool,
+    ) -> Result<(), EngineError> {
+        let req_ms = self.time_ms;
+        let (style_name, maxfeats, hfrt) = Self::zz_style_info(class);
+        let feats =
+            self.zz_feat_differences(style_name, maxfeats, hand, ZZ_DUMMY_FINGER, r, theta);
+        let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
+        self.zz_last_style = Some((
+            class.to_string(),
+            style_name.to_string(),
+            hand_name.to_string(),
+        ));
+        self.zz_last_move = Some(ZzMoveInfo {
+            style_name: style_name.to_string(),
+            hand,
+            finger: ZZ_DUMMY_FINGER,
+            r,
+            theta,
+            maxfeats,
+            hfrt,
+        });
+        self.man_prep_busy = true;
+        self.man_last_prep = Some(hand);
+        self.zz_last_cmd[hand] = class.to_string();
+        if self.cfg.zz_two_proc {
+            self.man_proc[hand] = true;
+        } else {
+            self.man_proc[0] = true;
+            self.man_proc[1] = true;
+        }
+        let prep = feats * self.cfg.feat_prep_ms;
+        self.push(
+            self.time_ms + prep,
+            Prio::Num(0),
+            Out::Always,
+            Event::ZzHandPlyPrep {
+                class: class.to_string(),
+                hand,
+                r,
+                theta,
+                r_str,
+                theta_str,
+                target,
+                req_ms,
+                deferred,
+            },
+        );
+        Ok(())
+    }
+
+    /// `prepare` (`general-pm.lisp:562`): build a `hand-ply` and prepare it,
+    /// but do not execute it until an `execute` request arrives. The trace is
+    /// the event name plus its params (`scheduling.lisp` `format-event`).
+    fn zz_prepare(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+        let hand = slots
+            .iter()
+            .find(|(s, _)| s == "HAND")
+            .and_then(|(_, v)| Self::touch_hand_idx(&name_of(v)))
+            .unwrap_or(1);
+        let r_val = slots.iter().find(|(s, _)| s == "R").map(|(_, v)| v);
+        let theta_val = slots.iter().find(|(s, _)| s == "THETA").map(|(_, v)| v);
+        let r = r_val.and_then(num_of).unwrap_or(0.0) as f32;
+        let theta = theta_val.and_then(num_of).unwrap_or(0.0) as f32;
+        let r_str = r_val.map(lisp_num_str).unwrap_or_else(|| "0".to_string());
+        let theta_str = theta_val.map(lisp_num_str).unwrap_or_else(|| "0".to_string());
+        let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: format!("PREPARE HAND-PLY HAND {hand_name} R {r_str} THETA {theta_str}"),
+            },
+        );
+        // `prepare-features` (`motor.lisp:1106`): `move-a-hand` shifts the
+        // hand loc by the polar vector (`polar-move-xy` rounds each axis).
+        let (hx, hy) = self.zz_hands[hand].loc;
+        let target = (
+            (hx as f32 + r * theta.cos()).round() as i64,
+            (hy as f32 + r * theta.sin()).round() as i64,
+        );
+        self.zz_hand_ply_request(
+            "HAND-PLY", hand, r, theta, r_str, theta_str, target, true,
+        )
+    }
+
+    /// `execute` (`general-pm.lisp:580`): queue the last prepared movement and
+    /// run it.
+    fn zz_execute(&mut self) -> Result<(), EngineError> {
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: "EXECUTE".to_string(),
+            },
+        );
+        if let Some(p) = self.zz_prepared.take() {
+            self.man_exec_queue.push(p);
+            self.zz_maybe_execute();
+        }
+        Ok(())
+    }
+
+    /// `point-hand-at-key` (`keyboard.lisp:653`): point the hand's index finger
+    /// at `to-key` via a `hand-ply`, leaving the finger offsets unchanged.
+    fn zz_point_hand_at_key(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+        let hand = slots
+            .iter()
+            .find(|(s, _)| s == "HAND")
+            .and_then(|(_, v)| Self::touch_hand_idx(&name_of(v)))
+            .unwrap_or(1);
+        let to_key = slots
+            .iter()
+            .find(|(s, _)| s == "TO-KEY")
+            .map(|(_, v)| name_of(v))
+            .unwrap_or_default();
+        let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: format!("POINT-HAND-AT-KEY HAND {hand_name} TO-KEY {to_key}"),
+            },
+        );
+        let Some(new_loc) = key_xy(&to_key) else {
+            return Ok(());
+        };
+        let (hx, hy) = self.zz_hands[hand].loc;
+        let dx = (new_loc.0 - hx) as f64;
+        let dy = (new_loc.1 - hy) as f64;
+        let r = (dx * dx + dy * dy).sqrt() as f32;
+        if r == 0.0 {
+            // `:686`: warning only, no movement.
+            return Ok(());
+        }
+        let theta = dy.atan2(dx) as f32;
+        let target = (
+            (hx as f32 + r * theta.cos()).round() as i64,
+            (hy as f32 + r * theta.sin()).round() as i64,
+        );
+        self.zz_hand_ply_request(
+            "HAND-PLY",
+            hand,
+            r,
+            theta,
+            lisp_s_f32(r),
+            lisp_s_f32(theta),
+            target,
+            false,
+        )
+    }
+
     /// Manual request routing: only press-key in M5a.
     fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         let (ctype, slots) = match &spec {
@@ -10226,13 +10580,10 @@ impl Engine {
             {
                 self.zz_direct_style(c, &slots)
             }
-            (Some(c), _)
-                if self.cfg.zz_ext
-                    && matches!(c, "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY") =>
-            {
-                // TODO(M5b/M5c): dual-stage `prepare`/`execute` and
-                // `point-hand-at-key` are not yet implemented.
-                Ok(())
+            (Some("PREPARE"), _) if self.cfg.zz_ext => self.zz_prepare(&slots),
+            (Some("EXECUTE"), _) if self.cfg.zz_ext => self.zz_execute(),
+            (Some("POINT-HAND-AT-KEY"), _) if self.cfg.zz_ext => {
+                self.zz_point_hand_at_key(&slots)
             }
             got => Err(unimpl(format!("manual request {got:?}"))),
         }
@@ -10587,6 +10938,16 @@ fn num_of(v: &Value) -> Option<f64> {
         Value::Int(i) => Some(*i as f64),
         Value::Num(x) => Some(*x),
         _ => None,
+    }
+}
+
+/// A numeric value as Lisp `~a` would print it: an integer stays an integer
+/// (`r 1` -> `1`) while a float gets the single-float spelling (`1.0`).
+fn lisp_num_str(v: &Value) -> String {
+    match v {
+        Value::Int(i) => i.to_string(),
+        Value::Num(x) => lisp_s_f32(*x as f32),
+        _ => String::new(),
     }
 }
 
