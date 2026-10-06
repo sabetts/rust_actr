@@ -305,6 +305,8 @@ struct Config {
     zz_krt_ms: i64,
     /// `:cursor-drag-delay` (`nil`/`t`→0.8/`0.5`/`1.0`).
     zz_cdd: Option<f64>,
+    /// `:peck-strike-distance` (`*psd*`).
+    zz_psd: Option<f32>,
     peck_fitts: f32,
     min_fitts_ms: i64,
     rhst: bool,
@@ -383,13 +385,47 @@ struct KeySpec {
 
 /// extended-motor-actions: a movement waiting for its hand's execution stage.
 #[derive(Debug, Clone)]
+enum ZzKind {
+    /// Base `press-key`: `MotorNotify` → `OutputKey`.
+    Press,
+    /// Extended keyboard style: `output-key` at exec (unless `output`),
+    /// `release-key` at `exec2`, plus finger `down`/`busy` bookkeeping.
+    Key {
+        finger: usize,
+        exec2_ms: Option<i64>,
+        output: bool,
+    },
+    /// `hand-to-mouse`/`hand-to-home` (`hand-ply`).
+    Hand { to_mouse: bool, r: f32, theta: f32 },
+}
+
+/// extended-motor-actions: the last prepared movement's features, for
+/// `compute-prep-time`/`feat-differences` (`general-pm.lisp:670`).
+#[derive(Debug, Clone)]
+struct ZzMoveInfo {
+    /// `style-name` (e.g. `PECK`/`PUNCH`/`PLY`), compared by
+    /// `compute-prep-time`.
+    style_name: String,
+    hand: usize,
+    finger: usize,
+    r: f32,
+    theta: f32,
+    /// `num-possible-feats` = 1 + feature-slot count.
+    maxfeats: i64,
+    /// Whether the style is `hfrt-movement` (hand finger r theta).
+    hfrt: bool,
+}
+
+#[derive(Debug, Clone)]
 struct ZzPending {
     key: String,
     req_ms: i64,
     hand: usize,
     style: String,
+    /// Time offsets from the start of execution.
     exec_ms: i64,
     finish_ms: i64,
+    kind: ZzKind,
 }
 
 /// tracker extra: a learned value tracker (`extras/tracker/tracker.lisp`).
@@ -921,6 +957,7 @@ impl Config {
             zz_kct_ms: 10,
             zz_krt_ms: 40,
             zz_cdd: None,
+            zz_psd: None,
             peck_fitts: sgp_single(&m.params, ":PECK-FITTS-COEFF")?.unwrap_or(0.075),
             min_fitts_ms: secs_to_ms(":MIN-FITTS-TIME", 0.1)?,
             rhst: match m.params.iter().find(|(k, _)| k == ":RHST") {
@@ -1512,6 +1549,13 @@ pub struct Engine {
     /// for the `style X hand Y` event details (class) and
     /// `compute-prep-time` differences (style-name).
     zz_last_style: Option<(String, String, String)>,
+    /// extended-motor-actions: the last prepared movement for feature-prep
+    /// timing (`compute-prep-time`).
+    zz_last_move: Option<ZzMoveInfo>,
+    /// extended-motor-actions: a `pbreak` production name that halts the run.
+    zz_break: Option<String>,
+    /// Set when the current run hit the `zz_break` production.
+    zz_break_hit: bool,
     imag_busy: bool,
     /// Temporal module: current tick interval (ms), tick count, the
     /// one-time start increment (ms), and a generation counter that cancels
@@ -1658,8 +1702,6 @@ impl Engine {
             zz_last_cmd: [String::new(), String::new()],
             zz_data: Vec::new(),
             zz_mouse_pos: (0, 0, 1080),
-            /// extended-motor-actions: the mouse cursor's device position
-            /// (`cursor-pos`, `mouse.lisp:192`), used by `hand-to-cursor`.
             zz_mouse_cursor: (28, 2),
             zz_mouse_down: false,
             zz_hands: [
@@ -1679,6 +1721,9 @@ impl Engine {
                 },
             ],
             zz_last_style: None,
+            zz_last_move: None,
+            zz_break: None,
+            zz_break_hit: false,
             imag_busy: false,
             temporal_tick: 0.0,
             temporal_ticks: 0,
@@ -1741,6 +1786,7 @@ impl Engine {
             self.cfg.zz_kct_ms,
             self.cfg.zz_krt_ms,
             self.cfg.zz_cdd,
+            self.cfg.zz_psd,
         );
         self.cfg = Config::from_model(&self.model)?;
         self.cfg.zz_two_proc = zz.0;
@@ -1749,6 +1795,7 @@ impl Engine {
         self.cfg.zz_kct_ms = zz.3;
         self.cfg.zz_krt_ms = zz.4;
         self.cfg.zz_cdd = zz.5;
+        self.cfg.zz_psd = zz.6;
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
@@ -1846,6 +1893,9 @@ impl Engine {
         self.man_last_prep = None;
         self.zz_last_cmd = [String::new(), String::new()];
         self.zz_last_style = None;
+        self.zz_last_move = None;
+        self.zz_break = None;
+        self.zz_break_hit = false;
         self.zz_mouse_down = false;
         // The virtual mouse cursor's current/device positions
         // (`mouse.lisp:178`/`:192`).
@@ -2287,6 +2337,10 @@ impl Engine {
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
+            if self.zz_break_hit {
+                self.zz_break_hit = false;
+                break;
+            }
             if self.stopped {
                 self.queue.clear();
                 self.emit("------", "BREAK-EVENT Stopped by !stop!".into());
@@ -2482,6 +2536,7 @@ impl Engine {
         self.zz_test1()?;
         self.zz_test2()?;
         self.zz_test3()?;
+        self.zz_test4()?;
         Ok(())
     }
 
@@ -2505,7 +2560,20 @@ impl Engine {
         self.goal_focus(&ChunkDesc::Named(name))
     }
 
+    /// `run-test` testing defaults (`test-model.lisp:67`): reset before each
+    /// test, then apply the test's overrides.
+    fn zz_run_test_defaults(&mut self) {
+        self.cfg.zz_kct_ms = 10;
+        self.cfg.zz_krt_ms = 40;
+        self.cfg.zz_psd = None;
+        self.cfg.zz_cdd = None;
+        self.cfg.zz_two_proc = false;
+        self.cfg.zz_two_exec = true;
+        self.cfg.zz_query = "STATE".to_string();
+    }
+
     fn zz_test1(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
         for hand in ["same", "diff"] {
             for query in ["state", "processor", "preparation"] {
                 for processors in [true, false] {
@@ -2550,6 +2618,7 @@ impl Engine {
     }
 
     fn zz_test2(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
         for (cdd, disp) in [
             (None, "NIL"),
             (Some(0.8), "T"),
@@ -2579,11 +2648,9 @@ impl Engine {
     }
 
     fn zz_test3(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
         self.cfg.zz_kct_ms = 25;
         self.cfg.zz_krt_ms = 25;
-        // `run-test` defaults: `*de*` = t, `*dp*` = nil.
-        self.cfg.zz_two_exec = true;
-        self.cfg.zz_two_proc = false;
         self.zz_data
             .push(("TEST".to_string(), 0, "Auto release key & mouse when moving hand".to_string()));
         self.reset()?;
@@ -2600,10 +2667,30 @@ impl Engine {
         Ok(())
     }
 
+    fn zz_test4(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
+        self.cfg.zz_psd = Some(0.2);
+        self.zz_data
+            .push(("TEST".to_string(), 0, "Some various key pressing".to_string()));
+        self.reset()?;
+        self.zz_goal_focus(
+            "GOAL",
+            vec![("TEST".to_string(), Value::Sym("TEST4".to_string()))],
+        )?;
+        self.zz_break = Some("TEST4-7".to_string());
+        self.run_secs(10.0)?;
+        self.zz_buffer_status();
+        self.zz_print_finger_locs();
+        self.run_secs(10.0)?;
+        self.zz_buffer_status();
+        self.zz_print_finger_locs();
+        self.zz_summarize();
+        Ok(())
+    }
+
     /// `(buffer-status manual-left manual-right)` (`motor-extension.lisp:1306`,
     /// `generic-state-query` at 1337).
-    fn zz_buffer_status(&mut self) {
-        for (name, hand) in [("MANUAL-LEFT", 0usize), ("MANUAL-RIGHT", 1)] {
+    fn zz_buffer_status(&mut self) {        for (name, hand) in [("MANUAL-LEFT", 0usize), ("MANUAL-RIGHT", 1)] {
             let h = &self.zz_hands[hand];
             let proc = self.man_proc[hand];
             let exec = self.man_exec[hand];
@@ -2663,6 +2750,72 @@ impl Engine {
             }
             self.out_lines.push(String::new());
         }
+    }
+
+    /// The test driver's `(finger-loc-m …)` dump (`test-model.lisp:178`).
+    fn zz_print_finger_locs(&mut self) {
+        for (hand, hname) in [(0usize, "LEFT"), (1, "RIGHT")] {
+            for (f, fname) in ["INDEX", "MIDDLE", "RING", "PINKIE", "THUMB"]
+                .iter()
+                .enumerate()
+            {
+                let (x, y) = self.zz_finger_loc(hand, f);
+                self.out_lines.push(format!("  {hname} {fname}: #({x} {y})"));
+            }
+        }
+    }
+
+    /// `print-instantiation` (`procedural.lisp:2441`): the selected
+    /// production with its matched bindings, as a `pbreak` prints it.
+    fn zz_print_instantiation(&mut self, prod: usize, bindings: &Bindings) {
+        let p = self.model.productions[prod].clone();
+        let mut lines = vec![format!("(P {}", p.name)];
+        for item in &p.lhs {
+            match item {
+                LhsItem::Match { buffer, tests } => {
+                    lines.push(format!("   ={buffer}>"));
+                    for t in tests {
+                        if t.slot.eq_ignore_ascii_case("ISA") {
+                            continue;
+                        }
+                        lines.push(format!("       {} {}", t.slot, show_pat(&t.value, bindings)));
+                    }
+                }
+                LhsItem::Query { buffer, queries } => {
+                    lines.push(format!("   ?{buffer}>"));
+                    for (slot, val) in queries {
+                        lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                    }
+                }
+                _ => {}
+            }
+        }
+        lines.push(" ==>".to_string());
+        for item in &p.rhs {
+            match item {
+                RhsAction::Request { buffer, spec } => {
+                    lines.push(format!("   +{buffer}>"));
+                    if let ChunkDesc::Spec { ctype, slots, .. } = spec {
+                        if !ctype.is_empty() {
+                            lines.push(format!("       CMD {ctype}"));
+                        }
+                        for (slot, val) in slots {
+                            lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                        }
+                    }
+                }
+                RhsAction::Clear { buffer } => lines.push(format!("   -{buffer}>")),
+                RhsAction::Modify { buffer, slots } => {
+                    lines.push(format!("   ={buffer}>"));
+                    for (slot, val) in slots {
+                        lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                    }
+                }
+                _ => {}
+            }
+        }
+        lines.push(")".to_string());
+        self.out_lines.extend(lines);
     }
 
     /// `(buffer-chunk <name>...)`: append the command-layer buffer dump the
@@ -3358,6 +3511,13 @@ impl Engine {
                 if show {
                     self.emit("PROCEDURAL", format!("PRODUCTION-SELECTED {name}"));
                 }
+                // `pbreak` (`procedural.lisp:2318`): print the instantiation,
+                // emit a break event, and halt the run before the reads.
+                if self.zz_break.as_deref() == Some(name.as_str()) {
+                    self.zz_print_instantiation(prod, &bindings);
+                    self.emit("------", format!("BREAK-EVENT PRODUCTION {name}"));
+                    self.zz_break_hit = true;
+                }
                 // Utility-learning history records selections.
                 if self.cfg.ul {
                     self.history.push((prod, self.time_ms));
@@ -3525,12 +3685,6 @@ impl Engine {
                 }
                 let _ = theta;
                 self.man_prep_busy = false;
-                if self.cfg.zz_two_exec {
-                    self.man_exec[hand] = true;
-                } else {
-                    self.man_exec[0] = true;
-                    self.man_exec[1] = true;
-                }
                 let init = self.cfg.init_ms;
                 let burst = self.cfg.burst_ms;
                 let kct = self.cfg.zz_kct_ms;
@@ -3538,72 +3692,45 @@ impl Engine {
                     .max((self.cfg.touch_peck_coeff * (r + 0.5).log2())
                         .max(self.cfg.min_fitts_ms as f32 / 1000.0));
                 let move_ms = (mv * 1000.0).round() as i64;
-                let (exec_ms, finish_ms) = match style.as_str() {
-                    "HOLD-PECK" => (init + move_ms, init + move_ms),
-                    "PECK" => (init + move_ms, init + move_ms + burst),
-                    "HOLD-PUNCH" => (init + kct, init + burst),
-                    "PUNCH" => (init + kct, init + burst + burst),
-                    "RELEASE" => (init + self.cfg.zz_krt_ms, init + burst),
-                    _ => (init, init + burst),
+                let strike = self.zz_movement_strike_time(move_ms, r);
+                let (exec_ms, exec2_ms, finish_ms) = match style.as_str() {
+                    "HOLD-PECK" => (init + move_ms, None, init + move_ms),
+                    "PECK" | "PECK-RECOIL" => (
+                        init + strike,
+                        Some(init + move_ms + self.cfg.zz_krt_ms),
+                        init + move_ms + burst,
+                    ),
+                    "HOLD-PUNCH" => (init + kct, None, init + burst),
+                    "PUNCH" => (
+                        init + kct,
+                        Some(init + self.cfg.zz_krt_ms),
+                        init + burst + burst,
+                    ),
+                    "RELEASE" => (init + self.cfg.zz_krt_ms, None, init + burst),
+                    "POINT-FINGER" => (init + strike, None, init + move_ms),
+                    _ => (init, None, init + burst),
                 };
-                let t = self.time_ms;
-                self.push(
-                    t + init,
-                    Prio::Num(0),
-                    Out::Always,
-                    Event::InitiationComplete {
-                        req_ms,
-                        hand,
-                        style: style.clone(),
+                self.man_exec_queue.push(ZzPending {
+                    key: key.clone(),
+                    req_ms,
+                    hand,
+                    style: style.clone(),
+                    exec_ms,
+                    finish_ms,
+                    kind: ZzKind::Key {
+                        finger,
+                        exec2_ms,
+                        output: cmd != "MOVE-TO-KEY",
                     },
-                );
-                // At equal timestamps the finish event precedes the output-key
-                // event (see `handle-style-request` in `motor-extension.lisp`).
-                self.push(
-                    t + finish_ms,
-                    Prio::Num(0),
-                    Out::Always,
-                    Event::FinishMovement {
-                        req_ms,
-                        hand,
-                        style: style.clone(),
-                    },
-                );
-                if cmd != "MOVE-TO-KEY" {
-                    self.push(
-                        t + exec_ms,
-                        Prio::Num(0),
-                        Out::Always,
-                        Event::ZzKeyOutput {
-                            key: key.clone(),
-                            down: style != "RELEASE",
-                            hand,
-                            finger,
-                        },
-                    );
-                }
-                // Move the hand/finger to the key and update the finger state.
+                });
+                // Move the hand/finger to the key (the *next* location).
                 if let Some(kl) = key_xy(&key) {
                     let off = self.zz_hands[hand].offsets[finger];
                     if style != "RELEASE" {
                         self.zz_hands[hand].loc = (kl.0 - off.0, kl.1 - off.1);
                     }
                 }
-                // `perform-movement` marks the finger busy at preparation
-                // completion (`motor-extension.lisp:1186`); `finish-movement`
-                // frees it (`:1205`).
-                self.zz_hands[hand].busy[finger] = true;
-                self.push(
-                    t + finish_ms,
-                    Prio::Num(0),
-                    Out::Never,
-                    Event::ZzFingerFree { hand, finger },
-                );
-                if style == "RELEASE" {
-                    self.zz_hands[hand].held[finger] = None;
-                } else if cmd != "MOVE-TO-KEY" {
-                    self.zz_hands[hand].held[finger] = Some(key.clone());
-                }
+                self.zz_maybe_execute();
             }
             Event::ZzFingerFree { hand, finger } => {
                 self.zz_hands[hand].busy[finger] = false;
@@ -3622,6 +3749,7 @@ impl Engine {
                 // The finger goes down/up at execution time (`set-finger-down`
                 // / `set-finger-up`).
                 self.zz_hands[hand].down[finger] = down;
+                self.zz_hands[hand].held[finger] = if down { Some(key.clone()) } else { None };
                 if down {
                     self.zz_data
                         .push(("PRESSED".to_string(), self.time_ms, key));
@@ -3647,88 +3775,22 @@ impl Engine {
                     );
                 }
                 self.man_prep_busy = false;
-                if self.cfg.zz_two_exec {
-                    self.man_exec[1] = true;
-                } else {
-                    self.man_exec[0] = true;
-                    self.man_exec[1] = true;
-                }
                 let init = self.cfg.init_ms;
                 let burst = self.cfg.burst_ms;
                 let fit = (self.cfg.touch_cursor_coeff * (r / 4.0 + 0.5).log2())
                     .max(self.cfg.min_fitts_ms as f32 / 1000.0);
                 let exec = init + (fit * 1000.0).round() as i64;
                 let finish = exec + burst;
-                let t = self.time_ms;
-                self.push(
-                    t + init,
-                    Prio::Num(0),
-                    Out::Always,
-                    Event::InitiationComplete {
-                        req_ms,
-                        hand: 1,
-                        style: "HAND-PLY".to_string(),
-                    },
-                );
-                self.push(
-                    t + exec,
-                    Prio::Num(0),
-                    Out::Low,
-                    Event::Emit {
-                        module: "MOTOR".to_string(),
-                        line: format!(
-                            "MOVE-A-HAND RIGHT {} {}",
-                            lisp_s_f32(r),
-                            lisp_s_f32(theta)
-                        ),
-                    },
-                );
-                // Auto-release any held key `key-release-time` after initiation.
-                let held: Vec<(usize, String)> = (0..5)
-                    .filter_map(|f| self.zz_hands[1].held[f].clone().map(|k| (f, k)))
-                    .collect();
-                for (f, k) in held {
-                    self.push(
-                        t + init + self.cfg.zz_krt_ms,
-                        Prio::Num(0),
-                        Out::Always,
-                        Event::ZzKeyOutput {
-                            key: k,
-                            down: false,
-                            hand: 1,
-                            finger: f,
-                        },
-                    );
-                    self.zz_hands[1].held[f] = None;
-                }
-                // A held mouse button is released by the same `set-finger-up`
-                // mechanism (the button is the index finger on the mouse).
-                if self.zz_mouse_down {
-                    self.zz_mouse_down = false;
-                    self.push(
-                        t + init + self.cfg.zz_krt_ms,
-                        Prio::Num(0),
-                        Out::Always,
-                        Event::ZzMouseRelease { req_ms },
-                    );
-                }
-                self.push(
-                    t + finish,
-                    Prio::Num(0),
-                    Out::Always,
-                    Event::FinishMovement {
-                        req_ms,
-                        hand: 1,
-                        style: "HAND-PLY".to_string(),
-                    },
-                );
-                let target = if to_mouse {
-                    self.zz_mouse_cursor
-                } else {
-                    self.zz_home_position(1, 0)
-                };
-                let off = self.zz_hands[1].offsets[0];
-                self.zz_hands[1].loc = (target.0 - off.0, target.1 - off.1);
+                self.man_exec_queue.push(ZzPending {
+                    key: String::new(),
+                    req_ms,
+                    hand: 1,
+                    style: "HAND-PLY".to_string(),
+                    exec_ms: exec,
+                    finish_ms: finish,
+                    kind: ZzKind::Hand { to_mouse, r, theta },
+                });
+                self.zz_maybe_execute();
             }
             Event::ZzMousePrep { cmd, req_ms, loc } => {
                 if show {
@@ -4199,6 +4261,7 @@ impl Engine {
                         style: class,
                         exec_ms,
                         finish_ms,
+                        kind: ZzKind::Press,
                     });
                     self.zz_maybe_execute();
                 } else {
@@ -9081,15 +9144,6 @@ impl Engine {
                         },
                     );
                     self.push(
-                        t + p.exec_ms,
-                        Prio::Num(0),
-                        Out::Never,
-                        Event::MotorNotify {
-                            key: p.key,
-                            req_ms: p.req_ms,
-                        },
-                    );
-                    self.push(
                         t + p.finish_ms,
                         Prio::Num(0),
                         Out::Always,
@@ -9099,6 +9153,116 @@ impl Engine {
                             style: p.style.clone(),
                         },
                     );
+                    match p.kind.clone() {
+                        ZzKind::Press => {
+                            self.push(
+                                t + p.exec_ms,
+                                Prio::Num(0),
+                                Out::Never,
+                                Event::MotorNotify {
+                                    key: p.key.clone(),
+                                    req_ms: p.req_ms,
+                                },
+                            );
+                        }
+                        ZzKind::Key {
+                            finger,
+                            exec2_ms,
+                            output,
+                        } => {
+                            if output {
+                                self.push(
+                                    t + p.exec_ms,
+                                    Prio::Num(0),
+                                    Out::Always,
+                                    Event::ZzKeyOutput {
+                                        key: p.key.clone(),
+                                        down: true,
+                                        hand: p.hand,
+                                        finger,
+                                    },
+                                );
+                            }
+                            if let Some(e2) = exec2_ms {
+                                self.push(
+                                    t + e2,
+                                    Prio::Num(0),
+                                    Out::Always,
+                                    Event::ZzKeyOutput {
+                                        key: p.key.clone(),
+                                        down: false,
+                                        hand: p.hand,
+                                        finger,
+                                    },
+                                );
+                            }
+                            // `perform-movement` marks the finger busy
+                            // (`motor-extension.lisp:1186`); `finish-movement`
+                            // frees it (`:1205`).
+                            self.zz_hands[p.hand].busy[finger] = true;
+                            self.push(
+                                t + p.finish_ms,
+                                Prio::Num(0),
+                                Out::Never,
+                                Event::ZzFingerFree {
+                                    hand: p.hand,
+                                    finger,
+                                },
+                            );
+                        }
+                        ZzKind::Hand { to_mouse, r, theta } => {
+                            self.push(
+                                t + p.exec_ms,
+                                Prio::Num(0),
+                                Out::Low,
+                                Event::Emit {
+                                    module: "MOTOR".to_string(),
+                                    line: format!(
+                                        "MOVE-A-HAND RIGHT {} {}",
+                                        lisp_s_f32(r),
+                                        lisp_s_f32(theta)
+                                    ),
+                                },
+                            );
+                            // `perform-movement` auto-releases any finger that
+                            // is down `key-release-time` after initiation.
+                            let held: Vec<(usize, String)> = (0..5)
+                                .filter_map(|f| {
+                                    self.zz_hands[p.hand].held[f].clone().map(|k| (f, k))
+                                })
+                                .collect();
+                            for (f, k) in held {
+                                self.push(
+                                    t + self.cfg.init_ms + self.cfg.zz_krt_ms,
+                                    Prio::Num(0),
+                                    Out::Always,
+                                    Event::ZzKeyOutput {
+                                        key: k,
+                                        down: false,
+                                        hand: p.hand,
+                                        finger: f,
+                                    },
+                                );
+                                self.zz_hands[p.hand].held[f] = None;
+                            }
+                            if self.zz_mouse_down {
+                                self.zz_mouse_down = false;
+                                self.push(
+                                    t + self.cfg.init_ms + self.cfg.zz_krt_ms,
+                                    Prio::Num(0),
+                                    Out::Always,
+                                    Event::ZzMouseRelease { req_ms: p.req_ms },
+                                );
+                            }
+                            let target = if to_mouse {
+                                self.zz_mouse_cursor
+                            } else {
+                                self.zz_home_position(p.hand, 0)
+                            };
+                            let off = self.zz_hands[p.hand].offsets[0];
+                            self.zz_hands[p.hand].loc = (target.0 - off.0, target.1 - off.1);
+                        }
+                    }
                     ran = true;
                     break;
                 }
@@ -9106,6 +9270,31 @@ impl Engine {
             }
             if !ran {
                 break;
+            }
+        }
+    }
+
+    /// `movement-strike-time` (`motor-extension.lisp:1557`): the delay from
+    /// initiation to the finger contacting the key, when
+    /// `peck-strike-distance` (`*psd*`) is set.
+    fn zz_movement_strike_time(&self, tt_ms: i64, r: f32) -> i64 {
+        match self.cfg.zz_psd {
+            None => tt_ms,
+            Some(psd) if psd == 0.0 => tt_ms + self.cfg.zz_kct_ms,
+            Some(psd) => {
+                let tt = tt_ms as f32 / 1000.0;
+                let target = r - psd;
+                let mut width = 0.25 * tt;
+                let mut guess = 0.75 * tt;
+                let mut value = minjerk_dist(guess, r, tt);
+                let mut dir: f32 = if value < target { 1.0 } else { -1.0 };
+                while (target - value).abs() >= 0.01 {
+                    width /= 2.0;
+                    guess += dir * width;
+                    value = minjerk_dist(guess, r, tt);
+                    dir = if value < target { 1.0 } else { -1.0 };
+                }
+                ((self.cfg.zz_kct_ms as f32 / 1000.0 + guess) * 1000.0).round() as i64
             }
         }
     }
@@ -9199,6 +9388,16 @@ impl Engine {
         (home.0 + offs[finger].0, home.1 + offs[finger].1)
     }
 
+    /// `(style-name, num-possible-feats, hfrt)` for a movement class
+    /// (`motor-extension.lisp:1861`+ / `motor.lisp:984`).
+    fn zz_style_info(class: &str) -> (&'static str, i64, bool) {
+        match class {
+            "PECK" | "PECK-RECOIL" | "HOLD-PECK" | "POINT-FINGER" => ("PECK", 5, true),
+            "PUNCH" | "HOLD-PUNCH" | "RELEASE" => ("PUNCH", 3, false),
+            _ => ("PLY", 3, false),
+        }
+    }
+
     /// `extended-finger-keyboard` (`motor-extension.lisp:2103`): resolve a key
     /// to a hand/finger, then dispatch "same-loc" or "move-loc".
     fn zz_extended_finger_keyboard(
@@ -9207,8 +9406,6 @@ impl Engine {
         key: &str,
         same_style: &str,
         move_style: &str,
-        same_feats: i64,
-        move_feats: i64,
     ) -> Result<(), EngineError> {
         let Some((hand, finger)) = key_hand_finger(key) else {
             return Ok(());
@@ -9218,13 +9415,13 @@ impl Engine {
         };
         let finger_loc = self.zz_finger_loc(hand, finger);
         if key_loc == finger_loc {
-            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0, same_feats)
+            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0)
         } else {
-            let dx = (key_loc.0 - finger_loc.0) as f32;
-            let dy = (key_loc.1 - finger_loc.1) as f32;
-            let r = (dx * dx + dy * dy).sqrt();
-            let theta = dy.atan2(dx);
-            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta, move_feats)
+            let dx = (key_loc.0 - finger_loc.0) as f64;
+            let dy = (key_loc.1 - finger_loc.1) as f64;
+            let r = (dx * dx + dy * dy).sqrt() as f32;
+            let theta = dy.atan2(dx) as f32;
+            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta)
         }
     }
 
@@ -9233,28 +9430,65 @@ impl Engine {
     fn zz_key_request(
         &mut self,
         cmd: &str,
-        style: &str,
+        class: &str,
         key: &str,
         hand: usize,
         finger: usize,
         r: f32,
         theta: f32,
-        fresh: i64,
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
-        let feats = match &self.zz_last_style {
-            Some((_, ls, _)) if ls == style => 0,
-            _ => fresh,
+        let (style_name, maxfeats, hfrt) = Self::zz_style_info(class);
+        // `compute-prep-time`/`feat-differences` (`general-pm.lisp:670`,
+        // `motor.lisp:970`).
+        let feats = match &self.zz_last_move {
+            None => maxfeats,
+            Some(prev) if prev.style_name != style_name => maxfeats,
+            Some(prev) if prev.hfrt => {
+                let maxfeats = prev.maxfeats;
+                if prev.hand != hand {
+                    maxfeats - 1
+                } else if prev.finger != finger {
+                    maxfeats - 2
+                } else {
+                    let mut n = 0;
+                    if (prev.r - r).abs() >= 2.0 {
+                        n += 1;
+                    }
+                    if !direction_eq(prev.theta, theta) {
+                        n += 1;
+                    }
+                    n
+                }
+            }
+            Some(prev) => {
+                if prev.hand != hand {
+                    2
+                } else if prev.finger != finger {
+                    1
+                } else {
+                    0
+                }
+            }
         };
         let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
         self.zz_last_style = Some((
-            style.to_string(),
-            style.to_string(),
+            class.to_string(),
+            style_name.to_string(),
             hand_name.to_string(),
         ));
+        self.zz_last_move = Some(ZzMoveInfo {
+            style_name: style_name.to_string(),
+            hand,
+            finger,
+            r,
+            theta,
+            maxfeats,
+            hfrt,
+        });
         self.man_prep_busy = true;
         self.man_last_prep = Some(hand);
-        self.zz_last_cmd[hand] = style.to_string();
+        self.zz_last_cmd[hand] = class.to_string();
         if self.cfg.zz_two_proc {
             self.man_proc[hand] = true;
         } else {
@@ -9268,7 +9502,7 @@ impl Engine {
             Out::Always,
             Event::ZzKeyPrep {
                 cmd: cmd.to_string(),
-                style: style.to_string(),
+                style: class.to_string(),
                 key: key.to_string(),
                 hand,
                 finger,
@@ -9288,18 +9522,14 @@ impl Engine {
             .map(|(_, v)| name_of(v))
             .unwrap_or_default();
         match cmd {
-            "HOLD-KEY" => {
-                self.zz_extended_finger_keyboard(cmd, &key, "HOLD-PUNCH", "HOLD-PECK", 3, 5)
-            }
-            "HIT-KEY" => self.zz_extended_finger_keyboard(cmd, &key, "PUNCH", "PECK", 3, 5),
-            "TYPE-KEY" => {
-                self.zz_extended_finger_keyboard(cmd, &key, "PUNCH", "PECK-RECOIL", 3, 5)
-            }
+            "HOLD-KEY" => self.zz_extended_finger_keyboard(cmd, &key, "HOLD-PUNCH", "HOLD-PECK"),
+            "HIT-KEY" => self.zz_extended_finger_keyboard(cmd, &key, "PUNCH", "PECK"),
+            "TYPE-KEY" => self.zz_extended_finger_keyboard(cmd, &key, "PUNCH", "PECK-RECOIL"),
             "MOVE-TO-KEY" => {
-                self.zz_extended_finger_keyboard(cmd, &key, "POINT-FINGER", "POINT-FINGER", 4, 4)
+                self.zz_extended_finger_keyboard(cmd, &key, "POINT-FINGER", "POINT-FINGER")
             }
             "RELEASE-KEY" | "RELEASE-KEY-TO-HOME" => {
-                self.zz_extended_finger_keyboard(cmd, &key, "RELEASE", "RELEASE", 3, 3)
+                self.zz_extended_finger_keyboard(cmd, &key, "RELEASE", "RELEASE")
             }
             "HAND-TO-MOUSE" => self.zz_hand_to(true),
             "HAND-TO-HOME" => self.zz_hand_to(false),
@@ -9326,6 +9556,15 @@ impl Engine {
             "HAND-PLY".to_string(),
             "RIGHT".to_string(),
         ));
+        self.zz_last_move = Some(ZzMoveInfo {
+            style_name: "HAND-PLY".to_string(),
+            hand: 1,
+            finger: 0,
+            r,
+            theta,
+            maxfeats: 3,
+            hfrt: false,
+        });
         self.man_prep_busy = true;
         self.man_last_prep = Some(1);
         self.zz_last_cmd[1] = "HAND-PLY".to_string();
@@ -9813,6 +10052,25 @@ fn num_value(x: f64) -> Value {
 }
 
 /// `~f`/`~a` single-float display for the touch signals.
+/// `direction=` (`motor.lisp:894`): two directions are equal if within π/4.
+fn direction_eq(d1: f32, d2: f32) -> bool {
+    let delta = (d1 - d2).abs();
+    (std::f32::consts::FRAC_PI_4 > delta) || (delta > 7.0 * std::f32::consts::PI / 4.0)
+}
+
+/// `minjerk-dist` (`motor.lisp:1256`): distance moved at time `tm`, given max
+/// distance `a` and total move time `d`.
+fn minjerk_dist(tm: f32, a: f32, d: f32) -> f32 {
+    if tm >= d {
+        a
+    } else if tm <= 0.0 || d <= 0.0 {
+        0.0
+    } else {
+        let td = tm / d;
+        a * (10.0 * td.powi(3) - 15.0 * td.powi(4) + 6.0 * td.powi(5))
+    }
+}
+
 fn lisp_s_f32(x: f32) -> String {    if !x.is_finite() {
         return format!("{x}");
     }
