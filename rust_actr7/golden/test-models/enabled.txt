@@ -46,3 +46,4 @@ z-threads
 dynamic-real-time
 act-touch
 tracker
+zz-extended-motor-actions

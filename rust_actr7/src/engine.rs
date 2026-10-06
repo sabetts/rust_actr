@@ -416,6 +416,9 @@ enum ZzKind {
     },
     /// `all-fingers-to-home`: both hands to the home row.
     AllHome { hands: Vec<usize> },
+    /// `release-all-fingers` (`motor-extension.lisp:2512`): release the held
+    /// fingers of the given hands, without moving them.
+    ReleaseAll { hands: Vec<usize> },
 }
 
 /// extended-motor-actions: the last prepared movement's features, for
@@ -1340,6 +1343,11 @@ enum Event {
         req_ms: i64,
         hands: Vec<usize>,
         r: f32,
+    },
+    /// extended-motor-actions: `release-all-fingers` prep complete.
+    ZzReleaseAllPrep {
+        req_ms: i64,
+        hands: Vec<usize>,
     },
     /// extended-motor-actions: mouse movement preparation complete.
     ZzMousePrep {        cmd: String,
@@ -2662,6 +2670,8 @@ impl Engine {
         self.zz_test5()?;
         self.zz_test6()?;
         self.zz_test7()?;
+        self.zz_test8()?;
+        self.zz_test9()?;
         Ok(())
     }
 
@@ -2901,6 +2911,48 @@ impl Engine {
             vec![("TEST".to_string(), Value::Sym("TEST7".to_string()))],
         )?;
         self.run_secs(10.0)?;
+        self.zz_summarize();
+        Ok(())
+    }
+
+    /// `test8` (`test-model.lisp:225`): hold several fingers down, then
+    /// `all-fingers-to-home`, then dump buffers/finger locations.
+    fn zz_test8(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "All home with multiple fingers down".to_string(),
+        ));
+        self.reset()?;
+        self.zz_goal_focus(
+            "CHUNK",
+            vec![("TEST".to_string(), Value::Sym("TEST8".to_string()))],
+        )?;
+        self.run_secs(10.0)?;
+        self.zz_buffer_status();
+        self.zz_print_finger_locs();
+        self.zz_summarize();
+        Ok(())
+    }
+
+    /// `test9` (`test-model.lisp:236`): like test8 but `release-all-fingers`
+    /// (including the second, no-op one that prints a warning).
+    fn zz_test9(&mut self) -> Result<(), EngineError> {
+        self.zz_run_test_defaults();
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Release-all-fingers with multiple fingers down".to_string(),
+        ));
+        self.reset()?;
+        self.zz_goal_focus(
+            "CHUNK",
+            vec![("TEST".to_string(), Value::Sym("TEST9".to_string()))],
+        )?;
+        self.run_secs(10.0)?;
+        self.zz_buffer_status();
+        self.zz_print_finger_locs();
         self.zz_summarize();
         Ok(())
     }
@@ -4155,6 +4207,36 @@ impl Engine {
                     exec_ms: exec,
                     finish_ms: finish,
                     kind: ZzKind::AllHome { hands },
+                });
+                self.zz_maybe_execute();
+            }
+            Event::ZzReleaseAllPrep { req_ms, hands } => {
+                let both = hands.len() == 2;
+                let hand = if both { 1 } else { hands[0] };
+                if show {
+                    self.emit(
+                        "MOTOR",
+                        format!(
+                            "PREPARATION-COMPLETE {}{}",
+                            Self::secs_str(req_ms),
+                            self.zz_style_suffix_hand("RELEASE-ALL-FINGERS", hand, both)
+                        ),
+                    );
+                }
+                self.man_prep_busy = false;
+                // `release-all-fingers` (`motor-extension.lisp:2577`): exec is
+                // `init + key-release-time`, finish is `init + 2*burst`.
+                let exec = self.cfg.init_ms + self.cfg.zz_krt_ms;
+                let finish = self.cfg.init_ms + 2 * self.cfg.burst_ms;
+                self.man_exec_queue.push(ZzPending {
+                    key: String::new(),
+                    req_ms,
+                    hand,
+                    both,
+                    style: "RELEASE-ALL-FINGERS".to_string(),
+                    exec_ms: exec,
+                    finish_ms: finish,
+                    kind: ZzKind::ReleaseAll { hands },
                 });
                 self.zz_maybe_execute();
             }
@@ -9822,6 +9904,43 @@ impl Engine {
                                 };
                             }
                         }
+                        ZzKind::ReleaseAll { hands } => {
+                            // `queue-output-events` (`motor-extension.lisp:2610`):
+                            // a `RELEASING-ALL-FINGERS` details line at exec; the
+                            // finger positions are unchanged.
+                            self.push(
+                                t + p.exec_ms,
+                                Prio::Num(0),
+                                Out::Medium,
+                                Event::Emit {
+                                    module: "MOTOR".to_string(),
+                                    line: "RELEASING-ALL-FINGERS".to_string(),
+                                },
+                            );
+                            for h in &hands {
+                                // Auto-release any held finger at
+                                // `init + key-release-time`.
+                                let held: Vec<(usize, String)> = (0..5)
+                                    .filter_map(|f| {
+                                        self.zz_hands[*h].held[f].clone().map(|k| (f, k))
+                                    })
+                                    .collect();
+                                for (f, k) in held {
+                                    self.push(
+                                        t + self.cfg.init_ms + self.cfg.zz_krt_ms,
+                                        Prio::Num(0),
+                                        Out::Always,
+                                        Event::ZzKeyOutput {
+                                            key: k,
+                                            down: false,
+                                            hand: *h,
+                                            finger: f,
+                                        },
+                                    );
+                                    self.zz_hands[*h].held[f] = None;
+                                }
+                            }
+                        }
                     }
                     ran = true;
                     break;
@@ -10286,6 +10405,82 @@ impl Engine {
         Ok(())
     }
 
+    /// `release-all-fingers` (`motor-extension.lisp:2616`): release the held
+    /// fingers of whichever hands have one down; with none, warn and do
+    /// nothing.
+    fn zz_release_all_fingers(&mut self) -> Result<(), EngineError> {
+        let mut hands: Vec<usize> = Vec::new();
+        for h in 0..2 {
+            if (0..5).any(|f| self.zz_hands[h].down[f]) {
+                hands.push(h);
+            }
+        }
+        if hands.is_empty() {
+            // `:2637`: `print-warning`, no movement.
+            self.emit_warning(
+                "Release-all-fingers action called when no fingers need to be released.",
+            );
+            return Ok(());
+        }
+        let req_ms = self.time_ms;
+        let both = hands.len() == 2;
+        let single = if both { 1 } else { hands[0] };
+        let hand_name = if both {
+            "BOTH"
+        } else if single == 0 {
+            "LEFT"
+        } else {
+            "RIGHT"
+        };
+        // The request trace is an explicit `:details` string, so it stays
+        // lowercase (`motor-extension.lisp:2628`).
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: "release-all-fingers".to_string(),
+            },
+        );
+        self.zz_last_style = Some((
+            "RELEASE-ALL-FINGERS".to_string(),
+            "RELEASE-ALL-FINGERS".to_string(),
+            hand_name.to_string(),
+        ));
+        self.zz_last_move = Some(ZzMoveInfo {
+            style_name: "RELEASE-ALL-FINGERS".to_string(),
+            hand: single,
+            finger: ZZ_DUMMY_FINGER,
+            r: 0.0,
+            theta: 0.0,
+            maxfeats: 1,
+            hfrt: false,
+        });
+        self.man_prep_busy = true;
+        self.man_last_prep = Some(single);
+        for h in &hands {
+            self.zz_last_cmd[*h] = "RELEASE-ALL-FINGERS".to_string();
+        }
+        if self.cfg.zz_two_proc {
+            for h in &hands {
+                self.man_proc[*h] = true;
+            }
+        } else {
+            self.man_proc[0] = true;
+            self.man_proc[1] = true;
+        }
+        // `num-to-prepare` is 1 (`release-all-fingers` feature-slots is
+        // `(hand)` and its `:around` drops one, `:2524`).
+        let prep = self.cfg.feat_prep_ms;
+        self.push(
+            self.time_ms + prep,
+            Prio::Num(0),
+            Out::Always,
+            Event::ZzReleaseAllPrep { req_ms, hands },
+        );
+        Ok(())
+    }
+
     /// `all-fingers-to-home` (`motor-extension.lisp:2419`): whether a hand
     /// needs moving — off the home location, any finger down, or a finger off
     /// its home position.
@@ -10703,6 +10898,7 @@ impl Engine {
                     | "HOLD-PUNCH" | "HOLD-PECK" | "PUNCH" | "PECK" | "PECK-RECOIL"
                     | "POINT-FINGER" | "RELEASE"
                     | "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY" | "DELAYED-PUNCH"
+                    | "RELEASE-ALL-FINGERS"
             ) {
                 Some(t)
             } else {
@@ -10786,6 +10982,9 @@ impl Engine {
                 self.zz_point_hand_at_key(&slots)
             }
             (Some("DELAYED-PUNCH"), _) if self.cfg.zz_ext => self.zz_delayed_punch(&slots),
+            (Some("RELEASE-ALL-FINGERS"), _) if self.cfg.zz_ext => {
+                self.zz_release_all_fingers()
+            }
             got => Err(unimpl(format!("manual request {got:?}"))),
         }
     }

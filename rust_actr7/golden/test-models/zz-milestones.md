@@ -10,12 +10,8 @@ summary block per sub-run (`PRESSED`/`RELEASED`/`CLICKED`/`UNCLICKED`/`Held`/
 
 ## Status
 
-**Byte-exact through line 3226** — test1–test7 complete including every summary.
-The remaining output (3227–3568) is tests 8–9 (M8).
-
-Reference line ranges (each range is a test's trace plus its trailing summary;
-the summary prints the test's description, so a description line belongs to the
-test *above* it):
+**Complete.** `zz-extended-motor-actions` (3568 lines) is byte-exact and is in
+`enabled.txt`; `cargo test` is green (43 enabled specs).
 
 | test | lines |
 |------|-------|
@@ -24,8 +20,8 @@ test *above* it):
 | test5 | 2311–2893 |
 | test6 | 2894–3034 |
 | test7 | 3035–3226 |
-| test8 | 3227–3395 |
-| test9 | 3396–3568 |
+| test8 | 3227–3393 |
+| test9 | 3394–3568 |
 
 ## M0 — Loader + task-driver scaffolding  (mostly done)
 - Loader: top-level `defmethod`; model-body `sgp-fct`/`p-fct` (backquoted,
@@ -85,15 +81,16 @@ The largest and foundational piece.
 - **Exit met**: test7 byte-exact through line 3226 including its summary
   (GOTCHA #142).
 
-## M8 — all-fingers-to-home + release-all  (tests 8/9, 342 lines)
-- `all-fingers-to-home`, `release-all-fingers`, and the
-  `Release-all-fingers action called when no fingers need to be released.`
-  warning.
+## M8 — all-fingers-to-home + release-all  (tests 8/9, 342 lines)  **Done**
+- `all-fingers-to-home` with multiple fingers down (test8), `release-all-fingers`
+  and its no-op warning (test9).
+- **Exit met**: test9 byte-exact through line 3568 (GOTCHA #143).
 
-## M9 — polish
-- Exact summary formatting, remaining warnings/edge cases, add to `enabled.txt`.
+## M9 — polish  **Done**
+- Summary formatting, warnings/edge cases, and `enabled.txt` — the spec is
+  enabled and the suite is green (43 specs).
 
 ## Suggested order
 M0 → M1 (largest, unlocks the shared dual-execution plumbing) → M2/M3 (device
 release semantics) → M4 → M5/M6 → M7/M8 → M9.  Each milestone should end with a
-commit and the 42-spec suite still green.
+commit and the 43-spec suite still green.

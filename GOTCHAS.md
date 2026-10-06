@@ -1779,6 +1779,36 @@ is not the production's *only* LHS test is ignored
 `zz` test7 is **byte-exact through line 3226** — test1–test7 plus every
 summary. Tests 8–9 (M8) remain.
 
+## 143. `zz` test8/test9: `release-all-fingers` vs `all-fingers-to-home`
+
+`release-all-fingers` (`motor-extension.lisp:2512`) subclasses `punch` with
+`hand both`, `finger :dummy`, `release-if-down :free`, and
+`feature-slots '(hand)`; its `num-to-prepare :around` (`:2524`) drops the hand,
+so prep is 1 feature (0.050 s). Its exec is `init + key-release-time` and
+finish `init + 2*burst` (`:2577`/`:2582`), and it emits a
+`RELEASING-ALL-FINGERS` line at exec (`:2610`) — **not** a per-hand line like
+`all-fingers-to-home`'s `ALL-FINGERS-TO-HOME <hand>`. Crucially it does **not**
+move the fingers: its `prepare-features` copies the hand position with the
+extended-finger states cleared but the locations unchanged, so test9's held
+keys (`z`/`o`) leave their fingers off the home row, while test8's
+`all-fingers-to-home` resets both hands to home.
+
+The handler (`:2616`) only prepares a movement when some finger is down;
+otherwise it calls `print-warning "Release-all-fingers action called when no
+fingers need to be released."` and does nothing — test9's second request
+(test9-5). Its request trace uses an explicit `:details "release-all-fingers"`
+string (`:2636`), so it stays **lowercase** unlike the symbol-name traces.
+
+At exec, the auto-release's `set-finger-up` events are scheduled before
+`releasing-all-fingers` (`perform-movement` releases fingers, then calls
+`queue-output-events`), but each `set-finger-up` only *schedules* its
+`release-key`, so `RELEASING-ALL-FINGERS` still prints before the releases —
+the same deferred-output ordering as GOTCHA #141.
+
+`zz` test9 is byte-exact through line 3568; with it the whole
+`zz-extended-motor-actions` spec (3568 lines) passes and is now in
+`enabled.txt`.
+
 
 
 
