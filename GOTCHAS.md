@@ -1539,3 +1539,41 @@ step adds the `prompt` feature and arms the keypress→`correct`/`wrong`→
 `(57531033409 0)`, not the recorded `(100 0)`.
 
 `tracker` is byte-exact (322 lines) — **42 specs**.
+
+## 134. `zz` test3: keyboard geometry, the dual-execution state machine, and two mouse positions
+
+Test3 (`hold-key`/`hand-to-mouse`/`hand-to-home`) needs three things the
+base motor module doesn't provide:
+
+- **Virtual-keyboard geometry.** `key->loc` is the `(x, y)` grid coordinate
+  from `specify-key` (`other-files/keyboard.lisp:243`); a finger's absolute
+  location is `hand.loc + finger-offset` where the home locs are
+  `#(4 4)`/`#(7 4)` (`motor.lisp:676`/`:682`) and the standard offsets are
+  `index (0 0) middle (1 0) … pinkie (3 0) thumb (-1 2)`. `extended-finger-keyboard`
+  (`motor-extension.lisp:2103`) then picks `hold-punch` (same loc) or
+  `hold-peck` (move loc, polar `xy-to-polar`) — so `hold-key shift` is a
+  `HOLD-PECK` (pinkie at `(1 4)`, shift at `(0 5)`) and `hold-key k` a
+  `HOLD-PUNCH` (middle already at `(8 4)`).
+- **The `hand-tracker` state.** `proc-s`/`exec-s` are per-hand lists, but
+  `change-state` (`motor-extension.lisp:774`) collapses a hand-tagged change
+  to **both** hands when `two-proc`/`two-exec` is nil. `initiation-complete`
+  (`:1005`) frees the hand of the *current* `last-prep`, not the movement
+  that just initiated — so a fast follow-up request can strand the earlier
+  hand's `proc` busy (exactly the 0.500 `buffer-status`). Finger `busy` is
+  set at preparation-complete (`:1186`) and cleared at finish (`:1205`);
+  finger `down` flips at exec (`set-finger-down`), not at prep.
+- **Two mouse positions.** The click/release trace prints `cursor-loc`
+  (`mouse.lisp:178`, initial `(0 0)`, moved by `move-cursor`), but
+  `hand-to-cursor` polar is computed from `cursor-pos` (`mouse.lisp:192`,
+  default `(28 2)`). `dist((7 4),(28 2)) = √445 = 21.095022`,
+  `atan2(-2,21) = -0.094951704` — and the return leg is the same `r` with
+  `θ+π`. Compute the polar in `f64` then narrow to `f32`: SBCL's `atan` with
+  integer args goes through the double path, and the `f32`-only `atan2` is
+  one ULP off.
+- `perform-movement` releases a *held* finger (key or mouse button)
+  `key-release-time` after initiation (`:1171`), which is what makes
+  `hand-to-home` emit `release-mouse` at 1.828.
+
+`zz` test3 is byte-exact through line 2016 (test1 + test2 + test3); tests
+4–9 (M4–M8) remain.
+
