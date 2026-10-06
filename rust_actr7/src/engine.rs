@@ -3694,7 +3694,10 @@ impl Engine {
                 let move_ms = (mv * 1000.0).round() as i64;
                 let strike = self.zz_movement_strike_time(move_ms, r);
                 let (exec_ms, exec2_ms, finish_ms) = match style.as_str() {
-                    "HOLD-PECK" => (init + move_ms, None, init + move_ms),
+                    // `hold-peck` (`motor-extension.lisp:1909`): exec is the
+                    // strike time, finish is the full move time (they differ
+                    // only when `peck-strike-distance` is set).
+                    "HOLD-PECK" => (init + strike, None, init + move_ms),
                     "PECK" | "PECK-RECOIL" => (
                         init + strike,
                         Some(init + move_ms + self.cfg.zz_krt_ms),

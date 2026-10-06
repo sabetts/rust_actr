@@ -1598,4 +1598,18 @@ test4's five hit-keys fall out exactly: `t` `r=√2`, `r` `r=1.0`, `i` `r=1.0`,
 `f` `r=1.0`, `n` `r=√2` (the `√2` cases strike in 82 ms, the `1.0` cases in
 77 ms). `zz` test4 is byte-exact through line 2120 (hit-key run).
 
+## 136. `zz` test4: `hold-peck`'s exec and finish are different instants
+
+`hold-peck` (`motor-extension.lisp:1909`) computes
+`exec = init + movement-strike-time(move-time, r)` but
+`finish = init + move-time`. They coincide only when
+`peck-strike-distance` is unset, because `movement-strike-time` returns
+`tt` unchanged when `peck-strike` is nil (`:1559`). So test3's `hold-key
+shift` (`*psd*` nil) has `exec == finish == 0.450`, while test4's `hold-key x`
+(`*psd* .2`, `r=1.0`, `move-time=100`, strike 77 ms) puts `output-key` at
+1.527 and `FINISH-MOVEMENT` at 1.550. `hold-punch` has no such split
+(`exec = init + key-closure`, `finish = init + burst`). `zz` test4 is
+byte-exact through line 2124 (hold-key x).
+
+
 
