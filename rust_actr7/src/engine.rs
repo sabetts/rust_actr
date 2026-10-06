@@ -1044,6 +1044,8 @@ pub struct Engine {
     /// Buffer chunk name -> final DM chunk name, for chunk references that
     /// were merged into an existing DM chunk (`merging-test`).
     chunk_alias: HashMap<String, String>,
+    /// Copy name -> its source chunk name (`copy_chunk`).
+    copy_source: HashMap<String, String>,
     /// `!stop!` was executed: end the run with a BREAK-EVENT.
     stopped: bool,
     /// Recently-retrieved chunk finsts: `(name, time_ms)`, newest last.
@@ -1078,6 +1080,9 @@ pub struct Engine {
     /// Production compilation: count of compiled productions, the previous
     /// fired production `(index, bindings)`, and its fire time.
     compiled_count: usize,
+    /// Number of model productions before any compilation (compiled
+    /// productions are dropped on reset).
+    base_prods: usize,
     /// `(index, bindings, whole-chunk requests)` at the previous fire.
     prev_prod: Option<(usize, Bindings, Vec<(String, String)>)>,
     prev_prod_ms: i64,
@@ -1120,6 +1125,7 @@ impl Engine {
             clear_on_keypress,
             consume_rng,
         } = device;
+        let base_prods = model.productions.len();
         let mut eng = Engine {
             model,
             cfg,
@@ -1161,6 +1167,7 @@ impl Engine {
             copy_count: HashMap::new(),
             c_fan_out: HashMap::new(),
             chunk_alias: HashMap::new(),
+            copy_source: HashMap::new(),
             stopped: false,
             finsts: Vec::new(),
             vl_copies: HashMap::new(),
@@ -1179,6 +1186,7 @@ impl Engine {
             blending_busy: false,
             blending_error: false,
             compiled_count: 0,
+            base_prods,
             prev_prod: None,
             prev_prod_ms: 0,
             last_press: None,
@@ -1214,6 +1222,8 @@ impl Engine {
     /// handle that. Trace history (`out_lines`) is preserved.
     pub fn reset(&mut self) -> Result<(), EngineError> {
         self.cfg = Config::from_model(&self.model)?;
+        // Compiled productions do not survive a reset.
+        self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
         self.dm = Vec::new();
         for c in &self.model.chunks {
@@ -1284,6 +1294,7 @@ impl Engine {
         self.copy_count.clear();
         self.c_fan_out.clear();
         self.chunk_alias.clear();
+        self.copy_source.clear();
         self.stopped = false;
         self.finsts.clear();
         self.vl_copies.clear();
@@ -3680,6 +3691,17 @@ impl Engine {
                     "it has an indirect action with the {buf} buffer"
                 ));
             }
+            // With :cia, an indirect action whose variable is bound by a
+            // `!bind!`/`!safe-bind!` is invalid (`:rir` ignores the retrieval
+            // style).
+            let ivars = indirect_action_vars(prod, self.cfg.rir);
+            let bvars = production_bind_vars(prod);
+            if ivars.iter().any(|v| bvars.contains(v)) {
+                return Some(
+                    "it has an indirect action using a variable bound with a !safe-bind!"
+                        .to_string(),
+                );
+            }
         }
         None
     }
@@ -3758,9 +3780,22 @@ impl Engine {
         let p2 = &self.model.productions[i2];
         for a in &p1.rhs {
             if let RhsAction::Request { buffer, .. } = a {
-                if p2.rhs.iter().any(
+                let both_req = p2.rhs.iter().any(
                     |b| matches!(b, RhsAction::Request { buffer: bb, .. } if bb == buffer),
-                ) {
+                );
+                if !both_req {
+                    continue;
+                }
+                // The buffer's compilation type table decides whether the
+                // (p1-usage, p2-usage) pair composes.
+                let u1 = buffer_usage(p1, buffer);
+                let u2 = buffer_usage(p2, buffer);
+                let composable = match buffer.as_str() {
+                    "RETRIEVAL" => retrieval_composable(u1, u2),
+                    "GOAL" => goal_composable(u1, u2),
+                    _ => false,
+                };
+                if !composable {
                     return Some(buffer.clone());
                 }
             }
@@ -3956,26 +3991,80 @@ impl Engine {
                 }
             }
         }
-        let subst = |v: &SlotVal| -> SlotVal {
+        // Only variables referenced by an *indirect* request (`+buffer> =c`,
+        // not `+goal> =retrieval`) are resolved from the firings; other
+        // variables stay symbolic (compiled productions are not otherwise
+        // specialized — cf. `ppm-compilation`).
+        let mut indirect_vars: HashSet<String> = HashSet::new();
+        for acts in [&p1_acts, &p2_acts] {
+            for (op, _buf, _slots, var) in acts {
+                if *op == 'r' {
+                    if let Some(v) = var {
+                        if !is_buffer_name(v) {
+                            indirect_vars.insert(v.clone());
+                        }
+                    }
+                }
+            }
+        }
+        // A variable not unified across the pair, but resolved by an
+        // indirect action, is instantiated from the firing bindings.
+        let subst = |v: &SlotVal, b: &Bindings| -> SlotVal {
             match v {
-                SlotVal::Var(n) => map.get(n).cloned().unwrap_or_else(|| v.clone()),
+                SlotVal::Var(n) => {
+                    if indirect_vars.contains(n) && b.contains_key(n) {
+                        SlotVal::Lit(b[n].show())
+                    } else if let Some(m) = map.get(n) {
+                        m.clone()
+                    } else if let Some(name) = self
+                        .buffers
+                        .get(n)
+                        .and_then(|buf| buf.chunk.as_ref())
+                        .and_then(|c| c.name.clone())
+                    {
+                        // A `=buffer` reference resolves to that buffer's
+                        // chunk at composition time (`G-1` for the retrieval
+                        // C supplied; empty once p2's own request clears it).
+                        SlotVal::Lit(name)
+                    } else {
+                        SlotVal::Var(n.clone())
+                    }
+                }
                 SlotVal::Lit(s) => SlotVal::Lit(s.clone()),
             }
         };
-        let apply_lhs = |lhs: &[(String, Vec<(String, SlotVal)>)]| {
+        let apply_lhs = |lhs: &[(String, Vec<(String, SlotVal)>)], b: &Bindings| {
             lhs.iter()
-                .map(|(b, s)| {
+                .map(|(buf, s)| {
                     (
-                        b.clone(),
+                        buf.clone(),
                         s.iter()
-                            .map(|(n, v)| (n.clone(), subst(v)))
+                            .map(|(n, v)| (n.clone(), subst(v, b)))
                             .collect::<Vec<_>>(),
                     )
                 })
                 .collect::<Vec<_>>()
         };
-        let p1_lhs = apply_lhs(&p1_lhs);
-        let p2_lhs = apply_lhs(&p2_lhs);
+        let p1_lhs = apply_lhs(&p1_lhs, b1);
+        let p2_lhs = apply_lhs(&p2_lhs, b2);
+        let inst_acts = |acts: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
+                         b: &Bindings| {
+            acts.iter()
+                .map(|(op, buf, slots, var)| {
+                    (
+                        *op,
+                        buf.clone(),
+                        slots
+                            .iter()
+                            .map(|(n, v)| (n.clone(), subst(v, b)))
+                            .collect::<Vec<_>>(),
+                        var.clone(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        let p1_acts = inst_acts(&p1_acts, b1);
+        let p2_acts = inst_acts(&p2_acts, b2);
 
         let mut buffers: Vec<String> = Vec::new();
         let add_buf = |buffers: &mut Vec<String>, b: &str| {
@@ -3984,7 +4073,9 @@ impl Engine {
             }
         };
         for (b, _) in p1_lhs.iter().chain(&p2_lhs) {
-            add_buf(&mut buffers, b);
+            if !b.starts_with('?') {
+                add_buf(&mut buffers, b);
+            }
         }
         for (_, b, _, _) in p1_acts.iter().chain(&p2_acts) {
             add_buf(&mut buffers, b);
@@ -4022,8 +4113,10 @@ impl Engine {
                 .iter()
                 .any(|(op, bb, _, _)| bb == buf && (*op == '+' || *op == 'r'));
             if p1_req {
-                // The request supplies the buffer; drop the second's tests.
-                if !c1.is_empty() {
+                // The request supplies the buffer; drop the second's tests,
+                // but keep p1's own condition even if it has no slots
+                // (`=retrieval>`).
+                if p1_lhs.iter().any(|(b, _)| b == buf) {
                     lhs.push((format!("={buf}>"), remove_dup_keep_last(c1)));
                 }
             } else {
@@ -4038,6 +4131,12 @@ impl Engine {
                 if had {
                     lhs.push((format!("={buf}>"), remove_dup_keep_last(slots)));
                 }
+            }
+        }
+        // Query conditions (`?buffer> state free`) follow the matches.
+        for (b, s) in p1_lhs.iter().chain(&p2_lhs) {
+            if b.starts_with('?') && !lhs.iter().any(|(t, _)| t == b) {
+                lhs.push((b.clone(), remove_dup_keep_last(s.clone())));
             }
         }
 
@@ -4083,26 +4182,54 @@ impl Engine {
             // `+` requests: p1's is dropped when p2 tests the buffer (and
             // the requested chunk is noted); p2's indirect ones are
             // resolved from p1's requests and expanded to slots.
-            for (_, _) in acts_for(&p1_acts, buf, &['+', 'r']) {
+            // p1 requests: kept unless p2 tests the buffer; an indirect
+            // request (`+retrieval> =c`) expands to the referenced chunk's
+            // spec.
+            for (s, var) in acts_for(&p1_acts, buf, &['+', 'r']) {
                 if p2_tests {
-                    if let Some(n) = reqs1.iter().find(|(bb, _)| bb == buf).map(|(_, n)| n.clone()) {
-                        dropped.push(n);
-                    }
-                } else {
-                    rhs.push((format!("+{buf}>"), Vec::new()));
-                }
-            }
-            for (s, var) in acts_for(&p2_acts, buf, &['+', 'r']) {
-                if let Some(v) = var {
-                    if let Some(chunk) =
-                        reqs1.iter().find(|(bb, _)| bb == &v).map(|(_, c)| c.clone())
-                    {
-                        if let Some(c) = self.dm.iter().find(|c| c.name.as_deref() == Some(chunk.as_str())) {
-                            let slots: Vec<(String, String)> =
-                                c.slots.iter().map(|(n, val)| (n.clone(), val.show())).collect();
-                            rhs.push((format!("+{buf}>"), slots));
+                    if reqs1.iter().any(|(bb, _)| bb == buf) {
+                        // The dropped name is the chunk p1's request actually
+                        // produced (e.g. the retrieved `G`, not the requested
+                        // `red`), i.e. the buffer's current content.
+                        let name = self
+                            .buffers
+                            .get(buf)
+                            .and_then(|b| b.chunk.as_ref())
+                            .and_then(|c| c.name.clone())
+                            .map(|n| self.copy_source.get(&n).cloned().unwrap_or(n))
+                            .or_else(|| {
+                                reqs1.iter().find(|(bb, _)| bb == buf).map(|(_, n)| n.clone())
+                            });
+                        if let Some(n) = name {
+                            dropped.push(n);
                         }
                     }
+                } else {
+                    let slots = match &var {
+                        Some(v) => self
+                            .binding_chunk_name(v, b1)
+                            .map(|n| self.chunk_spec_slots(&n))
+                            .unwrap_or_default(),
+                        None => sv(s),
+                    };
+                    rhs.push((format!("+{buf}>"), slots));
+                }
+            }
+            // p2 requests.
+            for (s, var) in acts_for(&p2_acts, buf, &['+', 'r']) {
+                if let Some(v) = var {
+                    let slots = if let Some(chunk) = reqs1
+                        .iter()
+                        .find(|(bb, _)| bb == &v || bb == buf)
+                        .map(|(_, c)| c.clone())
+                    {
+                        self.chunk_spec_slots(&chunk)
+                    } else {
+                        self.binding_chunk_name(&v, b2)
+                            .map(|n| self.chunk_spec_slots(&n))
+                            .unwrap_or_default()
+                    };
+                    rhs.push((format!("+{buf}>"), slots));
                 } else {
                     rhs.push((format!("+{buf}>"), sv(s)));
                 }
@@ -4139,6 +4266,39 @@ impl Engine {
         } else {
             self.cfg.md
         }
+    }
+
+    /// The chunk name bound to a variable (for an indirect request).
+    fn binding_chunk_name(&self, var: &str, b: &Bindings) -> Option<String> {
+        match b.get(var) {
+            Some(Value::Sym(s)) => Some(s.clone()),
+            _ => None,
+        }
+    }
+
+    /// `chunk-name-to-chunk-spec`: a chunk's slots; for an undefined chunk
+    /// (a bare-symbol slot value like `red`), the slot(s) that reference it
+    /// (`add-dm`'s `get-true-slot-value-name` gives the chunk that slot).
+    fn chunk_spec_slots(&self, name: &str) -> Vec<(String, String)> {
+        if let Some(c) = self
+            .dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+            .or_else(|| self.named.get(name))
+        {
+            return c.slots.iter().map(|(k, v)| (k.clone(), v.show())).collect();
+        }
+        let mut out = Vec::new();
+        for c in self.dm.iter() {
+            for (k, v) in &c.slots {
+                if let Value::Sym(s) = v {
+                    if s == name && !out.contains(&(k.clone(), name.to_string())) {
+                        out.push((k.clone(), name.to_string()));
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// For a whole-chunk request (`+goal> =retrieval`), the trace shows the
@@ -5154,6 +5314,23 @@ fn prod_lhs_slots(p: &Production, _b: &Bindings) -> Vec<(String, Vec<(String, Sl
                 .collect();
             slots.sort_by(|a, b| a.0.cmp(&b.0));
             out.push((buffer.clone(), slots));
+        } else if let LhsItem::Query { buffer, queries } = item {
+            // State/failure queries (`?imaginal> state free`).
+            let mut slots: Vec<(String, SlotVal)> = queries
+                .iter()
+                .filter(|(s, _)| s != "ISA")
+                .map(|(s, v)| {
+                    let sv = match v {
+                        Pattern::Var(vv) => SlotVal::Var(vv.clone()),
+                        other => SlotVal::Lit(
+                            Value::from_pattern(other).map(|x| x.show()).unwrap_or_default(),
+                        ),
+                    };
+                    (s.clone(), sv)
+                })
+                .collect();
+            slots.sort_by(|a, b| a.0.cmp(&b.0));
+            out.push((format!("?{buffer}>"), slots));
         }
     }
     out
@@ -5295,6 +5472,82 @@ fn render_compiled(
     s
 }
 
+/// `get-buffer-index` (`production-compilation.lisp:1441`): bitmask of how a
+/// production uses a buffer — LHS match +8, LHS query +16, RHS `=` +1,
+/// RHS `-` +2, RHS `+` +4, RHS `*` +32.
+fn buffer_usage(p: &crate::model::Production, buffer: &str) -> u32 {
+    let mut u = 0;
+    if p.lhs
+        .iter()
+        .any(|i| matches!(i, LhsItem::Match { buffer: b, .. } if b == buffer))
+    {
+        u += 8;
+    }
+    if p.lhs
+        .iter()
+        .any(|i| matches!(i, LhsItem::Query { buffer: b, .. } if b == buffer))
+    {
+        u += 16;
+    }
+    for a in &p.rhs {
+        match a {
+            RhsAction::Modify { buffer: b, .. } if b == buffer => u += 1,
+            RhsAction::Clear { buffer: b } if b == buffer => u += 2,
+            RhsAction::Request { buffer: b, .. } if b == buffer => u += 4,
+            RhsAction::ModifyRequest { buffer: b, .. } if b == buffer => u += 32,
+            _ => {}
+        }
+    }
+    u
+}
+
+/// The RETRIEVAL compilation type's table (`retrieval-compilation.lisp:279`);
+/// any listed pair composes (T or a special compose function), unlisted does
+/// not.
+fn retrieval_composable(u1: u32, u2: u32) -> bool {
+    matches!(
+        (u1, u2),
+        (28, 28) | (28, 24) | (28, 20) | (28, 16) | (28, 12) | (28, 8) | (28, 4) | (28, 0)
+            | (24, 20) | (24, 16) | (24, 4) | (24, 0)
+            | (20, 28) | (20, 24) | (20, 20) | (20, 16) | (20, 12) | (20, 8) | (20, 4) | (20, 0)
+            | (16, 28) | (16, 24) | (16, 20) | (16, 16) | (16, 12) | (16, 8) | (16, 4) | (16, 0)
+            | (12, 28) | (12, 24) | (12, 20) | (12, 16) | (12, 12) | (12, 8) | (12, 4) | (12, 0)
+            | (8, 20) | (8, 16) | (8, 4) | (8, 0)
+            | (4, 28) | (4, 24) | (4, 20) | (4, 16) | (4, 12) | (4, 8) | (4, 4) | (4, 0)
+            | (0, 28) | (0, 24) | (0, 20) | (0, 16) | (0, 12) | (0, 8) | (0, 4)
+    )
+}
+
+/// The GOAL compilation type's table (`goal-compilation.lisp:704`); only the
+/// `T` entries compose here (the special functions are not modelled).
+fn goal_composable(u1: u32, u2: u32) -> bool {
+    matches!(
+        (u1, u2),
+        (44, 0) | (40, 44) | (40, 40) | (40, 13) | (40, 12) | (40, 9) | (40, 4) | (40, 0)
+            | (13, 0) | (12, 0)
+            | (9, 13) | (9, 12) | (9, 9) | (9, 4) | (9, 0)
+            | (8, 4) | (8, 0)
+            | (4, 0)
+            | (0, 44) | (0, 40) | (0, 13) | (0, 12) | (0, 9) | (0, 8) | (0, 4)
+    )
+}
+
+/// True for a buffer name (an RHS `=BUFFER` reference rather than a slot
+/// variable).
+fn is_buffer_name(s: &str) -> bool {
+    matches!(
+        s,
+        "GOAL"
+            | "RETRIEVAL"
+            | "IMAGINAL"
+            | "VISUAL"
+            | "VISUAL-LOCATION"
+            | "MANUAL"
+            | "BLENDING"
+            | "TEMPORAL"
+    )
+}
+
 /// The module a buffer's events are traced under (`:module` of a scheduled
 /// buffer event).
 fn buffer_module(buffer: &str) -> String {
@@ -5322,6 +5575,49 @@ fn indirect_action_buffer_name(prod: &Production) -> Option<String> {
         }
     }
     None
+}
+
+/// `indirect-action-variables` (`production-compilation.lisp:1218`): the
+/// variables named by single-variable requests. With `:rir` the retrieval
+/// style is ignored.
+fn indirect_action_vars(prod: &Production, ignore_retrieval: bool) -> Vec<String> {
+    let mut out = Vec::new();
+    for a in &prod.rhs {
+        if let RhsAction::Request {
+            buffer,
+            spec: ChunkDesc::Named(n),
+        } = a
+        {
+            if let Some(v) = n.strip_prefix('=') {
+                if ignore_retrieval && buffer == "RETRIEVAL" {
+                    continue;
+                }
+                out.push(v.to_uppercase());
+            }
+        }
+    }
+    out
+}
+
+/// `production-bind-variables` (`production-compilation.lisp:1229`): the
+/// variables bound by `!bind!`/`!safe-bind!`/`!mv-bind!`.
+fn production_bind_vars(prod: &Production) -> Vec<String> {
+    let mut out = Vec::new();
+    for item in &prod.lhs {
+        if let LhsItem::Bind { var, .. } = item {
+            out.push(var.to_uppercase());
+        }
+    }
+    for a in &prod.rhs {
+        match a {
+            RhsAction::Bind { var, .. } => out.push(var.to_uppercase()),
+            RhsAction::MvBind { vars, .. } => {
+                out.extend(vars.iter().map(|v| v.to_uppercase()))
+            }
+            _ => {}
+        }
+    }
+    out
 }
 
 /// Numeric view of a value for the `!eval!`/`!bind!` evaluator.
@@ -6288,6 +6584,7 @@ impl Engine {
         let n = *self.copy_count.entry(name.to_string()).or_insert(0);
         self.copy_count.insert(name.to_string(), n + 1);
         let copy = format!("{name}-{n}");
+        self.copy_source.insert(copy.clone(), name.to_string());
         if let Some(src) = self
             .dm
             .iter()

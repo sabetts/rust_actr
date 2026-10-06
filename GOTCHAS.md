@@ -1303,3 +1303,33 @@ No enabled spec regressed.  M2 (composed-production instantiation:
 `color =c` → `color red`, and expanding the indirect `+retrieval> =c` action
 to `+RETRIEVAL> COLOR RED`) is the next milestone; `retain` stays disabled
 until M2/M3 land.
+
+## 124. M2: composed-production instantiation + indirect-action expansion (verified)
+
+`retain-indirect-retrievals` **run 2 now matches exactly** (lines 86-298).
+`compose_pair` was extended:
+- Only variables named by an *indirect* request (`+retrieval> =c`, not
+  `+goal> =retrieval`) are instantiated from the firing bindings; other
+  variables stay symbolic (`ppm-compilation` depends on this).
+- An indirect request is expanded to the referenced chunk's spec:
+  `chunk_spec_slots` = a real chunk's slots, or for an undefined chunk (a
+  bare-symbol slot value like `red`) the slot that references it
+  (`color=red`, matching `chunk-name-to-chunk-spec`).
+- A `=buffer` reference resolves to that buffer's chunk at composition time
+  (`G-1` for the retrieval `C` supplied; symbolic once p2's own request
+  clears it).
+- Query conditions (`?imaginal> state free`) join the composed LHS, and a
+  slotless `=retrieval>` match is kept.
+- The dropped-chunk doc uses the chunk p1's request actually produced
+  (`G`, not the requested `red`), via a `copy_source` table.
+- The composition gate is the per-buffer usage table
+  (`buffer_usage` + `retrieval_composable`/`goal_composable`): RETRIEVAL
+  `(4,12)` composes, GOAL `(12,44)` does not.
+- `:cia` invalidates a production whose indirect-action variable is bound by
+  a `!bind!`/`!safe-bind!` ("indirect action using a variable bound with a
+  !safe-bind!").
+- Compiled productions do **not** survive `reset` (run 3 starts fresh).
+
+Run 3 (`:cia t :rir t`) still differs: `:rir` retains indirect retrievals
+with its own rendering rules (`+RETRIEVAL> =C` vs `+RETRIEVAL> RED` vs
+dropped) that are not yet modelled.  `retain` stays disabled.
