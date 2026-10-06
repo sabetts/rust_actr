@@ -275,6 +275,9 @@ pub struct Model {
     /// Extras requested via top-level `(require-extra "name")`.
     pub required_extras: Vec<String>,
     pub initial_goal: Option<ChunkDesc>,
+    /// All model-body `(goal-focus ...)` calls in order (the threads extra
+    /// applies every one).
+    pub goal_focuses: Vec<ChunkDesc>,
     pub productions: Vec<Production>,
     /// Model-body `(schedule-event <secs> "command" :params (...) ...)`:
     /// scheduled relative to model time 0 on each reset.
@@ -810,6 +813,7 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
         base_levels: Vec::new(),
         required_extras: Vec::new(),
         initial_goal: None,
+        goal_focuses: Vec::new(),
         productions: Vec::new(),
         scheduled_events: Vec::new(),
         buffer_decls: Vec::new(),
@@ -887,14 +891,19 @@ fn parse_model(form: &Sexp) -> Result<Model, LoadError> {
                 // chunk(s), then focus the first. Errors in the definition
                 // leave the goal unset (ACT-R warns and `(car nil)` is nil).
                 if let Some(name) = car_define_chunks(&items[1], &mut model)? {
-                    model.initial_goal = name.map(ChunkDesc::Named);
+                    let desc = name.map(ChunkDesc::Named);
+                    model.initial_goal = desc.clone();
+                    if let Some(d) = desc {
+                        model.goal_focuses.push(d);
+                    }
                 } else {
                     let desc = match &items[1] {
                         Sexp::List(spec) => parse_chunk_desc(spec)?,
                         Sexp::Sym(n) => ChunkDesc::Named(n.clone()),
                         got => return structural(format!("bad goal-focus arg: {got:?}")),
                     };
-                    model.initial_goal = Some(desc);
+                    model.initial_goal = Some(desc.clone());
+                    model.goal_focuses.push(desc);
                 }
             }
             // `(set-similarities (a b v) ...)`: explicit Sji between named
@@ -1047,6 +1056,13 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
                     }
                 }
                 Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => models.push(parse_model(&form)?),
+                // Task-file data alongside a model (`defun`/`defvar`/...):
+                // skipped, not treated as a model form.
+                Some(Sexp::Sym(h))
+                    if matches!(
+                        h.as_str(),
+                        "DEFUN" | "DEFVAR" | "DEFPARAMETER" | "DEFCONSTANT" | "DEFMACRO"
+                    ) => {}
                 got => return structural(format!("unexpected top-level form: {got:?}")),
             },
             got => return structural(format!("unexpected top-level form: {got:?}")),

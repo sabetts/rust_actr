@@ -226,6 +226,9 @@ struct Config {
     vpft: bool,
     /// `:vidt` — randomize the imaginal module delay.
     vidt: bool,
+    /// `require-extra "threads"`: the goal buffer is a searchable
+    /// multi-buffer holding a set of concurrent goals (`new-threads.lisp`).
+    threads: bool,
     /// Activation trace (`:act`); see [`Act`].
     act: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
@@ -609,6 +612,10 @@ impl Config {
             },
             vpft: sgp_bool(&m.params, ":VPFT"),
             vidt: sgp_bool(&m.params, ":VIDT"),
+            threads: m
+                .required_extras
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case("threads")),
             act: match m.params.iter().find(|(k, _)| k == ":ACT") {
                 None => None,
                 Some((_, Sexp::Sym(s))) if s == "NIL" => None,
@@ -928,6 +935,14 @@ enum Event {
     FinishMovement {
         req_ms: i64,
     },
+    /// Threads extra: overwrite the goal multi-buffer's *visible* chunk
+    /// without clearing the rest of the goal set (`OVERWRITE-BUFFER-CHUNK`).
+    OverwriteBuffer {
+        buffer: String,
+        chunk: NewChunk,
+        requested: bool,
+        shown: Option<String>,
+    },
     /// A task command scheduled by model-body `schedule-event` or by
     /// `schedule-event-relative` inside another command. Emits a `NONE`
     /// trace line then runs the registered task function.
@@ -1050,6 +1065,10 @@ pub struct Engine {
     stopped: bool,
     /// Recently-retrieved chunk finsts: `(name, time_ms)`, newest last.
     finsts: Vec<(String, i64)>,
+    /// Threads extra: the goal multi-buffer's ordered chunk set.
+    goal_set: Vec<ChunkInst>,
+    /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
+    name_count: HashMap<String, u64>,
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
@@ -1170,6 +1189,8 @@ impl Engine {
             copy_source: HashMap::new(),
             stopped: false,
             finsts: Vec::new(),
+            goal_set: Vec::new(),
+            name_count: HashMap::new(),
             vl_copies: HashMap::new(),
             obj_built: HashMap::new(),
             visual_busy: false,
@@ -1297,6 +1318,8 @@ impl Engine {
         self.copy_source.clear();
         self.stopped = false;
         self.finsts.clear();
+        self.goal_set.clear();
+        self.name_count.clear();
         self.vl_copies.clear();
         self.obj_built.clear();
         self.visual_busy = false;
@@ -1322,7 +1345,7 @@ impl Engine {
             .enumerate()
             .map(|(index, prod)| ExecProd {
                 index,
-                implicit_clears: implicit_clears(prod, &self.cfg.do_not_harvest),
+                implicit_clears: implicit_clears(prod, &self.cfg.do_not_harvest, self.cfg.threads),
                 implicit_queries: implicit_queries(prod, &self.cfg.do_not_query),
             })
             .collect();
@@ -1330,7 +1353,12 @@ impl Engine {
         if !self.pending_texts.is_empty() && self.pending_texts[0].at_ms <= 0 {
             self.push_m(0, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
-        if let Some(goal) = self.model.initial_goal.clone() {
+        if self.cfg.threads {
+            // The threads extra applies every model-body `goal-focus`.
+            for desc in self.model.goal_focuses.clone() {
+                self.goal_focus(&desc)?;
+            }
+        } else if let Some(goal) = self.model.initial_goal.clone() {
             let chunk = new_chunk(&goal)?;
             self.push(
                 0,
@@ -1740,6 +1768,60 @@ impl Engine {
     /// `requested nil`). Any armed conflict-resolution wakes on the buffer
     /// change via [`Engine::changed`], matching the Lisp trace.
     pub fn goal_focus(&mut self, desc: &ChunkDesc) -> Result<(), EngineError> {
+        if self.cfg.threads {
+            let inst = match desc {
+                ChunkDesc::Named(n) => {
+                    // Copy the named chunk (`START-GOAL` -> `START-GOAL-0`).
+                    let copy = self.copy_chunk(n);
+                    self.named
+                        .get(&copy)
+                        .cloned()
+                        .or_else(|| {
+                            self.dm
+                                .iter()
+                                .find(|c| c.name.as_deref() == Some(copy.as_str()))
+                                .cloned()
+                        })
+                        .ok_or_else(|| bad(format!("no chunk named {n}")))?
+                }
+                ChunkDesc::Spec { .. } => {
+                    let nc = new_chunk(desc)?;
+                    let mut c = self.instantiate("GOAL", nc)?;
+                    // `define-chunks-fct` auto-names a spec by its type
+                    // (`(isa initial ...)` -> `INITIAL0`).
+                    let ctype = c.ctype.clone();
+                    let k = *self.name_count.entry(ctype.clone()).or_insert(0);
+                    self.name_count.insert(ctype.clone(), k + 1);
+                    c.name = Some(format!("{ctype}{k}"));
+                    c
+                }
+            };
+            let first = self.goal_set.is_empty();
+            if first {
+                self.now(
+                    Prio::Max,
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "GOAL".to_string(),
+                        chunk: NewChunk::Instance(inst),
+                        requested: false,
+                        shown: None,
+                    },
+                );
+            } else {
+                self.now(
+                    Prio::Max,
+                    Out::Low,
+                    Event::OverwriteBuffer {
+                        buffer: "GOAL".to_string(),
+                        chunk: NewChunk::Instance(inst),
+                        requested: false,
+                        shown: None,
+                    },
+                );
+            }
+            return Ok(());
+        }
         let chunk = new_chunk(desc)?;
         self.now(
             Prio::Max,
@@ -1916,6 +1998,41 @@ impl Engine {
                     };
                     self.emit(module, details);
                 }
+                if buffer == "GOAL" && self.cfg.threads
+                    && !self.goal_set.iter().any(|c| c.name == inst.name)
+                {
+                    self.goal_set.push(inst.clone());
+                }
+                self.buffer_mut(&buffer).chunk = Some(inst);
+                self.buffer_mut(&buffer).failed = false;
+                self.changed();
+            }
+            Event::OverwriteBuffer {
+                buffer,
+                chunk,
+                requested,
+                shown,
+            } => {
+                let inst = self.instantiate(&buffer, chunk)?;
+                if show {
+                    let text = shown.unwrap_or_else(|| inst.show());
+                    let mut details = format!("OVERWRITE-BUFFER-CHUNK {buffer} {text}");
+                    if !requested {
+                        details.push_str(" NIL");
+                    }
+                    let module = match buffer.as_str() {
+                        "RETRIEVAL" => "DECLARATIVE",
+                        "VISUAL-LOCATION" | "VISUAL" => "VISION",
+                        "MANUAL" => "MOTOR",
+                        other => other,
+                    };
+                    self.emit(module, details);
+                }
+                if buffer == "GOAL" && self.cfg.threads
+                    && !self.goal_set.iter().any(|c| c.name == inst.name)
+                {
+                    self.goal_set.push(inst.clone());
+                }
                 self.buffer_mut(&buffer).chunk = Some(inst);
                 self.buffer_mut(&buffer).failed = false;
                 self.changed();
@@ -1925,6 +2042,12 @@ impl Engine {
                     self.emit("PROCEDURAL", format!("CLEAR-BUFFER {buffer}"));
                 }
                 let cleared = self.buffer_mut(&buffer).chunk.take();
+                if buffer == "GOAL" && self.cfg.threads {
+                    if let Some(n) = cleared.as_ref().and_then(|c| c.name.clone()) {
+                        self.goal_set
+                            .retain(|g| g.name.as_deref() != Some(n.as_str()));
+                    }
+                }
                 self.buffer_mut(&buffer).failed = false;
                 // `:notify-on-clear` for declarative: the cleared chunk
                 // merges into DM, gaining a reference
@@ -2016,6 +2139,26 @@ impl Engine {
                         );
                     }
                     "GOAL" => {
+                        if self.cfg.threads {
+                            // Threaded goal request: create a fresh chunk
+                            // (`CHUNKn`) and overwrite it into the
+                            // multi-buffer while keeping the other goals.
+                            let mut inst = self.instantiate("GOAL", spec)?;
+                            let k = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
+                            self.name_count.insert("CHUNK".to_string(), k + 1);
+                            inst.name = Some(format!("CHUNK{k}"));
+                            self.now(
+                                Prio::Num(-1000),
+                                Out::Low,
+                                Event::OverwriteBuffer {
+                                    buffer: "GOAL".to_string(),
+                                    chunk: NewChunk::Instance(inst),
+                                    requested: true,
+                                    shown: None,
+                                },
+                            );
+                            return Ok(());
+                        }
                         // goal-style-request: delay 0, priority -1000, so the
                         // new goal lands after the production's clears
                         // (`support/goal-style-module.lisp:245`). Request
@@ -2993,6 +3136,45 @@ impl Engine {
         Ok(Some(b))
     }
 
+    /// ACT-R per-chunk LHS tests (`test-var-slot`, slot ops).
+    fn match_chunk_tests(
+        &self,
+        chunk: &ChunkInst,
+        buffer: &str,
+        tests: &[crate::model::SlotTest],
+        only_isa: bool,
+        b: &mut Bindings,
+        ppm: &mut Vec<PpmMismatch>,
+    ) -> Result<bool, EngineError> {
+        for t in tests {
+            if t.slot == "ISA" {
+                if only_isa {
+                    if let Pattern::Sym(want) = &t.value {
+                        if want != "CHUNK" && &chunk.ctype != want {
+                            return Ok(false);
+                        }
+                    }
+                }
+                continue;
+            }
+            // ACT-R `test-var-slot`: the slot *name* itself may be an
+            // LHS variable (`=attr =val`), substituted from bindings.
+            let slot = self.resolve_slot_name(&t.slot, b);
+            let got = chunk.get(&slot);
+            let ok = match t.op {
+                SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
+                    self.rel_test(t.op, &t.value, &got)
+                }
+                SlotOp::Neg => self.test_value(&t.value, &got, &mut *b, true)?,
+                SlotOp::Eq => self.match_eq(buffer, &slot, &t.value, &got, b, ppm)?,
+            };
+            if !ok {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
     fn match_item(
         &self,
         item: &LhsItem,
@@ -3001,6 +3183,28 @@ impl Engine {
     ) -> Result<Option<()>, EngineError> {
         match item {
             LhsItem::Match { buffer, tests } => {
+                // A LHS `ISA TYPE` as the *only* test constrains the buffer
+                // chunk's type: a request-built `(ISA CHUNK)` chunk must not
+                // satisfy `ISA GOAL` (bind-test). With other slot tests the
+                // type is carried for slot indices only, so the tests
+                // themselves decide (blending/addition).
+                let only_isa = tests.iter().all(|t| t.slot == "ISA");
+                // Threaded goal: search the goal set in order for the first
+                // chunk satisfying the tests.
+                if buffer == "GOAL" && self.cfg.threads {
+                    for chunk in &self.goal_set {
+                        let mut b2 = b.clone();
+                        let mut ppm2 = ppm.clone();
+                        if self.match_chunk_tests(
+                            chunk, buffer, tests, only_isa, &mut b2, &mut ppm2,
+                        )? {
+                            *b = b2;
+                            *ppm = ppm2;
+                            return Ok(Some(()));
+                        }
+                    }
+                    return Ok(None);
+                }
                 let buf = self
                     .buffers
                     .get(buffer)
@@ -3009,37 +3213,8 @@ impl Engine {
                     Some(c) => c,
                     None => return Ok(None),
                 };
-                // A LHS `ISA TYPE` as the *only* test constrains the buffer
-                // chunk's type: a request-built `(ISA CHUNK)` chunk must not
-                // satisfy `ISA GOAL` (bind-test). With other slot tests the
-                // type is carried for slot indices only, so the tests
-                // themselves decide (blending/addition).
-                let only_isa = tests.iter().all(|t| t.slot == "ISA");
-                for t in tests {
-                    if t.slot == "ISA" {
-                        if only_isa {
-                            if let Pattern::Sym(want) = &t.value {
-                                if want != "CHUNK" && &chunk.ctype != want {
-                                    return Ok(None);
-                                }
-                            }
-                        }
-                        continue;
-                    }
-                    // ACT-R `test-var-slot`: the slot *name* itself may be an
-                    // LHS variable (`=attr =val`), substituted from bindings.
-                    let slot = self.resolve_slot_name(&t.slot, b);
-                    let got = chunk.get(&slot);
-                    let ok = match t.op {
-                        SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
-                            self.rel_test(t.op, &t.value, &got)
-                        }
-                        SlotOp::Neg => self.test_value(&t.value, &got, &mut *b, true)?,
-                        SlotOp::Eq => self.match_eq(buffer, &slot, &t.value, &got, b, ppm)?,
-                    };
-                    if !ok {
-                        return Ok(None);
-                    }
+                if !self.match_chunk_tests(chunk, buffer, tests, only_isa, b, ppm)? {
+                    return Ok(None);
                 }
             }
             LhsItem::Query { buffer, queries } => {
@@ -3852,7 +4027,7 @@ impl Engine {
             let p = self.model.productions[idx].clone();
             self.exec_prods.push(ExecProd {
                 index: idx,
-                implicit_clears: implicit_clears(&p, &self.cfg.do_not_harvest),
+                implicit_clears: implicit_clears(&p, &self.cfg.do_not_harvest, self.cfg.threads),
                 implicit_queries: implicit_queries(&p, &self.cfg.do_not_query),
             });
         }
@@ -7007,7 +7182,7 @@ impl Engine {
 /// (`support/production-parsing.lisp:1323`): buffers tested on the LHS
 /// that no RHS action targets, plus requested buffers without an
 /// explicit clear, are cleared when the production fires.
-fn implicit_clears(prod: &Production, exempt: &[String]) -> Vec<String> {
+fn implicit_clears(prod: &Production, exempt: &[String], allow_dup: bool) -> Vec<String> {
     let mut tested: Vec<String> = Vec::new();
     for item in &prod.lhs {
         match item {
@@ -7058,7 +7233,7 @@ fn implicit_clears(prod: &Production, exempt: &[String]) -> Vec<String> {
         }
     }
     for (op, t) in &targeted {
-        if *op == '+' && !targeted.iter().any(|(o, b)| *o == '-' && b == t) && !clears.contains(t) {
+        if *op == '+' && !targeted.iter().any(|(o, b)| *o == '-' && b == t) && (allow_dup || !clears.contains(t)) {
             clears.push(t.clone());
         }
     }
@@ -7188,7 +7363,7 @@ mod tests {
         let exempt: Vec<String> = vec!["GOAL".to_string()];
         let m = m0("count.lisp");
         let clears =
-            |n: &str| implicit_clears(m.productions.iter().find(|p| p.name == n).unwrap(), &exempt);
+            |n: &str| implicit_clears(m.productions.iter().find(|p| p.name == n).unwrap(), &exempt, false);
         // START tests only =goal> but requests retrieval: request rule.
         assert_eq!(clears("START"), vec!["RETRIEVAL".to_string()]);
         // INCREMENT tests both, requests retrieval: request rule (no double).
@@ -7201,7 +7376,7 @@ mod tests {
             .iter()
             .find(|p| p.name == "DIRECT-VERIFY")
             .unwrap();
-        assert_eq!(implicit_clears(dv, &exempt), vec!["RETRIEVAL".to_string()]);
+        assert_eq!(implicit_clears(dv, &exempt, false), vec!["RETRIEVAL".to_string()]);
         // Goal is harvest-exempt even when tested-but-untargeted.
         use crate::model::Pattern as Pat;
         use crate::model::{LhsItem, Production, RhsAction, SlotTest};
@@ -7229,10 +7404,10 @@ mod tests {
         };
         let no_exempt: Vec<String> = vec![];
         assert_eq!(
-            implicit_clears(&probe, &no_exempt),
+            implicit_clears(&probe, &no_exempt, false),
             vec!["GOAL".to_string(), "VISUAL".to_string()]
         );
-        assert_eq!(implicit_clears(&probe, &exempt), vec!["VISUAL".to_string()]);
+        assert_eq!(implicit_clears(&probe, &exempt, false), vec!["VISUAL".to_string()]);
     }
 
     #[test]
