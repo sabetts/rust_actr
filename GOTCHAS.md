@@ -1966,6 +1966,36 @@ stream has to continue from model definition).
 because `demo2.spec` has a device sidecar (`ADD-TEXT 0 "V" 125 150`); `emma`
 has none, so its letter pick *and* its saccade noise both consume the stream.
 
+## 149. `emma`: the EMMA vision extension
+
+EMMA (`extras/emma/emma.lisp`) replaces the vision module's fixed-latency
+encoding with a saccade state machine. `move-attention` calls the
+`:visual-encoding-hook` (`vision.lisp:3021`); EMMA sets it to
+`emma-attention-hook` and returns `t`, so the base encoding schedule is
+suppressed and `initiate-eye-move` runs instead: `PREPARATION-COMPLETE` at
+`compute-prep-time`, then `INITIATION-COMPLETE` at `min(exec-time, init-time)`
+and `COMPLETE-EYE-MOVE` at `exec-time` (`emma.lisp:653`), and
+`complete-eye-move` re-fixates while `encoded` is nil. `exec-time =
+init + r·sacc-rate + base` with `r` from `angle-between-vectors`, and
+`prep-time` is `3` features on the first saccade then `feat-differences`
+(`distance=` 2°, `direction=` π/4). The only randomness is
+`add-gaussian-noise` on the destination — two logistic draws per saccade from
+the model's seeded MT19937. `update-attended-loc` re-invokes the same hook
+when the window changes under the attended location (`vision.lisp:1915`),
+which is what starts the final saccade after the keypress clears the window.
+
+Two things the engine needed beyond the machine:
+- the visicon text coordinates: `screen-x = window-x + text-x + 5`,
+  `screen-y = window-y + text-y + 6` (the default window origin 300,300 gives
+  the `+305/+306` seen in the ref) and `distance = viewing-distance ×
+  pixels-per-inch = 1080`;
+- EMMA's `current-marker` behaves as `#(0 0 1080)`, not the class default
+  `#(0 0 1)` — with z=1 the Fitts distance (and hence the noise scale) is
+  wrong and the ref's `#(320 522 1080)` cannot be reproduced.
+
+`emma` (81 lines) is byte-exact and in `enabled.txt` (47 specs); it also
+settles GOTCHA #148's claim that the ref is fully reproducible.
+
 
 
 

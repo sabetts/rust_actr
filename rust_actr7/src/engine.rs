@@ -5931,6 +5931,10 @@ impl Engine {
                     // drop the visicon, re-display, and re-encode the
                     // attended location (which now finds no object).
                     self.pending_clears.push(self.time_ms);
+                    // The re-encode below runs synchronously, before the
+                    // queued proc-display, so drop the visicon now to match
+                    // `update-attended-loc` seeing the cleared window.
+                    self.features.clear();
                     self.now_m(
                         Prio::Num(-100),
                         Out::Always,
@@ -5938,13 +5942,21 @@ impl Engine {
                         Event::ProcDisplay,
                     );
                     if let Some(loc) = self.last_attention.clone() {
-                        let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
-                        self.push(
-                            at,
-                            Prio::Num(0),
-                            Out::Medium,
-                            Event::EncodingComplete { loc },
-                        );
+                        if self.cfg.emma {
+                            // `update-attended-loc` re-invokes the encoding
+                            // hook (`vision.lisp:1915`), so EMMA starts a
+                            // fresh saccade to the (now empty) location.
+                            let end = self.emma_loc_xyz(&loc);
+                            self.emma_attention_hook(end);
+                        } else {
+                            let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
+                            self.push(
+                                at,
+                                Prio::Num(0),
+                                Out::Medium,
+                                Event::EncodingComplete { loc },
+                            );
+                        }
                     }
                 }
             }
