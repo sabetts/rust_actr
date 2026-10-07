@@ -2183,6 +2183,53 @@ remaining diff is the production-compilation machinery itself (composition
 rules, value substitution, `- <value>` naming, `:reward`/`:fixed-utility`
 parameter lines).
 
+## 157. Production compilation: the composition tables, drop-out naming, sorting
+
+`determine-composable` (`production-compilation.lisp:1375`) is table-driven
+per buffer type. The engine's old rule only refused when *both* productions
+made a request; v4's refusals are the (request, harvest) pairs. The port now
+iterates every buffer in CL `remove-duplicates` order — the *last* occurrence
+wins, verified in SBCL — and looks up `(p1-usage, p2-usage)` in the buffer's
+type table:
+
+- `production-lhs-buffers` (`support/production-parsing.lisp:435`) is the
+  `=`-match targets only, **not** queries; `production-rhs-buffers` is the
+  deduped RHS targets. Query usage still counts (+16) via `get-buffer-index`.
+- Tables: RETRIEVAL (`retrieval-compilation.lisp:279`), GOAL
+  (`goal-compilation.lisp:704`), PERCEPTUAL for VISUAL/VISUAL-LOCATION/
+  AURAL*/TEMPORAL (`perceptual-compilation.lisp:290`), IMAGINAL
+  (`imaginal-compilation.lisp:802`) and MOTOR — which is also the `:DEFAULT`
+  type (`motor-compilation.lisp:145`). The special check functions are not
+  modelled and treated as composing; GOAL keeps its previous
+  `T`-entries-only behaviour.
+- The refusal reason is the type's `whynot-reason` with
+  `failed-function = nil` (the `(> index 30)`, `(2 6 10 ...)` clear,
+  `(9 11 13 ...)` modify, `(4 20)` both-request, `(4 12 20 28)` request+
+  harvest cases). This is what turns v4's "composed" pairs into the ref's
+  "Buffer VISUAL prevents composition … the first production makes a request
+  and the second production harvests the chunk."
+
+Composed-production text:
+
+- The `- <chunk>` doc suffix is `dropped-chunks`
+  (`production-compilation.lisp:1723`): for each `=` buffer of p2 of a
+  drop-out type (only RETRIEVAL sets drop-out) that p1 *requested*, the chunk
+  p2's `=BUFFER` variable held (the copy's source via
+  `chunk-copied-from-fct`). `match_item` now binds `=BUFFER` to the matched
+  chunk, mirroring `buffer-name->variable` (`production-parsing.lisp:481`).
+- Conditions print sorted by token (`sort-conditions`,
+  `production-compilation.lisp:1903`), but `!`-conditions are collected and
+  prepended in reverse `push` order (assembly at :1741) — `retain-indirect-
+  retrievals`' `!safe-bind! =r …` line pins this.
+- `:reward`/`:fixed-utility` print only with `:esc` + `:ul`
+  (`utility-and-reward-1.lisp:686`); v4 sets `:ul t`, ppm-compilation does
+  not.
+
+v4 is down from 205 to 24 diff lines; what remains is the map/compose
+functions' value substitution (`value "3"`, `key "d"`, `num2 =retrieval` vs
+`screen-pos =visual-location`), the `> screen-x current` rel rendering and
+the chunk-type default (`is-response t`) in composed conditions.
+
 
 
 

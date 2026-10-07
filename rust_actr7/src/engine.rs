@@ -6863,6 +6863,9 @@ impl Engine {
                         )? {
                             *b = b2;
                             *ppm = ppm2;
+                            if let Some(name) = &chunk.name {
+                                b.insert(format!("={buffer}"), Value::Sym(name.clone()));
+                            }
                             return Ok(Some(()));
                         }
                     }
@@ -6878,6 +6881,12 @@ impl Engine {
                 };
                 if !self.match_chunk_tests(chunk, buffer, tests, only_isa, b, ppm)? {
                     return Ok(None);
+                }
+                // `buffer-name->variable` (`support/production-parsing.lisp:481`):
+                // a `=buffer>` match binds `=BUFFER` to the chunk it held, which
+                // production compilation uses for drop-out naming.
+                if let Some(name) = &chunk.name {
+                    b.insert(format!("={buffer}"), Value::Sym(name.clone()));
                 }
             }
             LhsItem::Query { buffer, queries } => {
@@ -7784,29 +7793,38 @@ impl Engine {
 
     /// A buffer both productions make a `+` request to: composition is
     /// refused (`Buffer X prevents composition … both make requests`).
-    fn both_request_buffer(&self, i1: usize, i2: usize) -> Option<String> {
+    /// `determine-composable` (`production-compilation.lisp:1375`): the first
+    /// buffer, in `remove-duplicates` order (the last occurrence wins), whose
+    /// `(p1-usage, p2-usage)` pair is not in its compilation type's table,
+    /// with the type's `whynot-reason` string.
+    fn determine_composable(&self, i1: usize, i2: usize) -> Option<(String, String)> {
         let p1 = &self.model.productions[i1];
         let p2 = &self.model.productions[i2];
-        for a in &p1.rhs {
-            if let RhsAction::Request { buffer, .. } = a {
-                let both_req = p2.rhs.iter().any(
-                    |b| matches!(b, RhsAction::Request { buffer: bb, .. } if bb == buffer),
-                );
-                if !both_req {
-                    continue;
-                }
-                // The buffer's compilation type table decides whether the
-                // (p1-usage, p2-usage) pair composes.
-                let u1 = buffer_usage(p1, buffer);
-                let u2 = buffer_usage(p2, buffer);
-                let composable = match buffer.as_str() {
-                    "RETRIEVAL" => retrieval_composable(u1, u2),
-                    "GOAL" => goal_composable(u1, u2),
-                    _ => false,
+        let mut all: Vec<String> = lhs_buffers(p1);
+        all.extend(lhs_buffers(p2));
+        all.extend(rhs_buffers(p1));
+        all.extend(rhs_buffers(p2));
+        let buffers: Vec<String> = all
+            .iter()
+            .enumerate()
+            .filter(|(i, b)| !all[i + 1..].contains(b))
+            .map(|(_, b)| b.clone())
+            .collect();
+        for buffer in &buffers {
+            let u1 = buffer_usage(p1, buffer);
+            let u2 = buffer_usage(p2, buffer);
+            let (table, reason): (&[(u32, u32)], fn(u32, u32) -> String) =
+                match buffer.as_str() {
+                    "RETRIEVAL" => (RETRIEVAL_COMPOSE, retrieval_reason),
+                    "GOAL" => (GOAL_COMPOSE, goal_reason),
+                    "VISUAL-LOCATION" | "VISUAL" | "AURAL-LOCATION" | "AURAL" | "TEMPORAL" => {
+                        (PERCEPTUAL_COMPOSE, perceptual_reason)
+                    }
+                    "IMAGINAL" => (IMAGINAL_COMPOSE, imaginal_reason),
+                    _ => (MOTOR_COMPOSE, motor_reason),
                 };
-                if !composable {
-                    return Some(buffer.clone());
-                }
+            if !table.contains(&(u1, u2)) {
+                return Some((buffer.clone(), reason(u1, u2)));
             }
         }
         None
@@ -7884,12 +7902,12 @@ impl Engine {
                         "  Cannot compile {p1name} and {p2name} because the time between them exceeds the threshold time."
                     ));
                 }
-            } else if let Some(buf) = self.both_request_buffer(p1_idx, idx) {
+            } else if let Some((buf, reason)) = self.determine_composable(p1_idx, idx) {
                 if trace {
                     self.out(format!(
                         "  Buffer {buf} prevents composition of these productions"
                     ));
-                    self.out("   because both productions make requests".to_string());
+                    self.out(format!("   because {reason}"));
                     self.out(format!(
                         "  Production {p1name} and {p2name} cannot be composed."
                     ));
@@ -7915,7 +7933,7 @@ impl Engine {
                         self.out(format!("   because {reason}"));
                     }
                 } else {
-                let (lhs, rhs, dropped) = self.compose_pair(
+                let (lhs, rhs, _compose_dropped) = self.compose_pair(
                     p1_idx,
                     &p1_bindings,
                     &p1_reqs,
@@ -7930,12 +7948,52 @@ impl Engine {
                         "  Production {p1name} and {p2name} are being composed."
                     ));
                     self.out("  New production:\n".to_string());
+                    // `dropped-chunks` (`production-compilation.lisp:1723`):
+                    // for each `=` buffer of p2 of a drop-out type that p1
+                    // requested, the chunk p2's buffer variable held (the
+                    // copy's source if it was one).
+                    let mut dropped: Vec<(String, String)> = Vec::new();
+                    for x in lhs_buffers(&self.model.productions[idx]) {
+                        if x != "RETRIEVAL" {
+                            continue;
+                        }
+                        if buffer_usage(&self.model.productions[p1_idx], &x) & 4 == 0 {
+                            continue;
+                        }
+                        if let Some(v) = bindings.get(&format!("={x}")) {
+                            let name = v.show();
+                            let name = self.copy_source.get(&name).cloned().unwrap_or(name);
+                            dropped.push((x, name));
+                        }
+                    }
+                    dropped.sort_by(|a, b| a.0.cmp(&b.0));
                     let doc = if dropped.is_empty() {
                         format!("{p1name} & {p2name}")
                     } else {
-                        format!("{p1name} & {p2name} - {}", dropped.join(" - "))
+                        let vals: Vec<String> =
+                            dropped.iter().map(|(_, n)| n.clone()).collect();
+                        format!("{p1name} & {p2name} - {}", vals.join(" - "))
                     };
-                    self.out(render_compiled(&cname, &doc, &lhs, &rhs));
+                    // `sort-conditions` (`production-compilation.lisp:1903`)
+                    // plus the assembly at 1741: `!`-conditions are collected
+                    // and prepended (in reverse `push` order), then the rest
+                    // sorted by token.
+                    let mut bangs: Vec<(String, Vec<(String, SlotVal)>)> = lhs
+                        .iter()
+                        .filter(|(t, _)| t.starts_with('!'))
+                        .cloned()
+                        .collect();
+                    bangs.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
+                    bangs.reverse();
+                    let mut rest: Vec<(String, Vec<(String, SlotVal)>)> = lhs
+                        .iter()
+                        .filter(|(t, _)| !t.starts_with('!'))
+                        .cloned()
+                        .collect();
+                    rest.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
+                    let sorted: Vec<(String, Vec<(String, SlotVal)>)> =
+                        bangs.into_iter().chain(rest).collect();
+                    self.out(render_compiled(&cname, &doc, &sorted, &rhs));
                     self.out(format!("Parameters for production {cname}:"));
                     if self.cfg.esc {
                         // Compiled productions have no numeric utility yet.
@@ -7946,6 +8004,13 @@ impl Engine {
                         " :at {}",
                         fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)
                     ));
+                    if self.cfg.esc && self.cfg.ul {
+                        // `production-parameter-fct`
+                        // (`utility-and-reward-1.lisp:686`): the reward
+                        // lines print only with `:esc` + `:ul`.
+                        self.out(" :reward    NIL".to_string());
+                        self.out(" :fixed-utility    NIL".to_string());
+                    }
                 }
                 self.install_compiled(&cname, &lhs, &rhs);
                 self.compiled_count += 1;
@@ -9830,6 +9895,16 @@ fn render_compiled(
     s
 }
 
+/// `sort-conditions`'s key (`production-compilation.lisp:1905`): the
+/// condition token uppercased, or `"z"` so `!`-conditions sort last.
+fn sort_token(token: &str) -> String {
+    if token.starts_with('!') {
+        "z".to_string()
+    } else {
+        token.to_uppercase()
+    }
+}
+
 /// `get-buffer-index` (`production-compilation.lisp:1441`): bitmask of how a
 /// production uses a buffer — LHS match +8, LHS query +16, RHS `=` +1,
 /// RHS `-` +2, RHS `+` +4, RHS `*` +32.
@@ -9859,35 +9934,228 @@ fn buffer_usage(p: &crate::model::Production, buffer: &str) -> u32 {
     u
 }
 
-/// The RETRIEVAL compilation type's table (`retrieval-compilation.lisp:279`);
-/// any listed pair composes (T or a special compose function), unlisted does
-/// not.
-fn retrieval_composable(u1: u32, u2: u32) -> bool {
-    matches!(
-        (u1, u2),
-        (28, 28) | (28, 24) | (28, 20) | (28, 16) | (28, 12) | (28, 8) | (28, 4) | (28, 0)
-            | (24, 20) | (24, 16) | (24, 4) | (24, 0)
-            | (20, 28) | (20, 24) | (20, 20) | (20, 16) | (20, 12) | (20, 8) | (20, 4) | (20, 0)
-            | (16, 28) | (16, 24) | (16, 20) | (16, 16) | (16, 12) | (16, 8) | (16, 4) | (16, 0)
-            | (12, 28) | (12, 24) | (12, 20) | (12, 16) | (12, 12) | (12, 8) | (12, 4) | (12, 0)
-            | (8, 20) | (8, 16) | (8, 4) | (8, 0)
-            | (4, 28) | (4, 24) | (4, 20) | (4, 16) | (4, 12) | (4, 8) | (4, 4) | (4, 0)
-            | (0, 28) | (0, 24) | (0, 20) | (0, 16) | (0, 12) | (0, 8) | (0, 4)
-    )
+/// `production-lhs-buffers` (`support/production-parsing.lisp:435`): the
+/// `=`-statement targets of the LHS, in source order (query buffers are not
+/// included).
+fn lhs_buffers(p: &crate::model::Production) -> Vec<String> {
+    p.lhs
+        .iter()
+        .filter_map(|i| match i {
+            LhsItem::Match { buffer, .. } => Some(buffer.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
+/// `production-rhs-buffers` (`support/production-parsing.lisp:441`): the
+/// RHS statement targets, in source order, deduplicated.
+fn rhs_buffers(p: &crate::model::Production) -> Vec<String> {
+    let mut out = Vec::new();
+    for a in &p.rhs {
+        if let Some(b) = rhs_buffer(a) {
+            if !out.contains(&b) {
+                out.push(b);
+            }
+        }
+    }
+    out
+}
+
+/// The RETRIEVAL compilation type's table (`retrieval-compilation.lisp:279`):
+/// `T` entries plus the `R-B-C1`/`R-B-C2` checks, which are not modelled and
+/// treated as composing.
+const RETRIEVAL_COMPOSE: &[(u32, u32)] = &[
+    (28, 28), (28, 24), (28, 20), (28, 16), (28, 12), (28, 8), (28, 4), (28, 0),
+    (24, 20), (24, 16), (24, 4), (24, 0),
+    (20, 28), (20, 24), (20, 20), (20, 16), (20, 12), (20, 8), (20, 4), (20, 0),
+    (16, 28), (16, 24), (16, 20), (16, 16), (16, 12), (16, 8), (16, 4), (16, 0),
+    (12, 28), (12, 24), (12, 20), (12, 16), (12, 12), (12, 8), (12, 4), (12, 0),
+    (8, 20), (8, 16), (8, 4), (8, 0),
+    (4, 28), (4, 24), (4, 20), (4, 16), (4, 12), (4, 8), (4, 4), (4, 0),
+    (0, 28), (0, 24), (0, 20), (0, 16), (0, 12), (0, 8), (0, 4),
+];
+
 /// The GOAL compilation type's table (`goal-compilation.lisp:704`); only the
-/// `T` entries compose here (the special functions are not modelled).
-fn goal_composable(u1: u32, u2: u32) -> bool {
-    matches!(
-        (u1, u2),
-        (44, 0) | (40, 44) | (40, 40) | (40, 13) | (40, 12) | (40, 9) | (40, 4) | (40, 0)
-            | (13, 0) | (12, 0)
-            | (9, 13) | (9, 12) | (9, 9) | (9, 4) | (9, 0)
-            | (8, 4) | (8, 0)
-            | (4, 0)
-            | (0, 44) | (0, 40) | (0, 13) | (0, 12) | (0, 9) | (0, 8) | (0, 4)
-    )
+/// `T` entries compose here (the special checks are not modelled).
+const GOAL_COMPOSE: &[(u32, u32)] = &[
+    (44, 0), (40, 44), (40, 40), (40, 13), (40, 12), (40, 9), (40, 4), (40, 0),
+    (13, 0), (12, 0),
+    (9, 13), (9, 12), (9, 9), (9, 4), (9, 0),
+    (8, 4), (8, 0),
+    (4, 0),
+    (0, 44), (0, 40), (0, 13), (0, 12), (0, 9), (0, 8), (0, 4),
+];
+
+/// The PERCEPTUAL compilation type's table
+/// (`perceptual-compilation.lisp:290`) for VISUAL-LOCATION, VISUAL,
+/// AURAL-LOCATION, AURAL and TEMPORAL; `T` entries plus the `P-B-C*` checks,
+/// which are not modelled and treated as composing.
+const PERCEPTUAL_COMPOSE: &[(u32, u32)] = &[
+    (28, 16), (28, 0),
+    (24, 28), (24, 24), (24, 20), (24, 16), (24, 12), (24, 8), (24, 4), (24, 0),
+    (20, 16), (20, 0),
+    (16, 28), (16, 24), (16, 20), (16, 16), (16, 12), (16, 8), (16, 4), (16, 0),
+    (12, 16), (12, 0),
+    (8, 28), (8, 24), (8, 20), (8, 16), (8, 12), (8, 8), (8, 4), (8, 0),
+    (4, 16), (4, 0),
+    (0, 28), (0, 24), (0, 20), (0, 16), (0, 12), (0, 8), (0, 4),
+];
+
+/// The IMAGINAL compilation type's table (`imaginal-compilation.lisp:802`);
+/// `T` entries plus the `I-B-C*` checks, which are not modelled and treated
+/// as composing.
+const IMAGINAL_COMPOSE: &[(u32, u32)] = &[
+    (56, 56), (56, 40), (56, 25), (56, 24), (56, 16), (56, 9), (56, 8), (56, 0),
+    (40, 56), (40, 40), (40, 25), (40, 24), (40, 16), (40, 9), (40, 8), (40, 0),
+    (29, 56), (29, 40), (29, 25), (29, 24), (29, 16), (29, 9), (29, 8), (29, 0),
+    (28, 56), (28, 40), (28, 25), (28, 24), (28, 16), (28, 9), (28, 8), (28, 0),
+    (25, 29), (25, 28), (25, 25), (25, 24), (25, 20), (25, 16), (25, 13), (25, 12),
+    (25, 9), (25, 8), (25, 4), (25, 0),
+    (24, 56), (24, 40), (24, 29), (24, 28), (24, 25), (24, 24), (24, 20), (24, 16),
+    (24, 13), (24, 12), (24, 9), (24, 8), (24, 4), (24, 0),
+    (20, 56), (20, 40), (20, 25), (20, 24), (20, 16), (20, 9), (20, 8), (20, 0),
+    (16, 56), (16, 40), (16, 29), (16, 28), (16, 25), (16, 24), (16, 20), (16, 16),
+    (16, 13), (16, 12), (16, 9), (16, 8), (16, 4), (16, 0),
+    (13, 56), (13, 40), (13, 25), (13, 24), (13, 16), (13, 9), (13, 8), (13, 0),
+    (12, 56), (12, 40), (12, 25), (12, 24), (12, 16), (12, 9), (12, 8), (12, 0),
+    (9, 29), (9, 28), (9, 25), (9, 24), (9, 20), (9, 16), (9, 13), (9, 12), (9, 9),
+    (9, 8), (9, 4), (9, 0),
+    (8, 56), (8, 40), (8, 29), (8, 28), (8, 25), (8, 24), (8, 20), (8, 16), (8, 13),
+    (8, 12), (8, 9), (8, 8), (8, 4), (8, 0),
+    (4, 56), (4, 40), (4, 25), (4, 24), (4, 16), (4, 9), (4, 8), (4, 0),
+    (0, 56), (0, 40), (0, 29), (0, 28), (0, 25), (0, 24), (0, 20), (0, 16), (0, 13),
+    (0, 12), (0, 9), (0, 8), (0, 4),
+];
+
+/// The MOTOR compilation type's table (`motor-compilation.lisp:145`), which is
+/// also the `:default` type for every buffer without its own type (MANUAL,
+/// VOCAL, ...); `T` entries plus the `M-B-C*` checks, treated as composing.
+const MOTOR_COMPOSE: &[(u32, u32)] = &[
+    (20, 16), (20, 0),
+    (16, 20), (16, 16), (16, 4), (16, 0),
+    (4, 16), (4, 0),
+    (0, 20), (0, 16), (0, 4),
+];
+
+/// `retrieval-reason` (`retrieval-compilation.lisp:255`), the
+/// `failed-function = nil` branch (checks are not modelled).
+fn retrieval_reason(u1: u32, u2: u32) -> String {
+    let s = if u1 > 30 {
+        "buffer modification actions in first production are not allowed."
+    } else if u2 > 30 {
+        "buffer modification actions in second production are not allowed."
+    } else if matches!(u1, 9 | 11 | 13 | 15 | 25 | 27 | 29) {
+        "buffer modification actions in first production are not allowed."
+    } else if matches!(u1, 2 | 6 | 10 | 14 | 18 | 22 | 26 | 30) {
+        "the buffer is explicitly cleared in the first production."
+    } else if matches!(u2, 2 | 6 | 10 | 14 | 18 | 22 | 26 | 30) {
+        "the buffer is explicitly cleared in the second production."
+    } else if matches!(u2, 9 | 11 | 13 | 15 | 25 | 27 | 29) {
+        "buffer modification actions in second production are not allowed."
+    } else {
+        "strict harvesting should have prevented the buffer condition from matching in the second production."
+    };
+    s.to_string()
+}
+
+/// `perceptual-reason` (`perceptual-compilation.lisp:259`), `nil` branch.
+fn perceptual_reason(u1: u32, u2: u32) -> String {
+    let s = if u1 > 30 {
+        "buffer modification actions in first production are not allowed."
+    } else if u2 > 30 {
+        "buffer modification actions in second production are not allowed."
+    } else if matches!(u1, 9 | 11 | 13 | 15 | 25 | 27 | 29) {
+        "buffer modification actions in first production are not allowed."
+    } else if matches!(u1, 2 | 6 | 10 | 14 | 18 | 22 | 26 | 30) {
+        "the buffer is explicitly cleared in the first production."
+    } else if matches!(u2, 2 | 6 | 10 | 14 | 18 | 22 | 26 | 30) {
+        "the buffer is explicitly cleared in the second production."
+    } else if matches!(u2, 9 | 11 | 13 | 15 | 25 | 27 | 29) {
+        "buffer modification actions in second production are not allowed."
+    } else if matches!(u2, 4 | 20) {
+        "both productions make a request."
+    } else if matches!(u1, 4 | 12 | 20 | 28) {
+        "the first production makes a request and the second production harvests the chunk."
+    } else {
+        "the second production harvests a chunk which is there because of buffer stuffing or because strict harvesting has been disabled."
+    };
+    s.to_string()
+}
+
+/// `goal-reason` (`goal-compilation.lisp:670`), `nil` branch.
+fn goal_reason(u1: u32, u2: u32) -> String {
+    const CLEARED: &[u32] = &[2, 6, 10, 11, 14, 15, 42, 43, 46, 47];
+    const QUERIES: &[u32] = &[
+        16, 18, 20, 22, 24, 25, 26, 27, 28, 29, 30, 31, 56, 57, 58, 60, 59, 61, 62, 63,
+    ];
+    let s = if CLEARED.contains(&u1) {
+        "the buffer is explicitly cleared in the first production"
+    } else if QUERIES.contains(&u1) {
+        "there are queries of the buffer in the first production"
+    } else if matches!(u1, 41 | 45) {
+        "the first production makes both a modification and a modification request"
+    } else if CLEARED.contains(&u2) {
+        "the buffer is explicitly cleared in the second production"
+    } else if QUERIES.contains(&u2) {
+        "there are queries of the buffer in the second production"
+    } else if matches!(u2, 41 | 45) {
+        "the second production makes both a modification and a modification request"
+    } else if matches!(u1, 4 | 12 | 13 | 44) {
+        "both productions make requests"
+    } else {
+        "one production makes a modification and the other makes a modification request"
+    };
+    s.to_string()
+}
+
+/// `imaginal-reason` (`imaginal-compilation.lisp:753`), `nil` branch.
+fn imaginal_reason(u1: u32, u2: u32) -> String {
+    const CLEARED: &[u32] = &[
+        2, 6, 10, 11, 14, 15, 42, 43, 46, 47, 18, 22, 26, 27, 30, 31, 58, 59, 63, 62,
+    ];
+    let s = if CLEARED.contains(&u1) {
+        "the buffer is explicitly cleared in the first production."
+    } else if matches!(u1, 44 | 45 | 60 | 61) {
+        "the first production makes both a request and a modification request."
+    } else if matches!(u1, 41 | 57) {
+        "the first production makes both a modification and a modification request."
+    } else if CLEARED.contains(&u2) {
+        "the buffer is explicitly cleared in the second production."
+    } else if matches!(u2, 44 | 45 | 60 | 61) {
+        "the second production makes both a request and a modification request."
+    } else if matches!(u2, 41 | 57) {
+        "the second production makes both a modification and a modification request."
+    } else if matches!(u2, 40 | 56) {
+        "the first production makes a modification and the second makes a modification request."
+    } else if matches!(u1, 4 | 12 | 13 | 20 | 28 | 29) {
+        "both productions make requests."
+    } else if matches!(u2, 4 | 12 | 13 | 20 | 28 | 29) {
+        "the first production makes a modification request and the second makes a request."
+    } else {
+        "the first production makes a modification request and the other makes a modification."
+    };
+    s.to_string()
+}
+
+/// `motor-reason` (`motor-compilation.lisp:125`), `nil` branch (the default
+/// type's reason).
+fn motor_reason(u1: u32, u2: u32) -> String {
+    const TESTS: &[u32] = &[
+        8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31, 40, 41, 42, 44, 43, 45,
+        46, 47, 56, 57, 58, 60, 59, 61, 62, 63,
+    ];
+    let s = if TESTS.contains(&u1) {
+        "buffer tests in first production are not allowed."
+    } else if matches!(u1, 2 | 6 | 18 | 22) {
+        "the buffer is explicitly cleared in the first production."
+    } else if TESTS.contains(&u2) {
+        "buffer tests in second production are not allowed."
+    } else if matches!(u2, 2 | 6 | 18 | 22) {
+        "the buffer is explicitly cleared in the second production."
+    } else {
+        "both productions make requests."
+    };
+    s.to_string()
 }
 
 /// The buffers an action targets.
