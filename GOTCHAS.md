@@ -2659,3 +2659,21 @@ That makes `paired-learning`'s `retireve-associate & retrieval-arg2-unsuccessful
 refuse (`buffer failure` is neither), matching the reference. The remaining
 types' checks, the composed-LHS specialization, and the compiled productions'
 `parameters for production` blocks are still open.
+
+## 180. `paired-learning`: composed-LHS specialization needs `rename-variables`
+
+A composed production's condition takes p1's firing values; when p1 and p2
+use the *same variable name* for different things (e.g. `retrieve-operator`'s
+goal `state` and `read-arg1`'s retrieved `post`, both `=state`), the engine
+unified them and specialized the condition from p2's value (`state
+stimulus-read` instead of `state start`). ACT-R's `rename-variables`
+(`production-compilation.lisp:1945`) renames p2's colliding *basic* variables
+(`basic-variables`, :1964) before composing, so the two stay distinct.
+Implemented, plus `MAP-GOAL-BUFFER`'s p1-RHS→p2-LHS goal mapping
+(`goal-compilation.lisp:320`) so a renamed variable re-unifies with p1's.
+
+A refinement was needed to avoid regressing `retain-indirect-retrievals`: a
+variable bound by the *same* buffer in both productions (e.g. `=c` in
+`=goal>`) is the same variable and must not be renamed. `paired-learning`'s
+composed-LHS values now match (diff 274→260 hunks); the composed RHS slot
+*order* (`state` before `step`) and the other categories remain.

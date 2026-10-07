@@ -8605,10 +8605,71 @@ impl Engine {
     ) {
         let p1 = &self.model.productions[i1];
         let p2 = &self.model.productions[i2];
+        // `rename-variables` (`production-compilation.lisp:1945`): a basic
+        // variable that occurs in both productions is renamed in the second
+        // so the two no longer unify (e.g. a goal state variable and a
+        // retrieved-slot variable that happen to share a name).
+        let ren: HashMap<String, String> = {
+            let v1 = basic_vars(p1);
+            let v2 = basic_vars(p2);
+            let vb1 = var_buffers(p1);
+            let vb2 = var_buffers(p2);
+            let mut used: HashSet<String> = v1.union(&v2).cloned().collect();
+            let mut m = HashMap::new();
+            for v in &v2 {
+                // Only a variable bound by a *different* buffer in the two
+                // productions needs disambiguating; one bound in the same
+                // buffer is the same variable.
+                if v1.contains(v) && vb1.get(v) != vb2.get(v) {
+                    let mut n = 1;
+                    let fresh = loop {
+                        let c = format!("{v}{n}");
+                        if !used.contains(&c) {
+                            break c;
+                        }
+                        n += 1;
+                    };
+                    used.insert(fresh.clone());
+                    m.insert(v.clone(), fresh);
+                }
+            }
+            m
+        };
+        let rename = |n: &str| -> String { ren.get(n).cloned().unwrap_or_else(|| n.to_string()) };
+        let b2r: Bindings = {
+            let mut m = b2.clone();
+            for (k, v) in &ren {
+                if let Some(val) = b2.get(k) {
+                    m.insert(v.clone(), val.clone());
+                }
+            }
+            m
+        };
+        let b2: &Bindings = &b2r;
+        let rename_slots = |slots: Vec<(String, SlotVal)>| -> Vec<(String, SlotVal)> {
+            slots
+                .into_iter()
+                .map(|(n, v)| {
+                    let v = match v {
+                        SlotVal::Var(x) => SlotVal::Var(rename(&x)),
+                        other => other,
+                    };
+                    (n, v)
+                })
+                .collect()
+        };
         let p1_lhs = prod_lhs_slots(p1, b1, &self.model.chunk_types);
-        let p2_lhs = prod_lhs_slots(p2, b2, &self.model.chunk_types);
+        let p2_lhs: Vec<(String, Vec<(String, SlotVal)>)> =
+            prod_lhs_slots(p2, b2, &self.model.chunk_types)
+                .into_iter()
+                .map(|(b, s)| (b, rename_slots(s)))
+                .collect();
         let p1_acts = prod_rhs_actions(p1, b1);
-        let p2_acts = prod_rhs_actions(p2, b2);
+        let p2_acts: Vec<(char, String, Vec<(String, SlotVal)>, Option<String>)> =
+            prod_rhs_actions(p2, b2)
+                .into_iter()
+                .map(|(op, buf, slots, var)| (op, buf, rename_slots(slots), var))
+                .collect();
 
         // Cross-production variable mappings for same-slot `=` pairs
         // (`MAP-GOAL-BUFFER`, goal-compilation.lisp:320-330): two variables
@@ -8616,7 +8677,22 @@ impl Engine {
         // instantiated from its own bindings.
         let mut map: HashMap<String, SlotVal> = HashMap::new();
         for (buf, slots1) in &p1_lhs {
-            for (name1, v1) in slots1 {
+            // `MAP-GOAL-BUFFER` (`goal-compilation.lisp:320`) also maps p1's
+            // RHS `=`/`*` goal slots onto p2's LHS `=` slots, so a variable
+            // renamed by `rename-variables` re-unifies with p1's.
+            let mut p1_slots: Vec<(String, SlotVal)> = slots1.clone();
+            if buf == "GOAL" {
+                for (op, b, s, _) in &p1_acts {
+                    if b == buf && (*op == '=' || *op == '*') {
+                        for (n, v) in s {
+                            if !p1_slots.iter().any(|(x, _)| x == n) {
+                                p1_slots.push((n.clone(), v.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+            for (name1, v1) in &p1_slots {
                 if let Some((_, slots2)) = p2_lhs.iter().find(|(b, _)| b == buf) {
                     if let Some((_, v2)) = slots2.iter().find(|(n, _)| n == name1) {
                         match (v1, v2) {
@@ -10329,6 +10405,77 @@ impl SlotVal {
 /// Instantiated LHS match slots per buffer, sorted by slot name
 /// (`sort-production-slots`). `isa` is the chunk type, not a slot. Values
 /// stay symbolic (`=var`) so cross-production mappings can apply first.
+/// The variables of a production minus its buffer-name variables
+/// (`basic-variables`, `production-compilation.lisp:1964`): the ones
+/// `rename-variables` disambiguates across a composition.
+fn basic_vars(p: &Production) -> HashSet<String> {
+    let mut s: HashSet<String> = HashSet::new();
+    for item in &p.lhs {
+        match item {
+            LhsItem::Match { tests, .. } => {
+                for t in tests {
+                    if let Pattern::Var(x) = &t.value {
+                        s.insert(x.clone());
+                    }
+                }
+            }
+            LhsItem::Query { queries, .. } => {
+                for (_, v) in queries {
+                    if let Pattern::Var(x) = v {
+                        s.insert(x.clone());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    for a in &p.rhs {
+        match a {
+            RhsAction::Modify { slots, .. } | RhsAction::ModifyRequest { slots, .. } => {
+                for (_, v) in slots {
+                    if let Pattern::Var(x) = v {
+                        s.insert(x.clone());
+                    }
+                }
+            }
+            RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => {
+                if let ChunkDesc::Spec { slots, neg, rels, .. } = spec {
+                    for (_, v) in slots.iter().chain(neg.iter()) {
+                        if let Pattern::Var(x) = v {
+                            s.insert(x.clone());
+                        }
+                    }
+                    for (_, v, _) in rels {
+                        if let Pattern::Var(x) = v {
+                            s.insert(x.clone());
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    s.retain(|v| !is_buffer_name(&v.to_uppercase()));
+    s
+}
+
+/// The LHS buffers whose slot values mention each variable (used to decide
+/// whether a shared variable really binds to the same place in both
+/// productions).
+fn var_buffers(p: &Production) -> HashMap<String, HashSet<String>> {
+    let mut m: HashMap<String, HashSet<String>> = HashMap::new();
+    for item in &p.lhs {
+        if let LhsItem::Match { buffer, tests } = item {
+            for t in tests {
+                if let Pattern::Var(x) = &t.value {
+                    m.entry(x.clone()).or_default().insert(buffer.clone());
+                }
+            }
+        }
+    }
+    m
+}
+
 fn prod_lhs_slots(
     p: &Production,
     _b: &Bindings,
