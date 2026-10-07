@@ -279,6 +279,9 @@ pub struct Model {
     pub similarities: Vec<(String, String, f32)>,
     /// Model-body `(set-base-levels (name level [creation-seconds]) ...)`.
     pub base_levels: Vec<(String, f32, Option<f64>)>,
+    /// Model-body `(set-all-base-levels <level> [creation-seconds])`: a fixed
+    /// base level for every DM chunk (`commands/dm-commands.lisp:600`).
+    pub set_all_base_levels: Option<(f32, Option<f64>)>,
     /// Extras requested via top-level `(require-extra "name")`.
     pub required_extras: Vec<String>,
     pub initial_goal: Option<ChunkDesc>,
@@ -1653,6 +1656,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
         defined_chunks: Vec::new(),
         similarities: Vec::new(),
         base_levels: Vec::new(),
+        set_all_base_levels: None,
         required_extras: Vec::new(),
         initial_goal: None,
         goal_focuses: Vec::new(),
@@ -1802,6 +1806,14 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                             model.base_levels.push((name.to_string(), level as f32, creation));
                         }
                     }
+                }
+            }
+            // `(set-all-base-levels <level> [creation-seconds])`: fixed
+            // base-level for every DM chunk (`commands/dm-commands.lisp:600`).
+            "SET-ALL-BASE-LEVELS" => {
+                if let Some(level) = items.get(1).and_then(sexp_f64) {
+                    let creation = items.get(2).and_then(sexp_f64);
+                    model.set_all_base_levels = Some((level as f32, creation));
                 }
             }
             // `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`:

@@ -2110,6 +2110,27 @@ work: `tutorial-unit3modeling-v2-run` (device + a scheduled `pm-issue-display`
 command line) and `tutorial-unit7modeling-pcomp-issues-v2/-v4-one-trial`
 (loader `set-all-base-levels`, then a device).
 
+## 154. `set-all-base-levels`, and the extractor's run-trace flag
+
+Two pieces the pcomp redefinition specs needed:
+- model-body `(set-all-base-levels <level> [creation-seconds])`
+  (`commands/dm-commands.lisp:600`): a fixed base-level history for *every*
+  DM chunk (a later named `set-base-levels` overrides). The engine's `reset`
+  applies it to all history entries.
+- `w-run` recorded the model's `:v` as the run's trace flag, but the
+  trace-reference harness captures the model-trace via monitors regardless of
+  `:v` (which only gates the stdout echo). `production-compilation-issues-
+  model-v2` sets `:v nil`, so its extracted spec had a NIL trace and the
+  engine emitted nothing. `w-run` now records `T` unconditionally — a no-op
+  for every spec that already had `T`.
+
+`tutorial-unit7modeling-pcomp-issues-v2-one-trial` is now runnable and matches
+the ref through line 17 of 27; it diverges at `no-past-trial`'s
+`+retrieval> isa response` (the engine retrieves a number chunk, the ref a
+`RESPONSE-n`), which is a retrieval candidacy/`isa` question to settle.
+`-v4-one-trial` is runnable too. Both are committed as in-progress specs;
+`probe_runnable` reports 51 pass / 3 fail.
+
 
 
 

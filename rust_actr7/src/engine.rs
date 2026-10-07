@@ -2210,6 +2210,25 @@ impl Engine {
             };
             dm_len
         ];
+        // Model-body `set-all-base-levels`: fixed history for every DM chunk
+        // (`commands/dm-commands.lisp:600`); a later named `set-base-levels`
+        // overrides.
+        if let Some((level, creation)) = self.model.set_all_base_levels {
+            let n = level.max(0.0).round() as usize;
+            for i in 0..self.hist.len() {
+                let creation_ms = creation
+                    .map(|s| (s * 1000.0).round() as i64)
+                    .unwrap_or(self.hist[i].creation_ms);
+                self.hist[i].creation_ms = creation_ms;
+                self.hist[i].count = n;
+                self.hist[i].fixed_base = Some(level);
+                self.hist[i].refs = match &self.cfg.ol {
+                    Ol::On => vec![creation_ms; n],
+                    Ol::Off => even_references(creation_ms, 0, n),
+                    Ol::Num(ol) => even_references(creation_ms, 0, (*ol as usize).min(n)),
+                };
+            }
+        }
         // Model-body `set-base-levels`: fixed history for named DM chunks.
         for (name, level, creation) in &self.model.base_levels {
             if let Some(i) = self.dm.iter().position(|c| c.name.as_deref() == Some(name.as_str())) {

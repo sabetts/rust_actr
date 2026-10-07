@@ -156,7 +156,10 @@ disable/enable, breakpoints); not trace-only drivers.")
   ;; without changing model output.
   (declare (ignore real-time))
   (when (and (eq *mode* :drive) (not *suppress*))
-    (let ((rec (list run-time (eff-seed) (eff-v)
+    ;; The trace-reference harness monitors the model-trace regardless of the
+    ;; model's `:v` (which only gates the stdout echo), so the recorded run is
+    ;; always traced.
+    (let ((rec (list run-time (eff-seed) t
                      (ignore-errors (max-module-name-length)))))
       (push rec *runs*)
       (push (cons :run rec) *steps*)))
