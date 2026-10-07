@@ -2340,6 +2340,28 @@ comparison rep) so a composed production identical to an existing one prints
 and the case-specific retention of a null `=buffer>` modify in
 `COMPOSE-GOAL-BUFFER`. The spec is regenerated (15 runs) but not enabled.
 
+## 162. Duplicate composed productions, null modifies, repeated `:do-not-harvest`
+
+Three more pieces finished `dynamic-production-compilation-tests`:
+
+- `check-for-duplicate-productions` (`production-compilation.lisp:1915`): a
+  composed production equivalent to an existing one is not installed. The
+  engine compares a canonical rep (tokens + slots sorted) of the composed
+  pair against each existing production; a match prints
+  `Result is production X` / `No actions taken.` for a user production
+  (`Recreating production X` for a compiled one).
+- A null `=buffer>` modify is **kept** in the composed actions
+  (`COMPOSE-GOAL-BUFFER`'s `(when a2= (list a2=))`), so `G2 & G2` matches
+  `G2` and not `G1` (which has no action). Without it the canonical rep
+  collapsed G1/G2.
+- `:do-not-harvest`/`:do-not-query` may repeat in one `sgp`
+  (`:do-not-harvest imaginal :do-not-harvest visual-location`); each
+  occurrence extends the set. The engine only read the first, so
+  VISUAL-LOCATION was still harvested and `P1` could not fire twice.
+
+`dynamic-production-compilation-tests` is byte-exact and in `enabled.txt`
+(56 specs); `probe_runnable` reports **56 pass / 0 fail**.
+
 
 
 

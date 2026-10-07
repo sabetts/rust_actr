@@ -59,3 +59,4 @@ tutorial-unit7modeling-pcomp-issues-v2-one-trial
 tutorial-unit7modeling-pcomp-issues-v4-one-trial
 tutorial-unit3modeling-v2-run
 tutorial-unit4-paired-trace
+dynamic-production-compilation-tests

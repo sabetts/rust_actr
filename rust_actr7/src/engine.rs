@@ -961,7 +961,9 @@ impl Config {
             (":DO-NOT-QUERY", &mut do_not_query),
             (":DO-NOT-HARVEST", &mut do_not_harvest),
         ] {
-            if let Some((_, v)) = m.params.iter().find(|(k, _)| k == key) {
+            // A repeated key (`:do-not-harvest imaginal :do-not-harvest
+            // visual-location`) extends the set for every occurrence.
+            for (_, v) in m.params.iter().filter(|(k, _)| k == key) {
                 apply_buffer_list(target, v)?;
             }
         }
@@ -8035,10 +8037,32 @@ impl Engine {
                     &retain2,
                 );
                 let cname = format!("PRODUCTION{}", self.compiled_count);
+                // `check-for-duplicate-productions`
+                // (`production-compilation.lisp:1915`): a composed production
+                // equivalent to an existing one is not installed.
+                let dup = {
+                    let crep = canon_composed(&lhs, &rhs);
+                    self.model.productions.iter().enumerate().find_map(|(i, p)| {
+                        if canon_prod(p) == crep {
+                            Some((p.name.clone(), i >= self.base_prods))
+                        } else {
+                            None
+                        }
+                    })
+                };
                 if trace {
                     self.out(format!(
                         "  Production {p1name} and {p2name} are being composed."
                     ));
+                    if let Some((dname, compiled)) = &dup {
+                        if *compiled {
+                            self.out(format!("  Recreating production {dname}"));
+                        } else {
+                            self.out(format!(
+                                "  Result is production {dname}\n  No actions taken."
+                            ));
+                        }
+                    } else {
                     self.out("  New production:\n".to_string());
                     // `dropped-chunks` (`production-compilation.lisp:1723`):
                     // for each `=` buffer of p2 of a drop-out type that p1
@@ -8103,9 +8127,12 @@ impl Engine {
                         self.out(" :reward    NIL".to_string());
                         self.out(" :fixed-utility    NIL".to_string());
                     }
+                    }
                 }
-                self.install_compiled(&cname, &lhs, &rhs);
-                self.compiled_count += 1;
+                if dup.is_none() {
+                    self.install_compiled(&cname, &lhs, &rhs);
+                    self.compiled_count += 1;
+                }
                 }
             }
         } else if trace {
@@ -8444,7 +8471,11 @@ impl Engine {
             let sv = |s: Vec<(String, SlotVal)>| -> Vec<(String, String)> {
                 s.iter().map(|(n, v)| (n.clone(), v.render())).collect()
             };
-            // `=` modify union (second overrides).
+            // `=` modify union (second overrides). A null `=buffer>` modify
+            // is kept (`COMPOSE-GOAL-BUFFER`'s `(when a2= (list a2=))`), so a
+            // self-composition like `G2 & G2` matches `G2`.
+            let has_eq1 = !acts_for(&p1_acts, buf, &['=']).is_empty();
+            let has_eq2 = !acts_for(&p2_acts, buf, &['=']).is_empty();
             let eq1: Vec<_> = acts_for(&p1_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
@@ -8453,7 +8484,7 @@ impl Engine {
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            if !eq1.is_empty() || !eq2.is_empty() {
+            if has_eq1 || has_eq2 {
                 let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
                 let mut slots: Vec<(String, SlotVal)> =
                     eq1.into_iter().filter(|(n, _)| !names2.contains(n)).collect();
@@ -9952,6 +9983,130 @@ fn prod_lhs_slots(
 /// The printed value bound to an LHS variable, if bound.
 fn instantiate_var(name: &str, b: &Bindings) -> Option<String> {
     b.get(name).map(|v| v.show())
+}
+
+/// A canonical production comparison rep (`production-comparison-rep`,
+/// `production-compilation.lisp:2044`): LHS/RHS tokens with their slots,
+/// tokens and slots sorted. Null `=buffer>` modifies are dropped (ACT-R's
+/// `COMPOSE-GOAL-BUFFER` may keep them; the composed side here does not).
+#[allow(clippy::type_complexity)]
+fn canon_prod(
+    prod: &Production,
+) -> (
+    Vec<(String, Vec<(String, String)>)>,
+    Vec<(String, Vec<(String, String)>)>,
+) {
+    let mut lhs: Vec<(String, Vec<(String, String)>)> = Vec::new();
+    for item in &prod.lhs {
+        match item {
+            LhsItem::Match { buffer, tests } => {
+                let mut slots: Vec<(String, String)> = tests
+                    .iter()
+                    .filter(|t| t.slot != "ISA")
+                    .map(|t| (t.slot.clone(), canon_pattern(&t.value)))
+                    .collect();
+                slots.sort();
+                lhs.push((format!("={buffer}>"), slots));
+            }
+            LhsItem::Query { buffer, queries } => {
+                let mut slots: Vec<(String, String)> = queries
+                    .iter()
+                    .map(|(s, v)| (s.clone(), canon_pattern(v)))
+                    .collect();
+                slots.sort();
+                lhs.push((format!("?{buffer}>"), slots));
+            }
+            _ => {}
+        }
+    }
+    lhs.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut rhs: Vec<(String, Vec<(String, String)>)> = Vec::new();
+    for a in &prod.rhs {
+        if let Some((tok, mut slots)) = canon_action(a) {
+            slots.sort();
+            rhs.push((tok, slots));
+        }
+    }
+    rhs.sort_by(|a, b| a.0.cmp(&b.0));
+    (lhs, rhs)
+}
+
+/// The canonical token/slots of one RHS action (`None` for non-buffer ones).
+fn canon_action(a: &RhsAction) -> Option<(String, Vec<(String, String)>)> {
+    let pair = |buffer: &str, slots: Vec<(String, String)>| {
+        Some((format!("{buffer}>"), slots))
+    };
+    match a {
+        RhsAction::Modify { buffer, slots } => pair(
+            &format!("={buffer}"),
+            slots
+                .iter()
+                .map(|(n, v)| (n.clone(), canon_pattern(v)))
+                .collect(),
+        ),
+        RhsAction::ModifyRequest { buffer, slots } => pair(
+            &format!("*{buffer}"),
+            slots
+                .iter()
+                .map(|(n, v)| (n.clone(), canon_pattern(v)))
+                .collect(),
+        ),
+        RhsAction::Request { buffer, spec } => match spec {
+            ChunkDesc::Spec { slots, .. } => pair(
+                &format!("+{buffer}"),
+                slots
+                    .iter()
+                    .map(|(n, v)| (n.clone(), canon_pattern(v)))
+                    .collect(),
+            ),
+            ChunkDesc::Named(n) => pair(&format!("+{buffer}"), vec![("=".into(), format!("={n}"))]),
+        },
+        RhsAction::Clear { buffer } => Some((format!("-{buffer}>"), Vec::new())),
+        _ => None,
+    }
+}
+
+fn canon_pattern(p: &Pattern) -> String {
+    match p {
+        Pattern::Var(v) => format!("={v}"),
+        Pattern::Nil => "NIL".to_string(),
+        other => Value::from_pattern(other)
+            .map(|x| x.show())
+            .unwrap_or_default(),
+    }
+}
+
+/// The canonical rep of the composed (lhs, rhs) pair, matching [`canon_prod`].
+#[allow(clippy::type_complexity)]
+fn canon_composed(
+    lhs: &[(String, Vec<(String, SlotVal)>)],
+    rhs: &[(String, Vec<(String, String)>)],
+) -> (
+    Vec<(String, Vec<(String, String)>)>,
+    Vec<(String, Vec<(String, String)>)>,
+) {
+    let mut cl: Vec<(String, Vec<(String, String)>)> = lhs
+        .iter()
+        .map(|(tok, slots)| {
+            let mut s: Vec<(String, String)> = slots
+                .iter()
+                .map(|(n, v)| (n.clone(), v.render()))
+                .collect();
+            s.sort();
+            (tok.clone(), s)
+        })
+        .collect();
+    cl.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut cr: Vec<(String, Vec<(String, String)>)> = rhs
+        .iter()
+        .map(|(tok, slots)| {
+            let mut s = slots.clone();
+            s.sort();
+            (tok.clone(), s)
+        })
+        .collect();
+    cr.sort_by(|a, b| a.0.cmp(&b.0));
+    (cl, cr)
 }
 
 /// Instantiated RHS actions per buffer as `(op, buffer, slots, var)`:
