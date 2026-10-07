@@ -10467,6 +10467,19 @@ fn basic_vars(p: &Production) -> HashSet<String> {
     s
 }
 
+/// Defaults for ACT-R's built-in module chunk-types that the engine doesn't
+/// load from the model file. `vision.lisp:3067`: `(chunk-type
+/// (text (:include visual-object)) (text t))`, etc. Only the defaults that
+/// show up in composed conditions matter.
+fn builtin_type_defaults(name: &str) -> &'static [(&'static str, &'static str)] {
+    match name.to_uppercase().as_str() {
+        "TEXT" => &[("TEXT", "T")],
+        "OVAL" => &[("OVAL", "T")],
+        "LINE" => &[("LINE", "T")],
+        _ => &[],
+    }
+}
+
 /// The LHS buffers whose slot values mention each variable (used to decide
 /// whether a shared variable really binds to the same place in both
 /// productions).
@@ -10514,18 +10527,27 @@ fn prod_lhs_slots(
                     _ => None,
                 }
             }) {
+                let mut defaults: Vec<(String, String)> = Vec::new();
                 if let Some(t) = types.iter().find(|t| t.name.eq_ignore_ascii_case(&ct)) {
-                    for (slot, pat) in &t.defaults {
-                        if !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case(slot)) {
-                            slots.push((
-                                slot.to_uppercase(),
-                                SlotVal::Lit(
-                                    Value::from_pattern(pat)
-                                        .map(|x| x.show())
-                                        .unwrap_or_default(),
-                                ),
-                            ));
-                        }
+                    defaults.extend(t.defaults.iter().map(|(slot, pat)| {
+                        (
+                            slot.to_uppercase(),
+                            Value::from_pattern(pat)
+                                .map(|x| x.show())
+                                .unwrap_or_default(),
+                        )
+                    }));
+                }
+                // ACT-R's built-in module chunk-types aren't in the model
+                // file (`vision.lisp:3067`): `isa text` also adds `text t`.
+                for (slot, val) in builtin_type_defaults(&ct) {
+                    if !defaults.iter().any(|(s, _)| s.eq_ignore_ascii_case(slot)) {
+                        defaults.push((slot.to_string(), val.to_string()));
+                    }
+                }
+                for (slot, val) in defaults {
+                    if !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case(&slot)) {
+                        slots.push((slot, SlotVal::Lit(val)));
                     }
                 }
             }

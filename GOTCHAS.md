@@ -2690,3 +2690,11 @@ p2's sorted slots. The engine had preserved source order, so a composed
 the reference's `state … step …`. Sorting each side before concatenating
 matches. (`retain-indirect-retrievals`' earlier breakage was the
 `rename-variables` over-rename, not this sort.)
+
+## 182. `isa text` adds `text t` from the built-in vision type
+
+The vision module defines `(chunk-type (text (:include visual-object))
+(text t))` (`vision.lisp:3069`), but the engine only loads chunk-types from
+the model file, so a composed condition `isa text` lost the `text t` default.
+Added `builtin_type_defaults` for the vision types (`text`/`oval`/`line`) used
+when expanding `isa TYPE` in `prod_lhs_slots`.
