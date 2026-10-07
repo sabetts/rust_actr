@@ -274,6 +274,9 @@ struct Config {
     feat_prep_ms: i64,
     init_ms: i64,
     burst_ms: i64,
+    /// EMMA vision extension, enabled via
+    /// `(ssp :starting-parameters (:emma t))` (`extras/emma/emma.lisp:885`).
+    emma: bool,
     /// `key-closure-time` (`motor.lisp:477`, default 0.01): the punch style's
     /// exec time is `init + closure` (`motor.lisp:938`).
     key_closure_ms: i64,
@@ -1031,6 +1034,7 @@ impl Config {
             feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
             burst_ms: secs_to_ms(":MOTOR-BURST-TIME", 0.05)?,
+            emma: false,
             key_closure_ms: secs_to_ms(":KEY-CLOSURE-TIME", 0.01)?,
             touch: m
                 .required_extras
@@ -4128,6 +4132,18 @@ impl Engine {
         };
         let truthy = !matches!(val, Sexp::Sym(s) if s == "NIL");
         match key.to_uppercase().as_str() {
+            ":EMMA" => self.cfg.emma = truthy,
+            // `(ssp :starting-parameters (:key val ...))`: apply each nested
+            // parameter (`central-parameters.lisp:131`). `nil` clears them.
+            ":STARTING-PARAMETERS" => {
+                if let Sexp::List(items) = val {
+                    for kv in items.as_chunks::<2>().0 {
+                        if let Some(k) = kv[0].as_sym() {
+                            self.apply_sgp(k, &kv[1])?;
+                        }
+                    }
+                }
+            }
             ":PPM" => self.cfg.ppm = num(val),
             ":EGS" => self.cfg.egs = num(val).unwrap_or(0.0),
             ":CIA" => self.cfg.cia = truthy,
