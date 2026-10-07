@@ -1739,6 +1739,10 @@ pub struct Engine {
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
     device_clears: Vec<i64>,
+    /// The task's non-replayed setup draws (device sidecar): applied after
+    /// the model-body seed on every `reset`, since the task redoes its setup
+    /// per run.
+    consume_rng: u64,
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
     feat_seq: u64,
@@ -1987,6 +1991,7 @@ impl Engine {
                 v.sort_unstable();
                 v
             },
+            consume_rng,
             features: Vec::new(),
             feat_seq: 0,
             copy_count: HashMap::new(),
@@ -2086,21 +2091,12 @@ impl Engine {
         };
         eng.reset()?;
         eng.cfg.module_width = module_width;
-        // `(sgp :seed (S C))` in the model body (`random.lisp:417`): ACT-R
-        // applies it while defining the model, so it supersedes the
-        // harness's per-run seed. This is the seed the `.ref` used.
-        if let Some((s, c)) = eng.cfg.seed {
-            eng.rng.borrow_mut().set_seed(s, c);
-        }
         // The construction reset is not part of the recorded trace: ACT-R
         // installs its monitors after the model is loaded, so any warnings it
         // emitted (e.g. the validator's) are dropped. The spec's own `(reset)`
-        // step re-emits them.
+        // step re-emits them. `reset` applies the model-body seed and the
+        // task's setup draws (see `reset`).
         eng.out_lines.clear();
-        // Skin off the task's non-replayed setup draws (device sidecar).
-        for _ in 0..consume_rng {
-            eng.rng.borrow_mut().next_u32();
-        }
         // Device script: a run-full-time dummy and scheduled rewards are part
         // of the task, not the model reset, so they are armed only here.
         if let Some(end) = end {
@@ -2396,9 +2392,17 @@ impl Engine {
                 },
             );
         }
-        // NOTE: the model body's `(sgp :seed ...)` is applied at construction
-        // only (GOTCHA #148); re-applying it here regresses `demo2-randomized`
-        // and `emma` (its `consume_rng` device draws are ordered after it).
+        // `(sgp :seed (S C))` in the model body (`random.lisp:417`): ACT-R
+        // re-evaluates the model body on reset (`model.lisp:983`), reseeding
+        // the RNG. The task then redoes its setup draws (device sidecar),
+        // which is why `consume_rng` is applied here rather than once at
+        // construction.
+        if let Some((s, c)) = self.cfg.seed {
+            self.rng.borrow_mut().set_seed(s, c);
+        }
+        for _ in 0..self.consume_rng {
+            self.rng.borrow_mut().next_u32();
+        }
         self.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
         // Model-body `(schedule-event <secs> ...)`: armed relative to model
         // time 0 (params evaluated with no bindings).
@@ -2497,8 +2501,8 @@ impl Engine {
     /// sji(source, candidate)`. Goal spread is `:ga` (default 0), imaginal
     /// is `:imaginal-activation` (default 1.0); other buffer spreads
     /// default 0.
-    fn spreading_activation(&mut self, candidate: &str) -> f32 {
-        let Some(mas) = self.cfg.mas else {
+    fn spreading_activation(&mut self, candidate: &str, mas: Option<f32>) -> f32 {
+        let Some(mas) = mas else {
             return 0.0;
         };
         let verbose = self.act_medium();
@@ -2539,10 +2543,19 @@ impl Engine {
                 continue;
             }
             if verbose {
-                let cname = chunk
-                    .name
-                    .clone()
-                    .unwrap_or_else(|| format!("{buffer}-CHUNK0"));
+                // The goal buffer is a `reuse?` buffer (`buffers.lisp:1349`):
+                // its chunk is the reusable copy `GOAL-CHUNK0`. The engine
+                // keeps the source chunk so `=goal`/retrieval resolve, so
+                // report the copy's name here. The threads extra replaces the
+                // goal buffer and keeps source names.
+                let cname = if buffer == "GOAL" && !self.cfg.threads {
+                    "GOAL-CHUNK0".to_string()
+                } else {
+                    chunk
+                        .name
+                        .clone()
+                        .unwrap_or_else(|| format!("{buffer}-CHUNK0"))
+                };
                 self.out(format!(
                     "  Spreading {} from buffer {} chunk {}",
                     lisp_f(spread),
@@ -3743,7 +3756,7 @@ impl Engine {
             }
             None => self.hist[idx].fixed_base.unwrap_or(self.cfg.blc),
         };
-        let spread = self.spreading_activation(name);
+        let spread = self.spreading_activation(name, self.cfg.mas);
         (base + spread) as f64
     }
 
@@ -8350,6 +8363,21 @@ impl Engine {
         None
     }
 
+    /// `get-chunk`: a chunk by name from DM, the model's named chunks, or a
+    /// buffer (a `reuse?` copy like `GOAL-CHUNK0`, `buffers.lisp:1349`).
+    fn find_chunk_by_name(&self, name: &str) -> Option<&ChunkInst> {
+        self.dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+            .or_else(|| self.named.get(name))
+            .or_else(|| {
+                self.buffers
+                    .values()
+                    .filter_map(|b| b.chunk.as_ref())
+                    .find(|c| c.name.as_deref() == Some(name))
+            })
+    }
+
     fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
         // A whole-chunk request (`+retrieval> =goal`) expands the referenced
         // chunk to its slot spec (`chunk-name-to-chunk-spec`) and retrieves
@@ -8357,11 +8385,7 @@ impl Engine {
         // bare-symbol slot value like `red`) expands to an unconstrained
         // request matching any chunk.
         if let NewChunk::Named(n) = &spec {
-            let chunk = self
-                .dm
-                .iter()
-                .find(|c| c.name.as_deref() == Some(n.as_str()))
-                .or_else(|| self.named.get(n.as_str()));
+            let chunk = self.find_chunk_by_name(n);
             let expanded = match chunk {
                 Some(c) => NewChunk::Spec {
                     ctype: String::new(),
@@ -8459,6 +8483,38 @@ impl Engine {
             Some(Value::Num(x)) => x as f32,
             Some(Value::Int(i)) => i as f32,
             _ => self.cfg.rt,
+        };
+        // `:bll-value`/`:mas-value`/`:ans-value` (`declarative-memory.lisp:1243`):
+        // nil disables that term for this request.
+        let bll = match want_slots
+            .iter()
+            .find(|(s, _)| s == ":BLL-VALUE")
+            .map(|(_, v)| v.clone())
+        {
+            Some(Value::Nil) => None,
+            Some(Value::Num(x)) => Some(x as f32),
+            Some(Value::Int(i)) => Some(i as f32),
+            _ => self.cfg.bll,
+        };
+        let mas = match want_slots
+            .iter()
+            .find(|(s, _)| s == ":MAS-VALUE")
+            .map(|(_, v)| v.clone())
+        {
+            Some(Value::Nil) => None,
+            Some(Value::Num(x)) => Some(x as f32),
+            Some(Value::Int(i)) => Some(i as f32),
+            _ => self.cfg.mas,
+        };
+        let ans = match want_slots
+            .iter()
+            .find(|(s, _)| s == ":ANS-VALUE")
+            .map(|(_, v)| v.clone())
+        {
+            Some(Value::Nil) => None,
+            Some(Value::Num(x)) => Some(x as f32),
+            Some(Value::Int(i)) => Some(i as f32),
+            _ => self.cfg.ans,
         };
         // Partial matching (mp set, esc on): candidacy is the request's
         // slot signature — required-filled and required-empty slot names —
@@ -8596,7 +8652,7 @@ impl Engine {
             // A = base-level + spreading + partial matching + activation
             // noise. Base-level from the decay equation when :bll is set,
             // else blc. Noise drawn per candidate in DM order.
-            let base = match self.cfg.bll {
+            let base = match bll {
                 Some(bll) => {
                     let (refs, creation, count) = {
                         let h = &self.hist[idx];
@@ -8656,7 +8712,7 @@ impl Engine {
                 self.out(format!("Total base-level: {}", lisp_f(base)));
             }
             let spread = if c.name.is_some() {
-                self.spreading_activation(&cname)
+                self.spreading_activation(&cname, mas)
             } else {
                 0.0
             };
@@ -8726,7 +8782,7 @@ impl Engine {
                     self.out(format!("Total similarity score {}", lisp_f(total)));
                 }
             }
-            let noise = match self.cfg.ans {
+            let noise = match ans {
                 Some(s) => self.rng.borrow_mut().noise(s),
                 None => 0.0,
             };
@@ -8815,12 +8871,12 @@ impl Engine {
         let gen = self.dm_gen;
         match best {
             None => {
-                let wait = failure_wait(&self.cfg);
+                let wait = failure_wait(&self.cfg, rt);
                 let at = self.time_ms + wait;
                 self.push(at, Prio::Num(0), Out::Low, Event::RetrievalFailure { gen });
             }
             Some(_) if self.cfg.esc && act < rt => {
-                let wait = failure_wait(&self.cfg);
+                let wait = failure_wait(&self.cfg, rt);
                 let at = self.time_ms + wait;
                 self.push(at, Prio::Num(0), Out::Low, Event::RetrievalFailure { gen });
             }
@@ -8998,7 +9054,7 @@ impl Engine {
         };
         let name = self.dm[idx].name.clone().unwrap_or_default();
         let spread = if self.dm[idx].name.is_some() {
-            self.spreading_activation(&name)
+            self.spreading_activation(&name, self.cfg.mas)
         } else {
             0.0
         };
@@ -9175,7 +9231,7 @@ impl Engine {
                 self.out("No matching chunks found.".to_string());
                 self.out("Blending request fails.".to_string());
             }
-            let wait = failure_wait(&self.cfg);
+            let wait = failure_wait(&self.cfg, self.cfg.rt);
             self.push(
                 self.time_ms + wait,
                 Prio::Num(0),
@@ -9473,7 +9529,7 @@ impl Engine {
             if self.cfg.blt {
                 self.out("Not above threshold so blending failed".to_string());
             }
-            let wait = failure_wait(&self.cfg);
+            let wait = failure_wait(&self.cfg, self.cfg.rt);
             self.push(
                 self.time_ms + wait,
                 Prio::Num(0),
@@ -10174,9 +10230,9 @@ fn set_result(results: &mut [(String, Option<Value>)], slot: &str, v: Value) {
 }
 
 /// Failure latency uses the threshold: `round(lf * e^(-le*rt))`.
-fn failure_wait(cfg: &Config) -> i64 {
+fn failure_wait(cfg: &Config, rt: f32) -> i64 {
     if cfg.esc {
-        latency(cfg.lf_ms, cfg.le, cfg.rt)
+        latency(cfg.lf_ms, cfg.le, rt)
     } else {
         0
     }

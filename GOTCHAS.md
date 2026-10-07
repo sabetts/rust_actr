@@ -1958,9 +1958,10 @@ seed a `.ref` reflects is the model body's `(sgp :seed (S C))`
 different trace (`#(427 507 1080)` vs the ref's `#(320 522 1080)`), while the
 model's `(123456 0)` reproduces `emma.ref` byte-for-byte — and twice in a row,
 so the draws are fully seeded, not wall-clock. `Config::from_model` now parses
-`:SEED` and the engine applies it right after the construction reset; it must
-**not** be re-applied on `reset` (`demo2-randomized` regresses if it is — its
-stream has to continue from model definition).
+`:SEED` and the engine applies it on `reset` (see GOTCHA #152): the model body
+is re-evaluated there (`model.lisp:983`), and the task's `consume_rng` draws
+follow, which is equivalent for the single-run specs here and correct for the
+per-run loops.
 
 `demo2` and `emma` share `demo2-model.lisp`, but `demo2` is seed-independent
 because `demo2.spec` has a device sidecar (`ADD-TEXT 0 "V" 125 150`); `emma`
@@ -2069,13 +2070,25 @@ now) surfaced three general pieces:
   re-evaluates the model body (`model.lisp:983`). This is what makes the
   per-production driver loop run exactly one production.
 
-`retrieval-request-parameters` is **not yet byte-exact** and is committed as a
-runnable spec (`:SCOPE :MULTI`, `:FLAGS (:DRIVER)`) so `probe_runnable` tracks
-it (49 pass / 1 fail). Remaining: the goal buffer holds a `reuse?` copy
-`GOAL-CHUNK0` in the ref (`buffers.lisp:1349`) while the engine keeps the
-source name (a naive copy regresses `indirect-action-compilation`, so this
-needs care), and `:bll-value`/`:mas-value`/`:ans-value` plus the
-retrieval-failure timing.
+`retrieval-request-parameters` is byte-exact and in `enabled.txt` (50 specs).
+The remaining pieces it needed:
+- `:bll-value`/`:mas-value`/`:ans-value` request parameters
+  (`declarative-memory.lisp:1243`): `nil` disables that term for the request;
+  `spreading_activation` now takes the effective `:mas`.
+- the retrieval-failure delay uses the request's `:rt` (`failure_wait`), not
+  the model's, so a request with `:rt-value 10` fails at once.
+- the model-body seed and the task's `consume_rng` draws are applied **on
+  every `reset`** (ACT-R re-evaluates the body, `model.lisp:983`; the task
+  redoes its setup per run). This supersedes the "construction only" note in
+  GOTCHA #148 — it is equivalent for the single-run specs and correct for the
+  per-production loop here.
+- the goal buffer is a `reuse?` buffer (`buffers.lisp:1349`), so its chunk is
+  the reusable copy `GOAL-CHUNK0`. Implementing the copy itself is entangled
+  with the engine's name-based `=buffer>` bindings and regresses
+  `indirect-action-compilation` (retrieval of the source chunk, slot order)
+  and `z-threads`, so the engine keeps the source chunk and reports
+  `GOAL-CHUNK0` in the spreading trace only (the one place the copy name
+  leaks). This is a documented approximation, not full fidelity.
 
 
 
