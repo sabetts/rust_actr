@@ -2645,3 +2645,17 @@ Two last details completed the BOLD table:
    `~{~{17,3f~}~%~}` already ends in `~%`, so the wrapper adds a second.
 
 With both, `paired` is byte-exact (540 lines) and joins `enabled.txt`.
+
+## 179. `paired-learning`: compilation-type checks are not "always compose"
+
+`define-compilation-type` tables (`retrieval-compilation.lisp:279` etc.) do
+not just list usage pairs to allow — some entries are *checks* (`R-B-C1`,
+`R-B-C2`, `G-B-C1`, `I-B-C1..C10`, `P-B-C1..C4`, `M-B-C1/C2`,
+`NO-RHS-GOAL-REF`, `NO-GOAL-HARVESTING*`). The engine had been treating every
+listed pair as composing, so it composed where ACT-R refuses. Implemented the
+RETRIEVAL checks: `R-B-C1` requires the second production's query to test only
+`state busy`/`buffer empty`; `R-B-C2` requires both queries to be identical.
+That makes `paired-learning`'s `retireve-associate & retrieval-arg2-unsuccessful`
+refuse (`buffer failure` is neither), matching the reference. The remaining
+types' checks, the composed-LHS specialization, and the compiled productions'
+`parameters for production` blocks are still open.

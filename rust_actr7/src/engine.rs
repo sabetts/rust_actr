@@ -8306,9 +8306,35 @@ impl Engine {
         for buffer in &buffers {
             let u1 = buffer_usage(p1, buffer);
             let u2 = buffer_usage(p2, buffer);
+            if buffer == "RETRIEVAL" {
+                match RETRIEVAL_COMPOSE
+                    .iter()
+                    .find(|(a, b, _)| *a == u1 && *b == u2)
+                    .map(|(_, _, c)| *c)
+                {
+                    None => return Some((buffer.clone(), retrieval_reason(u1, u2))),
+                    Some(CompCheck::T) => {}
+                    Some(CompCheck::RbC1) => {
+                        if !r_b_c1(p2, buffer) {
+                            return Some((
+                                buffer.clone(),
+                                "when the first production makes a request and the second does not harvest it the second can only query for state busy or buffer empty.".to_string(),
+                            ));
+                        }
+                    }
+                    Some(CompCheck::RbC2) => {
+                        if !r_b_c2(p1, p2, buffer) {
+                            return Some((
+                                buffer.clone(),
+                                "the queries in both productions must be the same.".to_string(),
+                            ));
+                        }
+                    }
+                }
+                continue;
+            }
             let (table, reason): (&[(u32, u32)], fn(u32, u32) -> String) =
                 match buffer.as_str() {
-                    "RETRIEVAL" => (RETRIEVAL_COMPOSE, retrieval_reason),
                     "GOAL" => (GOAL_COMPOSE, goal_reason),
                     "VISUAL-LOCATION" | "VISUAL" | "AURAL-LOCATION" | "AURAL" | "TEMPORAL" => {
                         (PERCEPTUAL_COMPOSE, perceptual_reason)
@@ -10740,15 +10766,111 @@ fn rhs_buffers(p: &crate::model::Production) -> Vec<String> {
 /// The RETRIEVAL compilation type's table (`retrieval-compilation.lisp:279`):
 /// `T` entries plus the `R-B-C1`/`R-B-C2` checks, which are not modelled and
 /// treated as composing.
-const RETRIEVAL_COMPOSE: &[(u32, u32)] = &[
-    (28, 28), (28, 24), (28, 20), (28, 16), (28, 12), (28, 8), (28, 4), (28, 0),
-    (24, 20), (24, 16), (24, 4), (24, 0),
-    (20, 28), (20, 24), (20, 20), (20, 16), (20, 12), (20, 8), (20, 4), (20, 0),
-    (16, 28), (16, 24), (16, 20), (16, 16), (16, 12), (16, 8), (16, 4), (16, 0),
-    (12, 28), (12, 24), (12, 20), (12, 16), (12, 12), (12, 8), (12, 4), (12, 0),
-    (8, 20), (8, 16), (8, 4), (8, 0),
-    (4, 28), (4, 24), (4, 20), (4, 16), (4, 12), (4, 8), (4, 4), (4, 0),
-    (0, 28), (0, 24), (0, 20), (0, 16), (0, 12), (0, 8), (0, 4),
+/// A compilation-type table entry's check (`define-compilation-type`,
+/// `production-compilation.lisp:925`): `T` always composes; the named
+/// checks are evaluated against the two productions.
+#[derive(Clone, Copy, PartialEq)]
+enum CompCheck {
+    T,
+    RbC1,
+    RbC2,
+}
+
+/// `R-B-C1` (`retrieval-compilation.lisp:223`): when the first production
+/// requests the buffer and the second does not harvest it, the second may
+/// only query `state busy` or `buffer empty`.
+fn r_b_c1(p2: &crate::model::Production, buffer: &str) -> bool {
+    match p2.lhs.iter().find_map(|i| match i {
+        LhsItem::Query { buffer: b, queries } if b == buffer => Some(queries),
+        _ => None,
+    }) {
+        None => true,
+        Some(qs) => qs.iter().all(|(s, v)| {
+            (s.eq_ignore_ascii_case("STATE")
+                && matches!(v, Pattern::Sym(x) if x.eq_ignore_ascii_case("busy")))
+                || (s.eq_ignore_ascii_case("BUFFER")
+                    && matches!(v, Pattern::Sym(x) if x.eq_ignore_ascii_case("empty")))
+        }),
+    }
+}
+
+/// `R-B-C2` (`retrieval-compilation.lisp:237`): the queries in both
+/// productions must be the same.
+fn r_b_c2(p1: &crate::model::Production, p2: &crate::model::Production, buffer: &str) -> bool {
+    let q = |p: &crate::model::Production| -> Vec<(String, Pattern)> {
+        p.lhs
+            .iter()
+            .find_map(|i| match i {
+                LhsItem::Query { buffer: b, queries } if b == buffer => Some(queries.clone()),
+                _ => None,
+            })
+            .unwrap_or_default()
+    };
+    let q1 = q(p1);
+    let q2 = q(p2);
+    let mut all: Vec<&(String, Pattern)> = q1.iter().chain(q2.iter()).collect();
+    all.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
+    all.dedup();
+    q1.len() == q2.len() && q1.len() == all.len()
+}
+
+/// The RETRIEVAL compilation type's table (`retrieval-compilation.lisp:279`).
+const RETRIEVAL_COMPOSE: &[(u32, u32, CompCheck)] = &[
+    (28, 28, CompCheck::T),
+    (28, 24, CompCheck::T),
+    (28, 20, CompCheck::RbC1),
+    (28, 16, CompCheck::RbC1),
+    (28, 12, CompCheck::T),
+    (28, 8, CompCheck::T),
+    (28, 4, CompCheck::T),
+    (28, 0, CompCheck::T),
+    (24, 20, CompCheck::RbC2),
+    (24, 16, CompCheck::RbC2),
+    (24, 4, CompCheck::T),
+    (24, 0, CompCheck::T),
+    (20, 28, CompCheck::T),
+    (20, 24, CompCheck::T),
+    (20, 20, CompCheck::RbC1),
+    (20, 16, CompCheck::RbC1),
+    (20, 12, CompCheck::T),
+    (20, 8, CompCheck::T),
+    (20, 4, CompCheck::T),
+    (20, 0, CompCheck::T),
+    (16, 28, CompCheck::RbC2),
+    (16, 24, CompCheck::RbC2),
+    (16, 20, CompCheck::RbC2),
+    (16, 16, CompCheck::RbC2),
+    (16, 12, CompCheck::T),
+    (16, 8, CompCheck::T),
+    (16, 4, CompCheck::T),
+    (16, 0, CompCheck::T),
+    (12, 28, CompCheck::T),
+    (12, 24, CompCheck::T),
+    (12, 20, CompCheck::RbC1),
+    (12, 16, CompCheck::RbC1),
+    (12, 12, CompCheck::T),
+    (12, 8, CompCheck::T),
+    (12, 4, CompCheck::T),
+    (12, 0, CompCheck::T),
+    (8, 20, CompCheck::T),
+    (8, 16, CompCheck::T),
+    (8, 4, CompCheck::T),
+    (8, 0, CompCheck::T),
+    (4, 28, CompCheck::T),
+    (4, 24, CompCheck::T),
+    (4, 20, CompCheck::RbC1),
+    (4, 16, CompCheck::RbC1),
+    (4, 12, CompCheck::T),
+    (4, 8, CompCheck::T),
+    (4, 4, CompCheck::T),
+    (4, 0, CompCheck::T),
+    (0, 28, CompCheck::T),
+    (0, 24, CompCheck::T),
+    (0, 20, CompCheck::T),
+    (0, 16, CompCheck::T),
+    (0, 12, CompCheck::T),
+    (0, 8, CompCheck::T),
+    (0, 4, CompCheck::T),
 ];
 
 /// The GOAL compilation type's table (`goal-compilation.lisp:704`): `T`
