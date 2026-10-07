@@ -2135,7 +2135,7 @@ impl Engine {
             trace_on: true,
             user_fns: HashMap::new(),
         };
-        eng.reset()?;
+        eng.reset_impl()?;
         eng.cfg.module_width = module_width;
         // The construction reset is not part of the recorded trace: ACT-R
         // installs its monitors after the model is loaded, so any warnings it
@@ -2303,8 +2303,12 @@ impl Engine {
             "VISUAL",
             "VISUAL-LOCATION",
             "MANUAL",
+            "MANUAL-LEFT",
+            "MANUAL-RIGHT",
             "TEMPORAL",
             "VOCAL",
+            "AURAL",
+            "AURAL-LOCATION",
         ] {
             self.buffers.insert(b.to_string(), Buffer::empty());
         }

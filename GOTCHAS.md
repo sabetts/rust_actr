@@ -2381,6 +2381,26 @@ block starts at 0.000); the engine already did this.
 is the `:act` trace the task toggles via its `:testing-function`, the
 buffer-trace output, `sdm`, and the noise alignment.
 
+## 165. Tutorial companion loads; AURAL buffers
+
+`tutorial-unit3-sperling-trial-trace`'s stub calls `sperling-trial` but only
+loads `sperling-model.lisp`; the function lives in `tutorial/lisp/sperling.lisp`
+and loading it makes the ref match exactly. The extractor now retries a stub
+whose `run-it` fails with an undefined function, after loading
+`tutorial/lisp/<stem>.lisp` for each loaded `tutorial/…/<stem>-model.lisp`
+(only ever triggered for specs that already errored).
+
+The engine's reset buffer list was missing `AURAL`/`AURAL-LOCATION` (the
+loader's `is_known_buffer` already knew them), so any audio production failed
+to load. Added, along with `MANUAL-LEFT`/`MANUAL-RIGHT`.
+
+The spec still needs the audio module: the ref shows `AUDIO SET-BUFFER-CHUNK
+AURAL-LOCATION AUDIO-EVENT0` at +50 ms and `AURAL TONE0`, while the engine's
+partial audio scaffolding only fires from the vocal path and uses a +300 ms
+detection delay. It also needs ACT-R's visicon-based `VISUAL-LOCATION{n}`
+naming (the engine numbers per feature, which only coincided for the small
+windows in the passing specs).
+
 ## 163. `clear-all` resets the model set; per-run device scripts
 
 `is_multi_model` counted every `define-model` in a spec's file chain, but

@@ -398,11 +398,49 @@ golden), so the value is irrelevant."
           :flags (remove nil flags)
           :error error)))
 
+(defun extract-one-attempt (name lisp static-scope)
+  (fresh-state)
+  (clear-all)
+  (let ((*mode* :load))
+    (load lisp))
+  (let ((*mode* :drive))
+    (force-virtual-window (funcall 'run-it)))
+  (let ((spec (make-spec
+               name
+               (cond ((> (length *runs*) 1) :multi)
+                     ((> *goal-focus-count* 0) :multi)
+                     ((> *reset-count* 0) :multi)
+                     ((= (length *runs*) 1) :pure)
+                     (t :other))
+               :flags (cond ((eq static-scope :device) '(:device))
+                            ((eq static-scope :driver) '(:driver))))))
+    (write-device name)
+    spec))
+
+(defun tutorial-companions ()
+  "Load `ACT-R:tutorial;lisp;<stem>.lisp` for each loaded
+`tutorial/.../<stem>-model.lisp`. Some stubs' `run-it` calls the tutorial
+task function without loading it (`sperling-trial`); this is only tried
+after an undefined-function error. Returns whether anything was loaded."
+  (let ((any nil))
+    (dolist (m (reverse *models*))
+      (let* ((rel (logical->rel m))
+             (semi (position #\; rel :from-end t))
+             (file (if semi (subseq rel (1+ semi)) rel)))
+        (when (and file (search "-model.lisp" file :from-end t))
+          (let* ((stem (subseq file 0 (- (length file) (length "-model.lisp"))))
+                 (cand (merge-pathnames
+                        (concatenate 'string "tutorial/lisp/" stem ".lisp")
+                        *actr-dir*)))
+            (when (probe-file cand)
+              (handler-case (progn (load cand) (setf any t))
+                (error () nil)))))))
+    any))
+
 (defun extract-one (name)
   "Return a spec plist for NAME, or a scope-error spec on failure."
   (let ((lisp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
-    (fresh-state)
     (let ((static-scope (scope-of (or src ""))))
       ;; Command stubs need the command layer (out of scope, classified from
       ;; source without executing). Device and driver stubs ARE executed so
@@ -410,26 +448,15 @@ golden), so the value is irrelevant."
       ;; oracle; the spec replays it).
       (if (eq static-scope :command)
           (make-spec name static-scope :flags (list static-scope))
-          (handler-case
-              (progn
-                (clear-all)
-                (let ((*mode* :load))
-                  (load lisp))
-                (let ((*mode* :drive))
-                  (force-virtual-window (funcall 'run-it)))
-                (let ((spec (make-spec
-                             name
-                             (cond ((> (length *runs*) 1) :multi)
-                                   ((> *goal-focus-count* 0) :multi)
-                                   ((> *reset-count* 0) :multi)
-                                   ((= (length *runs*) 1) :pure)
-                                   (t :other))
-                             :flags (cond ((eq static-scope :device) '(:device))
-                                          ((eq static-scope :driver) '(:driver))))))
-                  (write-device name)
-                  spec))
+          (handler-case (extract-one-attempt name lisp static-scope)
             (error (e)
-              (make-spec name :error :error (princ-to-string e))))))))
+              ;; Retry once with the tutorial task file if `run-it` needed an
+              ;; undefined function the stub did not load.
+              (if (and (search "undefined" (string-downcase (princ-to-string e)))
+                       (tutorial-companions))
+                  (handler-case (extract-one-attempt name lisp static-scope)
+                    (error (e2) (make-spec name :error :error (princ-to-string e2))))
+                (make-spec name :error :error (princ-to-string e)))))))))
 
 (defun write-spec (spec)
   (let ((path (merge-pathnames (concatenate 'string (getf spec :name) ".spec") *out-dir*)))
