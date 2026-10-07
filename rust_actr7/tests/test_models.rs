@@ -535,6 +535,13 @@ fn parse_device_op(
                 y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
                 run,
             }),
+            "MODIFY-TEXT" => device.modifies.push(actr_engine::engine::DeviceModify {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
+                x: as_i64(v.get(3).ok_or("missing x")?).ok_or("bad x")?,
+                y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
+                run,
+            }),
             "CLEAR" => device.clears.push((ms()?, run)),
             "COMMAND" => device.commands.push(actr_engine::engine::DeviceCommand {
                 at_ms: ms()?,

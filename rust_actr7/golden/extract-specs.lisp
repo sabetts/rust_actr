@@ -68,6 +68,15 @@ disable/enable, breakpoints); not trace-only drivers.")
 ;; Scheduled command events that print a trace line (`schedule-event-relative`
 ;; / `schedule-event` with a string action), as `(ms output details)`.
 (defvar *device-commands* nil)
+;; Window-item moves (`modify-text-for-exp-window`), as
+;; `(run ms text x y)`. The driver's `move-it` is scheduled by the model's
+;; `!eval!`, so the engine cannot replay the item position from the model
+;; alone; the captured op re-applies it at the same model time.
+(defvar *device-modifies* nil)
+;; `item-key -> text` and `item-key -> (x . y)` so a modify can record the
+;; item's text and the coordinates it does not pass.
+(defvar *item-texts* nil)
+(defvar *item-pos* nil)
 
 ;;; ---------------------------------------------------------------- utils
 
@@ -241,10 +250,26 @@ disable/enable, breakpoints); not trace-only drivers.")
 ;;; derive, e.g. CONSUME-RNG / CLEAR-ON-KEYPRESS) is never overwritten.
 
 (defun w-add-text (win text &rest keys)
+  (let ((key (apply (gethash 'add-text-to-exp-window *orig-fns*) win text keys)))
+    (when (and (eq *mode* :drive) (not *suppress*))
+      (push (list *reset-count* (mp-time-ms) text (or (getf keys :x) 0) (or (getf keys :y) 0))
+            *device-texts*)
+      (when key
+        (setf (gethash key *item-texts*) text)
+        (setf (gethash key *item-pos*)
+              (cons (or (getf keys :x) 0) (or (getf keys :y) 0)))))
+    key))
+
+(defun w-modify-text (item &rest keys)
   (when (and (eq *mode* :drive) (not *suppress*))
-    (push (list *reset-count* (mp-time-ms) text (or (getf keys :x) 0) (or (getf keys :y) 0))
-          *device-texts*))
-  (apply (gethash 'add-text-to-exp-window *orig-fns*) win text keys))
+    (let* ((txt (gethash item *item-texts*))
+           (cur (gethash item *item-pos*))
+           (x (or (getf keys :x) (car cur) 0))
+           (y (or (getf keys :y) (cdr cur) 0)))
+      (when txt
+        (push (list *reset-count* (mp-time-ms) txt x y) *device-modifies*)
+        (setf (gethash item *item-pos*) (cons x y)))))
+  (apply (gethash 'modify-text-for-exp-window *orig-fns*) item keys))
 
 (defun w-clear-exp-window (&optional win)
   (when (and (eq *mode* :drive) (not *suppress*))
@@ -302,10 +327,12 @@ disable/enable, breakpoints); not trace-only drivers.")
         (let* ((texts (dedupe-preserve (reverse *device-texts*)))
                (clears (dedupe-preserve (reverse *device-clears*)))
                (commands (dedupe-preserve (reverse *device-commands*)))
+               (modifies (dedupe-preserve (reverse *device-modifies*)))
                (runs (sort (remove-duplicates
                             (append (mapcar #'first texts)
                                     (mapcar #'first clears)
-                                    (mapcar #'first commands)))
+                                    (mapcar #'first commands)
+                                    (mapcar #'first modifies)))
                            #'<)))
           (dolist (r runs)
             (format f "(RUN ~a~%" r)
@@ -319,6 +346,10 @@ disable/enable, breakpoints); not trace-only drivers.")
             (dolist (c commands)
               (when (= (first c) r)
                 (format f " (COMMAND ~a ~a ~s)~%" (second c) (third c) (fourth c))))
+            (dolist (m modifies)
+              (when (= (first m) r)
+                (format f " (MODIFY-TEXT ~a ~s ~a ~a)~%" (second m) (third m)
+                        (fourth m) (fifth m))))
             (format f ")~%")))))))
 
 (defun install-wrappers ()
@@ -332,6 +363,7 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'load-act-r-model #'w-load-model)
   (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk)
   (wrap-fn 'add-text-to-exp-window #'w-add-text)
+  (wrap-fn 'modify-text-for-exp-window #'w-modify-text)
   (wrap-fn 'clear-exp-window #'w-clear-exp-window)
   (wrap-fn 'pdisable-fct #'w-pdisable)
   (wrap-fn 'penable-fct #'w-penable)
@@ -349,7 +381,9 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defun fresh-state ()
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
         *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil
-        *device-commands* nil))
+        *device-commands* nil *device-modifies* nil
+        *item-texts* (make-hash-table :test 'equal)
+        *item-pos* (make-hash-table :test 'equal)))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))

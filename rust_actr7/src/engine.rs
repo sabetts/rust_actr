@@ -367,6 +367,19 @@ pub struct DeviceText {
     pub run: Option<u32>,
 }
 
+/// One scripted window-item move (`modify-text-for-exp-window`): the task's
+/// `move-it` is scheduled by the model's `!eval!`, so the engine replays the
+/// resulting position change from the captured op.
+#[derive(Debug, Clone)]
+pub struct DeviceModify {
+    pub at_ms: i64,
+    pub text: String,
+    pub x: i64,
+    pub y: i64,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
 /// One scripted command trace line: a task's scheduled command event.
 #[derive(Debug, Clone)]
 pub struct DeviceCommand {
@@ -381,6 +394,8 @@ pub struct DeviceCommand {
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
+    /// Scripted window-item moves (`modify-text-for-exp-window`).
+    pub modifies: Vec<DeviceModify>,
     /// Window clears at ms (clear-exp-window), with the run grouping.
     pub clears: Vec<(i64, Option<u32>)>,
     /// Scheduled command lines `(ms, output, details)` — a task's
@@ -1766,11 +1781,14 @@ pub struct Engine {
     sims: HashMap<(String, String), f32>,
     /// Scripted device items not yet shown, by appearance time.
     pending_texts: Vec<DeviceText>,
+    /// Scripted window-item moves not yet applied, by time.
+    pending_modifies: Vec<DeviceModify>,
     /// Scripted window clears not yet applied, sorted.
     pending_clears: Vec<i64>,
     /// The full device script, re-armed on every `reset` (a task re-applies
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
+    device_modifies: Vec<DeviceModify>,
     device_clears: Vec<(i64, Option<u32>)>,
     /// Scheduled command lines, re-armed on every `reset` like the rest of
     /// the device script.
@@ -1975,6 +1993,7 @@ impl Engine {
         rng.set_seed(seed.0, seed.1);
         let DeviceSetup {
             texts,
+            modifies,
             clears,
             commands,
             end,
@@ -2016,6 +2035,11 @@ impl Engine {
                 v.sort_by_key(|t| t.at_ms);
                 v
             },
+            pending_modifies: {
+                let mut v = modifies.clone();
+                v.sort_by_key(|m| m.at_ms);
+                v
+            },
             pending_clears: {
                 let mut v: Vec<i64> = clears.iter().map(|(t, _)| *t).collect();
                 v.sort_unstable();
@@ -2024,6 +2048,11 @@ impl Engine {
             device_texts: {
                 let mut v = texts;
                 v.sort_by_key(|t| t.at_ms);
+                v
+            },
+            device_modifies: {
+                let mut v = modifies;
+                v.sort_by_key(|m| m.at_ms);
                 v
             },
             device_clears: {
@@ -2334,6 +2363,12 @@ impl Engine {
             .device_texts
             .iter()
             .filter(|t| t.run.is_none() || t.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_modifies = self
+            .device_modifies
+            .iter()
+            .filter(|m| m.run.is_none() || m.run == Some(run))
             .cloned()
             .collect();
         self.pending_clears = self
@@ -6428,6 +6463,15 @@ impl Engine {
                         let chunk = self
                             .m_eval(items.get(2).ok_or("set-buffer-chunk needs a chunk")?, b)?;
                         self.set_buffer_chunk_cmd(&buffer, &chunk)?;
+                        return Ok(Value::Nil);
+                    }
+                    // The task's `move-it` is scheduled by the model's
+                    // `!eval! (schedule-event-relative … 'move-it)`. Its
+                    // effect on the window is replayed from the captured
+                    // device op (`MODIFY-TEXT`), so the body is a no-op here
+                    // (the arguments reference task globals the engine does
+                    // not model).
+                    "INCF" | "MODIFY-TEXT-FOR-EXP-WINDOW" => {
                         return Ok(Value::Nil);
                     }
                     "SCHEDULE-EVENT-RELATIVE" | "SCHEDULE-EVENT" => {
@@ -13482,6 +13526,26 @@ impl Engine {
         if cleared {
             self.features.clear();
         }
+        // Window-item moves: re-apply the captured position change to the
+        // visicon feature carrying that text value (the model's `!eval!`
+        // schedules `move-it`, which the engine replays as a no-op; the
+        // captured op supplies the coordinates).
+        let mut moved = Vec::new();
+        self.pending_modifies.retain(|m| {
+            if m.at_ms <= now {
+                moved.push(m.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for m in &moved {
+            if let Some(f) = self.features.iter_mut().find(|f| f.value == m.text) {
+                f.x = m.x + 305;
+                f.y = m.y + 306;
+                f.tstamp_ms = now;
+            }
+        }
         // `update-attended-loc` (`vision.lisp:1870`): re-encode only when
         // the attended object is gone (a clear) or was modified. A new text
         // elsewhere leaves it untouched, so adding texts must not trigger
@@ -13544,10 +13608,13 @@ impl Engine {
             }
         }
         self.now(Prio::Num(0), Out::Medium, Event::VisiconUpdate);
-        // Schedule the next wave for remaining texts or clears.
+        // Schedule the next wave for remaining texts, moves or clears.
         let mut next_at: Option<i64> = None;
         if let Some(next) = self.pending_texts.first() {
             next_at = Some(next.at_ms);
+        }
+        if let Some(m) = self.pending_modifies.first() {
+            next_at = Some(next_at.map_or(m.at_ms, |n| n.min(m.at_ms)));
         }
         if let Some(clear) = self.pending_clears.first() {
             next_at = Some(next_at.map_or(*clear, |n| n.min(*clear)));
