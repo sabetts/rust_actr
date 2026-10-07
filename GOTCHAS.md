@@ -2545,3 +2545,13 @@ engine's DM currently holds only the imaginal/visual merges (the location
 buffer is not a merge source) and the merged visual objects keep the buffer
 copy name (`VISUAL-CHUNK0`) rather than `VISUAL-CHUNK0-{k}`, and the `add-dm`
 goals are absent — so the dump content/order still differs.
+
+## 172. Visicon `screen-x` uses the item's centre
+
+`add-text-to-exp-window` places an item by its top-left, but the visicon
+records the item's *centre*: `screen-x = window-x + text-x + width/2`,
+`screen-y = window-y + text-y + height/2`. The engine used a constant
+`text-x + 305`, which is only right for 7-px characters; `zinc` (width 28) is
+`455` but the reference has `465`. The offset is
+`305 + (width - 7)/2` (window 300, font 7 px/char, 10 px tall) — confirmed by
+`paired` (`zinc` 465 / `9` 455) and unchanged for `tracking-test` (all 7-px).

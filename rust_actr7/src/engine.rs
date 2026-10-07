@@ -13740,19 +13740,20 @@ impl Engine {
             let n = self.feat_seq;
             self.feat_seq += 1;
             // `add-text-to-exp-window` places a text item relative to the
-            // window, and the visicon uses absolute screen coordinates:
-            // `screen-x = window-x + text-x + 5`, `screen-y = window-y +
-            // text-y + 6` (verified against SBCL). The test-model windows
-            // use the default origin (300, 300), so the offset is 305/306.
+            // window by its top-left, and the visicon uses the item's
+            // centre: `screen-x = window-x + text-x + width/2`,
+            // `screen-y = window-y + text-y + height/2` (verified against
+            // SBCL). The test-model windows use the default origin
+            // (300, 300) and the font is 7 px/char, 10 px tall, so the
+            // offsets are `305 + (width-7)/2` and `306`.
+            let width = 7 * t.text.chars().count() as i64;
             self.features.push(Feature {
                 name: format!("VISUAL-LOCATION{n}"),
                 kind: "TEXT".to_string(),
                 value: t.text.clone(),
-                x: t.x + 305,
+                x: t.x + 305 + (width - 7) / 2,
                 y: t.y + 306,
-                // Font metrics: 7 px per character, 10 px tall (verified
-                // against the `buffer-chunk` dumps in `paired`/`tracking-test`).
-                width: 7 * t.text.chars().count() as i64,
+                width,
                 height: 10,
                 extra: Vec::new(),
                 tstamp_ms: now,
