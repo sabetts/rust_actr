@@ -5032,6 +5032,11 @@ impl Engine {
                 }
                 // `check-unstuff-buffer` sees a modified (non-copy) chunk.
                 self.buffer_mut(&buffer).modified = true;
+                // A `*imaginal>` mod-request frees the imaginal module once
+                // its delayed change lands (`module-mod-request`).
+                if buffer == "IMAGINAL" && module == "IMAGINAL" {
+                    self.imag_busy = false;
+                }
                 if self.cfg.tracker {
                     let names: Vec<String> = slots.iter().map(|(s, _)| s.clone()).collect();
                     for s in names {
@@ -7840,8 +7845,9 @@ impl Engine {
                     );
                 }
                 RhsAction::ModifyRequest { buffer, slots } => {
-                    // `*buffer>` (`buffer-mod-request`): apply the change
-                    // and trace it under the buffer's module.
+                    // `*buffer>` (`buffer-mod-request`): request a change from
+                    // the buffer's module, which goes busy and applies it
+                    // after its delay (the imaginal module's 200 ms).
                     if slots.is_empty() {
                         continue;
                     }
@@ -7850,15 +7856,34 @@ impl Engine {
                     for (s, p) in slots {
                         sub.push((s.clone(), self.rhs_value(p, &b, copy, &mut copied)?));
                     }
-                    self.now(
-                        Prio::Num(100),
-                        Out::Medium,
-                        Event::ModBuffer {
-                            buffer: buffer.clone(),
-                            slots: sub,
-                            module: buffer_module(buffer),
-                        },
-                    );
+                    if buffer == "IMAGINAL" {
+                        self.imag_busy = true;
+                        let delay = if self.cfg.vidt {
+                            self.randomize_ms(self.cfg.imaginal_delay_ms)
+                        } else {
+                            self.cfg.imaginal_delay_ms
+                        };
+                        self.push(
+                            self.time_ms + delay,
+                            Prio::Num(0),
+                            Out::Low,
+                            Event::ModBuffer {
+                                buffer: buffer.clone(),
+                                slots: sub,
+                                module: buffer_module(buffer),
+                            },
+                        );
+                    } else {
+                        self.now(
+                            Prio::Num(100),
+                            Out::Medium,
+                            Event::ModBuffer {
+                                buffer: buffer.clone(),
+                                slots: sub,
+                                module: buffer_module(buffer),
+                            },
+                        );
+                    }
                 }
                 RhsAction::Request { buffer, spec } => {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
