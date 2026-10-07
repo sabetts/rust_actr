@@ -1958,7 +1958,7 @@ impl Engine {
             obj_built: HashMap::new(),
             visual_busy: false,
             last_attention: None,
-            emma_eye: (0.0, 0.0, 1.0),
+            emma_eye: (0.0, 0.0, 1080.0),
             emma_prep_s: false,
             emma_exec_s: false,
             emma_next_loc: None,
@@ -2201,7 +2201,7 @@ impl Engine {
         self.obj_built.clear();
         self.visual_busy = false;
         self.last_attention = None;
-        self.emma_eye = (0.0, 0.0, 1.0);
+        self.emma_eye = (0.0, 0.0, 1080.0);
         self.emma_prep_s = false;
         self.emma_exec_s = false;
         self.emma_next_loc = None;
@@ -12429,12 +12429,17 @@ impl Engine {
         for t in due {
             let n = self.feat_seq;
             self.feat_seq += 1;
+            // `add-text-to-exp-window` places a text item relative to the
+            // window, and the visicon uses absolute screen coordinates:
+            // `screen-x = window-x + text-x + 5`, `screen-y = window-y +
+            // text-y + 6` (verified against SBCL). The test-model windows
+            // use the default origin (300, 300), so the offset is 305/306.
             self.features.push(Feature {
                 name: format!("VISUAL-LOCATION{n}"),
                 kind: "TEXT".to_string(),
                 value: t.text.clone(),
-                x: t.x,
-                y: t.y,
+                x: t.x + 305,
+                y: t.y + 306,
                 width: 0,
                 height: 0,
                 extra: Vec::new(),
