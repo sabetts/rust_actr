@@ -2479,3 +2479,24 @@ named `VISUAL-LOCATION1` instead of `VISUAL-LOCATION0`. Regenerating the
 sidecar (with the groups) fixed the naming. The spec still needs the
 production-compilation rendering to match (the composed production's LHS
 takes the post-state `stimulus-read` instead of the first firing's `start`).
+
+## 168. Visicon naming order; sperling's RNG gap
+
+`VISUAL-LOCATION{n}` names follow the order the environment returns window
+items, which is column-major `(screen-x, screen-y)` rather than the order
+the items were added. In `sperling` the 12 letters are added
+`V N T Z / C R Y K / W J G F` but the names run `V C W N R J T Y G Z K F`
+as `0..11`; the attended rows' ids (`1 3 2 0 4 1`) only line up with the
+column-major naming. `proc_display` now sorts each wave by `(x, y)` first.
+
+`stuff-visloc-buffer` (`vision.lisp:1978`) then sorts the max-tstamp objects
+by `symbol-name` before `random-item`, so `newest_feature`'s name sort is
+correct (restored).
+
+`sperling` still mismatches: its first auto-stuffed location should be
+`VISUAL-LOCATION1` (the reference's first `random-item` draw is 1), but the
+standard MT19937 seeded `(100 0)` gives `random 12` = 6 first, and the
+reference's later ids don't appear anywhere in that draw stream — ACT-R
+consumes draws somewhere the engine does not (the model's own `:seed` may
+also be applied at a different point). The trace body otherwise depends on
+this draw, so the spec needs that alignment plus the audio module.

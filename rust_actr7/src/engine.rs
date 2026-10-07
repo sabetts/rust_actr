@@ -13706,6 +13706,11 @@ impl Engine {
                 }
             }
         }
+        // The environment returns window items column-major, so the
+        // `VISUAL-LOCATION{n}` names follow `(screen-x, screen-y)` order
+        // (verified against `sperling`: the input order `V N T Z / C R Y K /
+        // W J G F` names `V C W N R J T Y G Z K F` as `0..11`).
+        due.sort_by_key(|t| (t.x, t.y));
         for t in due {
             let n = self.feat_seq;
             self.feat_seq += 1;
@@ -14063,6 +14068,10 @@ impl Engine {
 
     fn newest_feature(&mut self) -> Option<Feature> {
         let top = self.features.iter().map(|f| f.tstamp_ms).max()?;
+        // The visicon keeps entries in creation order (window items
+        // column-major), but `stuff-visloc-buffer` (`vision.lisp:1978`)
+        // sorts the max-tstamp objects by symbol name before
+        // `random-item`.
         let mut names: Vec<String> = self
             .features
             .iter()
