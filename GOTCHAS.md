@@ -2528,3 +2528,20 @@ defines `set-testing-traces` as a no-op if the harness did not.
 This makes `paired`'s `:act` activation blocks (and their `No matching chunk
 found retrieval failure` line) and the run-2/3 production-compilation blocks
 appear, matching the reference.
+
+## 171. `sdm` and the declarative-memory dump
+
+`paired` calls `(sdm isa pair)` between tasks, which prints the DM chunks
+matching the spec (`commands/dm-commands.lisp:491`); `isa pair` matches the
+`isa chunk` goals too, so the whole DM is printed. The extractor wraps
+`sdm-fct` (the `sdm` macro expands to it) into a `(:SDM isa pair)` step and
+`Engine::print_sdm` renders `self.dm` with the same `pprint-a-chunk` helper
+`buffer-chunk` uses.
+
+The reference's DM holds the merged buffer chunks first
+(`IMAGINAL-CHUNK0-0`, `VISUAL-CHUNK0-{0,1}`, `VISUAL-LOCATION0-0`,
+`VISUAL-LOCATION1-0`) then the goal chunks (`START` … `READ-STUDY-ITEM`). The
+engine's DM currently holds only the imaginal/visual merges (the location
+buffer is not a merge source) and the merged visual objects keep the buffer
+copy name (`VISUAL-CHUNK0`) rather than `VISUAL-CHUNK0-{k}`, and the `add-dm`
+goals are absent — so the dump content/order still differs.

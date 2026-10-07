@@ -209,6 +209,14 @@ disable/enable, breakpoints); not trace-only drivers.")
       (let ((r (sgp-fct (list :v))))
         (if (consp r) (and (first r) t) (and r t))))))
 
+(defun w-sdm (spec)
+  ;; `sdm` (`commands/dm-commands.lisp:484`): the stub calls
+  ;; `(sdm isa pair)` between tasks to print the matching DM chunks; record
+  ;; the spec so the engine can reproduce the dump.
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*))
+    (push (list* :sdm spec) *steps*))
+  (call-orig 'sdm-fct spec))
+
 (defun w-act-r-random (limit)
   ;; `act-r-random` (`random.lisp:482`): the task's own draws (e.g.
   ;; `permute-list` in `paired-task`) happen outside a run; count them so a
@@ -419,6 +427,7 @@ disable/enable, breakpoints); not trace-only drivers.")
 
 (defun install-wrappers ()
   (wrap-fn 'act-r-random #'w-act-r-random)
+  (wrap-fn 'sdm-fct #'w-sdm)
   (wrap-fn 'run #'w-run)
   (wrap-fn 'run-full-time #'w-run-full-time)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)

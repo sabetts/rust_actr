@@ -245,6 +245,17 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 Some(n) if n >= 0 => steps.push(Step::ConsumeRng(n as u64)),
                 other => note(&mut unsupported, format!("consume-rng {other:?}")),
             },
+            ":SDM" => {
+                let args: Vec<String> = v[1..]
+                    .iter()
+                    .map(|s| match s {
+                        Sexp::Sym(x) => x.clone(),
+                        Sexp::Str(x) => x.clone(),
+                        other => format!("{other:?}"),
+                    })
+                    .collect();
+                steps.push(Step::Sdm(args));
+            }
             ":PDISABLE" | ":PENABLE" => {
                 let names: Vec<String> = v[1..]
                     .iter()

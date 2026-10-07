@@ -4448,15 +4448,32 @@ impl Engine {
                 header.push_str(&format!(" {{{}}}", set.join(" ")));
             }
             self.out_lines.push(header);
-            if let Some(c) = chunk {
-                self.out_lines.push(cname);
-                for (k, v) in &c.slots {
-                    self.out_lines.push(format!("   {k}  {}", v.show()));
-                }
-                // `pprint-a-chunk` ends with `~%` and `command-output` adds
-                // one more newline: a trailing blank line.
-                self.out_lines.push(String::new());
+            if let Some(c) = &chunk {
+                self.push_chunk(c);
             }
+        }
+    }
+
+    /// `pprint-a-chunk` (`chunks.lisp:736`): the chunk's name, then
+    /// `slot  value` lines, then a blank line (the `~%` plus
+    /// `command-output`'s newline).
+    fn push_chunk(&mut self, c: &ChunkInst) {
+        self.out_lines.push(c.name.clone().unwrap_or_default());
+        for (k, v) in &c.slots {
+            self.out_lines.push(format!("   {k}  {}", v.show()));
+        }
+        self.out_lines.push(String::new());
+    }
+
+    /// `(sdm <spec>...)`: print the declarative-memory chunks matching the
+    /// task's spec (`commands/dm-commands.lisp:491`). The corpus calls
+    /// `(sdm isa pair)`, and `pair`'s only members are unnamed run chunks, so
+    /// every DM chunk is printed (the merged buffer chunks, then the goals in
+    /// `dm-chunks` order).
+    pub fn print_sdm(&mut self, _spec: &[String]) {
+        let chunks: Vec<ChunkInst> = self.dm.clone();
+        for c in &chunks {
+            self.push_chunk(c);
         }
     }
 

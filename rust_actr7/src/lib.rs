@@ -206,6 +206,9 @@ pub enum Step {
     /// Consume `n` draws from the random stream (the task's setup draws
     /// between runs, which the engine does not otherwise execute).
     ConsumeRng(u64),
+    /// `(sdm <spec>...)`: print the declarative-memory chunks matching the
+    /// task's spec (`commands/dm-commands.lisp:491`).
+    Sdm(Vec<String>),
     /// `(sgp :trace-detail X)`.
     SetDetail(trace::Detail),
     /// `(sgp :key value)` for any other parameter (applied at run time).
@@ -312,6 +315,7 @@ pub fn run_model_steps(
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
+            Step::Sdm(spec) => eng.print_sdm(spec),
             Step::SetDetail(d) => eng.set_detail(*d),
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
