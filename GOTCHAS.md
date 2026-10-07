@@ -2420,3 +2420,43 @@ two specs in progress (regenerated, not enabled).
 
 
 
+
+## 166. Vision tracking (`start-tracking`/`update-tracking-mth`)
+
+`tracking-test` exercises the vision module's object tracking: a production
+requests `+visual> isa start-tracking`, and every time the tracked text moves
+(`modify-text-for-exp-window`, driven by the model's `!eval!
+(schedule-event-relative … 'move-it)`) the vision buffers are re-synced.
+
+Several non-obvious details:
+
+- A `+visual>` request's command is its **chunk-type** (`isa
+  move-attention`/`isa start-tracking`), not a `cmd` slot; `visual_request`
+  now reads the ctype (a `cmd` slot still overrides).
+- `start-tracking` is scheduled at priority 0 so the request rule's implicit
+  `clear-buffer visual` (priority 10) lands first; the module then stays
+  `:exec BUSY` (`?visual> state free` fails while tracking).
+- `update-tracking-mth` (`vision.lisp:2706`) branches on which vision buffers
+  hold the tracked chunks; `set-vis-loc` is priority 15, `set-vis-obj` 14,
+  `update-tracking-loc-chunk` 13 (silent), so the location lands first.
+- `convert-loc-to-object` builds a **fresh** object chunk every update, so
+  the `TEXT{n}` counter advances even when the chunk is only used for a
+  modification (`TEXT0`, `TEXT1`, `TEXT2`, `TEXT5`, `TEXT8` in the ref).
+- The visual buffers hold copies: the location chunk is `VISUAL-LOCATION0-{k}`
+  (`chunk-copied-from-fct` = the feature base, printed `[VISUAL-LOCATION0]`),
+  the object is always `VISUAL-CHUNK0`. `mod-buffer-chunk` clears the
+  `copied-from`, and `@visual> vo-1` copies (`VISUAL-CHUNK0 [VO-1]`), which is
+  how `update-tracking-mth`'s `vis-obj-marker` test tells a tracked object
+  from an overwritten one. `@visual-location> vl-1` copies to `VL-1-{k}`.
+- `simple-size` (`vision.lisp:3698`) is `0.01 * round(angle(w)*angle(h)/0.01)`
+  in single-float, `angle(px) = 2*atan(px/2, 1080)` in degrees; CL `round`
+  returns the integer quotient (so `7×10 → 0.19999999`, `28×10 →
+  0.78999996`).
+- A visual-object chunk's `VALUE` slot is the text; a visual-**location**
+  chunk's `VALUE` is the *kind* (`TEXT`). `screen-x/y`, `height`, `width`,
+  `distance` are integers.
+
+The task's `move-it` is scheduled by the model, so its window effect is
+replayed from a captured `(MODIFY-TEXT ms text x y)` device op; `!eval!`
+`incf`/`modify-text-for-exp-window` are no-ops, and `!eval! (buffer-chunk …)`
+runs in source order (after `!output!`).

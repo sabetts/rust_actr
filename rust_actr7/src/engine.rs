@@ -1424,6 +1424,10 @@ enum Event {
     MoveAttention {
         loc: String,
     },
+    /// `start-tracking` (`vision.lisp:2665`): begin tracking the currently
+    /// attended object (scheduled so the request rule's implicit
+    /// clear-buffer lands first).
+    StartTracking,
     /// Imaginal request delay elapsed: free the module and place the chunk.
     ImaginalDone {
         spec: NewChunk,
@@ -1829,12 +1833,23 @@ pub struct Engine {
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
+    /// Visual-location copy name -> the chunk it was copied from
+    /// (`chunk-copied-from-fct`), printed as `[source]` by `buffer-chunk`.
+    vl_copied_from: HashMap<String, String>,
     /// Visual-object names per kind: KIND -> objects so far.
     obj_built: HashMap<String, u64>,
+    /// Visual-object chunk name → the visicon feature it was encoded from
+    /// (`chunk-visicon-entry`), for tracking's `vis-obj-marker` test.
+    obj_feature: HashMap<String, String>,
     visual_busy: bool,
     /// Location copy named in the last `move-attention`, re-encoded when
     /// the window changes underneath it.
     last_attention: Option<String>,
+    /// Vision tracking (`start-tracking`/`update-tracking-mth`,
+    /// `vision.lisp:2665`): the visicon feature being tracked and the
+    /// location chunk that last held it (`tracked-obj-lastloc`).
+    tracked: Option<String>,
+    tracked_lastloc: Option<String>,
     /// EMMA `current-marker`: the eye position as a 3-vector (default
     /// `#(0 0 1)`, `emma.lisp:386`).
     emma_eye: (f32, f32, f32),
@@ -2080,9 +2095,13 @@ impl Engine {
             audio_events: 0,
             name_count: HashMap::new(),
             vl_copies: HashMap::new(),
+            vl_copied_from: HashMap::new(),
             obj_built: HashMap::new(),
+            obj_feature: HashMap::new(),
             visual_busy: false,
             last_attention: None,
+            tracked: None,
+            tracked_lastloc: None,
             emma_eye: (0.0, 0.0, 1080.0),
             emma_prep_s: false,
             emma_exec_s: false,
@@ -2414,14 +2433,18 @@ impl Engine {
         self.audio_events = 0;
         self.name_count.clear();
         self.vl_copies.clear();
+        self.vl_copied_from.clear();
         self.vl_xy.clear();
         self.trackers.clear();
         self.tracker_gen = 0;
         self.tracker_task = false;
         self.tracker_feature = None;
         self.obj_built.clear();
+        self.obj_feature.clear();
         self.visual_busy = false;
         self.last_attention = None;
+        self.tracked = None;
+        self.tracked_lastloc = None;
         self.emma_eye = (0.0, 0.0, 1080.0);
         self.emma_prep_s = false;
         self.emma_exec_s = false;
@@ -4411,6 +4434,10 @@ impl Engine {
                 .and_then(|c| c.name.clone())
                 .unwrap_or_default();
             let mut header = format!("{bname}: {cname} ");
+            if let Some(src) = self.vl_copied_from.get(&cname) {
+                // `~@[[~s]~]` (`chunk-copied-from-fct`): the source chunk.
+                header.push_str(&format!("[{src}]"));
+            }
             if self.cfg.threads && bname == "GOAL" {
                 // `hash-table-keys` (`misc-utils.lisp:657`) pushes while
                 // walking the goal m-buffer set; SBCL visits these small
@@ -4782,10 +4809,25 @@ impl Engine {
                 shown,
                 module,
             } => {
-                let inst = self.instantiate(&buffer, chunk)?;
+                let mut inst = self.instantiate(&buffer, chunk)?;
+                let source = shown.clone().unwrap_or_else(|| inst.show());
+                if buffer == "VISUAL" {
+                    // The VISUAL buffer holds a `VISUAL-CHUNK0` copy of the
+                    // overwritten chunk (`chunk-copied-from-fct`), so
+                    // `buffer-chunk` prints `VISUAL-CHUNK0 [SOURCE]`.
+                    self.vl_copied_from
+                        .insert("VISUAL-CHUNK0".to_string(), source.clone());
+                    inst.name = Some("VISUAL-CHUNK0".to_string());
+                } else if buffer == "VISUAL-LOCATION" {
+                    // `@visual-location> vl-1` copies into `VL-1-{k}`.
+                    let n = *self.copy_count.entry(source.clone()).or_insert(0);
+                    self.copy_count.insert(source.clone(), n + 1);
+                    let copy = format!("{source}-{n}");
+                    self.vl_copied_from.insert(copy.clone(), source.clone());
+                    inst.name = Some(copy);
+                }
                 if show {
-                    let text = shown.unwrap_or_else(|| inst.show());
-                    let mut details = format!("OVERWRITE-BUFFER-CHUNK {buffer} {text}");
+                    let mut details = format!("OVERWRITE-BUFFER-CHUNK {buffer} {source}");
                     if !requested {
                         details.push_str(" NIL");
                     }
@@ -5329,6 +5371,25 @@ impl Engine {
                         shown: None,
                     },
                 );
+            }
+            Event::StartTracking => {
+                if show {
+                    self.emit("VISION", "START-TRACKING".into());
+                }
+                let feat = self
+                    .last_attention
+                    .as_ref()
+                    .and_then(|loc| self.resolve_loc(loc).ok())
+                    .map(|i| self.features[i].name.clone());
+                if let Some(name) = feat {
+                    self.tracked = Some(name);
+                    self.tracked_lastloc = None;
+                    // `change-state :exec 'BUSY` (`vision.lisp:2677`): the
+                    // vision module stays busy while tracking, so
+                    // `?visual> state free` fails.
+                    self.visual_busy = true;
+                    self.update_tracking(false);
+                }
             }
             Event::MoveAttention { loc } => {
                 if show {
@@ -6472,6 +6533,17 @@ impl Engine {
                     // (the arguments reference task globals the engine does
                     // not model).
                     "INCF" | "MODIFY-TEXT-FOR-EXP-WINDOW" => {
+                        return Ok(Value::Nil);
+                    }
+                    // `(buffer-chunk <buffer> …)`: a model-body call prints
+                    // the command-layer buffer dump (`tracking-test`'s
+                    // `report` production). Buffer names are symbols.
+                    "BUFFER-CHUNK" => {
+                        let names: Vec<String> = items[1..]
+                            .iter()
+                            .filter_map(|a| a.as_sym().map(|s| s.to_string()))
+                            .collect();
+                        self.print_buffer_chunk(&names);
                         return Ok(Value::Nil);
                     }
                     "SCHEDULE-EVENT-RELATIVE" | "SCHEDULE-EVENT" => {
@@ -7699,7 +7771,14 @@ impl Engine {
         }
         for action in &prod.rhs {
             if let RhsAction::Eval { value, safe } = action {
-                if let Err(e) = self.eval_expr(value, &b) {
+                // `(buffer-chunk <buffer> …)` runs in source order (after
+                // `!output!`); see the action loop below.
+                if let Sexp::List(items) = value {
+                    if items.first().and_then(|x| x.as_sym()) == Some("BUFFER-CHUNK") {
+                        continue;
+                    }
+                }
+                if let Err(e) = self.m_eval(value, &b) {
                     if !*safe {
                         return Err(unimpl(format!("!EVAL! {e}")));
                     }
@@ -7844,9 +7923,22 @@ impl Engine {
                         },
                     );
                 }
+                // `(buffer-chunk <buffer> …)`: a model-body `!eval!` prints
+                // the command-layer buffer dump (`tracking-test`'s `report`
+                // production) in source order; buffer names are symbols.
+                RhsAction::Eval { value, .. } => {
+                    if let Sexp::List(items) = value {
+                        if items.first().and_then(|x| x.as_sym()) == Some("BUFFER-CHUNK") {
+                            let names: Vec<String> = items[1..]
+                                .iter()
+                                .filter_map(|a| a.as_sym().map(|s| s.to_string()))
+                                .collect();
+                            self.print_buffer_chunk(&names);
+                        }
+                    }
+                }
                 RhsAction::Output { .. }
                 | RhsAction::Other { .. }
-                | RhsAction::Eval { .. }
                 | RhsAction::Bind { .. }
                 | RhsAction::MvBind { .. } => {}
             }
@@ -11069,11 +11161,10 @@ impl Engine {
     /// Device request routing for the visual buffer: only
     /// move-attention in M5a (plus finst assignment later).
     fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
-        let (slots, ctype_ok) = match &spec {
-            NewChunk::Spec { ctype, slots, .. } => (slots.clone(), ctype.is_empty()),
+        let (slots, ctype) = match &spec {
+            NewChunk::Spec { ctype, slots, .. } => (slots.clone(), ctype.clone()),
             _ => return Err(unimpl("non-spec visual request")),
         };
-        let _ = ctype_ok;
         let mut cmd: Option<String> = None;
         let mut screen_pos: Option<String> = None;
         let mut scale: Option<String> = None;
@@ -11087,8 +11178,15 @@ impl Engine {
                 }
             }
         }
-        match cmd.as_deref() {
-            Some("MOVE-ATTENTION") => {
+        // A `+visual>` request's command is its chunk-type (`isa
+        // move-attention` / `isa start-tracking`), with a `cmd` slot
+        // overriding it.
+        let command = cmd
+            .clone()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| ctype.clone());
+        match command.as_str() {
+            "MOVE-ATTENTION" => {
                 let loc = screen_pos
                     .ok_or_else(|| bad("move-attention without screen-pos".to_string()))?;
                 if !self.loc_known(&loc) {
@@ -11101,8 +11199,16 @@ impl Engine {
             // `+visual> cmd clear`: direct clear event (output low);
             // the buffer itself is cleared by the request-rule implicit
             // ClearBuffer already queued at firing.
-            Some("CLEAR") => {
+            "CLEAR" => {
                 self.now(Prio::Num(0), Out::Low, Event::VisualClear);
+                Ok(())
+            }
+            // `start-tracking` (`vision.lisp:2665`): begin tracking the
+            // currently attended object; `update-tracking-mth` then stuffs
+            // the vision buffers. Scheduled so the request rule's implicit
+            // clear-buffer lands first.
+            "START-TRACKING" => {
+                self.now(Prio::Num(0), Out::Always, Event::StartTracking);
                 Ok(())
             }
             got => Err(unimpl(format!("visual command {got:?}"))),
@@ -13589,8 +13695,10 @@ impl Engine {
                 value: t.text.clone(),
                 x: t.x + 305,
                 y: t.y + 306,
-                width: 0,
-                height: 0,
+                // Font metrics: 7 px per character, 10 px tall (verified
+                // against the `buffer-chunk` dumps in `paired`/`tracking-test`).
+                width: 7 * t.text.chars().count() as i64,
+                height: 10,
                 extra: Vec::new(),
                 tstamp_ms: now,
                 attended: false,
@@ -13601,11 +13709,16 @@ impl Engine {
             .get("VISUAL-LOCATION")
             .and_then(|b| b.chunk.as_ref())
             .is_none();
-        if empty {
+        if empty && self.tracked.is_none() {
             if let Some(feat) = self.newest_feature() {
                 let base = feat.name.clone();
                 self.place_vl(&base, false)?;
             }
+        }
+        // Tracking re-syncs the vision buffers to the moved object
+        // (`update-tracking-mth`) before the visicon update is announced.
+        if self.tracked.is_some() {
+            self.update_tracking(true);
         }
         self.now(Prio::Num(0), Out::Medium, Event::VisiconUpdate);
         // Schedule the next wave for remaining texts, moves or clears.
@@ -13629,6 +13742,10 @@ impl Engine {
     /// requested base name, but the buffer holds a `-k` copy (which is
     /// what later requests bind). Aliased back to the feature.
     fn place_vl(&mut self, base: &str, requested: bool) -> Result<(), EngineError> {
+        self.place_vl_at(base, requested, 10)
+    }
+
+    fn place_vl_at(&mut self, base: &str, requested: bool, prio: i64) -> Result<(), EngineError> {
         let idx = self
             .features
             .iter()
@@ -13642,6 +13759,7 @@ impl Engine {
         self.copy_count.insert(base.to_string(), n + 1);
         let copy = format!("{base}-{n}");
         self.vl_copies.insert(copy.clone(), idx);
+        self.vl_copied_from.insert(copy.clone(), base.to_string());
         self.vl_xy.insert(copy.clone(), (feat.x, feat.y));
         let inst = ChunkInst {
             name: Some(copy.clone()),
@@ -13652,7 +13770,7 @@ impl Engine {
         self.buffer_mut("VISUAL-LOCATION").failed = false;
         self.buffer_mut("VISUAL-LOCATION").modified = false;
         self.now(
-            Prio::Num(10),
+            Prio::Num(prio),
             Out::Low,
             Event::SetBuffer {
                 buffer: "VISUAL-LOCATION".to_string(),
@@ -13680,6 +13798,242 @@ impl Engine {
             }
         }
         Ok(())
+    }
+
+    /// The feature name a visual-location copy aliases (`chunk-visicon-entry`).
+    fn loc_feature(&self, copy: &str) -> Option<String> {
+        self.vl_copies
+            .get(copy)
+            .map(|&i| self.features[i].name.clone())
+    }
+
+    /// The source chunk a visual-buffer copy was made from
+    /// (`chunk-copied-from-fct`), for the `vis-obj-marker` test: the
+    /// `VISUAL-CHUNK0` copy of `VO-1` is not the tracked object.
+    fn obj_source(&self, name: &str) -> String {
+        self.vl_copied_from
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| name.to_string())
+    }
+
+    /// `convert-loc-to-object`: build a fresh visual-object chunk for the
+    /// tracked feature. The object counter advances on every tracking
+    /// update even when the chunk is only used for a modification
+    /// (`vision.lisp:2762`).
+    fn convert_loc_to_object(&mut self, feat: &Feature) -> ChunkInst {
+        let k = self.obj_built.entry(feat.kind.clone()).or_insert(0);
+        let name = format!("{}{}", feat.kind, *k);
+        *k += 1;
+        self.obj_feature
+            .insert(name.clone(), feat.name.clone());
+        self.obj_feature
+            .insert("VISUAL-CHUNK0".to_string(), feat.name.clone());
+        let pos = self
+            .buffers
+            .get("VISUAL-LOCATION")
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.clone())
+            .unwrap_or_else(|| feat.name.clone());
+        ChunkInst {
+            name: Some(name),
+            ctype: "VISUAL-OBJECT".to_string(),
+            slots: Self::object_slots(feat, &pos),
+            bare: false,
+        }
+    }
+
+    /// The visual-object chunk slots (`SCREEN-POS`, `VALUE`, `COLOR`,
+    /// `HEIGHT`, `WIDTH`, `TEXT`).
+    fn object_slots(feat: &Feature, screen_pos: &str) -> Vec<(String, Value)> {
+        vec![
+            ("SCREEN-POS".to_string(), Value::Sym(screen_pos.to_string())),
+            ("VALUE".to_string(), Value::Str(feat.value.clone())),
+            ("COLOR".to_string(), Value::Sym("BLACK".to_string())),
+            ("HEIGHT".to_string(), Value::Int(feat.height)),
+            ("WIDTH".to_string(), Value::Int(feat.width)),
+            ("TEXT".to_string(), Value::Sym("T".to_string())),
+        ]
+    }
+
+    /// `set-vis-loc`: stuff the tracked object's location chunk.
+    fn track_set_vis_loc(&mut self, feature: &str) {
+        let _ = self.place_vl_at(feature, false, 15);
+    }
+
+    /// `mod-vis-loc`: refresh the location chunk in place. A modified chunk
+    /// is no longer a copy (`chunk-copied-from-fct` clears).
+    fn track_mod_vis_loc(&mut self, feature: &str) {
+        if let Some(cur) = self
+            .buffers
+            .get("VISUAL-LOCATION")
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.clone())
+        {
+            self.vl_copied_from.remove(&cur);
+        }
+        if let Some(f) = self.features.iter().find(|f| f.name == feature).cloned() {
+            self.now(
+                Prio::Num(15),
+                Out::Always,
+                Event::ModBuffer {
+                    buffer: "VISUAL-LOCATION".to_string(),
+                    slots: vec![
+                        ("SCREEN-X".to_string(), Value::Int(f.x)),
+                        ("SCREEN-Y".to_string(), Value::Int(f.y)),
+                    ],
+                    module: "VISION".to_string(),
+                },
+            );
+        }
+    }
+
+    /// The copy name `place_vl_at` will use for `base` next.
+    fn next_vl_copy(&self, base: &str) -> String {
+        format!("{base}-{}", *self.copy_count.get(base).unwrap_or(&0))
+    }
+
+    /// `set-vis-obj`: stuff the fresh object into the visual buffer at the
+    /// location chunk `pos`. The buffer holds a `VISUAL-CHUNK0` copy; the
+    /// trace shows the source object name. `copy` marks the `(null
+    /// vis-obj-chunk)` branch, which copies (`chunk-copied-from-fct`).
+    fn track_set_vis_obj(&mut self, obj: &ChunkInst, pos: &str, copy: bool) {
+        let source = obj.name.clone().unwrap_or_default();
+        let mut obj = obj.clone();
+        obj.name = Some("VISUAL-CHUNK0".to_string());
+        if let Some((_, v)) = obj.slots.iter_mut().find(|(k, _)| k == "SCREEN-POS") {
+            *v = Value::Sym(pos.to_string());
+        }
+        if copy {
+            self.vl_copied_from
+                .insert("VISUAL-CHUNK0".to_string(), source.clone());
+        } else {
+            self.vl_copied_from.remove("VISUAL-CHUNK0");
+        }
+        self.now(
+            Prio::Num(14),
+            Out::Always,
+            Event::SetBuffer {
+                buffer: "VISUAL".to_string(),
+                chunk: NewChunk::Instance(obj),
+                requested: false,
+                shown: Some(source),
+            },
+        );
+    }
+
+    /// `mod-vis-obj`: refresh the object's `screen-pos`. A modified chunk is
+    /// no longer a copy (`chunk-copied-from-fct` clears).
+    fn track_mod_vis_obj(&mut self, pos: &str) {
+        self.vl_copied_from.remove("VISUAL-CHUNK0");
+        self.now(
+            Prio::Num(14),
+            Out::Always,
+            Event::ModBuffer {
+                buffer: "VISUAL".to_string(),
+                slots: vec![("SCREEN-POS".to_string(), Value::Sym(pos.to_string()))],
+                module: "VISION".to_string(),
+            },
+        );
+    }
+
+    /// `update-tracking-loc-chunk`: record the location chunk; `modify` also
+    /// refreshes the visual object's `screen-pos` (silently, `:output nil`).
+    fn track_update_loc(&mut self, modify: bool, pos: &str) {
+        self.tracked_lastloc = Some(pos.to_string());
+        if modify {
+            self.now(
+                Prio::Num(13),
+                Out::Never,
+                Event::ModBuffer {
+                    buffer: "VISUAL".to_string(),
+                    slots: vec![("SCREEN-POS".to_string(), Value::Sym(pos.to_string()))],
+                    module: "VISION".to_string(),
+                },
+            );
+        }
+    }
+
+    /// `tracking-failed`: the tracked object left the visicon; clear the
+    /// visual buffer and stop tracking.
+    fn tracking_failed(&mut self) {
+        self.tracked = None;
+        self.tracked_lastloc = None;
+        self.last_attention = None;
+        self.visual_busy = false;
+        self.now(Prio::Num(13), Out::Always, Event::VisualClear);
+        self.buffer_mut("VISUAL").failed = true;
+    }
+
+    /// `update-tracking-mth` (`vision.lisp:2706`): re-sync the vision
+    /// buffers to the tracked object's new position.
+    fn update_tracking(&mut self, _from_proc_display: bool) {
+        let Some(tracked) = self.tracked.clone() else {
+            return;
+        };
+        let Some(feat) = self.features.iter().find(|f| f.name == tracked).cloned() else {
+            self.tracking_failed();
+            return;
+        };
+        let new_obj = self.convert_loc_to_object(&feat);
+        let vis_loc = self
+            .buffers
+            .get("VISUAL-LOCATION")
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.clone());
+        let vis_obj = self
+            .buffers
+            .get("VISUAL")
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.clone());
+        let obj_marker = vis_obj
+            .as_ref()
+            .and_then(|n| self.obj_feature.get(&self.obj_source(n)).cloned());
+        let mut old_loc = self.tracked_lastloc.clone();
+        if old_loc.is_none() {
+            if let Some(vlc) = &vis_loc {
+                if self.loc_feature(vlc).as_deref() == Some(tracked.as_str()) {
+                    old_loc = Some(vlc.clone());
+                }
+            }
+        }
+        let loc_is_old = vis_loc.is_some() && vis_loc == old_loc;
+        let obj_is_tracked = obj_marker.as_deref() == Some(tracked.as_str());
+        // The location chunk the buffers hold after a `set-vis-loc`.
+        let stuffed = self.next_vl_copy(&tracked);
+        if vis_loc.is_none() && vis_obj.is_none() {
+            self.track_set_vis_loc(&tracked);
+            self.track_set_vis_obj(&new_obj, &stuffed, false);
+            self.track_update_loc(true, &stuffed);
+        } else if vis_loc.is_none() && obj_is_tracked {
+            self.track_set_vis_loc(&tracked);
+            self.track_mod_vis_obj(&stuffed);
+            self.track_update_loc(true, &stuffed);
+        } else if vis_loc.is_none() {
+            self.track_set_vis_loc(&tracked);
+            self.track_update_loc(false, &stuffed);
+        } else if loc_is_old && vis_obj.is_none() {
+            let loc = vis_loc.clone().unwrap();
+            self.track_mod_vis_loc(&tracked);
+            self.track_set_vis_obj(&new_obj, &loc, false);
+            self.track_update_loc(true, &loc);
+        } else if loc_is_old && obj_is_tracked {
+            let loc = vis_loc.clone().unwrap();
+            self.track_mod_vis_loc(&tracked);
+            self.track_mod_vis_obj(&loc);
+            self.track_update_loc(true, &loc);
+        } else if loc_is_old {
+            self.track_mod_vis_loc(&tracked);
+        } else if vis_obj.is_none() {
+            // The visual buffer holds a non-tracked location, so the object's
+            // `screen-pos` is the tracked feature's own chunk.
+            self.track_set_vis_obj(&new_obj, &tracked, true);
+        } else if obj_is_tracked {
+            // The visual buffer holds the tracked object but the location
+            // buffer holds some other chunk, so `screen-pos` is the tracked
+            // feature's own chunk.
+            self.track_mod_vis_obj(&tracked);
+        }
     }
 
     fn newest_feature(&mut self) -> Option<Feature> {
@@ -13762,18 +14116,26 @@ impl Engine {
         };
         let feat = self.features[idx].clone();
         let k = self.obj_built.entry(feat.kind.clone()).or_insert(0);
-        let name = format!("{}{}", feat.kind, *k);
+        let source = format!("{}{}", feat.kind, *k);
         *k += 1;
+        // The VISUAL buffer holds a `VISUAL-CHUNK{n}` copy; the trace shows
+        // the source object name (`TEXT{n}`).
+        self.obj_feature
+            .insert(source.clone(), feat.name.clone());
+        self.obj_feature
+            .insert("VISUAL-CHUNK0".to_string(), feat.name.clone());
         let inst = ChunkInst {
-            name: Some(name),
+            name: Some("VISUAL-CHUNK0".to_string()),
             ctype: "VISUAL-OBJECT".to_string(),
-            slots: vec![("VALUE".to_string(), Value::Str(feat.value.clone()))],
+            slots: Self::object_slots(&feat, &loc),
             bare: false,
         };
         if let Ok(idx) = self.resolve_loc(&loc) {
             self.features[idx].attended = true;
         }
         self.visual_busy = false;
+        // An encoded object is not a copy (no `chunk-copied-from-fct`).
+        self.vl_copied_from.remove("VISUAL-CHUNK0");
         self.now(
             Prio::Num(10),
             Out::Low,
@@ -13781,7 +14143,7 @@ impl Engine {
                 buffer: "VISUAL".to_string(),
                 chunk: NewChunk::Instance(inst),
                 requested,
-                shown: None,
+                shown: Some(source),
             },
         );
         Ok(())
@@ -13795,12 +14157,29 @@ impl Feature {
     fn loc_slots(&self) -> Vec<(String, Value)> {
         let mut v = vec![
             ("KIND".to_string(), Value::Sym(self.kind.clone())),
-            ("VALUE".to_string(), Value::Str(self.value.clone())),
-            ("SCREEN-X".to_string(), Value::Num(self.x as f64)),
-            ("SCREEN-Y".to_string(), Value::Num(self.y as f64)),
+            ("VALUE".to_string(), Value::Sym(self.kind.clone())),
+            ("COLOR".to_string(), Value::Sym("BLACK".to_string())),
+            ("HEIGHT".to_string(), Value::Int(self.height)),
+            ("WIDTH".to_string(), Value::Int(self.width)),
+            ("SCREEN-X".to_string(), Value::Int(self.x)),
+            ("SCREEN-Y".to_string(), Value::Int(self.y)),
+            ("DISTANCE".to_string(), Value::Int(1080)),
+            // `simple-size` (`vision.lisp:3698`): pixels→angle product,
+            // rounded to 0.01.
+            ("SIZE".to_string(), Value::Num(self.size())),
         ];
         v.extend(self.extra.iter().cloned());
         v
+    }
+
+    /// `simple-size` (`vision.lisp:3698`): `0.01 * round(angle(w) *
+    /// angle(h) / 0.01)`, with `angle(px) = 2*atan(px/2, 1080)` in degrees
+    /// and single-float arithmetic (`round` returns the integer quotient).
+    fn size(&self) -> f64 {
+        let ang = |px: i64| (2.0 * ((px as f64) / 2.0 / 1080.0).atan()).to_degrees();
+        let prod = ang(self.width) * ang(self.height);
+        let q = (prod / 0.01).round();
+        (0.01f32 * q as f32) as f64
     }
 }
 

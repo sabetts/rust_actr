@@ -1,62 +1,63 @@
-# ACT-R test-models: specs that must pass under `cargo test`.
-# One test name per line (matches golden/test-models/specs/<name>.spec).
-# Grow this list with:
-#   cargo test --test test_models probe_runnable -- --ignored --nocapture
 #
-# Trace-only drivers the engine can reproduce (single- and multi-run).
+# ACT-R test-models: specs that must pass under `cargo test`.
+act-touch
 addition
+associative-learning
+bind-test
+blending
+buffer-queries
+#   cargo test --test test_models probe_runnable -- --ignored --nocapture
 count
+demo2
+demo2-randomized
+dynamic-production-compilation-tests
+dynamic-real-time
+dynamic-slot-compilation
+emma
+grouped
+# Grow this list with:
+indirect-action-compilation
+merging-test
+# One test name per line (matches golden/test-models/specs/<name>.spec).
+ppm-compilation
+precondition-test
+remote-bind-test
+retain-indirect-retrievals
+retrieval-request-parameters
 semantic
-tutorial-unit1-count-trace
-tutorial-unit1-semantic-g1-trace
-tutorial-unit1-tutor-model-trace
+semantic-dynamic
+simple-ppm-test
+sji-merge
+test-bad-productions
+test-mp-value-req-param
+test-temporal
+# Trace-only drivers the engine can reproduce (single- and multi-run).
+tracker
+tracking-test
 tutorial-unit1code-tutor-model-high-trace
 tutorial-unit1code-tutor-model-low-trace
+tutorial-unit1-count-trace
+tutorial-unit1-semantic-g1-trace
+tutorial-unit1-tutor-model-partial-trace
+tutorial-unit1-tutor-model-trace
+tutorial-unit3modeling-v2-run
+tutorial-unit4-paired-trace
 tutorial-unit5modeling-first-run
 tutorial-unit5modeling-v1-run
 tutorial-unit5modeling-v2-first-run
 tutorial-unit5modeling-v2-longer-run
-tutorial-unit5modeling-v4-p3-run
-tutorial-unit5modeling-v6-run-p3
-sji-merge
-buffer-queries
-blending
-tutorial-unit8-simple-ppm-model-initial-run
-tutorial-unit8-simple-ppm-model-ppm-run
-tutorial-unit8-simple-ppm-model-medium-chosen-run
-simple-ppm-test
-ppm-compilation
-semantic-dynamic
-merging-test
-indirect-action-compilation
-dynamic-slot-compilation
-bind-test
-remote-bind-test
-tutorial-unit5modeling-v6-p4-run-with-mp-2
 tutorial-unit5modeling-v3-first-run
-demo2
+tutorial-unit5modeling-v4-p3-run
+tutorial-unit5modeling-v6-p4-run-with-mp-2
+tutorial-unit5modeling-v6-run-p3
+tutorial-unit7modeling-pcomp-issues-v2-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial
 tutorial-unit7modeling-ul-issues-first-run
 tutorial-unit7modeling-ul-issues-first-run-with-ult
 tutorial-unit7modeling-ul-issues-second-run
-test-temporal
-demo2-randomized
-retain-indirect-retrievals
-grouped
-z-threads
-dynamic-real-time
-act-touch
-tracker
-zz-extended-motor-actions
-associative-learning
-test-mp-value-req-param
-test-bad-productions
-emma
-precondition-test
-tutorial-unit1-tutor-model-partial-trace
-retrieval-request-parameters
 tutorial-unit7modeling-ul-issues-v1-first-run
-tutorial-unit7modeling-pcomp-issues-v2-one-trial
-tutorial-unit7modeling-pcomp-issues-v4-one-trial
-tutorial-unit3modeling-v2-run
-tutorial-unit4-paired-trace
-dynamic-production-compilation-tests
+tutorial-unit8-simple-ppm-model-initial-run
+tutorial-unit8-simple-ppm-model-medium-chosen-run
+tutorial-unit8-simple-ppm-model-ppm-run
+z-threads
+zz-extended-motor-actions
