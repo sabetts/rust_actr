@@ -2677,3 +2677,16 @@ variable bound by the *same* buffer in both productions (e.g. `=c` in
 `=goal>`) is the same variable and must not be renamed. `paired-learning`'s
 composed-LHS values now match (diff 274→260 hunks); the composed RHS slot
 *order* (`state` before `step`) and the other categories remain.
+
+## 181. Composed-production slot order comes from the standard rep
+
+`compose-productions` receives each production's *standard rep*
+(`production-standard-rep-sides`, `production-compilation.lisp:2074`), whose
+slots are `stable-sort`ed by `sort-production-slots` (:1976, op then name).
+`buffer+-union`/`buffer=-union` (`:2295`/`2316`) then do
+`(append a1-remain a2)` — p1's sorted slots (minus those matching p2's) then
+p2's sorted slots. The engine had preserved source order, so a composed
+`=goal> step attending state =state` printed `step` before `state` instead of
+the reference's `state … step …`. Sorting each side before concatenating
+matches. (`retain-indirect-retrievals`' earlier breakage was the
+`rename-variables` over-rename, not this sort.)

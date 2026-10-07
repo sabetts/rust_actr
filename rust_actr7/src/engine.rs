@@ -8977,14 +8977,20 @@ impl Engine {
             // self-composition like `G2 & G2` matches `G2`.
             let has_eq1 = !acts_for(&p1_acts, buf, &['=']).is_empty();
             let has_eq2 = !acts_for(&p2_acts, buf, &['=']).is_empty();
-            let eq1: Vec<_> = acts_for(&p1_acts, buf, &['='])
+            // The composed slots come from each production's *standard rep*,
+            // whose slots are sorted (`sort-production-slots`,
+            // `production-compilation.lisp:1976`), so sort each side before
+            // concatenating (`buffer+-union`'s `(append a1-remain a2)`).
+            let mut eq1: Vec<_> = acts_for(&p1_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            let eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
+            eq1.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
+            eq2.sort_by(|a, b| a.0.cmp(&b.0));
             if has_eq1 || has_eq2 {
                 let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
                 let mut slots: Vec<(String, SlotVal)> =
@@ -8993,14 +8999,16 @@ impl Engine {
                 rhs.push((format!("={buf}>"), sv(slots)));
             }
             // `*` modify-request union.
-            let st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
+            let mut st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            let st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
+            st1.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
+            st2.sort_by(|a, b| a.0.cmp(&b.0));
             if !st1.is_empty() || !st2.is_empty() {
                 let names2: Vec<String> = st2.iter().map(|(n, _)| n.clone()).collect();
                 let mut slots: Vec<(String, SlotVal)> =
