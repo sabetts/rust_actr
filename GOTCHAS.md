@@ -2598,3 +2598,22 @@ objects, `VISUAL-CHUNK0-0`/`-1`, even though four are encoded across the two
 identical trials). The enabled suite is unaffected.
 
 With this, `paired`'s `sdm` blocks match; only the buffer-trace table remains.
+
+## 176. The BOLD demand table
+
+`paired` ends with `(predict-bold-response)`, whose table (`time GOAL …`) is
+the BOLD haemodynamic prediction (`other-files/bold.lisp`), not a plain
+activation log. It: records each traced buffer's busy/demand intervals from
+the buffer-trace (`parse-trace-lists-for-bold`); convolves each with a gamma
+PDF (`bold_partial_gammapdf(t,a,b) = (t/b)^a·e^(−t/b)`, trapezoidal over the
+demand, `area-under-bold-curve`); samples at `:bold-inc` (2 s) from
+`inc/2` to `end−inc/2`; and prints via `print-bold-response-data`
+(`~{17,@a~}` header, `~{17,3f~}` rows; `max-len = 2 + longest name`). Defaults
+`:bold-exp 5`, `:neg-bold-exp 15`, `:bold-positive 6`, `:bold-negative 1`,
+`:bold-scale 1`, `:bold-settle 40`, `:point-predict (goal)`.
+
+`reset` restarts the meta-process clock, so the recorder tracks the *current
+task* (the reference's table spans 0–40, task 3's end). The engine now
+records the busy intervals per event and prints the table; IMAGINAL/RETRIEVAL
+match exactly. Remaining: GOAL is point-predicted (its demand points aren't
+captured yet) and VISUAL is off by ~0.001.

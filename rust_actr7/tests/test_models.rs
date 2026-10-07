@@ -256,6 +256,14 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                     .collect();
                 steps.push(Step::Sdm(args));
             }
+            ":RECORD-HISTORY" => {
+                let args: Vec<String> = v[1..]
+                    .iter()
+                    .filter_map(|s| s.as_sym().map(str::to_string))
+                    .collect();
+                steps.push(Step::RecordHistory(args));
+            }
+            ":PREDICT-BOLD" => steps.push(Step::PredictBold),
             ":PDISABLE" | ":PENABLE" => {
                 let names: Vec<String> = v[1..]
                     .iter()

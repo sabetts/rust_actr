@@ -1807,6 +1807,12 @@ pub struct Engine {
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
     feat_seq: u64,
+    /// BOLD demand recorder (`other-files/bold.lisp` + the buffer-trace):
+    /// the traced buffers, the open demand-period start (seconds) per
+    /// buffer, and the recorded `(start, end)` periods in seconds.
+    bold_buffers: Vec<String>,
+    bold_open: HashMap<String, f64>,
+    bold_demand: HashMap<String, Vec<(f64, f64)>>,
     /// Location-name copy counter: requested base -> copies made.
     copy_count: HashMap<String, u64>,
     /// Copy fan-out (`c-fan-out`): a copied chunk's source fan-out at copy
@@ -2084,6 +2090,9 @@ impl Engine {
             consume_rng,
             features: Vec::new(),
             feat_seq: 0,
+            bold_buffers: Vec::new(),
+            bold_open: HashMap::new(),
+            bold_demand: HashMap::new(),
             copy_count: HashMap::new(),
             c_fan_out: HashMap::new(),
             chunk_alias: HashMap::new(),
@@ -2365,6 +2374,11 @@ impl Engine {
                 .insert("BLENDING".to_string(), Buffer::empty());
         }
         self.queue = BinaryHeap::new();
+        // The BOLD demand recorder tracks the current task only: `reset`
+        // restarts the meta-process clock, and the buffer-trace recorder the
+        // predictor reads is reset with it.
+        self.bold_open.clear();
+        self.bold_demand.clear();
         self.time_ms = 0;
         self.cr_armed = false;
         self.dm_gen = 0;
@@ -3054,6 +3068,7 @@ impl Engine {
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
+            self.bold_record();
             self.exec(next.event, show)?;
             processed = true;
             if self.zz_break_hit {
@@ -4524,6 +4539,83 @@ impl Engine {
         for i in prints {
             let c = self.dm[i].clone();
             self.push_chunk(&c);
+        }
+    }
+
+    /// Set the buffers the BOLD predictor traces (`record-history`'s names).
+    pub fn set_bold_buffers(&mut self, buffers: &[String]) {
+        self.bold_buffers = buffers.iter().map(|b| b.to_uppercase()).collect();
+    }
+
+    /// BOLD demand recorder: at each event note each traced buffer's busy
+    /// state and open/close a demand period on a transition (the buffer-trace
+    /// recorder snapshots per event; `parse-trace-lists-for-bold`,
+    /// `other-files/bold.lisp:536`).
+    fn bold_record(&mut self) {
+        if self.bold_buffers.is_empty() {
+            return;
+        }
+        let t = self.time_ms as f64 / 1000.0;
+        for b in self.bold_buffers.clone() {
+            let busy = !self.query_free(&b).unwrap_or(true);
+            match (busy, self.bold_open.get(&b).copied()) {
+                (true, None) => {
+                    self.bold_open.insert(b, t);
+                }
+                (false, Some(s)) => {
+                    self.bold_open.remove(&b);
+                    self.bold_demand.entry(b).or_default().push((s, t));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// `(predict-bold-response)`: the BOLD haemodynamic prediction for each
+    /// traced buffer (`other-files/bold.lisp`), printed as the `time …`
+    /// table. Defaults: `:bold-inc 2`, `:bold-exp 5`, `:bold-scale 1`,
+    /// `:bold-settle 40`, `:bold-positive 6`, `:bold-negative 1`,
+    /// `:neg-bold-exp 15`, `:point-predict (goal)`.
+    pub fn print_bold(&mut self) {
+        const INC: f64 = 2.0;
+        const SETTLE: f64 = 40.0;
+        const EXP: f64 = 5.0;
+        const NEG_EXP: f64 = 15.0;
+        const C1: f64 = 6.0;
+        const C2: f64 = 1.0;
+        fn fact(n: u32) -> f64 {
+            (1..=n).fold(1.0, |a, b| a * b as f64)
+        }
+        let pos_factor = C1 / (C1 - C2) / fact(EXP as u32);
+        let neg_factor = C2 / (C1 - C2) / fact(NEG_EXP as u32);
+        let start = 0.0f64;
+        let end = self.time_ms as f64 / 1000.0;
+        let mut buffers: Vec<String> = self.bold_buffers.clone();
+        buffers.sort();
+        let max_len = 2 + buffers
+            .iter()
+            .map(|b| b.len())
+            .chain(std::iter::once("time".len()))
+            .max()
+            .unwrap_or(4);
+        let mut header = format!("{:>w$}", "time", w = max_len);
+        for b in &buffers {
+            header.push_str(&format!("{:>w$}", b, w = max_len));
+        }
+        self.out_lines.push(header);
+        let mut time = start + INC / 2.0;
+        while time <= end - INC / 2.0 {
+            let mut row = format!("{:>w$.3}", time, w = max_len);
+            for b in &buffers {
+                let demand = self.bold_demand.get(b).cloned().unwrap_or_default();
+                let point = b == "GOAL";
+                let pos = bold_values(&demand, time, INC, SETTLE, EXP, 1.0, point);
+                let neg = bold_values(&demand, time, INC, SETTLE, NEG_EXP, 1.0, point);
+                let v = pos * pos_factor - neg * neg_factor;
+                row.push_str(&format!("{:>w$.3}", v, w = max_len));
+            }
+            self.out_lines.push(row);
+            time += INC;
         }
     }
 
@@ -11255,6 +11347,76 @@ fn failure_wait(cfg: &Config, rt: f32) -> i64 {
 /// Rounds halves to even, as CL `round` does (units table ROUND rows).
 fn latency(lf_ms: i64, le: f32, act: f32) -> i64 {
     lisp_round((lf_ms as f32) * (-le * act).exp())
+}
+
+/// `bold_partial_gammapdf` (`other-files/bold.lisp:464`): `(t/b)^a · e^(−t/b)`,
+/// 0 for a non-positive `t` (a demand that starts in the future).
+fn bold_pdf(t: f64, a: f64, b: f64) -> f64 {
+    if t <= 0.0 {
+        return 0.0;
+    }
+    let scale = t / b;
+    scale.powf(a) * (-scale).exp()
+}
+
+/// `area-under-bold-subsegment` (`other-files/bold.lisp:475`): the trapezoidal
+/// area under the gamma PDF over `[t1, t2]`.
+fn area_under_subsegment(time: f64, t1: f64, t2: f64, a: f64, b: f64) -> f64 {
+    (bold_pdf(time - t1, a, b)
+        + 2.0 * bold_pdf(time - (t1 + t2) / 2.0, a, b)
+        + bold_pdf(time - t2, a, b))
+        * (t2 - t1)
+        * 0.25
+}
+
+/// `area-under-bold-curve` (`other-files/bold.lisp:482`): split `[t1, t2]`
+/// into blocks no wider than `inc` and sum their trapezoids.
+fn area_under_curve(time: f64, t1: f64, t2: f64, inc: f64, a: f64, b: f64) -> f64 {
+    let t2 = t2.min(time);
+    if t1 == t2 {
+        return 0.0;
+    }
+    let width = t2 - t1;
+    let steps = (width / inc).ceil() as i64;
+    let step = width / steps as f64;
+    let mut sum = 0.0;
+    let mut x = t2 - step;
+    let mut y = t2;
+    for _ in 1..steps {
+        sum += area_under_subsegment(time, x, y, a, b);
+        x -= step;
+        y -= step;
+    }
+    sum + area_under_subsegment(time, t1, y, a, b)
+}
+
+/// `compute-bold-values`/`sum-bold-demands` (`other-files/bold.lisp:487`): the
+/// summed demand for `time`, dropping demand intervals older than
+/// `time - settle`.
+fn bold_values(
+    demand: &[(f64, f64)],
+    time: f64,
+    inc: f64,
+    settle: f64,
+    a: f64,
+    b: f64,
+    point: bool,
+) -> f64 {
+    let mut sum = 0.0;
+    for &(t1, t2) in demand {
+        if t1 > time {
+            break;
+        }
+        if t2 <= time - settle {
+            continue;
+        }
+        sum += if point {
+            bold_pdf(time - t1, a, b)
+        } else {
+            area_under_curve(time, t1, t2, inc, a, b)
+        };
+    }
+    sum
 }
 
 impl Engine {

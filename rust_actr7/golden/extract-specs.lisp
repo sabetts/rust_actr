@@ -209,6 +209,25 @@ disable/enable, breakpoints); not trace-only drivers.")
       (let ((r (sgp-fct (list :v))))
         (if (consp r) (and (first r) t) (and r t))))))
 
+(defun w-record-history (&rest names)
+  ;; `record-history` (`history-recorder.lisp:614`): the driver names the
+  ;; buffers the BOLD predictor traces (`"buffer-trace"` is the recorder
+  ;; itself). Record them so the engine can run the demand recorder.
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*))
+    (let ((buffers (remove "buffer-trace" names :test #'string-equal)))
+      (when buffers
+        (push (cons :record-history
+                    (mapcar (lambda (n) (intern (string-upcase n))) buffers))
+              *steps*))))
+  (apply (gethash 'record-history-fct *orig-fns*) names))
+
+(defun w-predict-bold (&rest args)
+  ;; `predict-bold-response` (`other-files/bold.lisp:648`): print the BOLD
+  ;; demand table from the recorded buffer trace.
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*))
+    (push (list :predict-bold) *steps*))
+  (apply (gethash 'predict-bold-response *orig-fns*) args))
+
 (defun w-sdm (spec)
   ;; `sdm` (`commands/dm-commands.lisp:484`): the stub calls
   ;; `(sdm isa pair)` between tasks to print the matching DM chunks; record
@@ -428,6 +447,8 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defun install-wrappers ()
   (wrap-fn 'act-r-random #'w-act-r-random)
   (wrap-fn 'sdm-fct #'w-sdm)
+  (wrap-fn 'record-history-fct #'w-record-history)
+  (wrap-fn 'predict-bold-response #'w-predict-bold)
   (wrap-fn 'run #'w-run)
   (wrap-fn 'run-full-time #'w-run-full-time)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)

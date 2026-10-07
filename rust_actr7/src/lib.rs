@@ -209,6 +209,11 @@ pub enum Step {
     /// `(sdm <spec>...)`: print the declarative-memory chunks matching the
     /// task's spec (`commands/dm-commands.lisp:491`).
     Sdm(Vec<String>),
+    /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
+    /// traces (the demand recorder).
+    RecordHistory(Vec<String>),
+    /// `(predict-bold-response)`: print the BOLD demand table.
+    PredictBold,
     /// `(sgp :trace-detail X)`.
     SetDetail(trace::Detail),
     /// `(sgp :key value)` for any other parameter (applied at run time).
@@ -316,6 +321,8 @@ pub fn run_model_steps(
             Step::Seed(s) => eng.set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
             Step::Sdm(spec) => eng.print_sdm(spec),
+            Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
+            Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
