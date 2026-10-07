@@ -193,6 +193,12 @@ pub enum Step {
         trace: bool,
         width: usize,
     },
+    /// `(run-full-time secs)` — like `Run`, but runs to the time limit.
+    RunFullTime {
+        secs: f64,
+        trace: bool,
+        width: usize,
+    },
     /// `(goal-focus <spec>)`.
     GoalFocus(ChunkDesc),
     /// `(sgp :seed (S C))`.
@@ -294,6 +300,11 @@ pub fn run_model_steps(
                 eng.set_module_width(*width);
                 eng.set_trace(*trace);
                 eng.run_secs(*secs)?;
+            }
+            Step::RunFullTime { secs, trace, width } => {
+                eng.set_module_width(*width);
+                eng.set_trace(*trace);
+                eng.run_full_time(*secs)?;
             }
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),

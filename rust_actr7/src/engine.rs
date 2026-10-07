@@ -2865,13 +2865,31 @@ impl Engine {
     /// (`framework/scheduling.lisp:816`, which bounds each run relative to
     /// the current model time).
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
-        self.zz_run_step(secs).map(|_| ())
+        self.zz_run_step_mode(secs, false).map(|_| ())
+    }
+
+    /// `run-full-time` (`framework/scheduling.lisp:986`): run for `secs` of
+    /// model time, guaranteed to reach the limit by a hidden `:maintenance`
+    /// dummy event at the end (priority `:min`, `:output nil`). An empty
+    /// queue therefore stops with "time limit reached", not "no events left".
+    pub fn run_full_time(&mut self, secs: f64) -> Result<(), EngineError> {
+        let end = self.time_ms + (secs * 1000.0).round() as i64;
+        self.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
+        self.zz_run_step_mode(secs, true).map(|_| ())
     }
 
     /// Like `run_secs`, but reports whether any event was executed. The
     /// `zz` task driver loops `(run 10)` until it returns 0 (`test-model.lisp`
     /// `test5`): a run that processes nothing is the terminator.
     fn zz_run_step(&mut self, secs: f64) -> Result<bool, EngineError> {
+        self.zz_run_step_mode(secs, false)
+    }
+
+    /// `full` selects `run-full-time`'s stop: events at exactly the limit
+    /// stay queued. The task's window change between runs schedules its
+    /// `proc-display` at the boundary *after* the previous run returns
+    /// (`paired`), so the engine must not consume it in the earlier run.
+    fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         let mut processed = false;
         loop {
@@ -2895,7 +2913,7 @@ impl Engine {
                     }
                     break;
                 }
-                Some(t) if t > limit_ms => {
+                Some(t) if (if full { t >= limit_ms } else { t > limit_ms }) => {
                     self.time_ms = limit_ms;
                     self.emit("------", "Stopped because time limit reached".into());
                     break;

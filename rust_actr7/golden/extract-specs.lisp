@@ -169,6 +169,19 @@ disable/enable, breakpoints); not trace-only drivers.")
   (let ((*in-run* t))
     (call-orig 'run run-time nil)))
 
+(defun w-run-full-time (run-time &optional real-time)
+  ;; `run-full-time` (`scheduling.lisp:986`): run for `run-time` seconds of
+  ;; model time, guaranteed by a hidden dummy event — recorded as its own
+  ;; step so the engine runs to the limit instead of stopping early.
+  (declare (ignore real-time))
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (let ((rec (list run-time (eff-seed) t
+                     (ignore-errors (max-module-name-length)))))
+      (push rec *runs*)
+      (push (cons :run-full-time rec) *steps*)))
+  (let ((*in-run* t))
+    (call-orig 'run-full-time run-time nil)))
+
 (defun w-goal-focus (spec)
   ;; Only record driver-level goal-focus calls; calls made *during* a run
   ;; (e.g. from a scheduled task command) are reproduced by the engine's
@@ -295,6 +308,7 @@ disable/enable, breakpoints); not trace-only drivers.")
 
 (defun install-wrappers ()
   (wrap-fn 'run #'w-run)
+  (wrap-fn 'run-full-time #'w-run-full-time)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
   (wrap-fn 'reset #'w-reset)
   (wrap-fn 'sgp-fct #'w-sgp)

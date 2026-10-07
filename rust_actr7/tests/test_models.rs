@@ -198,6 +198,23 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                     width,
                 });
             }
+            ":RUN-FULL-TIME" => {
+                let secs = match v.get(1) {
+                    Some(Sexp::Int(i)) => *i as f64,
+                    Some(Sexp::Float(x)) => *x,
+                    _ => {
+                        note(&mut unsupported, format!("bad :RUN-FULL-TIME in {st:?}"));
+                        continue;
+                    }
+                };
+                let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
+                let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
+                steps.push(Step::RunFullTime {
+                    secs,
+                    trace,
+                    width,
+                });
+            }
             ":GOAL-FOCUS" => {
                 let item = match v.get(1) {
                     Some(i) => i,
@@ -450,11 +467,12 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
     if let Some(u) = &spec.steps_unsupported {
         return Some(format!("unsupported step: {u}"));
     }
-    if !spec
-        .steps
-        .iter()
-        .any(|s| matches!(s, Step::Run { .. } | Step::ZzDriver | Step::AlDriver))
-    {
+    if !spec.steps.iter().any(|s| {
+        matches!(
+            s,
+            Step::Run { .. } | Step::RunFullTime { .. } | Step::ZzDriver | Step::AlDriver
+        )
+    }) {
         return Some("no run step".into());
     }
     None

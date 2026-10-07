@@ -2289,6 +2289,32 @@ composition:
 `tutorial-unit3modeling-v2-run` is byte-exact and in `enabled.txt`
 (54 specs); `probe_runnable` reports **54 pass / 0 fail**.
 
+## 160. `run-full-time` and the boundary between runs
+
+`paired`/`tutorial-unit4-paired-trace` run with `(run-full-time 5)`, not
+`run`. ACT-R's `run-full-time` (`framework/scheduling.lisp:986`) schedules a
+hidden `:maintenance` dummy at the end (priority `:min`, `:output nil`) so an
+empty queue still reaches the time limit. The extractor now wraps it and
+records a `(:RUN-FULL-TIME secs …)` step; the engine pushes the dummy and
+runs to the limit.
+
+The subtlety: the task's window change *between* runs schedules its
+`proc-display` at the boundary time (5.000), **after** the previous run has
+returned. The engine arms the whole device script at reset, so its
+`proc-display` at 5.000 is already queued and would be consumed by run 1,
+putting the "Stopped because time limit reached" line after the VL set. The
+engine's `run_full_time` therefore stops on `t >= limit` (plain `run` keeps
+`t > limit`), leaving boundary events for the next run — matching the ref's
+stop-then-VL-set order.
+
+The task's `(permute-list …)` also consumes one `act-r-random` per trial
+(task-only, never replayed), so `(CONSUME-RNG 2)` in the hand-authored
+sidecar aligns the activation-noise stream (verified by logging ACT-R's
+draws: `AR1/4` = the two `permute-list` picks, `AR2/3/5/7` = the vision
+`random-item`s, `AR6` = the trial-3 noise).
+
+`tutorial-unit4-paired-trace` is byte-exact and in `enabled.txt` (55 specs).
+
 
 
 
