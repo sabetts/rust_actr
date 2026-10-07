@@ -56,3 +56,4 @@ tutorial-unit1-tutor-model-partial-trace
 retrieval-request-parameters
 tutorial-unit7modeling-ul-issues-v1-first-run
 tutorial-unit7modeling-pcomp-issues-v2-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial

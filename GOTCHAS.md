@@ -2230,6 +2230,39 @@ functions' value substitution (`value "3"`, `key "d"`, `num2 =retrieval` vs
 `screen-pos =visual-location`), the `> screen-x current` rel rendering and
 the chunk-type default (`is-response t`) in composed conditions.
 
+## 158. Production compilation: map-function substitution and rels
+
+The remaining v4 diffs were the buffer-type **map** functions
+(`MAP-RETRIEVAL-BUFFER`, `MAP-IMAGINAL-BUFFER`), which produce
+variable→value mappings applied to both productions' specs before
+composition:
+
+- `MAP-RETRIEVAL-BUFFER` (`retrieval-compilation.lisp:71`), p1 ∈
+  {4,12,20,28} × p2 ∈ {8,12,24,28}: the retrieved chunk (p2's `=RETRIEVAL`
+  binding) instantiates p1's `+retrieval>` action variables from p1's
+  bindings, and p2's `=retrieval>` condition variables from the chunk's
+  slots. This is `(=VAL . "3")` and `(=KEY . "d")`.
+- `MAP-IMAGINAL-BUFFER`'s RHS `=` to LHS `=` case
+  (`imaginal-compilation.lisp:212`), p1 ∈ {9,25} × p2 ∈
+  {8,9,12,13,24,25,28,29}: common slots between p1's (LHS ∪ RHS) and p2's
+  LHS map by value — a p2 constant wins, else p2's variable maps to p1's
+  value (`(=N2 . =RETRIEVAL)`).
+- A variable is only instantiated when a mapping says so: a bare buffer
+  variable (`=VISUAL-LOCATION`) stays symbolic, and `=RETRIEVAL` is
+  instantiated only when p1 requested the buffer
+  (`retrieval-buffers-map`, `production-compilation.lisp:297`). Getting this
+  wrong regresses `retain-indirect-retrievals` (wants `value g-1`) or v4
+  (wants `screen-pos =visual-location`).
+- `isa TYPE` adds the chunk-type's default slot tests to a *condition* too
+  (`process-slots-specs`, chunk-spec.lisp:597), so the composed
+  `=retrieval> isa response` prints `is-response t`.
+- A request's relative test (`> screen-x current`) is kept as a
+  `"<op> <slot>"` pseudo-slot and printed `    >  slot value`, matching
+  `render_production`.
+
+`tutorial-unit7modeling-pcomp-issues-v4-one-trial` is byte-exact and in
+`enabled.txt` (53 specs); `probe_runnable` reports 53 pass / 1 fail.
+
 
 
 

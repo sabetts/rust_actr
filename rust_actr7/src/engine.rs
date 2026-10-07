@@ -7311,6 +7311,25 @@ impl Engine {
         };
         Ok(c.map(|c| c.get(&slot)).unwrap_or(Value::Nil))
     }
+
+    /// The printed value of `slot` on the chunk named `chunk` (following a
+    /// copy back to its source), or `None` when the chunk or slot is absent.
+    /// Used by `MAP-RETRIEVAL-BUFFER` to instantiate p2's condition
+    /// variables from the retrieved chunk.
+    fn chunk_name_slot(&self, chunk: &str, slot: &str) -> Option<String> {
+        let name = self.copy_source.get(chunk).map(|s| s.as_str()).unwrap_or(chunk);
+        let c = self
+            .dm
+            .iter()
+            .find(|c| c.name.as_deref() == Some(name))
+            .or_else(|| self.named.get(name))?;
+        let v = c.get(slot);
+        if v == Value::Nil {
+            None
+        } else {
+            Some(v.show())
+        }
+    }
     /// An exact miss may still pass when the value similarity is strictly
     /// greater than `:md`; the mismatch is recorded for the utility penalty
     /// (`test-slot`, procedural.lisp:1774).
@@ -8061,8 +8080,8 @@ impl Engine {
     ) {
         let p1 = &self.model.productions[i1];
         let p2 = &self.model.productions[i2];
-        let p1_lhs = prod_lhs_slots(p1, b1);
-        let p2_lhs = prod_lhs_slots(p2, b2);
+        let p1_lhs = prod_lhs_slots(p1, b1, &self.model.chunk_types);
+        let p2_lhs = prod_lhs_slots(p2, b2, &self.model.chunk_types);
         let p1_acts = prod_rhs_actions(p1, b1);
         let p2_acts = prod_rhs_actions(p2, b2);
 
@@ -8095,6 +8114,80 @@ impl Engine {
                 }
             }
         }
+        // `MAP-RETRIEVAL-BUFFER` (`retrieval-compilation.lisp:71`): p1
+        // requests the buffer (4/12/20/28) and p2 matches it (8/12/24/28).
+        // The retrieved chunk's slots instantiate p1's request-action
+        // variables and p2's condition variables, and the buffer variable
+        // maps to the chunk itself.
+        let u1r = buffer_usage(p1, "RETRIEVAL");
+        let u2r = buffer_usage(p2, "RETRIEVAL");
+        if matches!(u1r, 4 | 12 | 20 | 28) && matches!(u2r, 8 | 12 | 24 | 28) {
+            if let Some(chunk) = b2.get("=RETRIEVAL").map(|v| v.show()) {
+                map.insert("RETRIEVAL".to_string(), SlotVal::Lit(chunk.clone()));
+                for (op, buf, slots, _) in &p1_acts {
+                    if buf == "RETRIEVAL" && (*op == '+' || *op == 'r') {
+                        for (_, v) in slots {
+                            if let SlotVal::Var(n) = v {
+                                if let Some(val) = instantiate_var(n, b1) {
+                                    map.insert(n.clone(), SlotVal::Lit(val));
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some((_, slots2)) = p2_lhs.iter().find(|(b, _)| b == "RETRIEVAL") {
+                    for (name, v) in slots2 {
+                        if let SlotVal::Var(n) = v {
+                            if let Some(cv) = self.chunk_name_slot(&chunk, name) {
+                                map.insert(n.clone(), SlotVal::Lit(cv));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // `MAP-IMAGINAL-BUFFER`'s RHS `=` to LHS `=` case
+        // (`imaginal-compilation.lisp:212`): p1 modified the imaginal buffer
+        // and p2 matches it. Slots common to p1's (LHS ∪ RHS) and p2's LHS
+        // map by value — a p2 constant wins, otherwise p2's variable maps to
+        // p1's value.
+        let u1i = buffer_usage(p1, "IMAGINAL");
+        let u2i = buffer_usage(p2, "IMAGINAL");
+        if matches!(u1i, 9 | 25) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29) {
+            let p1_lhs_i = p1_lhs
+                .iter()
+                .find(|(b, _)| b == "IMAGINAL")
+                .map(|(_, s)| s.clone())
+                .unwrap_or_default();
+            let p1_rhs_i: Vec<(String, SlotVal)> = p1_acts
+                .iter()
+                .filter(|(op, b, _, _)| *op == '=' && b == "IMAGINAL")
+                .flat_map(|(_, _, s, _)| s.clone())
+                .collect();
+            let rhs_names: Vec<String> = p1_rhs_i.iter().map(|(n, _)| n.clone()).collect();
+            let mut p1_slots: Vec<(String, SlotVal)> = p1_lhs_i
+                .into_iter()
+                .filter(|(n, _)| !rhs_names.contains(n))
+                .collect();
+            p1_slots.extend(p1_rhs_i);
+            if let Some((_, p2_slots)) = p2_lhs.iter().find(|(b, _)| b == "IMAGINAL") {
+                for (n1, v1) in &p1_slots {
+                    if let Some((_, v2)) = p2_slots.iter().find(|(n, _)| n == n1) {
+                        match (v1, v2) {
+                            (SlotVal::Var(a), SlotVal::Lit(_)) => {
+                                if let Some(val) = instantiate_var(a, b1) {
+                                    map.insert(a.clone(), SlotVal::Lit(val));
+                                }
+                            }
+                            (_, SlotVal::Var(c)) => {
+                                map.insert(c.clone(), v1.clone());
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
         // Only variables referenced by an *indirect* request (`+buffer> =c`,
         // not `+goal> =retrieval`) are resolved from the firings; other
         // variables stay symbolic (compiled productions are not otherwise
@@ -8119,6 +8212,13 @@ impl Engine {
             s.extend(collect(&p2_acts, retain2));
             s
         };
+        // `retrieval-buffers-map` (`production-compilation.lisp:297`): the
+        // drop-out buffer variable (`=RETRIEVAL`) is instantiated to the
+        // chunk it held when the first production requested that buffer;
+        // other buffer variables (`=VISUAL-LOCATION`, ...) stay symbolic.
+        let drop_retrieval = p1_acts
+            .iter()
+            .any(|(op, buf, _, _)| (*op == '+' || *op == 'r') && buf == "RETRIEVAL");
         // A variable not unified across the pair, but resolved by an
         // indirect action, is instantiated from the firing bindings.
         let subst = |v: &SlotVal, b: &Bindings, ivars: &HashSet<String>| -> SlotVal {
@@ -8128,16 +8228,13 @@ impl Engine {
                         SlotVal::Lit(b[n].show())
                     } else if let Some(m) = map.get(n) {
                         m.clone()
-                    } else if let Some(name) = self
-                        .buffers
-                        .get(n)
-                        .and_then(|buf| buf.chunk.as_ref())
-                        .and_then(|c| c.name.clone())
-                    {
-                        // A `=buffer` reference resolves to that buffer's
-                        // chunk at composition time (`G-1` for the retrieval
-                        // C supplied; empty once p2's own request clears it).
-                        SlotVal::Lit(name)
+                    } else if drop_retrieval && n == "RETRIEVAL" {
+                        self.buffers
+                            .get(n)
+                            .and_then(|buf| buf.chunk.as_ref())
+                            .and_then(|c| c.name.clone())
+                            .map(SlotVal::Lit)
+                            .unwrap_or_else(|| SlotVal::Var(n.clone()))
                     } else {
                         SlotVal::Var(n.clone())
                     }
@@ -9703,7 +9800,11 @@ impl SlotVal {
 /// Instantiated LHS match slots per buffer, sorted by slot name
 /// (`sort-production-slots`). `isa` is the chunk type, not a slot. Values
 /// stay symbolic (`=var`) so cross-production mappings can apply first.
-fn prod_lhs_slots(p: &Production, _b: &Bindings) -> Vec<(String, Vec<(String, SlotVal)>)> {
+fn prod_lhs_slots(
+    p: &Production,
+    _b: &Bindings,
+    types: &[crate::model::ChunkType],
+) -> Vec<(String, Vec<(String, SlotVal)>)> {
     let mut out = Vec::new();
     for item in &p.lhs {
         if let LhsItem::Match { buffer, tests } = item {
@@ -9720,6 +9821,30 @@ fn prod_lhs_slots(p: &Production, _b: &Bindings) -> Vec<(String, Vec<(String, Sl
                     (t.slot.clone(), v)
                 })
                 .collect();
+            // `isa TYPE` adds the chunk-type's default slot tests
+            // (`process-slots-specs`, chunk-spec.lisp:597), so the composed
+            // condition prints them too (`isa response` -> `is-response t`).
+            if let Some(ct) = tests.iter().find(|t| t.slot == "ISA").and_then(|t| {
+                match &t.value {
+                    Pattern::Sym(s) => Some(s.clone()),
+                    _ => None,
+                }
+            }) {
+                if let Some(t) = types.iter().find(|t| t.name.eq_ignore_ascii_case(&ct)) {
+                    for (slot, pat) in &t.defaults {
+                        if !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case(slot)) {
+                            slots.push((
+                                slot.to_uppercase(),
+                                SlotVal::Lit(
+                                    Value::from_pattern(pat)
+                                        .map(|x| x.show())
+                                        .unwrap_or_default(),
+                                ),
+                            ));
+                        }
+                    }
+                }
+            }
             slots.sort_by(|a, b| a.0.cmp(&b.0));
             out.push((buffer.clone(), slots));
         } else if let LhsItem::Bind { var, value, safe } = item {
@@ -9815,10 +9940,8 @@ fn prod_rhs_actions(
                     Vec::new(),
                     Some(n[1..].to_string()),
                 )),
-                ChunkDesc::Spec { slots, .. } => out.push((
-                    '+',
-                    buffer.clone(),
-                    slots
+                ChunkDesc::Spec { slots, rels, .. } => {
+                    let mut s: Vec<(String, SlotVal)> = slots
                         .iter()
                         .map(|(n, v)| {
                             (
@@ -9833,9 +9956,21 @@ fn prod_rhs_actions(
                                 },
                             )
                         })
-                        .collect(),
-                    None,
-                )),
+                        .collect();
+                    // Relative tests (`> screen-x current`) are carried as
+                    // `"<op> <slot>"` pseudo-slots so both the trace
+                    // (`render_compiled`) and the installed production
+                    // (`install_compiled`) keep them.
+                    for (name, v, op) in rels {
+                        s.push((
+                            format!("{} {}", slot_op_str(*op), name),
+                            SlotVal::Lit(
+                                Value::from_pattern(v).map(|x| x.show()).unwrap_or_default(),
+                            ),
+                        ));
+                    }
+                    out.push(('+', buffer.clone(), s, None));
+                }
                 _ => {}
             },
             RhsAction::Clear { buffer } => {
@@ -9888,11 +10023,25 @@ fn render_compiled(
     for (token, slots) in rhs {
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {
-            s.push_str(&format!("       {n} {v}\n"));
+            s.push_str(&render_rhs_slot(n, v));
         }
     }
     s.push(')');
     s
+}
+
+/// One composed-action slot line: a relative pseudo-slot (`"<op> <slot>"`,
+/// from a request's `> slot value`) prints the way `render_production` does
+/// (`    >  slot value`); everything else is `       slot value`.
+fn render_rhs_slot(n: &str, v: &str) -> String {
+    for op in [">=", "<=", ">", "<"] {
+        if let Some(rest) = n.strip_prefix(op) {
+            if let Some(slot) = rest.strip_prefix(' ') {
+                return format!("    {op:<2} {slot} {v}\n");
+            }
+        }
+    }
+    format!("       {n} {v}\n")
 }
 
 /// `sort-conditions`'s key (`production-compilation.lisp:1905`): the
