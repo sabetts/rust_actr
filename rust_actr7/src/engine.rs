@@ -8678,12 +8678,13 @@ impl Engine {
         let mut map: HashMap<String, SlotVal> = HashMap::new();
         for (buf, slots1) in &p1_lhs {
             // `MAP-GOAL-BUFFER` (`goal-compilation.lisp:320`) also maps p1's
-            // RHS `=`/`*` goal slots onto p2's LHS `=` slots, so a variable
-            // renamed by `rename-variables` re-unifies with p1's.
+            // RHS goal slots — from a `+` request, `=`/`*` modify — onto p2's
+            // LHS `=` slots, so a variable renamed by `rename-variables`
+            // re-unifies with p1's.
             let mut p1_slots: Vec<(String, SlotVal)> = slots1.clone();
             if buf == "GOAL" {
                 for (op, b, s, _) in &p1_acts {
-                    if b == buf && (*op == '=' || *op == '*') {
+                    if b == buf && matches!(op, '=' | '*' | '+' | 'r') {
                         for (n, v) in s {
                             if !p1_slots.iter().any(|(x, _)| x == n) {
                                 p1_slots.push((n.clone(), v.clone()));

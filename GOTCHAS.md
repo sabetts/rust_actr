@@ -2698,3 +2698,13 @@ The vision module defines `(chunk-type (text (:include visual-object))
 the model file, so a composed condition `isa text` lost the `text t` default.
 Added `builtin_type_defaults` for the vision types (`text`/`oval`/`line`) used
 when expanding `isa TYPE` in `prod_lhs_slots`.
+
+## 183. MAP-GOAL-BUFFER maps p1's `+` request slots too
+
+`MAP-GOAL-BUFFER`'s first case (`goal-compilation.lisp:320`) is the RHS `+`
+to LHS `=` mapping (and the `*` variants), not just `=`/`*`. Extending the
+engine's goal mapping to p1's `+`/`r` slots stopped `complete-task &
+retrieve-operator` leaking a renamed `=state1` (p1's `+goal> state =state`
+now unifies with p2's renamed goal variable). The remaining difference there
+is that ACT-R merges p1's `+goal>` and p2's `=goal>` into one `+goal>`
+statement (`buffer+-union`), which the engine still emits separately.
