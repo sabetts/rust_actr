@@ -396,10 +396,12 @@ fn first_diff(expected: &[String], actual: &[String]) -> String {
     )
 }
 
-/// True when the spec's files define more than one model (a multi-model
-/// trace has an extra model-name column the single-model formatter lacks).
+/// True when the spec's files define more than one *distinct* model (a
+/// multi-model trace has an extra model-name column the single-model
+/// formatter lacks). Same-name `define-model` redefinitions are one model:
+/// the last definition wins (`run_model_steps`), as in ACT-R.
 fn is_multi_model(spec: &Spec) -> bool {
-    let mut count = 0usize;
+    let mut names = BTreeSet::new();
     for m in &spec.models {
         let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
         let path = actr_dir().join(rel);
@@ -408,20 +410,22 @@ fn is_multi_model(spec: &Spec) -> bool {
         }
         if let Ok(src) = fs::read_to_string(&path) {
             if let Ok(forms) = parse_all(&src) {
-                count += forms
-                    .iter()
-                    .filter(|f| match f {
-                        Sexp::List(v) => matches!(
+                for f in &forms {
+                    if let Sexp::List(v) = f {
+                        if matches!(
                             v.first().and_then(|s| s.as_sym()),
                             Some("DEFINE-MODEL") | Some("DEFINE-MODEL-FCT")
-                        ),
-                        _ => false,
-                    })
-                    .count();
+                        ) {
+                            if let Some(n) = v.get(1).and_then(as_str) {
+                                names.insert(n.to_uppercase());
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-    count > 1
+    names.len() > 1
 }
 
 /// Why a spec is not runnable in the current engine (None = runnable).

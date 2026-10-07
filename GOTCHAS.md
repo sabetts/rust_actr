@@ -2090,6 +2090,26 @@ The remaining pieces it needed:
   `GOAL-CHUNK0` in the spreading trace only (the one place the copy name
   leaks). This is a documented approximation, not full fidelity.
 
+## 153. Same-name `define-model` redefinitions are one model
+
+`is_multi_model` counted *every* `define-model` in a spec's files, so the
+tutorial specs that load a base model and then a `-vN` file defining the
+same model were mis-flagged as multi-model (an extra trace column). ACT-R
+redefines the model in place, so only *distinct* names produce the column;
+the last definition wins (`run_model_steps` already used `defs.last()`).
+
+This is what unlocks `tutorial-unit7modeling-ul-issues-v1-first-run`
+(24 lines): `ul-issues.lisp` + `utility-learning-issues-model.lisp` +
+`utility-learning-issues-model-v1.lisp` all define `utility-learning-test`,
+and the engine reproduces the utility-learning trace (PROPAGATE-REWARD and
+the `Utility updates with Reward …` output). It is byte-exact and in
+`enabled.txt` (51 specs).
+
+The same fix surfaces two more redefinition specs that still need engine
+work: `tutorial-unit3modeling-v2-run` (device + a scheduled `pm-issue-display`
+command line) and `tutorial-unit7modeling-pcomp-issues-v2/-v4-one-trial`
+(loader `set-all-base-levels`, then a device).
+
 
 
 
