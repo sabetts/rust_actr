@@ -4958,7 +4958,10 @@ impl Engine {
                         self.push(
                             self.time_ms,
                             Prio::Num(-1000),
-                            Out::Medium,
+                            // `schedule-set-buffer-chunk` defaults to
+                            // `:output low` (`buffers.lisp:1403`), so the
+                            // goal set prints at any detail level.
+                            Out::Low,
                             Event::SetBuffer {
                                 buffer: "GOAL".to_string(),
                                 chunk: spec,
@@ -5240,6 +5243,10 @@ impl Engine {
                     self.emit("VISION", "CLEAR".into());
                 }
                 self.visual_busy = false;
+                // `clear :after` (`vision.lisp:2886`) drops the attended
+                // object and the current marker, so a later window change
+                // no longer re-encodes the old location.
+                self.last_attention = None;
                 // pm-module clear also frees preparation state 50 ms
                 // later via an (at most high-detail) change-state event;
                 // executing it wakes an armed conflict-resolution.
@@ -6147,12 +6154,11 @@ impl Engine {
                 }
                 if self.clear_on_keypress {
                     // `clear-exp-window` from the task's output-key handler:
-                    // drop the visicon, re-display, and re-encode the
-                    // attended location (which now finds no object).
+                    // drop the visicon and re-display. The re-encode of the
+                    // attended location happens in `proc_display`
+                    // (`update-attended-loc`), which also sees the cleared
+                    // window because the visicon is dropped here first.
                     self.pending_clears.push(self.time_ms);
-                    // The re-encode below runs synchronously, before the
-                    // queued proc-display, so drop the visicon now to match
-                    // `update-attended-loc` seeing the cleared window.
                     self.features.clear();
                     self.now_m(
                         Prio::Num(-100),
@@ -6160,23 +6166,6 @@ impl Engine {
                         true,
                         Event::ProcDisplay,
                     );
-                    if let Some(loc) = self.last_attention.clone() {
-                        if self.cfg.emma {
-                            // `update-attended-loc` re-invokes the encoding
-                            // hook (`vision.lisp:1915`), so EMMA starts a
-                            // fresh saccade to the (now empty) location.
-                            let end = self.emma_loc_xyz(&loc);
-                            self.emma_attention_hook(end);
-                        } else {
-                            let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
-                            self.push(
-                                at,
-                                Prio::Num(0),
-                                Out::Medium,
-                                Event::EncodingComplete { loc },
-                            );
-                        }
-                    }
                 }
             }
             Event::ReleaseKey { key } => {
@@ -12799,6 +12788,32 @@ impl Engine {
         if cleared {
             self.features.clear();
         }
+        // `update-attended-loc` (`vision.lisp:1870`): re-encode only when
+        // the attended object is gone (a clear) or was modified. A new text
+        // elsewhere leaves it untouched, so adding texts must not trigger
+        // this (paired-static: the old location stays). EMMA re-invokes its
+        // hook instead (a fresh saccade); the base module re-schedules
+        // `encoding-complete` after the attention latency.
+        if cleared {
+            if let Some(loc) = self.last_attention.clone() {
+                if self.cfg.emma {
+                    let end = self.emma_loc_xyz(&loc);
+                    self.emma_attention_hook(end);
+                } else {
+                    // The re-encode occupies the visual module, so
+                    // `?visual> state free` fails until it lands
+                    // (`update-attended-loc` -> `encode-visual-object`).
+                    self.visual_busy = true;
+                    let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
+                    self.push(
+                        at,
+                        Prio::Num(0),
+                        Out::Medium,
+                        Event::EncodingComplete { loc },
+                    );
+                }
+            }
+        }
         for t in due {
             let n = self.feat_seq;
             self.feat_seq += 1;
@@ -12966,8 +12981,14 @@ impl Engine {
                 // The attended object disappeared before the encoding
                 // landed (e.g. the window was cleared underneath it):
                 // vision reports no object and leaves VISUAL unchanged.
-                self.emit("VISION", "No visual-object found".into());
+                // `:output medium` + `:maintenance t` (`vision.lisp:2436`).
+                if self.cfg.detail.shows(Out::Medium) {
+                    self.emit("VISION", "No visual-object found".into());
+                }
                 self.visual_busy = false;
+                // Becoming free again wakes the armed conflict-resolution
+                // (`conditions-met`).
+                self.changed();
                 return Ok(());
             }
         };

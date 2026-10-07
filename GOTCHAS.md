@@ -2142,14 +2142,46 @@ the chunk-type's default slot tests for any slot not already tested
 `(chunk-type response key (is-response t))` really requests
 `is-response = t`, which is what filters the candidates to the response
 chunks. The engine now expands a request's `ctype` to its chunk-type defaults
-in `start_retrieval`.
+in `start_retrieval`. With candidacy fixed, pcomp v2 retrieved a response
+(18/27 lines); the remaining divergences are #156.
 
-`tutorial-unit7modeling-pcomp-issues-v2-one-trial` now retrieves a response
-(18/27 lines match); the remaining divergence is which response — the engine's
-noise picks `RESPONSE-1`, the ref `RESPONSE-3` — plus a 1 ms latency and a
-trailing goal set. The candidate *order* is not the cause: reversing the
-partial-matching activation order makes `RESPONSE-3` win but regresses nine
-enabled specs, so the difference is upstream (RNG state).
+## 156. `update-attended-loc`, the busy visual module, and the task's RNG draws
+
+The last pcomp v2 divergences, each pinned by logging ACT-R's `act-r-random`
+calls and reading `update-attended-loc` (`vision.lisp:1870`):
+
+- A window **clear** under the attended location re-runs its encoding
+  (condition [1]: "looking at an object and it's gone"). The re-encode
+  occupies the visual module, so `?visual> state free` fails until it lands
+  — without this, the CR at the window change fires `detect-feedback`
+  85 ms early (the `:crt` trace shows `The STATE FREE query of the VISUAL
+  buffer failed`). The engine now schedules the re-encode from
+  `proc_display` and sets `visual_busy`.
+- A plain **text add** elsewhere must *not* re-encode (`visicon-updated`
+  only lists *modified* objects; the old location is untouched) —
+  `paired-static`/`paired-full` pin this.
+- A `-visual>` buffer clear runs `clear :after` (`vision.lisp:2886`),
+  which nils `currently-attended` and the marker, so a later window change
+  no longer re-encodes the stale location (`paired-full` at 5.000).
+- `No visual-object found` is `:output medium` + `:maintenance t`
+  (`vision.lisp:2436`): hidden at low detail and it does not itself wake an
+  armed CR; the module going free does (`conditions-met`).
+- `+goal>` requests schedule their set with `schedule-set-buffer-chunk`'s
+  default `:output low` (`buffers.lisp:1403`), so
+  `SET-BUFFER-CHUNK GOAL (ISA CHUNK)` prints even at `:trace-detail low`.
+- The task's `present-next-trial` calls `(act-r-random 4)` twice
+  (`pcomp-issues.lisp:35-36`) before the run; the engine never replays those
+  picks, so the noise stream was two draws behind. Logging `act-r-random`
+  in SBCL gave `AR1/2` = the task picks, `AR3` = vision's `random-item`,
+  `AR4-7` = the first retrieval's noises. `(CONSUME-RNG 2)` (hand-authored,
+  applied on reset) aligns them; the same knob fixes v4's first
+  `VISUAL-LOCATION` index.
+
+`tutorial-unit7modeling-pcomp-issues-v2-one-trial` is byte-exact and in
+`enabled.txt` (52 specs). `-v4-one-trial` now matches through the trace; its
+remaining diff is the production-compilation machinery itself (composition
+rules, value substitution, `- <value>` naming, `:reward`/`:fixed-utility`
+parameter lines).
 
 
 
