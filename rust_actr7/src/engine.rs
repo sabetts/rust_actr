@@ -4725,6 +4725,14 @@ impl Engine {
         self.rng.borrow_mut().set_seed(seed.0, seed.1);
     }
 
+    /// Consume `n` draws from the random stream without using the values
+    /// (a task's setup draws between runs).
+    pub fn consume_rng(&mut self, n: u64) {
+        for _ in 0..n {
+            self.rng.borrow_mut().next_u32();
+        }
+    }
+
     /// `pdisable-fct` (`procedural-cmds.lisp:541`): skip the named
     /// productions in conflict resolution; an empty list disables all.
     pub fn pdisable(&mut self, names: &[String]) {

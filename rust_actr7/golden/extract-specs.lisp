@@ -58,6 +58,10 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defvar *goal-focus-count* 0)
 (defvar *reset-count* 0)
 (defvar *in-run* nil)
+;; Draws from `act-r-random` made by the task outside a run (setup),
+;; recorded as a `(:consume-rng n)` step before the next run so the engine's
+;; stream aligns with ACT-R's.
+(defvar *rng-count* 0)
 (defvar *sgp-calls* nil)
 (defvar *suppress* nil)
 (defvar *wrapped* nil)
@@ -163,6 +167,19 @@ disable/enable, breakpoints); not trace-only drivers.")
       (let ((r (sgp-fct (list :v))))
         (if (consp r) (and (first r) t) (and r t))))))
 
+(defun w-act-r-random (limit)
+  ;; `act-r-random` (`random.lisp:482`): the task's own draws (e.g.
+  ;; `permute-list` in `paired-task`) happen outside a run; count them so a
+  ;; `(:consume-rng n)` step can advance the engine's stream to match.
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*))
+    (incf *rng-count*))
+  (call-orig 'act-r-random limit))
+
+(defun flush-rng-count ()
+  (when (and (eq *mode* :drive) (not *suppress*) (> *rng-count* 0))
+    (push (list :consume-rng *rng-count*) *steps*))
+  (setf *rng-count* 0))
+
 (defun w-run (run-time &optional real-time)
   ;; Force non-real-time: pacing is wall-clock only and would make regen slow
   ;; without changing model output.
@@ -171,6 +188,7 @@ disable/enable, breakpoints); not trace-only drivers.")
     ;; The trace-reference harness monitors the model-trace regardless of the
     ;; model's `:v` (which only gates the stdout echo), so the recorded run is
     ;; always traced.
+    (flush-rng-count)
     (let ((rec (list run-time (eff-seed) t
                      (ignore-errors (max-module-name-length)))))
       (push rec *runs*)
@@ -184,6 +202,7 @@ disable/enable, breakpoints); not trace-only drivers.")
   ;; step so the engine runs to the limit instead of stopping early.
   (declare (ignore real-time))
   (when (and (eq *mode* :drive) (not *suppress*))
+    (flush-rng-count)
     (let ((rec (list run-time (eff-seed) t
                      (ignore-errors (max-module-name-length)))))
       (push rec *runs*)
@@ -353,6 +372,7 @@ disable/enable, breakpoints); not trace-only drivers.")
             (format f ")~%")))))))
 
 (defun install-wrappers ()
+  (wrap-fn 'act-r-random #'w-act-r-random)
   (wrap-fn 'run #'w-run)
   (wrap-fn 'run-full-time #'w-run-full-time)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
@@ -383,7 +403,8 @@ disable/enable, breakpoints); not trace-only drivers.")
         *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil
         *device-commands* nil *device-modifies* nil
         *item-texts* (make-hash-table :test 'equal)
-        *item-pos* (make-hash-table :test 'equal)))
+        *item-pos* (make-hash-table :test 'equal)
+        *rng-count* 0))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))

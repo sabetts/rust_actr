@@ -203,6 +203,9 @@ pub enum Step {
     GoalFocus(ChunkDesc),
     /// `(sgp :seed (S C))`.
     Seed((u64, u64)),
+    /// Consume `n` draws from the random stream (the task's setup draws
+    /// between runs, which the engine does not otherwise execute).
+    ConsumeRng(u64),
     /// `(sgp :trace-detail X)`.
     SetDetail(trace::Detail),
     /// `(sgp :key value)` for any other parameter (applied at run time).
@@ -308,6 +311,7 @@ pub fn run_model_steps(
             }
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),
+            Step::ConsumeRng(n) => eng.consume_rng(*n),
             Step::SetDetail(d) => eng.set_detail(*d),
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,

@@ -241,6 +241,10 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 steps.push(Step::GoalFocus(desc));
             }
             ":RESET" => steps.push(Step::Reset),
+            ":CONSUME-RNG" => match v.get(1).and_then(as_i64) {
+                Some(n) if n >= 0 => steps.push(Step::ConsumeRng(n as u64)),
+                other => note(&mut unsupported, format!("consume-rng {other:?}")),
+            },
             ":PDISABLE" | ":PENABLE" => {
                 let names: Vec<String> = v[1..]
                     .iter()

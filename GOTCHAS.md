@@ -2500,3 +2500,15 @@ reference's later ids don't appear anywhere in that draw stream — ACT-R
 consumes draws somewhere the engine does not (the model's own `:seed` may
 also be applied at a different point). The trace body otherwise depends on
 this draw, so the spec needs that alignment plus the audio module.
+
+## 169. Per-run RNG draws from the task (`:CONSUME-RNG` steps)
+
+A task's setup code draws from the same random stream as the model
+(`paired-task` calls `permute-list`, which calls `act-r-random`), but those
+draws happen between runs, so the device-level `CONSUME-RNG` (applied once
+per reset) cannot align them. The extractor now wraps `act-r-random`, counts
+the task's draws made *outside* a run, and emits a `(:CONSUME-RNG n)` step
+before the next run; `Step::ConsumeRng` advances the engine's MT stream by
+`n`. With this, `paired`'s retrieval latencies (and the transient-noise
+values in the `:act` trace) line up across all 16 runs — the reference's
+first noise, `−0.7636829`, comes out of consuming the task's draw.
