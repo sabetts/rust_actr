@@ -2315,6 +2315,31 @@ draws: `AR1/4` = the two `permute-list` picks, `AR2/3/5/7` = the vision
 
 `tutorial-unit4-paired-trace` is byte-exact and in `enabled.txt` (55 specs).
 
+## 161. Model-body `set-buffer-chunk`, `declare-buffer-usage`, GOAL checks
+
+`dynamic-production-compilation-tests`' model body initialises buffers
+directly:
+
+- `(set-buffer-chunk '<buffer> '<chunk>)` (`commands/buffer-cmds.lisp`) sets
+  a buffer's initial content; ACT-R re-evaluates the model body on reset, so
+  the engine applies it (silently, no trace line) on every `reset`.
+- `(declare-buffer-usage <buffer> <type> <slots>)`
+  (`procedural-cmds.lisp:789`) is compiler metadata (which chunk type a
+  buffer holds); it is accepted and ignored.
+
+The GOAL compilation table's special checks (`G-B-C1`, `NO-RHS-GOAL-REF`,
+`NO-GOAL-HARVESTING*`) are now treated as composing, like the other types'
+checks. That was needed for G1&G1 (usage 8×8, `NO-GOAL-HARVESTING` passes),
+which the engine had been refusing with "one production makes a modification
+and the other makes a modification request".
+
+Remaining for this spec: ACT-R's `equivalent-productions-p`
+(`production-compilation.lisp:2044`, the canonical variable-renamed
+comparison rep) so a composed production identical to an existing one prints
+`Result is production X` / `No actions taken.` instead of a new production —
+and the case-specific retention of a null `=buffer>` modify in
+`COMPOSE-GOAL-BUFFER`. The spec is regenerated (15 runs) but not enabled.
+
 
 
 

@@ -309,6 +309,10 @@ pub struct Model {
     /// Model-body `(pdisable name...)`: productions disabled on every reset
     /// (ACT-R re-evaluates the body, `procedural-cmds.lisp:541`). Upper-cased.
     pub disabled_prods: Vec<String>,
+    /// Model-body `(set-buffer-chunk '<buffer> '<chunk>)`: initial buffer
+    /// contents applied silently on every reset (the model body is
+    /// re-evaluated). `(buffer, chunk-name)`.
+    pub initial_buffer_sets: Vec<(String, String)>,
     /// Warning blocks from productions rejected by the validator. ACT-R
     /// re-evaluates the model body on `reset`, so these are re-emitted then
     /// (not at load, where the warning monitor isn't installed yet).
@@ -1667,6 +1671,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
         pfct: Vec::new(),
         no_reuse_buffers: Vec::new(),
         disabled_prods: Vec::new(),
+        initial_buffer_sets: Vec::new(),
         reset_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
@@ -2004,6 +2009,28 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                     }
                 }
             }
+            // `(set-buffer-chunk '<buffer> '<chunk>)` in the model body: an
+            // initial buffer content, re-applied on every reset (silently —
+            // no trace line).
+            "SET-BUFFER-CHUNK" => {
+                let sym = |e: Option<&Sexp>| -> Option<String> {
+                    match e {
+                        Some(Sexp::Sym(s)) => Some(s.clone()),
+                        Some(Sexp::List(q)) => match q.as_slice() {
+                            [Sexp::Sym(q), Sexp::Sym(s)] if q == "QUOTE" => Some(s.clone()),
+                            _ => None,
+                        },
+                        _ => None,
+                    }
+                };
+                if let (Some(b), Some(c)) = (sym(items.get(1)), sym(items.get(2))) {
+                    model.initial_buffer_sets.push((b.to_uppercase(), c));
+                }
+            }
+            // `(declare-buffer-usage <buffer> <type> <slots>)`: compiler
+            // metadata (which chunk type a buffer holds); it does not affect
+            // the trace, so it is accepted and ignored.
+            "DECLARE-BUFFER-USAGE" => {}
             got => return structural(format!("unknown model body form: {got}")),
         }
     }

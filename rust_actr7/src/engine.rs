@@ -2466,6 +2466,15 @@ impl Engine {
                 },
             );
         }
+        // Model-body `(set-buffer-chunk '<buffer> '<chunk>)`: silent initial
+        // buffer contents, applied on every reset.
+        for (buffer, chunk_name) in self.model.initial_buffer_sets.clone() {
+            let inst = self.instantiate(&buffer, NewChunk::Named(chunk_name))?;
+            let b = self.buffer_mut(&buffer);
+            b.chunk = Some(inst);
+            b.failed = false;
+            b.modified = false;
+        }
         // `(sgp :seed (S C))` in the model body (`random.lisp:417`): ACT-R
         // re-evaluates the model body on reset (`model.lisp:983`), reseeding
         // the RNG. The task then redoes its setup draws (device sidecar),
@@ -10188,14 +10197,17 @@ const RETRIEVAL_COMPOSE: &[(u32, u32)] = &[
     (0, 28), (0, 24), (0, 20), (0, 16), (0, 12), (0, 8), (0, 4),
 ];
 
-/// The GOAL compilation type's table (`goal-compilation.lisp:704`); only the
-/// `T` entries compose here (the special checks are not modelled).
+/// The GOAL compilation type's table (`goal-compilation.lisp:704`): `T`
+/// entries plus the `G-B-C1`/`NO-RHS-GOAL-REF`/`NO-GOAL-HARVESTING*` checks,
+/// which are not modelled and treated as composing.
 const GOAL_COMPOSE: &[(u32, u32)] = &[
-    (44, 0), (40, 44), (40, 40), (40, 13), (40, 12), (40, 9), (40, 4), (40, 0),
-    (13, 0), (12, 0),
-    (9, 13), (9, 12), (9, 9), (9, 4), (9, 0),
-    (8, 4), (8, 0),
-    (4, 0),
+    (44, 40), (44, 9), (44, 8), (44, 0),
+    (40, 44), (40, 40), (40, 13), (40, 12), (40, 9), (40, 8), (40, 4), (40, 0),
+    (13, 40), (13, 9), (13, 8), (13, 0),
+    (12, 40), (12, 9), (12, 8), (12, 0),
+    (9, 13), (9, 12), (9, 9), (9, 8), (9, 4), (9, 0),
+    (8, 44), (8, 40), (8, 13), (8, 12), (8, 9), (8, 8), (8, 4), (8, 0),
+    (4, 40), (4, 9), (4, 8), (4, 0),
     (0, 44), (0, 40), (0, 13), (0, 12), (0, 9), (0, 8), (0, 4),
 ];
 
