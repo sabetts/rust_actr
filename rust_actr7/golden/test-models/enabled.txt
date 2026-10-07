@@ -52,3 +52,4 @@ test-mp-value-req-param
 test-bad-productions
 emma
 precondition-test
+tutorial-unit1-tutor-model-partial-trace

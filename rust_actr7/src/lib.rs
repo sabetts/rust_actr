@@ -203,6 +203,10 @@ pub enum Step {
     Sgp(String, sexpr::Sexp),
     /// `(reset)`.
     Reset,
+    /// `(pdisable <name>...)`: skip the named productions.
+    PDisable(Vec<String>),
+    /// `(penable <name>...)`: re-enable the named productions.
+    PEnable(Vec<String>),
     /// `(buffer-chunk <name>...)`: the task driver's final buffer dump.
     BufferChunk(Vec<String>),
     /// Schedule a no-op event at absolute model time (real-time slack hook).
@@ -296,6 +300,8 @@ pub fn run_model_steps(
             Step::SetDetail(d) => eng.set_detail(*d),
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
+            Step::PDisable(names) => eng.pdisable(names),
+            Step::PEnable(names) => eng.penable(names),
             Step::BufferChunk(buffers) => eng.print_buffer_chunk(buffers),
             Step::DummyEvent(at_ms) => eng.schedule_dummy(*at_ms),
             Step::EmitWarning(msg) => eng.emit_warning(msg),

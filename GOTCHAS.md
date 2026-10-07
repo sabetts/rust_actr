@@ -2032,6 +2032,26 @@ Three engine pieces this exposed:
 `precondition-test` (20 lines, two `run-test` passes: focused and unfocused)
 is byte-exact and in `enabled.txt` (48 specs).
 
+## 151. DRIVER stubs: `pdisable`/`penable` capture and selection filtering
+
+`extract-specs.lisp` also skipped DRIVER stubs from source. They are now
+executed too (only COMMAND stubs are still classified without running), with
+`pdisable-fct`/`penable-fct` wrapped so the calls become `(:pdisable ...)` /
+`(:penable ...)` steps. `tutorial-unit1-tutor-model-partial-trace` is the
+small DRIVER case: it disables four productions of the already-supported
+tutor model so the trace stops after `ADD-ONES`.
+
+`pdisable-fct`/`penable-fct` (`procedural-cmds.lisp:541,568`) set a
+`production-disabled` flag; `conflict-resolution` skips flagged productions
+(`procedural.lisp:2195`). The engine keeps a `disabled_prods` name set and
+filters in `conflict_resolution`. A production name list is applied as-is;
+an empty list means all. `reset` clears the set because ACT-R recreates the
+productions from the model body (a model-body `pdisable-fct`, as in
+`dynamic-production-compilation-tests`, would therefore re-apply).
+
+`tutorial-unit1-tutor-model-partial-trace` (17 lines) is byte-exact and in
+`enabled.txt` (49 specs).
+
 
 
 

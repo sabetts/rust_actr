@@ -1717,6 +1717,10 @@ pub struct Engine {
     limit_ms: i64,
     out_lines: Vec<String>,
     exec_prods: Vec<ExecProd>,
+    /// `pdisable-fct` (`procedural-cmds.lisp:541`): productions skipped by
+    /// conflict resolution. Cleared on `reset` (the model body is
+    /// re-evaluated, recreating the productions).
+    disabled_prods: HashSet<String>,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -1953,6 +1957,7 @@ impl Engine {
             limit_ms: (run_secs * 1000.0).round() as i64,
             out_lines: Vec::new(),
             exec_prods: Vec::new(),
+            disabled_prods: HashSet::new(),
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -2344,6 +2349,9 @@ impl Engine {
         self.touch_hands = [false, false];
         self.touch_fingers = [[(0, 0, 1); 5]; 2];
         self.touch_last = None;
+        // Productions are recreated from the model body on reset, so any
+        // `pdisable` is forgotten (a model-body `pdisable-fct` would re-apply).
+        self.disabled_prods.clear();
         self.exec_prods = self
             .model
             .productions
@@ -4487,6 +4495,32 @@ impl Engine {
         self.rng.borrow_mut().set_seed(seed.0, seed.1);
     }
 
+    /// `pdisable-fct` (`procedural-cmds.lisp:541`): skip the named
+    /// productions in conflict resolution; an empty list disables all.
+    pub fn pdisable(&mut self, names: &[String]) {
+        if names.is_empty() {
+            for p in &self.model.productions {
+                self.disabled_prods.insert(p.name.to_uppercase());
+            }
+        } else {
+            for n in names {
+                self.disabled_prods.insert(n.to_uppercase());
+            }
+        }
+    }
+
+    /// `penable-fct` (`procedural-cmds.lisp:568`): re-enable the named
+    /// productions; an empty list enables all.
+    pub fn penable(&mut self, names: &[String]) {
+        if names.is_empty() {
+            self.disabled_prods.clear();
+        } else {
+            for n in names {
+                self.disabled_prods.remove(&n.to_uppercase());
+            }
+        }
+    }
+
     fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
         match event {
             Event::SetBuffer {
@@ -6524,6 +6558,11 @@ impl Engine {
         let mut matched: Vec<(usize, Bindings, f32, Vec<PpmMismatch>)> = Vec::new();
         for ep in self.exec_prods.clone() {
             let pname = self.model.productions[ep.index].name.clone();
+            // `conflict-resolution` skips disabled productions
+            // (`procedural.lisp:2195`).
+            if self.disabled_prods.contains(&pname.to_uppercase()) {
+                continue;
+            }
             if crt {
                 self.out(format!("Trying production: {pname}"));
             }

@@ -232,6 +232,16 @@ disable/enable, breakpoints); not trace-only drivers.")
     (push (mp-time-ms) *device-clears*))
   (call-orig 'clear-exp-window win))
 
+(defun w-pdisable (productions)
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (push (cons :pdisable productions) *steps*))
+  (call-orig 'pdisable-fct productions))
+
+(defun w-penable (productions)
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (push (cons :penable productions) *steps*))
+  (call-orig 'penable-fct productions))
+
 (defun write-device (name)
   (when (or *device-texts* *device-clears*)
     (let ((path (merge-pathnames (concatenate 'string name ".device.sexp") *out-dir*)))
@@ -258,7 +268,9 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'load-act-r-model #'w-load-model)
   (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk)
   (wrap-fn 'add-text-to-exp-window #'w-add-text)
-  (wrap-fn 'clear-exp-window #'w-clear-exp-window))
+  (wrap-fn 'clear-exp-window #'w-clear-exp-window)
+  (wrap-fn 'pdisable-fct #'w-pdisable)
+  (wrap-fn 'penable-fct #'w-penable))
 
 ;;; ---------------------------------------------------------------- extraction
 
@@ -325,11 +337,11 @@ golden), so the value is irrelevant."
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
     (fresh-state)
     (let ((static-scope (scope-of (or src ""))))
-      ;; Command/driver stubs need the Lisp harness and would capture
-      ;; time-random seeds; classify them from source without executing.
-      ;; Device stubs ARE executed so their run steps and window script are
-      ;; captured (the ref is the oracle; the device sidecar replays it).
-      (if (and static-scope (not (eq static-scope :device)))
+      ;; Command stubs need the command layer (out of scope, classified from
+      ;; source without executing). Device and driver stubs ARE executed so
+      ;; their run steps and device script are captured (the ref is the
+      ;; oracle; the spec replays it).
+      (if (eq static-scope :command)
           (make-spec name static-scope :flags (list static-scope))
           (handler-case
               (progn
@@ -345,7 +357,8 @@ golden), so the value is irrelevant."
                                    ((> *reset-count* 0) :multi)
                                    ((= (length *runs*) 1) :pure)
                                    (t :other))
-                             :flags (when (eq static-scope :device) '(:device)))))
+                             :flags (cond ((eq static-scope :device) '(:device))
+                                          ((eq static-scope :driver) '(:driver))))))
                   (write-device name)
                   spec))
             (error (e)

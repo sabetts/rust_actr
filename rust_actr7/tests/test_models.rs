@@ -224,6 +224,17 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 steps.push(Step::GoalFocus(desc));
             }
             ":RESET" => steps.push(Step::Reset),
+            ":PDISABLE" | ":PENABLE" => {
+                let names: Vec<String> = v[1..]
+                    .iter()
+                    .filter_map(|s| s.as_sym().map(str::to_string))
+                    .collect();
+                if head == ":PDISABLE" {
+                    steps.push(Step::PDisable(names));
+                } else {
+                    steps.push(Step::PEnable(names));
+                }
+            }
             ":DUMMY-EVENT" => match v.get(1).and_then(as_i64) {
                 Some(ms) => steps.push(Step::DummyEvent(ms)),
                 None => note(&mut unsupported, format!("dummy-event {st:?}")),
