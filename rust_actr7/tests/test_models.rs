@@ -580,9 +580,11 @@ fn probe_runnable() {
     let mut pass = Vec::new();
     let mut fail = Vec::new();
     let mut ignored = 0;
+    let mut ignored_detail = Vec::new();
     for spec in &specs {
-        if ignore_reason(spec).is_some() {
+        if let Some(reason) = ignore_reason(spec) {
             ignored += 1;
+            ignored_detail.push(format!("{} [{}] {reason}", spec.name, spec.scope));
             continue;
         }
         let ref_path = refs_dir().join(&spec.ref_name);
@@ -605,6 +607,14 @@ fn probe_runnable() {
         pass.join("\n")
     );
     println!("\n=== fail ({}) ===\n{}", fail.len(), fail.join("\n"));
+    if std::env::var("PROBE_IGNORED").is_ok() {
+        ignored_detail.sort();
+        println!(
+            "\n=== ignored ({}) ===\n{}",
+            ignored_detail.len(),
+            ignored_detail.join("\n")
+        );
+    }
 }
 
 #[test]

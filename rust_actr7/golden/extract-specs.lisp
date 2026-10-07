@@ -61,6 +61,10 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defvar *sgp-calls* nil)
 (defvar *suppress* nil)
 (defvar *wrapped* nil)
+;; Device calls made by an executed stub (`add-text-to-exp-window` etc.),
+;; as `(ms text x y)` / `ms`; written to `<name>.device.sexp`.
+(defvar *device-texts* nil)
+(defvar *device-clears* nil)
 
 ;;; ---------------------------------------------------------------- utils
 
@@ -209,6 +213,41 @@ disable/enable, breakpoints); not trace-only drivers.")
     (push (cons :buffer-chunk names) *steps*))
   (call-orig 'buffer-chunk-fct names))
 
+;;; ---------------------------------------------------------------- device
+;;;
+;;; Device stubs are now executed (not classified out of scope from source)
+;;; so their run steps and window script are captured. The script is emitted
+;;; as `<name>.device.sexp` in the format the Rust harness consumes; a
+;;; hand-authored sidecar (which carries task knobs the extractor cannot
+;;; derive, e.g. CONSUME-RNG / CLEAR-ON-KEYPRESS) is never overwritten.
+
+(defun w-add-text (win text &rest keys)
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (push (list (mp-time-ms) text (or (getf keys :x) 0) (or (getf keys :y) 0))
+          *device-texts*))
+  (apply (gethash 'add-text-to-exp-window *orig-fns*) win text keys))
+
+(defun w-clear-exp-window (&optional win)
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (push (mp-time-ms) *device-clears*))
+  (call-orig 'clear-exp-window win))
+
+(defun write-device (name)
+  (when (or *device-texts* *device-clears*)
+    (let ((path (merge-pathnames (concatenate 'string name ".device.sexp") *out-dir*)))
+      (when (probe-file path)
+        (format t "SPEC-NOTE ~a : keeping hand-authored device sidecar~%" name)
+        (return-from write-device nil))
+      (with-open-file (f path :direction :output :if-exists :supersede
+                              :if-does-not-exist :create)
+        ;; The task re-applies its setup each run; the engine re-arms the
+        ;; script per reset, so keep one copy.
+        (dolist (item (dedupe-preserve (reverse *device-texts*)))
+          (format f "(ADD-TEXT ~a ~s ~a ~a)~%" (first item) (second item)
+                  (third item) (fourth item)))
+        (dolist (c (dedupe-preserve (reverse *device-clears*)))
+          (format f "(CLEAR ~a)~%" c))))))
+
 (defun install-wrappers ()
   (wrap-fn 'run #'w-run)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
@@ -217,7 +256,9 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'ssp-fct #'w-ssp)
   (wrap-fn 'actr-load #'w-actr-load)
   (wrap-fn 'load-act-r-model #'w-load-model)
-  (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk))
+  (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk)
+  (wrap-fn 'add-text-to-exp-window #'w-add-text)
+  (wrap-fn 'clear-exp-window #'w-clear-exp-window))
 
 ;;; ---------------------------------------------------------------- extraction
 
@@ -229,7 +270,7 @@ disable/enable, breakpoints); not trace-only drivers.")
 
 (defun fresh-state ()
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
-        *reset-count* 0 *sgp-calls* nil))
+        *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))
@@ -284,9 +325,11 @@ golden), so the value is irrelevant."
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
     (fresh-state)
     (let ((static-scope (scope-of (or src ""))))
-      ;; Command/device stubs need the Lisp harness and would capture
+      ;; Command/driver stubs need the Lisp harness and would capture
       ;; time-random seeds; classify them from source without executing.
-      (if static-scope
+      ;; Device stubs ARE executed so their run steps and window script are
+      ;; captured (the ref is the oracle; the device sidecar replays it).
+      (if (and static-scope (not (eq static-scope :device)))
           (make-spec name static-scope :flags (list static-scope))
           (handler-case
               (progn
@@ -295,13 +338,16 @@ golden), so the value is irrelevant."
                   (load lisp))
                 (let ((*mode* :drive))
                   (force-virtual-window (funcall 'run-it)))
-                (make-spec
-                 name
-                 (cond ((> (length *runs*) 1) :multi)
-                       ((> *goal-focus-count* 0) :multi)
-                       ((> *reset-count* 0) :multi)
-                       ((= (length *runs*) 1) :pure)
-                       (t :other))))
+                (let ((spec (make-spec
+                             name
+                             (cond ((> (length *runs*) 1) :multi)
+                                   ((> *goal-focus-count* 0) :multi)
+                                   ((> *reset-count* 0) :multi)
+                                   ((= (length *runs*) 1) :pure)
+                                   (t :other))
+                             :flags (when (eq static-scope :device) '(:device)))))
+                  (write-device name)
+                  spec))
             (error (e)
               (make-spec name :error :error (princ-to-string e))))))))
 

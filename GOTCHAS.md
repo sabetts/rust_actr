@@ -1996,6 +1996,42 @@ Two things the engine needed beyond the machine:
 `emma` (81 lines) is byte-exact and in `enabled.txt` (47 specs); it also
 settles GOTCHA #148's claim that the ref is fully reproducible.
 
+## 150. Device stubs are extracted by executing them; the vision auto-unstuff
+
+`extract-specs.lisp` used to classify any stub whose *text* mentioned a
+device token (`install-device`, `open-exp-window`, …) as out of scope and
+write `:STEPS NIL` **without running it** (`extract-one`). The `.ref` was
+always the oracle; only the replay script was lossy. Now device stubs are
+executed like any other under `force-virtual-window`, with wrappers on
+`add-text-to-exp-window` / `clear-exp-window` capturing the window script,
+which is emitted as `<name>.device.sexp`. A hand-authored sidecar is never
+overwritten (it carries knobs the extractor cannot derive, e.g.
+`CONSUME-RNG`). Because the task re-applies its setup per run, the engine
+re-arms the script on every `reset` (`pending_texts`/`pending_clears` are
+consumed as time advances), and the emitted script is de-duplicated.
+
+Three engine pieces this exposed:
+- `(goal-focus free)` targets a chunk ACT-R defines for every model:
+  `create-model-default-chunks` (`model.lisp:753`) adds `free busy error
+  empty full failure requested unrequested` (`(x name x)`) and `clear`. The
+  engine now seeds these into `named` before the model's own chunks.
+- The vision module auto-stuffs an unused visual-location and then unstuffs
+  it after `new-span` (`stuff-visloc-buffer`, `vision.lisp:1995`;
+  `unstuff-buffer`, `general-pm.lisp:896`), erasing the buffer
+  (`ERASE-BUFFER VISUAL-LOCATION`). The precondition
+  `check-unstuff-buffer` (`vision.lisp:1944`) requires the buffer to still
+  hold the *unchanged, unrequested* copy, so a production's `=visual-location>`
+  RHS (`mod-buffer-chunk`) cancels it — the engine tracks a `modified` flag.
+  `:unstuff-visual-location` may be `nil`/`t`/a number (`act-touch` sets it
+  `nil`, which is why its VL is never erased).
+- ACT-R drops an event whose precondition fails **before** the run's stop
+  check (`skip-unnecessary-events`, `scheduling.lisp:588`; it checks only the
+  *next* event). Without this the stale unstuff kept the run alive to 0.5s
+  instead of stopping at the last real event.
+
+`precondition-test` (20 lines, two `run-test` passes: focused and unfocused)
+is byte-exact and in `enabled.txt` (48 specs).
+
 
 
 

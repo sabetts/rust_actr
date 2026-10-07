@@ -1,1 +1,1 @@
-(:NAME "precondition-test" :REF "precondition-test.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :DEVICE :FLAGS (:DEVICE) :ERROR NIL)
+(:NAME "precondition-test" :REF "precondition-test.ref" :MODELS ("test-models;models;precondition-test.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22) (1 (100 0) T 22)) :STEPS ((:RESET) (:GOAL-FOCUS FREE) (:RUN 1 (100 0) T 22) (:RESET) (:RUN 1 (100 0) T 22)) :GOAL-FOCUS 1 :RESETS 2 :SGP NIL :SCOPE :MULTI :FLAGS (:DEVICE) :ERROR NIL)

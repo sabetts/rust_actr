@@ -270,6 +270,9 @@ struct Config {
     finst_span_ms: i64,
     dat_ms: i64,
     attention_ms: i64,
+    /// `:unstuff-visual-location` (`vision.lisp:3499`): `None` disables the
+    /// automatic unstuff; `Some(delay)` is the unstuff delay in ms.
+    unstuff_vl_ms: Option<i64>,
     imaginal_delay_ms: i64,
     feat_prep_ms: i64,
     init_ms: i64,
@@ -983,6 +986,19 @@ impl Config {
             Some(b) => (0.001f32).powf(-b).ln(),
             None => 0.0,
         };
+        // `:unstuff-visual-location` (`vision.lisp:3499`): nil disables the
+        // automatic unstuff; t uses `new-span`; a number is the delay itself.
+        let onset_span_ms = secs_to_ms(":VISUAL-ONSET-SPAN", 0.5)?;
+        let unstuff_vl_ms = match m.params.iter().find(|(k, _)| k == ":UNSTUFF-VISUAL-LOCATION") {
+            None => Some(onset_span_ms),
+            Some((_, Sexp::Sym(s))) if s == "NIL" => None,
+            Some((_, Sexp::Sym(_))) => Some(onset_span_ms),
+            Some((_, Sexp::Float(x))) => Some((x * 1000.0).round() as i64),
+            Some((_, Sexp::Int(i))) => Some(i * 1000),
+            Some((_, got)) => {
+                return Err(bad(format!("bad :unstuff-visual-location {got:?}")))
+            }
+        };
         let mut cfg = Config {
             detail,
             esc: sgp_bool(&m.params, ":ESC"),
@@ -1062,6 +1078,7 @@ impl Config {
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
             attention_ms: secs_to_ms(":VISUAL-ATTENTION-LATENCY", 0.085)?,
+            unstuff_vl_ms,
             imaginal_delay_ms: secs_to_ms(":IMAGINAL-DELAY", 0.2)?,
             feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
@@ -1208,6 +1225,9 @@ struct Buffer {
     chunk: Option<ChunkInst>,
     failed: bool,
     busy: bool,
+    /// Set by `mod-buffer-chunk` (a production's `=buffer>` RHS): the vision
+    /// module's `check-unstuff-buffer` only unstuffs an *unmodified* copy.
+    modified: bool,
 }
 
 /// Base-level history per DM chunk, aligned with `Engine.dm` by index:
@@ -1231,6 +1251,7 @@ impl Buffer {
             chunk: None,
             failed: false,
             busy: false,
+            modified: false,
         }
     }
 }
@@ -1389,6 +1410,11 @@ enum Event {
     /// `+visual> cmd clear` direct event (output low); the buffer
     /// itself is cleared by the request-rule implicit event.
     VisualClear,
+    /// Vision `unstuff-buffer` (`general-pm.lisp:896`): erase an unused
+    /// auto-stuffed visual-location chunk once `new-span` elapses.
+    UnstuffVl {
+        copy: String,
+    },
     /// Run-full-time dummy: keeps the run going to the time limit. Also used
     /// non-maintenance for a real-time slack hook's `(schedule-event <t> 'fn)`
     /// no-op, which is hidden at medium but wakes an armed CR.
@@ -1705,6 +1731,10 @@ pub struct Engine {
     pending_texts: Vec<DeviceText>,
     /// Scripted window clears not yet applied, sorted.
     pending_clears: Vec<i64>,
+    /// The full device script, re-armed on every `reset` (a task re-applies
+    /// its window setup each run; `pending_*` is consumed as time advances).
+    device_texts: Vec<DeviceText>,
+    device_clears: Vec<i64>,
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
     feat_seq: u64,
@@ -1933,11 +1963,21 @@ impl Engine {
                 .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
                 .collect(),
             pending_texts: {
-                let mut v = texts;
+                let mut v = texts.clone();
                 v.sort_by_key(|t| t.at_ms);
                 v
             },
             pending_clears: {
+                let mut v = clears.clone();
+                v.sort_unstable();
+                v
+            },
+            device_texts: {
+                let mut v = texts;
+                v.sort_by_key(|t| t.at_ms);
+                v
+            },
+            device_clears: {
                 let mut v = clears;
                 v.sort_unstable();
                 v
@@ -2120,6 +2160,32 @@ impl Engine {
             self.dm.push(chunk_inst(c)?);
         }
         self.named = HashMap::new();
+        // `create-model-default-chunks` (`model.lisp:753`): every model starts
+        // with these state chunks (`(free name free)` etc., plus `clear`); a
+        // model-body definition of the same name overrides them below.
+        for name in [
+            "FREE", "BUSY", "ERROR", "EMPTY", "FULL", "FAILURE", "REQUESTED",
+            "UNREQUESTED",
+        ] {
+            self.named.insert(
+                name.to_string(),
+                ChunkInst {
+                    name: Some(name.to_string()),
+                    ctype: "CHUNK".to_string(),
+                    slots: vec![("NAME".to_string(), Value::Sym(name.to_string()))],
+                    bare: false,
+                },
+            );
+        }
+        self.named.insert(
+            "CLEAR".to_string(),
+            ChunkInst {
+                name: Some("CLEAR".to_string()),
+                ctype: "CLEAR".to_string(),
+                slots: Vec::new(),
+                bare: false,
+            },
+        );
         for c in &self.model.defined_chunks {
             self.named.insert(c.name.clone(), chunk_inst(c)?);
         }
@@ -2181,6 +2247,11 @@ impl Engine {
         self.utilities = vec![self.cfg.iu; self.model.productions.len()];
         self.history.clear();
         self.features.clear();
+        // A device task re-applies its window setup after each reset; restore
+        // the script so the next run sees it (`pending_*` is consumed as time
+        // advances, and a task runs its setup again per run).
+        self.pending_texts = self.device_texts.clone();
+        self.pending_clears = self.device_clears.clone();
         self.feat_seq = 0;
         self.copy_count.clear();
         self.c_fan_out.clear();
@@ -2643,6 +2714,36 @@ impl Engine {
         }
     }
 
+    /// `check-unstuff-buffer` (`vision.lisp:1944`): the visual-location buffer
+    /// still holds the *unchanged*, auto-stuffed copy.
+    fn unstuff_valid(&self, copy: &str) -> bool {
+        self.buffers.get("VISUAL-LOCATION").map_or(false, |b| {
+            !b.modified
+                && b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(copy)
+        })
+    }
+
+    /// `skip-unnecessary-events` (`scheduling.lisp:588`): drop the next
+    /// queued event while its precondition no longer holds. Only the vision
+    /// unstuff event has one, so a run that modified the location stops
+    /// instead of lingering until the unstuff time.
+    fn skip_unnecessary_events(&mut self) {
+        loop {
+            let stale = match self.queue.peek() {
+                Some(q) => match &q.event {
+                    Event::UnstuffVl { copy } => !self.unstuff_valid(copy),
+                    _ => false,
+                },
+                None => false,
+            };
+            if stale {
+                self.queue.pop();
+            } else {
+                break;
+            }
+        }
+    }
+
     /// Run once and return the full trace (single-shot contract).
     pub fn run(mut self) -> Result<String, EngineError> {
         let secs = self.limit_ms as f64 / 1000.0;
@@ -2666,6 +2767,10 @@ impl Engine {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         let mut processed = false;
         loop {
+            // `skip-unnecessary-events` runs before the stop check, so a
+            // stale maintenance event (failing precondition) doesn't keep
+            // the run alive.
+            self.skip_unnecessary_events();
             // Peek so an event beyond the limit stays queued for a later
             // `run` (ACT-R bounds each run relative to the current time and
             // leaves future events in place).
@@ -4430,6 +4535,7 @@ impl Engine {
                 }
                 self.buffer_mut(&buffer).chunk = Some(inst);
                 self.buffer_mut(&buffer).failed = false;
+                self.buffer_mut(&buffer).modified = false;
                 self.changed();
             }
             Event::OverwriteBuffer {
@@ -4460,6 +4566,7 @@ impl Engine {
                 }
                 self.buffer_mut(&buffer).chunk = Some(inst);
                 self.buffer_mut(&buffer).failed = false;
+                self.buffer_mut(&buffer).modified = false;
                 self.changed();
             }
             Event::VocalFree => {
@@ -4559,6 +4666,7 @@ impl Engine {
                     self.emit(&module, format!("CLEAR-BUFFER {buffer}"));
                 }
                 let cleared = self.buffer_mut(&buffer).chunk.take();
+                self.buffer_mut(&buffer).modified = false;
                 if buffer == "GOAL" && self.cfg.threads {
                     if let Some(n) = cleared.as_ref().and_then(|c| c.name.clone()) {
                         self.goal_set
@@ -4595,6 +4703,19 @@ impl Engine {
                 }
                 self.changed();
             }
+            Event::UnstuffVl { copy } => {
+                // `check-unstuff-buffer` (`vision.lisp:1944`): only an
+                // unchanged, unrequested auto-stuffed copy is erased.
+                let valid = self.unstuff_valid(&copy);
+                if valid {
+                    if show {
+                        self.emit("VISION", "ERASE-BUFFER VISUAL-LOCATION".to_string());
+                    }
+                    self.buffer_mut("VISUAL-LOCATION").chunk = None;
+                    self.buffer_mut("VISUAL-LOCATION").failed = false;
+                    self.changed();
+                }
+            }
             Event::AlBufferCleared { chunk } => {
                 // `al-buffer-cleared` (`associative-learning.lisp:667`): update
                 // with the chunk's own sources plus the other source buffers.
@@ -4624,6 +4745,8 @@ impl Engine {
                         }
                     }
                 }
+                // `check-unstuff-buffer` sees a modified (non-copy) chunk.
+                self.buffer_mut(&buffer).modified = true;
                 if self.cfg.tracker {
                     let names: Vec<String> = slots.iter().map(|(s, _)| s.clone()).collect();
                     for s in names {
@@ -12504,12 +12627,13 @@ impl Engine {
         self.vl_copies.insert(copy.clone(), idx);
         self.vl_xy.insert(copy.clone(), (feat.x, feat.y));
         let inst = ChunkInst {
-            name: Some(copy),
+            name: Some(copy.clone()),
             ctype: "VISUAL-LOCATION".to_string(),
             slots: feat.loc_slots(),
             bare: false,
         };
         self.buffer_mut("VISUAL-LOCATION").failed = false;
+        self.buffer_mut("VISUAL-LOCATION").modified = false;
         self.now(
             Prio::Num(10),
             Out::Low,
@@ -12520,6 +12644,20 @@ impl Engine {
                 shown: Some(base.to_string()),
             },
         );
+        // `stuff-visloc-buffer` (`vision.lisp:1995`): an auto-stuffed
+        // (unrequested) location is unstuffed after `new-span`, unless
+        // `:unstuff-visual-location` is nil.
+        if !requested {
+            if let Some(delay) = self.cfg.unstuff_vl_ms {
+                self.push_m(
+                    self.time_ms + delay,
+                    Prio::Num(0),
+                    Out::Medium,
+                    true,
+                    Event::UnstuffVl { copy: copy.clone() },
+                );
+            }
+        }
         Ok(())
     }
 

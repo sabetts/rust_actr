@@ -51,3 +51,4 @@ associative-learning
 test-mp-value-req-param
 test-bad-productions
 emma
+precondition-test
