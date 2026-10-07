@@ -2460,3 +2460,22 @@ The task's `move-it` is scheduled by the model, so its window effect is
 replayed from a captured `(MODIFY-TEXT ms text x y)` device op; `!eval!`
 `incf`/`modify-text-for-exp-window` are no-ops, and `!eval! (buffer-chunk …)`
 runs in source order (after `!output!`).
+
+## 167. `*buffer>` mod-requests and per-run device sidecars
+
+`*buffer>` (`module-mod-request`, `buffers.lisp:1666`) is not an immediate
+modify: the request goes to the buffer's module, which goes busy and applies
+the change after its own delay. For `*imaginal>` that is the 200 ms imaginal
+delay, so a later `?imaginal> state free` test waits (in `paired-learning`
+the `retireve-associate` firing moves 0.450 → 0.600 and a `MOD-BUFFER-CHUNK
+IMAGINAL` appears at +200 ms). The engine now sets `imag_busy`, schedules the
+change, and frees the module when it lands (traced at `low`, the detail the
+model's `:trace-detail` shows).
+
+`paired-learning`'s checked-in device sidecar predated per-run `(RUN n …)`
+groups, so its flat `ADD-TEXT` list mixed texts from different runs at the
+same `at_ms` — two texts landed at t=0 and the first visual-location was
+named `VISUAL-LOCATION1` instead of `VISUAL-LOCATION0`. Regenerating the
+sidecar (with the groups) fixed the naming. The spec still needs the
+production-compilation rendering to match (the composed production's LHS
+takes the post-state `stimulus-read` instead of the first firing's `start`).
