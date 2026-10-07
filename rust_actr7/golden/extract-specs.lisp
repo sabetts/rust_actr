@@ -153,6 +153,48 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defun call-orig (name &rest args)
   (apply (gethash name *orig-fns*) args))
 
+(defvar *last-sgp-params* nil)
+
+(defun eff-param (key)
+  "Read a parameter without recording the call."
+  (ignore-errors
+    (let ((*suppress* t))
+      (let ((r (sgp-fct (list key))))
+        ;; `sgp-fct` with a getter returns the value(s): a single value as a
+        ;; one-element list (`(T)`), a plist as `((:key v))`.
+        (cond ((and (consp r) (consp (car r))) (second (car r)))
+              ((consp r) (car r))
+              (t r))))))
+
+(defvar *testing-function* nil)
+
+(defun find-testing-function (tree)
+  (cond ((and (consp tree) (eq (car tree) :testing-function)) (cadr tree))
+        ((consp tree)
+         (or (find-testing-function (car tree))
+             (find-testing-function (cdr tree))))
+        (t nil)))
+
+(defun flush-sgp-params ()
+  ;; The `:testing-function` re-applies `:act`/`:epl`/`:pct` on each reset
+  ;; (`paired`'s `set-paired-params`); record a step when they change so the
+  ;; engine turns tracing/compilation on and off per run.
+  (when (and (eq *mode* :drive) (not *suppress*))
+    ;; The stub's `ssp :starting-parameters (:testing-function fn)` is applied
+    ;; by the model-tester on each reset; the single-threaded load does not,
+    ;; so call it here (it sets `:act`/`:epl`/`:pct` from the task's globals).
+    (when *testing-function*
+      ;; Suppress the harness trace setup (`set-testing-traces` sets
+      ;; `:v`/`:cmdt`, already encoded in each `:RUN` step).
+      (let ((*suppress* t))
+        (ignore-errors (funcall *testing-function*))))
+    (let* ((act (eff-param :act)) (epl (eff-param :epl)) (pct (eff-param :pct))
+           (cur (list (and act t) (and epl t) (and pct t))))
+      (unless (equal cur *last-sgp-params*)
+        (push (list :sgp :act (first cur) :epl (second cur) :pct (third cur))
+              *steps*)
+        (setf *last-sgp-params* cur)))))
+
 (defun eff-seed ()
   (ignore-errors
     (let ((*suppress* t))
@@ -188,6 +230,7 @@ disable/enable, breakpoints); not trace-only drivers.")
     ;; The trace-reference harness monitors the model-trace regardless of the
     ;; model's `:v` (which only gates the stdout echo), so the recorded run is
     ;; always traced.
+    (flush-sgp-params)
     (flush-rng-count)
     (let ((rec (list run-time (eff-seed) t
                      (ignore-errors (max-module-name-length)))))
@@ -202,6 +245,7 @@ disable/enable, breakpoints); not trace-only drivers.")
   ;; step so the engine runs to the limit instead of stopping early.
   (declare (ignore real-time))
   (when (and (eq *mode* :drive) (not *suppress*))
+    (flush-sgp-params)
     (flush-rng-count)
     (let ((rec (list run-time (eff-seed) t
                      (ignore-errors (max-module-name-length)))))
@@ -235,6 +279,8 @@ disable/enable, breakpoints); not trace-only drivers.")
   (call-orig 'sgp-fct params))
 
 (defun w-ssp (params)
+  (let ((tf (find-testing-function params)))
+    (when tf (setf *testing-function* tf)))
   (when (and (eq *mode* :drive) (not *suppress*)
              (not (every #'keywordp params)))
     (push (cons :ssp params) *sgp-calls*)
@@ -404,7 +450,7 @@ disable/enable, breakpoints); not trace-only drivers.")
         *device-commands* nil *device-modifies* nil
         *item-texts* (make-hash-table :test 'equal)
         *item-pos* (make-hash-table :test 'equal)
-        *rng-count* 0))
+        *rng-count* 0 *last-sgp-params* nil *testing-function* nil))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))
@@ -458,6 +504,7 @@ golden), so the value is irrelevant."
   (clear-all)
   (let ((*mode* :load))
     (load lisp))
+
   (let ((*mode* :drive))
     (force-virtual-window (funcall 'run-it)))
   (let ((spec (make-spec
@@ -521,6 +568,12 @@ after an undefined-function error. Returns whether anything was loaded."
             (*print-level* nil) (*print-case* :upcase))
         (prin1 spec f)
         (terpri f)))))
+
+; The model-tester harness defines `set-testing-traces`; the spec records the
+;; trace itself, so a no-op keeps a `:testing-function` (e.g. paired's
+;; `set-paired-params`) from erroring before it applies `:act`/`:epl`/`:pct`.
+(unless (fboundp 'set-testing-traces)
+  (defun set-testing-traces (&optional arg) (declare (ignore arg)) t))
 
 (defun spec-main ()
   (setf *tm-dir* (pathname (concatenate 'string (sb-ext:posix-getenv "SPEC_TMDIR") "/"))

@@ -2512,3 +2512,19 @@ before the next run; `Step::ConsumeRng` advances the engine's MT stream by
 `n`. With this, `paired`'s retrieval latencies (and the transient-noise
 values in the `:act` trace) line up across all 16 runs — the reference's
 first noise, `−0.7636829`, comes out of consuming the task's draw.
+
+## 170. Per-run `:act`/`:epl`/`:pct` from the testing-function
+
+A stub's `(ssp :starting-parameters (:testing-function fn))` is applied by
+the model-tester harness, not the single-threaded ACT-R load, so the
+extractor now captures the function (`w-ssp`) and calls it before each run,
+then records the resulting `:act`/`:epl`/`:pct` as a `(:SGP …)` step when they
+change (`paired`'s `set-paired-params` reads the task's `*act-trace*` /
+`*compilation*` globals). Its `set-testing-traces` call is suppressed (it
+sets `:v`/`:cmdt`, already encoded in each `:RUN` step); `sgp-fct` getters
+return a flat value list (`(T)`, not `((:act t))`). The extractor also
+defines `set-testing-traces` as a no-op if the harness did not.
+
+This makes `paired`'s `:act` activation blocks (and their `No matching chunk
+found retrieval failure` line) and the run-2/3 production-compilation blocks
+appear, matching the reference.
