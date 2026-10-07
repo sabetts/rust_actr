@@ -296,6 +296,9 @@ pub struct Model {
     /// not reuse a single chunk (`buffers.lisp:1920`); each request makes a
     /// fresh chunk. Stored upper-cased.
     pub no_reuse_buffers: Vec<String>,
+    /// Model-body `(pdisable name...)`: productions disabled on every reset
+    /// (ACT-R re-evaluates the body, `procedural-cmds.lisp:541`). Upper-cased.
+    pub disabled_prods: Vec<String>,
     /// Warning blocks from productions rejected by the validator. ACT-R
     /// re-evaluates the model body on `reset`, so these are re-emitted then
     /// (not at load, where the warning monitor isn't installed yet).
@@ -1642,6 +1645,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
         visloc_default: Vec::new(),
         pfct: Vec::new(),
         no_reuse_buffers: Vec::new(),
+        disabled_prods: Vec::new(),
         reset_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
@@ -1938,6 +1942,37 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                 });
                 if let Some(b) = name {
                     model.no_reuse_buffers.push(b.to_uppercase());
+                }
+            }
+            // `(pdisable name...)` / `(penable name...)` in the model body:
+            // ACT-R re-evaluates the body on every reset (`model.lisp:983`),
+            // so these are re-applied then. `(pdisable-fct (all-productions))`
+            // is recorded as `"*"` (every production).
+            "PDISABLE" | "PENABLE" | "PDISABLE-FCT" | "PENABLE-FCT" => {
+                let disable = head.starts_with("PDISABLE");
+                if items.len() == 1 {
+                    if !disable {
+                        model.disabled_prods.clear();
+                    }
+                } else if let Some(Sexp::List(call)) = items.get(1) {
+                    if call.first().and_then(|x| x.as_sym()) == Some("ALL-PRODUCTIONS") {
+                        if !model.disabled_prods.contains(&"*".to_string()) {
+                            model.disabled_prods.push("*".to_string());
+                        }
+                    }
+                } else {
+                    for e in &items[1..] {
+                        if let Some(n) = e.as_sym() {
+                            let n = n.to_uppercase();
+                            if disable {
+                                if !model.disabled_prods.contains(&n) {
+                                    model.disabled_prods.push(n);
+                                }
+                            } else {
+                                model.disabled_prods.retain(|x| x != &n);
+                            }
+                        }
+                    }
                 }
             }
             got => return structural(format!("unknown model body form: {got}")),

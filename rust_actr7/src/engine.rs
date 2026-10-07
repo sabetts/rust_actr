@@ -2350,8 +2350,18 @@ impl Engine {
         self.touch_fingers = [[(0, 0, 1); 5]; 2];
         self.touch_last = None;
         // Productions are recreated from the model body on reset, so any
-        // `pdisable` is forgotten (a model-body `pdisable-fct` would re-apply).
+        // `pdisable` is forgotten; a model-body `pdisable` is re-applied
+        // (`model.lisp:983` re-evaluates the body).
         self.disabled_prods.clear();
+        for n in &self.model.disabled_prods {
+            if n == "*" {
+                for p in &self.model.productions {
+                    self.disabled_prods.insert(p.name.to_uppercase());
+                }
+            } else {
+                self.disabled_prods.insert(n.clone());
+            }
+        }
         self.exec_prods = self
             .model
             .productions
@@ -2386,6 +2396,9 @@ impl Engine {
                 },
             );
         }
+        // NOTE: the model body's `(sgp :seed ...)` is applied at construction
+        // only (GOTCHA #148); re-applying it here regresses `demo2-randomized`
+        // and `emma` (its `consume_rng` device draws are ordered after it).
         self.push(0, Prio::Min, Out::Medium, Event::ConflictResolution);
         // Model-body `(schedule-event <secs> ...)`: armed relative to model
         // time 0 (params evaluated with no bindings).
@@ -8436,6 +8449,17 @@ impl Engine {
                 return Ok(());
             }
         }
+        // `:rt-value` request parameter (`declarative-memory.lisp:1292`)
+        // overrides `:rt` for this request; the value must be a number.
+        let rt = match want_slots
+            .iter()
+            .find(|(s, _)| s == ":RT-VALUE")
+            .map(|(_, v)| v.clone())
+        {
+            Some(Value::Num(x)) => x as f32,
+            Some(Value::Int(i)) => i as f32,
+            _ => self.cfg.rt,
+        };
         // Partial matching (mp set, esc on): candidacy is the request's
         // slot signature — required-filled and required-empty slot names —
         // NOT the chunk type (`slots-vector-match-signature`,
@@ -8583,16 +8607,34 @@ impl Engine {
                         // merge/add (both start count at 1).
                         -999999.0
                     } else {
-                        self.cfg.blc
-                            + bl_equation(
-                                self.time_ms,
-                                &refs,
-                                count as f32,
-                                creation,
-                                bll,
-                                &self.cfg.ol,
-                                self.cfg.act_scale,
-                            )
+                        if self.act_medium() {
+                            self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                            let refs_str: Vec<String> =
+                                refs.iter().map(|r| fmt_secs(*r)).collect();
+                            self.out(format!(
+                                "Computing base-level from {count} references ({})",
+                                refs_str.join(" ")
+                            ));
+                            self.out(format!(
+                                "  creation time: {} decay: {}  Optimized-learning: {}",
+                                fmt_secs(creation),
+                                lisp_f(bll),
+                                ol_str(&self.cfg.ol)
+                            ));
+                        }
+                        let value = bl_equation(
+                            self.time_ms,
+                            &refs,
+                            count as f32,
+                            creation,
+                            bll,
+                            &self.cfg.ol,
+                            self.cfg.act_scale,
+                        );
+                        if self.act_medium() {
+                            self.out(format!("base-level value: {}", lisp_f(value)));
+                        }
+                        self.cfg.blc + value
                     }
                 }
                 None => match self.hist[idx].fixed_base {
@@ -8749,13 +8791,13 @@ impl Engine {
             }
         };
         let act = best_a.unwrap_or(0.0);
-        let below = self.cfg.esc && act < self.cfg.rt;
+        let below = self.cfg.esc && act < rt;
         if self.act_low() {
             match &best {
                 Some(_) if below => {
                     self.out(format!(
                         "No chunk above the retrieval threshold: {}",
-                        lisp_f(self.cfg.rt)
+                        lisp_f(rt)
                     ));
                 }
                 Some(w) => {
@@ -8777,7 +8819,7 @@ impl Engine {
                 let at = self.time_ms + wait;
                 self.push(at, Prio::Num(0), Out::Low, Event::RetrievalFailure { gen });
             }
-            Some(_) if self.cfg.esc && act < self.cfg.rt => {
+            Some(_) if self.cfg.esc && act < rt => {
                 let wait = failure_wait(&self.cfg);
                 let at = self.time_ms + wait;
                 self.push(at, Prio::Num(0), Out::Low, Event::RetrievalFailure { gen });
@@ -12929,6 +12971,21 @@ fn lisp_f(x: f32) -> String {
         format!("{x:.1}")
     } else {
         format!("{x}")
+    }
+}
+
+/// `print-time-in-seconds` (`misc-utils.lisp:1518`): ms as `S.mmm`.
+fn fmt_secs(ms: i64) -> String {
+    let a = ms.abs();
+    format!("{}{}.{:03}", if ms < 0 { "-" } else { "" }, a / 1000, a % 1000)
+}
+
+/// `~s` of an `:ol` value in the base-level trace.
+fn ol_str(ol: &Ol) -> String {
+    match ol {
+        Ol::On => "T".to_string(),
+        Ol::Off => "NIL".to_string(),
+        Ol::Num(n) => lisp_f(*n as f32),
     }
 }
 

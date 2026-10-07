@@ -2052,6 +2052,31 @@ productions from the model body (a model-body `pdisable-fct`, as in
 `tutorial-unit1-tutor-model-partial-trace` (17 lines) is byte-exact and in
 `enabled.txt` (49 specs).
 
+## 152. `:act` base-level trace, `:rt-value`, model-body `pdisable`
+
+Making `retrieval-request-parameters` runnable (DRIVER stubs are executed
+now) surfaced three general pieces:
+- the full `:act` base-level trace when `:bll` is set: `Starting with blc`,
+  `Computing base-level from N references (...)`,
+  `  creation time: … decay: …  Optimized-learning: …`, `base-level value:`
+  before `Total base-level` (`compute-references`,
+  `declarative-memory.lisp:2695`). The engine previously emitted only
+  `Computing base-level` → `Total base-level`.
+- the `:rt-value` retrieval-request parameter (`declarative-memory.lisp:1292`):
+  a number overrides `:rt` for that request.
+- model-body `(pdisable …)` / `(penable …)` (and `(pdisable-fct
+  (all-productions))`): re-applied on every `reset`, because ACT-R
+  re-evaluates the model body (`model.lisp:983`). This is what makes the
+  per-production driver loop run exactly one production.
+
+`retrieval-request-parameters` is **not yet byte-exact** and is committed as a
+runnable spec (`:SCOPE :MULTI`, `:FLAGS (:DRIVER)`) so `probe_runnable` tracks
+it (49 pass / 1 fail). Remaining: the goal buffer holds a `reuse?` copy
+`GOAL-CHUNK0` in the ref (`buffers.lisp:1349`) while the engine keeps the
+source name (a naive copy regresses `indirect-action-compilation`, so this
+needs care), and `:bll-value`/`:mas-value`/`:ans-value` plus the
+retrieval-failure timing.
+
 
 
 
