@@ -2627,3 +2627,21 @@ events, summed as `bold_partial_gammapdf(time − t1)`. `bold_point` records a
 point on each goal `set-buffer-chunk`; with it `paired`'s GOAL column matches
 and only VISUAL remains (the engine's visual-busy demand is ~2/3 of the
 reference's — a boundary detail in the busy-interval recording).
+
+## 178. `paired` BOLD: the visual clear is busy, and the table's blank line
+
+Two last details completed the BOLD table:
+
+1. **`+visual> cmd clear` marks the vision module busy.** The module's
+   `clear` (`general-pm.lisp:333`, reached via `pm-module-request` →
+   `schedule-event-now 'clear`, `vision.lisp:3252`) sets `prep` busy for
+   `feat-prep-time`, so `?visual> state free` stays false for ~50 ms after
+   each `VISION CLEAR`. That is the *second* busy interval per paired run
+   (`[k+0.185, k+0.235]`); the plain `CLEAR-BUFFER VISUAL` (no module
+   request) does not. Modelled with `visual_prep_busy`, freed by the
+   scheduled `change-state`; `query_free("VISUAL")` now tests both flags.
+2. **The table ends with one blank line.** `command-output`
+   (`misc-utils.lisp:845`) wraps its argument in `~&…~%`; the data format
+   `~{~{17,3f~}~%~}` already ends in `~%`, so the wrapper adds a second.
+
+With both, `paired` is byte-exact (540 lines) and joins `enabled.txt`.

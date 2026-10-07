@@ -1848,6 +1848,10 @@ pub struct Engine {
     /// (`chunk-visicon-entry`), for tracking's `vis-obj-marker` test.
     obj_feature: HashMap<String, String>,
     visual_busy: bool,
+    /// `clear` on the vision module (`pm-module` clear, `general-pm.lisp:333`)
+    /// sets `prep` busy for `feat-prep-time`, so `?visual> state free` stays
+    /// false for ~50 ms after a `+visual> cmd clear` (`VISION CLEAR`).
+    visual_prep_busy: bool,
     /// Location copy named in the last `move-attention`, re-encoded when
     /// the window changes underneath it.
     last_attention: Option<String>,
@@ -2108,6 +2112,7 @@ impl Engine {
             obj_built: HashMap::new(),
             obj_feature: HashMap::new(),
             visual_busy: false,
+            visual_prep_busy: false,
             last_attention: None,
             tracked: None,
             tracked_lastloc: None,
@@ -2456,6 +2461,7 @@ impl Engine {
         self.obj_built.clear();
         self.obj_feature.clear();
         self.visual_busy = false;
+        self.visual_prep_busy = false;
         self.last_attention = None;
         self.tracked = None;
         self.tracked_lastloc = None;
@@ -4631,6 +4637,10 @@ impl Engine {
             self.out_lines.push(row);
             time += INC;
         }
+        // `command-output` wraps its argument with `~&…~%`
+        // (`misc-utils.lisp:845`); the data block already ends in `~%`, so
+        // the table is followed by one blank line.
+        self.out_lines.push(String::new());
     }
 
     /// Schedule a no-op event at absolute model time `at_ms` (a real-time
@@ -6318,6 +6328,12 @@ impl Engine {
                         "CHANGE-STATE :LAST NONE :PREP FREE :PROC FREE".into(),
                     );
                 }
+                // `clear`'s scheduled `change-state` frees the vision module's
+                // preparation state (`general-pm.lisp:333`).
+                if module == "VISION" {
+                    self.visual_prep_busy = false;
+                    self.changed();
+                }
             }
             Event::PressKey { key, req_ms, isa: _isa } => {
                 if show {
@@ -7820,7 +7836,7 @@ impl Engine {
     /// buffers, buffer flag otherwise. (Motor free = neither preparing
     /// nor executing; visual free = no attention shift in flight.)
     fn query_free(&self, buffer: &str) -> Result<bool, EngineError> {
-        match buffer {            "VISUAL" => Ok(!self.visual_busy),
+        match buffer {            "VISUAL" => Ok(!self.visual_busy && !self.visual_prep_busy),
             "MANUAL" => {
                 if self.cfg.zz_ext {
                     Ok(!self.man_prep_busy
@@ -11479,6 +11495,11 @@ impl Engine {
             // the buffer itself is cleared by the request-rule implicit
             // ClearBuffer already queued at firing.
             "CLEAR" => {
+                // `pm-module-request` schedules `clear`
+                // (`vision.lisp:3252`), whose `pm-module` method sets `prep`
+                // busy for `feat-prep-time` (`general-pm.lisp:333`); the
+                // matching `change-state` frees it.
+                self.visual_prep_busy = true;
                 self.now(Prio::Num(0), Out::Low, Event::VisualClear);
                 Ok(())
             }
