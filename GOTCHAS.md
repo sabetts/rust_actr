@@ -2726,3 +2726,21 @@ of the parents' and its `reward` to the max of the numeric parent rewards.
 The engine had hard-coded `:reward NIL`; now it inherits (so `complete-task`'s
 `(spp complete-task :reward 20)` shows on the compiled production's parameter
 block) and stores it on the installed production for later compositions.
+
+## 186. `update-attended-loc` re-encode matches by position, not name
+
+`encoding-complete` (`vision.lisp:2413`) builds the object with
+`get-obj-at-location` → `within-move` (`vision.lisp:2485/2367`), i.e. by the
+attention position with `:visual-movement-tolerance` (default 0.5°, the
+module's `move-allowance`). The engine resolved the re-encode through
+`resolve_loc`, which consults the `vl_copies` name→index map — stale across a
+window clear, so the old copy name still pointed at index 0, now holding the
+*new* text. The re-encode therefore wrongly "found" it: an extra
+`SET-BUFFER-CHUNK VISUAL TEXT1 NIL` at k+0.085 plus a consumed `TEXT{n}`
+name (so the requested encode became `TEXT2`). SBCL probes confirm ACT-R
+fires the re-encode but finds nothing when the replacement shifts the centre
+past tolerance (`xray`→`8`: 10 px ≈ 0.53° > 0.5° → `No visual-object found`),
+and *does* re-encode when the centre is unchanged (`xray`→`zinc` →
+`SET-BUFFER-CHUNK VISUAL TEXT1 NIL`). Fix: resolve `requested = nil` encodings
+by the old clof (`emma_loc_xyz`) via `angle_between` ≤ 0.5°; on no match take
+the `No visual-object found` branch (frees the module, consumes no name).

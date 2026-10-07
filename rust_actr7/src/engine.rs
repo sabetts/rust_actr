@@ -14750,21 +14750,28 @@ impl Engine {
 
     /// Attention landed: build the TEXT object and fill the buffer.
     fn encoding_complete(&mut self, loc: String, requested: bool) -> Result<(), EngineError> {
-        let idx = match self.resolve_loc(&loc) {
-            Ok(i) if i < self.features.len() => i,
-            _ => {
-                // The attended object disappeared before the encoding
-                // landed (e.g. the window was cleared underneath it):
-                // vision reports no object and leaves VISUAL unchanged.
-                // `:output medium` + `:maintenance t` (`vision.lisp:2436`).
-                if self.cfg.detail.shows(Out::Medium) {
-                    self.emit("VISION", "No visual-object found".into());
-                }
-                self.visual_busy = false;
-                // Becoming free again wakes the armed conflict-resolution
-                // (`conditions-met`).
-                self.changed();
-                return Ok(());
+        // `encoding-complete` (`vision.lisp:2413`) builds the object with
+        // `get-obj-at-location` -> `within-move` (`vision.lisp:2485/2367`),
+        // i.e. by the attention position, not the location chunk's name.
+        // The requested encode's location is current, so its name resolves;
+        // `update-attended-loc`'s re-encode (`requested = nil`) must match by
+        // position: the old location chunk is gone (a window clear) and the
+        // new object at the same visicon slot must not be mistaken for it
+        // (paired-learning: `xray` -> `8` shift the centre past tolerance,
+        // so nothing is found).
+        let idx = if requested {
+            match self.resolve_loc(&loc) {
+                Ok(i) if i < self.features.len() => i,
+                _ => return self.encoding_no_object(),
+            }
+        } else {
+            let clof = self.emma_loc_xyz(&loc);
+            match self.features.iter().position(|f| {
+                angle_between(clof, (f.x as f32, f.y as f32, clof.2))
+                    <= VISUAL_MOVEMENT_TOLERANCE
+            }) {
+                Some(i) => i,
+                None => return self.encoding_no_object(),
             }
         };
         let feat = self.features[idx].clone();
@@ -14783,9 +14790,7 @@ impl Engine {
             slots: Self::object_slots(&feat, &loc),
             bare: false,
         };
-        if let Ok(idx) = self.resolve_loc(&loc) {
-            self.features[idx].attended = true;
-        }
+        self.features[idx].attended = true;
         self.visual_busy = false;
         // An encoded object is not a copy (no `chunk-copied-from-fct`).
         self.vl_copied_from.remove("VISUAL-CHUNK0");
@@ -14799,6 +14804,20 @@ impl Engine {
                 shown: Some(source),
             },
         );
+        Ok(())
+    }
+
+    /// The `No visual-object found` branch of `encoding-complete`
+    /// (`vision.lisp:2436`): the attended object is gone, so vision reports
+    /// no object, frees the module, and leaves VISUAL unchanged.
+    fn encoding_no_object(&mut self) -> Result<(), EngineError> {
+        if self.cfg.detail.shows(Out::Medium) {
+            self.emit("VISION", "No visual-object found".into());
+        }
+        self.visual_busy = false;
+        // Becoming free again wakes the armed conflict-resolution
+        // (`conditions-met`).
+        self.changed();
         Ok(())
     }
 }
@@ -14901,6 +14920,12 @@ fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineE
 fn vec_dist(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
 }
+
+/// `:visual-movement-tolerance` (`vision.lisp:3466`, default 0.5): how far
+/// an object may shift and still count as the same object (`within-move`,
+/// `vision.lisp:2367`). The base vision module uses this for the
+/// `get-obj-at-location` lookup in `encoding-complete`.
+const VISUAL_MOVEMENT_TOLERANCE: f32 = 0.5;
 
 /// `angle-between-vectors` (`vision.lisp:2386`) in degrees.
 fn angle_between(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
