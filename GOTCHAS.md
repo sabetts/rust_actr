@@ -2555,3 +2555,17 @@ records the item's *centre*: `screen-x = window-x + text-x + width/2`,
 `455` but the reference has `465`. The offset is
 `305 + (width - 7)/2` (window 300, font 7 px/char, 10 px tall) — confirmed by
 `paired` (`zinc` 465 / `9` 455) and unchanged for `tracking-test` (all 7-px).
+
+## 173. `sdm` prints DM sets newest-first
+
+`dm-chunks` is an alist keyed by each chunk's *shape* (its type plus the set
+of filled slot names), and `add-chunk-into-dm` pushes a new set to the front
+(`declarative-memory.lisp:1931`). So `sdm` prints the merged buffer sets
+newest-first (each set's chunks in insertion order) and only then the model's
+`add-dm` chunks. `print_sdm` groups `self.dm` by shape and reverses the
+group order before appending the goals; this matches `paired`'s
+`IMAGINAL, VISUAL, VISUAL-LOCATION, START, …`.
+
+(The visicon's `new-name` counters do *not* reset on a window clear —
+`paired-full`'s golden keeps numbering across `clear-exp-window`
+(`VISUAL-LOCATION1` after the clear) — so feature ids continue per run.)

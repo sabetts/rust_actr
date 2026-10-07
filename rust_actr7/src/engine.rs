@@ -4471,9 +4471,37 @@ impl Engine {
     /// every DM chunk is printed (the merged buffer chunks, then the goals in
     /// `dm-chunks` order).
     pub fn print_sdm(&mut self, _spec: &[String]) {
-        let chunks: Vec<ChunkInst> = self.dm.clone();
-        for c in &chunks {
-            self.push_chunk(c);
+        // `dm-chunks` (`declarative-memory.lisp:912`, `add-chunk-into-dm`
+        // 1918) is an alist keyed by the chunk's slot signature, and a new
+        // set is pushed to the *front* (1931), so `sdm` prints the merged
+        // sets newest-first, with each set's chunks in insertion order,
+        // followed by the model's `add-dm` chunks.
+        let n_model = self.model.chunks.len().min(self.dm.len());
+        let key = |c: &ChunkInst| {
+            let mut names: Vec<String> = c.slots.iter().map(|(k, _)| k.clone()).collect();
+            names.sort();
+            (c.ctype.clone(), names)
+        };
+        let mut groups: Vec<Vec<usize>> = Vec::new();
+        for i in n_model..self.dm.len() {
+            let ki = key(&self.dm[i]);
+            let found = groups.iter().position(|grp| {
+                let j = grp[0];
+                key(&self.dm[j]) == ki
+            });
+            match found {
+                Some(g) => groups[g].push(i),
+                None => groups.push(vec![i]),
+            }
+        }
+        let mut prints: Vec<usize> = Vec::new();
+        for grp in groups.iter().rev() {
+            prints.extend(grp.iter().copied());
+        }
+        prints.extend(0..n_model);
+        for i in prints {
+            let c = self.dm[i].clone();
+            self.push_chunk(&c);
         }
     }
 
