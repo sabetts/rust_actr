@@ -2717,3 +2717,12 @@ keeps p1's `+` request and folds p2's `=`/`*` slots into it via
 RETRIEVAL, which drops p1's request when p2 harvests. So `complete-task &
 retrieve-operator` composes to `+goal> state =state step retrieving-operator`,
 not a separate `=goal>`. Added the GOAL special case to the RHS builder.
+
+## 185. Compiled productions inherit their parents' reward
+
+`initialize-utility-for-compiled-production`
+(`utility-and-reward-1.lisp:477`) sets a compiled production's `at` to the max
+of the parents' and its `reward` to the max of the numeric parent rewards.
+The engine had hard-coded `:reward NIL`; now it inherits (so `complete-task`'s
+`(spp complete-task :reward 20)` shows on the compiled production's parameter
+block) and stores it on the installed production for later compositions.

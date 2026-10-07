@@ -8475,6 +8475,20 @@ impl Engine {
                         }
                     })
                 };
+                // `initialize-utility-for-compiled-production`
+                // (`utility-and-reward-1.lisp:477`): the composed production's
+                // reward is inherited from its parents (the max when both are
+                // numeric).
+                let reward: Option<f32> = {
+                    let r1 = self.model.productions[p1_idx].reward;
+                    let r2 = self.model.productions[idx].reward;
+                    match (r1, r2) {
+                        (Some(a), Some(b)) => Some(a.max(b)),
+                        (Some(a), None) => Some(a),
+                        (None, Some(b)) => Some(b),
+                        (None, None) => None,
+                    }
+                };
                 if trace {
                     self.out(format!(
                         "  Production {p1name} and {p2name} are being composed."
@@ -8549,13 +8563,19 @@ impl Engine {
                         // `production-parameter-fct`
                         // (`utility-and-reward-1.lisp:686`): the reward
                         // lines print only with `:esc` + `:ul`.
-                        self.out(" :reward    NIL".to_string());
+                        match reward {
+                            Some(r) => self.out(format!(" :reward {r:6.3}")),
+                            None => self.out(" :reward    NIL".to_string()),
+                        }
                         self.out(" :fixed-utility    NIL".to_string());
                     }
                     }
                 }
                 if dup.is_none() {
                     self.install_compiled(&cname, &lhs, &rhs);
+                    if let Some(last) = self.model.productions.last_mut() {
+                        last.reward = reward;
+                    }
                     self.compiled_count += 1;
                 }
                 }
