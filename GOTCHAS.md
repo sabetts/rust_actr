@@ -2362,6 +2362,25 @@ Three more pieces finished `dynamic-production-compilation-tests`:
 `dynamic-production-compilation-tests` is byte-exact and in `enabled.txt`
 (56 specs); `probe_runnable` reports **56 pass / 0 fail**.
 
+## 164. Per-run device scripts (`RUN` groups)
+
+A task re-applies its window content after each `(reset)` — `paired` runs
+`paired-task` three times, each resetting and picking new texts — so ops at
+the same ms in different runs collided in the flat `<name>.device.sexp`. The
+extractor now records each device op with the current `*reset-count*` and
+writes `(RUN n (ADD-TEXT …) …)` groups; a flat op (no group) still re-arms on
+every reset for backward compatibility.
+
+The engine tracks a `device_run` counter: the construction reset is run 0 and
+the spec's first `(reset)` is run 1 (the extractor's `*reset-count*` matches),
+so `reset` arms only the current run's grouped ops. ACT-R's `reset` also
+resets model time to 0, which `paired`'s ref confirms (each `paired-task`
+block starts at 0.000); the engine already did this.
+
+`paired` is now runnable with the right window content per run; what remains
+is the `:act` trace the task toggles via its `:testing-function`, the
+buffer-trace output, `sdm`, and the noise alignment.
+
 ## 163. `clear-all` resets the model set; per-run device scripts
 
 `is_multi_model` counted every `define-model` in a spec's file chain, but

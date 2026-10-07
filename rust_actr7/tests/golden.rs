@@ -205,12 +205,13 @@ fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
                     text: unquote(text).ok_or_else(|| format!("bad text in {form}"))?,
                     x: x.parse().map_err(|_| format!("bad x in {form}"))?,
                     y: y.parse().map_err(|_| format!("bad y in {form}"))?,
+                    run: None,
                 });
             }
             [op, ms] if op == "CLEAR" => {
                 device
                     .clears
-                    .push(ms.parse().map_err(|_| format!("bad ms in {form}"))?);
+                    .push((ms.parse().map_err(|_| format!("bad ms in {form}"))?, None));
             }
             [op, ms] if op == "END" => {
                 device.end = Some(ms.parse().map_err(|_| format!("bad ms in {form}"))?);

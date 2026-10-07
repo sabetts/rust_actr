@@ -495,8 +495,36 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
     let src = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     let forms = parse_all(&src).map_err(|e| format!("{}: {e}", path.display()))?;
     let mut device = DeviceSetup::default();
+    // `(RUN n (ADD-TEXT …) …)` groups ops to a reset; a flat op re-arms on
+    // every reset.
+    let mut flat: Vec<Sexp> = Vec::new();
     for form in &forms {
-        let v = list(form).ok_or_else(|| format!("bad device form in {}: {form:?}", path.display()))?;
+        if let Some(v) = list(form) {
+            if v.first().and_then(|s| s.as_sym()) == Some("RUN") {
+                let run = as_i64(v.get(1).ok_or("missing run")?).ok_or("bad run")? as u32;
+                for op in &v[2..] {
+                    parse_device_op(op, Some(run), &mut device)
+                        .map_err(|e| format!("{}: {e}", path.display()))?;
+                }
+                continue;
+            }
+        }
+        flat.push(form.clone());
+    }
+    for form in &flat {
+        parse_device_op(form, None, &mut device)
+            .map_err(|e| format!("{}: {e}", path.display()))?;
+    }
+    Ok(device)
+}
+
+fn parse_device_op(
+    form: &Sexp,
+    run: Option<u32>,
+    device: &mut DeviceSetup,
+) -> Result<(), String> {
+    {
+        let v = list(form).ok_or_else(|| format!("bad device form: {form:?}"))?;
         let op = v.first().and_then(|s| s.as_sym()).unwrap_or("");
         let ms = || as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms".to_string());
         match op {
@@ -505,8 +533,9 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
                 text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
                 x: as_i64(v.get(3).ok_or("missing x")?).ok_or("bad x")?,
                 y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
+                run,
             }),
-            "CLEAR" => device.clears.push(ms()?),
+            "CLEAR" => device.clears.push((ms()?, run)),
             "COMMAND" => device.commands.push(actr_engine::engine::DeviceCommand {
                 at_ms: ms()?,
                 output: as_str(v.get(2).ok_or("missing output")?)
@@ -514,6 +543,7 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
                     .to_lowercase(),
                 details: as_str(v.get(3).ok_or("missing details")?)
                     .ok_or("bad details")?,
+                run,
             }),
             "CLEAR-ON-KEYPRESS" => device.clear_on_keypress = true,
             "CONSUME-RNG" => {
@@ -530,10 +560,10 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
                 as_str(v.get(2).ok_or("missing b")?).ok_or("bad b")?.to_uppercase(),
                 as_i64(v.get(3).ok_or("missing v")?).ok_or("bad v")? as f32,
             )),
-            other => return Err(format!("bad device op {other} in {}", path.display())),
+            other => return Err(format!("bad device op {other} in {form:?}")),
         }
     }
-    Ok(device)
+    Ok(())
 }
 
 fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {

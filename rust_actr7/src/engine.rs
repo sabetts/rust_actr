@@ -362,6 +362,9 @@ pub struct DeviceText {
     pub text: String,
     pub x: i64,
     pub y: i64,
+    /// The reset this op belongs to (`(RUN n …)` grouping): the task
+    /// re-applies its window content per run. `None` = every reset.
+    pub run: Option<u32>,
 }
 
 /// One scripted command trace line: a task's scheduled command event.
@@ -371,13 +374,15 @@ pub struct DeviceCommand {
     /// `low`/`medium`/`high`/`t` (`:output`).
     pub output: String,
     pub details: String,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
-    /// Window clears at ms (clear-exp-window): all features removed.
-    pub clears: Vec<i64>,
+    /// Window clears at ms (clear-exp-window), with the run grouping.
+    pub clears: Vec<(i64, Option<u32>)>,
     /// Scheduled command lines `(ms, output, details)` — a task's
     /// `schedule-event-relative`/`schedule-event` with a string action
     /// prints `NONE <action> <params>` at its `:output` level.
@@ -1766,10 +1771,13 @@ pub struct Engine {
     /// The full device script, re-armed on every `reset` (a task re-applies
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
-    device_clears: Vec<i64>,
+    device_clears: Vec<(i64, Option<u32>)>,
     /// Scheduled command lines, re-armed on every `reset` like the rest of
     /// the device script.
     device_commands: Vec<DeviceCommand>,
+    /// The current run index for `(RUN n …)` device groups; the construction
+    /// reset is run 0, the spec's first `(reset)` run 1.
+    device_run: u32,
     /// The task's non-replayed setup draws (device sidecar): applied after
     /// the model-body seed on every `reset`, since the task redoes its setup
     /// per run.
@@ -2009,7 +2017,7 @@ impl Engine {
                 v
             },
             pending_clears: {
-                let mut v = clears.clone();
+                let mut v: Vec<i64> = clears.iter().map(|(t, _)| *t).collect();
                 v.sort_unstable();
                 v
             },
@@ -2020,7 +2028,7 @@ impl Engine {
             },
             device_clears: {
                 let mut v = clears;
-                v.sort_unstable();
+                v.sort_by_key(|(t, _)| *t);
                 v
             },
             device_commands: {
@@ -2028,6 +2036,7 @@ impl Engine {
                 v.sort_by_key(|c| c.at_ms);
                 v
             },
+            device_run: 0,
             consume_rng,
             features: Vec::new(),
             feat_seq: 0,
@@ -2156,6 +2165,13 @@ impl Engine {
     /// intentionally NOT reseeded (GOTCHAS #5/#35); scripted `:seed` steps
     /// handle that. Trace history (`out_lines`) is preserved.
     pub fn reset(&mut self) -> Result<(), EngineError> {
+        self.device_run += 1;
+        self.reset_impl()
+    }
+
+    /// The body of `reset`; the construction reset calls this directly so the
+    /// spec's first `(reset)` is device run 1.
+    fn reset_impl(&mut self) -> Result<(), EngineError> {
         // Driver-set extended-motor-actions params survive a reset.
         let zz = (
             self.cfg.zz_two_proc,
@@ -2307,11 +2323,29 @@ impl Engine {
         // A device task re-applies its window setup after each reset; restore
         // the script so the next run sees it (`pending_*` is consumed as time
         // advances, and a task runs its setup again per run).
-        self.pending_texts = self.device_texts.clone();
-        self.pending_clears = self.device_clears.clone();
+        // Device script: flat ops re-arm on every reset; `(RUN n …)` ops
+        // belong to run `n` (the task re-applies its window content per run).
+        let run = self.device_run;
+        self.pending_texts = self
+            .device_texts
+            .iter()
+            .filter(|t| t.run.is_none() || t.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_clears = self
+            .device_clears
+            .iter()
+            .filter(|(_, r)| r.is_none() || *r == Some(run))
+            .map(|(t, _)| *t)
+            .collect();
         // Scheduled command lines re-fire each run (`schedule-event-relative`
         // runs again in the task's setup).
-        for c in self.device_commands.clone() {
+        for c in self
+            .device_commands
+            .clone()
+            .into_iter()
+            .filter(|c| c.run.is_none() || c.run == Some(run))
+        {
             let out = match c.output.as_str() {
                 "low" => Out::Low,
                 "medium" => Out::Medium,
