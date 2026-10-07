@@ -429,13 +429,18 @@ fn is_multi_model(spec: &Spec) -> bool {
             if let Ok(forms) = parse_all(&src) {
                 for f in &forms {
                     if let Sexp::List(v) = f {
-                        if matches!(
-                            v.first().and_then(|s| s.as_sym()),
-                            Some("DEFINE-MODEL") | Some("DEFINE-MODEL-FCT")
-                        ) {
-                            if let Some(n) = v.get(1).and_then(as_str) {
-                                names.insert(n.to_uppercase());
+                        match v.first().and_then(|s| s.as_sym()) {
+                            // `(clear-all)` drops every model, so a later
+                            // `define-model` starts a fresh (single) set —
+                            // `paired-learning` clears the `paired` model
+                            // loaded by its task file.
+                            Some("CLEAR-ALL") | Some("CLEAR-ALL-FCT") => names.clear(),
+                            Some("DEFINE-MODEL") | Some("DEFINE-MODEL-FCT") => {
+                                if let Some(n) = v.get(1).and_then(as_str) {
+                                    names.insert(n.to_uppercase());
+                                }
                             }
+                            _ => {}
                         }
                     }
                 }

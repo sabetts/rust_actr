@@ -2362,6 +2362,21 @@ Three more pieces finished `dynamic-production-compilation-tests`:
 `dynamic-production-compilation-tests` is byte-exact and in `enabled.txt`
 (56 specs); `probe_runnable` reports **56 pass / 0 fail**.
 
+## 163. `clear-all` resets the model set; per-run device scripts
+
+`is_multi_model` counted every `define-model` in a spec's file chain, but
+`paired-learning` loads `paired-model.lisp` (via its task file) and then
+`paired-learning-model.lisp`, whose body starts with `(clear-all)` — so only
+`paired-learning` is active and the ref is single-column. The classifier now
+clears its name set on `clear-all`, like ACT-R.
+
+`paired`/`paired-learning` still need the device script to be **per run**: the
+task re-applies its window content after each `(reset)` (different texts
+picked by `permute-list`), but the flat `<name>.device.sexp` arms every op at
+reset, so the t=0 texts from different `paired-task` calls collide. That plus
+`record-history`/`sdm` output and the retrieval-timing differences keep these
+two specs in progress (regenerated, not enabled).
+
 
 
 
