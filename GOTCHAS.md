@@ -2744,3 +2744,25 @@ and *does* re-encode when the centre is unchanged (`xray`→`zinc` →
 `SET-BUFFER-CHUNK VISUAL TEXT1 NIL`). Fix: resolve `requested = nil` encodings
 by the old clof (`emma_loc_xyz`) via `angle_between` ≤ 0.5°; on no match take
 the `No visual-object found` branch (frees the module, consumes no name).
+
+## 187. `parameters for production` on recreation; utility learning
+
+`update-params-for-compiled-production` (`production-compilation.lisp:1802`)
+prints the `spp-fct` block in the new-production branch *and* the
+"recreation of a previously compiled" branch (a user-production collision
+prints nothing). A recreated production's `u` moves toward its first parent's
+via `linear-update-utility` (`utility-and-reward-1.lisp:395`); `:utility` is
+`production-utility`, cached by the last conflict resolution
+(`compute-utility` with `save`, `utility-and-reward-1.lisp:357` ->
+`procedural.lisp:2230`) and printed before the ppm search offsets are folded
+in. `new-production-name` (`production-compilation.lisp:1874`) consumes a
+`PRODUCTION{n}` name for every composition that reaches it (duplicate or
+not), so the counter advances across recreations (ref jumps 8 -> 19).
+
+The engine now prints the block on recreate, caches `production-utility`,
+applies the recreation update, and advances the name counter per
+composition. The first recreation's `u` matches, but long-run `:u`/`:utility`
+still diverge (the ref grows toward ~20, the engine stalls near 1-2): the
+utility dynamics (conflict-candidate set / possible silent reward
+propagation) are not fully modelled. Pre-existing RNG divergence (task pair
+order, 1 ms retrieval timings) is also present in this spec.

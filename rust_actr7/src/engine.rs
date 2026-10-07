@@ -1779,6 +1779,10 @@ pub struct Engine {
     /// Production utilities (init :iu) and selection history
     /// (prod index, selection time ms) for reward propagation.
     utilities: Vec<f32>,
+    /// `production-utility` (`utility-and-reward-1.lisp:357`): the utility
+    /// cached by the last conflict resolution (`compute-utility` with
+    /// `save`), printed as `:utility` (nil until a candidate).
+    production_utility: Vec<Option<f32>>,
     history: Vec<(usize, i64)>,
     /// Chunk similarities, as given (lookup tries both orders;
     /// mirrors set-similarities).
@@ -2050,6 +2054,7 @@ impl Engine {
             dm_gen: 0,
             dm_busy: false,
             utilities: Vec::new(),
+            production_utility: Vec::new(),
             history: Vec::new(),
             sims: sims
                 .iter()
@@ -2389,6 +2394,7 @@ impl Engine {
         self.dm_gen = 0;
         self.dm_busy = false;
         self.utilities = vec![self.cfg.iu; self.model.productions.len()];
+        self.production_utility = vec![None; self.model.productions.len()];
         self.history.clear();
         self.features.clear();
         // A device task re-applies its window setup after each reset; restore
@@ -7055,14 +7061,18 @@ impl Engine {
             let mut mism: Vec<PpmMismatch> = Vec::new();
             if let Some(b) = self.match_prod(&prod, &ep.implicit_queries, &mut mism)? {
                 let mut u = self.utilities[ep.index];
+                if self.cfg.egs != 0.0 {
+                    u += self.rng.borrow_mut().noise(self.cfg.egs);
+                }
+                // `compute-utility` with `save` (`utility-and-reward-1.lisp:357`,
+                // called at `procedural.lisp:2230`) caches the value *before*
+                // the ppm search offsets are folded in; `spp` prints it.
+                self.production_utility[ep.index] = Some(u);
                 // `ppm-offset` (procedural.lisp:2373): penalty is
                 // `:ppm * Σ similarity` over the mismatched slots (the
                 // similarities are negative, so this lowers utility).
                 if let Some(p) = self.cfg.ppm {
                     u += p * mism.iter().map(|m| m.4).sum::<f32>();
-                }
-                if self.cfg.egs != 0.0 {
-                    u += self.rng.borrow_mut().noise(self.cfg.egs);
                 }
                 matched.push((ep.index, b.clone(), u, mism));
                 match best_u {
@@ -8376,6 +8386,7 @@ impl Engine {
         if let Ok(prod) = crate::model::parse_production_text(&text) {
             self.model.productions.push(prod);
             self.utilities.push(0.0);
+            self.production_utility.push(None);
             let idx = self.model.productions.len() - 1;
             let p = self.model.productions[idx].clone();
             self.exec_prods.push(ExecProd {
@@ -8462,6 +8473,11 @@ impl Engine {
                     &retain2,
                 );
                 let cname = format!("PRODUCTION{}", self.compiled_count);
+                // `new-production-name` (`production-compilation.lisp:1874`)
+                // consumes a name for every composition that reaches this
+                // point, duplicate or not (a recreated name is released but
+                // the counter never rewinds).
+                self.compiled_count += 1;
                 // `check-for-duplicate-productions`
                 // (`production-compilation.lisp:1915`): a composed production
                 // equivalent to an existing one is not installed.
@@ -8469,7 +8485,7 @@ impl Engine {
                     let crep = canon_composed(&lhs, &rhs);
                     self.model.productions.iter().enumerate().find_map(|(i, p)| {
                         if canon_prod(p) == crep {
-                            Some((p.name.clone(), i >= self.base_prods))
+                            Some((i, p.name.clone(), i >= self.base_prods))
                         } else {
                             None
                         }
@@ -8493,9 +8509,24 @@ impl Engine {
                     self.out(format!(
                         "  Production {p1name} and {p2name} are being composed."
                     ));
-                    if let Some((dname, compiled)) = &dup {
+                    if let Some((didx, dname, compiled)) = &dup {
                         if *compiled {
                             self.out(format!("  Recreating production {dname}"));
+                            // `update-utility-for-compiled-production`
+                            // (`utility-and-reward-1.lisp:497`): the existing
+                            // compiled production's `u` moves toward the first
+                            // parent's via `linear-update-utility`, then the
+                            // updated parameters are printed.
+                            if self.cfg.esc && self.cfg.ul {
+                                let alpha = self.cfg.alpha;
+                                let parent = self.utilities[p1_idx];
+                                let old = self.utilities[*didx];
+                                self.utilities[*didx] = old + alpha * (parent - old);
+                            }
+                            let u = self.utilities[*didx];
+                            let utility = self.production_utility[*didx];
+                            let reward = self.model.productions[*didx].reward;
+                            self.print_prod_params(dname, u, utility, reward);
                         } else {
                             self.out(format!(
                                 "  Result is production {dname}\n  No actions taken."
@@ -8549,26 +8580,9 @@ impl Engine {
                     let sorted: Vec<(String, Vec<(String, SlotVal)>)> =
                         bangs.into_iter().chain(rest).collect();
                     self.out(render_compiled(&cname, &doc, &sorted, &rhs));
-                    self.out(format!("Parameters for production {cname}:"));
-                    if self.cfg.esc {
-                        // Compiled productions have no numeric utility yet.
-                        self.out(" :utility    NIL".to_string());
-                    }
-                    self.out(" :u   0.000".to_string());
-                    self.out(format!(
-                        " :at {}",
-                        fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)
-                    ));
-                    if self.cfg.esc && self.cfg.ul {
-                        // `production-parameter-fct`
-                        // (`utility-and-reward-1.lisp:686`): the reward
-                        // lines print only with `:esc` + `:ul`.
-                        match reward {
-                            Some(r) => self.out(format!(" :reward {r:6.3}")),
-                            None => self.out(" :reward    NIL".to_string()),
-                        }
-                        self.out(" :fixed-utility    NIL".to_string());
-                    }
+                    // A freshly compiled production has no cached
+                    // `production-utility` yet and `u = :nu` (0).
+                    self.print_prod_params(&cname, 0.0, None, reward);
                     }
                 }
                 if dup.is_none() {
@@ -8576,7 +8590,6 @@ impl Engine {
                     if let Some(last) = self.model.productions.last_mut() {
                         last.reward = reward;
                     }
-                    self.compiled_count += 1;
                 }
                 }
             }
@@ -14819,6 +14832,31 @@ impl Engine {
         // (`conditions-met`).
         self.changed();
         Ok(())
+    }
+
+    /// `production-parameter-fct` (`utility-and-reward-1.lisp:660`): the
+    /// `Parameters for production` block printed by `spp-fct` after a
+    /// composition. `utility` is the cached `production-utility` (nil until a
+    /// conflict resolution computes it); `u` is the base `production-u`.
+    fn print_prod_params(&mut self, name: &str, u: f32, utility: Option<f32>, reward: Option<f32>) {
+        self.out(format!("Parameters for production {name}:"));
+        if self.cfg.esc {
+            match utility {
+                Some(v) => self.out(format!(" :utility {v:6.3}")),
+                None => self.out(" :utility    NIL".to_string()),
+            }
+        }
+        self.out(format!(" :u  {u:6.3}"));
+        self.out(format!(" :at {}", fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)));
+        if self.cfg.esc && self.cfg.ul {
+            // `production-parameter-fct` (`utility-and-reward-1.lisp:686`):
+            // the reward lines print only with `:esc` + `:ul`.
+            match reward {
+                Some(r) => self.out(format!(" :reward {r:6.3}")),
+                None => self.out(" :reward    NIL".to_string()),
+            }
+            self.out(" :fixed-utility    NIL".to_string());
+        }
     }
 }
 
