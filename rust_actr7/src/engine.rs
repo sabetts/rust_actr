@@ -2844,10 +2844,27 @@ impl Engine {
     /// `:ignore-buffers` skip this; no golden sets it.
     fn merge_into_dm(&mut self, mut chunk: ChunkInst, buffer: &str) {
         let now = self.time_ms;
-        let found = self
-            .dm
+        // A vision object's `screen-pos` names a buffer copy that is
+        // recreated on each attention, so the same object re-encountered
+        // later must match an existing DM chunk on its other slots rather
+        // than add a new one (verified against `paired`'s DM, which keeps two
+        // objects across task 1's two identical trials).
+        let no_pos: Vec<(String, Value)> = chunk
+            .slots
             .iter()
-            .position(|c| c.ctype == chunk.ctype && c.slots == chunk.slots);
+            .filter(|(k, _)| k != "SCREEN-POS")
+            .cloned()
+            .collect();
+        let found = self.dm.iter().position(|c| {
+            c.ctype == chunk.ctype
+                && c.slots.len() == chunk.slots.len()
+                && c.slots
+                    .iter()
+                    .filter(|(k, _)| k != "SCREEN-POS")
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    == no_pos
+        });
         match found {
             Some(i) => {
                 let h = &mut self.hist[i];

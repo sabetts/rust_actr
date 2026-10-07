@@ -2586,3 +2586,15 @@ by `paired-full`'s golden and by the continuing `VISUAL-LOCATION{n}` in
 `paired`'s own trace), so the two later objects differ only by their
 `screen-pos` copy name and ACT-R is not storing them — the remaining rule to
 pin down.
+
+## 175. Vision objects merge ignoring `screen-pos`
+
+A visual object's `screen-pos` names a buffer copy (`VISUAL-LOCATION0-0`) that
+is recreated on each attention, so the same object seen again later (the
+second trial of `paired`, a repeated window item) must merge into the existing
+DM chunk rather than add a new one. `merge_into_dm` compares slots with
+`SCREEN-POS` excluded (verified against ACT-R: `paired`'s task-1 DM holds two
+objects, `VISUAL-CHUNK0-0`/`-1`, even though four are encoded across the two
+identical trials). The enabled suite is unaffected.
+
+With this, `paired`'s `sdm` blocks match; only the buffer-trace table remains.
