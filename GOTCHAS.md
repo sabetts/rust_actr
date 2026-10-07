@@ -2131,6 +2131,26 @@ the ref through line 17 of 27; it diverges at `no-past-trial`'s
 `-v4-one-trial` is runnable too. Both are committed as in-progress specs;
 `probe_runnable` reports 51 pass / 3 fail.
 
+## 155. `isa TYPE` in a chunk-spec adds the type's default slot tests
+
+The pcomp retrieval divergence above was candidacy, not ordering. `isa TYPE`
+does **not** store a type on the chunk-spec (`act-r-chunk-spec`,
+`internal-structures.lisp:532`, has no type slot); `define-chunk-spec-fct`
+routes it through `process-slots-specs` (`chunk-spec.lisp:441`), which adds
+the chunk-type's default slot tests for any slot not already tested
+(`chunk-spec.lisp:597`). So `+retrieval> isa response` on
+`(chunk-type response key (is-response t))` really requests
+`is-response = t`, which is what filters the candidates to the response
+chunks. The engine now expands a request's `ctype` to its chunk-type defaults
+in `start_retrieval`.
+
+`tutorial-unit7modeling-pcomp-issues-v2-one-trial` now retrieves a response
+(18/27 lines match); the remaining divergence is which response — the engine's
+noise picks `RESPONSE-1`, the ref `RESPONSE-3` — plus a 1 ms latency and a
+trailing goal set. The candidate *order* is not the cause: reversing the
+partial-matching activation order makes `RESPONSE-3` win but regresses nine
+enabled specs, so the difference is upstream (RNG state).
+
 
 
 

@@ -8498,7 +8498,7 @@ impl Engine {
                 }
             }
         }
-        let (want_slots, want_neg) = match &spec {
+        let (mut want_slots, want_neg) = match &spec {
             NewChunk::Named(_) => unreachable!(),
             NewChunk::Instance(_) => {
                 return Err(bad(
@@ -8507,6 +8507,30 @@ impl Engine {
             }
             NewChunk::Spec { slots, neg, .. } => (slots.clone(), neg.clone()),
         };
+        // `isa TYPE` (`define-chunk-spec-fct`, chunk-spec.lisp:441): the
+        // chunk-type's default slot tests are added for any slot not already
+        // tested (`process-slots-specs`, chunk-spec.lisp:597) — e.g.
+        // `isa response` on `(chunk-type response key (is-response t))`
+        // requests `is-response = t`.
+        if let NewChunk::Spec { ctype, .. } = &spec {
+            if !ctype.is_empty() {
+                let defaults = self
+                    .model
+                    .chunk_types
+                    .iter()
+                    .find(|t| t.name.eq_ignore_ascii_case(ctype))
+                    .map(|t| t.defaults.clone())
+                    .unwrap_or_default();
+                for (slot, pat) in defaults {
+                    if !want_slots
+                        .iter()
+                        .any(|(s, _)| s.eq_ignore_ascii_case(&slot))
+                    {
+                        want_slots.push((slot.to_uppercase(), Value::from_pattern(&pat)?));
+                    }
+                }
+            }
+        }
         // `:mp-value` request parameter (`+retrieval> isa test :mp-value 3`)
         // overrides `:mp` for this request; `nil` disables partial matching.
         let mp_req = want_slots
