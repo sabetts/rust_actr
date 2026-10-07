@@ -3068,8 +3068,8 @@ impl Engine {
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
-            self.bold_record();
             self.exec(next.event, show)?;
+            self.bold_record();
             processed = true;
             if self.zz_break_hit {
                 self.zz_break_hit = false;
