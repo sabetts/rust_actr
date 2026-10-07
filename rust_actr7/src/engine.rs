@@ -4571,6 +4571,20 @@ impl Engine {
         }
     }
 
+    /// A zero-length demand point (`time . time`) for a point-predicted
+    /// buffer (`:point-predict (goal)`): the goal module is never busy, so
+    /// its demand comes from the chunk-name/request events
+    /// (`parse-trace-lists-for-bold`, `other-files/bold.lisp:536`).
+    fn bold_point(&mut self, buffer: &str) {
+        if self.bold_buffers.iter().any(|b| b == buffer) {
+            let t = self.time_ms as f64 / 1000.0;
+            self.bold_demand
+                .entry(buffer.to_string())
+                .or_default()
+                .push((t, t));
+        }
+    }
+
     /// `(predict-bold-response)`: the BOLD haemodynamic prediction for each
     /// traced buffer (`other-files/bold.lisp`), printed as the `time …`
     /// table. Defaults: `:bold-inc 2`, `:bold-exp 5`, `:bold-scale 1`,
@@ -4967,6 +4981,9 @@ impl Engine {
                 self.buffer_mut(&buffer).chunk = Some(inst);
                 self.buffer_mut(&buffer).failed = false;
                 self.buffer_mut(&buffer).modified = false;
+                if buffer == "GOAL" {
+                    self.bold_point("GOAL");
+                }
                 self.changed();
             }
             Event::OverwriteBuffer {

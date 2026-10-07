@@ -2617,3 +2617,13 @@ task* (the reference's table spans 0–40, task 3's end). The engine now
 records the busy intervals per event and prints the table; IMAGINAL/RETRIEVAL
 match exactly. Remaining: GOAL is point-predicted (its demand points aren't
 captured yet) and VISUAL is off by ~0.001.
+
+## 177. GOAL is point-predicted
+
+The goal module's `state busy` is *always nil* (`goal.lisp:163`), so the goal
+buffer never contributes a busy *interval*; its BOLD demand is the
+`point-predict (goal)` case — zero-length points at the goal chunk-name/request
+events, summed as `bold_partial_gammapdf(time − t1)`. `bold_point` records a
+point on each goal `set-buffer-chunk`; with it `paired`'s GOAL column matches
+and only VISUAL remains (the engine's visual-busy demand is ~2/3 of the
+reference's — a boundary detail in the busy-interval recording).
