@@ -1,1 +1,1 @@
-(:NAME "tracking-test" :REF "tracking-test.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :DEVICE :FLAGS (:DEVICE) :ERROR NIL)
+(:NAME "tracking-test" :REF "tracking-test.ref" :MODELS ("test-models;models;tracking-test.lisp") :SEED-SET NIL :RUNS ((3 (100 0) T 22)) :STEPS ((:RESET) (:RUN 3 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS (:DEVICE) :ERROR NIL)
