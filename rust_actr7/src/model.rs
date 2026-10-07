@@ -130,6 +130,13 @@ pub enum RhsAction {
     Request { buffer: String, spec: ChunkDesc },
     /// `-goal>`
     Clear { buffer: String },
+    /// `@goal> <chunk>` — a direct set (`overwrite-buffer-chunk`,
+    /// `production-parsing.lisp:1147`): overwrite the buffer now, not a
+    /// request.
+    DirectSet { buffer: String, spec: ChunkDesc },
+    /// `@goal>` (no chunk) — direct `erase-buffer`
+    /// (`production-parsing.lisp:1140`).
+    DirectErase { buffer: String },
     /// `!output! (...)` — args kept raw for the M2c evaluator.
     Output { args: Vec<Sexp> },
     /// `!eval!`/`!safe-eval!` on the RHS.
@@ -391,7 +398,7 @@ fn structural<T>(msg: impl Into<String>) -> Result<T, LoadError> {
 fn buffer_ref(s: &str) -> Option<(char, &str)> {
     let mut c = s.chars();
     let op = c.next()?;
-    if !"=+-?*".contains(op) || !s.ends_with('>') || s == "==>" {
+    if !"=+-?*@".contains(op) || !s.ends_with('>') || s == "==>" {
         return None;
     }
     let inner = &s[op.len_utf8()..s.len() - 1];
@@ -1312,6 +1319,16 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
                         return structural(format!("clear `-{buffer}>` takes no args"));
                     }
                     actions.push(RhsAction::Clear { buffer });
+                }
+                '@' => {
+                    if body.is_empty() {
+                        actions.push(RhsAction::DirectErase { buffer });
+                    } else {
+                        actions.push(RhsAction::DirectSet {
+                            buffer,
+                            spec: parse_chunk_desc(body)?,
+                        });
+                    }
                 }
                 _ => return structural(format!("RHS: unexpected `{op}` buffer ref")),
             }

@@ -1621,11 +1621,20 @@ enum Event {
     },
     /// Threads extra: overwrite the goal multi-buffer's *visible* chunk
     /// without clearing the rest of the goal set (`OVERWRITE-BUFFER-CHUNK`).
+    /// Also a production `@buffer>` direct set (`production-parsing.lisp:1147`),
+    /// traced under `PROCEDURAL`.
     OverwriteBuffer {
         buffer: String,
         chunk: NewChunk,
         requested: bool,
         shown: Option<String>,
+        module: String,
+    },
+    /// A production `@buffer>` direct erase (`production-parsing.lisp:1140`):
+    /// `ERASE-BUFFER <buffer>` (remove the chunk, keep the buffer state).
+    EraseBuffer {
+        buffer: String,
+        module: String,
     },
     /// A task command scheduled by model-body `schedule-event` or by
     /// `schedule-event-relative` inside another command. Emits a `NONE`
@@ -2921,6 +2930,7 @@ impl Engine {
                         chunk: NewChunk::Instance(inst),
                         requested: false,
                         shown: None,
+                        module: "GOAL".to_string(),
                     },
                 );
             }
@@ -4603,6 +4613,7 @@ impl Engine {
                 chunk,
                 requested,
                 shown,
+                module,
             } => {
                 let inst = self.instantiate(&buffer, chunk)?;
                 if show {
@@ -4611,13 +4622,7 @@ impl Engine {
                     if !requested {
                         details.push_str(" NIL");
                     }
-                    let module = match buffer.as_str() {
-                        "RETRIEVAL" => "DECLARATIVE",
-                        "VISUAL-LOCATION" | "VISUAL" => "VISION",
-                        "MANUAL" => "MOTOR",
-                        other => other,
-                    };
-                    self.emit(module, details);
+                    self.emit(&module, details);
                 }
                 if buffer == "GOAL" && self.cfg.threads
                     && !self.goal_set.iter().any(|c| c.name == inst.name)
@@ -4625,6 +4630,17 @@ impl Engine {
                     self.goal_set.push(inst.clone());
                 }
                 self.buffer_mut(&buffer).chunk = Some(inst);
+                self.buffer_mut(&buffer).failed = false;
+                self.buffer_mut(&buffer).modified = false;
+                self.changed();
+            }
+            Event::EraseBuffer { buffer, module } => {
+                // `erase-buffer` (`buffers.lisp:1273`): drop the chunk but
+                // keep the buffer state (no clear-buffer).
+                if show {
+                    self.emit(&module, format!("ERASE-BUFFER {buffer}"));
+                }
+                self.buffer_mut(&buffer).chunk = None;
                 self.buffer_mut(&buffer).failed = false;
                 self.buffer_mut(&buffer).modified = false;
                 self.changed();
@@ -4908,6 +4924,7 @@ impl Engine {
                                     chunk: NewChunk::Instance(inst),
                                     requested: true,
                                     shown: None,
+                                    module: "GOAL".to_string(),
                                 },
                             );
                             return Ok(());
@@ -7606,6 +7623,34 @@ impl Engine {
                         },
                     );
                 }
+                RhsAction::DirectSet { buffer, spec } => {
+                    // `@buffer> chunk` (`production-parsing.lisp:1147`):
+                    // overwrite the buffer now (priority 90).
+                    let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
+                    let concrete = self.concretize(spec, &b, copy, &mut copied)?;
+                    self.now(
+                        Prio::Num(90),
+                        explicit_out(self.cfg.rhst),
+                        Event::OverwriteBuffer {
+                            buffer: buffer.clone(),
+                            chunk: concrete,
+                            requested: false,
+                            shown: None,
+                            module: "PROCEDURAL".to_string(),
+                        },
+                    );
+                }
+                RhsAction::DirectErase { buffer } => {
+                    // `@buffer>` (`production-parsing.lisp:1140`): erase-buffer.
+                    self.now(
+                        Prio::Num(90),
+                        explicit_out(self.cfg.rhst),
+                        Event::EraseBuffer {
+                            buffer: buffer.clone(),
+                            module: "PROCEDURAL".to_string(),
+                        },
+                    );
+                }
                 RhsAction::Output { .. }
                 | RhsAction::Other { .. }
                 | RhsAction::Eval { .. }
@@ -10174,6 +10219,19 @@ fn render_production(prod: &Production, b: &Bindings, partials: &[PpmMismatch]) 
                 }
             },
             RhsAction::Clear { buffer } => s.push_str(&format!("   -{buffer}>\n")),
+            RhsAction::DirectSet { buffer, spec } => match spec {
+                ChunkDesc::Named(n) => s.push_str(&format!("   @{buffer}> {n}\n")),
+                ChunkDesc::Spec { slots, .. } => {
+                    s.push_str(&format!("   @{buffer}>\n"));
+                    for (name, val) in slots {
+                        if name == "ISA" {
+                            continue;
+                        }
+                        s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                    }
+                }
+            },
+            RhsAction::DirectErase { buffer } => s.push_str(&format!("   @{buffer}>\n")),
             RhsAction::Output { args } => {
                 let body: Vec<String> = args.iter().map(|a| show_sexp_arg(a, b)).collect();
                 s.push_str(&format!("   !OUTPUT! {}\n", body.join(" ")));
@@ -13663,6 +13721,10 @@ fn implicit_clears(prod: &Production, exempt: &[String], allow_dup: bool) -> Vec
             }
             RhsAction::Request { buffer, .. } => targeted.push(('+', buffer.clone())),
             RhsAction::Clear { buffer } => targeted.push(('-', buffer.clone())),
+            // A direct `@buffer>` set/erase is targeted, so no implicit clear.
+            RhsAction::DirectSet { buffer, .. } | RhsAction::DirectErase { buffer } => {
+                targeted.push(('=', buffer.clone()))
+            }
             RhsAction::Output { .. }
             | RhsAction::Other { .. }
             | RhsAction::Eval { .. }
