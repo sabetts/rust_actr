@@ -277,6 +277,20 @@ struct Config {
     /// EMMA vision extension, enabled via
     /// `(ssp :starting-parameters (:emma t))` (`extras/emma/emma.lisp:885`).
     emma: bool,
+    /// `:eye-saccade-rate` — saccade rate per degree of visual angle (0.002).
+    emma_sacc_rate: f32,
+    /// `:saccade-base-time` — base saccade execution time (0.020).
+    emma_base_exe: f32,
+    /// `:saccade-init-time` — non-labile saccade initiation (0.050).
+    emma_init_time: f32,
+    /// `:saccade-feat-time` — prep cost per saccade feature (0.050).
+    emma_feat_prep: f32,
+    /// `:visual-encoding-factor` — recognition-time factor K (0.006).
+    emma_enc_factor: f32,
+    /// `:visual-encoding-exponent` — recognition-time exponent k (0.4).
+    emma_enc_exp: f32,
+    /// `:vis-obj-freq` — default visual-object frequency (0.1).
+    emma_obj_freq: f32,
     /// `key-closure-time` (`motor.lisp:477`, default 0.01): the punch style's
     /// exec time is `init + closure` (`motor.lisp:938`).
     key_closure_ms: i64,
@@ -371,6 +385,24 @@ pub struct DeviceSetup {
     /// selecting the window text), consumed after the initial reset so
     /// `:randomize-time` draws line up.
     pub consume_rng: u64,
+}
+
+/// EMMA `saccade` movement style (`emma.lisp:448`): the geometry and times
+/// of one eye movement.
+#[derive(Debug, Clone)]
+struct EmmaSacc {
+    /// `r` — angle from the eye to the (noisy) target, in degrees.
+    r: f32,
+    /// `theta` — direction angle.
+    theta: f32,
+    /// `trgt` — the object chunk the movement is aimed at.
+    trgt: Option<String>,
+    /// `new-loc` — the (noisy, rounded) landing point.
+    new_loc: (f32, f32, f32),
+    /// `fprep-time` — preparation time in seconds.
+    fprep_time: f64,
+    /// `exec-time` — execution time in seconds.
+    exec_time: f64,
 }
 
 /// A visicon feature: what the device shows and vision can find.
@@ -1035,6 +1067,13 @@ impl Config {
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
             burst_ms: secs_to_ms(":MOTOR-BURST-TIME", 0.05)?,
             emma: false,
+            emma_sacc_rate: sgp_single(&m.params, ":EYE-SACCADE-RATE")?.unwrap_or(0.002),
+            emma_base_exe: sgp_single(&m.params, ":SACCADE-BASE-TIME")?.unwrap_or(0.020),
+            emma_init_time: sgp_single(&m.params, ":SACCADE-INIT-TIME")?.unwrap_or(0.050),
+            emma_feat_prep: sgp_single(&m.params, ":SACCADE-FEAT-TIME")?.unwrap_or(0.050),
+            emma_enc_factor: sgp_single(&m.params, ":VISUAL-ENCODING-FACTOR")?.unwrap_or(0.006),
+            emma_enc_exp: sgp_single(&m.params, ":VISUAL-ENCODING-EXPONENT")?.unwrap_or(0.4),
+            emma_obj_freq: sgp_single(&m.params, ":VIS-OBJ-FREQ")?.unwrap_or(0.1),
             key_closure_ms: secs_to_ms(":KEY-CLOSURE-TIME", 0.01)?,
             touch: m
                 .required_extras
@@ -1336,6 +1375,16 @@ enum Event {
     /// Attention landed: build the visual object.
     EncodingComplete {
         loc: String,
+    },
+    /// EMMA: a saccade's preparation finished (`PREPARATION-COMPLETE`).
+    EmmaPrepComplete {
+        trgt: Option<String>,
+    },
+    /// EMMA: a saccade's initiation finished (`INITIATION-COMPLETE`).
+    EmmaInitComplete,
+    /// EMMA: a saccade completed (`COMPLETE-EYE-MOVE`).
+    EmmaEyeMoveComplete {
+        sacc: EmmaSacc,
     },
     /// `+visual> cmd clear` direct event (output low); the buffer
     /// itself is cleared by the request-rule implicit event.
@@ -1691,6 +1740,28 @@ pub struct Engine {
     /// Location copy named in the last `move-attention`, re-encoded when
     /// the window changes underneath it.
     last_attention: Option<String>,
+    /// EMMA `current-marker`: the eye position as a 3-vector (default
+    /// `#(0 0 1)`, `emma.lisp:386`).
+    emma_eye: (f32, f32, f32),
+    /// EMMA `prep-s`/`exec-s` movement states.
+    emma_prep_s: bool,
+    emma_exec_s: bool,
+    /// EMMA `next-loc`: where the eye will land after the current movement.
+    emma_next_loc: Option<(f32, f32, f32)>,
+    /// EMMA `final-shift`: the requested landing point (a location's xyz).
+    emma_final_shift: (f32, f32, f32),
+    /// EMMA `shift-target`: the object chunk the eye is moving to.
+    emma_shift_target: Option<String>,
+    emma_shift_start_ms: i64,
+    /// EMMA `shift-duration` in seconds.
+    emma_shift_duration: f64,
+    /// EMMA `encoded`: whether `initiate-eye-move` scheduled the encoding.
+    emma_encoded: bool,
+    /// EMMA `last-prep`: the most recently prepared saccade.
+    emma_last_prep: Option<EmmaSacc>,
+    /// `(ssp :starting-parameters (:key val ...))` (`central-parameters.lisp`):
+    /// re-applied on every reset, like the model's own parameters.
+    starting_params: Vec<(String, Sexp)>,
     /// Device clears the window on each keypress (task `output-key` handler).
     clear_on_keypress: bool,
     man_prep_busy: bool,
@@ -1887,6 +1958,17 @@ impl Engine {
             obj_built: HashMap::new(),
             visual_busy: false,
             last_attention: None,
+            emma_eye: (0.0, 0.0, 1.0),
+            emma_prep_s: false,
+            emma_exec_s: false,
+            emma_next_loc: None,
+            emma_final_shift: (0.0, 0.0, 0.0),
+            emma_shift_target: None,
+            emma_shift_start_ms: 0,
+            emma_shift_duration: 0.0,
+            emma_encoded: false,
+            emma_last_prep: None,
+            starting_params: Vec::new(),
             clear_on_keypress,
             man_prep_busy: false,
             man_exec_busy: false,
@@ -2020,6 +2102,11 @@ impl Engine {
         self.cfg.zz_dpd_ms = zz.7;
         self.cfg.zz_fpd_ms = zz.8;
         self.cfg.zz_spd_ms = zz.9;
+        // `(ssp :starting-parameters ...)` survives a reset, like the
+        // model's own parameters (`model.lisp:972`).
+        for (k, v) in self.starting_params.clone() {
+            self.apply_sgp(&k, &v)?;
+        }
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
@@ -2114,6 +2201,16 @@ impl Engine {
         self.obj_built.clear();
         self.visual_busy = false;
         self.last_attention = None;
+        self.emma_eye = (0.0, 0.0, 1.0);
+        self.emma_prep_s = false;
+        self.emma_exec_s = false;
+        self.emma_next_loc = None;
+        self.emma_final_shift = (0.0, 0.0, 0.0);
+        self.emma_shift_target = None;
+        self.emma_shift_start_ms = 0;
+        self.emma_shift_duration = 0.0;
+        self.emma_encoded = false;
+        self.emma_last_prep = None;
         self.man_prep_busy = false;
         self.man_exec_busy = false;
         self.man_proc = [false, false];
@@ -4134,11 +4231,14 @@ impl Engine {
         match key.to_uppercase().as_str() {
             ":EMMA" => self.cfg.emma = truthy,
             // `(ssp :starting-parameters (:key val ...))`: apply each nested
-            // parameter (`central-parameters.lisp:131`). `nil` clears them.
+            // parameter and remember them so `reset` re-applies them
+            // (`central-parameters.lisp:131`). `nil` clears them.
             ":STARTING-PARAMETERS" => {
+                self.starting_params.clear();
                 if let Sexp::List(items) = val {
                     for kv in items.as_chunks::<2>().0 {
                         if let Some(k) = kv[0].as_sym() {
+                            self.starting_params.push((k.to_string(), kv[1].clone()));
                             self.apply_sgp(k, &kv[1])?;
                         }
                     }
@@ -4866,20 +4966,55 @@ impl Engine {
                 }
                 self.last_attention = Some(loc.clone());
                 self.visual_busy = true;
-                let lat = self.randomize_ms(self.cfg.attention_ms);
-                let at = self.time_ms + lat;
-                self.push(
-                    at,
-                    Prio::Num(0),
-                    Out::Medium,
-                    Event::EncodingComplete { loc },
-                );
+                if self.cfg.emma {
+                    // EMMA replaces the fixed-latency encoding with its
+                    // saccade machinery (`emma-attention-hook`).
+                    let end = self.emma_loc_xyz(&loc);
+                    self.emma_attention_hook(end);
+                } else {
+                    let lat = self.randomize_ms(self.cfg.attention_ms);
+                    let at = self.time_ms + lat;
+                    self.push(
+                        at,
+                        Prio::Num(0),
+                        Out::Medium,
+                        Event::EncodingComplete { loc },
+                    );
+                }
             }
             Event::EncodingComplete { loc } => {
                 if show {
                     self.emit("VISION", format!("Encoding-complete {loc} NIL"));
                 }
                 self.encoding_complete(loc)?;
+            }
+            Event::EmmaPrepComplete { trgt } => {
+                if show {
+                    self.emit(
+                        "EMMA",
+                        format!("Preparation-complete {}", lisp_sym_opt(&trgt)),
+                    );
+                }
+                self.emma_preparation_complete();
+            }
+            Event::EmmaInitComplete => {
+                if show {
+                    self.emit("EMMA", "INITIATION-COMPLETE".into());
+                }
+                // `initiation-complete`: free the processor state.
+            }
+            Event::EmmaEyeMoveComplete { sacc } => {
+                if show {
+                    self.emit(
+                        "EMMA",
+                        format!(
+                            "Complete-eye-movement {} {}",
+                            lisp_sym_opt(&sacc.trgt),
+                            fmt_vec3(sacc.new_loc)
+                        ),
+                    );
+                }
+                self.emma_complete_eye_move(sacc);
             }
             Event::VisualClear => {
                 if show {
@@ -12055,6 +12190,24 @@ impl Engine {
 
     /// A location name (feature base, request copy, or buffer chunk) to
     /// its feature index.
+    /// The xyz vector of a location chunk (`xyz-loc`, `vision.lisp:1839`):
+    /// `(screen-x screen-y distance)`, the distance being
+    /// `viewing-distance × pixels-per-inch` (18 × 60 = 1080).
+    fn emma_loc_xyz(&self, loc: &str) -> (f32, f32, f32) {
+        let (x, y) = self
+            .vl_xy
+            .get(loc)
+            .copied()
+            .or_else(|| {
+                self.features
+                    .iter()
+                    .find(|f| f.name == loc)
+                    .map(|f| (f.x, f.y))
+            })
+            .unwrap_or((0, 0));
+        (x as f32, y as f32, 1080.0)
+    }
+
     fn resolve_loc(&self, loc: &str) -> Result<usize, EngineError> {
         if let Some(&idx) = self.vl_copies.get(loc) {
             return Ok(idx);
@@ -12067,6 +12220,189 @@ impl Engine {
 
     /// proc-display: move due device texts into the visicon, stuff the
     /// visual-location buffer if empty, and note the update.
+    // ------------------------------------------------------------------
+    // EMMA (`extras/emma/emma.lisp`): eye-movement timing and scheduling.
+    // ------------------------------------------------------------------
+
+    /// `emma-attention-hook` (`emma.lisp:502`): `move-attention` calls this
+    /// instead of the plain encoding schedule when `:emma` is enabled.
+    fn emma_attention_hook(&mut self, end_loc: (f32, f32, f32)) {
+        // `next-destination` (`:546`): the current marker when the eye is
+        // free, otherwise where it will land.
+        let start = if !self.emma_exec_s {
+            self.emma_eye
+        } else {
+            self.emma_next_loc.unwrap_or(self.emma_eye)
+        };
+        let return_obj = self.emma_obj_at(end_loc);
+        let sacc = self.emma_compute_saccade(start, end_loc);
+        let dur = self.emma_recog_time(sacc.r);
+        self.emma_shift_target = return_obj;
+        self.emma_final_shift = end_loc;
+        self.emma_initiate_eye_move(dur, sacc);
+    }
+
+    /// `get-obj-at-location` (`vision.lisp:2485`): the object at `loc`, or
+    /// none. Building one consumes an object number (`TEXT{n}`), matching
+    /// the ref's TEXT0/TEXT1 then TEXT2 from the encoding.
+    fn emma_obj_at(&mut self, loc: (f32, f32, f32)) -> Option<String> {
+        // `within-move` (`vision.lisp:2367`): features within the movement
+        // allowance of the location (default `:visual-movement-tolerance`).
+        let idx = self.features.iter().position(|f| {
+            let fl = (f.x as f32, f.y as f32, loc.2);
+            angle_between(loc, fl) <= 1.0
+        })?;
+        let kind = self.features[idx].kind.clone();
+        let k = self.obj_built.entry(kind.clone()).or_insert(0);
+        let name = format!("{kind}{k}");
+        *k += 1;
+        Some(name)
+    }
+
+    /// `compute-saccade-r-theta` (`emma.lisp:675`).
+    fn emma_compute_saccade(&mut self, start: (f32, f32, f32), end: (f32, f32, f32)) -> EmmaSacc {
+        let stddev = 0.1 * vec_dist(start, end);
+        let ex = lisp_round(add_gaussian_noise(&mut self.rng.borrow_mut(), end.0, stddev)) as f32;
+        let ey = lisp_round(add_gaussian_noise(&mut self.rng.borrow_mut(), end.1, stddev)) as f32;
+        let new_loc = (ex, ey, end.2);
+        let r = angle_between(start, new_loc);
+        let theta = (start.1 - end.1).atan2(end.0 - start.0);
+        let fprep_time = self.emma_compute_prep_time(r, theta);
+        let exec_time = self.emma_compute_exec_time(r);
+        EmmaSacc {
+            r,
+            theta,
+            trgt: None,
+            new_loc,
+            fprep_time,
+            exec_time,
+        }
+    }
+
+    /// `compute-prep-time` (`general-pm.lisp:670`): 3 features when there is
+    /// no previous movement, else the differing r/theta features
+    /// (`feat-differences`, `emma.lisp:482`; `distance=`/`direction=`,
+    /// `motor.lisp:888`/`:894`).
+    fn emma_compute_prep_time(&self, r: f32, theta: f32) -> f64 {
+        let base = self.cfg.emma_feat_prep as f64;
+        match &self.emma_last_prep {
+            None => base * 3.0,
+            Some(prev) => {
+                let mut n = 0.0;
+                if !(2.0 > (r - prev.r).abs()) {
+                    n += 1.0;
+                }
+                let delta = (theta - prev.theta).abs();
+                let same = (std::f32::consts::PI / 4.0) > delta
+                    || delta > (7.0 / 4.0 * std::f32::consts::PI);
+                if !same {
+                    n += 1.0;
+                }
+                base * n
+            }
+        }
+    }
+
+    /// `compute-exec-time` (`emma.lisp:461`): `init + r·rate + base`.
+    fn emma_compute_exec_time(&self, r: f32) -> f64 {
+        (self.cfg.emma_init_time + r * self.cfg.emma_sacc_rate + self.cfg.emma_base_exe) as f64
+    }
+
+    /// `recog-time` (`emma.lisp:696`): `K·(−ln f)·e^(r·k)`.
+    fn emma_recog_time(&self, r: f32) -> f64 {
+        let freq = self.cfg.emma_obj_freq;
+        (self.cfg.emma_enc_factor * (-freq.ln()) * (r * self.cfg.emma_enc_exp).exp()) as f64
+    }
+
+    /// `total-time` (`emma.lisp:494`): prep + exec.
+    fn emma_total_time(sacc: &EmmaSacc) -> f64 {
+        sacc.fprep_time + sacc.exec_time
+    }
+
+    /// `initiate-eye-move` (`emma.lisp:566`).
+    fn emma_initiate_eye_move(&mut self, recog_time: f64, mut sacc: EmmaSacc) {
+        sacc.trgt = self.emma_shift_target.clone();
+        self.emma_shift_start_ms = self.time_ms;
+        self.emma_prep_s = true;
+        self.emma_last_prep = Some(sacc.clone());
+        let at = self.time_ms + (sacc.fprep_time.max(0.0) * 1000.0).round() as i64;
+        self.push(
+            at,
+            Prio::Num(0),
+            Out::Medium,
+            Event::EmmaPrepComplete {
+                trgt: sacc.trgt.clone(),
+            },
+        );
+        if recog_time <= Self::emma_total_time(&sacc) {
+            self.emma_schedule_encoding_complete(recog_time);
+            self.emma_encoded = true;
+        } else {
+            self.emma_encoded = false;
+        }
+    }
+
+    /// `schedule-encoding-complete` (`vision.lisp:3043`): the plain VISION
+    /// encoding at the last attention location.
+    fn emma_schedule_encoding_complete(&mut self, delay: f64) {
+        let Some(loc) = self.last_attention.clone() else {
+            return;
+        };
+        let at = self.time_ms + (delay.max(0.0) * 1000.0).round() as i64;
+        self.push(at, Prio::Num(0), Out::Medium, Event::EncodingComplete { loc });
+    }
+
+    /// `preparation-complete` + `maybe-execute-movement` (`general-pm.lisp`).
+    fn emma_preparation_complete(&mut self) {
+        self.emma_prep_s = false;
+        let Some(sacc) = self.emma_last_prep.clone() else {
+            return;
+        };
+        if !self.emma_exec_s {
+            self.emma_perform_movement(sacc);
+        }
+    }
+
+    /// EMMA's `perform-movement` override (`emma.lisp:653`).
+    fn emma_perform_movement(&mut self, sacc: EmmaSacc) {
+        self.emma_exec_s = true;
+        self.emma_next_loc = Some(sacc.new_loc);
+        let init = sacc.exec_time.max(0.0).min(self.cfg.emma_init_time as f64);
+        let init_at = self.time_ms + (init * 1000.0).round() as i64;
+        self.push(init_at, Prio::Num(0), Out::Medium, Event::EmmaInitComplete);
+        let move_at = self.time_ms + (sacc.exec_time.max(0.0) * 1000.0).round() as i64;
+        self.push(
+            move_at,
+            Prio::Num(0),
+            Out::Medium,
+            Event::EmmaEyeMoveComplete { sacc },
+        );
+    }
+
+    /// `complete-eye-move` (`emma.lisp:620`): land, then re-fixate when the
+    /// object was not encoded before the movement finished.
+    fn emma_complete_eye_move(&mut self, sacc: EmmaSacc) {
+        self.emma_eye = sacc.new_loc;
+        if !self.emma_encoded {
+            let new_target = self.emma_obj_at(self.emma_final_shift);
+            let start = self.emma_eye;
+            let end = self.emma_final_shift;
+            let sacc2 = self.emma_compute_saccade(start, end);
+            let elapsed = (self.time_ms - self.emma_shift_start_ms) as f64 / 1000.0;
+            let frac = if self.emma_shift_duration != 0.0 {
+                elapsed / self.emma_shift_duration
+            } else {
+                0.0
+            };
+            let new_duration = self.emma_recog_time(sacc2.r) * (1.0 - frac);
+            self.emma_shift_target = new_target;
+            self.emma_shift_start_ms = self.time_ms;
+            self.emma_shift_duration = new_duration;
+            self.emma_initiate_eye_move(new_duration, sacc2);
+        }
+        self.emma_exec_s = false;
+    }
+
     fn proc_display(&mut self) -> Result<(), EngineError> {
         let now = self.time_ms;
         let mut due = Vec::new();
@@ -12347,6 +12683,35 @@ fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineE
 }
 
 /// CL `round`: fractional .5 goes to the even neighbor.
+/// Euclidean distance between two 3-vectors (`dist`, `misc-utils.lisp:1156`).
+fn vec_dist(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
+    ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
+}
+
+/// `angle-between-vectors` (`vision.lisp:2386`) in degrees.
+fn angle_between(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
+    let num = b.2;
+    let den = ((b.0 - a.0).powi(2) + (b.1 - a.1).powi(2) + b.2.powi(2)).sqrt();
+    (num / den).clamp(-1.0, 1.0).acos().to_degrees()
+}
+
+/// `add-gaussian-noise` (`emma.lisp:730`): `x` plus a logistic sample of
+/// scale `sqrt(3·stddev²)/π`.
+fn add_gaussian_noise(rng: &mut Mt, x: f32, stddev: f32) -> f32 {
+    let s = (3.0f32 * stddev * stddev).sqrt() / std::f32::consts::PI;
+    x + if s == 0.0 { 0.0 } else { rng.noise(s) }
+}
+
+/// `~s` of an optional symbol: `NIL` when absent.
+fn lisp_sym_opt(s: &Option<String>) -> String {
+    s.clone().unwrap_or_else(|| "NIL".to_string())
+}
+
+/// `write-to-string` of a 3-vector of whole numbers: `#(320 522 1080)`.
+fn fmt_vec3(v: (f32, f32, f32)) -> String {
+    format!("#({} {} {})", v.0 as i64, v.1 as i64, v.2 as i64)
+}
+
 fn lisp_round(x: f32) -> i64 {
     let f = x.floor();
     let d = x - f;
