@@ -2708,3 +2708,12 @@ retrieve-operator` leaking a renamed `=state1` (p1's `+goal> state =state`
 now unifies with p2's renamed goal variable). The remaining difference there
 is that ACT-R merges p1's `+goal>` and p2's `=goal>` into one `+goal>`
 statement (`buffer+-union`), which the engine still emits separately.
+
+## 184. GOAL `+`/`=` merge (`buffer+-union`)
+
+`COMPOSE-GOAL-BUFFER`'s `(4 12 13 44)` case (`goal-compilation.lisp:544`)
+keeps p1's `+` request and folds p2's `=`/`*` slots into it via
+`buffer+-union` (p1's non-matching slots then p2's, sorted) — unlike
+RETRIEVAL, which drops p1's request when p2 harvests. So `complete-task &
+retrieve-operator` composes to `+goal> state =state step retrieving-operator`,
+not a separate `=goal>`. Added the GOAL special case to the RHS builder.

@@ -8973,6 +8973,29 @@ impl Engine {
             let sv = |s: Vec<(String, SlotVal)>| -> Vec<(String, String)> {
                 s.iter().map(|(n, v)| (n.clone(), v.render())).collect()
             };
+            // `COMPOSE-GOAL-BUFFER`'s `(4 12 13 44)` case
+            // (`goal-compilation.lisp:544`): p1 requests the buffer and p2
+            // modifies it (without requesting), so the composed action is
+            // p1's `+` with p2's `=`/`*` slots merged in (`buffer+-union`:
+            // p1's non-matching slots then p2's, sorted).
+            let p1_goal_req = acts_for(&p1_acts, buf, &['+', 'r']);
+            let p2_goal_eq = acts_for(&p2_acts, buf, &['=', '*']);
+            if buf == "GOAL"
+                && !p1_goal_req.is_empty()
+                && !p2_goal_eq.is_empty()
+                && acts_for(&p2_acts, buf, &['+', 'r']).is_empty()
+            {
+                let mut slots: Vec<(String, SlotVal)> =
+                    p1_goal_req.into_iter().flat_map(|(s, _)| s).collect();
+                let mut eq: Vec<(String, SlotVal)> =
+                    p2_goal_eq.into_iter().flat_map(|(s, _)| s).collect();
+                eq.sort_by(|a, b| a.0.cmp(&b.0));
+                let names2: Vec<String> = eq.iter().map(|(n, _)| n.clone()).collect();
+                slots.retain(|(n, _)| !names2.contains(n));
+                slots.extend(eq);
+                rhs.push((format!("+{buf}>"), sv(slots)));
+                continue;
+            }
             // `=` modify union (second overrides). A null `=buffer>` modify
             // is kept (`COMPOSE-GOAL-BUFFER`'s `(when a2= (list a2=))`), so a
             // self-composition like `G2 & G2` matches `G2`.
