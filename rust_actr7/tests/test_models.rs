@@ -484,6 +484,14 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
                 y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
             }),
             "CLEAR" => device.clears.push(ms()?),
+            "COMMAND" => device.commands.push(actr_engine::engine::DeviceCommand {
+                at_ms: ms()?,
+                output: as_str(v.get(2).ok_or("missing output")?)
+                    .ok_or("bad output")?
+                    .to_lowercase(),
+                details: as_str(v.get(3).ok_or("missing details")?)
+                    .ok_or("bad details")?,
+            }),
             "CLEAR-ON-KEYPRESS" => device.clear_on_keypress = true,
             "CONSUME-RNG" => {
                 device.consume_rng =

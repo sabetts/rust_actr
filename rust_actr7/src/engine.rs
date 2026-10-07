@@ -364,11 +364,24 @@ pub struct DeviceText {
     pub y: i64,
 }
 
+/// One scripted command trace line: a task's scheduled command event.
+#[derive(Debug, Clone)]
+pub struct DeviceCommand {
+    pub at_ms: i64,
+    /// `low`/`medium`/`high`/`t` (`:output`).
+    pub output: String,
+    pub details: String,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
     /// Window clears at ms (clear-exp-window): all features removed.
     pub clears: Vec<i64>,
+    /// Scheduled command lines `(ms, output, details)` — a task's
+    /// `schedule-event-relative`/`schedule-event` with a string action
+    /// prints `NONE <action> <params>` at its `:output` level.
+    pub commands: Vec<DeviceCommand>,
     /// Run-full-time dummy: keep running to this ms, then time-limit stop.
     pub end: Option<i64>,
     /// Task rewards `(ms, value)`, mirroring scheduled `trigger-reward`
@@ -1396,6 +1409,10 @@ enum Event {
     /// Attention landed: build the visual object.
     EncodingComplete {
         loc: String,
+        /// `:requested` (`encoding-complete`): a model-requested attention
+        /// sets the buffer requested; the `update-attended-loc` re-encode
+        /// does not.
+        requested: bool,
     },
     /// EMMA: a saccade's preparation finished (`PREPARATION-COMPLETE`).
     EmmaPrepComplete {
@@ -1748,6 +1765,9 @@ pub struct Engine {
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
     device_clears: Vec<i64>,
+    /// Scheduled command lines, re-armed on every `reset` like the rest of
+    /// the device script.
+    device_commands: Vec<DeviceCommand>,
     /// The task's non-replayed setup draws (device sidecar): applied after
     /// the model-body seed on every `reset`, since the task redoes its setup
     /// per run.
@@ -1946,6 +1966,7 @@ impl Engine {
         let DeviceSetup {
             texts,
             clears,
+            commands,
             end,
             rewards,
             sims,
@@ -1998,6 +2019,11 @@ impl Engine {
             device_clears: {
                 let mut v = clears;
                 v.sort_unstable();
+                v
+            },
+            device_commands: {
+                let mut v = commands;
+                v.sort_by_key(|c| c.at_ms);
                 v
             },
             consume_rng,
@@ -2281,6 +2307,26 @@ impl Engine {
         // advances, and a task runs its setup again per run).
         self.pending_texts = self.device_texts.clone();
         self.pending_clears = self.device_clears.clone();
+        // Scheduled command lines re-fire each run (`schedule-event-relative`
+        // runs again in the task's setup).
+        for c in self.device_commands.clone() {
+            let out = match c.output.as_str() {
+                "low" => Out::Low,
+                "medium" => Out::Medium,
+                "high" | "t" => Out::Always,
+                _ => Out::Low,
+            };
+            self.push_m(
+                c.at_ms,
+                Prio::Num(0),
+                out,
+                false,
+                Event::Emit {
+                    module: "NONE".to_string(),
+                    line: c.details.clone(),
+                },
+            );
+        }
         self.feat_seq = 0;
         self.copy_count.clear();
         self.c_fan_out.clear();
@@ -5200,15 +5246,15 @@ impl Engine {
                         at,
                         Prio::Num(0),
                         Out::Medium,
-                        Event::EncodingComplete { loc },
+                        Event::EncodingComplete { loc, requested: true },
                     );
                 }
             }
-            Event::EncodingComplete { loc } => {
+            Event::EncodingComplete { loc, requested } => {
                 if show {
                     self.emit("VISION", format!("Encoding-complete {loc} NIL"));
                 }
-                self.encoding_complete(loc)?;
+                self.encoding_complete(loc, requested)?;
             }
             Event::EmmaPrepComplete { trgt } => {
                 if show {
@@ -13128,7 +13174,15 @@ impl Engine {
             return;
         };
         let at = self.time_ms + (delay.max(0.0) * 1000.0).round() as i64;
-        self.push(at, Prio::Num(0), Out::Medium, Event::EncodingComplete { loc });
+        self.push(
+            at,
+            Prio::Num(0),
+            Out::Medium,
+            Event::EncodingComplete {
+                loc,
+                requested: true,
+            },
+        );
     }
 
     /// `preparation-complete` + `maybe-execute-movement` (`general-pm.lisp`).
@@ -13226,7 +13280,10 @@ impl Engine {
                         at,
                         Prio::Num(0),
                         Out::Medium,
-                        Event::EncodingComplete { loc },
+                        Event::EncodingComplete {
+                            loc,
+                            requested: false,
+                        },
                     );
                 }
             }
@@ -13322,7 +13379,11 @@ impl Engine {
                 self.push_m(
                     self.time_ms + delay,
                     Prio::Num(0),
-                    Out::Medium,
+                    // `unstuff-buffer` schedules `erase-buffer` with
+                    // `schedule-event-now`'s default `:output t`
+                    // (`support/general-pm.lisp:899`, `scheduling.lisp:1292`):
+                    // high detail only.
+                    Out::Always,
                     true,
                     Event::UnstuffVl { copy: copy.clone() },
                 );
@@ -13391,7 +13452,7 @@ impl Engine {
     }
 
     /// Attention landed: build the TEXT object and fill the buffer.
-    fn encoding_complete(&mut self, loc: String) -> Result<(), EngineError> {
+    fn encoding_complete(&mut self, loc: String, requested: bool) -> Result<(), EngineError> {
         let idx = match self.resolve_loc(&loc) {
             Ok(i) if i < self.features.len() => i,
             _ => {
@@ -13429,7 +13490,7 @@ impl Engine {
             Event::SetBuffer {
                 buffer: "VISUAL".to_string(),
                 chunk: NewChunk::Instance(inst),
-                requested: true,
+                requested,
                 shown: None,
             },
         );

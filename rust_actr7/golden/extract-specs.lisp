@@ -65,6 +65,9 @@ disable/enable, breakpoints); not trace-only drivers.")
 ;; as `(ms text x y)` / `ms`; written to `<name>.device.sexp`.
 (defvar *device-texts* nil)
 (defvar *device-clears* nil)
+;; Scheduled command events that print a trace line (`schedule-event-relative`
+;; / `schedule-event` with a string action), as `(ms output details)`.
+(defvar *device-commands* nil)
 
 ;;; ---------------------------------------------------------------- utils
 
@@ -235,6 +238,33 @@ disable/enable, breakpoints); not trace-only drivers.")
     (push (mp-time-ms) *device-clears*))
   (call-orig 'clear-exp-window win))
 
+;;; A scheduled command event (`(schedule-event-relative t "cmd" :params ...)`)
+;;; prints `NONE <action> <params>` at its `:output` level. Record it so the
+;;; engine can replay the line (the ref is the oracle).
+
+(defun record-command (absolute? time action keys)
+  (when (and (stringp action) (not *suppress*))
+    (let ((output (getf keys :output t)))
+      (when output
+        (let* ((ms (if (getf keys :time-in-ms)
+                       time
+                     (round (* time 1000))))
+               (ms (if absolute? ms (+ (mp-time-ms) ms)))
+               (params (getf keys :params)))
+          (push (list ms (string-downcase (string output))
+                      (format nil "~a~{ ~a~}" action params))
+                *device-commands*))))))
+
+(defun w-schedule-event-relative (time action &rest keys)
+  (when (eq *mode* :drive)
+    (record-command nil time action keys))
+  (apply (gethash 'schedule-event-relative *orig-fns*) time action keys))
+
+(defun w-schedule-event (time action &rest keys)
+  (when (eq *mode* :drive)
+    (record-command t time action keys))
+  (apply (gethash 'schedule-event *orig-fns*) time action keys))
+
 (defun w-pdisable (productions)
   (when (and (eq *mode* :drive) (not *suppress*))
     (push (cons :pdisable productions) *steps*))
@@ -246,7 +276,7 @@ disable/enable, breakpoints); not trace-only drivers.")
   (call-orig 'penable-fct productions))
 
 (defun write-device (name)
-  (when (or *device-texts* *device-clears*)
+  (when (or *device-texts* *device-clears* *device-commands*)
     (let ((path (merge-pathnames (concatenate 'string name ".device.sexp") *out-dir*)))
       (when (probe-file path)
         (format t "SPEC-NOTE ~a : keeping hand-authored device sidecar~%" name)
@@ -259,7 +289,9 @@ disable/enable, breakpoints); not trace-only drivers.")
           (format f "(ADD-TEXT ~a ~s ~a ~a)~%" (first item) (second item)
                   (third item) (fourth item)))
         (dolist (c (dedupe-preserve (reverse *device-clears*)))
-          (format f "(CLEAR ~a)~%" c))))))
+          (format f "(CLEAR ~a)~%" c))
+        (dolist (c (dedupe-preserve (reverse *device-commands*)))
+          (format f "(COMMAND ~a ~a ~s)~%" (first c) (second c) (third c)))))))
 
 (defun install-wrappers ()
   (wrap-fn 'run #'w-run)
@@ -273,7 +305,9 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'add-text-to-exp-window #'w-add-text)
   (wrap-fn 'clear-exp-window #'w-clear-exp-window)
   (wrap-fn 'pdisable-fct #'w-pdisable)
-  (wrap-fn 'penable-fct #'w-penable))
+  (wrap-fn 'penable-fct #'w-penable)
+  (wrap-fn 'schedule-event-relative #'w-schedule-event-relative)
+  (wrap-fn 'schedule-event #'w-schedule-event))
 
 ;;; ---------------------------------------------------------------- extraction
 
@@ -285,7 +319,8 @@ disable/enable, breakpoints); not trace-only drivers.")
 
 (defun fresh-state ()
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
-        *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil))
+        *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil
+        *device-commands* nil))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))

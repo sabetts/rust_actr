@@ -2263,6 +2263,32 @@ composition:
 `tutorial-unit7modeling-pcomp-issues-v4-one-trial` is byte-exact and in
 `enabled.txt` (53 specs); `probe_runnable` reports 53 pass / 1 fail.
 
+## 159. Scheduled command lines, unstuff output level, encoding `:requested`
+
+`tutorial-unit3modeling-v2-run` needed three more pieces:
+
+- The task's `schedule-event-relative` with a **string action** prints
+  `NONE <action> <params>` at its `:output` (`+format-event-event-string+`,
+  `framework/events.lisp:262`: a non-nil `details` wins, else the action and
+  params print). The extractor wraps `schedule-event-relative` /
+  `schedule-event` and records `(ms output "action params")` as a
+  `(COMMAND ms output "…")` sidecar op; the engine re-arms it on `reset` as
+  an `Event::Emit` under `NONE` at the matching detail level. The params'
+  printed form is captured live (`(vision exp-window Simple task) next`).
+- `unstuff-buffer` schedules `erase-buffer` with `schedule-event-now`'s
+  default `:output t` (`support/general-pm.lisp:899`, `scheduling.lisp:1292`)
+  — **high detail only**. The engine emitted it at medium, so the line leaked
+  into a medium-detail trace (`precondition-test`, which is high, still
+  shows it).
+- `encoding-complete` sets the visual buffer's `:requested` from the
+  encoding event: a model `move-attention` is requested (`SET-BUFFER-CHUNK
+  VISUAL TEXT0`), while the `update-attended-loc` re-encode is not
+  (`SET-BUFFER-CHUNK VISUAL TEXT1 NIL`). The re-encode's
+  `Event::EncodingComplete` now carries `requested: false`.
+
+`tutorial-unit3modeling-v2-run` is byte-exact and in `enabled.txt`
+(54 specs); `probe_runnable` reports **54 pass / 0 fail**.
+
 
 
 
