@@ -2881,7 +2881,12 @@ impl Engine {
                 // shadow its table entry when merged, so it gets a fresh
                 // `NAME-{k}` copy instead.
                 if let Some(n) = chunk.name.clone() {
-                    if self.named.contains_key(&n) {
+                    // A `define-chunks` chunk modified in a buffer, and a
+                    // buffer-copy chunk (`VISUAL-CHUNK0`), get a fresh
+                    // `NAME-{k}` copy on merge (`chunk-not-storable` →
+                    // `copy-chunk-fct`, `declarative-memory.lisp:1908`).
+                    let copy_prefix = format!("{}-CHUNK", buffer.to_uppercase());
+                    if self.named.contains_key(&n) || n.starts_with(&copy_prefix) {
                         let k = *self.copy_count.entry(n.clone()).or_insert(0);
                         self.copy_count.insert(n.clone(), k + 1);
                         chunk.name = Some(format!("{n}-{k}"));

@@ -2569,3 +2569,20 @@ group order before appending the goals; this matches `paired`'s
 (The visicon's `new-name` counters do *not* reset on a window clear —
 `paired-full`'s golden keeps numbering across `clear-exp-window`
 (`VISUAL-LOCATION1` after the clear) — so feature ids continue per run.)
+
+## 174. Merged buffer copies get a `NAME-{k}` name
+
+`merge-chunk-into-dm` copies a chunk that fails `chunk-not-storable`, and a
+vision buffer copy (`VISUAL-CHUNK0`) does, so the DM entry is
+`VISUAL-CHUNK0-{k}` (`declarative-memory.lisp:1908`, `copy-chunk-fct`). The
+engine now renames a merged chunk whose name is a `{BUFFER}-CHUNK` copy (or a
+model `define-chunks` name) to `NAME-{k}`.
+
+`paired`'s task-1 DM then holds the two object copies
+`VISUAL-CHUNK0-0`/`-1`, but the engine still merges all four per-trial objects
+(the reference, verified by dumping ACT-R's `all-dm-chunks`, keeps only the
+first trial's two). The window clear does not reset the visicon ids (confirmed
+by `paired-full`'s golden and by the continuing `VISUAL-LOCATION{n}` in
+`paired`'s own trace), so the two later objects differ only by their
+`screen-pos` copy name and ACT-R is not storing them — the remaining rule to
+pin down.
