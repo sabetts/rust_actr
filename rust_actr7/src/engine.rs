@@ -327,6 +327,10 @@ struct Config {
     /// Module column width in trace lines (`max-module-name-length`). The
     /// normal value is 22; test-model stubs may override it (GOTCHAS M10).
     module_width: usize,
+    /// Model-body `(sgp :seed (S C))` (`random.lisp:417`). ACT-R re-applies
+    /// the model's seed on every reset (`model.lisp:972`), so it wins over
+    /// the harness's per-run seed — this is the seed the `.ref` used.
+    seed: Option<(u64, u64)>,
 }
 
 /// One scripted device action: show text at a time and position.
@@ -1081,6 +1085,13 @@ impl Config {
             do_not_query,
             do_not_harvest,
             module_width: MODULE_WIDTH,
+            seed: match m.params.iter().find(|(k, _)| k == ":SEED") {
+                Some((_, Sexp::List(v))) if v.len() == 2 => match (&v[0], &v[1]) {
+                    (Sexp::Int(a), Sexp::Int(b)) => Some((*a as u64, *b as u64)),
+                    _ => None,
+                },
+                _ => None,
+            },
         };
         // `al-params` (`associative-learning.lisp:421`): enabling `:eal` sets
         // `:mas` to π so spreading activation runs (the module replaces the
@@ -1944,6 +1955,12 @@ impl Engine {
         };
         eng.reset()?;
         eng.cfg.module_width = module_width;
+        // `(sgp :seed (S C))` in the model body (`random.lisp:417`): ACT-R
+        // applies it while defining the model, so it supersedes the
+        // harness's per-run seed. This is the seed the `.ref` used.
+        if let Some((s, c)) = eng.cfg.seed {
+            eng.rng.borrow_mut().set_seed(s, c);
+        }
         // The construction reset is not part of the recorded trace: ACT-R
         // installs its monitors after the model is loaded, so any warnings it
         // emitted (e.g. the validator's) are dropped. The spec's own `(reset)`

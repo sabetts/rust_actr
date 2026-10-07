@@ -1949,6 +1949,23 @@ The validator is now total rather than erroring: the engine warns and skips.
 `test-bad-productions` (31 lines) is byte-exact and in `enabled.txt` (46
 specs).
 
+## 148. The model's `(sgp :seed …)` is the real seed — `emma` is reproducible
+
+The extractor's per-spec `:RUNS` seed is a stand-in, not what ACT-R used. The
+seed a `.ref` reflects is the model body's `(sgp :seed (S C))`
+(`random.lisp:417`), applied while the model is defined. `emma` records
+`(100 0)` but `demo2-model.lisp` sets `(123456 0)`; forcing `(100 0)` gives a
+different trace (`#(427 507 1080)` vs the ref's `#(320 522 1080)`), while the
+model's `(123456 0)` reproduces `emma.ref` byte-for-byte — and twice in a row,
+so the draws are fully seeded, not wall-clock. `Config::from_model` now parses
+`:SEED` and the engine applies it right after the construction reset; it must
+**not** be re-applied on `reset` (`demo2-randomized` regresses if it is — its
+stream has to continue from model definition).
+
+`demo2` and `emma` share `demo2-model.lisp`, but `demo2` is seed-independent
+because `demo2.spec` has a device sidecar (`ADD-TEXT 0 "V" 125 150`); `emma`
+has none, so its letter pick *and* its saccade noise both consume the stream.
+
 
 
 
