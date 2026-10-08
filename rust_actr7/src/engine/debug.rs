@@ -1,0 +1,512 @@
+//! Trace/debug output, parameter setters, visicon and buffer dumps.
+use super::*;
+use super::compilation::{bold_values};
+impl Engine {
+
+    /// `(buffer-chunk <name>...)`: append the command-layer buffer dump the
+    /// task driver prints after a run (`framework/buffers.lisp:881` +
+    /// `framework/chunks.lisp:736`). Only the fields the corpus exercises:
+    /// the buffer/chunk header (with the multi-buffer set for threads goals)
+    /// and each slot. Not a trace line, so it is appended verbatim.
+    pub fn print_buffer_chunk(&mut self, buffers: &[String]) {
+        for name in buffers {
+            let bname = name.to_uppercase();
+            let chunk = self.buffers.get(&bname).and_then(|b| b.chunk.clone());
+            let cname = chunk
+                .as_ref()
+                .and_then(|c| c.name.clone())
+                .unwrap_or_default();
+            let mut header = format!("{bname}: {cname} ");
+            if let Some(src) = self.vl_copied_from.get(&cname) {
+                // `~@[[~s]~]` (`chunk-copied-from-fct`): the source chunk.
+                header.push_str(&format!("[{src}]"));
+            }
+            if self.cfg.threads && bname == "GOAL" {
+                // `hash-table-keys` (`misc-utils.lisp:657`) pushes while
+                // walking the goal m-buffer set; SBCL visits these small
+                // tables in insertion order, so the printed set is reversed.
+                let mut set: Vec<String> =
+                    self.goal_set.iter().filter_map(|c| c.name.clone()).collect();
+                set.reverse();
+                header.push_str(&format!(" {{{}}}", set.join(" ")));
+            }
+            self.out_lines.push(header);
+            if let Some(c) = &chunk {
+                self.push_chunk(c);
+            }
+        }
+    }
+
+    /// `pprint-a-chunk` (`chunks.lisp:736`): the chunk's name, then
+    /// `slot  value` lines, then a blank line (the `~%` plus
+    /// `command-output`'s newline).
+    pub(super) fn push_chunk(&mut self, c: &ChunkInst) {
+        self.out_lines.push(c.name.clone().unwrap_or_default());
+        for (k, v) in &c.slots {
+            self.out_lines.push(format!("   {k}  {}", v.show()));
+        }
+        self.out_lines.push(String::new());
+    }
+
+    /// `(sdm <spec>...)`: print the declarative-memory chunks matching the
+    /// task's spec (`commands/dm-commands.lisp:491`). The corpus calls
+    /// `(sdm isa pair)`, and `pair`'s only members are unnamed run chunks, so
+    /// every DM chunk is printed (the merged buffer chunks, then the goals in
+    /// `dm-chunks` order).
+    pub fn print_sdm(&mut self, _spec: &[String]) {
+        // `dm-chunks` (`declarative-memory.lisp:912`, `add-chunk-into-dm`
+        // 1918) is an alist keyed by the chunk's slot signature, and a new
+        // set is pushed to the *front* (1931), so `sdm` prints the merged
+        // sets newest-first, with each set's chunks in insertion order,
+        // followed by the model's `add-dm` chunks.
+        let n_model = self.model.chunks.len().min(self.dm.len());
+        let key = |c: &ChunkInst| {
+            let mut names: Vec<String> = c.slots.iter().map(|(k, _)| k.clone()).collect();
+            names.sort();
+            (c.ctype.clone(), names)
+        };
+        let mut groups: Vec<Vec<usize>> = Vec::new();
+        for i in n_model..self.dm.len() {
+            let ki = key(&self.dm[i]);
+            let found = groups.iter().position(|grp| {
+                let j = grp[0];
+                key(&self.dm[j]) == ki
+            });
+            match found {
+                Some(g) => groups[g].push(i),
+                None => groups.push(vec![i]),
+            }
+        }
+        let mut prints: Vec<usize> = Vec::new();
+        for grp in groups.iter().rev() {
+            prints.extend(grp.iter().copied());
+        }
+        prints.extend(0..n_model);
+        for i in prints {
+            let c = self.dm[i].clone();
+            self.push_chunk(&c);
+        }
+    }
+
+    /// Set the buffers the BOLD predictor traces (`record-history`'s names).
+    pub fn set_bold_buffers(&mut self, buffers: &[String]) {
+        self.bold_buffers = buffers.iter().map(|b| b.to_uppercase()).collect();
+    }
+
+    /// BOLD demand recorder: at each event note each traced buffer's busy
+    /// state and open/close a demand period on a transition (the buffer-trace
+    /// recorder snapshots per event; `parse-trace-lists-for-bold`,
+    /// `other-files/bold.lisp:536`).
+    pub(super) fn bold_record(&mut self) {
+        if self.bold_buffers.is_empty() {
+            return;
+        }
+        let t = self.time_ms as f64 / 1000.0;
+        for b in self.bold_buffers.clone() {
+            let busy = !self.query_free(&b).unwrap_or(true);
+            match (busy, self.bold_open.get(&b).copied()) {
+                (true, None) => {
+                    self.bold_open.insert(b, t);
+                }
+                (false, Some(s)) => {
+                    self.bold_open.remove(&b);
+                    self.bold_demand.entry(b).or_default().push((s, t));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// A zero-length demand point (`time . time`) for a point-predicted
+    /// buffer (`:point-predict (goal)`): the goal module is never busy, so
+    /// its demand comes from the chunk-name/request events
+    /// (`parse-trace-lists-for-bold`, `other-files/bold.lisp:536`).
+    pub(super) fn bold_point(&mut self, buffer: &str) {
+        if self.bold_buffers.iter().any(|b| b == buffer) {
+            let t = self.time_ms as f64 / 1000.0;
+            self.bold_demand
+                .entry(buffer.to_string())
+                .or_default()
+                .push((t, t));
+        }
+    }
+
+    /// `(predict-bold-response)`: the BOLD haemodynamic prediction for each
+    /// traced buffer (`other-files/bold.lisp`), printed as the `time …`
+    /// table. Defaults: `:bold-inc 2`, `:bold-exp 5`, `:bold-scale 1`,
+    /// `:bold-settle 40`, `:bold-positive 6`, `:bold-negative 1`,
+    /// `:neg-bold-exp 15`, `:point-predict (goal)`.
+    pub fn print_bold(&mut self) {
+        const INC: f64 = 2.0;
+        const SETTLE: f64 = 40.0;
+        const EXP: f64 = 5.0;
+        const NEG_EXP: f64 = 15.0;
+        const C1: f64 = 6.0;
+        const C2: f64 = 1.0;
+        fn fact(n: u32) -> f64 {
+            (1..=n).fold(1.0, |a, b| a * b as f64)
+        }
+        let pos_factor = C1 / (C1 - C2) / fact(EXP as u32);
+        let neg_factor = C2 / (C1 - C2) / fact(NEG_EXP as u32);
+        let start = 0.0f64;
+        let end = self.time_ms as f64 / 1000.0;
+        let mut buffers: Vec<String> = self.bold_buffers.clone();
+        buffers.sort();
+        let max_len = 2 + buffers
+            .iter()
+            .map(|b| b.len())
+            .chain(std::iter::once("time".len()))
+            .max()
+            .unwrap_or(4);
+        let mut header = format!("{:>w$}", "time", w = max_len);
+        for b in &buffers {
+            header.push_str(&format!("{:>w$}", b, w = max_len));
+        }
+        self.out_lines.push(header);
+        let mut time = start + INC / 2.0;
+        while time <= end - INC / 2.0 {
+            let mut row = format!("{:>w$.3}", time, w = max_len);
+            for b in &buffers {
+                let demand = self.bold_demand.get(b).cloned().unwrap_or_default();
+                let point = b == "GOAL";
+                let pos = bold_values(&demand, time, INC, SETTLE, EXP, 1.0, point);
+                let neg = bold_values(&demand, time, INC, SETTLE, NEG_EXP, 1.0, point);
+                let v = pos * pos_factor - neg * neg_factor;
+                row.push_str(&format!("{:>w$.3}", v, w = max_len));
+            }
+            self.out_lines.push(row);
+            time += INC;
+        }
+        // `command-output` wraps its argument with `~&…~%`
+        // (`misc-utils.lisp:845`); the data block already ends in `~%`, so
+        // the table is followed by one blank line.
+        self.out_lines.push(String::new());
+    }
+
+    /// Schedule a no-op event at absolute model time `at_ms` (a real-time
+    /// slack hook's `(schedule-event .5 'fn)`, `meta-process.lisp`): hidden at
+    /// medium but wakes an armed conflict-resolution.
+    pub fn schedule_dummy(&mut self, at_ms: i64) {
+        self.push(at_ms, Prio::Num(0), Out::Always, Event::Dummy);
+    }
+
+    /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
+    /// stub's "Installing a default touch device…" banner.
+    pub fn emit_warning(&mut self, msg: &str) {
+        self.out_lines.push(format!("#|Warning: {msg} |#"));
+    }
+
+    /// `(mod-focus slot value ...)`: schedule a goal modification at the
+    /// current time (`goal.lisp:346`, priority `:max`).
+    pub fn mod_focus(&mut self, slots: &[(String, Sexp)]) {
+        let mut out = Vec::new();
+        for (k, v) in slots {
+            if let Ok(val) = Value::from_sexp(v) {
+                out.push((k.to_uppercase(), val));
+            }
+        }
+        self.now(Prio::Num(0), Out::Medium, Event::ModFocus { slots: out });
+    }
+
+    /// `(add-visicon-features (slot value) ...)`: add a visicon feature and
+    /// re-run `proc-display` at the current time. The chunk is auto-named
+    /// `CHUNK{n}` (`new-name-fct`).
+    pub fn add_visicon(&mut self, slots: &[(String, Sexp)]) {
+        let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
+        self.name_count.insert("CHUNK".to_string(), n + 1);
+        let mut x = 0i64;
+        let mut y = 0i64;
+        let mut w = 0i64;
+        let mut ht = 0i64;
+        let mut extra: Vec<(String, Value)> = Vec::new();
+        for (k, v) in slots {
+            let ku = k.to_uppercase();
+            match (ku.as_str(), v) {
+                ("SCREEN-X", Sexp::Int(i)) => x = *i,
+                ("SCREEN-Y", Sexp::Int(i)) => y = *i,
+                ("WIDTH", Sexp::Int(i)) => w = *i,
+                ("HEIGHT", Sexp::Int(i)) => ht = *i,
+                _ => {
+                    if let Ok(val) = Value::from_sexp(v) {
+                        extra.push((ku, val));
+                    }
+                }
+            }
+        }
+        self.features.push(Feature {
+            name: format!("CHUNK{n}"),
+            kind: "VISUAL-LOCATION".to_string(),
+            value: String::new(),
+            x,
+            y,
+            width: w,
+            height: ht,
+            extra,
+            tstamp_ms: self.time_ms,
+            attended: false,
+        });
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
+    /// `(modify-visicon-features (feature screen-x X screen-y Y))`: move the
+    /// named feature at absolute model time `at_ms`.
+    pub fn schedule_modify_visicon(&mut self, at_ms: i64, name: &str, x: i64, y: i64) {
+        self.push(
+            at_ms,
+            Prio::Num(0),
+            Out::Never,
+            Event::ModifyVisicon {
+                name: name.to_string(),
+                x,
+                y,
+            },
+        );
+    }
+
+    /// Trace on/off (`:v`), used by scripted drivers that hide segments.
+    pub fn set_trace(&mut self, on: bool) {
+        self.trace_on = on;
+    }
+
+    /// Install task-file `defun`s for the bounded `!eval!`/`!bind!` evaluator.
+    pub fn set_user_fns(&mut self, fns: HashMap<String, crate::model::UserDefun>) {
+        self.user_fns = fns;
+    }
+
+    /// Override the trace module-column width (`max-module-name-length`).
+    pub fn set_module_width(&mut self, width: usize) {
+        self.cfg.module_width = width;
+    }
+
+    /// `(sgp :trace-detail X)` mid-driver.
+    pub fn set_detail(&mut self, detail: Detail) {
+        self.cfg.detail = detail;
+    }
+
+    /// `(sgp :key value)` mid-driver. Known parameters update the live
+    /// config; unknown ones are accepted (no-op) so specs are not rejected.
+    pub fn apply_sgp(&mut self, key: &str, val: &Sexp) -> Result<(), EngineError> {
+        let num = |v: &Sexp| -> Option<f32> {
+            match v {
+                Sexp::Int(i) => Some(*i as f32),
+                Sexp::Float(x) => Some(*x as f32),
+                _ => None,
+            }
+        };
+        let truthy = !matches!(val, Sexp::Sym(s) if s == "NIL");
+        match key.to_uppercase().as_str() {
+            ":EMMA" => self.cfg.emma = truthy,
+            // `(ssp :starting-parameters (:key val ...))`: apply each nested
+            // parameter and remember them so `reset` re-applies them
+            // (`central-parameters.lisp:131`). `nil` clears them.
+            ":STARTING-PARAMETERS" => {
+                self.starting_params.clear();
+                if let Sexp::List(items) = val {
+                    for kv in items.as_chunks::<2>().0 {
+                        if let Some(k) = kv[0].as_sym() {
+                            self.starting_params.push((k.to_string(), kv[1].clone()));
+                            self.apply_sgp(k, &kv[1])?;
+                        }
+                    }
+                }
+            }
+            ":PPM" => self.cfg.ppm = num(val),
+            ":EGS" => self.cfg.egs = num(val).unwrap_or(0.0),
+            ":CIA" => self.cfg.cia = truthy,
+            ":RIR" => self.cfg.rir = truthy,
+            ":EPL" => self.cfg.epl = truthy,
+            ":PCT" => self.cfg.pct = truthy,
+            ":LF" => {
+                if let Some(x) = num(val) {
+                    self.cfg.lf_ms = (x * 1000.0).round() as i64;
+                }
+            }
+            ":ESC" => self.cfg.esc = truthy,
+            ":RT" => {
+                if let Some(x) = num(val) {
+                    self.cfg.rt = x;
+                }
+            }
+            ":ANS" => self.cfg.ans = num(val).filter(|x| *x > 0.0),
+            ":MP" => self.cfg.mp = num(val),
+            ":MD" => {
+                if let Some(x) = num(val) {
+                    self.cfg.md = x;
+                }
+            }
+            ":MS" => {
+                if let Some(x) = num(val) {
+                    self.cfg.ms = x;
+                }
+            }
+            ":MAS" => self.cfg.mas = num(val),
+            ":BLC" => {
+                if let Some(x) = num(val) {
+                    self.cfg.blc = x;
+                }
+            }
+            ":BLL" => {
+                self.cfg.bll = num(val).filter(|b| *b > 0.0);
+                self.cfg.act_scale = match self.cfg.bll {
+                    Some(b) => (0.001f32).powf(-b).ln(),
+                    None => 0.0,
+                };
+            }
+            ":UL" => self.cfg.ul = truthy,
+            ":ULT" => self.cfg.ult = truthy,
+            ":RECORD-TICKS" => self.cfg.record_ticks = truthy,
+            ":RANDOMIZE-TIME" => {
+                self.cfg.randomize_scale = match val {
+                    Sexp::Sym(s) if s == "NIL" => None,
+                    Sexp::Sym(_) => Some(3.0),
+                    Sexp::Float(x) => Some(*x as f32),
+                    Sexp::Int(i) => Some(*i as f32),
+                    _ => None,
+                }
+            }
+            ":VPFT" => self.cfg.vpft = truthy,
+            ":VIDT" => self.cfg.vidt = truthy,
+            ":TOUCH-DRAG-DELAY" => self.cfg.touch_drag_delay = truthy,
+            ":LEFT-START" => {
+                if let Sexp::List(v) = val {
+                    if let (Some(a), Some(b)) = (
+                        v.first().and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                        v.get(1).and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                    ) {
+                        self.cfg.touch_left_start = (a, b);
+                    }
+                }
+            }
+            ":RIGHT-START" => {
+                if let Sexp::List(v) = val {
+                    if let (Some(a), Some(b)) = (
+                        v.first().and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                        v.get(1).and_then(|x| match x {
+                            Sexp::Int(i) => Some(*i),
+                            _ => None,
+                        }),
+                    ) {
+                        self.cfg.touch_right_start = (a, b);
+                    }
+                }
+            }
+            ":IU" => {
+                if let Some(x) = num(val) {
+                    self.cfg.iu = x;
+                }
+            }
+            ":ALPHA" => {
+                if let Some(x) = num(val) {
+                    self.cfg.alpha = x;
+                }
+            }
+            ":ER" => self.cfg.er = truthy,
+            ":CRT" => self.cfg.crt = truthy,
+            ":CST" => self.cfg.cst = truthy,
+            ":ACT" => {
+                self.cfg.act = match val {
+                    Sexp::Sym(s) if s == "NIL" => None,
+                    Sexp::Sym(s) => Some(match s.as_str() {
+                        "T" => Act::T,
+                        "HIGH" => Act::High,
+                        "MEDIUM" => Act::Medium,
+                        "LOW" => Act::Low,
+                        _ => return Err(bad(format!("bad :act {s}"))),
+                    }),
+                    _ => return Err(bad(format!("bad :act {val:?}"))),
+                };
+            }
+            ":NSJI" => self.cfg.nsji = truthy,
+            ":GA" => {
+                if let Some(x) = num(val) {
+                    self.cfg.ga = x;
+                }
+            }
+            ":DAT" => {
+                if let Some(x) = num(val) {
+                    self.cfg.dat_ms = (x * 1000.0).round() as i64;
+                }
+            }
+            // `:UTILITY-OFFSETS`, seeds, etc. accepted without an observable
+            // effect here (the ppm offset is implicit in `:ppm`).
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// `(sgp :seed (S C))`: init + discard, same as construction.
+    pub fn set_seed(&mut self, seed: (u64, u64)) {
+        self.rng.borrow_mut().set_seed(seed.0, seed.1);
+    }
+
+    /// Consume `n` draws from the random stream without using the values
+    /// (a task's setup draws between runs).
+    pub fn consume_rng(&mut self, n: u64) {
+        for _ in 0..n {
+            self.rng.borrow_mut().next_u32();
+        }
+    }
+
+    /// `pdisable-fct` (`procedural-cmds.lisp:541`): skip the named
+    /// productions in conflict resolution; an empty list disables all.
+    pub fn pdisable(&mut self, names: &[String]) {
+        if names.is_empty() {
+            for p in &self.model.productions {
+                self.disabled_prods.insert(p.name.to_uppercase());
+            }
+        } else {
+            for n in names {
+                self.disabled_prods.insert(n.to_uppercase());
+            }
+        }
+    }
+
+    /// `penable-fct` (`procedural-cmds.lisp:568`): re-enable the named
+    /// productions; an empty list enables all.
+    pub fn penable(&mut self, names: &[String]) {
+        if names.is_empty() {
+            self.disabled_prods.clear();
+        } else {
+            for n in names {
+                self.disabled_prods.remove(&n.to_uppercase());
+            }
+        }
+    }
+}
+
+impl Engine {
+
+    /// `production-parameter-fct` (`utility-and-reward-1.lisp:660`): the
+    /// `Parameters for production` block printed by `spp-fct` after a
+    /// composition. `utility` is the cached `production-utility` (nil until a
+    /// conflict resolution computes it); `u` is the base `production-u`.
+    pub(super) fn print_prod_params(&mut self, name: &str, u: f32, utility: Option<f32>, reward: Option<f32>) {
+        self.out(format!("Parameters for production {name}:"));
+        if self.cfg.esc {
+            match utility {
+                Some(v) => self.out(format!(" :utility {v:6.3}")),
+                None => self.out(" :utility    NIL".to_string()),
+            }
+        }
+        self.out(format!(" :u  {u:6.3}"));
+        self.out(format!(" :at {}", fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)));
+        if self.cfg.esc && self.cfg.ul {
+            // `production-parameter-fct` (`utility-and-reward-1.lisp:686`):
+            // the reward lines print only with `:esc` + `:ul`.
+            match reward {
+                Some(r) => self.out(format!(" :reward {r:6.3}")),
+                None => self.out(" :reward    NIL".to_string()),
+            }
+            self.out(" :fixed-utility    NIL".to_string());
+        }
+    }
+}

@@ -1,0 +1,405 @@
+//! Engine unit tests.
+use super::compilation::{latency, remove_dup_keep_last, render_production};
+use super::dm::{bl_equation};
+use super::rhs::{implicit_clears};
+    use super::*;
+    use std::path::PathBuf;
+
+    fn m0(name: &str) -> Model {
+        let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../actr7.x/tutorial/unit1")
+            .join(name);
+        let ms = crate::model::load_models(&p).unwrap();
+        assert_eq!(ms.len(), 1);
+        ms.into_iter().next().unwrap()
+    }
+
+    fn inst(ctype: &str, slots: Vec<(&str, Value)>) -> ChunkInst {
+        ChunkInst {
+            name: None,
+            ctype: ctype.into(),
+            slots: slots.into_iter().map(|(s, v)| (s.into(), v)).collect(),
+            bare: false,
+        }
+    }
+
+    fn sym(s: &str) -> Value {
+        Value::Sym(s.into())
+    }
+
+    #[test]
+    fn scripted_reset_is_idempotent() {
+        // Construction performs a reset; an explicit `(reset)` at t=0 must
+        // reproduce the same run (same DM, goal, CR) exactly.
+        let a = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        let out_a = a.run().unwrap();
+        let mut b = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        b.reset().unwrap();
+        b.run_secs(10.0).unwrap();
+        assert_eq!(out_a, b.output());
+    }
+
+    #[test]
+    fn queue_orders_time_then_priority_then_fifo() {
+        let m = m0("count.lisp");
+        let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        e.queue.clear();
+        e.seq = 0;
+        let rd = |b: &str| Event::BufferRead { buffer: b.into() };
+        e.push(100, Prio::Num(0), Out::Low, rd("A"));
+        e.push(50, Prio::Min, Out::Low, rd("B"));
+        e.push(50, Prio::Num(10), Out::Low, rd("C"));
+        e.push(50, Prio::Num(10), Out::Low, rd("D"));
+        e.push(50, Prio::Max, Out::Low, rd("E"));
+        e.push(50, Prio::Num(0), Out::Low, rd("F"));
+        let mut order = Vec::new();
+        while let Some(q) = e.queue.pop() {
+            match q.event {
+                Event::BufferRead { buffer } => order.push(buffer),
+                _ => unreachable!(),
+            }
+        }
+        assert_eq!(order, vec!["E", "C", "D", "F", "B", "A"]);
+    }
+
+    #[test]
+    fn harvest_rules() {
+        let exempt: Vec<String> = vec!["GOAL".to_string()];
+        let m = m0("count.lisp");
+        let clears =
+            |n: &str| implicit_clears(m.productions.iter().find(|p| p.name == n).unwrap(), &exempt, false);
+        // START tests only =goal> but requests retrieval: request rule.
+        assert_eq!(clears("START"), vec!["RETRIEVAL".to_string()]);
+        // INCREMENT tests both, requests retrieval: request rule (no double).
+        assert_eq!(clears("INCREMENT"), vec!["RETRIEVAL".to_string()]);
+        // STOP has explicit -goal>: only the untested-by-rhs retrieval.
+        assert_eq!(clears("STOP"), vec!["RETRIEVAL".to_string()]);
+        let s = m0("semantic.lisp");
+        let dv = s
+            .productions
+            .iter()
+            .find(|p| p.name == "DIRECT-VERIFY")
+            .unwrap();
+        assert_eq!(implicit_clears(dv, &exempt, false), vec!["RETRIEVAL".to_string()]);
+        // Goal is harvest-exempt even when tested-but-untargeted.
+        use crate::model::Pattern as Pat;
+        use crate::model::{LhsItem, Production, RhsAction, SlotTest};
+        let probe = Production {
+            name: "PROBE".to_string(),
+            reward: None,
+            at: None,
+            utility: None,
+            lhs: vec![LhsItem::Match {
+                buffer: "GOAL".to_string(),
+                tests: vec![SlotTest {
+                    slot: "ISA".to_string(),
+                    value: Pat::Sym("GOAL".to_string()),
+                    op: SlotOp::Eq,
+                }],
+            }],
+            rhs: vec![RhsAction::Request {
+                buffer: "VISUAL".to_string(),
+                spec: crate::model::ChunkDesc::Spec {
+                    ctype: String::new(),
+                    slots: vec![],
+                    neg: vec![],
+                    rels: vec![],
+                },
+            }],
+        };
+        let no_exempt: Vec<String> = vec![];
+        assert_eq!(
+            implicit_clears(&probe, &no_exempt, false),
+            vec!["GOAL".to_string(), "VISUAL".to_string()]
+        );
+        assert_eq!(implicit_clears(&probe, &exempt, false), vec!["VISUAL".to_string()]);
+    }
+
+    #[test]
+    fn matcher_vars_nil_negation() {
+        let m = m0("count.lisp");
+        let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        // goal-focus state: COUNT slot absent (= nil for tests).
+        e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
+            "COUNT-FROM",
+            vec![("START", sym("TWO")), ("END", sym("FOUR"))],
+        ));
+        let start = e.model.productions[0].clone();
+        let b = e
+            .match_prod(&start, &[], &mut Vec::new())
+            .unwrap()
+            .expect("START should match");
+        assert_eq!(b.get("NUM1"), Some(&sym("TWO")));
+        // INCREMENT needs =retrieval>: absent, no match.
+        let inc = e.model.productions[1].clone();
+        assert!(e.match_prod(&inc, &[], &mut Vec::new()).unwrap().is_none());
+        // Retrieval TWO (number TWO next THREE): full match, NUM2=THREE.
+        e.buffers.get_mut("RETRIEVAL").unwrap().chunk = Some(inst(
+            "NUMBER",
+            vec![("NUMBER", sym("TWO")), ("NEXT", sym("THREE"))],
+        ));
+        // Goal still count-less: `count =num1` fails on nil... START's
+        // `count nil` passes but increment needs a real count.
+        assert!(e.match_prod(&inc, &[], &mut Vec::new()).unwrap().is_none());
+        // Advance the goal as START's firing would: count=TWO.
+        e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
+            "COUNT-FROM",
+            vec![
+                ("START", sym("TWO")),
+                ("END", sym("FOUR")),
+                ("COUNT", sym("TWO")),
+            ],
+        ));
+        let b = e.match_prod(&inc, &[], &mut Vec::new()).unwrap().expect("INCREMENT matches");
+        assert_eq!(b.get("NUM1"), Some(&sym("TWO")));
+        assert_eq!(b.get("NUM2"), Some(&sym("THREE")));
+        // STOP needs count=end: not yet.
+        let stop = e.model.productions[2].clone();
+        assert!(e.match_prod(&stop, &[], &mut Vec::new()).unwrap().is_none());
+    }
+
+    #[test]
+    fn matcher_failure_query() {
+        let m = m0("semantic.lisp");
+        let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
+            "IS-MEMBER",
+            vec![
+                ("OBJECT", sym("CANARY")),
+                ("CATEGORY", sym("BIRD")),
+                ("JUDGMENT", sym("PENDING")),
+            ],
+        ));
+        let fail = e.model.productions[3].clone();
+        // Retrieval merely empty is not failure.
+        assert!(e.match_prod(&fail, &[], &mut Vec::new()).unwrap().is_none());
+        e.buffers.get_mut("RETRIEVAL").unwrap().failed = true;
+        assert!(e.match_prod(&fail, &[], &mut Vec::new()).unwrap().is_some());
+    }
+
+    /// SBCL `~S` single-float rendering (the blending trace's arbiter):
+    /// shortest digits, fixed for exponents -3..=6, exponent form outside.
+    #[test]
+    fn lisp_s_f32_matches_sbcl() {
+        assert_eq!(lisp_s_f32(0.35355338), "0.35355338");
+        assert_eq!(lisp_s_f32(2.5325232), "2.5325232");
+        assert_eq!(lisp_s_f32(3.7122225e-6), "3.7122225e-6");
+        assert_eq!(lisp_s_f32(1.1136667e-5), "1.1136667e-5");
+        assert_eq!(lisp_s_f32(0.001), "0.001");
+        assert_eq!(lisp_s_f32(1.0e7), "1.0e7");
+        assert_eq!(lisp_s_f32(9999999.0), "9999999.0");
+        assert_eq!(lisp_s_f32(-0.9), "-0.9");
+        assert_eq!(lisp_s_f32(0.0), "0.0");
+        assert_eq!(lisp_s_f32(2.0), "2.0");
+    }
+
+    /// CL `remove-duplicates` keeps the later copy (production
+    /// compilation's condition union depends on it).
+    #[test]
+    fn remove_dup_keeps_last() {
+        assert_eq!(remove_dup_keep_last(vec![1, 2, 1, 3]), vec![2, 1, 3]);
+        let a = ("SLOT".to_string(), SlotVal::Lit("SMALL".to_string()));
+        let b = ("STATE".to_string(), SlotVal::Lit("P2".to_string()));
+        assert_eq!(
+            remove_dup_keep_last(vec![a.clone(), b.clone(), a]),
+            vec![b, ("SLOT".to_string(), SlotVal::Lit("SMALL".to_string()))]
+        );
+    }
+
+    /// The bounded `!eval!`/`!bind!` evaluator: pure operators, variables,
+    /// quotes, `mp-time`, and loud failure for unknown heads.
+    #[test]
+    fn eval_evaluator() {
+        use crate::sexpr::parse_all;
+        let e = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        let mut b = Bindings::new();
+        b.insert("X".to_string(), Value::Int(3));
+        let one = |s: &str| parse_all(s).unwrap().pop().unwrap();
+        let t = Value::Sym("T".to_string());
+        assert_eq!(e.eval_expr(&one("(> (mp-time) .4)"), &b).unwrap(), Value::Nil);
+        assert_eq!(e.eval_expr(&one("(> (mp-time) -1)"), &b).unwrap(), t);
+        assert_eq!(
+            e.eval_expr(&one("(not (equal =x 'blue))"), &b).unwrap(),
+            t
+        );
+        assert_eq!(e.eval_expr(&one("(+ =x 1)"), &b).unwrap(), Value::Int(4));
+        assert_eq!(e.eval_expr(&one("(null =x)"), &b).unwrap(), Value::Nil);
+        assert_eq!(
+            e.eval_expr(&one("(and (> =x 2) (< =x 4))"), &b).unwrap(),
+            t
+        );
+        assert!(e.eval_expr(&one("(this-needs-a-real-lisp)"), &b).is_err());
+    }
+
+    /// Task-file `defun`s are callable by symbol or string head, with bare
+    /// parameters bound from the call scope.
+    #[test]
+    fn eval_user_defun() {
+        use crate::model::UserDefun;
+        use crate::sexpr::parse_all;
+        let mut e = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+        let expr = |s: &str| parse_all(s).unwrap().pop().unwrap();
+        let mut fns = HashMap::new();
+        fns.insert(
+            "SINGLE-BIND".to_string(),
+            UserDefun {
+                params: vec!["VAL".to_string()],
+                body: vec![expr("(1+ val)")],
+            },
+        );
+        e.set_user_fns(fns);
+        let b = Bindings::new();
+        assert_eq!(e.eval_expr(&expr("(single-bind 3)"), &b).unwrap(), Value::Int(4));
+        assert_eq!(
+            e.eval_expr(&expr("(\"single-bind\" 4)"), &b).unwrap(),
+            Value::Int(5)
+        );
+    }
+
+    /// `render_production` reproduces the `:cst` instantiation block
+    /// (`tutorial-unit8-simple-ppm-model-initial-run.ref`).
+    #[test]
+    fn render_production_instantiated() {
+        use crate::model::{LhsItem, Pattern as Pat, Production, RhsAction, SlotTest};
+        let prod = Production {
+            name: "SMALL".to_string(),
+            reward: None,
+            at: None,
+            utility: None,
+            lhs: vec![LhsItem::Match {
+                buffer: "GOAL".to_string(),
+                tests: vec![
+                    SlotTest {
+                        slot: "ISA".to_string(),
+                        value: Pat::Sym("TEST".to_string()),
+                        op: SlotOp::Eq,
+                    },
+                    SlotTest {
+                        slot: "VALUE".to_string(),
+                        value: Pat::Sym("SMALL".to_string()),
+                        op: SlotOp::Eq,
+                    },
+                    SlotTest {
+                        slot: "VALUE".to_string(),
+                        value: Pat::Var("VAL".to_string()),
+                        op: SlotOp::Eq,
+                    },
+                ],
+            }],
+            rhs: vec![
+                RhsAction::Output {
+                    args: vec![Sexp::Sym("=VAL".to_string())],
+                },
+                RhsAction::Clear {
+                    buffer: "GOAL".to_string(),
+                },
+            ],
+        };
+        let mut b = Bindings::new();
+        b.insert("VAL".to_string(), Value::Sym("SMALL".to_string()));
+        assert_eq!(
+            render_production(&prod, &b, &[]),
+            "(P SMALL\n   =GOAL>\n       VALUE SMALL\n       VALUE SMALL\n ==>\n   !OUTPUT! SMALL\n   -GOAL>\n)"
+        );
+    }
+
+    /// Row-by-row against `golden/units/tables/latency.sexp`: 802
+    /// `compute-activation-latency` points plus CL half-even ROUND probes.
+    #[test]
+    fn latency_matches_lisp_table() {
+        use crate::sexpr::{parse_all, Sexp};
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/units/tables/latency.sexp");
+        let src = std::fs::read_to_string(&path).unwrap();
+        let forms = parse_all(&src).unwrap();
+        let (mut lat, mut rnd) = (0, 0);
+        for f in &forms {
+            let items = match f {
+                Sexp::List(it) => it,
+                _ => panic!("table row not a list: {f:?}"),
+            };
+            match items.as_slice() {
+                [Sexp::Sym(h), Sexp::Float(a), Sexp::Int(lf), Sexp::Float(le), Sexp::Int(want)]
+                    if h == "LAT" =>
+                {
+                    assert_eq!(latency(*lf, *le as f32, *a as f32), *want, "row {f:?}");
+                    lat += 1;
+                }
+                [Sexp::Sym(h), Sexp::Float(x), Sexp::Int(want)] if h == "ROUND" => {
+                    assert_eq!(lisp_round(*x as f32), *want, "row {f:?}");
+                    rnd += 1;
+                }
+                row => panic!("bad table row: {row:?}"),
+            }
+        }
+        assert!(lat >= 800 && rnd >= 7, "table shrank: lat={lat} rnd={rnd}");
+    }
+
+    /// Row-by-row against `golden/units/tables/base-level.sexp`:
+    /// act-scale derivation plus the decay equation over three OL
+    /// modes. Compared with epsilon (f32 `powf`/`ln` may differ 1ulp
+    /// across libms); the table pins the equation, not the last bit.
+    #[test]
+    fn base_level_matches_lisp_table() {
+        use crate::sexpr::{parse_all, Sexp};
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/units/tables/base-level.sexp");
+        let src = std::fs::read_to_string(&path).unwrap();
+        let forms = parse_all(&src).unwrap();
+        let (mut acts, mut rows, mut now_ms) = (0, 0, 0i64);
+        for f in &forms {
+            let items = match f {
+                Sexp::List(it) => it,
+                _ => panic!("table row not a list: {f:?}"),
+            };
+            match items.as_slice() {
+                [Sexp::Sym(h), Sexp::Int(t)] if h == "NOW" => now_ms = *t,
+                [Sexp::Sym(h), Sexp::Float(bll), Sexp::Float(want)] if h == "ACTSCALE" => {
+                    // (log (expt 1/1000 (- bll))): ratio coerced to single.
+                    let got = (0.001f32).powf(-(*bll as f32)).ln();
+                    assert!(
+                        (got - *want as f32).abs() <= 1e-6,
+                        "ACTSCALE {bll}: got {got}, want {want}"
+                    );
+                    acts += 1;
+                }
+                [Sexp::Sym(h), Sexp::Float(bll), ol, Sexp::Float(scale), Sexp::Int(n), Sexp::Int(ct), rest @ ..]
+                    if h == "BL" =>
+                {
+                    let ol = match ol {
+                        Sexp::Sym(s) if s == "NIL" => Ol::Off,
+                        Sexp::Int(i) => Ol::Num(*i as f64),
+                        Sexp::Sym(s) if s == "T" => Ol::On,
+                        got => panic!("bad OL flag: {got:?}"),
+                    };
+                    assert!(rest.len() >= 1, "BL row missing RESULT: {f:?}");
+                    let (refs_s, res_s) = rest.split_at(rest.len() - 1);
+                    let refs: Vec<i64> = refs_s
+                        .iter()
+                        .map(|r| match r {
+                            Sexp::Int(t) => *t,
+                            got => panic!("bad ref time: {got:?}"),
+                        })
+                        .collect();
+                    let want = match &res_s[0] {
+                        Sexp::Float(x) => *x as f32,
+                        got => panic!("bad RESULT: {got:?}"),
+                    };
+                    assert_eq!(refs.len(), *n as usize, "row {f:?}");
+                    let got =
+                        bl_equation(now_ms, &refs, *n as f32, *ct, *bll as f32, &ol, *scale as f32);
+                    let tol = 1e-5 * want.abs().max(1.0);
+                    assert!(
+                        (got - want).abs() <= tol,
+                        "BL row {f:?}: got {got}, want {want}"
+                    );
+                    rows += 1;
+                }
+                row => panic!("bad table row: {row:?}"),
+            }
+        }
+        assert!(
+            acts >= 2 && rows >= 24,
+            "table shrank: acts={acts} rows={rows}"
+        );
+    }
