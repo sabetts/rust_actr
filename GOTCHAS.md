@@ -2841,3 +2841,41 @@ dropping a pending `update-attended-loc` re-encode
 (`EncodingComplete { requested: false }`) when a new `MoveAttention` starts;
 vision stays busy to 1.060 and `start-report` fires at 1.110, byte-exact.
 `tutorial-unit3-sperling-trial-trace` is in `enabled.txt` (59 specs).
+
+## 192. `ssp :starting-parameters` seeds, `:alpha`, and device sidecars (verified)
+
+The model-tester re-applies `ssp :starting-parameters` on every `(reset)`
+(`central-parameters-reset`, `central-parameters.lisp:140`), including a
+`:seed` and the `:testing-function`. The single-threaded extractor only
+called the testing function, so for `paired-learning` (whose model sets no
+seed) it recorded the default seed `618013` and a window that never matched
+the reference. `golden/extract-specs.lisp` now captures
+`:starting-parameters`' `:seed` and re-applies it in `w-reset`, and
+`flush-sgp-params` also records `:alpha` (the task runs its second block
+with `alpha 1.0`, which makes reward propagation jump straight to the
+reward). The per-run `(:RUN-FULL-TIME 5 (1 N) …)` seeds are the real RNG
+states — unlike `(:run …)` they are never canonicalised to the `(100 0)`
+placeholder — so `Step::RunFullTime` now carries and re-applies its seed.
+`paired-learning.device.sexp` (window texts) had to be regenerated too.
+This cut the `paired-learning` diff from ~180 hunks to 27.
+
+## 193. Production-compilation composition details (verified)
+
+Four fixes in `compose_pair`/`rename-variables` closed the remaining
+`paired-learning` hunks (27 → 0):
+
+- `rename-variables` (`production-compilation.lisp:1533`) renames a shared
+  basic variable in the second production when it binds a different
+  `(buffer, slot)` there — `PRODUCTION14 & PRODUCTION16` share `=state` for
+  the retrieval's `arg1` (p1) and `post` (p2), so the two must not unify
+  (`=state` → "respond", `=state1` → "wait"). The same slot in the same
+  buffer stays unified (`E & F`'s `color =c`).
+- `MAP-IMAGINAL-BUFFER`'s RHS-`*` case (`imaginal-compilation.lisp:98`)
+  fires for a `*imaginal>` (modify-request) first production: the second's
+  constant instantiates the variable, or its variable unifies onto p1's.
+- `COMPOSE-GOAL-BUFFER`'s `(4 12 13 44)` case
+  (`goal-compilation.lisp:546`) emits the first production's own
+  `=goal>`/`*goal>` modify before the `+goal>` union.
+- `buffer=-union` for `(and a1* a2=)` (`COMPOSE-IMAGINAL-BUFFER`'s
+  `(9 40 25 56)` case) emits a single `*` — the `=`/`*` modify unions are
+  not emitted separately.

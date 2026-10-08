@@ -81,14 +81,16 @@ Enable a passing spec by appending its name to
     (`Feature`, `Config`), `engine/events.rs` (`MoveAttention`, `UnstuffVl`),
     `actr7.x/core-modules/vision.lisp:2006,2269,2282,2247,2929,1542`.
 
-- [ ] **A2. paired-learning utility / selection** → enable `paired-learning`. **(IN PROGRESS)**
-  - [ ] First diff: `production1 :utility 0.121` (ref) vs `-0.025` (engine) after
-        recreation (`recreating production production1`).
-  - [ ] Audit `:u` init vs computed utility, and reward propagation onto
-        recreated/compiled productions (`engine/productions.rs`,
-        `engine/compilation.rs`, `model.rs` `spp :u`/`:reward`).
-  - [ ] Work the remaining ~180 diff hunks (2730 ref lines vs 2808 engine lines).
-  - [ ] Enable; commit; GOTCHA.
+- [x] **A2. paired-learning utility / selection** → enable `paired-learning`.
+  - [x] Root cause was spec generation, not the engine: the extractor never
+        applied `ssp :starting-parameters (:seed …)` / `:alpha`, and the device
+        sidecar was authored with the wrong seed. Fixed in
+        `golden/extract-specs.lisp` + `Step::RunFullTime` per-run seeding;
+        regenerated the spec/device. GOTCHA #192.
+  - [x] Composition fixes closed the remaining hunks (`rename-variables`
+        (buffer, slot), `MAP-IMAGINAL-BUFFER` RHS-`*`, `COMPOSE-GOAL-BUFFER`
+        `(4 12 13 44)` a1=, `buffer=-union` a1*/a2=). GOTCHA #193.
+  - [x] Enable the spec (60 specs); commit.
 
 ## Phase B — unlock hidden real-model traces (coverage ROI)
 

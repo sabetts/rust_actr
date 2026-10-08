@@ -1192,9 +1192,11 @@ impl Engine {
             let mut used: HashSet<String> = v1.union(&v2).cloned().collect();
             let mut m = HashMap::new();
             for v in &v2 {
-                // Only a variable bound by a *different* buffer in the two
-                // productions needs disambiguating; one bound in the same
-                // buffer is the same variable.
+                // `rename-variables` (`production-compilation.lisp:1533`): a
+                // shared basic variable is renamed in the second production
+                // when it binds a different (buffer, slot) there — e.g. a goal
+                // state variable and a retrieved-slot variable sharing a name.
+                // The same slot in the same buffer stays unified.
                 if v1.contains(v) && vb1.get(v) != vb2.get(v) {
                     let mut n = 1;
                     let fresh = loop {
@@ -1316,7 +1318,10 @@ impl Engine {
                     for (name, v) in slots2 {
                         if let SlotVal::Var(n) = v {
                             if let Some(cv) = self.chunk_name_slot(&chunk, name) {
-                                map.insert(n.clone(), SlotVal::Lit(cv));
+                                // A variable already instantiated from p1's
+                                // own request (`pre =state`) keeps p1's value;
+                                // p2's condition only fills the rest.
+                                map.entry(n.clone()).or_insert(SlotVal::Lit(cv));
                             }
                         }
                     }
@@ -1603,16 +1608,6 @@ impl Engine {
                 .flat_map(|(s, _)| s)
                 .collect();
             eq2.sort_by(|a, b| a.0.cmp(&b.0));
-            if has_eq1 || has_eq2 {
-                let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
-                let mut slots: Vec<(String, SlotVal)> = eq1
-                    .into_iter()
-                    .filter(|(n, _)| !names2.contains(n))
-                    .collect();
-                slots.extend(eq2);
-                rhs.push((format!("={buf}>"), sv(slots)));
-            }
-            // `*` modify-request union.
             let mut st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
@@ -1623,6 +1618,29 @@ impl Engine {
                 .flat_map(|(s, _)| s)
                 .collect();
             st2.sort_by(|a, b| a.0.cmp(&b.0));
+            // `buffer=-union` when the first modifies-by-request and the second
+            // modifies: the union is a single `*` (`COMPOSE-IMAGINAL-BUFFER`
+            // `(and a1* a2=)`), not a separate `=` plus `*`.
+            if !st1.is_empty() && has_eq2 && st2.is_empty() {
+                let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
+                let mut slots: Vec<(String, SlotVal)> = st1
+                    .into_iter()
+                    .filter(|(n, _)| !names2.contains(n))
+                    .collect();
+                slots.extend(eq2);
+                rhs.push((format!("*{buf}>"), sv(slots)));
+                continue;
+            }
+            if has_eq1 || has_eq2 {
+                let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
+                let mut slots: Vec<(String, SlotVal)> = eq1
+                    .into_iter()
+                    .filter(|(n, _)| !names2.contains(n))
+                    .collect();
+                slots.extend(eq2);
+                rhs.push((format!("={buf}>"), sv(slots)));
+            }
+            // `*` modify-request union.
             if !st1.is_empty() || !st2.is_empty() {
                 let names2: Vec<String> = st2.iter().map(|(n, _)| n.clone()).collect();
                 let mut slots: Vec<(String, SlotVal)> = st1

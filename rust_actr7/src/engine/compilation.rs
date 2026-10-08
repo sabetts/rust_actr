@@ -85,13 +85,15 @@ pub(super) fn builtin_type_defaults(name: &str) -> &'static [(&'static str, &'st
 /// The LHS buffers whose slot values mention each variable (used to decide
 /// whether a shared variable really binds to the same place in both
 /// productions).
-pub(super) fn var_buffers(p: &Production) -> HashMap<String, HashSet<String>> {
-    let mut m: HashMap<String, HashSet<String>> = HashMap::new();
+pub(super) fn var_buffers(p: &Production) -> HashMap<String, HashSet<(String, String)>> {
+    let mut m: HashMap<String, HashSet<(String, String)>> = HashMap::new();
     for item in &p.lhs {
         if let LhsItem::Match { buffer, tests } = item {
             for t in tests {
                 if let Pattern::Var(x) = &t.value {
-                    m.entry(x.clone()).or_default().insert(buffer.clone());
+                    m.entry(x.clone())
+                        .or_default()
+                        .insert((buffer.clone(), t.slot.clone()));
                 }
             }
         }

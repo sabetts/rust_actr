@@ -20,6 +20,7 @@ indirect-action-compilation
 merging-test
 # One test name per line (matches golden/test-models/specs/<name>.spec).
 paired
+paired-learning
 ppm-compilation
 precondition-test
 remote-bind-test
