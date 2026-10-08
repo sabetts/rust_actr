@@ -125,19 +125,30 @@ impl Engine {
             .named
             .get(&name)
             .cloned()
-            .or_else(|| self.dm.iter().find(|c| c.name.as_deref() == Some(&name)).cloned())
             .or_else(|| {
-                self.buffers
-                    .values()
-                    .find_map(|b| b.chunk.as_ref().filter(|c| c.name.as_deref() == Some(&name)).cloned())
+                self.dm
+                    .iter()
+                    .find(|c| c.name.as_deref() == Some(&name))
+                    .cloned()
+            })
+            .or_else(|| {
+                self.buffers.values().find_map(|b| {
+                    b.chunk
+                        .as_ref()
+                        .filter(|c| c.name.as_deref() == Some(&name))
+                        .cloned()
+                })
             });
         let c = chunk?;
         let slot = |k: &str| -> Option<i64> {
-            c.slots.iter().find(|(s, _)| s == k).and_then(|(_, v)| match v {
-                Value::Int(i) => Some(*i),
-                Value::Num(x) => Some(*x as i64),
-                _ => None,
-            })
+            c.slots
+                .iter()
+                .find(|(s, _)| s == k)
+                .and_then(|(_, v)| match v {
+                    Value::Int(i) => Some(*i),
+                    Value::Num(x) => Some(*x as i64),
+                    _ => None,
+                })
         };
         Some((slot("SCREEN-X")?, slot("SCREEN-Y")?, name))
     }
@@ -225,10 +236,22 @@ impl Engine {
     }
 
     /// `compute-saccade-r-theta` (`emma.lisp:675`).
-    pub(super) fn emma_compute_saccade(&mut self, start: (f32, f32, f32), end: (f32, f32, f32)) -> EmmaSacc {
+    pub(super) fn emma_compute_saccade(
+        &mut self,
+        start: (f32, f32, f32),
+        end: (f32, f32, f32),
+    ) -> EmmaSacc {
         let stddev = 0.1 * vec_dist(start, end);
-        let ex = lisp_round(add_gaussian_noise(&mut self.rng.borrow_mut(), end.0, stddev)) as f32;
-        let ey = lisp_round(add_gaussian_noise(&mut self.rng.borrow_mut(), end.1, stddev)) as f32;
+        let ex = lisp_round(add_gaussian_noise(
+            &mut self.rng.borrow_mut(),
+            end.0,
+            stddev,
+        )) as f32;
+        let ey = lisp_round(add_gaussian_noise(
+            &mut self.rng.borrow_mut(),
+            end.1,
+            stddev,
+        )) as f32;
         let new_loc = (ex, ey, end.2);
         let r = angle_between(start, new_loc);
         let theta = (start.1 - end.1).atan2(end.0 - start.0);
@@ -518,7 +541,12 @@ impl Engine {
         self.place_vl_at(base, requested, 10)
     }
 
-    pub(super) fn place_vl_at(&mut self, base: &str, requested: bool, prio: i64) -> Result<(), EngineError> {
+    pub(super) fn place_vl_at(
+        &mut self,
+        base: &str,
+        requested: bool,
+        prio: i64,
+    ) -> Result<(), EngineError> {
         let idx = self
             .features
             .iter()
@@ -598,8 +626,7 @@ impl Engine {
         let k = self.obj_built.entry(feat.kind.clone()).or_insert(0);
         let name = format!("{}{}", feat.kind, *k);
         *k += 1;
-        self.obj_feature
-            .insert(name.clone(), feat.name.clone());
+        self.obj_feature.insert(name.clone(), feat.name.clone());
         self.obj_feature
             .insert("VISUAL-CHUNK0".to_string(), feat.name.clone());
         let pos = self
@@ -886,7 +913,11 @@ impl Engine {
     }
 
     /// Attention landed: build the TEXT object and fill the buffer.
-    pub(super) fn encoding_complete(&mut self, loc: String, requested: bool) -> Result<(), EngineError> {
+    pub(super) fn encoding_complete(
+        &mut self,
+        loc: String,
+        requested: bool,
+    ) -> Result<(), EngineError> {
         // `encoding-complete` (`vision.lisp:2413`) builds the object with
         // `get-obj-at-location` -> `within-move` (`vision.lisp:2485/2367`),
         // i.e. by the attention position, not the location chunk's name.
@@ -904,8 +935,7 @@ impl Engine {
         } else {
             let clof = self.emma_loc_xyz(&loc);
             match self.features.iter().position(|f| {
-                angle_between(clof, (f.x as f32, f.y as f32, clof.2))
-                    <= VISUAL_MOVEMENT_TOLERANCE
+                angle_between(clof, (f.x as f32, f.y as f32, clof.2)) <= VISUAL_MOVEMENT_TOLERANCE
             }) {
                 Some(i) => i,
                 None => return self.encoding_no_object(),
@@ -917,8 +947,7 @@ impl Engine {
         *k += 1;
         // The VISUAL buffer holds a `VISUAL-CHUNK{n}` copy; the trace shows
         // the source object name (`TEXT{n}`).
-        self.obj_feature
-            .insert(source.clone(), feat.name.clone());
+        self.obj_feature.insert(source.clone(), feat.name.clone());
         self.obj_feature
             .insert("VISUAL-CHUNK0".to_string(), feat.name.clone());
         let inst = ChunkInst {
@@ -989,7 +1018,6 @@ impl Feature {
     }
 }
 
-
 /// Visual-location request matching over features. Unconstrained
 /// requests match everything; unknown slots error.
 pub(super) fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineError> {
@@ -1050,7 +1078,6 @@ pub(super) fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bo
     Ok(true)
 }
 
-
 /// Request slot relations (`> screen-y 450 < screen-y 470`) on a
 /// visual-location search (`find-location`, `vision.lisp:2921`). Unknown
 /// slots are not filtered (the search ignores them).
@@ -1078,13 +1105,11 @@ pub(super) fn loc_rel_matches(feat: &Feature, rels: &[(String, Value, SlotOp)]) 
     true
 }
 
-
 /// CL `round`: fractional .5 goes to the even neighbor.
 /// Euclidean distance between two 3-vectors (`dist`, `misc-utils.lisp:1156`).
 pub(super) fn vec_dist(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
 }
-
 
 /// `angle-between-vectors` (`vision.lisp:2386`) in degrees.
 pub(super) fn angle_between(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
@@ -1093,14 +1118,12 @@ pub(super) fn angle_between(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
     (num / den).clamp(-1.0, 1.0).acos().to_degrees()
 }
 
-
 /// `add-gaussian-noise` (`emma.lisp:730`): `x` plus a logistic sample of
 /// scale `sqrt(3·stddev²)/π`.
 pub(super) fn add_gaussian_noise(rng: &mut Mt, x: f32, stddev: f32) -> f32 {
     let s = (3.0f32 * stddev * stddev).sqrt() / std::f32::consts::PI;
     x + if s == 0.0 { 0.0 } else { rng.noise(s) }
 }
-
 
 /// The sound's `audio-event` chunk (`update-sound-evt`, `audio.lisp:922`):
 /// `onset`, `location`, `kind`, `id`, `pitch`. The model's `detected-sound`
@@ -1119,7 +1142,6 @@ pub(super) fn audio_event_chunk(s: &Sound) -> ChunkInst {
         bare: false,
     }
 }
-
 
 /// The sound chunk (`audio-encoding-complete`, `audio.lisp:1205`):
 /// `content`, `kind`, `event` (the `audio-event` chunk name).

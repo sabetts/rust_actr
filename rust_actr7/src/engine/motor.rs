@@ -1,6 +1,6 @@
 //! Manual/touch/keyboard motor (extended motor actions) and tracker.
-use super::*;
 use super::eval::{lisp_num_str, name_of, num_of, num_value};
+use super::*;
 
 pub(super) fn key_table() -> HashMap<String, KeySpec> {
     HashMap::from([
@@ -106,36 +106,251 @@ pub(super) fn key_table() -> HashMap<String, KeySpec> {
         // QWERTY letter rows (`other-files/keyboard.lisp`). Punch-style
         // home keys (A S D F J K L) have no explicit polar geometry; use
         // the home position as a stand-in.
-        ("Q".to_string(), KeySpec { hand: "LEFT", finger: "PINKIE", r: 1.0, theta: -1.57 }),
-        ("W".to_string(), KeySpec { hand: "LEFT", finger: "RING", r: 1.0, theta: -1.57 }),
-        ("E".to_string(), KeySpec { hand: "LEFT", finger: "MIDDLE", r: 1.0, theta: -1.57 }),
-        ("R".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: -1.57 }),
-        ("T".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.41, theta: -0.79 }),
-        ("Y".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.41, theta: -2.36 }),
-        ("U".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: -1.57 }),
-        ("I".to_string(), KeySpec { hand: "RIGHT", finger: "MIDDLE", r: 1.0, theta: -1.57 }),
-        ("O".to_string(), KeySpec { hand: "RIGHT", finger: "RING", r: 1.0, theta: -1.57 }),
-        ("P".to_string(), KeySpec { hand: "RIGHT", finger: "PINKIE", r: 1.0, theta: -1.57 }),
-        ("A".to_string(), KeySpec { hand: "LEFT", finger: "PINKIE", r: 1.0, theta: 0.0 }),
-        ("S".to_string(), KeySpec { hand: "LEFT", finger: "RING", r: 1.0, theta: 0.0 }),
-        ("D".to_string(), KeySpec { hand: "LEFT", finger: "MIDDLE", r: 1.0, theta: 0.0 }),
-        ("F".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: 0.0 }),
-        ("G".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: 0.0 }),
-        ("H".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: 3.14 }),
-        ("J".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: 0.0 }),
-        ("K".to_string(), KeySpec { hand: "RIGHT", finger: "MIDDLE", r: 1.0, theta: 0.0 }),
-        ("L".to_string(), KeySpec { hand: "RIGHT", finger: "RING", r: 1.0, theta: 0.0 }),
-        ("Z".to_string(), KeySpec { hand: "LEFT", finger: "PINKIE", r: 1.0, theta: 1.57 }),
-        ("X".to_string(), KeySpec { hand: "LEFT", finger: "RING", r: 1.0, theta: 1.57 }),
-        ("C".to_string(), KeySpec { hand: "LEFT", finger: "MIDDLE", r: 1.0, theta: 1.57 }),
-        ("V".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.0, theta: 1.57 }),
-        ("B".to_string(), KeySpec { hand: "LEFT", finger: "INDEX", r: 1.41, theta: 0.79 }),
-        ("N".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.41, theta: 2.36 }),
-        ("M".to_string(), KeySpec { hand: "RIGHT", finger: "INDEX", r: 1.0, theta: 1.57 }),
-        ("SPACE".to_string(), KeySpec { hand: "LEFT", finger: "THUMB", r: 1.0, theta: 0.0 }),
+        (
+            "Q".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "PINKIE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "W".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "RING",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "E".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "R".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "T".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 1.41,
+                theta: -0.79,
+            },
+        ),
+        (
+            "Y".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.41,
+                theta: -2.36,
+            },
+        ),
+        (
+            "U".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "I".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "O".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "P".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "PINKIE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "A".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "PINKIE",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "S".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "RING",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "D".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "F".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "G".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "H".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 3.14,
+            },
+        ),
+        (
+            "J".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "K".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "L".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "Z".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "PINKIE",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "X".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "RING",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "C".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "V".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "B".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "INDEX",
+                r: 1.41,
+                theta: 0.79,
+            },
+        ),
+        (
+            "N".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.41,
+                theta: 2.36,
+            },
+        ),
+        (
+            "M".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "SPACE".to_string(),
+            KeySpec {
+                hand: "LEFT",
+                finger: "THUMB",
+                r: 1.0,
+                theta: 0.0,
+            },
+        ),
     ])
 }
-
 
 /// Keys whose `key->cmd` mapping is a `punch` movement (`other-files/keyboard.lisp`
 /// ASDF row and space): the finger is already home, so no polar geometry is
@@ -147,7 +362,6 @@ pub(super) fn key_is_punch(key: &str) -> bool {
         "A" | "S" | "D" | "F" | "J" | "K" | "L" | ";" | "SPACE"
     )
 }
-
 
 /// A key's absolute `(x, y)` in the virtual keyboard grid
 /// (`other-files/keyboard.lisp` `specify-key`).
@@ -212,7 +426,6 @@ pub(super) fn key_xy(key: &str) -> Option<(i64, i64)> {
     Some(p)
 }
 
-
 /// `key->hand&finger` (`keyboard.lisp` `key->cmd` → the style's hand/finger).
 /// A key's canonical lowercase name at absolute `(x, y)` — the inverse of
 /// [`key_xy`], used to name the device's `output-key` from the finger position
@@ -260,7 +473,6 @@ pub(super) fn xy_key(x: i64, y: i64) -> Option<&'static str> {
     Some(s)
 }
 
-
 pub(super) fn key_hand_finger(key: &str) -> Option<(usize, usize)> {
     let (hand, finger) = match key.to_uppercase().as_str() {
         "`" | "BACKQUOTE" | "1" | "Q" | "A" | "Z" | "TAB" | "CAPS-LOCK" | "SHIFT"
@@ -272,10 +484,9 @@ pub(super) fn key_hand_finger(key: &str) -> Option<(usize, usize)> {
         "7" | "U" | "J" | "M" => (1, 0),
         "8" | "I" | "K" | "," | "COMMA" => (1, 1),
         "9" | "O" | "L" | "." | "PERIOD" | "DOT" => (1, 2),
-        "0" | "P" | ";" | "SEMICOLON" | "/" | "SLASH" | "-" | "HYPHEN" | "="
-        | "EQUAL" | "[" | "LEFT-BRACKET" | "]" | "RIGHT-BRACKET" | "\\"
-        | "BACKSLASH" | "'" | "QUOTE" | "DELETE" | "RETURN" | "NEWLINE"
-        | "RIGHT-SHIFT" => (1, 3),
+        "0" | "P" | ";" | "SEMICOLON" | "/" | "SLASH" | "-" | "HYPHEN" | "=" | "EQUAL" | "["
+        | "LEFT-BRACKET" | "]" | "RIGHT-BRACKET" | "\\" | "BACKSLASH" | "'" | "QUOTE"
+        | "DELETE" | "RETURN" | "NEWLINE" | "RIGHT-SHIFT" => (1, 3),
         "SPACE" => (0, 4),
         _ => return None,
     };
@@ -283,7 +494,6 @@ pub(super) fn key_hand_finger(key: &str) -> Option<(usize, usize)> {
 }
 
 impl Engine {
-
     /// `style X hand Y` suffix for motor events when the extended-motor-actions
     /// module is loaded (`motor-extension.lisp:979`).
     pub(super) fn zz_style_suffix(&self) -> String {
@@ -319,7 +529,6 @@ impl Engine {
 }
 
 impl Engine {
-
     /// act-touch: hand index (left=0, right=1).
     pub(super) fn touch_hand_idx(hand: &str) -> Option<usize> {
         match hand.to_uppercase().as_str() {
@@ -361,7 +570,13 @@ impl Engine {
         // (index, middle, ring, pinkie, thumb) standard offsets, mirrored
         // for the left hand.
         let offs: [(f32, f32); 5] = if h == 0 {
-            [(0.0, 0.0), (-1.0, 0.0), (-2.0, 0.0), (-3.0, 0.0), (1.0, 2.0)]
+            [
+                (0.0, 0.0),
+                (-1.0, 0.0),
+                (-2.0, 0.0),
+                (-3.0, 0.0),
+                (1.0, 2.0),
+            ]
         } else {
             [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (3.0, 0.0), (-1.0, 2.0)]
         };
@@ -420,8 +635,7 @@ impl Engine {
                 _ => {}
             }
         }
-        let h = Self::touch_hand_idx(&hand)
-            .ok_or_else(|| unimpl(format!("touch hand {hand}")))?;
+        let h = Self::touch_hand_idx(&hand).ok_or_else(|| unimpl(format!("touch hand {hand}")))?;
         let init = self.cfg.init_ms;
         let burst = self.cfg.burst_ms;
         let feat = self.cfg.feat_prep_ms;
@@ -498,9 +712,8 @@ impl Engine {
             move_to: None,
             put_hand: false,
         };
-        let fitts = |coef: f32, d: f32, w: f32| -> f32 {
-            (coef * (d / w + 0.5).log2()).max(min_fitts)
-        };
+        let fitts =
+            |coef: f32, d: f32, w: f32| -> f32 { (coef * (d / w + 0.5).log2()).max(min_fitts) };
         let get = |k: &str| -> String {
             disp.iter()
                 .find(|(s, _)| s == k)
@@ -550,13 +763,13 @@ impl Engine {
                 plan.exec_ms = init + (t * 1000.0).round() as i64;
                 plan.finish_ms = plan.exec_ms + burst;
                 plan.signal = format!("touch-point {model} {hand} {tx} {ty}");
-                plan.monitor =
-                    format!("model {model} moved the {hand} hand to point {tx} , {ty}");
+                plan.monitor = format!("model {model} moved the {hand} hand to point {tx} , {ty}");
                 plan.move_to = Some((tx, ty));
             }
             "TAP" | "TAP-HOLD" => {
                 let angle = (2.0f32
-                    * ((self.cfg.touch_ppi * self.cfg.touch_height) / 2.0
+                    * ((self.cfg.touch_ppi * self.cfg.touch_height)
+                        / 2.0
                         / (self.cfg.touch_ppi * 15.0))
                         .atan())
                 .to_degrees();
@@ -571,7 +784,11 @@ impl Engine {
                 if cmd == "TAP" {
                     plan.up_at_exec_burst = true;
                 }
-                let sig = if cmd == "TAP" { "touch-tap" } else { "touch-tap-hold" };
+                let sig = if cmd == "TAP" {
+                    "touch-tap"
+                } else {
+                    "touch-tap-hold"
+                };
                 plan.signal = format!("{sig} {model} {hand} {finger} {fx} {fy}");
                 let verb = if cmd == "TAP" {
                     format!("tapped the {finger} finger on the {hand} hand at point {fx} , {fy}")
@@ -613,8 +830,11 @@ impl Engine {
                 );
             }
             "PINCH" => {
-                let mv = (burst as f32 / 1000.0)
-                    .max(fitts(self.cfg.touch_peck_coeff, (start_width - end_width).abs(), self.cfg.touch_ppi * self.cfg.touch_thumb_width));
+                let mv = (burst as f32 / 1000.0).max(fitts(
+                    self.cfg.touch_peck_coeff,
+                    (start_width - end_width).abs(),
+                    self.cfg.touch_ppi * self.cfg.touch_thumb_width,
+                ));
                 let exec = init as f32 / 1000.0 + (burst as f32 / 1000.0).max(mv);
                 plan.exec_ms = (exec * 1000.0).round() as i64;
                 plan.finish_ms = ((exec + burst as f32 / 1000.0 + mv) * 1000.0).round() as i64;
@@ -631,9 +851,16 @@ impl Engine {
             }
             "ROTATE" => {
                 let diameter = 54.0f32 * 5.0f32.sqrt();
-                let w = 0.5 * diameter * std::f32::consts::PI * (1.0 / 180.0) * self.cfg.touch_rotate_width;
-                let mv = (burst as f32 / 1000.0)
-                    .max(fitts(self.cfg.touch_peck_coeff, 0.5 * diameter * rotation.abs(), w));
+                let w = 0.5
+                    * diameter
+                    * std::f32::consts::PI
+                    * (1.0 / 180.0)
+                    * self.cfg.touch_rotate_width;
+                let mv = (burst as f32 / 1000.0).max(fitts(
+                    self.cfg.touch_peck_coeff,
+                    0.5 * diameter * rotation.abs(),
+                    w,
+                ));
                 let exec = init as f32 / 1000.0 + (burst as f32 / 1000.0).max(mv);
                 plan.exec_ms = (exec * 1000.0).round() as i64;
                 plan.finish_ms = ((exec + burst as f32 / 1000.0 + mv) * 1000.0).round() as i64;
@@ -759,7 +986,9 @@ impl Engine {
         let bad_slot = get("BAD-SLOT").map(|v| name_of(&v));
         let min = get("MIN").and_then(|v| num_of(&v)).unwrap_or(0.0);
         let max = get("MAX").and_then(|v| num_of(&v)).unwrap_or(1.0);
-        let count = get("CONTROL-COUNT").and_then(|v| num_of(&v)).unwrap_or(21.0) as usize;
+        let count = get("CONTROL-COUNT")
+            .and_then(|v| num_of(&v))
+            .unwrap_or(21.0) as usize;
         let delay = get("DELAY").and_then(|v| num_of(&v)).unwrap_or(10.0);
         let temp = get("TEMP").and_then(|v| num_of(&v)).unwrap_or(1.0);
         let scale = get("SCALE").and_then(|v| num_of(&v)).unwrap_or(180.0);
@@ -827,12 +1056,7 @@ impl Engine {
         self.trackers[idx].update_gen = gen;
         let name = self.trackers[idx].name.clone();
         let slot = self.trackers[idx].control_slot.clone();
-        self.push(
-            at,
-            Prio::Num(0),
-            Out::Always,
-            Event::TrackerUpdate { gen },
-        );
+        self.push(at, Prio::Num(0), Out::Always, Event::TrackerUpdate { gen });
         let _ = (name, slot);
     }
 
@@ -846,7 +1070,10 @@ impl Engine {
             .map(|&x| params[0] + x * params[1] + x * x * params[2])
             .collect();
         let max = ys.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let vals: Vec<f64> = ys.iter().map(|&y| ((y - max) / temperature).exp()).collect();
+        let vals: Vec<f64> = ys
+            .iter()
+            .map(|&y| ((y - max) / temperature).exp())
+            .collect();
         let sum: f64 = vals.iter().sum();
         let probs: Vec<f64> = vals.iter().map(|&v| v / sum).collect();
         let p = self.rng.borrow_mut().random_float(1.0) as f64;
@@ -953,7 +1180,11 @@ impl Engine {
             x * bad_y,
             x2 * bad_y,
         ];
-        let old: Vec<f32> = self.trackers[idx].statistics.iter().map(|v| *v as f32).collect();
+        let old: Vec<f32> = self.trackers[idx]
+            .statistics
+            .iter()
+            .map(|v| *v as f32)
+            .collect();
         let new: Vec<f32> = if skip {
             old.iter().map(|o| weight2 * o).collect()
         } else {
@@ -978,7 +1209,11 @@ impl Engine {
 
     /// tracker extra: least-squares quadratic fit (`tracker-calc-quad`).
     pub(super) fn tracker_calc_quad(&mut self, idx: usize) {
-        let s: Vec<f32> = self.trackers[idx].statistics.iter().map(|v| *v as f32).collect();
+        let s: Vec<f32> = self.trackers[idx]
+            .statistics
+            .iter()
+            .map(|v| *v as f32)
+            .collect();
         let wg = self.trackers[idx].good_weight as f32;
         let wb = self.trackers[idx].bad_weight as f32;
         let n = s[0];
@@ -1063,7 +1298,9 @@ impl Engine {
             if let Some(f) = self.features.iter_mut().find(|f| f.name == name) {
                 match f.extra.iter_mut().find(|(k, _)| k == "PROMPT") {
                     Some((_, v)) => *v = Value::Sym(prompt.to_string()),
-                    None => f.extra.push(("PROMPT".to_string(), Value::Sym(prompt.to_string()))),
+                    None => f
+                        .extra
+                        .push(("PROMPT".to_string(), Value::Sym(prompt.to_string()))),
                 }
             }
         }
@@ -1172,12 +1409,7 @@ impl Engine {
                                 // `point-finger`'s `set-hand-position`
                                 // (`motor-extension.lisp:2053`) has no details
                                 // but still wakes conflict resolution.
-                                self.push(
-                                    t + p.exec_ms,
-                                    Prio::Num(0),
-                                    Out::Never,
-                                    Event::Dummy,
-                                );
+                                self.push(t + p.exec_ms, Prio::Num(0), Out::Never, Event::Dummy);
                             }
                             if let Some(e2) = exec2_ms {
                                 self.push(
@@ -1424,7 +1656,11 @@ impl Engine {
 
     /// extended-motor-actions mouse request (`move-cursor`/`click-mouse`/
     /// `hold-mouse`/`release-mouse`).
-    pub(super) fn zz_mouse_request(&mut self, cmd: &str, slots: &[(String, Value)]) -> Result<(), EngineError> {
+    pub(super) fn zz_mouse_request(
+        &mut self,
+        cmd: &str,
+        slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
         let loc = slots
             .iter()
@@ -1494,10 +1730,7 @@ impl Engine {
     /// extended-motor-actions: a finger's absolute keyboard location.
     pub(super) fn zz_finger_loc(&self, hand: usize, finger: usize) -> (i64, i64) {
         let h = &self.zz_hands[hand];
-        (
-            h.loc.0 + h.offsets[finger].0,
-            h.loc.1 + h.offsets[finger].1,
-        )
+        (h.loc.0 + h.offsets[finger].0, h.loc.1 + h.offsets[finger].1)
     }
 
     /// extended-motor-actions: a finger's home keyboard location.
@@ -1587,13 +1820,33 @@ impl Engine {
         };
         let finger_loc = self.zz_finger_loc(hand, finger);
         if key_loc == finger_loc {
-            self.zz_key_request(cmd, same_style, key, hand, finger, 0.0, 0.0, Some(key_loc), 0)
+            self.zz_key_request(
+                cmd,
+                same_style,
+                key,
+                hand,
+                finger,
+                0.0,
+                0.0,
+                Some(key_loc),
+                0,
+            )
         } else {
             let dx = (key_loc.0 - finger_loc.0) as f64;
             let dy = (key_loc.1 - finger_loc.1) as f64;
             let r = (dx * dx + dy * dy).sqrt() as f32;
             let theta = dy.atan2(dx) as f32;
-            self.zz_key_request(cmd, move_style, key, hand, finger, r, theta, Some(key_loc), 0)
+            self.zz_key_request(
+                cmd,
+                move_style,
+                key,
+                hand,
+                finger,
+                r,
+                theta,
+                Some(key_loc),
+                0,
+            )
         }
     }
 
@@ -1662,7 +1915,11 @@ impl Engine {
     }
 
     /// extended-motor-actions keyboard/mouse-high-level commands.
-    pub(super) fn zz_key_cmd(&mut self, cmd: &str, slots: &[(String, Value)]) -> Result<(), EngineError> {
+    pub(super) fn zz_key_cmd(
+        &mut self,
+        cmd: &str,
+        slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
         let key = slots
             .iter()
             .find(|(s, _)| s == "KEY")
@@ -2088,7 +2345,12 @@ impl Engine {
             self.time_ms + 4 * self.cfg.feat_prep_ms,
             Prio::Num(0),
             Out::Always,
-            Event::ZzHandPrep { req_ms, r, theta, to_mouse },
+            Event::ZzHandPrep {
+                req_ms,
+                r,
+                theta,
+                to_mouse,
+            },
         );
         Ok(())
     }
@@ -2112,8 +2374,7 @@ impl Engine {
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
         let (style_name, maxfeats, hfrt) = Self::zz_style_info(class);
-        let feats =
-            self.zz_feat_differences(style_name, maxfeats, hand, ZZ_DUMMY_FINGER, r, theta);
+        let feats = self.zz_feat_differences(style_name, maxfeats, hand, ZZ_DUMMY_FINGER, r, theta);
         let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
         self.zz_last_style = Some((
             class.to_string(),
@@ -2172,7 +2433,9 @@ impl Engine {
         let r = r_val.and_then(num_of).unwrap_or(0.0) as f32;
         let theta = theta_val.and_then(num_of).unwrap_or(0.0) as f32;
         let r_str = r_val.map(lisp_num_str).unwrap_or_else(|| "0".to_string());
-        let theta_str = theta_val.map(lisp_num_str).unwrap_or_else(|| "0".to_string());
+        let theta_str = theta_val
+            .map(lisp_num_str)
+            .unwrap_or_else(|| "0".to_string());
         let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
         self.now(
             Prio::Num(0),
@@ -2189,9 +2452,7 @@ impl Engine {
             (hx as f32 + r * theta.cos()).round() as i64,
             (hy as f32 + r * theta.sin()).round() as i64,
         );
-        self.zz_hand_ply_request(
-            "HAND-PLY", hand, r, theta, r_str, theta_str, target, true,
-        )
+        self.zz_hand_ply_request("HAND-PLY", hand, r, theta, r_str, theta_str, target, true)
     }
 
     /// `execute` (`general-pm.lisp:580`): queue the last prepared movement and
@@ -2214,7 +2475,10 @@ impl Engine {
 
     /// `point-hand-at-key` (`keyboard.lisp:653`): point the hand's index finger
     /// at `to-key` via a `hand-ply`, leaving the finger offsets unchanged.
-    pub(super) fn zz_point_hand_at_key(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+    pub(super) fn zz_point_hand_at_key(
+        &mut self,
+        slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
         let hand = slots
             .iter()
             .find(|(s, _)| s == "HAND")
@@ -2265,7 +2529,10 @@ impl Engine {
     /// `delayed-punch` (`motor-extension.lisp:2699`): a punch whose release is
     /// `delay` after the strike (no `key-release-time`). `delay` is
     /// `default`/`fast`/`slow`/a positive number (`parse-delay-time`, `:2685`).
-    pub(super) fn zz_delayed_punch(&mut self, slots: &[(String, Value)]) -> Result<(), EngineError> {
+    pub(super) fn zz_delayed_punch(
+        &mut self,
+        slots: &[(String, Value)],
+    ) -> Result<(), EngineError> {
         let hand = slots
             .iter()
             .find(|(s, _)| s == "HAND")
@@ -2333,15 +2600,39 @@ impl Engine {
             let t = ctype.to_uppercase();
             if matches!(
                 t.as_str(),
-                "TAP" | "TAP-HOLD" | "TAP-RELEASE" | "SWIPE" | "PINCH" | "ROTATE"
-                    | "MOVE-HAND-TOUCH" | "HAND-TO-TOUCH"
-                    | "MOVE-CURSOR" | "CLICK-MOUSE" | "HOLD-MOUSE" | "RELEASE-MOUSE"
-                    | "HOLD-KEY" | "HIT-KEY" | "TYPE-KEY" | "MOVE-TO-KEY" | "RELEASE-KEY"
-                    | "RELEASE-KEY-TO-HOME" | "MOVE-FINGER-TO-HOME" | "ALL-FINGERS-TO-HOME"
-                    | "HAND-TO-MOUSE" | "HAND-TO-HOME"
-                    | "HOLD-PUNCH" | "HOLD-PECK" | "PUNCH" | "PECK" | "PECK-RECOIL"
-                    | "POINT-FINGER" | "RELEASE"
-                    | "PREPARE" | "EXECUTE" | "POINT-HAND-AT-KEY" | "DELAYED-PUNCH"
+                "TAP"
+                    | "TAP-HOLD"
+                    | "TAP-RELEASE"
+                    | "SWIPE"
+                    | "PINCH"
+                    | "ROTATE"
+                    | "MOVE-HAND-TOUCH"
+                    | "HAND-TO-TOUCH"
+                    | "MOVE-CURSOR"
+                    | "CLICK-MOUSE"
+                    | "HOLD-MOUSE"
+                    | "RELEASE-MOUSE"
+                    | "HOLD-KEY"
+                    | "HIT-KEY"
+                    | "TYPE-KEY"
+                    | "MOVE-TO-KEY"
+                    | "RELEASE-KEY"
+                    | "RELEASE-KEY-TO-HOME"
+                    | "MOVE-FINGER-TO-HOME"
+                    | "ALL-FINGERS-TO-HOME"
+                    | "HAND-TO-MOUSE"
+                    | "HAND-TO-HOME"
+                    | "HOLD-PUNCH"
+                    | "HOLD-PECK"
+                    | "PUNCH"
+                    | "PECK"
+                    | "PECK-RECOIL"
+                    | "POINT-FINGER"
+                    | "RELEASE"
+                    | "PREPARE"
+                    | "EXECUTE"
+                    | "POINT-HAND-AT-KEY"
+                    | "DELAYED-PUNCH"
                     | "RELEASE-ALL-FINGERS"
             ) {
                 Some(t)
@@ -2370,13 +2661,15 @@ impl Engine {
                 Self::key_spec(&k)?;
                 let req_ms = self.time_ms;
                 // `cmd press-key` vs `isa press-key` (no cmd).
-                let isa = !slots
-                    .iter()
-                    .any(|(s, _)| s == "CMD");
+                let isa = !slots.iter().any(|(s, _)| s == "CMD");
                 self.now(
                     Prio::Num(0),
                     Out::Low,
-                    Event::PressKey { key: k, req_ms, isa },
+                    Event::PressKey {
+                        key: k,
+                        req_ms,
+                        isa,
+                    },
                 );
                 Ok(())
             }
@@ -2384,8 +2677,14 @@ impl Engine {
                 if self.cfg.touch
                     && matches!(
                         c,
-                        "TAP" | "TAP-HOLD" | "TAP-RELEASE" | "SWIPE" | "PINCH" | "ROTATE"
-                            | "MOVE-HAND-TOUCH" | "HAND-TO-TOUCH"
+                        "TAP"
+                            | "TAP-HOLD"
+                            | "TAP-RELEASE"
+                            | "SWIPE"
+                            | "PINCH"
+                            | "ROTATE"
+                            | "MOVE-HAND-TOUCH"
+                            | "HAND-TO-TOUCH"
                     ) =>
             {
                 self.touch_request(&slots)
@@ -2403,9 +2702,16 @@ impl Engine {
                 if self.cfg.zz_ext
                     && matches!(
                         c,
-                        "HOLD-KEY" | "HIT-KEY" | "TYPE-KEY" | "MOVE-TO-KEY" | "RELEASE-KEY"
-                            | "RELEASE-KEY-TO-HOME" | "MOVE-FINGER-TO-HOME"
-                            | "ALL-FINGERS-TO-HOME" | "HAND-TO-MOUSE" | "HAND-TO-HOME"
+                        "HOLD-KEY"
+                            | "HIT-KEY"
+                            | "TYPE-KEY"
+                            | "MOVE-TO-KEY"
+                            | "RELEASE-KEY"
+                            | "RELEASE-KEY-TO-HOME"
+                            | "MOVE-FINGER-TO-HOME"
+                            | "ALL-FINGERS-TO-HOME"
+                            | "HAND-TO-MOUSE"
+                            | "HAND-TO-HOME"
                     ) =>
             {
                 self.zz_key_cmd(c, &slots)
@@ -2414,26 +2720,26 @@ impl Engine {
                 if self.cfg.zz_ext
                     && matches!(
                         c,
-                        "HOLD-PUNCH" | "HOLD-PECK" | "PUNCH" | "PECK" | "PECK-RECOIL"
-                            | "POINT-FINGER" | "RELEASE"
+                        "HOLD-PUNCH"
+                            | "HOLD-PECK"
+                            | "PUNCH"
+                            | "PECK"
+                            | "PECK-RECOIL"
+                            | "POINT-FINGER"
+                            | "RELEASE"
                     ) =>
             {
                 self.zz_direct_style(c, &slots)
             }
             (Some("PREPARE"), _) if self.cfg.zz_ext => self.zz_prepare(&slots),
             (Some("EXECUTE"), _) if self.cfg.zz_ext => self.zz_execute(),
-            (Some("POINT-HAND-AT-KEY"), _) if self.cfg.zz_ext => {
-                self.zz_point_hand_at_key(&slots)
-            }
+            (Some("POINT-HAND-AT-KEY"), _) if self.cfg.zz_ext => self.zz_point_hand_at_key(&slots),
             (Some("DELAYED-PUNCH"), _) if self.cfg.zz_ext => self.zz_delayed_punch(&slots),
-            (Some("RELEASE-ALL-FINGERS"), _) if self.cfg.zz_ext => {
-                self.zz_release_all_fingers()
-            }
+            (Some("RELEASE-ALL-FINGERS"), _) if self.cfg.zz_ext => self.zz_release_all_fingers(),
             got => Err(unimpl(format!("manual request {got:?}"))),
         }
     }
 }
-
 
 /// `~f`/`~a` single-float display for the touch signals.
 /// `direction=` (`motor.lisp:894`): two directions are equal if within π/4.
@@ -2441,7 +2747,6 @@ pub(super) fn direction_eq(d1: f32, d2: f32) -> bool {
     let delta = (d1 - d2).abs();
     (std::f32::consts::FRAC_PI_4 > delta) || (delta > 7.0 * std::f32::consts::PI / 4.0)
 }
-
 
 /// `minjerk-dist` (`motor.lisp:1256`): distance moved at time `tm`, given max
 /// distance `a` and total move time `d`.
@@ -2455,7 +2760,6 @@ pub(super) fn minjerk_dist(tm: f32, a: f32, d: f32) -> f32 {
         a * (10.0 * td.powi(3) - 15.0 * td.powi(4) + 6.0 * td.powi(5))
     }
 }
-
 
 /// Distribute `m` references evenly from `end` back toward `start`
 /// (`even-references`, commands/dm-commands.lisp:639). Integer ms.

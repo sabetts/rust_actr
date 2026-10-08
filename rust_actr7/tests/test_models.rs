@@ -42,7 +42,8 @@ struct Spec {
     error: Option<String>,
 }
 
-fn crate_dir() -> PathBuf {    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+fn crate_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 fn actr_dir() -> PathBuf {
@@ -124,7 +125,9 @@ fn parse_spec(src: &str) -> Result<Spec, String> {
         .and_then(list)
         .ok_or_else(|| "spec is not a top-level list".to_string())?;
 
-    let name = plist_get(items, ":NAME").and_then(as_str).ok_or("no :NAME")?;
+    let name = plist_get(items, ":NAME")
+        .and_then(as_str)
+        .ok_or("no :NAME")?;
     let ref_name = plist_get(items, ":REF").and_then(as_str).ok_or("no :REF")?;
     let models = plist_get(items, ":MODELS")
         .map(list_or_empty)
@@ -141,13 +144,18 @@ fn parse_spec(src: &str) -> Result<Spec, String> {
             parse_seed(&rr[1]).ok_or("bad run seed".to_string())
         })
         .collect::<Result<Vec<_>, String>>()?;
-    let (steps, steps_unsupported) =
-        parse_steps(&plist_get(items, ":STEPS").map(list_or_empty).unwrap_or_default())?;
+    let (steps, steps_unsupported) = parse_steps(
+        &plist_get(items, ":STEPS")
+            .map(list_or_empty)
+            .unwrap_or_default(),
+    )?;
     let scope = plist_get(items, ":SCOPE")
         .and_then(as_str)
         .map(|s| s.trim_start_matches(':').to_string())
         .ok_or("no :SCOPE")?;
-    let error = plist_get(items, ":ERROR").and_then(as_str).filter(|s| s != "NIL");
+    let error = plist_get(items, ":ERROR")
+        .and_then(as_str)
+        .filter(|s| s != "NIL");
 
     Ok(Spec {
         name,
@@ -192,11 +200,7 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 };
                 let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
                 let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
-                steps.push(Step::Run {
-                    secs,
-                    trace,
-                    width,
-                });
+                steps.push(Step::Run { secs, trace, width });
             }
             ":RUN-FULL-TIME" => {
                 let secs = match v.get(1) {
@@ -209,11 +213,7 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 };
                 let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
                 let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
-                steps.push(Step::RunFullTime {
-                    secs,
-                    trace,
-                    width,
-                });
+                steps.push(Step::RunFullTime { secs, trace, width });
             }
             ":GOAL-FOCUS" => {
                 let item = match v.get(1) {
@@ -476,7 +476,10 @@ fn is_multi_model(spec: &Spec) -> bool {
 /// Why a spec is not runnable in the current engine (None = runnable).
 fn ignore_reason(spec: &Spec) -> Option<String> {
     if let Some(e) = &spec.error {
-        return Some(format!("extraction error: {}", e.lines().next().unwrap_or("")));
+        return Some(format!(
+            "extraction error: {}",
+            e.lines().next().unwrap_or("")
+        ));
     }
     match spec.scope.as_str() {
         "PURE" | "MULTI" => {}
@@ -535,17 +538,12 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
         flat.push(form.clone());
     }
     for form in &flat {
-        parse_device_op(form, None, &mut device)
-            .map_err(|e| format!("{}: {e}", path.display()))?;
+        parse_device_op(form, None, &mut device).map_err(|e| format!("{}: {e}", path.display()))?;
     }
     Ok(device)
 }
 
-fn parse_device_op(
-    form: &Sexp,
-    run: Option<u32>,
-    device: &mut DeviceSetup,
-) -> Result<(), String> {
+fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> Result<(), String> {
     {
         let v = list(form).ok_or_else(|| format!("bad device form: {form:?}"))?;
         let op = v.first().and_then(|s| s.as_sym()).unwrap_or("");
@@ -571,15 +569,13 @@ fn parse_device_op(
                 output: as_str(v.get(2).ok_or("missing output")?)
                     .ok_or("bad output")?
                     .to_lowercase(),
-                details: as_str(v.get(3).ok_or("missing details")?)
-                    .ok_or("bad details")?,
+                details: as_str(v.get(3).ok_or("missing details")?).ok_or("bad details")?,
                 run,
             }),
             "SOUND" => device.sounds.push(actr_engine::engine::DeviceSound {
                 at_ms: ms()?,
                 freq: as_i64(v.get(2).ok_or("missing freq")?).ok_or("bad freq")?,
-                duration: as_i64(v.get(3).ok_or("missing duration")?)
-                    .ok_or("bad duration")?,
+                duration: as_i64(v.get(3).ok_or("missing duration")?).ok_or("bad duration")?,
                 run,
             }),
             "CLEAR-ON-KEYPRESS" => device.clear_on_keypress = true,
@@ -593,8 +589,12 @@ fn parse_device_op(
                 as_i64(v.get(2).ok_or("missing reward")?).ok_or("bad reward")? as f32,
             )),
             "SIMILARITY" => device.sims.push((
-                as_str(v.get(1).ok_or("missing a")?).ok_or("bad a")?.to_uppercase(),
-                as_str(v.get(2).ok_or("missing b")?).ok_or("bad b")?.to_uppercase(),
+                as_str(v.get(1).ok_or("missing a")?)
+                    .ok_or("bad a")?
+                    .to_uppercase(),
+                as_str(v.get(2).ok_or("missing b")?)
+                    .ok_or("bad b")?
+                    .to_uppercase(),
                 as_i64(v.get(3).ok_or("missing v")?).ok_or("bad v")? as f32,
             )),
             other => return Err(format!("bad device op {other} in {form:?}")),
@@ -604,11 +604,7 @@ fn parse_device_op(
 }
 
 fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
-    let seed = spec
-        .run_seeds
-        .first()
-        .copied()
-        .ok_or("no run seed")?;
+    let seed = spec.run_seeds.first().copied().ok_or("no run seed")?;
     let device = load_spec_device(&spec.name)?;
     let actual = run_model_steps(root, &spec.models, seed, &spec.steps, &device)
         .map_err(|e| format!("engine error: {e}"))?;
@@ -616,7 +612,10 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
 }
 
 fn load_enabled() -> BTreeSet<String> {
-    let path = crate_dir().join("golden").join("test-models").join("enabled.txt");
+    let path = crate_dir()
+        .join("golden")
+        .join("test-models")
+        .join("enabled.txt");
     fs::read_to_string(&path)
         .map(|s| {
             s.lines()
@@ -656,7 +655,10 @@ fn enabled_test_models_match() {
         }
         total += 1;
         if let Some(reason) = ignore_reason(spec) {
-            failures.push(format!("{}: listed enabled but not runnable: {reason}", spec.name));
+            failures.push(format!(
+                "{}: listed enabled but not runnable: {reason}",
+                spec.name
+            ));
             continue;
         }
         let ref_path = refs_dir().join(&spec.ref_name);
@@ -703,7 +705,9 @@ fn probe_runnable() {
         let ref_path = refs_dir().join(&spec.ref_name);
         let expected = normalize(&fs::read_to_string(&ref_path).unwrap());
         match run_spec(&root, spec) {
-            Ok(actual) if actual == expected => pass.push(format!("{} [{}]", spec.name, spec.scope)),
+            Ok(actual) if actual == expected => {
+                pass.push(format!("{} [{}]", spec.name, spec.scope))
+            }
             Ok(actual) => fail.push(format!(
                 "{} [{}] (mismatch)\n{}",
                 spec.name,

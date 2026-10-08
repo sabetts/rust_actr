@@ -32,9 +32,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use crate::model::{
-    Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction, SlotOp,
-};
+use crate::model::{Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction, SlotOp};
 use crate::rand::Mt;
 use crate::sexpr::Sexp;
 use crate::trace::{format_line, Detail, Out, MODULE_WIDTH};
@@ -53,7 +51,7 @@ mod rhs;
 #[cfg(test)]
 mod tests;
 
-use motor::{even_references};
+use motor::even_references;
 use rhs::{chunk_inst, implicit_clears, implicit_queries, new_chunk};
 
 #[derive(Debug)]
@@ -606,7 +604,8 @@ struct Tracker {
 /// Times are relative to the request; `signal`/`monitor` are the exact trace
 /// and task-output lines emitted at execution time.
 #[derive(Debug, Clone)]
-struct TouchPlan {    req_ms: i64,
+struct TouchPlan {
+    req_ms: i64,
     prep_ms: i64,
     init_ms: i64,
     exec_ms: i64,
@@ -713,9 +712,7 @@ impl Config {
                 got => return Err(bad(format!("bad :trace-detail {got}"))),
             },
             // `(quote high)` from `sgp-fct` with `'high`.
-            Some((_, Sexp::List(v)))
-                if v.len() == 2 && v[0].as_sym() == Some("QUOTE") =>
-            {
+            Some((_, Sexp::List(v))) if v.len() == 2 && v[0].as_sym() == Some("QUOTE") => {
                 match v[1].as_sym() {
                     Some("HIGH") => Detail::High,
                     Some("MEDIUM") => Detail::Medium,
@@ -788,15 +785,17 @@ impl Config {
         // `:unstuff-visual-location` (`vision.lisp:3499`): nil disables the
         // automatic unstuff; t uses `new-span`; a number is the delay itself.
         let onset_span_ms = secs_to_ms(":VISUAL-ONSET-SPAN", 0.5)?;
-        let unstuff_vl_ms = match m.params.iter().find(|(k, _)| k == ":UNSTUFF-VISUAL-LOCATION") {
+        let unstuff_vl_ms = match m
+            .params
+            .iter()
+            .find(|(k, _)| k == ":UNSTUFF-VISUAL-LOCATION")
+        {
             None => Some(onset_span_ms),
             Some((_, Sexp::Sym(s))) if s == "NIL" => None,
             Some((_, Sexp::Sym(_))) => Some(onset_span_ms),
             Some((_, Sexp::Float(x))) => Some((x * 1000.0).round() as i64),
             Some((_, Sexp::Int(i))) => Some(i * 1000),
-            Some((_, got)) => {
-                return Err(bad(format!("bad :unstuff-visual-location {got:?}")))
-            }
+            Some((_, got)) => return Err(bad(format!("bad :unstuff-visual-location {got:?}"))),
         };
         let mut cfg = Config {
             detail,
@@ -869,8 +868,8 @@ impl Config {
             min_bl: sgp_single(&m.params, ":MIN-BL")?,
             blend_all_slots: sgp_bool(&m.params, ":BLEND-ALL-SLOTS"),
             num_finsts: sgp_num(&m.params, ":DECLARATIVE-NUM-FINSTS", 4.0)? as usize,
-            finst_span_ms: (sgp_num(&m.params, ":DECLARATIVE-FINST-SPAN", 3.0)? * 1000.0)
-                .round() as i64,
+            finst_span_ms: (sgp_num(&m.params, ":DECLARATIVE-FINST-SPAN", 3.0)? * 1000.0).round()
+                as i64,
             bll,
             ol,
             act_scale,
@@ -1308,7 +1307,8 @@ enum Event {
         hands: Vec<usize>,
     },
     /// extended-motor-actions: mouse movement preparation complete.
-    ZzMousePrep {        cmd: String,
+    ZzMousePrep {
+        cmd: String,
         req_ms: i64,
         loc: Option<(i64, i64, String)>,
     },
@@ -2087,7 +2087,13 @@ impl Engine {
         // with these state chunks (`(free name free)` etc., plus `clear`); a
         // model-body definition of the same name overrides them below.
         for name in [
-            "FREE", "BUSY", "ERROR", "EMPTY", "FULL", "FAILURE", "REQUESTED",
+            "FREE",
+            "BUSY",
+            "ERROR",
+            "EMPTY",
+            "FULL",
+            "FAILURE",
+            "REQUESTED",
             "UNREQUESTED",
         ] {
             self.named.insert(
@@ -2144,7 +2150,11 @@ impl Engine {
         }
         // Model-body `set-base-levels`: fixed history for named DM chunks.
         for (name, level, creation) in &self.model.base_levels {
-            if let Some(i) = self.dm.iter().position(|c| c.name.as_deref() == Some(name.as_str())) {
+            if let Some(i) = self
+                .dm
+                .iter()
+                .position(|c| c.name.as_deref() == Some(name.as_str()))
+            {
                 let creation_ms = creation
                     .map(|s| (s * 1000.0).round() as i64)
                     .unwrap_or(self.hist[i].creation_ms);
@@ -2182,8 +2192,7 @@ impl Engine {
             self.buffers.insert(b.to_string(), Buffer::empty());
         }
         if self.cfg.blending {
-            self.buffers
-                .insert("BLENDING".to_string(), Buffer::empty());
+            self.buffers.insert("BLENDING".to_string(), Buffer::empty());
         }
         self.queue = BinaryHeap::new();
         // The BOLD demand recorder tracks the current task only: `reset`
@@ -2463,8 +2472,7 @@ impl Engine {
     /// chunk's fan-out and to the owner's fan-in. Only DM chunks get a
     /// fan-in (spreading candidates come from DM).
     fn build_fans(&mut self) {
-        let mut names: HashSet<String> =
-            self.model.chunks.iter().map(|c| c.name.clone()).collect();
+        let mut names: HashSet<String> = self.model.chunks.iter().map(|c| c.name.clone()).collect();
         names.extend(self.model.defined_chunks.iter().map(|c| c.name.clone()));
         self.chunk_names = names.clone();
         self.fan_out.clear();
@@ -2545,7 +2553,12 @@ impl Engine {
             if spread == 0.0 {
                 continue;
             }
-            let Some(chunk) = self.buffers.get(buffer).and_then(|b| b.chunk.as_ref()).cloned() else {
+            let Some(chunk) = self
+                .buffers
+                .get(buffer)
+                .and_then(|b| b.chunk.as_ref())
+                .cloned()
+            else {
                 continue;
             };
             // `chunk-filled-slots-list-fct` returns the chunk's internal slot
@@ -2590,10 +2603,7 @@ impl Engine {
                     buffer,
                     cname
                 ));
-                self.out(format!(
-                    "    sources of activation are: ({})",
-                    js.join(" ")
-                ));
+                self.out(format!("    sources of activation are: ({})", js.join(" ")));
             }
             let level = spread / js.len() as f32;
             for j in &js {
@@ -2802,8 +2812,7 @@ impl Engine {
     /// still holds the *unchanged*, auto-stuffed copy.
     fn unstuff_valid(&self, copy: &str) -> bool {
         self.buffers.get("VISUAL-LOCATION").map_or(false, |b| {
-            !b.modified
-                && b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(copy)
+            !b.modified && b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(copy)
         })
     }
 
@@ -3010,14 +3019,51 @@ const RETRIEVAL_COMPOSE: &[(u32, u32, CompCheck)] = &[
 /// entries plus the `G-B-C1`/`NO-RHS-GOAL-REF`/`NO-GOAL-HARVESTING*` checks,
 /// which are not modelled and treated as composing.
 const GOAL_COMPOSE: &[(u32, u32)] = &[
-    (44, 40), (44, 9), (44, 8), (44, 0),
-    (40, 44), (40, 40), (40, 13), (40, 12), (40, 9), (40, 8), (40, 4), (40, 0),
-    (13, 40), (13, 9), (13, 8), (13, 0),
-    (12, 40), (12, 9), (12, 8), (12, 0),
-    (9, 13), (9, 12), (9, 9), (9, 8), (9, 4), (9, 0),
-    (8, 44), (8, 40), (8, 13), (8, 12), (8, 9), (8, 8), (8, 4), (8, 0),
-    (4, 40), (4, 9), (4, 8), (4, 0),
-    (0, 44), (0, 40), (0, 13), (0, 12), (0, 9), (0, 8), (0, 4),
+    (44, 40),
+    (44, 9),
+    (44, 8),
+    (44, 0),
+    (40, 44),
+    (40, 40),
+    (40, 13),
+    (40, 12),
+    (40, 9),
+    (40, 8),
+    (40, 4),
+    (40, 0),
+    (13, 40),
+    (13, 9),
+    (13, 8),
+    (13, 0),
+    (12, 40),
+    (12, 9),
+    (12, 8),
+    (12, 0),
+    (9, 13),
+    (9, 12),
+    (9, 9),
+    (9, 8),
+    (9, 4),
+    (9, 0),
+    (8, 44),
+    (8, 40),
+    (8, 13),
+    (8, 12),
+    (8, 9),
+    (8, 8),
+    (8, 4),
+    (8, 0),
+    (4, 40),
+    (4, 9),
+    (4, 8),
+    (4, 0),
+    (0, 44),
+    (0, 40),
+    (0, 13),
+    (0, 12),
+    (0, 9),
+    (0, 8),
+    (0, 4),
 ];
 
 /// The PERCEPTUAL compilation type's table
@@ -3025,50 +3071,211 @@ const GOAL_COMPOSE: &[(u32, u32)] = &[
 /// AURAL-LOCATION, AURAL and TEMPORAL; `T` entries plus the `P-B-C*` checks,
 /// which are not modelled and treated as composing.
 const PERCEPTUAL_COMPOSE: &[(u32, u32)] = &[
-    (28, 16), (28, 0),
-    (24, 28), (24, 24), (24, 20), (24, 16), (24, 12), (24, 8), (24, 4), (24, 0),
-    (20, 16), (20, 0),
-    (16, 28), (16, 24), (16, 20), (16, 16), (16, 12), (16, 8), (16, 4), (16, 0),
-    (12, 16), (12, 0),
-    (8, 28), (8, 24), (8, 20), (8, 16), (8, 12), (8, 8), (8, 4), (8, 0),
-    (4, 16), (4, 0),
-    (0, 28), (0, 24), (0, 20), (0, 16), (0, 12), (0, 8), (0, 4),
+    (28, 16),
+    (28, 0),
+    (24, 28),
+    (24, 24),
+    (24, 20),
+    (24, 16),
+    (24, 12),
+    (24, 8),
+    (24, 4),
+    (24, 0),
+    (20, 16),
+    (20, 0),
+    (16, 28),
+    (16, 24),
+    (16, 20),
+    (16, 16),
+    (16, 12),
+    (16, 8),
+    (16, 4),
+    (16, 0),
+    (12, 16),
+    (12, 0),
+    (8, 28),
+    (8, 24),
+    (8, 20),
+    (8, 16),
+    (8, 12),
+    (8, 8),
+    (8, 4),
+    (8, 0),
+    (4, 16),
+    (4, 0),
+    (0, 28),
+    (0, 24),
+    (0, 20),
+    (0, 16),
+    (0, 12),
+    (0, 8),
+    (0, 4),
 ];
 
 /// The IMAGINAL compilation type's table (`imaginal-compilation.lisp:802`);
 /// `T` entries plus the `I-B-C*` checks, which are not modelled and treated
 /// as composing.
 const IMAGINAL_COMPOSE: &[(u32, u32)] = &[
-    (56, 56), (56, 40), (56, 25), (56, 24), (56, 16), (56, 9), (56, 8), (56, 0),
-    (40, 56), (40, 40), (40, 25), (40, 24), (40, 16), (40, 9), (40, 8), (40, 0),
-    (29, 56), (29, 40), (29, 25), (29, 24), (29, 16), (29, 9), (29, 8), (29, 0),
-    (28, 56), (28, 40), (28, 25), (28, 24), (28, 16), (28, 9), (28, 8), (28, 0),
-    (25, 29), (25, 28), (25, 25), (25, 24), (25, 20), (25, 16), (25, 13), (25, 12),
-    (25, 9), (25, 8), (25, 4), (25, 0),
-    (24, 56), (24, 40), (24, 29), (24, 28), (24, 25), (24, 24), (24, 20), (24, 16),
-    (24, 13), (24, 12), (24, 9), (24, 8), (24, 4), (24, 0),
-    (20, 56), (20, 40), (20, 25), (20, 24), (20, 16), (20, 9), (20, 8), (20, 0),
-    (16, 56), (16, 40), (16, 29), (16, 28), (16, 25), (16, 24), (16, 20), (16, 16),
-    (16, 13), (16, 12), (16, 9), (16, 8), (16, 4), (16, 0),
-    (13, 56), (13, 40), (13, 25), (13, 24), (13, 16), (13, 9), (13, 8), (13, 0),
-    (12, 56), (12, 40), (12, 25), (12, 24), (12, 16), (12, 9), (12, 8), (12, 0),
-    (9, 29), (9, 28), (9, 25), (9, 24), (9, 20), (9, 16), (9, 13), (9, 12), (9, 9),
-    (9, 8), (9, 4), (9, 0),
-    (8, 56), (8, 40), (8, 29), (8, 28), (8, 25), (8, 24), (8, 20), (8, 16), (8, 13),
-    (8, 12), (8, 9), (8, 8), (8, 4), (8, 0),
-    (4, 56), (4, 40), (4, 25), (4, 24), (4, 16), (4, 9), (4, 8), (4, 0),
-    (0, 56), (0, 40), (0, 29), (0, 28), (0, 25), (0, 24), (0, 20), (0, 16), (0, 13),
-    (0, 12), (0, 9), (0, 8), (0, 4),
+    (56, 56),
+    (56, 40),
+    (56, 25),
+    (56, 24),
+    (56, 16),
+    (56, 9),
+    (56, 8),
+    (56, 0),
+    (40, 56),
+    (40, 40),
+    (40, 25),
+    (40, 24),
+    (40, 16),
+    (40, 9),
+    (40, 8),
+    (40, 0),
+    (29, 56),
+    (29, 40),
+    (29, 25),
+    (29, 24),
+    (29, 16),
+    (29, 9),
+    (29, 8),
+    (29, 0),
+    (28, 56),
+    (28, 40),
+    (28, 25),
+    (28, 24),
+    (28, 16),
+    (28, 9),
+    (28, 8),
+    (28, 0),
+    (25, 29),
+    (25, 28),
+    (25, 25),
+    (25, 24),
+    (25, 20),
+    (25, 16),
+    (25, 13),
+    (25, 12),
+    (25, 9),
+    (25, 8),
+    (25, 4),
+    (25, 0),
+    (24, 56),
+    (24, 40),
+    (24, 29),
+    (24, 28),
+    (24, 25),
+    (24, 24),
+    (24, 20),
+    (24, 16),
+    (24, 13),
+    (24, 12),
+    (24, 9),
+    (24, 8),
+    (24, 4),
+    (24, 0),
+    (20, 56),
+    (20, 40),
+    (20, 25),
+    (20, 24),
+    (20, 16),
+    (20, 9),
+    (20, 8),
+    (20, 0),
+    (16, 56),
+    (16, 40),
+    (16, 29),
+    (16, 28),
+    (16, 25),
+    (16, 24),
+    (16, 20),
+    (16, 16),
+    (16, 13),
+    (16, 12),
+    (16, 9),
+    (16, 8),
+    (16, 4),
+    (16, 0),
+    (13, 56),
+    (13, 40),
+    (13, 25),
+    (13, 24),
+    (13, 16),
+    (13, 9),
+    (13, 8),
+    (13, 0),
+    (12, 56),
+    (12, 40),
+    (12, 25),
+    (12, 24),
+    (12, 16),
+    (12, 9),
+    (12, 8),
+    (12, 0),
+    (9, 29),
+    (9, 28),
+    (9, 25),
+    (9, 24),
+    (9, 20),
+    (9, 16),
+    (9, 13),
+    (9, 12),
+    (9, 9),
+    (9, 8),
+    (9, 4),
+    (9, 0),
+    (8, 56),
+    (8, 40),
+    (8, 29),
+    (8, 28),
+    (8, 25),
+    (8, 24),
+    (8, 20),
+    (8, 16),
+    (8, 13),
+    (8, 12),
+    (8, 9),
+    (8, 8),
+    (8, 4),
+    (8, 0),
+    (4, 56),
+    (4, 40),
+    (4, 25),
+    (4, 24),
+    (4, 16),
+    (4, 9),
+    (4, 8),
+    (4, 0),
+    (0, 56),
+    (0, 40),
+    (0, 29),
+    (0, 28),
+    (0, 25),
+    (0, 24),
+    (0, 20),
+    (0, 16),
+    (0, 13),
+    (0, 12),
+    (0, 9),
+    (0, 8),
+    (0, 4),
 ];
 
 /// The MOTOR compilation type's table (`motor-compilation.lisp:145`), which is
 /// also the `:default` type for every buffer without its own type (MANUAL,
 /// VOCAL, ...); `T` entries plus the `M-B-C*` checks, treated as composing.
 const MOTOR_COMPOSE: &[(u32, u32)] = &[
-    (20, 16), (20, 0),
-    (16, 20), (16, 16), (16, 4), (16, 0),
-    (4, 16), (4, 0),
-    (0, 20), (0, 16), (0, 4),
+    (20, 16),
+    (20, 0),
+    (16, 20),
+    (16, 16),
+    (16, 4),
+    (16, 0),
+    (4, 16),
+    (4, 0),
+    (0, 20),
+    (0, 16),
+    (0, 4),
 ];
 
 /// `~6,3F` — fixed 3 decimals, minimum width 6 (space padded).
@@ -3121,10 +3328,16 @@ fn lisp_f(x: f32) -> String {
 /// `print-time-in-seconds` (`misc-utils.lisp:1518`): ms as `S.mmm`.
 fn fmt_secs(ms: i64) -> String {
     let a = ms.abs();
-    format!("{}{}.{:03}", if ms < 0 { "-" } else { "" }, a / 1000, a % 1000)
+    format!(
+        "{}{}.{:03}",
+        if ms < 0 { "-" } else { "" },
+        a / 1000,
+        a % 1000
+    )
 }
 
-fn lisp_s_f32(x: f32) -> String {    if !x.is_finite() {
+fn lisp_s_f32(x: f32) -> String {
+    if !x.is_finite() {
         return format!("{x}");
     }
     if x == 0.0 {
@@ -3146,10 +3359,7 @@ fn lisp_s_f32(x: f32) -> String {    if !x.is_finite() {
         let body = if point <= 0 {
             format!("0.{}{}", "0".repeat((-point) as usize), digits)
         } else if (point as usize) >= digits.len() {
-            format!(
-                "{digits}{}.0",
-                "0".repeat(point as usize - digits.len())
-            )
+            format!("{digits}{}.0", "0".repeat(point as usize - digits.len()))
         } else {
             let (a, b) = digits.split_at(point as usize);
             format!("{a}.{b}")

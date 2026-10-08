@@ -1,13 +1,16 @@
 //! Task-command layer and module request routing.
+use super::eval::as_num;
+use super::motor::key_table;
 use super::*;
-use super::eval::{as_num};
-use super::motor::{key_table};
 impl Engine {
-
     /// Run a scheduled task command: bind its `:params` to the `defun`'s
     /// parameters and execute the body (side-effecting forms handled by
     /// [`Engine::m_eval`]).
-    pub(super) fn run_command(&mut self, name: &str, params: Vec<Value>) -> Result<(), EngineError> {
+    pub(super) fn run_command(
+        &mut self,
+        name: &str,
+        params: Vec<Value>,
+    ) -> Result<(), EngineError> {
         let key = name.to_uppercase();
         let def = self
             .user_fns
@@ -54,12 +57,12 @@ impl Engine {
                         let lim =
                             self.m_eval(items.get(1).ok_or("act-r-random needs a limit")?, b)?;
                         return match lim {
-                            Value::Int(n) if n > 0 => Ok(Value::Int(
-                                self.rng.borrow_mut().random_int(n as u64) as i64,
-                            )),
+                            Value::Int(n) if n > 0 => {
+                                Ok(Value::Int(self.rng.borrow_mut().random_int(n as u64) as i64))
+                            }
                             Value::Int(_) => Ok(Value::Int(0)),
                             Value::Num(x) => Ok(Value::Num(
-                                self.rng.borrow_mut().random_float(x as f32) as f64
+                                self.rng.borrow_mut().random_float(x as f32) as f64,
                             )),
                             other => {
                                 Err(format!("act-r-random needs a number, got {}", other.show()))
@@ -67,16 +70,16 @@ impl Engine {
                         };
                     }
                     "GOAL-FOCUS" | "GOAL-FOCUS-FCT" => {
-                        let desc = self
-                            .m_chunk_desc(items.get(1).ok_or("goal-focus needs an argument")?)?;
+                        let desc =
+                            self.m_chunk_desc(items.get(1).ok_or("goal-focus needs an argument")?)?;
                         self.goal_focus(&desc).map_err(|e| e.to_string())?;
                         return Ok(Value::Nil);
                     }
                     "SET-BUFFER-CHUNK" => {
-                        let buffer = self
-                            .m_eval(items.get(1).ok_or("set-buffer-chunk needs a buffer")?, b)?;
-                        let chunk = self
-                            .m_eval(items.get(2).ok_or("set-buffer-chunk needs a chunk")?, b)?;
+                        let buffer =
+                            self.m_eval(items.get(1).ok_or("set-buffer-chunk needs a buffer")?, b)?;
+                        let chunk =
+                            self.m_eval(items.get(2).ok_or("set-buffer-chunk needs a chunk")?, b)?;
                         self.set_buffer_chunk_cmd(&buffer, &chunk)?;
                         return Ok(Value::Nil);
                     }
@@ -102,12 +105,12 @@ impl Engine {
                     }
                     "SCHEDULE-EVENT-RELATIVE" | "SCHEDULE-EVENT" => {
                         let relative = h.eq_ignore_ascii_case("schedule-event-relative");
-                        let at = self
-                            .m_eval(items.get(1).ok_or("schedule-event needs a time")?, b)?;
+                        let at =
+                            self.m_eval(items.get(1).ok_or("schedule-event needs a time")?, b)?;
                         let at_secs = as_num(&at)
                             .ok_or_else(|| "schedule-event time is not a number".to_string())?;
-                        let name_v = self
-                            .m_eval(items.get(2).ok_or("schedule-event needs a command")?, b)?;
+                        let name_v =
+                            self.m_eval(items.get(2).ok_or("schedule-event needs a command")?, b)?;
                         let name = match name_v {
                             Value::Str(s) | Value::Sym(s) => s,
                             other => {
@@ -153,7 +156,11 @@ impl Engine {
     /// `set-buffer-chunk <buffer> <(slot value ...)>`: replace the buffer's
     /// chunk silently (no module trace at the tested detail), using the
     /// buffer's `declare-buffer-usage` type for the chunk.
-    pub(super) fn set_buffer_chunk_cmd(&mut self, buffer: &Value, chunk: &Value) -> Result<(), String> {
+    pub(super) fn set_buffer_chunk_cmd(
+        &mut self,
+        buffer: &Value,
+        chunk: &Value,
+    ) -> Result<(), String> {
         let bname = match buffer {
             Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
             other => return Err(format!("set-buffer-chunk buffer {}", other.show())),
@@ -279,8 +286,7 @@ impl Engine {
                 s
             }
         };
-        let tick = (start as f64
-            + self.rng.borrow_mut().noise(self.cfg.time_noise * start) as f64)
+        let tick = (start as f64 + self.rng.borrow_mut().noise(self.cfg.time_noise * start) as f64)
             .max(1.0) as f32;
         self.temporal_tick = tick;
         self.temporal_ticks = 0;
@@ -322,7 +328,9 @@ impl Engine {
             if let Some(c) = b.chunk.as_mut() {
                 match c.slots.iter_mut().find(|(k, _)| k == "TICKS") {
                     Some((_, old)) => *old = Value::Int(ticks as i64),
-                    None => c.slots.push(("TICKS".to_string(), Value::Int(ticks as i64))),
+                    None => c
+                        .slots
+                        .push(("TICKS".to_string(), Value::Int(ticks as i64))),
                 }
             }
         }
@@ -357,7 +365,11 @@ impl Engine {
             .ok_or_else(|| unimpl(format!("press-key for unknown key {key}")))
     }
 
-    pub(super) fn instantiate(&self, _buffer: &str, chunk: NewChunk) -> Result<ChunkInst, EngineError> {
+    pub(super) fn instantiate(
+        &self,
+        _buffer: &str,
+        chunk: NewChunk,
+    ) -> Result<ChunkInst, EngineError> {
         match chunk {
             NewChunk::Named(name) => self
                 .dm
@@ -367,10 +379,7 @@ impl Engine {
                 .cloned()
                 .ok_or_else(|| bad(format!("no chunk named {name}"))),
             NewChunk::Spec {
-                ctype,
-                slots,
-                bare,
-                ..
+                ctype, slots, bare, ..
             } => Ok(ChunkInst {
                 name: None,
                 ctype,

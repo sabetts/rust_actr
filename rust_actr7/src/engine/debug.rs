@@ -1,8 +1,7 @@
 //! Trace/debug output, parameter setters, visicon and buffer dumps.
+use super::compilation::bold_values;
 use super::*;
-use super::compilation::{bold_values};
 impl Engine {
-
     /// `(buffer-chunk <name>...)`: append the command-layer buffer dump the
     /// task driver prints after a run (`framework/buffers.lisp:881` +
     /// `framework/chunks.lisp:736`). Only the fields the corpus exercises:
@@ -25,8 +24,11 @@ impl Engine {
                 // `hash-table-keys` (`misc-utils.lisp:657`) pushes while
                 // walking the goal m-buffer set; SBCL visits these small
                 // tables in insertion order, so the printed set is reversed.
-                let mut set: Vec<String> =
-                    self.goal_set.iter().filter_map(|c| c.name.clone()).collect();
+                let mut set: Vec<String> = self
+                    .goal_set
+                    .iter()
+                    .filter_map(|c| c.name.clone())
+                    .collect();
                 set.reverse();
                 header.push_str(&format!(" {{{}}}", set.join(" ")));
             }
@@ -484,12 +486,17 @@ impl Engine {
 }
 
 impl Engine {
-
     /// `production-parameter-fct` (`utility-and-reward-1.lisp:660`): the
     /// `Parameters for production` block printed by `spp-fct` after a
     /// composition. `utility` is the cached `production-utility` (nil until a
     /// conflict resolution computes it); `u` is the base `production-u`.
-    pub(super) fn print_prod_params(&mut self, name: &str, u: f32, utility: Option<f32>, reward: Option<f32>) {
+    pub(super) fn print_prod_params(
+        &mut self,
+        name: &str,
+        u: f32,
+        utility: Option<f32>,
+        reward: Option<f32>,
+    ) {
         self.out(format!("Parameters for production {name}:"));
         if self.cfg.esc {
             match utility {

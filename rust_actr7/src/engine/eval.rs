@@ -1,7 +1,6 @@
 //! Bounded `!eval!`/`!bind!` evaluator.
 use super::*;
 impl Engine {
-
     /// LHS/RHS `!eval!`/`!bind!` expressions, evaluated against bindings.
     pub(super) fn eval_expr(&self, e: &Sexp, b: &Bindings) -> Result<Value, String> {
         match e {
@@ -119,7 +118,12 @@ impl Engine {
         Ok(out)
     }
 
-    pub(super) fn eval_call(&self, head: &Sexp, args: &[Sexp], b: &Bindings) -> Result<Value, String> {
+    pub(super) fn eval_call(
+        &self,
+        head: &Sexp,
+        args: &[Sexp],
+        b: &Bindings,
+    ) -> Result<Value, String> {
         if let Some(def) = self.user_fn_for_head(head) {
             let vals = self.user_fn_values(def, args, b)?;
             return Ok(vals.into_iter().next().unwrap_or(Value::Nil));
@@ -217,13 +221,13 @@ impl Engine {
             "ACT-R-RANDOM" => {
                 let lim = self.eval_expr(args.first().ok_or("act-r-random needs a limit")?, b)?;
                 match lim {
-                    Value::Int(n) if n > 0 => Ok(Value::Int(
-                        self.rng.borrow_mut().random_int(n as u64) as i64
-                    )),
-                    Value::Int(_) => Ok(Value::Int(0)),
-                    Value::Num(x) => {
-                        Ok(Value::Num(self.rng.borrow_mut().random_float(x as f32) as f64))
+                    Value::Int(n) if n > 0 => {
+                        Ok(Value::Int(self.rng.borrow_mut().random_int(n as u64) as i64))
                     }
+                    Value::Int(_) => Ok(Value::Int(0)),
+                    Value::Num(x) => Ok(Value::Num(
+                        self.rng.borrow_mut().random_float(x as f32) as f64
+                    )),
                     other => Err(format!("act-r-random needs a number, got {}", other.show())),
                 }
             }
@@ -241,7 +245,12 @@ impl Engine {
 
     /// Remote-command call by name (a string head). No commands are
     /// registered yet, so these fail loudly rather than silently.
-    pub(super) fn eval_command(&self, name: &str, _args: &[Sexp], _b: &Bindings) -> Result<Value, String> {
+    pub(super) fn eval_command(
+        &self,
+        name: &str,
+        _args: &[Sexp],
+        _b: &Bindings,
+    ) -> Result<Value, String> {
         // A registered task command (`add-act-r-command`): its side effects
         // (e.g. recording a response in the task's own variable) are not
         // part of the trace, so a no-op matches.
@@ -295,9 +304,7 @@ impl Engine {
         match self.cfg.randomize_scale {
             None => secs,
             Some(_) if secs == 0.0 => secs,
-            Some(scale) => {
-                (secs / scale) * (scale - 1.0 + self.rng.borrow_mut().random_float(2.0))
-            }
+            Some(scale) => (secs / scale) * (scale - 1.0 + self.rng.borrow_mut().random_float(2.0)),
         }
     }
 
@@ -327,7 +334,11 @@ impl Engine {
     /// Used by `MAP-RETRIEVAL-BUFFER` to instantiate p2's condition
     /// variables from the retrieved chunk.
     pub(super) fn chunk_name_slot(&self, chunk: &str, slot: &str) -> Option<String> {
-        let name = self.copy_source.get(chunk).map(|s| s.as_str()).unwrap_or(chunk);
+        let name = self
+            .copy_source
+            .get(chunk)
+            .map(|s| s.as_str())
+            .unwrap_or(chunk);
         let c = self
             .dm
             .iter()
@@ -409,7 +420,6 @@ impl Engine {
     }
 }
 
-
 /// Numeric view of a value for the `!eval!`/`!bind!` evaluator.
 pub(super) fn as_num(v: &Value) -> Option<f64> {
     match v {
@@ -418,7 +428,6 @@ pub(super) fn as_num(v: &Value) -> Option<f64> {
         _ => None,
     }
 }
-
 
 /// CL truth: `T` or `NIL`.
 pub(super) fn bool_value(b: bool) -> Value {
@@ -429,7 +438,6 @@ pub(super) fn bool_value(b: bool) -> Value {
     }
 }
 
-
 /// `(A B C)` from a slice of values (`~S` of a list).
 pub(super) fn show_values(vals: &[Value]) -> String {
     format!(
@@ -438,11 +446,9 @@ pub(super) fn show_values(vals: &[Value]) -> String {
     )
 }
 
-
 pub(super) fn is_number(v: &Value) -> bool {
     matches!(v, Value::Int(_) | Value::Num(_))
 }
-
 
 pub(super) fn f32_of(v: &Value) -> Option<f32> {
     match v {
@@ -452,13 +458,11 @@ pub(super) fn f32_of(v: &Value) -> Option<f32> {
     }
 }
 
-
 pub(super) fn set_result(results: &mut [(String, Option<Value>)], slot: &str, v: Value) {
     if let Some(e) = results.iter_mut().find(|(s, _)| s == slot) {
         e.1 = Some(v);
     }
 }
-
 
 /// SBCL `~S`/`~A` for a single-float: shortest round-tripping decimal,
 /// rendered fixed for decimal exponents in `-3..=6` and in `m.mmmmmmeN`
@@ -472,7 +476,6 @@ pub(super) fn name_of(v: &Value) -> String {
     }
 }
 
-
 /// A numeric value as `f64`, if it is one.
 pub(super) fn num_of(v: &Value) -> Option<f64> {
     match v {
@@ -481,7 +484,6 @@ pub(super) fn num_of(v: &Value) -> Option<f64> {
         _ => None,
     }
 }
-
 
 /// A numeric value as Lisp `~a` would print it: an integer stays an integer
 /// (`r 1` -> `1`) while a float gets the single-float spelling (`1.0`).
@@ -492,7 +494,6 @@ pub(super) fn lisp_num_str(v: &Value) -> String {
         _ => String::new(),
     }
 }
-
 
 /// A numeric value, as an integer when integral (ACT-R preserves the
 /// `generate-tracker-choices` integer choices).

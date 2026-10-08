@@ -1,10 +1,16 @@
 //! Procedural matching, conflict resolution, firing, compilation orchestration.
-use super::*;
-use super::compilation::{basic_vars, buffer_module, buffer_usage, canon_composed, canon_prod, compute_retain_buffers, failure_wait, goal_reason, imaginal_reason, indirect_action_buffer_name, indirect_action_vars, indirect_safe_bind_reason, instantiate_var, is_buffer_name, latency, lhs_buffers, motor_reason, perceptual_reason, prod_lhs_slots, prod_rhs_actions, production_bind_vars, r_b_c1, r_b_c2, remove_dup_keep_last, render_compiled, render_production, retrieval_reason, rhs_buffers, sort_token, var_buffers};
+use super::compilation::{
+    basic_vars, buffer_module, buffer_usage, canon_composed, canon_prod, compute_retain_buffers,
+    failure_wait, goal_reason, imaginal_reason, indirect_action_buffer_name, indirect_action_vars,
+    indirect_safe_bind_reason, instantiate_var, is_buffer_name, latency, lhs_buffers, motor_reason,
+    perceptual_reason, prod_lhs_slots, prod_rhs_actions, production_bind_vars, r_b_c1, r_b_c2,
+    remove_dup_keep_last, render_compiled, render_production, retrieval_reason, rhs_buffers,
+    sort_token, var_buffers,
+};
 use super::dm::{bl_equation, ol_str};
 use super::rhs::{explicit_out, implicit_clears, implicit_queries};
+use super::*;
 impl Engine {
-
     pub(super) fn conflict_resolution(&mut self) -> Result<(), EngineError> {
         // Utilities are production U plus optional `:egs` noise, drawn
         // per candidate in definition order (`compute-utility` runs
@@ -136,9 +142,7 @@ impl Engine {
                             !self.query_free(buffer).unwrap_or(false)
                         }
                         ("ERROR", Pattern::Nil) => self.buffer_error(buffer),
-                        ("ERROR", Pattern::Sym(s)) if s == "T" => {
-                            !self.buffer_error(buffer)
-                        }
+                        ("ERROR", Pattern::Sym(s)) if s == "T" => !self.buffer_error(buffer),
                         _ => true,
                     };
                     if !ok {
@@ -146,7 +150,10 @@ impl Engine {
                             Pattern::Sym(s) => s.clone(),
                             other => format!("{other:?}"),
                         };
-                        return format!("The {} {} query of the {} buffer failed.", attr, v, buffer);
+                        return format!(
+                            "The {} {} query of the {} buffer failed.",
+                            attr, v, buffer
+                        );
                     }
                 }
             }
@@ -269,9 +276,9 @@ impl Engine {
                     for chunk in &self.goal_set {
                         let mut b2 = b.clone();
                         let mut ppm2 = ppm.clone();
-                        if self.match_chunk_tests(
-                            chunk, buffer, tests, only_isa, &mut b2, &mut ppm2,
-                        )? {
+                        if self
+                            .match_chunk_tests(chunk, buffer, tests, only_isa, &mut b2, &mut ppm2)?
+                        {
                             *b = b2;
                             *ppm = ppm2;
                             if let Some(name) = &chunk.name {
@@ -316,13 +323,12 @@ impl Engine {
                                 .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?;
                             b.chunk.is_none() && !b.failed
                         }
-                        ("BUFFER", Pattern::Sym(s)) if s == "FULL" => {
-                            self.buffers
-                                .get(buffer)
-                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
-                                .chunk
-                                .is_some()
-                        }
+                        ("BUFFER", Pattern::Sym(s)) if s == "FULL" => self
+                            .buffers
+                            .get(buffer)
+                            .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
+                            .chunk
+                            .is_some(),
                         ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
                         // extended-motor-actions adds per-stage queries.
@@ -340,10 +346,7 @@ impl Engine {
                         }
                         // `?manual-left> index free/down` etc.
                         (attr, Pattern::Sym(s))
-                            if matches!(
-                                attr,
-                                "INDEX" | "MIDDLE" | "RING" | "PINKIE" | "THUMB"
-                            ) =>
+                            if matches!(attr, "INDEX" | "MIDDLE" | "RING" | "PINKIE" | "THUMB") =>
                         {
                             match s.as_str() {
                                 "FREE" => self.query_finger_free(buffer, attr)?,
@@ -407,7 +410,8 @@ impl Engine {
     /// buffers, buffer flag otherwise. (Motor free = neither preparing
     /// nor executing; visual free = no attention shift in flight.)
     pub(super) fn query_free(&self, buffer: &str) -> Result<bool, EngineError> {
-        match buffer {            "VISUAL" => Ok(!self.visual_busy && !self.visual_prep_busy),
+        match buffer {
+            "VISUAL" => Ok(!self.visual_busy && !self.visual_prep_busy),
             "MANUAL" => {
                 if self.cfg.zz_ext {
                     Ok(!self.man_prep_busy
@@ -432,7 +436,8 @@ impl Engine {
     }
 
     /// `?manual> processor free/busy` (extended-motor-actions).
-    pub(super) fn query_processor_free(&self, buffer: &str) -> Result<bool, EngineError> {        match buffer {
+    pub(super) fn query_processor_free(&self, buffer: &str) -> Result<bool, EngineError> {
+        match buffer {
             "MANUAL" => Ok(!self.man_proc[0] && !self.man_proc[1]),
             _ => self.query_free(buffer),
         }
@@ -448,7 +453,11 @@ impl Engine {
 
     /// `?manual-left> index free` (`motor-extension.lisp:1306`): whether a
     /// hand's finger is free (not busy with a movement).
-    pub(super) fn query_finger_free(&self, buffer: &str, finger: &str) -> Result<bool, EngineError> {
+    pub(super) fn query_finger_free(
+        &self,
+        buffer: &str,
+        finger: &str,
+    ) -> Result<bool, EngineError> {
         let hand = match buffer {
             "MANUAL-LEFT" => 0usize,
             "MANUAL-RIGHT" => 1,
@@ -460,7 +469,11 @@ impl Engine {
     }
 
     /// `?manual-left> index down`: whether a hand's finger is held down.
-    pub(super) fn query_finger_down(&self, buffer: &str, finger: &str) -> Result<bool, EngineError> {
+    pub(super) fn query_finger_down(
+        &self,
+        buffer: &str,
+        finger: &str,
+    ) -> Result<bool, EngineError> {
         let hand = match buffer {
             "MANUAL-LEFT" => 0usize,
             "MANUAL-RIGHT" => 1,
@@ -736,9 +749,7 @@ impl Engine {
         let prod = &self.model.productions[idx];
         if let Some(buf) = indirect_action_buffer_name(prod) {
             if !self.cfg.cia {
-                return Some(format!(
-                    "it has an indirect action with the {buf} buffer"
-                ));
+                return Some(format!("it has an indirect action with the {buf} buffer"));
             }
             // With :cia, an indirect action whose variable is bound by a
             // `!bind!`/`!safe-bind!` is invalid (`:rir` ignores the retrieval
@@ -810,10 +821,7 @@ impl Engine {
                             "it has multiple modification actions for the {} buffer",
                             k.1
                         ),
-                        _ => format!(
-                            "it has multiple requests to the {} buffer",
-                            k.1
-                        ),
+                        _ => format!("it has multiple requests to the {} buffer", k.1),
                     };
                 }
                 seen.push(k);
@@ -871,15 +879,14 @@ impl Engine {
                 }
                 continue;
             }
-            let (table, reason): (&[(u32, u32)], fn(u32, u32) -> String) =
-                match buffer.as_str() {
-                    "GOAL" => (GOAL_COMPOSE, goal_reason),
-                    "VISUAL-LOCATION" | "VISUAL" | "AURAL-LOCATION" | "AURAL" | "TEMPORAL" => {
-                        (PERCEPTUAL_COMPOSE, perceptual_reason)
-                    }
-                    "IMAGINAL" => (IMAGINAL_COMPOSE, imaginal_reason),
-                    _ => (MOTOR_COMPOSE, motor_reason),
-                };
+            let (table, reason): (&[(u32, u32)], fn(u32, u32) -> String) = match buffer.as_str() {
+                "GOAL" => (GOAL_COMPOSE, goal_reason),
+                "VISUAL-LOCATION" | "VISUAL" | "AURAL-LOCATION" | "AURAL" | "TEMPORAL" => {
+                    (PERCEPTUAL_COMPOSE, perceptual_reason)
+                }
+                "IMAGINAL" => (IMAGINAL_COMPOSE, imaginal_reason),
+                _ => (MOTOR_COMPOSE, motor_reason),
+            };
             if !table.contains(&(u1, u2)) {
                 return Some((buffer.clone(), reason(u1, u2)));
             }
@@ -930,7 +937,12 @@ impl Engine {
     /// `:epl`/`:pct` trace. This port covers the goal-style test+modify
     /// composition exercised by `ppm-compilation`; compiled productions are
     /// not (yet) added to the runtime set.
-    pub(super) fn compile_productions(&mut self, idx: usize, bindings: &Bindings, reqs: &[(String, String)]) {
+    pub(super) fn compile_productions(
+        &mut self,
+        idx: usize,
+        bindings: &Bindings,
+        reqs: &[(String, String)],
+    ) {
         if !self.cfg.epl {
             return;
         }
@@ -980,9 +992,7 @@ impl Engine {
                     (Vec::new(), Vec::new())
                 };
                 let reason = indirect_safe_bind_reason(&self.model.productions[p1_idx], &retain1)
-                    .or_else(|| {
-                        indirect_safe_bind_reason(&self.model.productions[idx], &retain2)
-                    });
+                    .or_else(|| indirect_safe_bind_reason(&self.model.productions[idx], &retain2));
                 if let Some(reason) = reason {
                     if trace {
                         self.out(format!(
@@ -991,134 +1001,138 @@ impl Engine {
                         self.out(format!("   because {reason}"));
                     }
                 } else {
-                let (lhs, rhs, _compose_dropped) = self.compose_pair(
-                    p1_idx,
-                    &p1_bindings,
-                    &p1_reqs,
-                    idx,
-                    bindings,
-                    &retain1,
-                    &retain2,
-                );
-                let cname = format!("PRODUCTION{}", self.compiled_count);
-                // `new-production-name` (`production-compilation.lisp:1874`)
-                // consumes a name for every composition that reaches this
-                // point, duplicate or not (a recreated name is released but
-                // the counter never rewinds).
-                self.compiled_count += 1;
-                // `check-for-duplicate-productions`
-                // (`production-compilation.lisp:1915`): a composed production
-                // equivalent to an existing one is not installed.
-                let dup = {
-                    let crep = canon_composed(&lhs, &rhs);
-                    self.model.productions.iter().enumerate().find_map(|(i, p)| {
-                        if canon_prod(p) == crep {
-                            Some((i, p.name.clone(), i >= self.base_prods))
-                        } else {
-                            None
-                        }
-                    })
-                };
-                // `initialize-utility-for-compiled-production`
-                // (`utility-and-reward-1.lisp:477`): the composed production's
-                // reward is inherited from its parents (the max when both are
-                // numeric).
-                let reward: Option<f32> = {
-                    let r1 = self.model.productions[p1_idx].reward;
-                    let r2 = self.model.productions[idx].reward;
-                    match (r1, r2) {
-                        (Some(a), Some(b)) => Some(a.max(b)),
-                        (Some(a), None) => Some(a),
-                        (None, Some(b)) => Some(b),
-                        (None, None) => None,
-                    }
-                };
-                if trace {
-                    self.out(format!(
-                        "  Production {p1name} and {p2name} are being composed."
-                    ));
-                    if let Some((didx, dname, compiled)) = &dup {
-                        if *compiled {
-                            self.out(format!("  Recreating production {dname}"));
-                            // `update-utility-for-compiled-production`
-                            // (`utility-and-reward-1.lisp:497`): the existing
-                            // compiled production's `u` moves toward the first
-                            // parent's via `linear-update-utility`, then the
-                            // updated parameters are printed.
-                            if self.cfg.esc && self.cfg.ul {
-                                let alpha = self.cfg.alpha;
-                                let parent = self.utilities[p1_idx];
-                                let old = self.utilities[*didx];
-                                self.utilities[*didx] = old + alpha * (parent - old);
-                            }
-                            let u = self.utilities[*didx];
-                            let utility = self.production_utility[*didx];
-                            let reward = self.model.productions[*didx].reward;
-                            self.print_prod_params(dname, u, utility, reward);
-                        } else {
-                            self.out(format!(
-                                "  Result is production {dname}\n  No actions taken."
-                            ));
-                        }
-                    } else {
-                    self.out("  New production:\n".to_string());
-                    // `dropped-chunks` (`production-compilation.lisp:1723`):
-                    // for each `=` buffer of p2 of a drop-out type that p1
-                    // requested, the chunk p2's buffer variable held (the
-                    // copy's source if it was one).
-                    let mut dropped: Vec<(String, String)> = Vec::new();
-                    for x in lhs_buffers(&self.model.productions[idx]) {
-                        if x != "RETRIEVAL" {
-                            continue;
-                        }
-                        if buffer_usage(&self.model.productions[p1_idx], &x) & 4 == 0 {
-                            continue;
-                        }
-                        if let Some(v) = bindings.get(&format!("={x}")) {
-                            let name = v.show();
-                            let name = self.copy_source.get(&name).cloned().unwrap_or(name);
-                            dropped.push((x, name));
-                        }
-                    }
-                    dropped.sort_by(|a, b| a.0.cmp(&b.0));
-                    let doc = if dropped.is_empty() {
-                        format!("{p1name} & {p2name}")
-                    } else {
-                        let vals: Vec<String> =
-                            dropped.iter().map(|(_, n)| n.clone()).collect();
-                        format!("{p1name} & {p2name} - {}", vals.join(" - "))
+                    let (lhs, rhs, _compose_dropped) = self.compose_pair(
+                        p1_idx,
+                        &p1_bindings,
+                        &p1_reqs,
+                        idx,
+                        bindings,
+                        &retain1,
+                        &retain2,
+                    );
+                    let cname = format!("PRODUCTION{}", self.compiled_count);
+                    // `new-production-name` (`production-compilation.lisp:1874`)
+                    // consumes a name for every composition that reaches this
+                    // point, duplicate or not (a recreated name is released but
+                    // the counter never rewinds).
+                    self.compiled_count += 1;
+                    // `check-for-duplicate-productions`
+                    // (`production-compilation.lisp:1915`): a composed production
+                    // equivalent to an existing one is not installed.
+                    let dup = {
+                        let crep = canon_composed(&lhs, &rhs);
+                        self.model
+                            .productions
+                            .iter()
+                            .enumerate()
+                            .find_map(|(i, p)| {
+                                if canon_prod(p) == crep {
+                                    Some((i, p.name.clone(), i >= self.base_prods))
+                                } else {
+                                    None
+                                }
+                            })
                     };
-                    // `sort-conditions` (`production-compilation.lisp:1903`)
-                    // plus the assembly at 1741: `!`-conditions are collected
-                    // and prepended (in reverse `push` order), then the rest
-                    // sorted by token.
-                    let mut bangs: Vec<(String, Vec<(String, SlotVal)>)> = lhs
-                        .iter()
-                        .filter(|(t, _)| t.starts_with('!'))
-                        .cloned()
-                        .collect();
-                    bangs.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
-                    bangs.reverse();
-                    let mut rest: Vec<(String, Vec<(String, SlotVal)>)> = lhs
-                        .iter()
-                        .filter(|(t, _)| !t.starts_with('!'))
-                        .cloned()
-                        .collect();
-                    rest.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
-                    let sorted: Vec<(String, Vec<(String, SlotVal)>)> =
-                        bangs.into_iter().chain(rest).collect();
-                    self.out(render_compiled(&cname, &doc, &sorted, &rhs));
-                    // A freshly compiled production has no cached
-                    // `production-utility` yet and `u = :nu` (0).
-                    self.print_prod_params(&cname, 0.0, None, reward);
+                    // `initialize-utility-for-compiled-production`
+                    // (`utility-and-reward-1.lisp:477`): the composed production's
+                    // reward is inherited from its parents (the max when both are
+                    // numeric).
+                    let reward: Option<f32> = {
+                        let r1 = self.model.productions[p1_idx].reward;
+                        let r2 = self.model.productions[idx].reward;
+                        match (r1, r2) {
+                            (Some(a), Some(b)) => Some(a.max(b)),
+                            (Some(a), None) => Some(a),
+                            (None, Some(b)) => Some(b),
+                            (None, None) => None,
+                        }
+                    };
+                    if trace {
+                        self.out(format!(
+                            "  Production {p1name} and {p2name} are being composed."
+                        ));
+                        if let Some((didx, dname, compiled)) = &dup {
+                            if *compiled {
+                                self.out(format!("  Recreating production {dname}"));
+                                // `update-utility-for-compiled-production`
+                                // (`utility-and-reward-1.lisp:497`): the existing
+                                // compiled production's `u` moves toward the first
+                                // parent's via `linear-update-utility`, then the
+                                // updated parameters are printed.
+                                if self.cfg.esc && self.cfg.ul {
+                                    let alpha = self.cfg.alpha;
+                                    let parent = self.utilities[p1_idx];
+                                    let old = self.utilities[*didx];
+                                    self.utilities[*didx] = old + alpha * (parent - old);
+                                }
+                                let u = self.utilities[*didx];
+                                let utility = self.production_utility[*didx];
+                                let reward = self.model.productions[*didx].reward;
+                                self.print_prod_params(dname, u, utility, reward);
+                            } else {
+                                self.out(format!(
+                                    "  Result is production {dname}\n  No actions taken."
+                                ));
+                            }
+                        } else {
+                            self.out("  New production:\n".to_string());
+                            // `dropped-chunks` (`production-compilation.lisp:1723`):
+                            // for each `=` buffer of p2 of a drop-out type that p1
+                            // requested, the chunk p2's buffer variable held (the
+                            // copy's source if it was one).
+                            let mut dropped: Vec<(String, String)> = Vec::new();
+                            for x in lhs_buffers(&self.model.productions[idx]) {
+                                if x != "RETRIEVAL" {
+                                    continue;
+                                }
+                                if buffer_usage(&self.model.productions[p1_idx], &x) & 4 == 0 {
+                                    continue;
+                                }
+                                if let Some(v) = bindings.get(&format!("={x}")) {
+                                    let name = v.show();
+                                    let name = self.copy_source.get(&name).cloned().unwrap_or(name);
+                                    dropped.push((x, name));
+                                }
+                            }
+                            dropped.sort_by(|a, b| a.0.cmp(&b.0));
+                            let doc = if dropped.is_empty() {
+                                format!("{p1name} & {p2name}")
+                            } else {
+                                let vals: Vec<String> =
+                                    dropped.iter().map(|(_, n)| n.clone()).collect();
+                                format!("{p1name} & {p2name} - {}", vals.join(" - "))
+                            };
+                            // `sort-conditions` (`production-compilation.lisp:1903`)
+                            // plus the assembly at 1741: `!`-conditions are collected
+                            // and prepended (in reverse `push` order), then the rest
+                            // sorted by token.
+                            let mut bangs: Vec<(String, Vec<(String, SlotVal)>)> = lhs
+                                .iter()
+                                .filter(|(t, _)| t.starts_with('!'))
+                                .cloned()
+                                .collect();
+                            bangs.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
+                            bangs.reverse();
+                            let mut rest: Vec<(String, Vec<(String, SlotVal)>)> = lhs
+                                .iter()
+                                .filter(|(t, _)| !t.starts_with('!'))
+                                .cloned()
+                                .collect();
+                            rest.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
+                            let sorted: Vec<(String, Vec<(String, SlotVal)>)> =
+                                bangs.into_iter().chain(rest).collect();
+                            self.out(render_compiled(&cname, &doc, &sorted, &rhs));
+                            // A freshly compiled production has no cached
+                            // `production-utility` yet and `u = :nu` (0).
+                            self.print_prod_params(&cname, 0.0, None, reward);
+                        }
                     }
-                }
-                if dup.is_none() {
-                    self.install_compiled(&cname, &lhs, &rhs);
-                    if let Some(last) = self.model.productions.last_mut() {
-                        last.reward = reward;
+                    if dup.is_none() {
+                        self.install_compiled(&cname, &lhs, &rhs);
+                        if let Some(last) = self.model.productions.last_mut() {
+                            last.reward = reward;
+                        }
                     }
-                }
                 }
             }
         } else if trace {
@@ -1405,20 +1419,19 @@ impl Engine {
                 SlotVal::Lit(s) => SlotVal::Lit(s.clone()),
             }
         };
-        let apply_lhs = |lhs: &[(String, Vec<(String, SlotVal)>)],
-                         b: &Bindings,
-                         ivars: &HashSet<String>| {
-            lhs.iter()
-                .map(|(buf, s)| {
-                    (
-                        buf.clone(),
-                        s.iter()
-                            .map(|(n, v)| (n.clone(), subst(v, b, ivars)))
-                            .collect::<Vec<_>>(),
-                    )
-                })
-                .collect::<Vec<_>>()
-        };
+        let apply_lhs =
+            |lhs: &[(String, Vec<(String, SlotVal)>)], b: &Bindings, ivars: &HashSet<String>| {
+                lhs.iter()
+                    .map(|(buf, s)| {
+                        (
+                            buf.clone(),
+                            s.iter()
+                                .map(|(n, v)| (n.clone(), subst(v, b, ivars)))
+                                .collect::<Vec<_>>(),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            };
         let p1_lhs = apply_lhs(&p1_lhs, b1, &indirect_vars);
         let p2_lhs = apply_lhs(&p2_lhs, b2, &indirect_vars);
         let inst_acts = |acts: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
@@ -1463,16 +1476,15 @@ impl Engine {
                 .map(|(_, s)| s.clone())
                 .unwrap_or_default()
         };
-        let acts_for =
-            |v: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
-             b: &str,
-             ops: &[char]|
-             -> Vec<(Vec<(String, SlotVal)>, Option<String>)> {
-                v.iter()
-                    .filter(|(op, bb, _, _)| bb == b && ops.contains(op))
-                    .map(|(_, _, s, var)| (s.clone(), var.clone()))
-                    .collect()
-            };
+        let acts_for = |v: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
+                        b: &str,
+                        ops: &[char]|
+         -> Vec<(Vec<(String, SlotVal)>, Option<String>)> {
+            v.iter()
+                .filter(|(op, bb, _, _)| bb == b && ops.contains(op))
+                .map(|(_, _, s, var)| (s.clone(), var.clone()))
+                .collect()
+        };
 
         let mut lhs = Vec::new();
         for buf in &buffers {
@@ -1501,8 +1513,8 @@ impl Engine {
                         slots.push((n, v));
                     }
                 }
-                let had = p1_lhs.iter().any(|(b, _)| b == buf)
-                    || p2_lhs.iter().any(|(b, _)| b == buf);
+                let had =
+                    p1_lhs.iter().any(|(b, _)| b == buf) || p2_lhs.iter().any(|(b, _)| b == buf);
                 if had {
                     lhs.push((format!("={buf}>"), remove_dup_keep_last(slots)));
                 }
@@ -1578,8 +1590,10 @@ impl Engine {
             eq2.sort_by(|a, b| a.0.cmp(&b.0));
             if has_eq1 || has_eq2 {
                 let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
-                let mut slots: Vec<(String, SlotVal)> =
-                    eq1.into_iter().filter(|(n, _)| !names2.contains(n)).collect();
+                let mut slots: Vec<(String, SlotVal)> = eq1
+                    .into_iter()
+                    .filter(|(n, _)| !names2.contains(n))
+                    .collect();
                 slots.extend(eq2);
                 rhs.push((format!("={buf}>"), sv(slots)));
             }
@@ -1596,8 +1610,10 @@ impl Engine {
             st2.sort_by(|a, b| a.0.cmp(&b.0));
             if !st1.is_empty() || !st2.is_empty() {
                 let names2: Vec<String> = st2.iter().map(|(n, _)| n.clone()).collect();
-                let mut slots: Vec<(String, SlotVal)> =
-                    st1.into_iter().filter(|(n, _)| !names2.contains(n)).collect();
+                let mut slots: Vec<(String, SlotVal)> = st1
+                    .into_iter()
+                    .filter(|(n, _)| !names2.contains(n))
+                    .collect();
                 slots.extend(st2);
                 rhs.push((format!("*{buf}>"), sv(slots)));
             }
@@ -1623,7 +1639,10 @@ impl Engine {
                             .and_then(|c| c.name.clone())
                             .map(|n| self.copy_source.get(&n).cloned().unwrap_or(n))
                             .or_else(|| {
-                                reqs1.iter().find(|(bb, _)| bb == buf).map(|(_, n)| n.clone())
+                                reqs1
+                                    .iter()
+                                    .find(|(bb, _)| bb == buf)
+                                    .map(|(_, n)| n.clone())
                             });
                         if let Some(n) = name {
                             dropped.push(n);
@@ -1791,7 +1810,11 @@ impl Engine {
             })
     }
 
-    pub(super) fn start_retrieval(&mut self, spec: NewChunk, var_slots: &[String]) -> Result<(), EngineError> {
+    pub(super) fn start_retrieval(
+        &mut self,
+        spec: NewChunk,
+        var_slots: &[String],
+    ) -> Result<(), EngineError> {
         // A whole-chunk request (`+retrieval> =goal`) expands the referenced
         // chunk to its slot spec (`chunk-name-to-chunk-spec`) and retrieves
         // by matching; a name that is not a chunk (e.g. `=c` bound to a
@@ -1851,7 +1874,7 @@ impl Engine {
             NewChunk::Named(_) => unreachable!(),
             NewChunk::Instance(_) => {
                 return Err(bad(
-                    "retrieval request cannot be a buffer instance".to_string(),
+                    "retrieval request cannot be a buffer instance".to_string()
                 ));
             }
             NewChunk::Spec { slots, neg, .. } => (slots.clone(), neg.clone()),
@@ -2102,8 +2125,7 @@ impl Engine {
                     } else {
                         if self.act_medium() {
                             self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
-                            let refs_str: Vec<String> =
-                                refs.iter().map(|r| fmt_secs(*r)).collect();
+                            let refs_str: Vec<String> = refs.iter().map(|r| fmt_secs(*r)).collect();
                             self.out(format!(
                                 "Computing base-level from {count} references ({})",
                                 refs_str.join(" ")
@@ -2204,15 +2226,14 @@ impl Engine {
                     if sim == self.cfg.ms {
                         let simd = mp * self.cfg.md;
                         if show {
-                            self.out(format!(
-                                "  effective similarity value is {}",
-                                lisp_f(simd)
-                            ));
+                            self.out(format!("  effective similarity value is {}", lisp_f(simd)));
                         }
                         total += simd;
                         a += simd;
                     } else if show {
-                        self.out("  negation test with similarity not ms has no effect".to_string());
+                        self.out(
+                            "  negation test with similarity not ms has no effect".to_string(),
+                        );
                     }
                 }
                 if show {

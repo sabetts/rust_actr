@@ -12,7 +12,11 @@ impl ChunkInst {
 }
 
 impl Engine {
-    pub(super) fn show_output_arg(&self, a: &crate::sexpr::Sexp, b: &Bindings) -> Result<String, EngineError> {
+    pub(super) fn show_output_arg(
+        &self,
+        a: &crate::sexpr::Sexp,
+        b: &Bindings,
+    ) -> Result<String, EngineError> {
         use crate::sexpr::Sexp::*;
         match a {
             // `!output! (=num1)`: one-element lists hold the value.
@@ -37,7 +41,6 @@ impl Engine {
     }
 }
 
-
 /// Build a chunk instance from a parsed `add-dm`/`define-chunks` entry.
 pub(super) fn chunk_inst(c: &Chunk) -> Result<ChunkInst, EngineError> {
     let mut slots = Vec::new();
@@ -51,7 +54,6 @@ pub(super) fn chunk_inst(c: &Chunk) -> Result<ChunkInst, EngineError> {
         bare: false,
     })
 }
-
 
 pub(super) fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
     match desc {
@@ -280,12 +282,15 @@ impl Engine {
     }
 }
 
-
 /// Strict harvesting + request rule
 /// (`support/production-parsing.lisp:1323`): buffers tested on the LHS
 /// that no RHS action targets, plus requested buffers without an
 /// explicit clear, are cleared when the production fires.
-pub(super) fn implicit_clears(prod: &Production, exempt: &[String], allow_dup: bool) -> Vec<String> {
+pub(super) fn implicit_clears(
+    prod: &Production,
+    exempt: &[String],
+    allow_dup: bool,
+) -> Vec<String> {
     let mut tested: Vec<String> = Vec::new();
     for item in &prod.lhs {
         match item {
@@ -303,18 +308,14 @@ pub(super) fn implicit_clears(prod: &Production, exempt: &[String], allow_dup: b
                     tested.push(buffer.clone());
                 }
             }
-            LhsItem::Eval { .. }
-            | LhsItem::Bind { .. }
-            | LhsItem::MvBind { .. } => {}
+            LhsItem::Eval { .. } | LhsItem::Bind { .. } | LhsItem::MvBind { .. } => {}
         }
     }
     let mut targeted: Vec<(char, String)> = Vec::new();
     for a in &prod.rhs {
         match a {
             RhsAction::Modify { buffer, .. } => targeted.push(('=', buffer.clone())),
-            RhsAction::ModifyRequest { buffer, .. } => {
-                targeted.push(('=', buffer.clone()))
-            }
+            RhsAction::ModifyRequest { buffer, .. } => targeted.push(('=', buffer.clone())),
             RhsAction::Request { buffer, .. } => targeted.push(('+', buffer.clone())),
             RhsAction::Clear { buffer } => targeted.push(('-', buffer.clone())),
             // A direct `@buffer>` set/erase is targeted, so no implicit clear.
@@ -340,13 +341,15 @@ pub(super) fn implicit_clears(prod: &Production, exempt: &[String], allow_dup: b
         }
     }
     for (op, t) in &targeted {
-        if *op == '+' && !targeted.iter().any(|(o, b)| *o == '-' && b == t) && (allow_dup || !clears.contains(t)) {
+        if *op == '+'
+            && !targeted.iter().any(|(o, b)| *o == '-' && b == t)
+            && (allow_dup || !clears.contains(t))
+        {
             clears.push(t.clone());
         }
     }
     clears
 }
-
 
 /// Buffers gaining an implicit `?buffer> state free` test: RHS `+`
 /// (or `*`) requests whose target is not exempt and has no explicit
@@ -367,7 +370,6 @@ pub(super) fn implicit_queries(prod: &Production, exempt: &[String]) -> Vec<Stri
     }
     out
 }
-
 
 /// Explicit modify/request output: `(procedural-rhst prod)` is `t` by
 /// default, and `t` shows only at high detail. With `:rhst nil` the

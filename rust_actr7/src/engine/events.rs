@@ -1,9 +1,8 @@
 //! Event dispatcher (`exec`).
-use super::*;
 use super::motor::{key_is_punch, key_xy};
 use super::perception::{audio_event_chunk, sound_chunk};
+use super::*;
 impl Engine {
-
     pub(super) fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
         match event {
             Event::SetBuffer {
@@ -19,13 +18,7 @@ impl Engine {
                 // `CHUNK{k}` (`buffers.lisp:1360`); the trace still prints the
                 // spec/chunk-def, so capture it before naming.
                 let text = shown.unwrap_or_else(|| inst.show());
-                if inst.name.is_none()
-                    && self
-                        .model
-                        .no_reuse_buffers
-                        .iter()
-                        .any(|b| b == &buffer)
-                {
+                if inst.name.is_none() && self.model.no_reuse_buffers.iter().any(|b| b == &buffer) {
                     let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
                     self.name_count.insert("CHUNK".to_string(), n + 1);
                     inst.name = Some(format!("CHUNK{n}"));
@@ -46,7 +39,8 @@ impl Engine {
                     };
                     self.emit(module, details);
                 }
-                if buffer == "GOAL" && self.cfg.threads
+                if buffer == "GOAL"
+                    && self.cfg.threads
                     && !self.goal_set.iter().any(|c| c.name == inst.name)
                 {
                     self.goal_set.push(inst.clone());
@@ -90,7 +84,8 @@ impl Engine {
                     }
                     self.emit(&module, details);
                 }
-                if buffer == "GOAL" && self.cfg.threads
+                if buffer == "GOAL"
+                    && self.cfg.threads
                     && !self.goal_set.iter().any(|c| c.name == inst.name)
                 {
                     self.goal_set.push(inst.clone());
@@ -443,11 +438,7 @@ impl Engine {
                         // (blending.lisp:465).
                         self.blending_busy = true;
                         self.blending_error = false;
-                        self.now(
-                            Prio::Num(-3000),
-                            Out::Medium,
-                            Event::StartBlending { spec },
-                        );
+                        self.now(Prio::Num(-3000), Out::Medium, Event::StartBlending { spec });
                     }
                     "GOAL" => {
                         if self.cfg.threads {
@@ -510,9 +501,7 @@ impl Engine {
                             _ => None,
                         };
                         if let Some(ename) = ename {
-                            if let Some(idx) =
-                                self.sounds.iter().position(|s| s.ename == ename)
-                            {
+                            if let Some(idx) = self.sounds.iter().position(|s| s.ename == ename) {
                                 if let Some(buf) = self.buffers.get_mut("AURAL") {
                                     buf.busy = true;
                                 }
@@ -657,9 +646,7 @@ impl Engine {
                         LhsItem::Query { buffer, .. } => {
                             self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
                         }
-                        LhsItem::Eval { .. }
-                        | LhsItem::Bind { .. }
-                        | LhsItem::MvBind { .. } => {}
+                        LhsItem::Eval { .. } | LhsItem::Bind { .. } | LhsItem::MvBind { .. } => {}
                     }
                 }
                 for buffer in self.exec_prods[prod].implicit_queries.clone() {
@@ -701,7 +688,11 @@ impl Engine {
                 // `(spp <prod> :reward R)`: propagate the reward at fire time
                 // (after the RHS actions), like ACT-R's `propagate-reward`.
                 if let Some(r) = self.model.productions[prod].reward {
-                    self.now(Prio::Num(0), Out::Medium, Event::PropagateReward { value: r });
+                    self.now(
+                        Prio::Num(0),
+                        Out::Medium,
+                        Event::PropagateReward { value: r },
+                    );
                 }
             }
             Event::ProcDisplay => {
@@ -778,7 +769,10 @@ impl Engine {
                         at,
                         Prio::Num(0),
                         Out::Medium,
-                        Event::EncodingComplete { loc, requested: true },
+                        Event::EncodingComplete {
+                            loc,
+                            requested: true,
+                        },
                     );
                 }
             }
@@ -874,9 +868,10 @@ impl Engine {
                 let init = self.cfg.init_ms;
                 let burst = self.cfg.burst_ms;
                 let kct = self.cfg.zz_kct_ms;
-                let mv = (burst as f32 / 1000.0)
-                    .max((self.cfg.touch_peck_coeff * (r + 0.5).log2())
-                        .max(self.cfg.min_fitts_ms as f32 / 1000.0));
+                let mv = (burst as f32 / 1000.0).max(
+                    (self.cfg.touch_peck_coeff * (r + 0.5).log2())
+                        .max(self.cfg.min_fitts_ms as f32 / 1000.0),
+                );
                 let move_ms = (mv * 1000.0).round() as i64;
                 let strike = self.zz_movement_strike_time(move_ms, r);
                 let (exec_ms, exec2_ms, finish_ms) = match style.as_str() {
@@ -912,11 +907,7 @@ impl Engine {
                     "RELEASE" => (init + self.cfg.zz_krt_ms, None, init + burst),
                     // `release-recoil` (`motor-extension.lisp:1991`): a peck
                     // that releases at exec and recoils home.
-                    "RELEASE-RECOIL" => (
-                        init + self.cfg.zz_krt_ms,
-                        None,
-                        init + move_ms + burst,
-                    ),
+                    "RELEASE-RECOIL" => (init + self.cfg.zz_krt_ms, None, init + move_ms + burst),
                     // `point-finger` (`motor-extension.lisp:2036`): exec is
                     // `max(init, move-time)`, finish `init + move-time`.
                     "POINT-FINGER" => (init.max(move_ms), None, init + move_ms),
@@ -936,7 +927,10 @@ impl Engine {
                         // `point-finger` and the release styles produce no
                         // `output-key`; `release`/`release-recoil` emit a
                         // `release-key` at exec instead.
-                        output: !matches!(style.as_str(), "POINT-FINGER" | "RELEASE" | "RELEASE-RECOIL"),
+                        output: !matches!(
+                            style.as_str(),
+                            "POINT-FINGER" | "RELEASE" | "RELEASE-RECOIL"
+                        ),
                         release_exec: matches!(style.as_str(), "RELEASE" | "RELEASE-RECOIL"),
                     },
                 });
@@ -1248,14 +1242,20 @@ impl Engine {
                         self.zz_mouse_pos = (tx, ty, 1080);
                         self.emit(
                             "MOUSE",
-                            format!("move-cursor {} mouse ({} {} {})", self.model.name, tx, ty, 1080),
+                            format!(
+                                "move-cursor {} mouse ({} {} {})",
+                                self.model.name, tx, ty, 1080
+                            ),
                         );
                     }
                     "CLICK-MOUSE" | "HOLD-MOUSE" => {
                         self.zz_mouse_down = true;
                         self.emit(
                             "MOUSE",
-                            format!("click-mouse {} ({} {} {}) INDEX", self.model.name, mx, my, mz),
+                            format!(
+                                "click-mouse {} ({} {} {}) INDEX",
+                                self.model.name, mx, my, mz
+                            ),
                         );
                         self.zz_data.push((
                             "CLICKED".to_string(),
@@ -1267,7 +1267,10 @@ impl Engine {
                         self.zz_mouse_down = false;
                         self.emit(
                             "MOUSE",
-                            format!("release-mouse {} ({} {} {}) index", self.model.name, mx, my, mz),
+                            format!(
+                                "release-mouse {} ({} {} {}) index",
+                                self.model.name, mx, my, mz
+                            ),
                         );
                         self.zz_data.push((
                             "UNCLICKED".to_string(),
@@ -1284,7 +1287,10 @@ impl Engine {
                 let (mx, my, mz) = self.zz_mouse_pos;
                 self.emit(
                     "MOUSE",
-                    format!("release-mouse {} ({} {} {}) INDEX", self.model.name, mx, my, mz),
+                    format!(
+                        "release-mouse {} ({} {} {}) INDEX",
+                        self.model.name, mx, my, mz
+                    ),
                 );
                 self.zz_data.push((
                     "UNCLICKED".to_string(),
@@ -1505,7 +1511,11 @@ impl Engine {
                     self.changed();
                 }
             }
-            Event::PressKey { key, req_ms, isa: _isa } => {
+            Event::PressKey {
+                key,
+                req_ms,
+                isa: _isa,
+            } => {
                 if show {
                     self.emit("MOTOR", format!("PRESS-KEY KEY {key}"));
                 }
@@ -1550,7 +1560,11 @@ impl Engine {
                 ));
                 self.man_prep_busy = true;
                 if self.cfg.zz_ext {
-                    let style = if key_is_punch(&key) { "PUNCH" } else { "PECK-RECOIL" };
+                    let style = if key_is_punch(&key) {
+                        "PUNCH"
+                    } else {
+                        "PECK-RECOIL"
+                    };
                     self.zz_last_style =
                         Some((style.to_string(), style.to_string(), spec.hand.to_string()));
                     let h = Self::touch_hand_idx(spec.hand).unwrap_or(1);
@@ -1603,10 +1617,9 @@ impl Engine {
                     let fit = (self.cfg.peck_fitts * (spec.r + 0.5).log2())
                         .max(self.cfg.min_fitts_ms as f32 / 1000.0);
                     let move_s = burst_s.max(fit);
-                    let exec_s = self.cfg.init_ms as f32 / 1000.0
-                        + burst_s.max(self.randomize_secs(move_s));
-                    let finish_s =
-                        exec_s + burst_s + burst_s.max(self.randomize_secs(move_s));
+                    let exec_s =
+                        self.cfg.init_ms as f32 / 1000.0 + burst_s.max(self.randomize_secs(move_s));
+                    let finish_s = exec_s + burst_s + burst_s.max(self.randomize_secs(move_s));
                     // Lisp rounds seconds->ms at scheduling time.
                     (
                         (exec_s * 1000.0).round() as i64,
@@ -1717,12 +1730,7 @@ impl Engine {
                         "WRONG"
                     };
                     self.tracker_set_prompt(prompt);
-                    self.push(
-                        self.time_ms + 5000,
-                        Prio::Num(0),
-                        Out::Never,
-                        Event::Choose,
-                    );
+                    self.push(self.time_ms + 5000, Prio::Num(0), Out::Never, Event::Choose);
                 }
                 if self.cfg.zz_ext {
                     self.zz_data
@@ -1744,12 +1752,7 @@ impl Engine {
                     // window because the visicon is dropped here first.
                     self.pending_clears.push(self.time_ms);
                     self.features.clear();
-                    self.now_m(
-                        Prio::Num(-100),
-                        Out::Always,
-                        true,
-                        Event::ProcDisplay,
-                    );
+                    self.now_m(Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
                 }
             }
             Event::ReleaseKey { key } => {
@@ -1810,11 +1813,7 @@ impl Engine {
                     } else {
                         format!(
                             " {}",
-                            params
-                                .iter()
-                                .map(Value::show)
-                                .collect::<Vec<_>>()
-                                .join(" ")
+                            params.iter().map(Value::show).collect::<Vec<_>>().join(" ")
                         )
                     };
                     self.emit("NONE", format!("{name}{suffix}"));

@@ -1,7 +1,7 @@
 //! Declarative memory, finsts, and blending.
-use super::*;
 use super::compilation::{failure_wait, latency};
 use super::eval::{f32_of, is_number, set_result, show_values};
+use super::*;
 impl Engine {
     /// Filled-slot names of a chunk (`chunk-slots-vector` mask, as names):
     /// non-nil slots only; `isa` is the chunk type, not a slot.
@@ -55,7 +55,10 @@ impl Engine {
     }
 
     /// `slot-mask->names`: the given names in slot-index order.
-    pub(super) fn names_by_index(names: &HashSet<String>, idx: &HashMap<String, usize>) -> Vec<String> {
+    pub(super) fn names_by_index(
+        names: &HashSet<String>,
+        idx: &HashMap<String, usize>,
+    ) -> Vec<String> {
         let mut v: Vec<String> = names.iter().cloned().collect();
         v.sort_by_key(|s| idx.get(s).copied().unwrap_or(usize::MAX));
         v
@@ -190,10 +193,7 @@ impl Engine {
     pub(super) fn start_blending(&mut self, spec: &NewChunk) -> Result<(), EngineError> {
         let (slots, neg, rels) = match spec {
             NewChunk::Spec {
-                slots,
-                neg,
-                rels,
-                ..
+                slots, neg, rels, ..
             } => (slots.clone(), neg.clone(), rels.clone()),
             _ => return Err(bad("blending request must be a chunk spec".to_string())),
         };
@@ -247,9 +247,8 @@ impl Engine {
         for i in &chunk_list {
             let c = &self.dm[*i];
             let ok = if partial {
-                rels.iter().all(|(s, v, op)| {
-                    s.starts_with(':') || self.rel_test_v(*op, v, &c.get(s))
-                })
+                rels.iter()
+                    .all(|(s, v, op)| s.starts_with(':') || self.rel_test_v(*op, v, &c.get(s)))
             } else {
                 self.chunk_matches_req(c, &slots, &neg, &rels)
             };
@@ -295,8 +294,7 @@ impl Engine {
         } else {
             (
                 1.0,
-                "Blending temperature defaults to 1 when :ans and :tmp are both nil"
-                    .to_string(),
+                "Blending temperature defaults to 1 when :ans and :tmp are both nil".to_string(),
             )
         };
 
@@ -372,10 +370,8 @@ impl Engine {
         }
 
         // Per-slot blending. `results` keeps blended-slots order.
-        let mut results: Vec<(String, Option<Value>)> = blended_slots
-            .iter()
-            .map(|s| (s.clone(), None))
-            .collect();
+        let mut results: Vec<(String, Option<Value>)> =
+            blended_slots.iter().map(|s| (s.clone(), None)).collect();
 
         for slot in &blended_slots {
             if self.cfg.blt {
@@ -643,7 +639,6 @@ impl Engine {
     }
 }
 
-
 /// `~s` of an `:ol` value in the base-level trace.
 pub(super) fn ol_str(ol: &Ol) -> String {
     match ol {
@@ -652,7 +647,6 @@ pub(super) fn ol_str(ol: &Ol) -> String {
         Ol::Num(n) => lisp_f(*n as f32),
     }
 }
-
 
 /// Generalized base-level decay (`compute-references`,
 /// declarative-memory.lisp:2695), all single-float. Pure: takes the
@@ -705,7 +699,6 @@ pub(super) fn bl_equation(
     }
 }
 
-
 /// `exp-coerced` (`misc-utils.lisp:554`): SBCL's `exp` on a single-float
 /// computes in double and rounds, which differs from Rust's `f32::exp` by an
 /// ulp (the associative-learning refs adjudicate).
@@ -713,13 +706,11 @@ pub(super) fn exp_coerced(x: f32) -> f32 {
     ((x as f64).exp()) as f32
 }
 
-
 /// `log-coerced` (`misc-utils.lisp:580`): SBCL's `log` on a single-float
 /// computes in double and rounds.
 pub(super) fn log_coerced(x: f32) -> f32 {
     ((x as f64).ln()) as f32
 }
-
 
 /// `needed-times` (`associative-learning.lisp:704`): with `:ol t` the history
 /// lists are never populated (they stay `nil`), which is why every
@@ -734,7 +725,6 @@ pub(super) fn al_needed_refs(ol: &Ol, refs: &mut Vec<i64>, ct: i64) {
         refs.truncate(keep);
     }
 }
-
 
 /// `~s` of a reference history list (`NIL` when empty).
 pub(super) fn al_history(refs: &[i64]) -> String {

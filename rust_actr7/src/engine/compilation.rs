@@ -9,7 +9,6 @@ impl SlotVal {
     }
 }
 
-
 /// Instantiated LHS match slots per buffer, sorted by slot name
 /// (`sort-production-slots`). `isa` is the chunk type, not a slot. Values
 /// stay symbolic (`=var`) so cross-production mappings can apply first.
@@ -47,7 +46,10 @@ pub(super) fn basic_vars(p: &Production) -> HashSet<String> {
                 }
             }
             RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => {
-                if let ChunkDesc::Spec { slots, neg, rels, .. } = spec {
+                if let ChunkDesc::Spec {
+                    slots, neg, rels, ..
+                } = spec
+                {
                     for (_, v) in slots.iter().chain(neg.iter()) {
                         if let Pattern::Var(x) = v {
                             s.insert(x.clone());
@@ -67,7 +69,6 @@ pub(super) fn basic_vars(p: &Production) -> HashSet<String> {
     s
 }
 
-
 /// Defaults for ACT-R's built-in module chunk-types that the engine doesn't
 /// load from the model file. `vision.lisp:3067`: `(chunk-type
 /// (text (:include visual-object)) (text t))`, etc. Only the defaults that
@@ -80,7 +81,6 @@ pub(super) fn builtin_type_defaults(name: &str) -> &'static [(&'static str, &'st
         _ => &[],
     }
 }
-
 
 /// The LHS buffers whose slot values mention each variable (used to decide
 /// whether a shared variable really binds to the same place in both
@@ -99,7 +99,6 @@ pub(super) fn var_buffers(p: &Production) -> HashMap<String, HashSet<String>> {
     m
 }
 
-
 pub(super) fn prod_lhs_slots(
     p: &Production,
     _b: &Bindings,
@@ -115,7 +114,9 @@ pub(super) fn prod_lhs_slots(
                     let v = match &t.value {
                         Pattern::Var(v) => SlotVal::Var(v.clone()),
                         other => SlotVal::Lit(
-                            Value::from_pattern(other).map(|x| x.show()).unwrap_or_default(),
+                            Value::from_pattern(other)
+                                .map(|x| x.show())
+                                .unwrap_or_default(),
                         ),
                     };
                     (t.slot.clone(), v)
@@ -124,12 +125,14 @@ pub(super) fn prod_lhs_slots(
             // `isa TYPE` adds the chunk-type's default slot tests
             // (`process-slots-specs`, chunk-spec.lisp:597), so the composed
             // condition prints them too (`isa response` -> `is-response t`).
-            if let Some(ct) = tests.iter().find(|t| t.slot == "ISA").and_then(|t| {
-                match &t.value {
+            if let Some(ct) = tests
+                .iter()
+                .find(|t| t.slot == "ISA")
+                .and_then(|t| match &t.value {
                     Pattern::Sym(s) => Some(s.clone()),
                     _ => None,
-                }
-            }) {
+                })
+            {
                 let mut defaults: Vec<(String, String)> = Vec::new();
                 if let Some(t) = types.iter().find(|t| t.name.eq_ignore_ascii_case(&ct)) {
                     defaults.extend(t.defaults.iter().map(|(slot, pat)| {
@@ -172,7 +175,9 @@ pub(super) fn prod_lhs_slots(
                     let sv = match v {
                         Pattern::Var(vv) => SlotVal::Var(vv.clone()),
                         other => SlotVal::Lit(
-                            Value::from_pattern(other).map(|x| x.show()).unwrap_or_default(),
+                            Value::from_pattern(other)
+                                .map(|x| x.show())
+                                .unwrap_or_default(),
                         ),
                     };
                     (s.clone(), sv)
@@ -185,12 +190,10 @@ pub(super) fn prod_lhs_slots(
     out
 }
 
-
 /// The printed value bound to an LHS variable, if bound.
 pub(super) fn instantiate_var(name: &str, b: &Bindings) -> Option<String> {
     b.get(name).map(|v| v.show())
 }
-
 
 /// A canonical production comparison rep (`production-comparison-rep`,
 /// `production-compilation.lisp:2044`): LHS/RHS tokens with their slots,
@@ -238,12 +241,9 @@ pub(super) fn canon_prod(
     (lhs, rhs)
 }
 
-
 /// The canonical token/slots of one RHS action (`None` for non-buffer ones).
 pub(super) fn canon_action(a: &RhsAction) -> Option<(String, Vec<(String, String)>)> {
-    let pair = |buffer: &str, slots: Vec<(String, String)>| {
-        Some((format!("{buffer}>"), slots))
-    };
+    let pair = |buffer: &str, slots: Vec<(String, String)>| Some((format!("{buffer}>"), slots));
     match a {
         RhsAction::Modify { buffer, slots } => pair(
             &format!("={buffer}"),
@@ -274,7 +274,6 @@ pub(super) fn canon_action(a: &RhsAction) -> Option<(String, Vec<(String, String
     }
 }
 
-
 pub(super) fn canon_pattern(p: &Pattern) -> String {
     match p {
         Pattern::Var(v) => format!("={v}"),
@@ -284,7 +283,6 @@ pub(super) fn canon_pattern(p: &Pattern) -> String {
             .unwrap_or_default(),
     }
 }
-
 
 /// The canonical rep of the composed (lhs, rhs) pair, matching [`canon_prod`].
 #[allow(clippy::type_complexity)]
@@ -298,10 +296,8 @@ pub(super) fn canon_composed(
     let mut cl: Vec<(String, Vec<(String, String)>)> = lhs
         .iter()
         .map(|(tok, slots)| {
-            let mut s: Vec<(String, String)> = slots
-                .iter()
-                .map(|(n, v)| (n.clone(), v.render()))
-                .collect();
+            let mut s: Vec<(String, String)> =
+                slots.iter().map(|(n, v)| (n.clone(), v.render())).collect();
             s.sort();
             (tok.clone(), s)
         })
@@ -318,7 +314,6 @@ pub(super) fn canon_composed(
     cr.sort_by(|a, b| a.0.cmp(&b.0));
     (cl, cr)
 }
-
 
 /// Instantiated RHS actions per buffer as `(op, buffer, slots, var)`:
 /// `=` modify, `*` modify-request, `+` request (var is the referenced
@@ -373,12 +368,9 @@ pub(super) fn prod_rhs_actions(
                 None,
             )),
             RhsAction::Request { buffer, spec } => match spec {
-                ChunkDesc::Named(n) if n.starts_with('=') => out.push((
-                    'r',
-                    buffer.clone(),
-                    Vec::new(),
-                    Some(n[1..].to_string()),
-                )),
+                ChunkDesc::Named(n) if n.starts_with('=') => {
+                    out.push(('r', buffer.clone(), Vec::new(), Some(n[1..].to_string())))
+                }
                 ChunkDesc::Spec { slots, rels, .. } => {
                     let mut s: Vec<(String, SlotVal)> = slots
                         .iter()
@@ -412,16 +404,13 @@ pub(super) fn prod_rhs_actions(
                 }
                 _ => {}
             },
-            RhsAction::Clear { buffer } => {
-                out.push(('-', buffer.clone(), Vec::new(), None))
-            }
+            RhsAction::Clear { buffer } => out.push(('-', buffer.clone(), Vec::new(), None)),
             _ => {}
         }
     }
     let _ = b;
     out
 }
-
 
 /// CL `remove-duplicates` ordering: drop earlier duplicates, keeping the
 /// later copy, preserving the original order of the kept elements.
@@ -434,7 +423,6 @@ pub(super) fn remove_dup_keep_last<T: PartialEq + Clone>(v: Vec<T>) -> Vec<T> {
     }
     out
 }
-
 
 /// Render a compiled production the way `print-production-text` does (the
 /// `:pct` trace block): `(P NAME`, the `"A & B"` documentation, one
@@ -471,7 +459,6 @@ pub(super) fn render_compiled(
     s
 }
 
-
 /// One composed-action slot line: a relative pseudo-slot (`"<op> <slot>"`,
 /// from a request's `> slot value`) prints the way `render_production` does
 /// (`    >  slot value`); everything else is `       slot value`.
@@ -486,7 +473,6 @@ pub(super) fn render_rhs_slot(n: &str, v: &str) -> String {
     format!("       {n} {v}\n")
 }
 
-
 /// `sort-conditions`'s key (`production-compilation.lisp:1905`): the
 /// condition token uppercased, or `"z"` so `!`-conditions sort last.
 pub(super) fn sort_token(token: &str) -> String {
@@ -496,7 +482,6 @@ pub(super) fn sort_token(token: &str) -> String {
         token.to_uppercase()
     }
 }
-
 
 /// `get-buffer-index` (`production-compilation.lisp:1441`): bitmask of how a
 /// production uses a buffer — LHS match +8, LHS query +16, RHS `=` +1,
@@ -527,7 +512,6 @@ pub(super) fn buffer_usage(p: &crate::model::Production, buffer: &str) -> u32 {
     u
 }
 
-
 /// `production-lhs-buffers` (`support/production-parsing.lisp:435`): the
 /// `=`-statement targets of the LHS, in source order (query buffers are not
 /// included).
@@ -540,7 +524,6 @@ pub(super) fn lhs_buffers(p: &crate::model::Production) -> Vec<String> {
         })
         .collect()
 }
-
 
 /// `production-rhs-buffers` (`support/production-parsing.lisp:441`): the
 /// RHS statement targets, in source order, deduplicated.
@@ -555,7 +538,6 @@ pub(super) fn rhs_buffers(p: &crate::model::Production) -> Vec<String> {
     }
     out
 }
-
 
 /// `R-B-C1` (`retrieval-compilation.lisp:223`): when the first production
 /// requests the buffer and the second does not harvest it, the second may
@@ -575,10 +557,13 @@ pub(super) fn r_b_c1(p2: &crate::model::Production, buffer: &str) -> bool {
     }
 }
 
-
 /// `R-B-C2` (`retrieval-compilation.lisp:237`): the queries in both
 /// productions must be the same.
-pub(super) fn r_b_c2(p1: &crate::model::Production, p2: &crate::model::Production, buffer: &str) -> bool {
+pub(super) fn r_b_c2(
+    p1: &crate::model::Production,
+    p2: &crate::model::Production,
+    buffer: &str,
+) -> bool {
     let q = |p: &crate::model::Production| -> Vec<(String, Pattern)> {
         p.lhs
             .iter()
@@ -595,7 +580,6 @@ pub(super) fn r_b_c2(p1: &crate::model::Production, p2: &crate::model::Productio
     all.dedup();
     q1.len() == q2.len() && q1.len() == all.len()
 }
-
 
 /// `retrieval-reason` (`retrieval-compilation.lisp:255`), the
 /// `failed-function = nil` branch (checks are not modelled).
@@ -617,7 +601,6 @@ pub(super) fn retrieval_reason(u1: u32, u2: u32) -> String {
     };
     s.to_string()
 }
-
 
 /// `perceptual-reason` (`perceptual-compilation.lisp:259`), `nil` branch.
 pub(super) fn perceptual_reason(u1: u32, u2: u32) -> String {
@@ -642,7 +625,6 @@ pub(super) fn perceptual_reason(u1: u32, u2: u32) -> String {
     };
     s.to_string()
 }
-
 
 /// `goal-reason` (`goal-compilation.lisp:670`), `nil` branch.
 pub(super) fn goal_reason(u1: u32, u2: u32) -> String {
@@ -669,7 +651,6 @@ pub(super) fn goal_reason(u1: u32, u2: u32) -> String {
     };
     s.to_string()
 }
-
 
 /// `imaginal-reason` (`imaginal-compilation.lisp:753`), `nil` branch.
 pub(super) fn imaginal_reason(u1: u32, u2: u32) -> String {
@@ -700,13 +681,12 @@ pub(super) fn imaginal_reason(u1: u32, u2: u32) -> String {
     s.to_string()
 }
 
-
 /// `motor-reason` (`motor-compilation.lisp:125`), `nil` branch (the default
 /// type's reason).
 pub(super) fn motor_reason(u1: u32, u2: u32) -> String {
     const TESTS: &[u32] = &[
-        8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31, 40, 41, 42, 44, 43, 45,
-        46, 47, 56, 57, 58, 60, 59, 61, 62, 63,
+        8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31, 40, 41, 42, 44, 43, 45, 46,
+        47, 56, 57, 58, 60, 59, 61, 62, 63,
     ];
     let s = if TESTS.contains(&u1) {
         "buffer tests in first production are not allowed."
@@ -722,7 +702,6 @@ pub(super) fn motor_reason(u1: u32, u2: u32) -> String {
     s.to_string()
 }
 
-
 /// The buffers an action targets.
 pub(super) fn rhs_buffer(a: &RhsAction) -> Option<String> {
     match a {
@@ -734,11 +713,13 @@ pub(super) fn rhs_buffer(a: &RhsAction) -> Option<String> {
     }
 }
 
-
 /// `compute-retain-buffers` (`production-compilation.lisp:2170`): with
 /// `:cia`+`:rir`, which productions keep their indirect retrieval request
 /// (rendered `+RETRIEVAL> =var`) rather than expanding it.
-pub(super) fn compute_retain_buffers(p1: &Production, p2: &Production) -> (Vec<String>, Vec<String>) {
+pub(super) fn compute_retain_buffers(
+    p1: &Production,
+    p2: &Production,
+) -> (Vec<String>, Vec<String>) {
     let mut retain1 = Vec::new();
     let mut retain2 = Vec::new();
     let mut buffers: Vec<String> = Vec::new();
@@ -769,7 +750,6 @@ pub(super) fn compute_retain_buffers(p1: &Production, p2: &Production) -> (Vec<S
     (retain1, retain2)
 }
 
-
 /// Render a raw `Sexp` the way Lisp prints it (for `!bind!` definitions).
 pub(super) fn sexp_lisp(e: &Sexp) -> String {
     match e {
@@ -783,7 +763,6 @@ pub(super) fn sexp_lisp(e: &Sexp) -> String {
         ),
     }
 }
-
 
 /// `produce-composition-representation`'s early return
 /// (`production-compilation.lisp:2258`): a non-retained indirect request
@@ -808,7 +787,6 @@ pub(super) fn indirect_safe_bind_reason(p: &Production, retain: &[String]) -> Op
     None
 }
 
-
 /// True for a buffer name (an RHS `=BUFFER` reference rather than a slot
 /// variable).
 pub(super) fn is_buffer_name(s: &str) -> bool {
@@ -825,7 +803,6 @@ pub(super) fn is_buffer_name(s: &str) -> bool {
     )
 }
 
-
 /// The module a buffer's events are traced under (`:module` of a scheduled
 /// buffer event).
 pub(super) fn buffer_module(buffer: &str) -> String {
@@ -836,7 +813,6 @@ pub(super) fn buffer_module(buffer: &str) -> String {
         other => other.to_string(),
     }
 }
-
 
 /// The buffer of an indirect action: an RHS `=`/`*`/`+` statement whose
 /// definition is a single chunk-spec variable (`+retrieval> =goal`).
@@ -855,7 +831,6 @@ pub(super) fn indirect_action_buffer_name(prod: &Production) -> Option<String> {
     }
     None
 }
-
 
 /// `indirect-action-variables` (`production-compilation.lisp:1218`): the
 /// variables named by single-variable requests. With `:rir` the retrieval
@@ -879,7 +854,6 @@ pub(super) fn indirect_action_vars(prod: &Production, ignore_retrieval: bool) ->
     out
 }
 
-
 /// `production-bind-variables` (`production-compilation.lisp:1229`): the
 /// variables bound by `!bind!`/`!safe-bind!`/`!mv-bind!`.
 pub(super) fn production_bind_vars(prod: &Production) -> Vec<String> {
@@ -892,15 +866,12 @@ pub(super) fn production_bind_vars(prod: &Production) -> Vec<String> {
     for a in &prod.rhs {
         match a {
             RhsAction::Bind { var, .. } => out.push(var.to_uppercase()),
-            RhsAction::MvBind { vars, .. } => {
-                out.extend(vars.iter().map(|v| v.to_uppercase()))
-            }
+            RhsAction::MvBind { vars, .. } => out.extend(vars.iter().map(|v| v.to_uppercase())),
             _ => {}
         }
     }
     out
 }
-
 
 /// Instantiate a pattern for `print-production-text`: bound variables show
 /// their value, unbound ones keep `=NAME`.
@@ -910,10 +881,11 @@ pub(super) fn show_pat(p: &Pattern, b: &Bindings) -> String {
             Some(val) => val.show(),
             None => format!("={v}"),
         },
-        other => Value::from_pattern(other).map(|v| v.show()).unwrap_or_default(),
+        other => Value::from_pattern(other)
+            .map(|v| v.show())
+            .unwrap_or_default(),
     }
 }
-
 
 /// Instantiate a raw RHS `!output!`/`!action!` argument.
 pub(super) fn show_sexp_arg(a: &Sexp, b: &Bindings) -> String {
@@ -942,7 +914,6 @@ pub(super) fn show_sexp_arg(a: &Sexp, b: &Bindings) -> String {
     }
 }
 
-
 pub(super) fn slot_op_str(op: SlotOp) -> &'static str {
     match op {
         SlotOp::Eq => "=",
@@ -954,11 +925,14 @@ pub(super) fn slot_op_str(op: SlotOp) -> &'static str {
     }
 }
 
-
 /// `print-production-text` with instantiations (`procedural.lisp:2441`):
 /// the `(P NAME …)` block shown by `:cst`. `isa` is the chunk type, not a
 /// slot, so it is not printed among the conditions.
-pub(super) fn render_production(prod: &Production, b: &Bindings, partials: &[PpmMismatch]) -> String {
+pub(super) fn render_production(
+    prod: &Production,
+    b: &Bindings,
+    partials: &[PpmMismatch],
+) -> String {
     let mut s = format!("(P {}\n", prod.name);
     for item in &prod.lhs {
         match item {
@@ -987,11 +961,7 @@ pub(super) fn render_production(prod: &Production, b: &Bindings, partials: &[Ppm
                             s.push_str(&format!("       {} {val}\n", t.slot));
                         }
                     } else {
-                        s.push_str(&format!(
-                            "    {:<2} {} {val}\n",
-                            slot_op_str(t.op),
-                            t.slot
-                        ));
+                        s.push_str(&format!("    {:<2} {} {val}\n", slot_op_str(t.op), t.slot));
                     }
                 }
             }
@@ -1115,7 +1085,6 @@ pub(super) fn render_production(prod: &Production, b: &Bindings, partials: &[Ppm
     s
 }
 
-
 /// Failure latency uses the threshold: `round(lf * e^(-le*rt))`.
 pub(super) fn failure_wait(cfg: &Config, rt: f32) -> i64 {
     if cfg.esc {
@@ -1125,14 +1094,12 @@ pub(super) fn failure_wait(cfg: &Config, rt: f32) -> i64 {
     }
 }
 
-
 /// `round(lf_ms * e^(-le*A))`, all single-float like the Lisp
 /// (`compute-activation-latency`; `:lf` is stored as integer ms).
 /// Rounds halves to even, as CL `round` does (units table ROUND rows).
 pub(super) fn latency(lf_ms: i64, le: f32, act: f32) -> i64 {
     lisp_round((lf_ms as f32) * (-le * act).exp())
 }
-
 
 /// `bold_partial_gammapdf` (`other-files/bold.lisp:464`): `(t/b)^a · e^(−t/b)`,
 /// 0 for a non-positive `t` (a demand that starts in the future).
@@ -1144,7 +1111,6 @@ pub(super) fn bold_pdf(t: f64, a: f64, b: f64) -> f64 {
     scale.powf(a) * (-scale).exp()
 }
 
-
 /// `area-under-bold-subsegment` (`other-files/bold.lisp:475`): the trapezoidal
 /// area under the gamma PDF over `[t1, t2]`.
 pub(super) fn area_under_subsegment(time: f64, t1: f64, t2: f64, a: f64, b: f64) -> f64 {
@@ -1154,7 +1120,6 @@ pub(super) fn area_under_subsegment(time: f64, t1: f64, t2: f64, a: f64, b: f64)
         * (t2 - t1)
         * 0.25
 }
-
 
 /// `area-under-bold-curve` (`other-files/bold.lisp:482`): split `[t1, t2]`
 /// into blocks no wider than `inc` and sum their trapezoids.
@@ -1176,7 +1141,6 @@ pub(super) fn area_under_curve(time: f64, t1: f64, t2: f64, inc: f64, a: f64, b:
     }
     sum + area_under_subsegment(time, t1, y, a, b)
 }
-
 
 /// `compute-bold-values`/`sum-bold-demands` (`other-files/bold.lisp:487`): the
 /// summed demand for `time`, dropping demand intervals older than

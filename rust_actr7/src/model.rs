@@ -435,7 +435,13 @@ fn is_action_head(s: &Sexp) -> bool {
 
 /// ACT-R `!cmd!` names (`command-symbol-p`, production-parsing.lisp:1879).
 const BANG_COMMANDS: &[&str] = &[
-    "EVAL", "SAFE-EVAL", "BIND", "SAFE-BIND", "MV-BIND", "STOP", "OUTPUT",
+    "EVAL",
+    "SAFE-EVAL",
+    "BIND",
+    "SAFE-BIND",
+    "MV-BIND",
+    "STOP",
+    "OUTPUT",
 ];
 
 /// Buffers that exist in every model: the module defaults plus the ones the
@@ -556,7 +562,9 @@ fn chunk_spec_warning(specs: &[Sexp]) -> Option<String> {
             }
         }
         if i >= specs.len() {
-            return Some("Invalid specs in call to define-chunk-spec - not enough arguments".into());
+            return Some(
+                "Invalid specs in call to define-chunk-spec - not enough arguments".into(),
+            );
         }
         match &specs[i] {
             Sexp::Sym(name) => {
@@ -564,9 +572,7 @@ fn chunk_spec_warning(specs: &[Sexp]) -> Option<String> {
                     return Some("Cannot use nil as a slot name.".into());
                 }
                 if name.starts_with(':') && modifier != "=" {
-                    return Some(
-                        "Request parameters may not use a modifier other than =.".into(),
-                    );
+                    return Some("Request parameters may not use a modifier other than =.".into());
                 }
                 let valid = is_var_sym(name)
                     || name.starts_with(':')
@@ -591,7 +597,9 @@ fn chunk_spec_warning(specs: &[Sexp]) -> Option<String> {
         }
         i += 1;
         if i >= specs.len() {
-            return Some("Invalid specs in call to define-chunk-spec - not enough arguments".into());
+            return Some(
+                "Invalid specs in call to define-chunk-spec - not enough arguments".into(),
+            );
         }
         i += 1;
     }
@@ -763,11 +771,7 @@ fn circular_rhs(rhs: &[Sexp], extra: &[String]) -> bool {
             _ => {}
         }
     }
-    fn dfs(
-        node: &str,
-        adj: &HashMap<String, Vec<String>>,
-        visiting: &mut Vec<String>,
-    ) -> bool {
+    fn dfs(node: &str, adj: &HashMap<String, Vec<String>>, visiting: &mut Vec<String>) -> bool {
         if visiting.iter().any(|x| x == node) {
             return true;
         }
@@ -783,9 +787,7 @@ fn circular_rhs(rhs: &[Sexp], extra: &[String]) -> bool {
         false
     }
     let nodes: Vec<String> = adj.keys().cloned().collect();
-    nodes
-        .iter()
-        .any(|n| dfs(n, &adj, &mut Vec::new()))
+    nodes.iter().any(|n| dfs(n, &adj, &mut Vec::new()))
 }
 
 /// Build the rejection block (`bad-production-exit`, production-parsing.lisp:397).
@@ -830,8 +832,7 @@ fn is_undefined_chunk_value(t: &str, known: &[String]) -> bool {
     if t.starts_with(':') || t.starts_with('=') {
         return false;
     }
-    if t
-        .chars()
+    if t.chars()
         .next()
         .map(|c| c.is_ascii_digit())
         .unwrap_or(false)
@@ -1279,7 +1280,11 @@ fn parse_lhs_bang(head: &str, body: &[Sexp], items: &mut Vec<LhsItem>) -> Result
             let vars = match body.first() {
                 Some(Sexp::List(v)) => v
                     .iter()
-                    .filter_map(|s| s.as_sym().and_then(|x| x.strip_prefix('=')).map(str::to_string))
+                    .filter_map(|s| {
+                        s.as_sym()
+                            .and_then(|x| x.strip_prefix('='))
+                            .map(str::to_string)
+                    })
                     .collect(),
                 _ => return structural("!mv-bind! needs a (=a =b) list"),
             };
@@ -1358,9 +1363,7 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
                         .first()
                         .and_then(|s| s.as_sym())
                         .and_then(|v| v.strip_prefix('='))
-                        .ok_or_else(|| {
-                            LoadError::Structural("!bind! needs a =variable".into())
-                        })?
+                        .ok_or_else(|| LoadError::Structural("!bind! needs a =variable".into()))?
                         .to_string();
                     let value = body.get(1).cloned().ok_or_else(|| {
                         LoadError::Structural("!bind! needs an expression".into())
@@ -1372,7 +1375,9 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
                         Some(Sexp::List(v)) => v
                             .iter()
                             .filter_map(|s| {
-                                s.as_sym().and_then(|x| x.strip_prefix('=')).map(str::to_string)
+                                s.as_sym()
+                                    .and_then(|x| x.strip_prefix('='))
+                                    .map(str::to_string)
                             })
                             .collect(),
                         _ => return structural("!mv-bind! needs a (=a =b) list"),
@@ -1397,8 +1402,7 @@ fn parse_rhs(forms: &[Sexp]) -> Result<Vec<RhsAction>, LoadError> {
 
 /// Parse a production from text (used for runtime-compiled productions).
 pub fn parse_production_text(text: &str) -> Result<Production, LoadError> {
-    let forms = crate::sexpr::parse_all(text)
-        .map_err(|e| LoadError::Structural(e.to_string()))?;
+    let forms = crate::sexpr::parse_all(text).map_err(|e| LoadError::Structural(e.to_string()))?;
     match forms.first() {
         Some(f) => parse_production(f, &[]),
         None => structural("empty production text"),
@@ -1475,9 +1479,7 @@ fn parse_chunk_type(form: &Sexp) -> Result<ChunkType, LoadError> {
                                 out.push(t.clone());
                                 defaults.push((t.clone(), Pattern::from_sexp(default)?));
                             }
-                            got => {
-                                return structural(format!("bad chunk-type slot: {got:?}"))
-                            }
+                            got => return structural(format!("bad chunk-type slot: {got:?}")),
                         },
                         got => {
                             return structural(format!("chunk-type slot must be a symbol: {got:?}"))
@@ -1522,13 +1524,11 @@ fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
             }
             // Named chunk without `isa` (`(g value 3 color red)`): an odd
             // number of forms is a name followed by slot/value pairs.
-            [Sexp::Sym(name), rest @ ..] if !rest.is_empty() && rest.len() % 2 == 0 => {
-                Ok(Chunk {
-                    name: name.clone(),
-                    ctype: None,
-                    slots: parse_pairs_plain(rest)?,
-                })
-            }
+            [Sexp::Sym(name), rest @ ..] if !rest.is_empty() && rest.len() % 2 == 0 => Ok(Chunk {
+                name: name.clone(),
+                ctype: None,
+                slots: parse_pairs_plain(rest)?,
+            }),
             got => structural(format!("bad add-dm entry: {got:?}")),
         },
         got => structural(format!("bad add-dm entry: {got:?}")),
@@ -1578,10 +1578,7 @@ fn define_chunk_table_entry(e: &Sexp, model: &mut Model) -> Result<String, LoadE
 /// Recognize `(car (define-chunks DEF...))` (the `goal-focus-fct` idiom):
 /// define the chunks and return the first name. `Some(None)` means the form
 /// matched but no chunk could be defined.
-fn car_define_chunks(
-    arg: &Sexp,
-    model: &mut Model,
-) -> Result<Option<Option<String>>, LoadError> {
+fn car_define_chunks(arg: &Sexp, model: &mut Model) -> Result<Option<Option<String>>, LoadError> {
     let items = match arg {
         Sexp::List(v) => v,
         _ => return Ok(None),
@@ -1645,7 +1642,11 @@ fn subst_bare(e: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Sexp 
     }
 }
 
-fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Result<Model, LoadError> {    let body = match form {
+fn parse_model(
+    form: &Sexp,
+    defs: &std::collections::HashMap<String, Sexp>,
+) -> Result<Model, LoadError> {
+    let body = match form {
         Sexp::List(items) => match items.as_slice() {
             [Sexp::Sym(h), Sexp::Sym(name), rest @ ..] if h == "DEFINE-MODEL" => {
                 (name.clone(), rest)
@@ -1728,13 +1729,14 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                 let mut anon = 0u64;
                 for e in &items[1..] {
                     let named_or_typed = match e {
-                        Sexp::List(p) => matches!(p.as_slice(), [Sexp::Sym(_)])
-                            || matches!(
-                                p.as_slice(),
-                                [Sexp::Sym(_), Sexp::Sym(isa), Sexp::Sym(_), ..] if isa == "ISA"
-                            )
-                            || (p.len() % 2 == 1
-                                && matches!(p.as_slice(), [Sexp::Sym(_), ..])),
+                        Sexp::List(p) => {
+                            matches!(p.as_slice(), [Sexp::Sym(_)])
+                                || matches!(
+                                    p.as_slice(),
+                                    [Sexp::Sym(_), Sexp::Sym(isa), Sexp::Sym(_), ..] if isa == "ISA"
+                                )
+                                || (p.len() % 2 == 1 && matches!(p.as_slice(), [Sexp::Sym(_), ..]))
+                        }
                         _ => false,
                     };
                     if named_or_typed {
@@ -1796,7 +1798,9 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                             p.get(1).and_then(|x| x.as_sym()),
                             p.get(2).and_then(sexp_f64),
                         ) {
-                            model.similarities.push((a.to_string(), b.to_string(), v as f32));
+                            model
+                                .similarities
+                                .push((a.to_string(), b.to_string(), v as f32));
                         }
                     }
                 }
@@ -1811,7 +1815,9 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                             p.get(1).and_then(sexp_f64),
                         ) {
                             let creation = p.get(2).and_then(sexp_f64);
-                            model.base_levels.push((name.to_string(), level as f32, creation));
+                            model
+                                .base_levels
+                                .push((name.to_string(), level as f32, creation));
                         }
                     }
                 }
@@ -1832,7 +1838,9 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                     items.get(1).and_then(|x| x.as_sym()),
                     items.get(2).and_then(|x| x.as_sym()),
                 ) {
-                    model.buffer_decls.push((b.to_uppercase(), t.to_uppercase()));
+                    model
+                        .buffer_decls
+                        .push((b.to_uppercase(), t.to_uppercase()));
                 }
             }
             // `(set-visloc-default <slot> <value> ...)`: default constraints
@@ -1841,7 +1849,9 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                 let mut i = 1;
                 while i + 1 < items.len() {
                     if let Some(k) = items[i].as_sym() {
-                        model.visloc_default.push((k.to_uppercase(), items[i + 1].clone()));
+                        model
+                            .visloc_default
+                            .push((k.to_uppercase(), items[i + 1].clone()));
                     }
                     i += 2;
                 }
@@ -1864,9 +1874,10 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
             // `(schedule-event <secs> "command" :params (...) ...)`:
             // schedule a task command relative to model time 0.
             "SCHEDULE-EVENT" | "SCHEDULE-EVENT-RELATIVE" => {
-                let at = items.get(1).and_then(sexp_f64).ok_or_else(|| {
-                    LoadError::Structural("schedule-event needs a time".into())
-                })?;
+                let at = items
+                    .get(1)
+                    .and_then(sexp_f64)
+                    .ok_or_else(|| LoadError::Structural("schedule-event needs a time".into()))?;
                 let command = items
                     .get(2)
                     .and_then(|x| match x {
@@ -1919,12 +1930,9 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                                 model
                                     .reset_warnings
                                     .extend(reorder_warning(&p.name, rhs, &extra));
-                                model.reset_warnings.extend(undefined_chunk_warnings(
-                                    lhs,
-                                    rhs,
-                                    &mut known,
-                                    &extra,
-                                ));
+                                model
+                                    .reset_warnings
+                                    .extend(undefined_chunk_warnings(lhs, rhs, &mut known, &extra));
                             }
                         }
                         created_chunks = known
@@ -1952,9 +1960,7 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                         model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
                     match parse_production(&Sexp::List(form), &extra) {
                         Ok(p) => model.productions.push(p),
-                        Err(LoadError::RejectedProduction(w)) => {
-                            model.reset_warnings.extend(w)
-                        }
+                        Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
                         Err(e) => return Err(e),
                     }
                 }
@@ -2063,7 +2069,11 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
     }
     // Apply chunk-type default slot values to chunks that don't set them.
     let types = model.chunk_types.clone();
-    for c in model.chunks.iter_mut().chain(model.defined_chunks.iter_mut()) {
+    for c in model
+        .chunks
+        .iter_mut()
+        .chain(model.defined_chunks.iter_mut())
+    {
         if let Some(t) = &c.ctype {
             if let Some(ct) = types.iter().find(|ct| &ct.name == t) {
                 for (s, p) in &ct.defaults {

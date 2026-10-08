@@ -1,10 +1,9 @@
 //! Task drivers (output, goal-focus, zz/al drivers).
-use super::*;
-use super::compilation::{show_pat};
+use super::compilation::show_pat;
 use super::dm::{al_history, al_needed_refs, bl_equation, exp_coerced, log_coerced};
-use super::rhs::{new_chunk};
+use super::rhs::new_chunk;
+use super::*;
 impl Engine {
-
     /// All trace emitted so far, newline-terminated (empty if none).
     pub fn output(&self) -> String {
         if self.out_lines.is_empty() {
@@ -171,8 +170,7 @@ impl Engine {
                 .find(|(k, t2, _)| k == "UNCLICKED" && *t2 >= t);
             if let Some((_, t2, pos)) = release {
                 let delta = (*t2 - t) as f64 / 1000.0;
-                self.out_lines
-                    .push(format!("  {key} {pos} {delta:.3}"));
+                self.out_lines.push(format!("  {key} {pos} {delta:.3}"));
             }
         }
     }
@@ -244,16 +242,29 @@ impl Engine {
     /// The stimulus word lists (`al-fan-study.lisp:220`), before permutation.
     pub(super) fn al_people_list() -> [&'static str; 16] {
         [
-            "hippie", "guard", "earl", "giant", "captain", "debutante", "fireman",
-            "lawyer", "wizard", "clerk", "writer", "doctor", "teacher", "boxer",
-            "queen", "singer",
+            "hippie",
+            "guard",
+            "earl",
+            "giant",
+            "captain",
+            "debutante",
+            "fireman",
+            "lawyer",
+            "wizard",
+            "clerk",
+            "writer",
+            "doctor",
+            "teacher",
+            "boxer",
+            "queen",
+            "singer",
         ]
     }
 
     pub(super) fn al_places_list() -> [&'static str; 16] {
         [
-            "beach", "castle", "dungeon", "forest", "park", "church", "cave", "bank",
-            "store", "tower", "lake", "stadium", "casino", "school", "diner", "office",
+            "beach", "castle", "dungeon", "forest", "park", "church", "cave", "bank", "store",
+            "tower", "lake", "stadium", "casino", "school", "diner", "office",
         ]
     }
 
@@ -272,32 +283,68 @@ impl Engine {
         self.al_people = self.al_permute(&people);
         self.al_places = self.al_permute(&places);
         let s_idx: [(usize, usize, i64, i64); 26] = [
-            (0, 0, 1, 1), (1, 1, 1, 1), (2, 2, 1, 1),
-            (3, 3, 2, 1), (4, 4, 2, 1), (5, 5, 2, 1),
-            (6, 6, 3, 1), (7, 7, 3, 1), (8, 8, 3, 1),
-            (9, 9, 1, 2), (10, 10, 1, 2), (11, 11, 1, 2),
-            (12, 12, 1, 3), (13, 13, 1, 3), (14, 14, 1, 3),
-            (4, 10, 2, 2), (15, 15, 2, 2),
-            (6, 9, 3, 2), (7, 15, 3, 2), (8, 11, 3, 2),
-            (3, 12, 2, 3), (15, 13, 2, 3), (5, 14, 2, 3),
-            (6, 12, 3, 3), (7, 13, 3, 3), (8, 14, 3, 3),
+            (0, 0, 1, 1),
+            (1, 1, 1, 1),
+            (2, 2, 1, 1),
+            (3, 3, 2, 1),
+            (4, 4, 2, 1),
+            (5, 5, 2, 1),
+            (6, 6, 3, 1),
+            (7, 7, 3, 1),
+            (8, 8, 3, 1),
+            (9, 9, 1, 2),
+            (10, 10, 1, 2),
+            (11, 11, 1, 2),
+            (12, 12, 1, 3),
+            (13, 13, 1, 3),
+            (14, 14, 1, 3),
+            (4, 10, 2, 2),
+            (15, 15, 2, 2),
+            (6, 9, 3, 2),
+            (7, 15, 3, 2),
+            (8, 11, 3, 2),
+            (3, 12, 2, 3),
+            (15, 13, 2, 3),
+            (5, 14, 2, 3),
+            (6, 12, 3, 3),
+            (7, 13, 3, 3),
+            (8, 14, 3, 3),
         ];
         let t_idx: [(usize, usize, i64, i64); 9] = [
-            (0, 0, 1, 1), (9, 9, 1, 2), (12, 12, 1, 3),
-            (3, 3, 2, 1), (4, 10, 2, 2), (15, 13, 2, 3),
-            (6, 6, 3, 1), (7, 15, 3, 2), (8, 14, 3, 3),
+            (0, 0, 1, 1),
+            (9, 9, 1, 2),
+            (12, 12, 1, 3),
+            (3, 3, 2, 1),
+            (4, 10, 2, 2),
+            (15, 13, 2, 3),
+            (6, 6, 3, 1),
+            (7, 15, 3, 2),
+            (8, 14, 3, 3),
         ];
         let f_idx: [(usize, usize, i64, i64); 18] = [
-            (0, 3, 1, 1), (9, 10, 1, 2), (12, 13, 1, 3),
-            (3, 0, 2, 1), (4, 9, 2, 2), (15, 12, 2, 3),
-            (6, 0, 3, 1), (7, 9, 3, 2), (8, 12, 3, 3),
-            (0, 6, 1, 1), (9, 15, 1, 2), (12, 14, 1, 3),
-            (3, 6, 2, 1), (4, 15, 2, 2), (15, 14, 2, 3),
-            (6, 3, 3, 1), (7, 10, 3, 2), (8, 13, 3, 3),
+            (0, 3, 1, 1),
+            (9, 10, 1, 2),
+            (12, 13, 1, 3),
+            (3, 0, 2, 1),
+            (4, 9, 2, 2),
+            (15, 12, 2, 3),
+            (6, 0, 3, 1),
+            (7, 9, 3, 2),
+            (8, 12, 3, 3),
+            (0, 6, 1, 1),
+            (9, 15, 1, 2),
+            (12, 14, 1, 3),
+            (3, 6, 2, 1),
+            (4, 15, 2, 2),
+            (15, 14, 2, 3),
+            (6, 3, 3, 1),
+            (7, 10, 3, 2),
+            (8, 13, 3, 3),
         ];
         let build = |idx: &[(usize, usize, i64, i64)],
                      people: &[String],
-                     places: &[String]| -> Vec<(String, String, i64, i64)> {
+                     places: &[String]|
+         -> Vec<(String, String, i64, i64)> {
             idx.iter()
                 .map(|(a, b, pf, lf)| (people[*a].clone(), places[*b].clone(), *pf, *lf))
                 .collect()
@@ -337,7 +384,11 @@ impl Engine {
 
     pub(super) fn al_add_meaning(&mut self, word: &str) {
         let name = word.to_uppercase();
-        if self.dm.iter().any(|c| c.name.as_deref() == Some(name.as_str())) {
+        if self
+            .dm
+            .iter()
+            .any(|c| c.name.as_deref() == Some(name.as_str()))
+        {
             return;
         }
         let inst = ChunkInst {
@@ -807,7 +858,11 @@ impl Engine {
             items.push((p.clone(), pl.clone(), *pf as usize, *lf as usize, false));
         }
         for (person, place, pf, lfan, is_target) in &items {
-            if let Some(c) = self.buffers.get_mut("IMAGINAL").and_then(|b| b.chunk.as_mut()) {
+            if let Some(c) = self
+                .buffers
+                .get_mut("IMAGINAL")
+                .and_then(|b| b.chunk.as_mut())
+            {
                 for (s, v) in c.slots.iter_mut() {
                     if s.as_str() == "ARG1" {
                         *v = Value::Sym(person.to_uppercase());
@@ -876,11 +931,7 @@ impl Engine {
     /// (`dm-commands.lisp:738`): base-level + spreading (no partial matching,
     /// `:ans` is nil).
     pub(super) fn al_sdp_activation(&mut self, name: &str) -> f64 {
-        let Some(idx) = self
-            .dm
-            .iter()
-            .position(|c| c.name.as_deref() == Some(name))
-        else {
+        let Some(idx) = self.dm.iter().position(|c| c.name.as_deref() == Some(name)) else {
             return f64::MIN;
         };
         let base = match self.cfg.bll {
@@ -914,8 +965,8 @@ impl Engine {
     /// RMSD against the experimental data plus the TARGETS/FOILS table.
     pub(super) fn al_output_person_location(&mut self, d: &[f64]) {
         let data = [
-            1.11, 1.17, 1.22, 1.17, 1.20, 1.22, 1.15, 1.23, 1.36, 1.20, 1.22, 1.26, 1.25,
-            1.36, 1.29, 1.26, 1.47, 1.47,
+            1.11, 1.17, 1.22, 1.17, 1.20, 1.22, 1.15, 1.23, 1.36, 1.20, 1.22, 1.26, 1.25, 1.36,
+            1.29, 1.26, 1.47, 1.47,
         ];
         let n = d.len() as f64;
         let sum_r: f64 = d.iter().sum();
@@ -928,10 +979,8 @@ impl Engine {
         let corr = (sum_rd / n - avg_r * avg_d)
             / ((sum_r2 / n - avg_r * avg_r).sqrt() * (sum_d2 / n - avg_d * avg_d).sqrt());
         let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / n).sqrt();
-        self.out_lines
-            .push(format!("CORRELATION: {corr:6.3}"));
-        self.out_lines
-            .push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
         self.out_lines.push("TARGETS:".to_string());
         self.out_lines
             .push("                         Person fan".to_string());
@@ -1002,8 +1051,7 @@ impl Engine {
                         self.cfg.zz_two_exec = executions;
                         self.cfg.zz_query = query.to_uppercase();
                         self.reset()?;
-                        self.out_lines
-                            .push("########################".to_string());
+                        self.out_lines.push("########################".to_string());
                         self.out_lines.push(format!(
                             "\"{} hand {} processors {} executions query {}\"",
                             hand.to_uppercase(),
@@ -1011,8 +1059,7 @@ impl Engine {
                             if executions { 2 } else { 1 },
                             query.to_uppercase()
                         ));
-                        self.out_lines
-                            .push("########################".to_string());
+                        self.out_lines.push("########################".to_string());
                         self.zz_goal_focus(
                             "GOAL",
                             vec![
@@ -1071,8 +1118,11 @@ impl Engine {
         self.zz_run_test_defaults();
         self.cfg.zz_kct_ms = 25;
         self.cfg.zz_krt_ms = 25;
-        self.zz_data
-            .push(("TEST".to_string(), 0, "Auto release key & mouse when moving hand".to_string()));
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Auto release key & mouse when moving hand".to_string(),
+        ));
         self.reset()?;
         self.zz_goal_focus(
             "GOAL",
@@ -1090,8 +1140,11 @@ impl Engine {
     pub(super) fn zz_test4(&mut self) -> Result<(), EngineError> {
         self.zz_run_test_defaults();
         self.cfg.zz_psd = Some(0.2);
-        self.zz_data
-            .push(("TEST".to_string(), 0, "Some various key pressing".to_string()));
+        self.zz_data.push((
+            "TEST".to_string(),
+            0,
+            "Some various key pressing".to_string(),
+        ));
         self.reset()?;
         self.zz_goal_focus(
             "GOAL",
@@ -1239,7 +1292,8 @@ impl Engine {
 
     /// `(buffer-status manual-left manual-right)` (`motor-extension.lisp:1306`,
     /// `generic-state-query` at 1337).
-    pub(super) fn zz_buffer_status(&mut self) {        for (name, hand) in [("MANUAL-LEFT", 0usize), ("MANUAL-RIGHT", 1)] {
+    pub(super) fn zz_buffer_status(&mut self) {
+        for (name, hand) in [("MANUAL-LEFT", 0usize), ("MANUAL-RIGHT", 1)] {
             let h = &self.zz_hands[hand];
             let proc = self.man_proc[hand];
             let exec = self.man_exec[hand];
@@ -1309,7 +1363,8 @@ impl Engine {
                 .enumerate()
             {
                 let (x, y) = self.zz_finger_loc(hand, f);
-                self.out_lines.push(format!("  {hname} {fname}: #({x} {y})"));
+                self.out_lines
+                    .push(format!("  {hname} {fname}: #({x} {y})"));
             }
         }
     }
@@ -1327,7 +1382,11 @@ impl Engine {
                         if t.slot.eq_ignore_ascii_case("ISA") {
                             continue;
                         }
-                        lines.push(format!("       {} {}", t.slot, show_pat(&t.value, bindings)));
+                        lines.push(format!(
+                            "       {} {}",
+                            t.slot,
+                            show_pat(&t.value, bindings)
+                        ));
                     }
                 }
                 LhsItem::Query { buffer, queries } => {

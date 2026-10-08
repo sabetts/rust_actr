@@ -160,7 +160,14 @@ pub fn run_model(
     run_time: f64,
     device: &DeviceSetup,
 ) -> Result<String, EngineError> {
-    run_model_with(actr_root, model, seed, run_time, device, trace::MODULE_WIDTH)
+    run_model_with(
+        actr_root,
+        model,
+        seed,
+        run_time,
+        device,
+        trace::MODULE_WIDTH,
+    )
 }
 
 /// Like [`run_model`], but with an explicit trace module-column width.
@@ -337,12 +344,9 @@ pub fn run_model_steps(
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
-            Step::ModifyVisicon {
-                at_ms,
-                name,
-                x,
-                y,
-            } => eng.schedule_modify_visicon(*at_ms, name, *x, *y),
+            Step::ModifyVisicon { at_ms, name, x, y } => {
+                eng.schedule_modify_visicon(*at_ms, name, *x, *y)
+            }
         }
     }
     Ok(eng.output())
