@@ -245,7 +245,8 @@ impl Engine {
             height: ht,
             extra,
             tstamp_ms: self.time_ms,
-            attended: false,
+            new_p: true,
+            finst_ms: None,
         });
         self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
     }

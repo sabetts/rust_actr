@@ -289,6 +289,10 @@ struct Config {
     /// Retrieval finsts: how many / how long (`:recently-retrieved`).
     num_finsts: usize,
     finst_span_ms: i64,
+    /// Visual finsts (`:visual-num-finsts` / `:visual-finst-span`,
+    /// `vision.lisp`): how many attended features are remembered, and how long.
+    visual_num_finsts: usize,
+    visual_finst_span_ms: i64,
     dat_ms: i64,
     attention_ms: i64,
     /// `:unstuff-visual-location` (`vision.lisp:3499`): `None` disables the
@@ -494,7 +498,15 @@ struct Feature {
     /// Additional slots (`prompt` etc.) preserved in the visual-location.
     extra: Vec<(String, Value)>,
     tstamp_ms: i64,
-    attended: bool,
+    /// `chunk-visual-new-p`: `NEW` until the feature is attended
+    /// (`add-finst` clears it, `vision.lisp:2297`). The default-spec's
+    /// `:attended new` (`vision.lisp:3178`) selects on this.
+    new_p: bool,
+    /// The feature's finst timestamp (`finst-lst` entry, `vision.lisp:2317`):
+    /// `Some` while recently attended. `:attended t` iff `Some`; `:attended
+    /// nil` iff `None`. Capped by `:visual-num-finsts` (oldest evicted), which
+    /// is what re-exposes Sperling's auto-stuffed location to a later find.
+    finst_ms: Option<i64>,
 }
 
 /// Virtual keyboard entry: hand geometry for prep/fitss math.
@@ -869,6 +881,9 @@ impl Config {
             blend_all_slots: sgp_bool(&m.params, ":BLEND-ALL-SLOTS"),
             num_finsts: sgp_num(&m.params, ":DECLARATIVE-NUM-FINSTS", 4.0)? as usize,
             finst_span_ms: (sgp_num(&m.params, ":DECLARATIVE-FINST-SPAN", 3.0)? * 1000.0).round()
+                as i64,
+            visual_num_finsts: sgp_num(&m.params, ":VISUAL-NUM-FINSTS", 4.0)? as usize,
+            visual_finst_span_ms: (sgp_num(&m.params, ":VISUAL-FINST-SPAN", 3.0)? * 1000.0).round()
                 as i64,
             bll,
             ol,

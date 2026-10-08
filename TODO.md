@@ -64,20 +64,22 @@ Enable a passing spec by appending its name to
 
 ## Phase A — close the frontier (2 known failures)
 
-- [ ] **A1. Sperling vision finst model** → enable
-      `tutorial-unit3-sperling-trial-trace`. **(IN PROGRESS)**
-  - [ ] Add a vision finst list + `NEW` state on visicon feature creation.
-  - [ ] `:attended` semantics: `:attended nil` matches `feat-attended ∈ {NEW, nil}`;
+- [x] **A1. Sperling vision finst model** → enable
+      `tutorial-unit3-sperling-trial-trace`.
+  - [x] Add a vision finst list + `NEW` state on visicon feature creation.
+  - [x] `:attended` semantics: `:attended nil` matches `feat-attended ∈ {NEW, nil}`;
         `:attended new` matches `NEW`; `t`/`requested` excluded
         (`vision.lisp:2269`, `test-attended` `vision.lisp:2006`).
-  - [ ] `add-finst` on `encoding_complete`; expire by `:visual-finst-span`
-        (`:declarative-finst-span` for DM is already modelled).
-  - [ ] Expected effect: 5th find `VISUAL-LOCATION7` → `VISUAL-LOCATION1`, and the
-        report phase moves `1.076` → `1.110`.
-  - [ ] Enable the spec; commit; GOTCHA.
+  - [x] `add-finst` on `encoding_complete`; cap at `:visual-num-finsts`
+        (evict oldest) + expire by `:visual-finst-span`.
+  - [x] Report phase: drop the stale window-clear re-encode when a move-attention
+        starts (proc-display lock deferral). Result: 5th find `VISUAL-LOCATION1`,
+        report at `1.110`. GOTCHA #191.
+  - [x] Enable the spec (59 specs); commit.
   - Refs: `engine/perception.rs` (`find_location`, `encoding_complete`,
-    `loc_matches`/`loc_rel_matches`, `Feature`), `engine.rs` (`Feature` struct),
-    `actr7.x/core-modules/vision.lisp:2006,2269,2462`.
+    `add_visual_finst`, `check_visual_finsts`, `loc_matches`), `engine.rs`
+    (`Feature`, `Config`), `engine/events.rs` (`MoveAttention`, `UnstuffVl`),
+    `actr7.x/core-modules/vision.lisp:2006,2269,2282,2247,2929,1542`.
 
 - [ ] **A2. paired-learning utility / selection** → enable `paired-learning`.
   - [ ] First diff: `production1 :utility 0.121` (ref) vs `-0.025` (engine) after

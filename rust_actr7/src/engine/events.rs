@@ -311,14 +311,9 @@ impl Engine {
                     if show {
                         self.emit("VISION", "ERASE-BUFFER VISUAL-LOCATION".to_string());
                     }
-                    // The object is no longer attended once its auto-stuffed
-                    // location is unstuffed (`:attended` reflects the vision
-                    // module's current attention).
-                    if let Some(&idx) = self.vl_copies.get(&copy) {
-                        if idx < self.features.len() {
-                            self.features[idx].attended = false;
-                        }
-                    }
+                    // Unstuffing does NOT clear the feature's finst
+                    // (`remove-finst` is never called on unstuff); the finst
+                    // cap/span is what re-exposes it (Sperling).
                     self.buffer_mut("VISUAL-LOCATION").chunk = None;
                     self.buffer_mut("VISUAL-LOCATION").failed = false;
                     self.changed();
@@ -757,6 +752,21 @@ impl Engine {
                 }
                 self.last_attention = Some(loc.clone());
                 self.visual_busy = true;
+                // A new attention shift supersedes any in-flight
+                // `update-attended-loc` re-encode: ACT-R blocks the window
+                // clear's `proc-display` behind the vision lock, so the
+                // re-encode never runs and the module stays busy until this
+                // shift completes (Sperling: the 0.941 clear vs the 0.975
+                // move-attention, freeing vision at 1.060).
+                self.queue.retain(|q| {
+                    !matches!(
+                        q.event,
+                        Event::EncodingComplete {
+                            requested: false,
+                            ..
+                        }
+                    )
+                });
                 if self.cfg.emma {
                     // EMMA replaces the fixed-latency encoding with its
                     // saccade machinery (`emma-attention-hook`).

@@ -41,6 +41,7 @@ tutorial-unit1-count-trace
 tutorial-unit1-semantic-g1-trace
 tutorial-unit1-tutor-model-partial-trace
 tutorial-unit1-tutor-model-trace
+tutorial-unit3-sperling-trial-trace
 tutorial-unit3modeling-v2-run
 tutorial-unit4-paired-trace
 tutorial-unit5modeling-first-run

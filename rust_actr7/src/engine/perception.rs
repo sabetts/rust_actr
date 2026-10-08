@@ -401,6 +401,9 @@ impl Engine {
 
     pub(super) fn proc_display(&mut self) -> Result<(), EngineError> {
         let now = self.time_ms;
+        // `proc-display` runs `check-finsts` (`vision.lisp:1796`): finsts older
+        // than `:visual-finst-span` are dropped before the display is searched.
+        self.check_visual_finsts();
         let mut due = Vec::new();
         self.pending_texts.retain(|t| {
             if t.at_ms <= now {
@@ -497,7 +500,8 @@ impl Engine {
                 height: 10,
                 extra: Vec::new(),
                 tstamp_ms: now,
-                attended: false,
+                new_p: true,
+                finst_ms: None,
             });
         }
         let empty = self
@@ -839,24 +843,24 @@ impl Engine {
     pub(super) fn newest_feature(&mut self) -> Option<Feature> {
         // `stuff-visloc-buffer` (`vision.lisp:1978`) searches with the
         // vision module's `default-spec` = `screen-x lowest :attended new`
-        // (`vision.lisp:3178`): the LEFTMOST unattended column, then the
+        // (`vision.lisp:3178`): the LEFTMOST still-`NEW` column, then the
         // newest-tstamp ties, sorted by name before `random-item`.
         let min_x = self
             .features
             .iter()
-            .filter(|f| !f.attended)
+            .filter(|f| f.new_p)
             .map(|f| f.x)
             .min()?;
         let top = self
             .features
             .iter()
-            .filter(|f| !f.attended && f.x == min_x)
+            .filter(|f| f.new_p && f.x == min_x)
             .map(|f| f.tstamp_ms)
             .max()?;
         let mut names: Vec<String> = self
             .features
             .iter()
-            .filter(|f| !f.attended && f.x == min_x && f.tstamp_ms == top)
+            .filter(|f| f.new_p && f.x == min_x && f.tstamp_ms == top)
             .map(|f| f.name.clone())
             .collect();
         names.sort();
@@ -864,6 +868,50 @@ impl Engine {
         let pick = self.rng_draw(names.len());
         let want = names[pick].clone();
         self.features.iter().find(|f| f.name == want).cloned()
+    }
+
+    /// `assign-finst` / `add-finst` (`vision.lisp:2282`): record or refresh the
+    /// feature's finst and enforce the `:visual-num-finsts` cap. Exceeding the
+    /// cap evicts the OLDEST finst, so a long-ago attended location becomes
+    /// `:attended nil` again — this is what lets Sperling's fifth find
+    /// reselect the auto-stuffed `VISUAL-LOCATION1`.
+    pub(super) fn add_visual_finst(&mut self, idx: usize) {
+        if self.features[idx].finst_ms.is_none() {
+            let cap = self.cfg.visual_num_finsts;
+            let live = self
+                .features
+                .iter()
+                .filter(|f| f.finst_ms.is_some())
+                .count();
+            if live >= cap {
+                if let Some(old) = self
+                    .features
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, f)| f.finst_ms.is_some())
+                    .min_by_key(|(_, f)| f.finst_ms.unwrap())
+                    .map(|(i, _)| i)
+                {
+                    self.features[old].finst_ms = None;
+                }
+            }
+        }
+        self.features[idx].finst_ms = Some(self.time_ms);
+        self.features[idx].new_p = false;
+    }
+
+    /// `check-finsts` (`vision.lisp:2247`): drop finsts older than
+    /// `:visual-finst-span`.
+    pub(super) fn check_visual_finsts(&mut self) {
+        let now = self.time_ms;
+        let span = self.cfg.visual_finst_span_ms;
+        for f in &mut self.features {
+            if let Some(t) = f.finst_ms {
+                if now - t > span {
+                    f.finst_ms = None;
+                }
+            }
+        }
     }
 
     /// Random index uniform in 0..n, always consuming exactly one draw
@@ -956,7 +1004,7 @@ impl Engine {
             slots: Self::object_slots(&feat, &loc),
             bare: false,
         };
-        self.features[idx].attended = true;
+        self.add_visual_finst(idx);
         self.visual_busy = false;
         // An encoded object is not a copy (no `chunk-copied-from-fct`).
         self.vl_copied_from.remove("VISUAL-CHUNK0");
@@ -1028,17 +1076,22 @@ pub(super) fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bo
         match (s, v) {
             ("ISA", _) => {}
             ("ATTENDED", Value::Sym(x)) if x == "T" => {
-                if !feat.attended {
+                if feat.finst_ms.is_none() {
+                    return Ok(false);
+                }
+            }
+            ("ATTENDED", Value::Sym(x)) if x == "NEW" => {
+                if !feat.new_p {
                     return Ok(false);
                 }
             }
             ("ATTENDED", Value::Sym(x)) if x == "NIL" => {
-                if feat.attended {
+                if feat.finst_ms.is_some() {
                     return Ok(false);
                 }
             }
             ("ATTENDED", Value::Nil) => {
-                if feat.attended {
+                if feat.finst_ms.is_some() {
                     return Ok(false);
                 }
             }

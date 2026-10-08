@@ -2815,3 +2815,29 @@ Still open: the last find (ref `VISUAL-LOCATION1`) needs the auto-stuffed
 object to become `:attended nil` again when its location is unstuffed
 (`UNSTUFF-BUFFER … VISICON-ID1`, 500 ms); and the report phase fires ~34 ms
 early.
+
+## 191. Vision finsts: `:attended`, `:visual-num-finsts`, and the clear/move race
+
+`:attended` is not a sticky bool. `feat-attended` (`vision.lisp:2269`) is `t`
+iff the feature is in `finst-lst`, `'requested` while attention moves to it,
+`'NEW` while `chunk-visual-new-p` is `NEW`, else `nil`; `test-attended`
+(`vision.lisp:2006`) makes `:attended nil` match `NEW` **or** `nil`, and
+`:attended new` match only `NEW`. `add-finst` (`vision.lisp:2282`) records a
+finst on encode and caps `finst-lst` at `:visual-num-finsts` (default 4),
+evicting the OLDEST — that cap, not the 500 ms unstuff, is why Sperling's
+auto-stuffed `VISUAL-LOCATION1` becomes `:attended nil` again for the fifth
+find (ref finds `3,2,0,4,1`). The engine stores `Feature.new_p` +
+`Feature.finst_ms`, sets the finst on encode, and enforces
+`:visual-num-finsts` / `:visual-finst-span`.
+
+The report phase then needed the window-clear re-encode suppressed: a
+`+visual-location` request holds the vision proc-display lock for ~50 ms
+(`find-location`, `vision.lisp:2929`; `lock-vision`/`unlock-vision`,
+`vision.lisp:1542`), so the 941 ms clear's `proc-display` /
+`update-attended-loc` is deferred to 975 ms — by which time the 975 ms
+move-attention has set `moving-attention`/`exec BUSY`, so `update-attended-loc`
+returns early and no re-encode runs. The engine models the observable by
+dropping a pending `update-attended-loc` re-encode
+(`EncodingComplete { requested: false }`) when a new `MoveAttention` starts;
+vision stays busy to 1.060 and `start-report` fires at 1.110, byte-exact.
+`tutorial-unit3-sperling-trial-trace` is in `enabled.txt` (59 specs).
