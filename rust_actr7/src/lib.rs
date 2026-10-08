@@ -200,11 +200,15 @@ pub enum Step {
         trace: bool,
         width: usize,
     },
-    /// `(run-full-time secs)` — like `Run`, but runs to the time limit.
+    /// `(run-full-time secs)` — like `Run`, but runs to the time limit. The
+    /// recorded `seed` is the RNG state ACT-R had at the run's start (the
+    /// task's setup draws between runs are not otherwise replayed), so it is
+    /// re-applied to keep the stream aligned.
     RunFullTime {
         secs: f64,
         trace: bool,
         width: usize,
+        seed: Option<(u64, u64)>,
     },
     /// `(goal-focus <spec>)`.
     GoalFocus(ChunkDesc),
@@ -319,7 +323,15 @@ pub fn run_model_steps(
                 eng.set_trace(*trace);
                 eng.run_secs(*secs)?;
             }
-            Step::RunFullTime { secs, trace, width } => {
+            Step::RunFullTime {
+                secs,
+                trace,
+                width,
+                seed,
+            } => {
+                if let Some(s) = seed {
+                    eng.set_seed(*s);
+                }
                 eng.set_module_width(*width);
                 eng.set_trace(*trace);
                 eng.run_full_time(*secs)?;

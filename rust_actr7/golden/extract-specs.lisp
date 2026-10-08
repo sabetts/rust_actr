@@ -168,6 +168,19 @@ disable/enable, breakpoints); not trace-only drivers.")
 
 (defvar *testing-function* nil)
 
+;; `ssp :starting-parameters (:seed (S C))` is applied by the model-tester's
+;; `central-parameters-reset` hook on every `(reset)` (see
+;; `central-parameters.lisp:140`), so the effective run seeds depend on it.
+;; The single-threaded load does not apply it, so capture and re-apply it
+;; ourselves — otherwise the recorded run seeds (and the RNG stream) diverge
+;; from the reference (paired-learning).
+(defvar *starting-seed* nil)
+
+(defun find-starting-seed (params)
+  (let ((sp (loop for (k v) on params when (eq k :starting-parameters) return v)))
+    (when (consp sp)
+      (loop for (k v) on sp when (eq k :seed) return v))))
+
 (defun find-testing-function (tree)
   (cond ((and (consp tree) (eq (car tree) :testing-function)) (cadr tree))
         ((consp tree)
@@ -189,9 +202,14 @@ disable/enable, breakpoints); not trace-only drivers.")
       (let ((*suppress* t))
         (ignore-errors (funcall *testing-function*))))
     (let* ((act (eff-param :act)) (epl (eff-param :epl)) (pct (eff-param :pct))
-           (cur (list (and act t) (and epl t) (and pct t))))
+           ;; The testing function may also change `:alpha` (paired-learning
+           ;; runs its second task with `:alpha 1.0`); record it so utility
+           ;; learning matches.
+           (alpha (eff-param :alpha))
+           (cur (list (and act t) (and epl t) (and pct t) alpha)))
       (unless (equal cur *last-sgp-params*)
-        (push (list :sgp :act (first cur) :epl (second cur) :pct (third cur))
+        (push (list :sgp :act (first cur) :epl (second cur) :pct (third cur)
+                    :alpha (fourth cur))
               *steps*)
         (setf *last-sgp-params* cur)))))
 
@@ -295,7 +313,11 @@ disable/enable, breakpoints); not trace-only drivers.")
     (incf *reset-count*)
     (push (list :reset) *steps*))
   (let ((*suppress* t))
-    (call-orig 'reset)))
+    (call-orig 'reset)
+    ;; Emulate `central-parameters-reset`: re-apply the stub's
+    ;; `:starting-parameters` seed after every reset.
+    (when *starting-seed*
+      (call-orig 'sgp-fct (list :seed *starting-seed*)))))
 
 (defun w-sgp (params)
   (when (and (eq *mode* :drive) (not *suppress*)
@@ -308,6 +330,8 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defun w-ssp (params)
   (let ((tf (find-testing-function params)))
     (when tf (setf *testing-function* tf)))
+  (let ((ss (find-starting-seed params)))
+    (when ss (setf *starting-seed* ss)))
   (when (and (eq *mode* :drive) (not *suppress*)
              (not (every #'keywordp params)))
     (push (cons :ssp params) *sgp-calls*)
@@ -480,7 +504,8 @@ disable/enable, breakpoints); not trace-only drivers.")
         *device-commands* nil *device-modifies* nil
         *item-texts* (make-hash-table :test 'equal)
         *item-pos* (make-hash-table :test 'equal)
-        *rng-count* 0 *last-sgp-params* nil *testing-function* nil))
+        *rng-count* 0 *last-sgp-params* nil *testing-function* nil
+        *starting-seed* nil))
 
 (defun dedupe-preserve (list)
   (let ((seen (make-hash-table :test 'equal)) (out nil))

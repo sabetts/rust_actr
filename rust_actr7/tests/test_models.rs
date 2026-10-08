@@ -213,7 +213,16 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                 };
                 let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
                 let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
-                steps.push(Step::RunFullTime { secs, trace, width });
+                // The recorded seed is the RNG state at the run's start; unlike
+                // `(:run ...)` it is never canonicalized to the `(100 0)`
+                // placeholder, so re-apply it to resync the stream.
+                let seed = v.get(2).and_then(parse_seed);
+                steps.push(Step::RunFullTime {
+                    secs,
+                    trace,
+                    width,
+                    seed,
+                });
             }
             ":GOAL-FOCUS" => {
                 let item = match v.get(1) {

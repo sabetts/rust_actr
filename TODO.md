@@ -81,7 +81,7 @@ Enable a passing spec by appending its name to
     (`Feature`, `Config`), `engine/events.rs` (`MoveAttention`, `UnstuffVl`),
     `actr7.x/core-modules/vision.lisp:2006,2269,2282,2247,2929,1542`.
 
-- [ ] **A2. paired-learning utility / selection** → enable `paired-learning`.
+- [ ] **A2. paired-learning utility / selection** → enable `paired-learning`. **(IN PROGRESS)**
   - [ ] First diff: `production1 :utility 0.121` (ref) vs `-0.025` (engine) after
         recreation (`recreating production production1`).
   - [ ] Audit `:u` init vs computed utility, and reward propagation onto
