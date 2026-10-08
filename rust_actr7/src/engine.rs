@@ -2459,7 +2459,13 @@ impl Engine {
         self.cr_armed = false;
         self.dm_gen = 0;
         self.dm_busy = false;
-        self.utilities = vec![self.cfg.iu; self.model.productions.len()];
+        // `(spp <prod> :u U)` overrides the initial utility (`:iu`).
+        self.utilities = self
+            .model
+            .productions
+            .iter()
+            .map(|p| p.utility.unwrap_or(self.cfg.iu))
+            .collect();
         self.production_utility = vec![None; self.model.productions.len()];
         self.history.clear();
         self.features.clear();
@@ -5232,6 +5238,10 @@ impl Engine {
                 // (`audio.lisp:716`): set AURAL-LOCATION to the sound's
                 // `audio-event` chunk with `:requested nil`.
                 let s = self.sounds[idx].clone();
+                // `find-sound` (`audio.lisp:1031`) picks
+                // `(random-item matching-chunks)`; even a single live tone
+                // consumes one draw, and it lands between the visual finds.
+                let _ = self.rng_draw(1);
                 let chunk = audio_event_chunk(&s);
                 self.now(
                     Prio::Num(10),
@@ -5334,6 +5344,14 @@ impl Engine {
                 if valid {
                     if show {
                         self.emit("VISION", "ERASE-BUFFER VISUAL-LOCATION".to_string());
+                    }
+                    // The object is no longer attended once its auto-stuffed
+                    // location is unstuffed (`:attended` reflects the vision
+                    // module's current attention).
+                    if let Some(&idx) = self.vl_copies.get(&copy) {
+                        if idx < self.features.len() {
+                            self.features[idx].attended = false;
+                        }
                     }
                     self.buffer_mut("VISUAL-LOCATION").chunk = None;
                     self.buffer_mut("VISUAL-LOCATION").failed = false;
@@ -14906,15 +14924,26 @@ impl Engine {
     }
 
     fn newest_feature(&mut self) -> Option<Feature> {
-        let top = self.features.iter().map(|f| f.tstamp_ms).max()?;
-        // The visicon keeps entries in creation order (window items
-        // column-major), but `stuff-visloc-buffer` (`vision.lisp:1978`)
-        // sorts the max-tstamp objects by symbol name before
-        // `random-item`.
+        // `stuff-visloc-buffer` (`vision.lisp:1978`) searches with the
+        // vision module's `default-spec` = `screen-x lowest :attended new`
+        // (`vision.lisp:3178`): the LEFTMOST unattended column, then the
+        // newest-tstamp ties, sorted by name before `random-item`.
+        let min_x = self
+            .features
+            .iter()
+            .filter(|f| !f.attended)
+            .map(|f| f.x)
+            .min()?;
+        let top = self
+            .features
+            .iter()
+            .filter(|f| !f.attended && f.x == min_x)
+            .map(|f| f.tstamp_ms)
+            .max()?;
         let mut names: Vec<String> = self
             .features
             .iter()
-            .filter(|f| f.tstamp_ms == top)
+            .filter(|f| !f.attended && f.x == min_x && f.tstamp_ms == top)
             .map(|f| f.name.clone())
             .collect();
         names.sort();
@@ -14933,13 +14962,13 @@ impl Engine {
     /// Find-location: newest-tstamp candidates, random among them,
     /// construct a fresh (dedup-named) location chunk into the buffer.
     fn find_location(&mut self, spec: NewChunk) -> Result<(), EngineError> {
-        let want = match &spec {
-            NewChunk::Spec { slots, .. } => slots.clone(),
+        let (want, rels) = match &spec {
+            NewChunk::Spec { slots, rels, .. } => (slots.clone(), rels.clone()),
             _ => return Err(unimpl("non-spec visual-location request")),
         };
         let mut cands: Vec<Feature> = Vec::new();
         for f in &self.features {
-            if loc_matches(f, &want)? {
+            if loc_matches(f, &want)? && loc_rel_matches(f, &rels) {
                 cands.push(f.clone());
             }
         }
@@ -15160,6 +15189,33 @@ fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineE
         }
     }
     Ok(true)
+}
+
+/// Request slot relations (`> screen-y 450 < screen-y 470`) on a
+/// visual-location search (`find-location`, `vision.lisp:2921`). Unknown
+/// slots are not filtered (the search ignores them).
+fn loc_rel_matches(feat: &Feature, rels: &[(String, Value, SlotOp)]) -> bool {
+    for (s, v, op) in rels {
+        let s = s.trim_start_matches(':');
+        let (got, want) = match (s, v) {
+            ("SCREEN-X", Value::Num(x)) => (feat.x as f64, *x as f64),
+            ("SCREEN-X", Value::Int(x)) => (feat.x as f64, *x as f64),
+            ("SCREEN-Y", Value::Num(y)) => (feat.y as f64, *y as f64),
+            ("SCREEN-Y", Value::Int(y)) => (feat.y as f64, *y as f64),
+            _ => continue,
+        };
+        let ok = match op {
+            SlotOp::Gt => got > want,
+            SlotOp::Lt => got < want,
+            SlotOp::Ge => got >= want,
+            SlotOp::Le => got <= want,
+            SlotOp::Eq | SlotOp::Neg => true,
+        };
+        if !ok {
+            return false;
+        }
+    }
+    true
 }
 
 /// CL `round`: fractional .5 goes to the even neighbor.
@@ -16064,6 +16120,7 @@ mod tests {
             name: "PROBE".to_string(),
             reward: None,
             at: None,
+            utility: None,
             lhs: vec![LhsItem::Match {
                 buffer: "GOAL".to_string(),
                 tests: vec![SlotTest {
@@ -16240,6 +16297,7 @@ mod tests {
             name: "SMALL".to_string(),
             reward: None,
             at: None,
+            utility: None,
             lhs: vec![LhsItem::Match {
                 buffer: "GOAL".to_string(),
                 tests: vec![

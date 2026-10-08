@@ -2799,11 +2799,19 @@ low`; `new-sound`/`ATTEND-SOUND`/`AUDIO-ENCODING-COMPLETE` are `medium` and
 are hidden there. Sperling: `0.200 AURAL-LOCATION AUDIO-EVENT0 NIL`,
 `0.570 AURAL TONE0`, exactly.
 
-Open (not yet modelled): ACT-R's `stuff-visloc-buffer` auto-stuff at the
-first `proc-display` sees only the *first column* of a freshly added
-Sperling window (3 objects, `random-item` index 1 -> "C"), whereas the
-engine's `proc_display` adds all texts in one wave. That shifts the first
-`random-item` draw, so `sperling`'s five `+visual-location>` picks still
-diverge (engine `0,11,2` vs ref `3,2,0,4,1`). The RNG stream itself matches
-ACT-R exactly once the setup draws (permute 21 + `random` 3 + `random` 200)
-are consumed.
+## 190. `find-location` relations, `screen-x lowest`, and the setup draws (verified)
+
+The Sperling visual search needs three things the engine had dropped:
+`find-location` must filter on the request's `>`/`<` relations
+(`> screen-y 450 < screen-y 470`), `stuff-visloc-buffer`'s auto-stuff uses
+the `default-spec` = `screen-x lowest :attended new` (`vision.lisp:3178`)
+so it only sees the leftmost column, and `find-sound` (`audio.lisp:1031`)
+consumes a `random-item` draw. The task's setup draws are
+`permute-list` of 21 (21 draws) + `(act-r-random 3)` + `(act-r-random 200)`
+= 23, so `(CONSUME-RNG 23)`. With all of these the engine's whole RNG
+stream matches ACT-R (`sperling`: finds `3,2,0,4` then the report phase).
+
+Still open: the last find (ref `VISUAL-LOCATION1`) needs the auto-stuffed
+object to become `:attended nil` again when its location is unstuffed
+(`UNSTUFF-BUFFER … VISICON-ID1`, 500 ms); and the report phase fires ~34 ms
+early.

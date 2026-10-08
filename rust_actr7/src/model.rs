@@ -163,6 +163,8 @@ pub struct Production {
     pub reward: Option<f32>,
     /// `(spp <name> :at S)`: production action time override in seconds.
     pub at: Option<f32>,
+    /// `(spp <name> :u U)`: initial utility override (else `:iu`).
+    pub utility: Option<f32>,
 }
 
 /// Collect `add-act-r-command` name→function aliases from a task file
@@ -1454,6 +1456,7 @@ fn parse_production(form: &Sexp, extra_buffers: &[String]) -> Result<Production,
         rhs,
         reward: None,
         at: None,
+        utility: None,
     })
 }
 
@@ -2049,6 +2052,10 @@ fn parse_model(form: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> R
                 } else if k == ":AT" {
                     if let Some(a) = sexp_f64(v) {
                         prod.at = Some(a as f32);
+                    }
+                } else if k == ":U" {
+                    if let Some(u) = sexp_f64(v) {
+                        prod.utility = Some(u as f32);
                     }
                 }
             }
