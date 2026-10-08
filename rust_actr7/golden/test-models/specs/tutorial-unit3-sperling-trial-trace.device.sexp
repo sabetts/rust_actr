@@ -1,4 +1,4 @@
-(CONSUME-RNG 7)
+(CONSUME-RNG 23)
 (RUN 1
  (ADD-TEXT 0 "V" 75 100)
  (ADD-TEXT 0 "N" 125 100)
@@ -13,6 +13,6 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 941)
- (COMMAND 150 medium "new-sound")
+ (SOUND 150 1000 500)
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )

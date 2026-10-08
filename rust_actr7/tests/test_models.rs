@@ -575,6 +575,13 @@ fn parse_device_op(
                     .ok_or("bad details")?,
                 run,
             }),
+            "SOUND" => device.sounds.push(actr_engine::engine::DeviceSound {
+                at_ms: ms()?,
+                freq: as_i64(v.get(2).ok_or("missing freq")?).ok_or("bad freq")?,
+                duration: as_i64(v.get(3).ok_or("missing duration")?)
+                    .ok_or("bad duration")?,
+                run,
+            }),
             "CLEAR-ON-KEYPRESS" => device.clear_on_keypress = true,
             "CONSUME-RNG" => {
                 device.consume_rng =

@@ -391,6 +391,21 @@ pub struct DeviceCommand {
     pub run: Option<u32>,
 }
 
+/// One scripted tone (`new-tone-sound`): the audio event is created at reset
+/// and its onset scheduled at `at_ms` (the tone's `onset`). The task's
+/// `new-tone-sound` has no textual trace, so the sidecar records the
+/// parameters directly rather than a `COMMAND` line.
+#[derive(Debug, Clone)]
+pub struct DeviceSound {
+    /// Onset in ms (when `new-sound` fires).
+    pub at_ms: i64,
+    pub freq: i64,
+    /// Sound duration in ms.
+    pub duration: i64,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
@@ -402,6 +417,8 @@ pub struct DeviceSetup {
     /// `schedule-event-relative`/`schedule-event` with a string action
     /// prints `NONE <action> <params>` at its `:output` level.
     pub commands: Vec<DeviceCommand>,
+    /// Scripted tone sounds (`new-tone-sound`), re-armed on every reset.
+    pub sounds: Vec<DeviceSound>,
     /// Run-full-time dummy: keep running to this ms, then time-limit stop.
     pub end: Option<i64>,
     /// Task rewards `(ms, value)`, mirroring scheduled `trigger-reward`
@@ -1291,6 +1308,26 @@ impl Buffer {
     }
 }
 
+/// One audio sound event (`sound-event`, `core-modules/audio.lisp:571`). A
+/// tone's `sname` is `TONE{n}` (chunk `isa sound`) and its `ename` is
+/// `AUDIO-EVENT{n}` (chunk `isa audio-event`); the two name counters are
+/// independent (`new-name-fct`).
+#[derive(Debug, Clone)]
+struct Sound {
+    sname: String,
+    ename: String,
+    kind: String,
+    content: i64,
+    onset: i64,
+    offset: i64,
+    duration: i64,
+    /// `tone-detect-delay` (50 ms): detect time is `onset + delay`.
+    delay: i64,
+    /// `tone-recode-delay` (285 ms): `attend-sound` encoding time.
+    recode: i64,
+    pitch: String,
+}
+
 // ---------------------------------------------------------------- events
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1657,6 +1694,21 @@ enum Event {
     NewSound,
     /// Audio module: the sound's aural location is set.
     AuralLocation,
+    /// Audio module: a tone's onset (`new-sound`, then schedule
+    /// `stuff-sound-buffer` at `onset + detect-delay`).
+    ToneSound {
+        idx: usize,
+    },
+    /// Audio module: `stuff-sound-buffer` sets `AURAL-LOCATION` to the
+    /// sound's `audio-event` chunk.
+    StuffSound {
+        idx: usize,
+    },
+    /// Audio module: `attend-sound` finishes, building the sound chunk and
+    /// setting the `AURAL` buffer.
+    AudioEncodingComplete {
+        idx: usize,
+    },
     /// Threads extra: clear the specific goal chunk a production matched
     /// (emits `CLEAR-BUFFER GOAL`, removes it from the goal set).
     ClearGoalThread {
@@ -1801,6 +1853,8 @@ pub struct Engine {
     /// Scheduled command lines, re-armed on every `reset` like the rest of
     /// the device script.
     device_commands: Vec<DeviceCommand>,
+    /// Scripted tone sounds, re-armed on every `reset`.
+    device_sounds: Vec<DeviceSound>,
     /// The current run index for `(RUN n …)` device groups; the construction
     /// reset is run 0, the spec's first `(reset)` run 1.
     device_run: u32,
@@ -1838,6 +1892,10 @@ pub struct Engine {
     vocal_busy: bool,
     /// Audio module: sounds emitted so far (`AUDIO-EVENT{n}`).
     audio_events: u64,
+    /// Audio module: live sound events (`TONE{n}`/`AUDIO-EVENT{n}`).
+    sounds: Vec<Sound>,
+    /// Audio module: next `TONE{n}` index (`new-name-fct "TONE"`).
+    tone_seq: u64,
     /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
     name_count: HashMap<String, u64>,
     /// SET-copy name -> feature index, resolving copies back for
@@ -2025,6 +2083,7 @@ impl Engine {
             modifies,
             clears,
             commands,
+            sounds,
             end,
             rewards,
             sims,
@@ -2095,6 +2154,11 @@ impl Engine {
                 v.sort_by_key(|c| c.at_ms);
                 v
             },
+            device_sounds: {
+                let mut v = sounds;
+                v.sort_by_key(|s| s.at_ms);
+                v
+            },
             device_run: 0,
             consume_rng,
             features: Vec::new(),
@@ -2111,6 +2175,8 @@ impl Engine {
             goal_set: Vec::new(),
             vocal_busy: false,
             audio_events: 0,
+            sounds: Vec::new(),
+            tone_seq: 0,
             name_count: HashMap::new(),
             vl_copies: HashMap::new(),
             vl_copied_from: HashMap::new(),
@@ -2456,6 +2522,19 @@ impl Engine {
         self.goal_set.clear();
         self.vocal_busy = false;
         self.audio_events = 0;
+        // Scripted tones: the task calls `new-tone-sound` during per-run
+        // setup, creating the event and scheduling its onset (`new-sound`).
+        self.sounds.clear();
+        self.tone_seq = 0;
+        for s in self
+            .device_sounds
+            .clone()
+            .into_iter()
+            .filter(|s| s.run.is_none() || s.run == Some(run))
+        {
+            let idx = self.add_sound(s.freq, s.duration, s.at_ms);
+            self.push(s.at_ms, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        }
         self.name_count.clear();
         self.vl_copies.clear();
         self.vl_copied_from.clear();
@@ -4985,6 +5064,7 @@ impl Engine {
                         "RETRIEVAL" => "DECLARATIVE",
                         "VISUAL-LOCATION" | "VISUAL" => "VISION",
                         "MANUAL" => "MOTOR",
+                        "AURAL" | "AURAL-LOCATION" => "AUDIO",
                         other => other,
                     };
                     self.emit(module, details);
@@ -5107,7 +5187,9 @@ impl Engine {
             }
             Event::SpeechInit => {}
             Event::NewSound => {
-                self.emit("AUDIO", "new-sound".to_string());
+                if show {
+                    self.emit("AUDIO", "new-sound".to_string());
+                }
                 // `stuff-sound-buffer` only sets AURAL-LOCATION while the
                 // buffer is empty (`audio.lisp:716`); later sounds leave the
                 // first location in place. Aural detection/recode delay.
@@ -5126,6 +5208,63 @@ impl Engine {
                 self.emit(
                     "AUDIO",
                     format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{n} NIL"),
+                );
+            }
+            Event::ToneSound { idx } => {
+                // `new-sound-event :around` (`audio.lisp:733`): `new-sound`
+                // at the onset (`:output medium`), then `stuff-sound-buffer`
+                // at `detect-at-time` = `onset + tone-detect-delay` as a
+                // maintenance event.
+                if show {
+                    self.emit("AUDIO", "new-sound".to_string());
+                }
+                let s = self.sounds[idx].clone();
+                self.push_m(
+                    s.onset + s.delay,
+                    Prio::Num(0),
+                    Out::Always,
+                    true,
+                    Event::StuffSound { idx },
+                );
+            }
+            Event::StuffSound { idx } => {
+                // `stuff-sound-buffer` -> `find-sound … :stuffed t`
+                // (`audio.lisp:716`): set AURAL-LOCATION to the sound's
+                // `audio-event` chunk with `:requested nil`.
+                let s = self.sounds[idx].clone();
+                let chunk = audio_event_chunk(&s);
+                self.now(
+                    Prio::Num(10),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "AURAL-LOCATION".to_string(),
+                        chunk: NewChunk::Instance(chunk),
+                        requested: false,
+                        shown: None,
+                    },
+                );
+            }
+            Event::AudioEncodingComplete { idx } => {
+                // `audio-encoding-complete` (`audio.lisp:1205`): free the
+                // module, give the sound chunk `content`/`kind`/`event`, then
+                // set the AURAL buffer.
+                let s = self.sounds[idx].clone();
+                if let Some(buf) = self.buffers.get_mut("AURAL") {
+                    buf.busy = false;
+                }
+                if self.cfg.detail.shows(Out::Medium) {
+                    self.emit("AUDIO", format!("AUDIO-ENCODING-COMPLETE {}", s.ename));
+                }
+                let chunk = sound_chunk(&s);
+                self.now(
+                    Prio::Num(0),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "AURAL".to_string(),
+                        chunk: NewChunk::Instance(chunk),
+                        requested: true,
+                        shown: None,
+                    },
                 );
             }
             Event::ClearGoalThread { name } => {
@@ -5364,6 +5503,42 @@ impl Engine {
                                 shown,
                             },
                         );
+                    }
+                    "AURAL" => {
+                        // `attend-sound` (`audio.lisp:1099`): resolve the
+                        // audio-event chunk named by the request's `event`
+                        // slot to its sound, go busy, and schedule
+                        // `audio-encoding-complete` after the recode delay
+                        // (`tone-recode-delay`).
+                        let ename = match &spec {
+                            NewChunk::Spec { slots, .. } => slots
+                                .iter()
+                                .find(|(s, _)| s == "EVENT")
+                                .and_then(|(_, v)| match v {
+                                    Value::Sym(s) => Some(s.clone()),
+                                    _ => None,
+                                }),
+                            _ => None,
+                        };
+                        if let Some(ename) = ename {
+                            if let Some(idx) =
+                                self.sounds.iter().position(|s| s.ename == ename)
+                            {
+                                if let Some(buf) = self.buffers.get_mut("AURAL") {
+                                    buf.busy = true;
+                                }
+                                if self.cfg.detail.shows(Out::Medium) {
+                                    self.emit("AUDIO", format!("ATTEND-SOUND {ename}-0"));
+                                }
+                                let recode = self.sounds[idx].recode;
+                                self.push(
+                                    self.time_ms + recode,
+                                    Prio::Num(0),
+                                    Out::Medium,
+                                    Event::AudioEncodingComplete { idx },
+                                );
+                            }
+                        }
                     }
                     got => {
                         return Err(unimpl(format!("request to buffer {got}")));
@@ -11809,6 +11984,38 @@ fn bold_values(
 }
 
 impl Engine {
+    /// `new-tone-sound` (`audio.lisp:778`): create a tone sound event. Names
+    /// come from the two independent counters (`TONE{n}` / `AUDIO-EVENT{n}`),
+    /// and `tone-sound-evt` sets `delay`/`recode`/`pitch` at construction
+    /// (`audio.lisp:649`).
+    fn add_sound(&mut self, freq: i64, duration: i64, onset: i64) -> usize {
+        let n = self.tone_seq;
+        self.tone_seq += 1;
+        let en = self.audio_events;
+        self.audio_events += 1;
+        // `(> content 1500)` high, `(< content 900)` low, else middle.
+        let pitch = if freq > 1500 {
+            "HIGH"
+        } else if freq < 900 {
+            "LOW"
+        } else {
+            "MIDDLE"
+        };
+        self.sounds.push(Sound {
+            sname: format!("TONE{n}"),
+            ename: format!("AUDIO-EVENT{en}"),
+            kind: "TONE".to_string(),
+            content: freq,
+            onset,
+            offset: onset + duration,
+            duration,
+            delay: 50,
+            recode: 285,
+            pitch: pitch.to_string(),
+        });
+        self.sounds.len() - 1
+    }
+
     /// Device request routing for the visual buffer: only
     /// move-attention in M5a (plus finst assignment later).
     fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
@@ -14742,12 +14949,14 @@ impl Engine {
             return Ok(());
         }
         let top = cands.iter().map(|f| f.tstamp_ms).max().unwrap();
-        let mut names: Vec<String> = cands
+        // `find-location` picks `(random-item (objs-max-val it
+        // 'chunk-visual-tstamp))` (`vision.lisp:2923`) with NO sort: the
+        // candidates are the newest-tstamp features in visicon order.
+        let names: Vec<String> = cands
             .iter()
             .filter(|f| f.tstamp_ms == top)
             .map(|f| f.name.clone())
             .collect();
-        names.sort();
         // `random-item` consumes exactly one draw, even for singletons.
         let pick = self.rng_draw(names.len());
         let feat = cands
@@ -15706,6 +15915,39 @@ fn explicit_out(rhst: bool) -> Out {
         Out::Always
     } else {
         Out::Never
+    }
+}
+
+/// The sound's `audio-event` chunk (`update-sound-evt`, `audio.lisp:922`):
+/// `onset`, `location`, `kind`, `id`, `pitch`. The model's `detected-sound`
+/// matches it untested and copies it as `event`.
+fn audio_event_chunk(s: &Sound) -> ChunkInst {
+    ChunkInst {
+        name: Some(s.ename.clone()),
+        ctype: "AUDIO-EVENT".to_string(),
+        slots: vec![
+            ("ONSET".to_string(), Value::Int(s.onset)),
+            ("LOCATION".to_string(), Value::Sym("EXTERNAL".to_string())),
+            ("KIND".to_string(), Value::Sym(s.kind.clone())),
+            ("ID".to_string(), Value::Sym(s.ename.clone())),
+            ("PITCH".to_string(), Value::Sym(s.pitch.clone())),
+        ],
+        bare: false,
+    }
+}
+
+/// The sound chunk (`audio-encoding-complete`, `audio.lisp:1205`):
+/// `content`, `kind`, `event` (the `audio-event` chunk name).
+fn sound_chunk(s: &Sound) -> ChunkInst {
+    ChunkInst {
+        name: Some(s.sname.clone()),
+        ctype: "SOUND".to_string(),
+        slots: vec![
+            ("CONTENT".to_string(), Value::Int(s.content)),
+            ("KIND".to_string(), Value::Sym(s.kind.clone())),
+            ("EVENT".to_string(), Value::Sym(s.ename.clone())),
+        ],
+        bare: false,
     }
 }
 

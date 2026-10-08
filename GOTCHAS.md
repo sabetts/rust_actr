@@ -2766,3 +2766,44 @@ still diverge (the ref grows toward ~20, the engine stalls near 1-2): the
 utility dynamics (conflict-candidate set / possible silent reward
 propagation) are not fully modelled. Pre-existing RNG divergence (task pair
 order, 1 ms retrieval timings) is also present in this spec.
+
+## 188. `find-location` does NOT sort its candidates (verified)
+
+`find-location` (`core-modules/vision.lisp:2923`) picks
+`(random-item (objs-max-val it 'chunk-visual-tstamp))` — **no** `sort`.
+`objs-max-val` (`framework/misc-utils.lisp:1263`) builds its tie list with
+`push`, but `find-current-locs-with-spec` hands the matches over in reverse
+visicon order, so the net order is *forward* visicon order. An earlier
+engine pass sorted the names (copying `stuff-visloc-buffer`,
+`vision.lisp:1978`, which *does* sort), which shifted every index and
+desynced the `random-item` picks. Verified against `sperling`:
+candidates `("V" "W" "N" "R" "J" "T" "Y" "G" "Z" "K" "F")` with
+`random-item` index 2 -> `VISUAL-LOCATION3` (N).
+
+## 189. Audio module: tone detection / recode timing and output levels (verified)
+
+A tone is `new-name-fct "TONE"` for the sound chunk and an independent
+`new-name-fct "AUDIO-EVENT"` for the `audio-event` chunk
+(`core-modules/audio.lisp:582`). `new-sound-event :around`
+(`audio.lisp:733`) schedules `stuff-sound-buffer` at
+`detect-at-time = onset + tone-detect-delay` (50 ms) as a **maintenance**
+event, and `new-sound` at the onset (`:output medium`). `stuff-sound-buffer`
+-> `find-sound :stuffed t` sets `AURAL-LOCATION` `:requested nil`;
+`attend-sound` then schedules `audio-encoding-complete` after
+`tone-recode-delay` (285 ms), which sets `AURAL` `:requested t` with the
+sound chunk (`content`, `kind`, `event`).
+
+The two `SET-BUFFER-CHUNK` lines print under `AUDIO` at the default
+`schedule-set-buffer-chunk` output (`low`), so they survive `trace-detail
+low`; `new-sound`/`ATTEND-SOUND`/`AUDIO-ENCODING-COMPLETE` are `medium` and
+are hidden there. Sperling: `0.200 AURAL-LOCATION AUDIO-EVENT0 NIL`,
+`0.570 AURAL TONE0`, exactly.
+
+Open (not yet modelled): ACT-R's `stuff-visloc-buffer` auto-stuff at the
+first `proc-display` sees only the *first column* of a freshly added
+Sperling window (3 objects, `random-item` index 1 -> "C"), whereas the
+engine's `proc_display` adds all texts in one wave. That shifts the first
+`random-item` draw, so `sperling`'s five `+visual-location>` picks still
+diverge (engine `0,11,2` vs ref `3,2,0,4,1`). The RNG stream itself matches
+ACT-R exactly once the setup draws (permute 21 + `random` 3 + `random` 200)
+are consumed.
