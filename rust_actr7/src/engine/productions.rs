@@ -1330,7 +1330,7 @@ impl Engine {
         // p1's value.
         let u1i = buffer_usage(p1, "IMAGINAL");
         let u2i = buffer_usage(p2, "IMAGINAL");
-        if matches!(u1i, 9 | 25) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29) {
+        if matches!(u1i, 9 | 25 | 56) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29 | 56) {
             let p1_lhs_i = p1_lhs
                 .iter()
                 .find(|(b, _)| b == "IMAGINAL")
@@ -1338,7 +1338,7 @@ impl Engine {
                 .unwrap_or_default();
             let p1_rhs_i: Vec<(String, SlotVal)> = p1_acts
                 .iter()
-                .filter(|(op, b, _, _)| *op == '=' && b == "IMAGINAL")
+                .filter(|(op, b, _, _)| matches!(*op, '=' | '*') && b == "IMAGINAL")
                 .flat_map(|(_, _, s, _)| s.clone())
                 .collect();
             let rhs_names: Vec<String> = p1_rhs_i.iter().map(|(n, _)| n.clone()).collect();
@@ -1558,6 +1558,21 @@ impl Engine {
                 && !p2_goal_eq.is_empty()
                 && acts_for(&p2_acts, buf, &['+', 'r']).is_empty()
             {
+                // `a1=`/`a1*`: p1's own `=`/`*` modify is emitted first
+                // (`goal-compilation.lisp:546`), then the `+` union.
+                let p1_eq: Vec<(String, SlotVal)> = acts_for(&p1_acts, buf, &['='])
+                    .into_iter()
+                    .flat_map(|(s, _)| s)
+                    .collect();
+                let p1_star: Vec<(String, SlotVal)> = acts_for(&p1_acts, buf, &['*'])
+                    .into_iter()
+                    .flat_map(|(s, _)| s)
+                    .collect();
+                if !p1_eq.is_empty() {
+                    rhs.push((format!("={buf}>"), sv(p1_eq)));
+                } else if !p1_star.is_empty() {
+                    rhs.push((format!("*{buf}>"), sv(p1_star)));
+                }
                 let mut slots: Vec<(String, SlotVal)> =
                     p1_goal_req.into_iter().flat_map(|(s, _)| s).collect();
                 let mut eq: Vec<(String, SlotVal)> =
