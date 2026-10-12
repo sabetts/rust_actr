@@ -231,10 +231,16 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       names a spec-built goal chunk `GOAL-CHUNK{n}`. Verified through
       `actr.py`: `tutorial_unit2code_{dm,sdm,buffer_status}` and
       `tutor-model-solution` match. Remaining:
-  - `whynot` (production match details) — `tutorial_unit2code_whynot`.
-  - `mp-show-queue` (`Events in the queue:`), `pp`, `sji`.
-  - `tutorial_unit2code_buffer_chunk` still shows a stray `SEVEN ` line (a
-    `!output!` leaking before the run) — investigate the `model-output` path.
+  - [x] `whynot` (production match details) — `tutorial_unit2code_whynot`
+        matches. Engine tracks the last conflict set and reports the first
+        failing condition.
+  - [ ] `mp-show-queue` (`Events in the queue:`), `pp`, `sji`.
+  - [ ] `tutorial_unit2code_buffer_chunk` still shows a stray `SEVEN ` line (a
+        `!output!` leaking before the run) — investigate the `model-output` path.
+  - [ ] `simple-ppm-test`: the `:cst` instantiation block's `:UTILITY` value is
+        `-0.174` vs the ref `-0.713` (a base-utility/`:egs`-noise nuance; the
+        ppm penalty and `:U` now match, 82/82 lines).
+  - [ ] `simple-dynamic-model`: 92/98 (dynamic buffer timing).
 - [ ] **R4. Device/vision/motor** as the tutorial needs: `open-exp-window`,
       `add-text`/`add-line`/`add-button-to-exp-window`, `modify-text-for-exp-
       window`, `remove-items-from-exp-window`, `clear-exp-window`,
@@ -246,20 +252,27 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       driven by failures (macros, `let`, loops, `format`, string ops,
       `multiple-value-bind`, …). Bounded to the tutorial; `model-tester.cl`
       only if we want `tester.py` itself.
-- [ ] **R6. Conformance harness.** End-to-end: start the Rust server, attach
-      the vendored `actr.py`, run `test-models/*.py`, diff against the same
-      `.ref`s. A manual harness (`/tmp/opencode/rpc_conf.py`) already drives
-      the vendored client and compares; 8/22 Python test-models match
+- [x] **R6. Conformance harness** (started, growing). `golden/rpc-conformance.py`
+      drives the vendored `actr.py`, `golden/rpc-conformance.sh` starts/stops
+      the server, `golden/rpc-enabled.txt` is the must-pass allowlist, and
+      `tests/rpc_conformance.rs` runs it (`cargo test --test rpc_conformance --
+      --ignored`). Currently asserts **9** Python test-models
       (`addition`, `count`, `semantic`, `semantic-dynamic`,
-      `tutorial_unit2code_{dm,sdm,buffer_status}`, `tutor-model-solution`).
-      Seven more (`bst-*`, `fan-no-pm`, `paired-learning-dynamic`,
-      `tutorial_unit5_onehit_*`) need the `tester.py` harness
-      (`sys.stdout = tester.out_file`), and `simple-dynamic-model`/
-      `simple-ppm-test` need R4 device commands. Wire into `cargo test` as an
-      ignored integration test once the server starts/stops from the harness.
-
-Ordering: R1 → R2 → R3 first (fastest demonstrable loop against `count.py`/
-`semantic.py`), then R4/R5 per tutorial unit.
+      `tutorial_unit2code_{dm,sdm,buffer_status,whynot}`, `tutor-model-solution`).
+- [ ] **R6b. `tester.py` support.** Seven tests (`bst-*`, `fan-no-pm`,
+      `paired-learning-dynamic`, `tutorial_unit5_onehit_*`) set
+      `sys.stdout = tester.out_file` and run full tasks; they need the Python
+      model-tester plus device/vision commands (R4).
+- [ ] **R4. Device/vision/motor** (largely done for the device corpus). The
+      Python tests that need it: `simple-dynamic-model`, `simple-ppm-test`, and
+      the R6b set. RPC command surface to add: `open-exp-window`, `add-text`/
+      `add-line`/`add-button-to-exp-window`, `modify-text-for-exp-window`,
+      `remove-items-from-exp-window`, `clear-exp-window`, `install-device`,
+      `process-events`, `add`/`modify`/`delete-visicon-features`,
+      `print-visicon`, `new-tone-sound`/`new-word-sound`/`new-digit-sound`,
+      `pbreak`/`punbreak`, `correlation`/`mean-deviation`.
+Ordering: R1 → R2 → R3 (done), then R6/R6b/R4 for the remaining Python
+test-models.
 
 ---
 
