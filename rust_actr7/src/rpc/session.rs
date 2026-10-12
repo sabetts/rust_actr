@@ -120,6 +120,7 @@ pub const BUILTINS: &[&str] = &[
     "sgp",
     "spp",
     "sdp",
+    "pp",
     // Device / vision / motor.
     "add-visicon-features",
     "modify-visicon-features",
@@ -849,6 +850,18 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "pp" => {
+                // `pp` (`procedural-cmds.lisp`): print the named productions'
+                // text, or every production when no name is given.
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                if let Some(eng) = &mut self.engine {
+                    eng.print_productions(&names);
+                }
+                Ok(vec![Json::Null])
+            }
             // --- Live experiment window (`devices/virtual/uwi.lisp`) --------
             "open-exp-window" => {
                 let opts = args.get(1);
@@ -1425,6 +1438,42 @@ mod tests {
                 .any(|l| l.contains("PRODUCTION-FIRED INCREMENT")),
             "the re-enabled production did not fire: {trace:?}"
         );
+    }
+
+    #[test]
+    fn pp_prints_production_text() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root.clone(), (100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(
+                "ACT-R:test-models;models;safe-queries.lisp".into(),
+            )],
+            &mut remote,
+        )
+        .unwrap();
+        let _ = s.take_trace();
+        s.evaluate("pp", None, &[], &mut remote).unwrap();
+        let got = s.take_trace();
+
+        // `safe-queries.ref` records two `(pp)` blocks; the first is the plain
+        // definition order, which is what a fresh `pp` prints.
+        let ref_txt = std::fs::read_to_string(root.join("test-models").join("safe-queries.ref"))
+            .expect("safe-queries.ref");
+        let norm = |lines: Vec<String>| -> Vec<String> {
+            lines
+                .into_iter()
+                .map(|l| l.trim().to_lowercase())
+                .filter(|l| !l.is_empty() && !l.starts_with("#|"))
+                .collect()
+        };
+        let expected = norm(ref_txt.lines().take(47).map(str::to_string).collect());
+        assert_eq!(norm(got), expected, "pp output mismatch");
     }
 
     /// A remote client that records the commands it is asked to run.

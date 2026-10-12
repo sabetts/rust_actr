@@ -109,7 +109,11 @@ impl Engine {
                 let prod = &self.model.productions[*idx];
                 // `print-instantiation` emits the definition one line at a
                 // time, so split the render.
-                lines.extend(render_production(prod, b, mism).lines().map(str::to_string));
+                lines.extend(
+                    render_production(prod, b, mism, &[])
+                        .lines()
+                        .map(str::to_string),
+                );
                 lines.push(format!("Parameters for production {}:", prod.name));
                 // `spp-fct (list name :utility :u)` uses the `parameters`
                 // branch (`utility-and-reward-1.lisp:666`), which prints every

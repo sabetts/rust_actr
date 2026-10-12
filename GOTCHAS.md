@@ -3056,3 +3056,23 @@ unbound when the imaginal clause ran and the production never matched
 `match_prod` now retries passes, deferring a match/query item whose dynamic
 slot-name variables are not yet bound, and falls back to source order when no
 further progress is possible. 96 -> 803/803 lines on `paired-learning-dynamic`.
+
+## 201. `pp` shows implicit queries; production redefinition keeps the last
+
+Two things the `(P …)` block from `pp` needs that the `:cst`/`whynot`
+rendering does not:
+
+- ACT-R's production compiler adds an implicit `?buffer> state free` for
+  every *requested* buffer (`+buf>` **or** `*buf>`) with no explicit
+  `?buf>` condition and not in `:do-not-query`. `pp` prints these
+  (`production-statement-text`); `whynot`/`:cst` do not. So `pp` computes its
+  own list (`pp_implicit_queries`, includes `ModifyRequest`) rather than
+  reusing `rhs::implicit_queries` (request-only, used for matching — changing
+  that would alter match semantics).
+- A second `(p name …)` redefines the production: ACT-R keeps the **last**
+  definition and warns at the next reset
+  (`#|Warning: Production F already exists and it is being redefined. |#`).
+  `push_production` (`model.rs`) now replaces by name.
+
+`safe-queries` (`pp` before/after `reset` with `:do-not-query imaginal`) is the
+oracle.

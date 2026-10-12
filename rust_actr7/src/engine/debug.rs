@@ -1,6 +1,29 @@
 //! Trace/debug output, parameter setters, visicon and buffer dumps.
 use super::compilation::bold_values;
 use super::*;
+
+/// The implicit queries `pp` prints for a production: one `?buffer> state
+/// free` per requested buffer (`+` request or `*` modify-request) that has no
+/// explicit `?buffer>` condition and is not exempt (`:do-not-query`). ACT-R's
+/// `production-statement-text` shows these in the `(P …)` block.
+fn pp_implicit_queries(prod: &crate::model::Production, exempt: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for a in &prod.rhs {
+        let buffer = match a {
+            RhsAction::Request { buffer, .. } | RhsAction::ModifyRequest { buffer, .. } => buffer,
+            _ => continue,
+        };
+        let explicit = prod
+            .lhs
+            .iter()
+            .any(|item| matches!(item, LhsItem::Query { buffer: b, .. } if b == buffer));
+        if !exempt.contains(buffer) && !explicit && !out.contains(buffer) {
+            out.push(buffer.clone());
+        }
+    }
+    out
+}
+
 impl Engine {
     /// `(buffer-chunk <name>...)`: append the command-layer buffer dump the
     /// task driver prints after a run (`framework/buffers.lisp:881` +
@@ -913,6 +936,38 @@ impl Engine {
 /// production, whether it is in the current conflict set plus its definition
 /// and (when not) why it fails. Returns the conflict set, as `whynot-fct` does.
 impl Engine {
+    /// `pp` (`procedural-cmds.lisp`): print the text of the named productions,
+    /// or all of them when `names` is empty.
+    pub fn print_productions(&mut self, names: &[String]) -> Vec<String> {
+        let exempt = self.cfg.do_not_query.clone();
+        let selected: Vec<crate::model::Production> = if names.is_empty() {
+            self.model.productions.clone()
+        } else {
+            names
+                .iter()
+                .filter_map(|n| {
+                    let up = n.to_uppercase();
+                    self.model
+                        .productions
+                        .iter()
+                        .find(|p| p.name == up)
+                        .cloned()
+                })
+                .collect()
+        };
+        let mut lines = Vec::new();
+        for prod in &selected {
+            let implicit = pp_implicit_queries(prod, &exempt);
+            let text =
+                super::compilation::render_production(prod, &Bindings::new(), &[], &implicit);
+            for line in text.lines() {
+                lines.push(line.to_string());
+            }
+        }
+        self.out_lines.extend(lines);
+        selected.iter().map(|p| p.name.clone()).collect()
+    }
+
     pub fn print_whynot(&mut self, names: &[String]) -> Vec<String> {
         let prods: Vec<crate::model::Production> = names
             .iter()
@@ -935,7 +990,7 @@ impl Engine {
                 self.out_lines
                     .push(format!("Production {} does NOT match.", prod.name));
             }
-            let text = super::compilation::render_production(prod, &Bindings::new(), &[]);
+            let text = super::compilation::render_production(prod, &Bindings::new(), &[], &[]);
             for line in text.lines() {
                 self.out_lines.push(line.to_string());
             }

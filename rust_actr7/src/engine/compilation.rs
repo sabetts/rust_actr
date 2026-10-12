@@ -949,6 +949,7 @@ pub(super) fn render_production(
     prod: &Production,
     b: &Bindings,
     partials: &[PpmMismatch],
+    implicit: &[String],
 ) -> String {
     let mut s = format!("(P {}\n", prod.name);
     for item in &prod.lhs {
@@ -1014,6 +1015,12 @@ pub(super) fn render_production(
                 ));
             }
         }
+    }
+    // Implicit queries added by the production compiler for a request with no
+    // explicit `?buffer>` condition (`implicit-queries`); `pp` shows them,
+    // `:cst`/`whynot` pass an empty list.
+    for buffer in implicit {
+        s.push_str(&format!("   ?{buffer}>\n       STATE FREE\n"));
     }
     s.push_str(" ==>\n");
     for a in &prod.rhs {

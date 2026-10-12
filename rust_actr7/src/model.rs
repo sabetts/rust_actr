@@ -1942,7 +1942,7 @@ fn parse_model(
                                     && !model.defined_chunks.iter().any(|c| &c.name == k)
                             })
                             .collect();
-                        model.productions.push(p);
+                        push_production(&mut model, p);
                     }
                     Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
                     Err(e) => return Err(e),
@@ -1959,7 +1959,7 @@ fn parse_model(
                     let extra: Vec<String> =
                         model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
                     match parse_production(&Sexp::List(form), &extra) {
-                        Ok(p) => model.productions.push(p),
+                        Ok(p) => push_production(&mut model, p),
                         Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
                         Err(e) => return Err(e),
                     }
@@ -2085,6 +2085,20 @@ fn parse_model(
         }
     }
     Ok(model)
+}
+
+/// Add a production, replacing any earlier one of the same name
+/// (`redefine-production`): ACT-R keeps the last definition and warns at the
+/// next reset (`#|Warning: Production F already exists …|#`).
+fn push_production(model: &mut Model, p: Production) {
+    if let Some(pos) = model.productions.iter().position(|q| q.name == p.name) {
+        model.productions.remove(pos);
+        model.reset_warnings.push(format!(
+            "#|Warning: Production {} already exists and it is being redefined. |#",
+            p.name
+        ));
+    }
+    model.productions.push(p);
 }
 
 /// Load every `define-model` in a `.lisp` model file (M0 files hold one).
