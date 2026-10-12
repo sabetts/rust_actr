@@ -2993,3 +2993,29 @@ refs pin down:
   requested keyword with `~S` (so `:UTILITY`, upper-case) and does **not** gate
   on `:esc` — unlike the bare `spp` path (`:678`). So `:UTILITY` and `:U` both
   appear even when `:esc` is nil.
+
+## 198. R6b: runtime seeds and the `:testing-function` reset hook
+
+`tester.py` (the Python model-tester) needs two engine behaviours the corpus
+had only exercised through load-time model parameters:
+
+- `(sgp :seed (S C))` was **ignored** by `apply_sgp` (only the model body's
+  `:seed` at construction reached `cfg.seed`). So `set_parameter_value(':seed',
+  …)` and `set_system_parameter_value(':starting-parameters', [':seed', …])`
+  were no-ops at run time. It is now applied immediately (init + `C` discards,
+  `random.lisp:417`) and remembered so `reset` re-seeds. With seed `(1 0)` the
+  stream is the standard MT19937 `init_genrand(1)` sequence.
+- `:testing-function` is ACT-R's `testing-module` **reset** hook
+  (`model-tester.cl:485`), not a normal parameter. The session now reads it
+  from `:starting-parameters`, dispatches it as a client command when one is
+  registered (`test-fan-2`, `python-set-testing-traces`), and otherwise applies
+  the well-known `set-testing-traces` effect (`sgp :v t :cmdt t`).
+
+`golden/rpc-conformance.py` now captures `tester.out_file` (task `print`s)
+interleaved with the monitored trace, so the tester refs (task stdout +
+trace) can be diffed.
+
+Remaining blocker for the `bst-*`/`fan-*`/`paired-*`/`onehit` refs: they drive
+a **live** experiment window (`open-exp-window` → `add-text-to-exp-window` →
+visicon), but the R4 window commands are still stubs, and the models' internal
+RNG draw counts must line up exactly.

@@ -409,6 +409,25 @@ impl Engine {
             }
             ":PPM" => self.cfg.ppm = num(val),
             ":EGS" => self.cfg.egs = num(val).unwrap_or(0.0),
+            // `(sgp :seed (S C))` (`random.lisp:417`): init the stream from `S`
+            // and discard `C` draws; `nil` clears it. Applied immediately and
+            // remembered so `reset` re-seeds (`engine.rs` reset_impl).
+            ":SEED" => match val {
+                Sexp::List(items) => {
+                    let s = match items.first() {
+                        Some(Sexp::Int(i)) => *i as u64,
+                        _ => 0,
+                    };
+                    let c = match items.get(1) {
+                        Some(Sexp::Int(i)) => *i as u64,
+                        _ => 0,
+                    };
+                    self.cfg.seed = Some((s, c));
+                    self.rng.borrow_mut().set_seed(s, c);
+                }
+                Sexp::Sym(s) if s == "NIL" => self.cfg.seed = None,
+                _ => {}
+            },
             ":CIA" => self.cfg.cia = truthy,
             ":RIR" => self.cfg.rir = truthy,
             ":EPL" => self.cfg.epl = truthy,

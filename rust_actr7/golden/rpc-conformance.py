@@ -34,22 +34,44 @@ def all_tests():
     return names
 
 
-def normalise(lines):
-    return [l.rstrip().lower() for l in lines if l.strip()]
+def normalise(chunks):
+    """Flatten captured trace+stdout chunks into comparable lines."""
+    return [l.rstrip().lower() for l in "".join(chunks).splitlines() if l.strip()]
+
+
+class _Collector:
+    """A `tester.out_file`: task `print`s are appended raw to the buffer so
+    they interleave with the monitored trace in arrival order."""
+
+    def __init__(self, buffer):
+        self._b = buffer
+
+    def write(self, s):
+        self._b.append(s)
+
+    def flush(self):
+        pass
+
+
+def uses_tester(name):
+    path = os.path.join(ACTR, "test-models", name + ".py")
+    try:
+        with open(path) as f:
+            return "import tester" in f.read()
+    except OSError:
+        return False
 
 
 def run_test(name, collected):
-    """Run one test-model, returning (sys.stdout+monitor lines)."""
+    """Run one test-model, capturing its trace and `tester.out_file` output."""
     collected.clear()
-    # The Python test-models that import the model-tester write task output to
-    # `tester.out_file`; give it a sink so they don't crash.
-    try:
-        import tester  # noqa: F401
-        import io
+    if uses_tester(name):
+        try:
+            import tester  # noqa: F401
 
-        tester.out_file = io.StringIO()
-    except Exception:
-        pass
+            tester.out_file = _Collector(collected)
+        except Exception:
+            pass
     mod = importlib.import_module(name)
     importlib.reload(mod)
     mod.run_it()
@@ -79,7 +101,7 @@ def main():
     collected = []
 
     def sink(s):
-        collected.append(s)
+        collected.append(s if s.endswith("\n") else s + "\n")
 
     actr.add_command("rpc-sink", sink)
     for c in ["model-trace", "command-trace", "warning-trace", "general-trace"]:
@@ -95,7 +117,7 @@ def main():
                 failed += 1
             continue
         ref_path = os.path.join(ACTR, "test-models", name + ".ref")
-        exp = normalise(open(ref_path).read().splitlines())
+        exp = normalise([open(ref_path).read()])
         if got == exp:
             print("RPC-OK %s" % name)
         else:

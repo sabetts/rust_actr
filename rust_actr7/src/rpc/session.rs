@@ -347,7 +347,7 @@ impl Session {
         remote: &mut dyn Remote,
     ) -> Result<Vec<Json>, String> {
         match &c.owner {
-            Owner::Builtin => self.invoke(name, args),
+            Owner::Builtin => self.invoke(name, args, remote),
             Owner::None => Ok(vec![Json::Bool(true)]),
             Owner::Remote { local_name } => {
                 let call = local_name.clone().unwrap_or_else(|| name.to_string());
@@ -380,7 +380,12 @@ impl Session {
     fn warn(&self, _msg: &str) {}
 
     /// The underlying handler for a built-in command.
-    fn invoke(&mut self, name: &str, args: &[Json]) -> Result<Vec<Json>, String> {
+    fn invoke(
+        &mut self,
+        name: &str,
+        args: &[Json],
+        remote: &mut dyn Remote,
+    ) -> Result<Vec<Json>, String> {
         match name {
             "new-symbol" => {
                 self.symbol_count += 1;
@@ -408,6 +413,9 @@ impl Session {
                 if let Some(eng) = &mut self.engine {
                     eng.reset().map_err(|e| e.to_string())?;
                 }
+                // ACT-R's `:testing-module` reset hook fires after the model
+                // reset (`model-tester.cl:485`).
+                self.invoke_testing_fn(remote);
                 Ok(vec![Json::Bool(true)])
             }
             "run" | "run-full-time" | "run-until-time" | "run-n-events" => self.run_cmd(name, args),
@@ -941,6 +949,50 @@ impl Session {
                         let _ = eng.apply_sgp(k, &sexp);
                     }
                 }
+            }
+        }
+    }
+
+    /// The `:testing-function` from `:starting-parameters`, quotes stripped
+    /// (`"'python-set-testing-traces'"` → `python-set-testing-traces`).
+    fn testing_fn(&self) -> Option<String> {
+        let items = match self.system_params.get(":STARTING-PARAMETERS") {
+            Some(Json::Arr(a)) => a,
+            _ => return None,
+        };
+        let mut i = 0;
+        while i + 1 < items.len() {
+            let is_fn = items[i]
+                .as_str()
+                .map(|k| k.eq_ignore_ascii_case(":testing-function"))
+                .unwrap_or(false);
+            if is_fn {
+                let n = items[i + 1].as_str().unwrap_or("").trim_matches('\'');
+                if !n.is_empty() {
+                    return Some(n.to_string());
+                }
+            }
+            i += 2;
+        }
+        None
+    }
+
+    /// `(call-testing-module-function)` (`model-tester.cl:485`): ACT-R's
+    /// `:testing-module` reset hook. Dispatches the named client command, or
+    /// applies the well-known `set-testing-traces` effect.
+    fn invoke_testing_fn(&mut self, remote: &mut dyn Remote) {
+        let Some(name) = self.testing_fn() else {
+            return;
+        };
+        if let Some(c) = self.commands.get(&name).cloned() {
+            let _ = self.underlying(&c, &name, None, &[], remote);
+            return;
+        }
+        // `set-testing-traces` (`model-tester.cl:494`): `(sgp :v t :cmdt t)`.
+        if name.to_uppercase().contains("TESTING-TRACES") {
+            if let Some(eng) = &mut self.engine {
+                let _ = eng.apply_sgp(":v", &Sexp::Sym("T".into()));
+                let _ = eng.apply_sgp(":cmdt", &Sexp::Sym("T".into()));
             }
         }
     }

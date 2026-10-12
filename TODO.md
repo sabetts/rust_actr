@@ -269,12 +269,16 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       --ignored`). Currently asserts **9** Python test-models
       (`addition`, `count`, `semantic`, `semantic-dynamic`,
       `tutorial_unit2code_{dm,sdm,buffer_status,whynot}`, `tutor-model-solution`).
-- [ ] **R6b. `tester.py` support.** Seven tests (`bst-*`, `fan-no-pm`,
-      `paired-learning-dynamic`, `tutorial_unit5_onehit_*`) set
-      `sys.stdout = tester.out_file` and run full tasks; they need the Python
-      model-tester itself (`model-tester.cl`'s `defun`s and
-      `:starting-parameters :testing-function`), which is the next blocker now
-      that R4's command surface exists.
+- [ ] **R6b. `tester.py` support** (plumbing done). `import tester` now works
+      (`model-tester.cl` loads), the harness captures `tester.out_file`
+      interleaved with the trace, and the engine gained the two runtime pieces
+      the tester needs: `(sgp :seed …)` actually applies now, and
+      `:testing-function` is dispatched as the `testing-module` reset hook
+      (`set-testing-traces` / registered client commands). See `GOTCHAS.md`
+      #198. Still failing: `bst-*`, `fan-no-pm`, `paired-learning-dynamic`,
+      `tutorial_unit5_onehit_*`. Blocker = a **live** device/window (the R4
+      `open-exp-window`/`add-text-to-exp-window`/… are stubs) plus exact
+      per-run RNG draw alignment through model runs.
 Ordering: R1 → R2 → R3 → R4 (done), then R6b for the tester-driven Python
 test-models.
 
