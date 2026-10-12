@@ -147,8 +147,6 @@ pub struct Session {
     commands: BTreeMap<String, Command>,
     engine: Option<Engine>,
     current_model: Option<String>,
-    /// Trace lines not yet streamed to `model-trace` monitors.
-    pending_trace: Vec<String>,
     trace_pos: usize,
     seed: (u64, u64),
     /// `(new-symbol …)` counter, as in ACT-R's `new-symbol`.
@@ -173,7 +171,6 @@ impl Session {
             commands,
             engine: None,
             current_model: None,
-            pending_trace: Vec::new(),
             trace_pos: 0,
             seed,
             symbol_count: 0,
