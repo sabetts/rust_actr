@@ -1593,6 +1593,13 @@ pub struct Engine {
     /// Chunk similarities, as given (lookup tries both orders;
     /// mirrors set-similarities).
     sims: HashMap<(String, String), f32>,
+    /// The model's possible slot names (`valid-slot-name`,
+    /// `chunk-types.lisp:590`): the union of every chunk-type's slots, plus
+    /// slots added at run time. A production's `=buffer>`/`*buffer>` mod that
+    /// instantiates a slot outside this set extends the chunk and emits
+    /// `EXTEND-BUFFER-CHUNK <buffer>` before the modification
+    /// (`instantiate-chunk-spec`, `chunk-spec.lisp:777`).
+    valid_slots: HashSet<String>,
     /// Scripted device items not yet shown, by appearance time.
     pending_texts: Vec<DeviceText>,
     /// Scripted window-item moves not yet applied, by time.
@@ -1863,6 +1870,12 @@ impl Engine {
             consume_rng,
         } = device;
         let base_prods = model.productions.len();
+        let valid_slots: HashSet<String> = model
+            .chunk_types
+            .iter()
+            .flat_map(|ct| ct.slots.iter())
+            .map(|s| s.to_uppercase())
+            .collect();
         let mut eng = Engine {
             model,
             cfg,
@@ -1892,6 +1905,7 @@ impl Engine {
                 .iter()
                 .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
                 .collect(),
+            valid_slots,
             pending_texts: {
                 let mut v = texts.clone();
                 v.sort_by_key(|t| t.at_ms);

@@ -558,6 +558,42 @@ impl Engine {
         buffer == "BLENDING" && self.blending_error
     }
 
+    /// `instantiate-chunk-spec` (`chunk-spec.lisp:777`): a `=buffer>`/
+    /// `*buffer>` mod-request whose *variable-bound* slot (a `=var` slot name,
+    /// resolved at fire time) is not a possible slot extends the chunk, and
+    /// the production action schedules an `EXTEND-BUFFER-CHUNK <buffer>` line
+    /// before the modification (`production-parsing.lisp:1096`). A literal
+    /// slot was already extended when the production was parsed, so it never
+    /// emits the line (`simple-dynamic-model`'s `=target` vs `act-touch`'s
+    /// `loc`). The extended slot stays possible, so a later mod of the same
+    /// slot does not extend again.
+    fn extend_buffer_chunk(&mut self, buffer: &str, dynamic: &[String], prio: i64) {
+        let new: Vec<String> = dynamic
+            .iter()
+            .map(|s| s.to_uppercase())
+            // `ISA` is the chunk's type, stored outside the slot list
+            // (`chunk-spec.lisp`), and a `:keyword` is a request parameter —
+            // neither is a possible-slot check (`keywordp` short-circuits in
+            // `instantiate-chunk-spec`).
+            .filter(|s| s != "ISA" && !s.starts_with(':'))
+            .filter(|s| !self.valid_slots.contains(s))
+            .collect();
+        if new.is_empty() {
+            return;
+        }
+        for s in new {
+            self.valid_slots.insert(s);
+        }
+        self.now(
+            Prio::Num(prio),
+            explicit_out(self.cfg.rhst),
+            Event::Emit {
+                module: "PROCEDURAL".to_string(),
+                line: format!("EXTEND-BUFFER-CHUNK {buffer}"),
+            },
+        );
+    }
+
     pub(super) fn fire(&mut self, prod_idx: usize, bindings: &Bindings) -> Result<(), EngineError> {
         let prod = self.model.productions[prod_idx].clone();
         // Copies of chunk-valued `=buffer` refs are deduped within one
@@ -650,14 +686,19 @@ impl Engine {
                     // (`paired-2x2`), matching `instantiate-chunk-spec`.
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
+                    let mut dyn_slots = Vec::new();
                     for (s, p) in slots {
                         // A dynamic slot (`=target =x`) is set under the name
                         // bound to `=target` (`instantiate-chunk-spec`).
+                        if s.starts_with('=') {
+                            dyn_slots.push(dynamic_slot(s, &b));
+                        }
                         sub.push((
                             dynamic_slot(s, &b),
                             self.rhs_value(p, &b, copy, &mut copied)?,
                         ));
                     }
+                    self.extend_buffer_chunk(buffer, &dyn_slots, 101);
                     self.now(
                         Prio::Num(100),
                         explicit_out(self.cfg.rhst),
@@ -677,12 +718,17 @@ impl Engine {
                     }
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
+                    let mut dyn_slots = Vec::new();
                     for (s, p) in slots {
+                        if s.starts_with('=') {
+                            dyn_slots.push(dynamic_slot(s, &b));
+                        }
                         sub.push((
                             dynamic_slot(s, &b),
                             self.rhs_value(p, &b, copy, &mut copied)?,
                         ));
                     }
+                    self.extend_buffer_chunk(buffer, &dyn_slots, 61);
                     if buffer == "IMAGINAL" {
                         self.imag_busy = true;
                         let delay = if self.cfg.vidt {
