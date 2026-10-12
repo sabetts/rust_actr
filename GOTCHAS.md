@@ -3043,3 +3043,16 @@ build visicon features directly (verified against an SBCL oracle,
   extended-motor-actions `zz_print_instantiation` prints slots then `CMD`; the
   general `render_production` prints `CMD` first — hence the guard/reorder
   there.
+
+## 200. LHS dynamic slots need dependency ordering
+
+A production LHS dynamic slot (`=imaginal> =target =stimulus`) names a slot by
+the value bound to `=target`, and that variable can be bound by a *later*
+clause (`retrieve-associate` binds `=target` from `=retrieval> required
+=target`). The matcher ran conditions in source order, so `=target` was
+unbound when the imaginal clause ran and the production never matched
+(`paired-learning-dynamic` stalled after its first `*imaginal>`).
+
+`match_prod` now retries passes, deferring a match/query item whose dynamic
+slot-name variables are not yet bound, and falls back to source order when no
+further progress is possible. 96 -> 803/803 lines on `paired-learning-dynamic`.

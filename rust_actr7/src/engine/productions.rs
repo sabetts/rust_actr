@@ -23,6 +23,18 @@ fn dynamic_slot(slot: &str, b: &Bindings) -> String {
     }
 }
 
+/// Whether an LHS match/query item's dynamic slot-name variables are all bound,
+/// so it can be matched now (ACT-R orders conditions by dependency).
+fn lhs_dynamic_ready(item: &LhsItem, b: &Bindings) -> bool {
+    match item {
+        LhsItem::Match { tests, .. } => tests.iter().all(|t| match t.slot.strip_prefix('=') {
+            Some(var) => b.contains_key(var),
+            None => true,
+        }),
+        _ => true,
+    }
+}
+
 impl Engine {
     pub(super) fn conflict_resolution(&mut self) -> Result<(), EngineError> {
         // Utilities are production U plus optional `:egs` noise, drawn
@@ -192,13 +204,43 @@ impl Engine {
         let mut b = Bindings::new();
         // Buffer matches/queries run first (they bind the variables that
         // LHS `!eval!`/`!bind!` conditions may use; ACT-R orders these by
-        // dependency, `production-parsing.lisp`).
-        for item in &prod.lhs {
-            if matches!(item, LhsItem::Match { .. } | LhsItem::Query { .. })
-                && self.match_item(item, &mut b, ppm)?.is_none()
-            {
-                return Ok(None);
+        // dependency, `production-parsing.lisp`). A dynamic slot
+        // (`=imaginal> =target =x`) needs its *slot-name* variable bound,
+        // which a later clause may supply (`retrieve-associate` binds
+        // `=target` from the retrieval clause), so retry passes until every
+        // such variable is bound.
+        let mut pending: Vec<&LhsItem> = prod
+            .lhs
+            .iter()
+            .filter(|i| matches!(i, LhsItem::Match { .. } | LhsItem::Query { .. }))
+            .collect();
+        loop {
+            if pending.is_empty() {
+                break;
             }
+            let mut deferred: Vec<&LhsItem> = Vec::new();
+            let mut progressed = false;
+            for item in pending.drain(..) {
+                if !lhs_dynamic_ready(item, &b) {
+                    deferred.push(item);
+                    continue;
+                }
+                progressed = true;
+                if self.match_item(item, &mut b, ppm)?.is_none() {
+                    return Ok(None);
+                }
+            }
+            if !progressed {
+                // No further progress possible: process the rest in source
+                // order (an unbound dynamic slot resolves to itself).
+                for item in deferred {
+                    if self.match_item(item, &mut b, ppm)?.is_none() {
+                        return Ok(None);
+                    }
+                }
+                break;
+            }
+            pending = deferred;
         }
         for item in &prod.lhs {
             if matches!(
