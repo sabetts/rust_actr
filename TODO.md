@@ -138,17 +138,31 @@ Enable a passing spec by appending its name to
   - `imaginal-action` — the model uses the `imaginal-action` buffer
     (`+imaginal-action> … action "cmd" slots (count)`, a command-layer
     feature); the parser rejects `slots (count)`.
-- [ ] **B4. Near-pure subset (42).** Reproduce the small non-trace lines
-      (`? (run n)` echoes, `...`, `Events in the queue:`) or reclassify them.
-      Sample: `tutorial-unit1modeling-broken-addition-v{3,4,5,6,7,9,12}-run*`,
-      `tutorial-unit5modeling-v6-p4-run-queue`,
-      `tutorial-unit7modeling-pcomp-issues-v9-non-win-composition`.
+- [x] **B4. Near-pure subset.** Literal `(model-output "? …")` echoes are
+      replayed (`:MODEL-OUTPUT` step); 22 of the 63 `? …` refs now pass and are
+      enabled. Frontier 67 → 89 specs.
+  - [ ] Remaining `? …` refs need the command output itself: `(dm)`, `(sdm …)`,
+        `(buffer-chunk …)`, `(whynot …)`, `(sgp …)`, `mp-show-queue`
+        (`Events in the queue:`), and the `pcomp-issues` break/queue ones.
+        Samples: `tutorial-unit1code-semantic-{buffers,buffer-specific,sdm,sdm2,
+        whynot,goal-focus}`, `tutorial-unit1modeling-broken-addition-v*-goal-buffer`,
+        `tutorial-unit5modeling-v6-p4-run-queue`,
+        `tutorial-unit7modeling-pcomp-issues-v9-non-win-composition`.
 
 ## Phase C — engine features surfaced by B
 
 - [ ] **C1.** Cluster the new mismatches by subsystem (vision / audio / DM /
       production-compilation / imaginal / temporal / …) and fix one cluster at a
-      time; each cluster gets its own spec(s) in `enabled.txt`.
+      time; each cluster gets its own spec(s) in `enabled.txt`. Current
+      runnable mismatches:
+  - `hear-self` — speech module: missing the `SPEAK <text>` playback line and
+    the subvocalize sound (`speech.lisp`), run stops early.
+  - `imaginal-action` — the `imaginal-action` buffer (command layer):
+    `+imaginal-action> … action "cmd" slots (count)`; parser rejects `slots (…)`.
+  - `tutorial-unit5-fan-lawyer-store-trace` — `?visual-location> buffer
+    unrequested` query not implemented.
+  - `tutorial-unit3-sperling-experiment`, `tutorial-unit3modeling-v6-next-run`,
+    `tutorial-unit4-paired-experiment` — task/experiment mismatches.
 
 ## Phase D — in-scope leftovers
 
