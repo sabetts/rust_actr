@@ -47,9 +47,6 @@ mp-queue-text	production	refs
 new-ongoing-sound	misc	refs
 no-output	misc	actr.py,refs
 overwrite-buffer-chunk	events	refs
-pdisable	production	actr.py
-penable	production	actr.py
-pp	production	actr.py
 print-activation-trace	misc	actr.py
 print-audicon	misc	actr.py,refs
 print-chunk-activation-trace	misc	actr.py
