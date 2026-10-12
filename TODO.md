@@ -12,8 +12,12 @@ Status legend: `- [ ]` todo · `- [x]` done · `(IN PROGRESS)` picked up.
   `git -c user.name=sabetts -c user.email=sabetts@localhost commit`.
 - **GOTCHAS.md**: add an entry for non-obvious behavior (tied to a source line),
   not a changelog.
-- **No command layer.** COMMAND-scope specs and unit-test refs are out of scope
-  unless re-triaged in Phase B.
+- **Command layer in scope (2026-10-12).** The goal is a drop-in RPC
+  replacement: a Python ACT-R client connects and behaves identically to Lisp
+  ACT-R, the only divergence being that arbitrary Lisp cannot be executed.
+  The client-facing command surface *and* whatever the refs exercise are now
+  in scope. The command inventory (`golden/command-inventory.txt`, regenerate
+  with `golden/command-inventory.py`) is the work list.
 - Device sidecars (`*.device.sexp`) are hand-authored and must not be clobbered;
   spec regeneration is additive (`SPEC_LIST`).
 
@@ -282,10 +286,37 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
 Ordering: R1 → R2 → R3 → R4 (done), then R6b for the tester-driven Python
 test-models.
 
+### R7. Full drop-in command surface (in scope 2026-10-12)
+
+Goal: a Python ACT-R client can call **every** command it can reach and get
+Lisp-identical output. Target surface = client-facing (`actr.py`, 123
+commands) ∪ ref-exercised (86), minus implemented → **72 commands**
+(`golden/command-inventory.txt`). Families: chunk-dm 7, production 9,
+window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
+
+- [ ] **M0. Inventory + harness.** Inventory done (`golden/command-inventory.py`
+      + `.txt`). Still: make the command-output refs runnable (a
+      `(:command name args…)` spec step that drives `Session::evaluate` and
+      compares printed output), and a coverage dashboard.
+- [ ] **M1. Implement the 72, by family** (chunk-dm → production → window →
+      audio → modules → history → events → misc), each enabled against its
+      ref(s).
+- [ ] **M2. Trace fidelity** for the command-scope timestamped specs: `:cmdt`
+      lines (`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `QUERY-BUFFER-ACTION`,
+      `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
+      `visicon-update`, `Find-location`, `Move-attention`, `Encoding-complete`),
+      module verbose output, utility-learning lines, `!output!` gating.
+- [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
+      alignment) plus `simple-dynamic-model`'s reusable-buffer naming.
+- Known divergence: the pipe transport and `define-module`/`undefine-module`
+  (client-defined modules) are covered by "no arbitrary Lisp" unless needed.
+
 ---
 
 ## Explicitly out of scope (revisit only on request)
 
-- The 91 command-output specs and the remaining command-only specs (need the
-  command layer).
-- The 344 non-timestamped unit-test refs.
+- The 344 non-timestamped unit-test refs **that only scrape the tutorial
+  source files** (194 of the 332; the stub `with-open-file`/`read-line`s a
+  model file and `model-output`s a fragment). They validate the tutorial
+  text, not the engine — no client command reaches them. The remaining ~138
+  are real command-output tests and are in scope (Phase R7).
