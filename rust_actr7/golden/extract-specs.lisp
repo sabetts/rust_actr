@@ -433,7 +433,12 @@ disable/enable, breakpoints); not trace-only drivers.")
 ;;; engine can replay the line (the ref is the oracle).
 
 (defun record-command (absolute? time action keys)
-  (when (and (stringp action) (not *suppress*))
+  ;; Only *task-setup* commands (scheduled outside a run) need replaying: a
+  ;; command scheduled during a run comes from a command the engine already
+  ;; dispatches (`ul-issues`'s `present-choose`/`show-result` chain) or an
+  ;; internal module event it already emits (`audio`'s `new-sound`), so a
+  ;; sidecar entry would duplicate the line.
+  (when (and (stringp action) (not *suppress*) (not *in-run*))
     (let ((output (getf keys :output t)))
       (when output
         (let* ((ms (if (getf keys :time-in-ms)
