@@ -806,3 +806,56 @@ fn sdm_match(c: &ChunkInst, preds: &[(Option<char>, String, String)]) -> bool {
         }
     })
 }
+
+/// `buffer-status` (`framework/buffers.lisp:953`): print the per-buffer query
+/// table and return the buffer names. The standard query set, plus the
+/// module-specific rows the vision buffer adds while idle.
+impl Engine {
+    pub fn print_buffer_status(&mut self, buffers: &[String]) -> Vec<String> {
+        let t = |x: bool| if x { "T" } else { "NIL" };
+        let mut names = Vec::new();
+        for name in buffers {
+            let bname = name.to_uppercase();
+            let (empty, failed, busy) = match self.buffers.get(&bname) {
+                None => (true, false, false),
+                Some(b) => (b.chunk.is_none(), b.failed, b.busy),
+            };
+            let mut lines = vec![format!("{bname}:")];
+            let mut row = |label: &str, val: &str| {
+                lines.push(format!("  {label:<22}: {val}"));
+            };
+            row("buffer empty", t(empty));
+            row("buffer full", "NIL");
+            row("buffer failure", t(failed));
+            row("buffer requested", "NIL");
+            row("buffer unrequested", "NIL");
+            row("state free", t(!busy && !failed));
+            row("state busy", t(busy));
+            row("state error", t(failed));
+            if bname == "VISUAL" {
+                // `vision-status` (`vision.lisp`): the vision module is idle
+                // when nothing is being perceived.
+                let idle = !self.vis_busy();
+                row("preparation free", t(idle));
+                row("preparation busy", t(!idle));
+                row("processor free", t(idle));
+                row("processor busy", t(!idle));
+                row("execution free", t(idle));
+                row("execution busy", t(!idle));
+                row("last-command", "NONE");
+                row("scene-change", "NIL");
+                row("scene-change-value", "NIL");
+            }
+            self.out_lines.extend(lines);
+            names.push(bname);
+        }
+        names
+    }
+
+    /// Whether the vision module is currently processing (`vis_busy`
+    /// tracked via the visual/visual-location buffers).
+    fn vis_busy(&self) -> bool {
+        let b = |n: &str| self.buffers.get(n).map(|b| b.busy).unwrap_or(false);
+        b("VISUAL") || b("VISUAL-LOCATION")
+    }
+}

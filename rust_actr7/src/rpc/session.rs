@@ -488,23 +488,16 @@ impl Session {
                 Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
             }
             "buffer-status" => {
-                let vals: Vec<Json> = args
+                let names: Vec<String> = args
                     .iter()
-                    .map(|a| {
-                        let b = a.as_str().unwrap_or("");
-                        let s = self
-                            .engine
-                            .as_ref()
-                            .map(|e| e.buffer_status(b))
-                            .unwrap_or("absent");
-                        Json::Str(s.to_string())
-                    })
+                    .filter_map(|a| a.as_str().map(str::to_string))
                     .collect();
-                if vals.len() == 1 {
-                    Ok(vals)
-                } else {
-                    Ok(vec![Json::Arr(vals)])
-                }
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_buffer_status(&names))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
             "clear-buffer" => {
                 let b = args.first().and_then(|a| a.as_str()).unwrap_or("");
