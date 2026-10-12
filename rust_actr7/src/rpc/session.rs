@@ -131,6 +131,8 @@ pub const BUILTINS: &[&str] = &[
     "new-digit-sound",
     "pbreak",
     "punbreak",
+    "pdisable",
+    "penable",
     "correlation",
     "mean-deviation",
     "clear-exp-window",
@@ -830,6 +832,23 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "pdisable" | "penable" => {
+                // `pdisable-fct`/`penable-fct` (`procedural-cmds.lisp`): the
+                // names come as separate args (`actr.pdisable('p1','p2')`);
+                // no args means all productions.
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                if let Some(eng) = &mut self.engine {
+                    if name == "pdisable" {
+                        eng.pdisable(&names);
+                    } else {
+                        eng.penable(&names);
+                    }
+                }
+                Ok(vec![Json::Null])
+            }
             // --- Live experiment window (`devices/virtual/uwi.lisp`) --------
             "open-exp-window" => {
                 let opts = args.get(1);
@@ -1347,6 +1366,65 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    #[test]
+    fn pdisable_and_penable_toggle_productions() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut remote,
+        )
+        .unwrap();
+        assert!(s.has_command("pdisable") && s.has_command("penable"));
+
+        // Disabling a named production suppresses it (but not the others).
+        s.evaluate(
+            "pdisable",
+            None,
+            &[Json::Str("increment".into())],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(1)], &mut remote)
+            .unwrap();
+        let trace = s.take_trace();
+        assert!(
+            trace.iter().any(|l| l.contains("PRODUCTION-FIRED START")),
+            "the enabled production did not fire: {trace:?}"
+        );
+        assert!(
+            !trace
+                .iter()
+                .any(|l| l.contains("PRODUCTION-FIRED INCREMENT")),
+            "the disabled production fired: {trace:?}"
+        );
+
+        // Re-enabling it (after a reset) lets it fire again.
+        s.evaluate(
+            "penable",
+            None,
+            &[Json::Str("increment".into())],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("reset", None, &[], &mut remote).unwrap();
+        s.evaluate("run", None, &[Json::Int(1)], &mut remote)
+            .unwrap();
+        let trace = s.take_trace();
+        assert!(
+            trace
+                .iter()
+                .any(|l| l.contains("PRODUCTION-FIRED INCREMENT")),
+            "the re-enabled production did not fire: {trace:?}"
+        );
     }
 
     /// A remote client that records the commands it is asked to run.
