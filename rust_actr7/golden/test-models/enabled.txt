@@ -40,6 +40,8 @@ tutorial-unit1code-tutor-model-high-trace
 tutorial-unit1code-tutor-model-low-trace
 tutorial-unit1-count-trace
 tutorial-unit1-semantic-g1-trace
+tutorial-unit1-semantic-g2-trace
+tutorial-unit1-semantic-g3-trace
 tutorial-unit1-tutor-model-partial-trace
 tutorial-unit1-tutor-model-trace
 tutorial-unit3-sperling-trial-trace

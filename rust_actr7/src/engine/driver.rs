@@ -73,6 +73,10 @@ impl Engine {
                     },
                 );
             }
+            // `goal-focus-fct` also schedules a `clear-delayed-goal`
+            // maintenance event (`goal.lisp:284`). It has no state effect here
+            // but counts toward `run-n-events`.
+            self.now_m(Prio::Max, Out::Never, true, Event::Dummy);
             return Ok(());
         }
         let chunk = new_chunk(desc)?;
@@ -86,6 +90,9 @@ impl Engine {
                 shown: None,
             },
         );
+        // `goal-focus-fct` also schedules a `clear-delayed-goal` maintenance
+        // event (`goal.lisp:284`); it counts toward `run-n-events`.
+        self.now_m(Prio::Max, Out::Never, true, Event::Dummy);
         Ok(())
     }
 

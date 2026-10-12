@@ -2423,9 +2423,12 @@ impl Engine {
             }
         } else if let Some(goal) = self.model.initial_goal.clone() {
             let chunk = new_chunk(&goal)?;
+            // Same priority as `goal_focus` so a later driver `(goal-focus …)`
+            // (inserted after this at the same time) overwrites it, as ACT-R
+            // does (both are `set-buffer-chunk` events at t=0, in call order).
             self.push(
                 0,
-                Prio::Num(0),
+                Prio::Max,
                 Out::Low,
                 Event::SetBuffer {
                     buffer: "GOAL".to_string(),
@@ -2434,6 +2437,10 @@ impl Engine {
                     shown: None,
                 },
             );
+            // `goal-focus-fct` also schedules a `clear-delayed-goal`
+            // maintenance event (`goal.lisp:284`); it counts toward
+            // `run-n-events`.
+            self.push_m(0, Prio::Max, Out::Never, true, Event::Dummy);
         }
         // Model-body `(set-buffer-chunk '<buffer> '<chunk>)`: silent initial
         // buffer contents, applied on every reset.
