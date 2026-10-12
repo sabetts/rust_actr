@@ -3076,3 +3076,27 @@ rendering does not:
 
 `safe-queries` (`pp` before/after `reset` with `:do-not-query imaginal`) is the
 oracle.
+
+## 202. `EXTEND-BUFFER-CHUNK` only for a variable-bound mod slot
+
+A `=buffer>`/`*buffer>` mod-request whose slot is **not** a possible slot
+extends the chunk, and the production action schedules an `EXTEND-BUFFER-CHUNK
+<buffer>` line one priority above the modification
+(`support/production-parsing.lisp:1096`, `:101` for `=` / `:61` for `*`; the
+`extend-buffer-chunk` function itself is a no-op — only the scheduled event's
+details print). "Possible" is the model-global slot set
+(`valid-slot-name`, `framework/chunk-types.lisp:590`): every chunk type's
+slots, module types included.
+
+The subtlety: a **literal** mod slot (`=visual-location> color green`,
+`=goal> loc …`) is extended when the production is *parsed*
+(`define-chunk-spec`, `framework/chunk-spec.lisp:633`, `extend` default `t`),
+so no line is emitted at fire time. Only a **variable-bound** slot name
+(`=imaginal> =target =x`) is extended at *fire* time
+(`instantiate-chunk-spec`, `framework/chunk-spec.lisp:777`). `simple-dynamic-model`
+shows both: `retrieve-first-step`'s `=target` = `data2` (a `result` slot — no
+line), `retrieve-second-step`'s `=target` = `data3` (not a slot — line).
+`act-touch` (`=goal> … loc`) and `precondition-test` (`=visual-location> color
+green`) are literal, so they must stay line-free. The engine tracks the
+extended set in `Engine::valid_slots` so a later mod of the same slot does not
+extend again.
