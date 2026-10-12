@@ -82,7 +82,9 @@ impl Engine {
             let mut lines: Vec<String> = Vec::new();
             for (idx, b, u, mism) in &matched {
                 let prod = &self.model.productions[*idx];
-                lines.push(render_production(prod, b, mism));
+                // `print-instantiation` emits the definition one line at a
+                // time, so split the render.
+                lines.extend(render_production(prod, b, mism).lines().map(str::to_string));
                 lines.push(format!("Parameters for production {}:", prod.name));
                 if self.cfg.esc {
                     lines.push(format!(" :utility {}", fmt_6_3(*u)));
