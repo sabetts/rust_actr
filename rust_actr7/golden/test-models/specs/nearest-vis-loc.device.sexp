@@ -1,0 +1,30 @@
+(RUN 1
+ (ADD-TEXT 0 "x" 30 40)
+ (ADD-TEXT 0 "y" 40 30)
+ (ADD-TEXT 0 "z" 32 32)
+ (CLEAR 0)
+)
+(RUN 2
+ (ADD-TEXT 0 "x" 30 40)
+ (ADD-TEXT 0 "y" 40 30)
+ (ADD-TEXT 0 "z" 32 32)
+ (CLEAR 0)
+)
+(RUN 3
+ (ADD-TEXT 0 "x" 30 40)
+ (ADD-TEXT 0 "y" 40 30)
+ (ADD-TEXT 0 "z" 32 32)
+ (CLEAR 0)
+)
+(RUN 4
+ (ADD-TEXT 0 "x" 30 40)
+ (ADD-TEXT 0 "y" 40 30)
+ (ADD-TEXT 0 "z" 32 32)
+ (CLEAR 0)
+)
+(RUN 5
+ (ADD-TEXT 0 "x" 30 40)
+ (ADD-TEXT 0 "y" 40 30)
+ (ADD-TEXT 0 "z" 32 32)
+ (CLEAR 0)
+)

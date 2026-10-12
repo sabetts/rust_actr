@@ -692,12 +692,17 @@ golden), so the value is irrelevant."
           runs))
 
 (defun canon-steps (steps values)
-  "Canonicalize the seed inside each `(:run ...)` step, mirroring
-`canon-runs`; other step shapes pass through."
+  "Canonicalize the seed inside each run step, mirroring `canon-runs`; other
+step shapes pass through. `:run-full-time` is included: its recorded seed is
+re-applied by the engine, but a seed that does not match a literal `:seed`
+belongs to a time-seeded (RNG-independent) run, so any value is equivalent
+and `(100 0)` keeps the spec stable across regens."
   (mapcar (lambda (st)
-            (if (and (consp st) (eq (car st) :run))
+            (if (and (consp st)
+                     (member (car st)
+                             '(:run :run-full-time :run-until-time :run-n-events)))
                 (let ((r (cdr st)))
-                  (list :run (first r)
+                  (list (car st) (first r)
                         (if (seed-reproducible-p (second r) values) (second r) '(100 0))
                         (third r) (fourth r)))
                 st))

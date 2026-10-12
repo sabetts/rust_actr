@@ -1,1 +1,1 @@
-(:NAME "keypad-test" :REF "keypad-test.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "keypad-test" :REF "keypad-test.ref" :MODELS ("test-models;models;keypad-test.lisp") :SEED-SET NIL :RUNS ((30 (100 0) T 22)) :STEPS ((:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 30 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

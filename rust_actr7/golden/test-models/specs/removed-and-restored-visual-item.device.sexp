@@ -1,0 +1,8 @@
+(RUN 1
+ (ADD-TEXT 0 "a" 125 150)
+)
+(RUN 2
+ (ADD-TEXT 0 "a" 125 150)
+ (ADD-TEXT 0 "b" 150 150)
+ (CLEAR 0)
+)

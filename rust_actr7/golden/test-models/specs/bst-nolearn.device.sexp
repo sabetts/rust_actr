@@ -1,0 +1,12 @@
+(RUN 1
+ (ADD-TEXT 10753 "Done" 180 200)
+)
+(RUN 2
+ (ADD-TEXT 5780 "Done" 180 200)
+)
+(RUN 3
+ (ADD-TEXT 10753 "Done" 180 200)
+)
+(RUN 4
+ (ADD-TEXT 5780 "Done" 180 200)
+)

@@ -36,6 +36,7 @@ test-temporal
 # Trace-only drivers the engine can reproduce (single- and multi-run).
 tracker
 tracking-test
+tutor-model-solution
 tutorial-unit1code-tutor-model-high-trace
 tutorial-unit1code-tutor-model-low-trace
 tutorial-unit1-count-trace
@@ -56,6 +57,7 @@ tutorial-unit1-semantic-g2-trace
 tutorial-unit1-semantic-g3-trace
 tutorial-unit1-tutor-model-partial-trace
 tutorial-unit1-tutor-model-trace
+tutorial-unit2-unit2-fake-python-run
 tutorial-unit2-unit2-run
 tutorial-unit3modeling-first-run
 tutorial-unit3modeling-v2-run
@@ -87,6 +89,7 @@ tutorial-unit7modeling-ul-issues-first-run-with-ult
 tutorial-unit7modeling-ul-issues-second-run
 tutorial-unit7modeling-ul-issues-v1-first-run
 tutorial-unit7modeling-ul-issues-v1-second-run
+tutorial-unit7modeling-ul-issues-v1-third-run
 tutorial-unit8-semantic-dynamic-g2-trace
 tutorial-unit8-simple-ppm-model-initial-run
 tutorial-unit8-simple-ppm-model-medium-chosen-run

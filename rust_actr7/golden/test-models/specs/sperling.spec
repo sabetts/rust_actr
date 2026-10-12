@@ -1,1 +1,1 @@
-(:NAME "sperling" :REF "sperling.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "sperling" :REF "sperling.ref" :MODELS ("tutorial;lisp;sperling.lisp" "tutorial;unit3;sperling-model.lisp") :SEED-SET T :RUNS ((30 (100 0) T 22) (30 (100 0) T 22)) :STEPS ((:RESET) (:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:CONSUME-RNG 23) (:RUN 30 (100 0) T 22) (:RESET) (:CONSUME-RNG 23) (:RUN 30 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 2 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

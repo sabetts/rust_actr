@@ -1,1 +1,1 @@
-(:NAME "tutor-model-solution" :REF "tutor-model-solution.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutor-model-solution" :REF "tutor-model-solution.ref" :MODELS ("tutorial;unit1;tutor-model-solution.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :STEPS ((:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 10 (100 0) T 22) (:BUFFER-CHUNK GOAL)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)
