@@ -28,14 +28,16 @@
 ;;;; effective seeds can be recorded.
 
 (defparameter *command-tokens*
-  '("model-output" "command-output" "(sdp" "(spp" "(whynot" "(dm " "(dm)"
+  '("command-output" "(sdp" "(spp" "(whynot" "(dm " "(dm)"
     "(buffer-chunk" "buffer-status" "(sji" "(pprint"
     "print-conflict-tree" "print-visicon" "print-all-visicon"
     "with-open-file" "read-line" "multiple-value-bind")
   "Stub text that means the ref contains non-trace output: out of scope.
 `(sgp :v …)`/`(sgp-fct (list :v …))`/`*out-file*` are only trace toggles and
 targets, not command output, so they must not classify a stub (they made
-`tutorial-unit5modeling-v7-p4-run` etc. look like command specs).")
+`tutorial-unit5modeling-v7-p4-run` etc. look like command specs).
+`model-output` is handled (`w-evaluate-act-r-command` records a literal
+echo), and a filtered `model-output` fragment is caught by the ref check.")
 
 (defparameter *device-tokens*
   '("install-device" "open-exp-window" "add-text-to-exp-window"
@@ -301,6 +303,19 @@ disable/enable, breakpoints); not trace-only drivers.")
   (let ((*in-run* t))
     (call-orig 'run-full-time run-time nil)))
 
+(defun w-evaluate-act-r-command (name &rest parameters)
+  ;; A literal `(model-output "? (run 10)")` echo (the tutorial stubs echo the
+  ;; driver call before running): the macro routes through
+  ;; `evaluate-act-r-command "model-output"` (`misc-utils.lisp:801`), so record
+  ;; it as a step. A format directive or args means the text is computed and
+  ;; cannot be replayed from the spec.
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*)
+             (stringp name) (string-equal name "model-output")
+             (stringp (first parameters))
+             (not (find #\~ (first parameters))))
+    (push (list :model-output (first parameters)) *steps*))
+  (apply (gethash 'evaluate-act-r-command *orig-fns*) name parameters))
+
 (defun w-run-until-time (end-time &optional real-time)
   ;; `run-until-time` (`scheduling.lisp:1030`): run to an *absolute* model
   ;; time (used to trace the tail of a long run, e.g.
@@ -531,7 +546,8 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'pdisable-fct #'w-pdisable)
   (wrap-fn 'penable-fct #'w-penable)
   (wrap-fn 'schedule-event-relative #'w-schedule-event-relative)
-  (wrap-fn 'schedule-event #'w-schedule-event))
+  (wrap-fn 'schedule-event #'w-schedule-event)
+  (wrap-fn 'evaluate-act-r-command #'w-evaluate-act-r-command))
 
 ;;; ---------------------------------------------------------------- extraction
 

@@ -1,0 +1,5 @@
+(RUN 1
+ (ADD-TEXT 0 "F" 125 75)
+ (ADD-TEXT 0 "N" 75 175)
+ (ADD-TEXT 0 "F" 175 175)
+)

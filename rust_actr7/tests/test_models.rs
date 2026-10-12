@@ -253,6 +253,16 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                     width,
                 });
             }
+            ":MODEL-OUTPUT" => {
+                let s = match v.get(1) {
+                    Some(Sexp::Str(s)) => s.clone(),
+                    _ => {
+                        note(&mut unsupported, format!("bad :MODEL-OUTPUT in {st:?}"));
+                        continue;
+                    }
+                };
+                steps.push(Step::ModelOutput(s));
+            }
             ":GOAL-FOCUS" => {
                 let item = match v.get(1) {
                     Some(i) => i,

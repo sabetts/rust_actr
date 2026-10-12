@@ -271,6 +271,12 @@ impl Engine {
         self.trace_on = on;
     }
 
+    /// `(model-output "…")` (`misc-utils.lisp:801`): a raw echoed line (no
+    /// timestamp/module formatting), gated by the model trace (`:v`).
+    pub fn model_output(&mut self, s: &str) {
+        self.out(s.to_string());
+    }
+
     /// Install task-file `defun`s for the bounded `!eval!`/`!bind!` evaluator.
     pub fn set_user_fns(&mut self, fns: HashMap<String, crate::model::UserDefun>) {
         self.user_fns = fns;

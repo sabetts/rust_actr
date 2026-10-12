@@ -224,6 +224,9 @@ pub enum Step {
         trace: bool,
         width: usize,
     },
+    /// `(model-output "…")`: a literal echoed line (the tutorial stubs echo
+    /// the driver call before running).
+    ModelOutput(String),
     /// `(goal-focus <spec>)`.
     GoalFocus(ChunkDesc),
     /// `(sgp :seed (S C))`.
@@ -364,6 +367,7 @@ pub fn run_model_steps(
                 eng.set_trace(*trace);
                 eng.run_n_events(*count)?;
             }
+            Step::ModelOutput(s) => eng.model_output(s),
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
