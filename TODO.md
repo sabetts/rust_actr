@@ -94,14 +94,22 @@ Enable a passing spec by appending its name to
 
 ## Phase B — unlock hidden real-model traces (coverage ROI)
 
-- [ ] **B1. Content-based scope triage.** Decide a spec's scope from the **ref
-      content**, not the stub source tokens, so pure/near-pure model traces stop
-      being excluded by an over-broad `*command-tokens*` match
-      (`golden/extract-specs.lisp` `scope-of`). Keep an explicit out-of-scope
-      override for genuine command output. Optionally add a `PROBE_SCOPE` report
-      mode to `tests/test_models.rs`.
-- [ ] **B2. Regenerate the 23 pure-trace candidates** (additive `SPEC_LIST`),
-      recording real steps/seeds. Candidates:
+- [x] **B1. Content-based scope triage.** `*command-tokens*` no longer treats
+      `(sgp :v …)`/`*out-file*`/`schedule-mod-buffer-chunk` as command output,
+      and a stub with no command token whose ref is a filtered fragment (no
+      run end) stays `:command` (`ref-has-run-end-p`). `fresh-state` per test
+      and `*out-file*` bound. Trace gating: `w-run` records the model's `:v`
+      again, `w-reset` applies the testing function (default
+      `set-testing-traces`), engine handles `:V`. `run-until-time`/
+      `run-n-events` steps added (extractor + engine). GOTCHA #194.
+- [x] **B2. Regenerate the 23 pure-trace candidates** (additive `SPEC_LIST`),
+      recording real steps/seeds. 7 now pass and are enabled
+      (`tutorial-unit1-semantic-g2/-g3-trace`,
+      `tutorial-unit5modeling-v7-p4-run`/`-v8-p6-run-high-detail`/
+      `-v9-p6-retrieval`/`-v9-p8-actions`,
+      `tutorial-unit7modeling-ul-issues-v1-second-run`); 14 were reclassified
+      `:command` (filtered `model-output` fragments); 2 fail (Phase C).
+      Candidates:
       `hear-self`, `imaginal-action`, `tutorial-unit1-semantic-g2-trace`,
       `tutorial-unit1-semantic-g3-trace`,
       `tutorial-unit2-demo2-find-unattended-letter-actions`,
@@ -123,7 +131,13 @@ Enable a passing spec by appending its name to
       `tutorial-unit5modeling-v9-p8-actions`,
       `tutorial-unit7modeling-ul-issues-v1-second-run`,
       `tutorial-unit8-simple-dynamic-extend-buffer-chunk`.
-- [ ] **B3. Probe + enable passers**; file every mismatch as a Phase C task.
+- [x] **B3. Probe + enable passers**; file every mismatch as a Phase C task.
+      Frontier 60 → 67 specs. Remaining B2 failures:
+  - `hear-self` — the speech module is missing the `SPEAK <text>` playback
+    line and the subvocalize sound (`speech.lisp`), and the run stops early.
+  - `imaginal-action` — the model uses the `imaginal-action` buffer
+    (`+imaginal-action> … action "cmd" slots (count)`, a command-layer
+    feature); the parser rejects `slots (count)`.
 - [ ] **B4. Near-pure subset (42).** Reproduce the small non-trace lines
       (`? (run n)` echoes, `...`, `Events in the queue:`) or reclassify them.
       Sample: `tutorial-unit1modeling-broken-addition-v{3,4,5,6,7,9,12}-run*`,

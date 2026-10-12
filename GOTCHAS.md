@@ -2879,3 +2879,49 @@ Four fixes in `compose_pair`/`rename-variables` closed the remaining
 - `buffer=-union` for `(and a1* a2=)` (`COMPOSE-IMAGINAL-BUFFER`'s
   `(9 40 25 56)` case) emits a single `*` — the `=`/`*` modify unions are
   not emitted separately.
+
+## 194. Phase B triage: ref content, `:v` gating, and event ordering (verified)
+
+Scope triage (`golden/extract-specs.lisp`):
+
+- `*command-tokens*` is only a *hint*: `(sgp :v …)`/`(sgp-fct (list :v …))`
+  and `*out-file*` are trace toggles/targets (not command output), and
+  `buffer-chunk` matched `schedule-mod-buffer-chunk`. A stub with no genuine
+  command token whose ref is a *filtered fragment* (assembled with
+  `model-output` from a pre-event hook) still stays `:command` — detected from
+  the ref, which lacks a run end (`ref-has-run-end-p`).
+- `fresh-state` must run per test even for `:command` specs, or they inherit
+  the previous stub's models/steps. `*out-file*` must be bound (`hear-self`).
+
+Trace gating (`:v`):
+
+- `w-run`/`w-run-full-time` record the model's `:v` as the run trace flag
+  (`(sgp :v nil)` hides a segment, e.g. `tutorial-unit5modeling-v7-p4-run`).
+  But the model-tester sets a global
+  `ssp :starting-parameters (:testing-function set-testing-traces)` applied on
+  reset (`model-tester.cl:356`), and `set-testing-traces` is `(sgp :v t)`
+  (`model-tester.cl:494`) — so a model that sets `:v nil` still traces
+  (`production-compilation-issues-model-v2`). `w-reset` applies the testing
+  function (default `set-testing-traces`); the engine handles `:V`.
+
+Event ordering:
+
+- A model-body `(goal-focus …)` is a `set-buffer-chunk` event at
+  `:priority :max` (`goal.lisp:284`), same as a driver `(goal-focus …)`, so a
+  later driver call overwrites it — `tutorial-unit1-semantic-g2/-g3-trace`
+  otherwise ran with the model's default `bird` goal and fired `direct-verify`
+  instead of `chain-category`.
+- `goal-focus-fct` also schedules a `clear-delayed-goal` maintenance event
+  (`goal.lisp:284`). It has no state effect in the engine but *counts* toward
+  `run-n-events` (`run-one-event` returns `t` for it), which is what makes
+  `run-n-events 2` skip exactly the model-body goal and leave the driver's
+  goal (and its trace line) in the following `run`.
+- A scheduled string command is only replayed from a device sidecar when it
+  was scheduled *outside* a run: a command scheduled during a run is
+  dispatched by the engine (the `ul-issues` `present-choose`/`show-result`
+  chain) or emitted by a module (`audio`'s `new-sound`), so a sidecar entry
+  duplicates the line.
+
+New steps: `run-until-time` (absolute end; its stop test is `next-time > end`,
+so an event *at* the end is still processed, unlike `run-full-time`) and
+`run-n-events`.
