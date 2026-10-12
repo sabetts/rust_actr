@@ -117,6 +117,9 @@ pub const BUILTINS: &[&str] = &[
     "record-history",
     "stop-recording-history",
     "predict-bold-response",
+    "sgp",
+    "spp",
+    "sdp",
     // The four trace streams (`framework/printing.lisp`); their monitors are
     // what actually receive output (the Rust engine already formatted it).
     "model-trace",
@@ -452,6 +455,41 @@ impl Session {
             "reload" => {
                 self.build_engine()?;
                 Ok(vec![Json::Bool(true)])
+            }
+            // `(sgp :key …)`: a getter when every arg is a keyword, else a
+            // setter (`framework/printing.lisp`). `spp`/`sdp` getters are the
+            // per-production/sub-symbolic forms; production params are
+            // returned as NIL for now.
+            "sgp" | "spp" | "sdp" => {
+                let all_keys = !args.is_empty()
+                    && args
+                        .iter()
+                        .all(|a| a.as_str().map(|s| s.starts_with(':')).unwrap_or(false));
+                if all_keys {
+                    let out: Vec<Json> = args
+                        .iter()
+                        .map(|a| {
+                            let k = a.as_str().unwrap_or("");
+                            self.engine
+                                .as_ref()
+                                .and_then(|e| e.get_param(k))
+                                .map(Json::Str)
+                                .unwrap_or(Json::Null)
+                        })
+                        .collect();
+                    Ok(out)
+                } else {
+                    let mut i = 0;
+                    while i + 1 < args.len() {
+                        let k = args[i].as_str().unwrap_or("").to_string();
+                        let sexp = json_to_sexp(&args[i + 1]);
+                        if let Some(eng) = &mut self.engine {
+                            eng.apply_sgp(&k, &sexp).map_err(|e| e.to_string())?;
+                        }
+                        i += 2;
+                    }
+                    Ok(vec![Json::Null])
+                }
             }
             "add-dm" | "add-dm-fct" | "define-chunks" | "define-chunks-fct" => {
                 // `(add-dm (name isa type …) …)`; a `-fct` variant takes one
