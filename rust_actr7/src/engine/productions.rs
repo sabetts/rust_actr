@@ -87,11 +87,9 @@ impl Engine {
                 lines.extend(render_production(prod, b, mism).lines().map(str::to_string));
                 lines.push(format!("Parameters for production {}:", prod.name));
                 // `spp-fct (list name :utility :u)` uses the `parameters`
-                // branch (`utility-and-reward-1.lisp:666`), which prints the
-                // keyword with `~S` (upper-case) and the cached value.
-                if self.cfg.esc {
-                    lines.push(format!(" :UTILITY {u:6.3}"));
-                }
+                // branch (`utility-and-reward-1.lisp:666`), which prints every
+                // requested keyword with `~S` (upper-case), unconditionally.
+                lines.push(format!(" :UTILITY {u:6.3}"));
                 // `:u` is the base production-u, not the adjusted value.
                 let base = self.utilities[*idx];
                 lines.push(format!(" :U {base:6.3}"));

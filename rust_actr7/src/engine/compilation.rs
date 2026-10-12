@@ -889,6 +889,18 @@ pub(super) fn show_pat(p: &Pattern, b: &Bindings) -> String {
     }
 }
 
+/// A dynamic LHS slot (`=context =x`) shows its bound slot name; a plain slot
+/// is shown verbatim.
+fn slot_disp(slot: &str, b: &Bindings) -> String {
+    match slot.strip_prefix('=') {
+        Some(var) => b
+            .get(var)
+            .map(|v| v.show())
+            .unwrap_or_else(|| slot.to_string()),
+        None => slot.to_string(),
+    }
+}
+
 /// Instantiate a raw RHS `!output!`/`!action!` argument.
 pub(super) fn show_sexp_arg(a: &Sexp, b: &Bindings) -> String {
     match a {
@@ -944,6 +956,9 @@ pub(super) fn render_production(
                     if t.slot == "ISA" {
                         continue;
                     }
+                    // A dynamic slot (`=context =x`) shows its bound name
+                    // (`production-statement-text` substitutes the bindings).
+                    let slot = slot_disp(&t.slot, b);
                     let val = show_pat(&t.value, b);
                     if t.op == SlotOp::Eq {
                         // `production-statement-text` annotates a partial
@@ -954,16 +969,16 @@ pub(super) fn render_production(
                         if let Some((_, _, _, actual, sim)) = ann {
                             s.push_str(&format!(
                                 "       {} [{}, {}, {}]\n",
-                                t.slot,
+                                slot,
                                 val,
                                 actual.show(),
                                 lisp_s_f32(*sim)
                             ));
                         } else {
-                            s.push_str(&format!("       {} {val}\n", t.slot));
+                            s.push_str(&format!("       {slot} {val}\n"));
                         }
                     } else {
-                        s.push_str(&format!("    {:<2} {} {val}\n", slot_op_str(t.op), t.slot));
+                        s.push_str(&format!("    {:<2} {slot} {val}\n", slot_op_str(t.op)));
                     }
                 }
             }
@@ -1006,7 +1021,11 @@ pub(super) fn render_production(
                     if name == "ISA" {
                         continue;
                     }
-                    s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                    s.push_str(&format!(
+                        "       {} {}\n",
+                        slot_disp(name, b),
+                        show_pat(val, b)
+                    ));
                 }
             }
             RhsAction::ModifyRequest { buffer, slots } => {
@@ -1015,7 +1034,11 @@ pub(super) fn render_production(
                     if name == "ISA" {
                         continue;
                     }
-                    s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                    s.push_str(&format!(
+                        "       {} {}\n",
+                        slot_disp(name, b),
+                        show_pat(val, b)
+                    ));
                 }
             }
             RhsAction::Request { buffer, spec } => match spec {
@@ -1028,7 +1051,11 @@ pub(super) fn render_production(
                         if name == "ISA" {
                             continue;
                         }
-                        s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                        s.push_str(&format!(
+                            "       {} {}\n",
+                            slot_disp(name, b),
+                            show_pat(val, b)
+                        ));
                     }
                     for (name, val) in neg {
                         s.push_str(&format!("    -  {name} {}\n", show_pat(val, b)));
@@ -1051,7 +1078,11 @@ pub(super) fn render_production(
                         if name == "ISA" {
                             continue;
                         }
-                        s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
+                        s.push_str(&format!(
+                            "       {} {}\n",
+                            slot_disp(name, b),
+                            show_pat(val, b)
+                        ));
                     }
                 }
             },

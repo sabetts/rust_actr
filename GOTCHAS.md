@@ -2975,3 +2975,21 @@ Non-obvious bits:
   the `bst-*`/`fan-no-pm`/`onehit` refs) all go through `tester.py`
   (`sys.stdout = tester.out_file`, `:starting-parameters :testing-function`),
   so they need R6b before an R4 command turns any of them green.
+
+## 197. Production printing must substitute dynamic slots and always show :UTILITY
+
+Two `print-production-text` details the `simple-dynamic-model`/`simple-ppm-test`
+refs pin down:
+
+- A dynamic slot `=context =x` (LHS) or `=target =x` (RHS) prints with both the
+  **slot name and the value** instantiated from the bindings
+  (`support/production-parsing.lisp` `production-statement-text`): `=context =x`
+  becomes `DATA 10`, `=imaginal> =target =x` becomes `DATA2 10`. The engine
+  renders values via `show_pat` but the *slot name* needs the same lookup
+  (`slot_disp`, `compilation.rs`). (The buffer modification itself still uses
+  the literal `=TARGET` — see the note below on `simple-dynamic-model`.)
+- The `:cst` conflict-set block calls `(spp-fct (list name :utility :u))`, whose
+  `parameters` branch (`utility-and-reward-1.lisp:666`) prints **every**
+  requested keyword with `~S` (so `:UTILITY`, upper-case) and does **not** gate
+  on `:esc` — unlike the bare `spp` path (`:678`). So `:UTILITY` and `:U` both
+  appear even when `:esc` is nil.
