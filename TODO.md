@@ -207,21 +207,23 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       `run`, `reset`, `goal-focus` all round-trip. (TCP only; the
       `p_interface` pipe variant is skipped when `start-pipe-connection` is
       not implemented.)
-- [ ] **R2. Command registry + core commands.** `name → handler`
-      (built-in / task-defun / remote) routed through `evaluate`. Done:
-      `run`/`run-full-time`/`run-until-time`/`run-n-events`, `reset`,
-      `load-act-r-model`/`load-act-r-code`, `goal-focus`, `new-symbol`,
-      `current-model`/`set-current-model`, `set-parameter-value`,
+- [x] **R2. Command registry + core commands.** `name → handler`
+      (built-in / task-defun / remote) routed through `evaluate`:
+      `run`/`run-full-time`/`run-until-time`/`run-n-events`, `reset`/`reload`,
+      `load-act-r-model`/`load-act-r-code`, `goal-focus`/`mod-focus`,
+      `set-parameter-value`/`get-parameter-value`, `set-system-parameter-value`/
+      `get-system-parameter-value`, `new-symbol`, `current-model`/
+      `set-current-model`, `buffer-read`/`buffer-status`/`clear-buffer`/
+      `set-buffer-chunk`, `chunk-p`/`chunk-copied-from`/`chunk-slot-value`,
+      `act-r-random`/`permute-list`, `schedule-event[-relative|-now]`,
+      `add-dm(-fct)`/`define-chunks(-fct)`, `record-history`,
+      `predict-bold-response`, `mp-time`/`mp-time-ms`/`get-time`,
       `model-output`/`command-output`/`print-warning`/`act-r-output`,
-      `buffer-chunk`, `mp-time`/`get-time`, and the protocol-level
-      `add`/`remove`/`monitor`/`remove-monitor`/`check`/`set-name`. Remaining:
-      `reload`, `mod-focus`, `get-parameter-value`,
-      `set-system-parameter-value`, `add-dm(-fct)`/`define-chunks(-fct)`,
-      `buffer-read`, `clear-buffer`, `set-buffer-chunk`,
-      `schedule-event-*`/`schedule-set-buffer-chunk`/
-      `schedule-mod-buffer-chunk`/`schedule-event-after-module`,
-      `mp-time-ms`, `act-r-random`/`permute-list`, `chunk-p`/
-      `chunk-copied-from`/`chunk-slot-value`, `release-chunk-spec-id`.
+      `release-chunk-spec-id`, and the protocol-level `add`/`remove`/`monitor`/
+      `remove-monitor`/`check`/`set-name`. Verified through `actr.py`. Minor
+      remainder (unused by the tutorial tests): `set-chunk-slot-value`/
+      `copy-chunk`/`delete-chunk`, `schedule-set-buffer-chunk`/
+      `schedule-mod-buffer-chunk`/`schedule-event-after-module`.
 - [ ] **R3. Output commands** (shared with Phase C1): `pprint-a-chunk`/
       `pprint-chunks` (`+pprint-chunk-string+` format), `buffer-chunk`, `dm`,
       `sdm`, `whynot`, `mp-show-queue`, `buffer-status`, `pp`,

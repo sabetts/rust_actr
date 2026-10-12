@@ -341,22 +341,21 @@ impl Session {
     /// Route a trace line to a trace command's monitors
     /// (`model-trace`/`command-trace`/…). The engine already formatted it, so
     /// the underlying function is a no-op.
+    /// Route a trace line to the `model-trace` command's monitors.
+    ///
+    /// The engine's `out_lines` interleaves model, command and general output
+    /// (the four Lisp streams share one sink in the model-tester), so all of
+    /// it goes to `model-trace`; a monitor registered on `command-trace`/
+    /// `general-trace` would otherwise see every line four times.
     pub fn deliver_trace(&mut self, line: &str, remote: &mut dyn Remote) {
-        for command in [
-            "model-trace",
-            "command-trace",
-            "warning-trace",
-            "general-trace",
-        ] {
-            let Some(c) = self.commands.get(command).cloned() else {
-                continue;
-            };
-            if c.before.is_empty() && c.after.is_empty() && c.simple.is_empty() {
-                continue;
-            }
-            let args = [Json::Str(line.to_string())];
-            let _ = self.evaluate(command, None, &args, remote);
+        let Some(c) = self.commands.get("model-trace").cloned() else {
+            return;
+        };
+        if c.before.is_empty() && c.after.is_empty() && c.simple.is_empty() {
+            return;
         }
+        let args = [Json::Str(line.to_string())];
+        let _ = self.evaluate("model-trace", None, &args, remote);
     }
 
     /// A warning that is not itself part of the trace.
@@ -612,19 +611,70 @@ impl Session {
                     Ok(vec![Json::Float(v)])
                 }
             }
+            // --- R3 output commands -----------------------------------------
+            // Each returns the printed chunk names; the reply wraps the single
+            // return value in a list (`actr.py:88` returns `results[1:]`).
             "buffer-chunk" => {
                 let names: Vec<String> = args
                     .iter()
                     .filter_map(|a| a.as_str().map(str::to_string))
                     .collect();
-                if let Some(eng) = &mut self.engine {
-                    eng.print_buffer_chunk(&names);
-                }
-                Ok(vec![Json::Null])
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_buffer_chunk(&names))
+                    .unwrap_or_default();
+                // An empty buffer prints/returns `nil`.
+                let list: Vec<Json> = out
+                    .into_iter()
+                    .map(|n| {
+                        if n.is_empty() {
+                            Json::Null
+                        } else {
+                            Json::Str(n)
+                        }
+                    })
+                    .collect();
+                Ok(vec![Json::Arr(list)])
             }
-            "dm" | "sdm" | "pprint-chunks" | "pprint-chunks-fct" | "whynot" | "mp-show-queue" => {
-                // Output commands land in a later increment (R3); an empty
-                // result keeps the protocol round-tripping for now.
+            "dm" => {
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_dm(&names))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
+            }
+            "sdm" => {
+                let spec: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_sdm(&spec))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
+            }
+            "pprint-chunks" | "pprint-chunks-fct" => {
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_pprint_chunks(&names))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
+            }
+            "whynot" | "mp-show-queue" => {
+                // Deferred (R3 tail / R4).
                 Ok(vec![Json::Null])
             }
             // The trace streams are written by the engine already; their
@@ -940,6 +990,62 @@ mod tests {
         );
         // count.lisp emits a fixed 48-line trace.
         assert_eq!(remote.lines.len(), 48);
+    }
+
+    #[test]
+    fn dm_and_sdm_print_and_return_names() {
+        let root = root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new(root.clone(), (100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;addition.lisp".into())],
+            &mut remote,
+        )
+        .unwrap();
+        // `dm` prints all chunks newest-first and returns the names.
+        let r = s.evaluate("dm", None, &[], &mut remote).unwrap();
+        let Json::Arr(names) = &r[0] else {
+            panic!("dm result not a list: {r:?}")
+        };
+        assert_eq!(names.len(), 11);
+        assert_eq!(names[0], Json::Str("TEN".into()));
+        assert_eq!(names[10], Json::Str("ZERO".into()));
+        // `sdm '- addend1 1'` excludes the chunk whose addend1 is 1.
+        let mut s = Session::new(root.clone(), (100, 0));
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(
+                "ACT-R:tutorial;unit1;tutor-model-solution.lisp".into(),
+            )],
+            &mut remote,
+        )
+        .unwrap();
+        let r = s
+            .evaluate(
+                "sdm",
+                None,
+                &[
+                    Json::Str("-".into()),
+                    Json::Str("addend1".into()),
+                    Json::Str("1".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        let Json::Arr(names) = &r[0] else {
+            panic!("sdm result not a list: {r:?}")
+        };
+        let names: Vec<String> = names
+            .iter()
+            .filter_map(|n| n.as_str().map(str::to_string))
+            .collect();
+        assert_eq!(names, vec!["FACT34", "FACT67", "FACT103"]);
     }
 
     #[test]

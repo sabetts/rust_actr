@@ -373,7 +373,9 @@ pub fn run_model_steps(
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
-            Step::Sdm(spec) => eng.print_sdm(spec),
+            Step::Sdm(spec) => {
+                eng.print_sdm(spec);
+            }
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),
@@ -381,7 +383,9 @@ pub fn run_model_steps(
             Step::Reset => eng.reset()?,
             Step::PDisable(names) => eng.pdisable(names),
             Step::PEnable(names) => eng.penable(names),
-            Step::BufferChunk(buffers) => eng.print_buffer_chunk(buffers),
+            Step::BufferChunk(buffers) => {
+                eng.print_buffer_chunk(buffers);
+            }
             Step::DummyEvent(at_ms) => eng.schedule_dummy(*at_ms),
             Step::EmitWarning(msg) => eng.emit_warning(msg),
             Step::StartHandAtTouch(hand) => eng.start_hand_at_touch(hand),

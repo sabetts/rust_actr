@@ -7,7 +7,8 @@ impl Engine {
     /// `framework/chunks.lisp:736`). Only the fields the corpus exercises:
     /// the buffer/chunk header (with the multi-buffer set for threads goals)
     /// and each slot. Not a trace line, so it is appended verbatim.
-    pub fn print_buffer_chunk(&mut self, buffers: &[String]) {
+    pub fn print_buffer_chunk(&mut self, buffers: &[String]) -> Vec<String> {
+        let mut names = Vec::new();
         for name in buffers {
             let bname = name.to_uppercase();
             let chunk = self.buffers.get(&bname).and_then(|b| b.chunk.clone());
@@ -33,21 +34,68 @@ impl Engine {
                 header.push_str(&format!(" {{{}}}", set.join(" ")));
             }
             self.out_lines.push(header);
+            names.push(cname.clone());
             if let Some(c) = &chunk {
                 self.push_chunk(c);
             }
         }
+        names
     }
 
     /// `pprint-a-chunk` (`chunks.lisp:736`): the chunk's name, then
     /// `slot  value` lines, then a blank line (the `~%` plus
-    /// `command-output`'s newline).
-    pub(super) fn push_chunk(&mut self, c: &ChunkInst) {
-        self.out_lines.push(c.name.clone().unwrap_or_default());
+    /// `command-output`'s newline). Returns the chunk's name.
+    pub(super) fn push_chunk(&mut self, c: &ChunkInst) -> String {
+        let name = c.name.clone().unwrap_or_default();
+        self.out_lines.push(name.clone());
         for (k, v) in &c.slots {
             self.out_lines.push(format!("   {k}  {}", v.show()));
         }
         self.out_lines.push(String::new());
+        name
+    }
+
+    /// `dm {names}` (`commands/dm-commands.lisp:437`): print and return the
+    /// named (or all) declarative-memory chunks.
+    pub fn print_dm(&mut self, names: &[String]) -> Vec<String> {
+        let out: Vec<usize> = if names.is_empty() {
+            // `all-dm-chunks` walks `dm-chunks`, whose sets are pushed to the
+            // front as they are created, so the model's `add-dm` chunks print
+            // newest-first.
+            (0..self.dm.len()).rev().collect()
+        } else {
+            names
+                .iter()
+                .filter_map(|n| {
+                    let up = n.to_uppercase();
+                    self.dm
+                        .iter()
+                        .position(|c| c.name.as_deref() == Some(up.as_str()))
+                })
+                .collect()
+        };
+        out.into_iter()
+            .map(|i| {
+                let c = self.dm[i].clone();
+                self.push_chunk(&c)
+            })
+            .collect()
+    }
+
+    /// `pprint-chunks {names}` (`framework/chunks.lisp:736`).
+    pub fn print_pprint_chunks(&mut self, names: &[String]) -> Vec<String> {
+        let chunks: Vec<ChunkInst> = names
+            .iter()
+            .filter_map(|n| {
+                let up = n.to_uppercase();
+                self.dm
+                    .iter()
+                    .find(|c| c.name.as_deref() == Some(up.as_str()))
+                    .or_else(|| self.named.get(&up))
+                    .cloned()
+            })
+            .collect();
+        chunks.iter().map(|c| self.push_chunk(c)).collect()
     }
 
     /// `(sdm <spec>...)`: print the declarative-memory chunks matching the
@@ -55,7 +103,13 @@ impl Engine {
     /// `(sdm isa pair)`, and `pair`'s only members are unnamed run chunks, so
     /// every DM chunk is printed (the merged buffer chunks, then the goals in
     /// `dm-chunks` order).
-    pub fn print_sdm(&mut self, _spec: &[String]) {
+    pub fn print_sdm(&mut self, spec: &[String]) -> Vec<String> {
+        let preds = parse_sdm_spec(spec);
+        // A plain `(sdm isa pair)` spec is the corpus's "print everything"
+        // form; filtering applies only when a modifier (`-`/`+`) is present
+        // (`sdm '- addend1 1'`).
+        let filter = preds.iter().any(|(m, _, _)| m.is_some());
+        let mut names = Vec::new();
         // `dm-chunks` (`declarative-memory.lisp:912`, `add-chunk-into-dm`
         // 1918) is an alist keyed by the chunk's slot signature, and a new
         // set is pushed to the *front* (1931), so `sdm` prints the merged
@@ -86,8 +140,12 @@ impl Engine {
         prints.extend(0..n_model);
         for i in prints {
             let c = self.dm[i].clone();
-            self.push_chunk(&c);
+            if filter && !sdm_match(&c, &preds) {
+                continue;
+            }
+            names.push(self.push_chunk(&c));
         }
+        names
     }
 
     /// Set the buffers the BOLD predictor traces (`record-history`'s names).
@@ -705,4 +763,46 @@ impl Engine {
             _ => return None,
         })
     }
+}
+
+/// Parse an `sdm` specification (`{modifier} slot value …`,
+/// `sdm-external`, `commands/dm-commands.lisp:511`) into predicates. A
+/// single punctuation token is a modifier (`-` = not equal).
+fn parse_sdm_spec(spec: &[String]) -> Vec<(Option<char>, String, String)> {
+    let mut preds = Vec::new();
+    let mut i = 0;
+    while i < spec.len() {
+        let tok = &spec[i];
+        let modifier = {
+            let mut cs = tok.chars();
+            match (cs.next(), cs.next()) {
+                (Some(c), None) if c.is_ascii_punctuation() => Some(c),
+                _ => None,
+            }
+        };
+        let (slot, vi) = match modifier {
+            Some(_) => (spec.get(i + 1).cloned().unwrap_or_default(), i + 2),
+            None => (tok.clone(), i + 1),
+        };
+        let val = spec.get(vi).cloned().unwrap_or_default();
+        preds.push((modifier, slot.to_uppercase(), val.to_uppercase()));
+        i = vi + 1;
+    }
+    preds
+}
+
+/// Whether a chunk satisfies every `sdm` predicate. `ISA` tests the chunk
+/// type; other slots compare their printed value.
+fn sdm_match(c: &ChunkInst, preds: &[(Option<char>, String, String)]) -> bool {
+    preds.iter().all(|(m, slot, val)| {
+        let actual = if slot == "ISA" {
+            c.ctype.to_uppercase()
+        } else {
+            c.get(slot).show().to_uppercase()
+        };
+        match m {
+            Some('-') => actual != *val,
+            _ => actual == *val,
+        }
+    })
 }
