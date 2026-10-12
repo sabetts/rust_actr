@@ -10,6 +10,19 @@ use super::compilation::{
 use super::dm::{bl_equation, ol_str};
 use super::rhs::{explicit_out, implicit_clears, implicit_queries};
 use super::*;
+
+/// Resolve an RHS slot name: a dynamic slot (`=target`) becomes the value bound
+/// to that variable (`instantiate-chunk-spec`), a plain slot is unchanged.
+fn dynamic_slot(slot: &str, b: &Bindings) -> String {
+    match slot.strip_prefix('=') {
+        Some(var) => b
+            .get(var)
+            .map(|v| v.show())
+            .unwrap_or_else(|| slot.to_string()),
+        None => slot.to_string(),
+    }
+}
+
 impl Engine {
     pub(super) fn conflict_resolution(&mut self) -> Result<(), EngineError> {
         // Utilities are production U plus optional `:egs` noise, drawn
@@ -592,7 +605,12 @@ impl Engine {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
-                        sub.push((s.clone(), self.rhs_value(p, &b, copy, &mut copied)?));
+                        // A dynamic slot (`=target =x`) is set under the name
+                        // bound to `=target` (`instantiate-chunk-spec`).
+                        sub.push((
+                            dynamic_slot(s, &b),
+                            self.rhs_value(p, &b, copy, &mut copied)?,
+                        ));
                     }
                     self.now(
                         Prio::Num(100),
@@ -614,7 +632,10 @@ impl Engine {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let mut sub = Vec::new();
                     for (s, p) in slots {
-                        sub.push((s.clone(), self.rhs_value(p, &b, copy, &mut copied)?));
+                        sub.push((
+                            dynamic_slot(s, &b),
+                            self.rhs_value(p, &b, copy, &mut copied)?,
+                        ));
                     }
                     if buffer == "IMAGINAL" {
                         self.imag_busy = true;
