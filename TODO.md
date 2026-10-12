@@ -240,7 +240,12 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
   - [ ] `simple-ppm-test`: the `:cst` instantiation block's `:UTILITY` value is
         `-0.174` vs the ref `-0.713` (a base-utility/`:egs`-noise nuance; the
         ppm penalty and `:U` now match, 82/82 lines).
-  - [ ] `simple-dynamic-model`: 92/98 (dynamic buffer timing).
+  - [ ] `simple-dynamic-model`: 96/98. Fixed the render-side and
+        application-side dynamic-slot handling (`=context =x`). Remaining: the
+        `EXTEND-BUFFER-CHUNK IMAGINAL` trace line (`#\=` RHS mod that adds a
+        slot) and the request-time reusable-buffer name (`IMAGINAL-CHUNK0`) so
+        `buffer-chunk` names the chunk instead of `NIL`. Naming is entangled
+        with the DM copy path (`engine.rs:2788`), so it needs care.
 - [x] **R4. Device/vision/motor** (command surface wired). Added RPC handlers
       for `add`/`modify`/`delete`(all)-`visicon-features`, `print-visicon`,
       `new-tone-sound`, `new-word`/`new-digit-sound`, `pbreak`/`punbreak`,
