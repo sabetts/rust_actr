@@ -1426,10 +1426,19 @@ impl Engine {
                         // `production-statement-text` (`procedural.lisp:2555`)
                         // prints the spec's slots, then the request type as
                         // `CMD`.
-                        for (slot, val) in slots {
+                        for (slot, val) in
+                            slots.iter().filter(|(s, _)| !s.eq_ignore_ascii_case("CMD"))
+                        {
                             lines.push(format!("       {slot} {}", show_pat(val, bindings)));
                         }
-                        if !ctype.is_empty() {
+                        for (slot, val) in
+                            slots.iter().filter(|(s, _)| s.eq_ignore_ascii_case("CMD"))
+                        {
+                            lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                        }
+                        if !ctype.is_empty()
+                            && !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case("CMD"))
+                        {
                             lines.push(format!("       CMD {ctype}"));
                         }
                     }

@@ -1105,3 +1105,278 @@ impl Engine {
         }
     }
 }
+
+// --- Live experiment window (`open-exp-window` etc., `devices/virtual`) -----
+//
+// The scripted device path (`pending_texts`) replays a pre-captured task; the
+// RPC path below builds the same visicon features from live `add-*-to-exp-
+// window` calls, using the geometry in `devices/virtual/uwi.lisp` +
+// `build-string-feats` (`core-modules/vision.lisp:3558`).
+
+/// A `chop-string` token: a word, or a run of spaces (its length).
+enum Chop {
+    Word(String),
+    Spaces(i64),
+}
+
+/// `chop-string` (`vision.lisp:3619`): split into words and space-run counts.
+/// `:WORD`/`:MISC` are treated alike (the corpus's texts are alphanumeric).
+fn chop_string(text: &str) -> Vec<Chop> {
+    if text.is_empty() {
+        return Vec::new();
+    }
+    let mut accum: Vec<Chop> = Vec::new();
+    let mut wrd = String::new();
+    let mut cnt = 0i64;
+    let mut old_space = text
+        .chars()
+        .next()
+        .map(char::is_whitespace)
+        .unwrap_or(false);
+    for ch in text.chars() {
+        let space = ch.is_whitespace();
+        if !space && !old_space {
+            wrd.push(ch);
+            cnt = 0;
+        } else if !space && old_space {
+            accum.push(Chop::Spaces(cnt + 1));
+            wrd.clear();
+            wrd.push(ch);
+        } else if space && !old_space {
+            accum.push(Chop::Word(std::mem::take(&mut wrd)));
+            cnt = 0;
+        } else {
+            cnt += 1;
+        }
+        old_space = space;
+    }
+    if !wrd.is_empty() {
+        accum.push(Chop::Word(wrd));
+    }
+    if let Some(Chop::Spaces(n)) = accum.first_mut() {
+        *n -= 1;
+    }
+    accum
+}
+
+/// Lisp `(round n d)` — round half to even.
+fn round_half_even(n: i64, d: i64) -> i64 {
+    let q = n.div_euclid(d);
+    let r = n.rem_euclid(d);
+    let t = 2 * r;
+    if t > d {
+        q + 1
+    } else if t < d || q % 2 == 0 {
+        q
+    } else {
+        q + 1
+    }
+}
+
+/// Lisp `(round x)` — round half to even, on a float.
+fn round_half_even_f(x: f64) -> i64 {
+    let fl = x.floor();
+    let diff = x - fl;
+    if diff > 0.5 {
+        fl as i64 + 1
+    } else if diff < 0.5 || (fl as i64) % 2 == 0 {
+        fl as i64
+    } else {
+        fl as i64 + 1
+    }
+}
+
+/// `pts-to-orientation` (`uwi.lisp:503`): degrees from -89..90, 0 vertical.
+fn pts_to_orientation(p1: (i64, i64), p2: (i64, i64)) -> i64 {
+    let dx = (p2.0 - p1.0) as f64;
+    let dy = (p2.1 - p1.1) as f64;
+    let theta = dy.atan2(dx);
+    let angle = (theta.to_degrees().round() as i64) - 90;
+    if angle < -90 {
+        angle + 180
+    } else if angle > 90 {
+        angle - 180
+    } else if angle == -90 {
+        90
+    } else {
+        angle
+    }
+}
+
+impl Engine {
+    /// `open-exp-window`: set the window origin and clear live items.
+    pub fn open_window(&mut self, x: i64, y: i64) {
+        self.window_origin = (x, y);
+        self.clear_window();
+    }
+
+    /// `clear-exp-window`: drop all live window items and visicon features.
+    pub fn clear_window(&mut self) {
+        self.window_items.clear();
+        self.features.clear();
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
+    /// `add-text-to-exp-window`: word features (`build-string-feats`,
+    /// `optimize-p` t) placed relative to the window origin. Returns the item
+    /// key.
+    pub fn add_window_text(
+        &mut self,
+        text: &str,
+        x: i64,
+        y: i64,
+        _width: i64,
+        _height: i64,
+        font_size: i64,
+    ) -> String {
+        let key = format!("TEXT-VDI-{}", self.window_item_seq);
+        self.window_item_seq += 1;
+        let (ox, oy) = self.window_origin;
+        // `char-width = (round font-size 12/7)`, `text-height = (round
+        // font-size 12/10)` (`uwi.lisp:447`).
+        let char_w = round_half_even_f(font_size as f64 * 7.0 / 12.0).max(1);
+        let text_h = round_half_even_f(font_size as f64 * 10.0 / 12.0).max(1);
+        let line_h = round_half_even_f(text_h as f64 / 0.8).max(text_h + 1);
+        let y_screen = y + oy + round_half_even(line_h, 2);
+        let mut names = Vec::new();
+        let mut curr_x = x + 1;
+        for tok in chop_string(text) {
+            match tok {
+                Chop::Word(w) => {
+                    let wd = char_w * w.chars().count() as i64;
+                    let name = format!("VISUAL-LOCATION{}", self.feat_seq);
+                    self.feat_seq += 1;
+                    self.features.push(Feature {
+                        name: name.clone(),
+                        kind: "TEXT".to_string(),
+                        value: w.clone(),
+                        x: curr_x + ox + round_half_even(wd, 2),
+                        y: y_screen,
+                        width: wd,
+                        height: text_h,
+                        extra: vec![("TEXT".to_string(), Value::Sym("T".to_string()))],
+                        tstamp_ms: self.time_ms,
+                        new_p: true,
+                        finst_ms: None,
+                    });
+                    names.push(name);
+                    curr_x += wd;
+                }
+                Chop::Spaces(n) => curr_x += n * char_w,
+            }
+        }
+        self.window_items.push((key.clone(), names));
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        key
+    }
+
+    /// `add-line-to-exp-window`: a `line` feature (`uwi.lisp:511`).
+    pub fn add_window_line(&mut self, start: (i64, i64), end: (i64, i64), color: &str) -> String {
+        let key = format!("LINE-VDI-{}", self.window_item_seq);
+        self.window_item_seq += 1;
+        let (ox, oy) = self.window_origin;
+        let (x1, y1) = (ox + start.0, oy + start.1);
+        let (x2, y2) = (ox + end.0, oy + end.1);
+        let name = format!("VISUAL-LOCATION{}", self.feat_seq);
+        self.feat_seq += 1;
+        self.features.push(Feature {
+            name: name.clone(),
+            kind: "LINE".to_string(),
+            value: pts_to_orientation((x1, y1), (x2, y2)).to_string(),
+            x: ox + (start.0 + end.0).div_euclid(2),
+            y: oy + (start.1 + end.1).div_euclid(2),
+            width: (start.0 - end.0).abs(),
+            height: (start.1 - end.1).abs(),
+            extra: vec![
+                ("COLOR".to_string(), Value::Sym(color.to_uppercase())),
+                ("END1-X".to_string(), Value::Int(x1)),
+                ("END1-Y".to_string(), Value::Int(y1)),
+                ("END2-X".to_string(), Value::Int(x2)),
+                ("END2-Y".to_string(), Value::Int(y2)),
+            ],
+            tstamp_ms: self.time_ms,
+            new_p: true,
+            finst_ms: None,
+        });
+        self.window_items.push((key.clone(), vec![name]));
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        key
+    }
+
+    /// `add-button-to-exp-window`: a `button` feature plus its text
+    /// (`uwi.lisp:358`); the button itself has the item key as its value.
+    pub fn add_window_button(
+        &mut self,
+        text: &str,
+        x: i64,
+        y: i64,
+        width: i64,
+        height: i64,
+        color: &str,
+    ) -> String {
+        let key = format!("BUTTON-VDI-{}", self.window_item_seq);
+        self.window_item_seq += 1;
+        let (ox, oy) = self.window_origin;
+        let name = format!("VISUAL-LOCATION{}", self.feat_seq);
+        self.feat_seq += 1;
+        self.features.push(Feature {
+            name: name.clone(),
+            kind: "BUTTON".to_string(),
+            value: key.clone(),
+            x: ox + x + width.div_euclid(2),
+            y: oy + y + height.div_euclid(2),
+            width,
+            height,
+            extra: vec![("COLOR".to_string(), Value::Sym(color.to_uppercase()))],
+            tstamp_ms: self.time_ms,
+            new_p: true,
+            finst_ms: None,
+        });
+        let mut names = vec![name];
+        // The button's text is a separate text item (centered on the button).
+        let tkey = self.add_window_text(text, x, y, width, height, 12);
+        if let Some((_, tnames)) = self.window_items.iter().find(|(k, _)| k == &tkey) {
+            names.extend(tnames.iter().cloned());
+        }
+        self.window_items.push((key.clone(), names));
+        key
+    }
+
+    /// `remove-items-from-exp-window`: drop the named items' features.
+    pub fn remove_window_items(&mut self, keys: &[String]) {
+        let mut dropped: Vec<String> = Vec::new();
+        self.window_items.retain(|(k, feats)| {
+            let hit = keys
+                .iter()
+                .any(|x| x.eq_ignore_ascii_case(k) || x.to_uppercase().contains(&k.to_uppercase()));
+            if hit {
+                dropped.extend(feats.iter().cloned());
+                false
+            } else {
+                true
+            }
+        });
+        if !dropped.is_empty() {
+            self.features.retain(|f| !dropped.contains(&f.name));
+            self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        }
+    }
+
+    /// `modify-text-for-exp-window`: move the text item's features by delta.
+    pub fn modify_window_text(&mut self, key: &str, x: Option<i64>, y: Option<i64>) {
+        let Some((_, names)) = self.window_items.iter().find(|(k, _)| k == key) else {
+            return;
+        };
+        let names = names.clone();
+        for f in self.features.iter_mut().filter(|f| names.contains(&f.name)) {
+            if let Some(nx) = x {
+                f.x = nx;
+            }
+            if let Some(ny) = y {
+                f.y = ny;
+            }
+            f.tstamp_ms = self.time_ms;
+        }
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+}

@@ -3019,3 +3019,27 @@ Remaining blocker for the `bst-*`/`fan-*`/`paired-*`/`onehit` refs: they drive
 a **live** experiment window (`open-exp-window` → `add-text-to-exp-window` →
 visicon), but the R4 window commands are still stubs, and the models' internal
 RNG draw counts must line up exactly.
+
+## 199. Live experiment window: text->visicon geometry and the `cmd` slot
+
+The RPC `open-exp-window` / `add-text-to-exp-window` / `add-line` /
+`add-button` / `remove-items` / `modify-text` / `clear-exp-window` commands now
+build visicon features directly (verified against an SBCL oracle,
+`devices/virtual/uwi.lisp` + `build-string-feats` `vision.lisp:3558`):
+
+- A text item is chopped into **words** (`chop-string`, `:WORD`/`:MISC` alike)
+  and one feature per word; the window origin (`open-exp-window` x/y, default
+  300,300) is added as an offset.
+- `char-width = (round font-size 12/7)` (7 for font-size 12),
+  `text-height = (round font-size 12/10)` (10), `line-height =
+  max((round text-height .8), text-height+1)` (12). A word at (x,y) yields
+  `screen-x = x+1 + origin-x + (round width 2)`, `screen-y = y + origin-y +
+  (round line-height 2)`, `width = char-width * len`, `height = text-height`.
+  Lisp `round` is **half-to-even** (e.g. `(round 21 2)` = 10).
+- `+visual>`/`+manual>`/… requests name a module command, whose chunk type
+  carries a `cmd` default (`vision.lisp:3086`). The engine expands it into the
+  request spec at construction (`expand_request_defaults`) so both the
+  instantiation renderer and production composition show it. The
+  extended-motor-actions `zz_print_instantiation` prints slots then `CMD`; the
+  general `render_production` prints `CMD` first — hence the guard/reorder
+  there.

@@ -1619,6 +1619,14 @@ pub struct Engine {
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
     feat_seq: u64,
+    /// Live experiment-window origin (`open-exp-window` x/y; ACT-R default
+    /// 300,300). RPC-driven window items are placed relative to it.
+    window_origin: (i64, i64),
+    /// Live window items: item key -> the visicon feature names it created
+    /// (`add-text-to-exp-window` etc.), for `remove-items-from-exp-window`.
+    window_items: Vec<(String, Vec<String>)>,
+    /// Auto-naming counter for live window items (`TEXT-VDI-{n}`).
+    window_item_seq: u64,
     /// BOLD demand recorder (`other-files/bold.lisp` + the buffer-trace):
     /// the traced buffers, the open demand-period start (seconds) per
     /// buffer, and the recorded `(start, end)` periods in seconds.
@@ -1810,6 +1818,16 @@ pub struct Engine {
     user_fns: HashMap<String, crate::model::UserDefun>,
 }
 
+/// Buffers whose `+buffer>` requests name a module command (`+visual>`,
+/// `+manual>`, `+vocal>`, `+aural>`, `+temporal>`); a `+retrieval>`/`+goal>`/
+/// `+imaginal>` request's `isa` is a chunk type instead.
+fn is_module_command_buffer(buffer: &str) -> bool {
+    matches!(
+        buffer.to_uppercase().as_str(),
+        "VISUAL" | "MANUAL" | "VOCAL" | "AURAL" | "TEMPORAL"
+    )
+}
+
 impl Engine {
     pub fn new(
         model: Model,
@@ -1918,6 +1936,9 @@ impl Engine {
             consume_rng,
             features: Vec::new(),
             feat_seq: 0,
+            window_origin: (300, 300),
+            window_items: Vec::new(),
+            window_item_seq: 0,
             bold_buffers: Vec::new(),
             bold_open: HashMap::new(),
             bold_demand: HashMap::new(),
@@ -2023,6 +2044,10 @@ impl Engine {
             trace_on: true,
             user_fns: HashMap::new(),
         };
+        // `process-slots-specs` (`chunk-spec.lisp:597`): a request
+        // `+buffer> isa TYPE` carries the chunk-type's default slots (e.g.
+        // `cmd move-attention`), which the rendering and composition see.
+        eng.expand_request_defaults();
         eng.reset_impl()?;
         eng.cfg.module_width = module_width;
         // The construction reset is not part of the recorded trace: ACT-R
@@ -2045,6 +2070,47 @@ impl Engine {
             );
         }
         Ok(eng)
+    }
+
+    /// `process-slots-specs` (`chunk-spec.lisp:597`): expand a request spec's
+    /// `isa TYPE` into that chunk type's default slots (e.g. `cmd
+    /// move-attention`), so rendering and composition match ACT-R.
+    fn expand_request_defaults(&mut self) {
+        let types: Vec<(String, Vec<(String, Pattern)>)> = self
+            .model
+            .chunk_types
+            .iter()
+            .map(|t| (t.name.to_uppercase(), t.defaults.clone()))
+            .collect();
+        for prod in self.model.productions.iter_mut() {
+            for a in prod.rhs.iter_mut() {
+                if let RhsAction::Request {
+                    buffer,
+                    spec: ChunkDesc::Spec { ctype, slots, .. },
+                } = a
+                {
+                    if ctype.is_empty() {
+                        continue;
+                    }
+                    // A module command request (`+visual> isa move-attention`)
+                    // carries `cmd <isa>` (`vision.lisp:3086` etc.).
+                    if is_module_command_buffer(buffer)
+                        && !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case("CMD"))
+                    {
+                        slots.insert(0, ("CMD".to_string(), Pattern::Sym(ctype.to_uppercase())));
+                    }
+                    if let Some((_, defs)) =
+                        types.iter().find(|(n, _)| n.eq_ignore_ascii_case(ctype))
+                    {
+                        for (slot, pat) in defs {
+                            if !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case(slot)) {
+                                slots.push((slot.to_uppercase(), pat.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// `(reset)`: re-evaluate the model body's effect on engine state —

@@ -135,9 +135,15 @@ pub const BUILTINS: &[&str] = &[
     "mean-deviation",
     "clear-exp-window",
     "add-text-to-exp-window",
+    "add-line-to-exp-window",
+    "add-button-to-exp-window",
+    "remove-items-from-exp-window",
+    "modify-text-for-exp-window",
     "open-exp-window",
     "install-device",
     "process-events",
+    "visible-virtuals-available?",
+    "start-hand-at-mouse",
     // The four trace streams (`framework/printing.lisp`); their monitors are
     // what actually receive output (the Rust engine already formatted it).
     "model-trace",
@@ -824,20 +830,80 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
-            "clear-exp-window"
-            | "add-text-to-exp-window"
-            | "open-exp-window"
-            | "install-device"
-            | "process-events" => {
-                // Window scaffolding: the engine's device model is a scripted
-                // window, so these are accepted (open returns a handle) and the
-                // visible effects are driven by the device sidecar.
-                if name == "open-exp-window" {
-                    Ok(vec![Json::Str("window0".into())])
-                } else {
-                    Ok(vec![Json::Null])
+            // --- Live experiment window (`devices/virtual/uwi.lisp`) --------
+            "open-exp-window" => {
+                let opts = args.get(1);
+                let x = opt_i(opts, "x", 300);
+                let y = opt_i(opts, "y", 300);
+                if let Some(eng) = &mut self.engine {
+                    eng.open_window(x, y);
                 }
+                Ok(vec![Json::Str("window".into())])
             }
+            "clear-exp-window" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.clear_window();
+                }
+                Ok(vec![Json::Null])
+            }
+            "add-text-to-exp-window" => {
+                let text = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
+                let opts = args.get(2);
+                let (x, y) = (opt_i(opts, "x", 0), opt_i(opts, "y", 0));
+                let (w, h) = (opt_i(opts, "width", 75), opt_i(opts, "height", 20));
+                let font = opt_i(opts, "font-size", 12);
+                let key = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.add_window_text(text, x, y, w, h, font))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(key)])
+            }
+            "add-line-to-exp-window" => {
+                let start = pair(args.get(1));
+                let end = pair(args.get(2));
+                let color = args.get(3).and_then(|a| a.as_str()).unwrap_or("black");
+                let key = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.add_window_line(start, end, color))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(key)])
+            }
+            "add-button-to-exp-window" => {
+                let opts = args.get(1);
+                let text = opt_str(opts, "text", "");
+                let (x, y) = (opt_i(opts, "x", 0), opt_i(opts, "y", 0));
+                let (w, h) = (opt_i(opts, "width", 75), opt_i(opts, "height", 20));
+                let color = opt_str(opts, "color", "gray");
+                let key = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.add_window_button(&text, x, y, w, h, &color))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(key)])
+            }
+            "remove-items-from-exp-window" => {
+                let keys: Vec<String> =
+                    args[1.min(args.len())..].iter().map(json_to_text).collect();
+                if let Some(eng) = &mut self.engine {
+                    eng.remove_window_items(&keys);
+                }
+                Ok(vec![Json::Null])
+            }
+            "modify-text-for-exp-window" => {
+                let key = args.first().map(json_to_text).unwrap_or_default();
+                let opts = args.get(1);
+                let x = option(opts, "x").and_then(|j| j.as_f64()).map(|v| v as i64);
+                let y = option(opts, "y").and_then(|j| j.as_f64()).map(|v| v as i64);
+                if let Some(eng) = &mut self.engine {
+                    eng.modify_window_text(&key, x, y);
+                }
+                Ok(vec![Json::Null])
+            }
+            "install-device" => Ok(vec![Json::Null]),
+            "visible-virtuals-available?" => Ok(vec![Json::Bool(false)]),
+            "start-hand-at-mouse" | "process-events" => Ok(vec![Json::Null]),
             "correlation" | "mean-deviation" => {
                 let a = num_list(args.first());
                 let b = num_list(args.get(1));
@@ -1099,6 +1165,33 @@ fn option<'a>(options: Option<&'a Json>, key: &str) -> Option<&'a Json> {
         }
     }
     None
+}
+
+/// An integer option from an `[["key",value], …]` list.
+fn opt_i(options: Option<&Json>, key: &str, default: i64) -> i64 {
+    option(options, key)
+        .and_then(|j| j.as_f64())
+        .map(|v| v.round() as i64)
+        .unwrap_or(default)
+}
+
+/// A string option from an `[["key",value], …]` list.
+fn opt_str(options: Option<&Json>, key: &str, default: &str) -> String {
+    option(options, key)
+        .and_then(|j| j.as_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| default.to_string())
+}
+
+/// A `[x, y]` pair (a line endpoint).
+fn pair(j: Option<&Json>) -> (i64, i64) {
+    match j {
+        Some(Json::Arr(a)) => (
+            a.first().and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+            a.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+        ),
+        _ => (0, 0),
+    }
 }
 
 /// JSON → display text (for `model-output`/`print-warning`).
