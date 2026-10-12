@@ -300,7 +300,7 @@ impl Engine {
     /// `(add-visicon-features (slot value) ...)`: add a visicon feature and
     /// re-run `proc-display` at the current time. The chunk is auto-named
     /// `CHUNK{n}` (`new-name-fct`).
-    pub fn add_visicon(&mut self, slots: &[(String, Sexp)]) {
+    pub fn add_visicon(&mut self, slots: &[(String, Sexp)]) -> String {
         let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
         self.name_count.insert("CHUNK".to_string(), n + 1);
         let mut x = 0i64;
@@ -336,6 +336,7 @@ impl Engine {
             finst_ms: None,
         });
         self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        format!("CHUNK{n}")
     }
 
     /// `(modify-visicon-features (feature screen-x X screen-y Y))`: move the
@@ -1022,6 +1023,66 @@ impl Engine {
             ("ERROR", Pattern::Nil) => self.buffer_error(buffer),
             ("ERROR", Pattern::Sym(s)) if s == "T" => !self.buffer_error(buffer),
             _ => true,
+        }
+    }
+}
+
+/// RPC device/vision/motor operations (`commands/*`, `core-modules/vision.lisp`).
+impl Engine {
+    /// `delete-visicon-features` / `delete-all-visicon-features`.
+    pub fn remove_visicon(&mut self, name: &str) {
+        self.features.retain(|f| f.name != name);
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
+    pub fn clear_visicon(&mut self) {
+        self.features.clear();
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
+    /// `print-visicon` (`vision.lisp`): one line per feature with its slots.
+    pub fn print_visicon_rpc(&mut self) -> Vec<String> {
+        let feats = self.features.clone();
+        let mut out = vec![format!("The visicon contains {} features:", feats.len())];
+        for f in &feats {
+            let mut parts = vec![format!("SCREEN-X {}", f.x), format!("SCREEN-Y {}", f.y)];
+            if f.width != 0 {
+                parts.push(format!("WIDTH {}", f.width));
+            }
+            if f.height != 0 {
+                parts.push(format!("HEIGHT {}", f.height));
+            }
+            for (k, v) in &f.extra {
+                parts.push(format!("{k} {}", v.show()));
+            }
+            out.push(format!("({})", parts.join(" ")));
+        }
+        self.out_lines.extend(out.clone());
+        out
+    }
+
+    /// `new-tone-sound <freq> <duration> [onset] [time-in-ms]`: schedule a tone.
+    pub fn new_tone_sound_rpc(&mut self, freq: i64, duration: i64, onset_ms: i64) {
+        let idx = self.add_sound(freq, duration, onset_ms);
+        let at = self.time_ms().max(onset_ms);
+        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+    }
+
+    /// `(pbreak <name>...)`: halt before firing the named production.
+    pub fn pbreak(&mut self, names: &[String]) {
+        for n in names {
+            let n = n.to_uppercase();
+            if !self.zz_breaks.contains(&n) {
+                self.zz_breaks.push(n);
+            }
+        }
+    }
+
+    /// `(punbreak <name>...)`.
+    pub fn punbreak(&mut self, names: &[String]) {
+        for n in names {
+            let n = n.to_uppercase();
+            self.zz_breaks.retain(|b| b != &n);
         }
     }
 }

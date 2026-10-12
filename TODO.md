@@ -241,12 +241,17 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
         `-0.174` vs the ref `-0.713` (a base-utility/`:egs`-noise nuance; the
         ppm penalty and `:U` now match, 82/82 lines).
   - [ ] `simple-dynamic-model`: 92/98 (dynamic buffer timing).
-- [ ] **R4. Device/vision/motor** as the tutorial needs: `open-exp-window`,
-      `add-text`/`add-line`/`add-button-to-exp-window`, `modify-text-for-exp-
-      window`, `remove-items-from-exp-window`, `clear-exp-window`,
-      `install-device`, `process-events`, `add`/`modify`/`delete-visicon-
-      features`, `print-visicon`, `new-tone-sound`/`new-word-sound`/
-      `new-digit-sound`.
+- [x] **R4. Device/vision/motor** (command surface wired). Added RPC handlers
+      for `add`/`modify`/`delete`(all)-`visicon-features`, `print-visicon`,
+      `new-tone-sound`, `new-word`/`new-digit-sound`, `pbreak`/`punbreak`,
+      `correlation`/`mean-deviation`, and the window scaffolding
+      (`open-exp-window`/`clear-exp-window`/`add-text-to-exp-window`/
+      `install-device`/`process-events`). `correlation`/`mean-deviation` are
+      exact (Pearson r / RMSD, printing `LABEL: x.xxx`) and unit-tested;
+      `print-visicon` is an approximate placeholder (no oracle yet);
+      `new-word`/`new-digit-sound` are no-ops. See `GOTCHAS.md` #196. The
+      Python tests that need it all route through `tester.py`, so they still
+      need R6b.
 - [ ] **R5. Bounded Lisp subset → whole tutorial.** Extend `model.rs`/`eval.rs`
       to load every tutorial model **and task file** the Python tests exercise,
       driven by failures (macros, `let`, loops, `format`, string ops,
@@ -262,16 +267,10 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
 - [ ] **R6b. `tester.py` support.** Seven tests (`bst-*`, `fan-no-pm`,
       `paired-learning-dynamic`, `tutorial_unit5_onehit_*`) set
       `sys.stdout = tester.out_file` and run full tasks; they need the Python
-      model-tester plus device/vision commands (R4).
-- [ ] **R4. Device/vision/motor** (largely done for the device corpus). The
-      Python tests that need it: `simple-dynamic-model`, `simple-ppm-test`, and
-      the R6b set. RPC command surface to add: `open-exp-window`, `add-text`/
-      `add-line`/`add-button-to-exp-window`, `modify-text-for-exp-window`,
-      `remove-items-from-exp-window`, `clear-exp-window`, `install-device`,
-      `process-events`, `add`/`modify`/`delete-visicon-features`,
-      `print-visicon`, `new-tone-sound`/`new-word-sound`/`new-digit-sound`,
-      `pbreak`/`punbreak`, `correlation`/`mean-deviation`.
-Ordering: R1 → R2 → R3 (done), then R6/R6b/R4 for the remaining Python
+      model-tester itself (`model-tester.cl`'s `defun`s and
+      `:starting-parameters :testing-function`), which is the next blocker now
+      that R4's command surface exists.
+Ordering: R1 → R2 → R3 → R4 (done), then R6b for the tester-driven Python
 test-models.
 
 ---

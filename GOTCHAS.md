@@ -2949,3 +2949,29 @@ Details that break a naive server:
   replies `{"id","result","error"}`; trace output reaches monitors through the
   four trace commands `model-trace`/`command-trace`/`warning-trace`/
   `general-trace`.
+
+## 196. R4 device/vision surface: stats are RMSD, not mean deviation
+
+The RPC command surface for device/vision/motor is wired to the engine's
+scripted device layer (`add-visicon-features`, `modify`/`delete`(all)-
+`visicon-features`, `print-visicon`, `new-tone-sound`, `pbreak`/`punbreak`,
+`correlation`/`mean-deviation`, and the window scaffolding).
+
+Non-obvious bits:
+
+- `mean-deviation` is **not** the mean absolute deviation — it is the RMSD,
+  `sqrt(Σ(a−b)²/n)` (`modules/act-gui-interface.lisp:1567`); `correlation` is
+  the usual Pearson r (`:1600`). Both `command-output "…: ~6,3F"` (i.e. print
+  `CORRELATION:  x.xxx` / `MEAN DEVIATION: x.xxx`) when `{output}` is true
+  (the default), which is what the `bst` task relies on
+  (`tutorial/python/bst.py:273`). Covered by a `session.rs` unit test.
+- `print-visicon` calls `(printed-visicon t)` (`core-modules/vision.lisp:4090`),
+  a column-aligned table (Name/Att/Loc + one column per attribute). The engine
+  currently emits an approximate line-per-feature form; no `.ref` exercises it
+  yet, so it is only a placeholder until an oracle exists.
+- `new-word-sound`/`new-digit-sound` are accepted but no-ops for now; the audio
+  corpus uses tone sounds.
+- The remaining Python tests that use these (`sperling_test`, `fan_test`, and
+  the `bst-*`/`fan-no-pm`/`onehit` refs) all go through `tester.py`
+  (`sys.stdout = tester.out_file`, `:starting-parameters :testing-function`),
+  so they need R6b before an R4 command turns any of them green.

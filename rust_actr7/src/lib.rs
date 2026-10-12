@@ -390,7 +390,9 @@ pub fn run_model_steps(
             Step::EmitWarning(msg) => eng.emit_warning(msg),
             Step::StartHandAtTouch(hand) => eng.start_hand_at_touch(hand),
             Step::ModFocus(slots) => eng.mod_focus(slots),
-            Step::AddVisicon(slots) => eng.add_visicon(slots),
+            Step::AddVisicon(slots) => {
+                eng.add_visicon(slots);
+            }
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,

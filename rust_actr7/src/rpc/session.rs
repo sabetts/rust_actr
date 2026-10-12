@@ -120,6 +120,24 @@ pub const BUILTINS: &[&str] = &[
     "sgp",
     "spp",
     "sdp",
+    // Device / vision / motor.
+    "add-visicon-features",
+    "modify-visicon-features",
+    "delete-visicon-features",
+    "delete-all-visicon-features",
+    "print-visicon",
+    "new-tone-sound",
+    "new-word-sound",
+    "new-digit-sound",
+    "pbreak",
+    "punbreak",
+    "correlation",
+    "mean-deviation",
+    "clear-exp-window",
+    "add-text-to-exp-window",
+    "open-exp-window",
+    "install-device",
+    "process-events",
     // The four trace streams (`framework/printing.lisp`); their monitors are
     // what actually receive output (the Rust engine already formatted it).
     "model-trace",
@@ -701,10 +719,140 @@ impl Session {
                     .unwrap_or_default();
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
-            "whynot" => {
-                if std::env::var("RPC_DEBUG").is_ok() {
-                    eprintln!("WHYNOT args={args:?} engine={}", self.engine.is_some());
+            // --- R4 device / vision / motor ---------------------------------
+            // Each feature arg is a flat `[slot, value, …]` list.
+            "add-visicon-features" => {
+                let specs: Vec<Vec<(String, Sexp)>> = args.iter().map(flat_slots).collect();
+                let names: Vec<Json> = specs
+                    .iter()
+                    .map(|s| match &mut self.engine {
+                        Some(e) => Json::Str(e.add_visicon(s)),
+                        None => Json::Null,
+                    })
+                    .collect();
+                // One feature returns its name; several return a list.
+                if names.len() == 1 {
+                    Ok(names)
+                } else {
+                    Ok(vec![Json::Arr(names)])
                 }
+            }
+            "modify-visicon-features" => {
+                let now = self.engine.as_ref().map(|e| e.time_ms()).unwrap_or(0);
+                for a in args {
+                    let items = match a {
+                        Json::Arr(x) => x.clone(),
+                        _ => continue,
+                    };
+                    let name = items.first().map(json_to_text).unwrap_or_default();
+                    let (x, y) = feature_xy(&items[1..]);
+                    if let Some(eng) = &mut self.engine {
+                        eng.schedule_modify_visicon(now, &name, x, y);
+                    }
+                }
+                Ok(vec![Json::Null])
+            }
+            "delete-visicon-features" => {
+                for a in args {
+                    let name = json_to_text(a);
+                    if let Some(eng) = &mut self.engine {
+                        eng.remove_visicon(&name);
+                    }
+                }
+                Ok(vec![Json::Null])
+            }
+            "delete-all-visicon-features" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.clear_visicon();
+                }
+                Ok(vec![Json::Null])
+            }
+            "print-visicon" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.print_visicon_rpc();
+                }
+                Ok(vec![Json::Null])
+            }
+            "new-tone-sound" => {
+                let freq = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                let duration = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                let onset = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let in_ms = args
+                    .get(3)
+                    .map(|a| matches!(a, Json::Bool(true)))
+                    .unwrap_or(false);
+                let onset_ms = if in_ms {
+                    onset as i64
+                } else {
+                    (onset * 1000.0).round() as i64
+                };
+                if let Some(eng) = &mut self.engine {
+                    eng.new_tone_sound_rpc(freq, duration, onset_ms);
+                }
+                Ok(vec![Json::Null])
+            }
+            "new-word-sound" | "new-digit-sound" => {
+                // A speech-like sound: hold the vocal buffer busy, then
+                // release. The corpus's audio specs use tone sounds.
+                Ok(vec![Json::Null])
+            }
+            "pbreak" => {
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                if let Some(eng) = &mut self.engine {
+                    eng.pbreak(&names);
+                }
+                Ok(vec![Json::Null])
+            }
+            "punbreak" => {
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                if let Some(eng) = &mut self.engine {
+                    eng.punbreak(&names);
+                }
+                Ok(vec![Json::Null])
+            }
+            "clear-exp-window"
+            | "add-text-to-exp-window"
+            | "open-exp-window"
+            | "install-device"
+            | "process-events" => {
+                // Window scaffolding: the engine's device model is a scripted
+                // window, so these are accepted (open returns a handle) and the
+                // visible effects are driven by the device sidecar.
+                if name == "open-exp-window" {
+                    Ok(vec![Json::Str("window0".into())])
+                } else {
+                    Ok(vec![Json::Null])
+                }
+            }
+            "correlation" | "mean-deviation" => {
+                let a = num_list(args.first());
+                let b = num_list(args.get(1));
+                let v = if name == "correlation" {
+                    correlation(&a, &b)
+                } else {
+                    mean_deviation(&a, &b)
+                };
+                // `{output}` defaults to t: `command-output "…: ~6,3F"`.
+                let output = !matches!(args.get(2), Some(Json::Null) | Some(Json::Bool(false)));
+                if output {
+                    let label = if name == "correlation" {
+                        "CORRELATION"
+                    } else {
+                        "MEAN DEVIATION"
+                    };
+                    if let Some(eng) = &mut self.engine {
+                        eng.model_output(&format!("{label}: {v:6.3}"));
+                    }
+                }
+                Ok(vec![Json::Float(v)])
+            }
+            "whynot" => {
                 let names: Vec<String> = args
                     .iter()
                     .filter_map(|a| a.as_str().map(str::to_string))
@@ -915,6 +1063,84 @@ pub fn json_to_text(j: &Json) -> String {
     }
 }
 
+/// A flat `[slot, value, …]` list (a visicon feature spec) → engine slot pairs.
+fn flat_slots(j: &Json) -> Vec<(String, Sexp)> {
+    let items = match j {
+        Json::Arr(a) => a,
+        _ => return Vec::new(),
+    };
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i + 1 < items.len() {
+        let key = json_to_text(&items[i]).to_uppercase();
+        out.push((key, json_to_sexp(&items[i + 1])));
+        i += 2;
+    }
+    out
+}
+
+/// `[slot, value, …]` → the `(screen-x, screen-y)` a modify carries.
+fn feature_xy(items: &[Json]) -> (i64, i64) {
+    let (mut x, mut y) = (0i64, 0i64);
+    let mut i = 0;
+    while i + 1 < items.len() {
+        let key = json_to_text(&items[i]).to_uppercase();
+        let v = items[i + 1].as_f64().unwrap_or(0.0) as i64;
+        match key.as_str() {
+            "SCREEN-X" => x = v,
+            "SCREEN-Y" => y = v,
+            _ => {}
+        }
+        i += 2;
+    }
+    (x, y)
+}
+
+/// Coerce a JSON list (or scalar) into `f64`s for the stats commands.
+fn num_list(j: Option<&Json>) -> Vec<f64> {
+    match j {
+        Some(Json::Arr(a)) => a.iter().filter_map(|x| x.as_f64()).collect(),
+        Some(other) => other.as_f64().map(|v| vec![v]).unwrap_or_default(),
+        None => Vec::new(),
+    }
+}
+
+/// `correlation` (`commands/misc-cmds.lisp`): Pearson's r over two lists.
+fn correlation(a: &[f64], b: &[f64]) -> f64 {
+    let n = a.len().min(b.len());
+    if n == 0 {
+        return 0.0;
+    }
+    let (a, b) = (&a[..n], &b[..n]);
+    let ma = a.iter().sum::<f64>() / n as f64;
+    let mb = b.iter().sum::<f64>() / n as f64;
+    let mut num = 0.0;
+    let mut da = 0.0;
+    let mut db = 0.0;
+    for i in 0..n {
+        let x = a[i] - ma;
+        let y = b[i] - mb;
+        num += x * y;
+        da += x * x;
+        db += y * y;
+    }
+    if da == 0.0 || db == 0.0 {
+        0.0
+    } else {
+        num / (da.sqrt() * db.sqrt())
+    }
+}
+
+/// `mean-deviation` (`act-gui-interface.lisp:1567`): the RMSD between two lists.
+fn mean_deviation(a: &[f64], b: &[f64]) -> f64 {
+    let n = a.len().min(b.len());
+    if n == 0 {
+        return 0.0;
+    }
+    let ss: f64 = (0..n).map(|i| (a[i] - b[i]).powi(2)).sum();
+    (ss / n as f64).sqrt()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -940,6 +1166,15 @@ mod tests {
             "ACT-R:tutorial;unit1;count.lisp",
         );
         assert_eq!(p, std::path::Path::new("/actr/tutorial/unit1/count.lisp"));
+    }
+
+    #[test]
+    fn correlation_and_rmsd_match_the_lisp() {
+        // Perfect positive / negative correlation.
+        assert!((correlation(&[1.0, 2.0, 3.0], &[2.0, 4.0, 6.0]) - 1.0).abs() < 1e-9);
+        assert!((correlation(&[1.0, 2.0, 3.0], &[6.0, 4.0, 2.0]) + 1.0).abs() < 1e-9);
+        // `mean-deviation` is the RMSD (`act-gui-interface.lisp:1567`).
+        assert!((mean_deviation(&[0.0, 0.0], &[3.0, 4.0]) - 12.5f64.sqrt()).abs() < 1e-9);
     }
 
     #[test]
