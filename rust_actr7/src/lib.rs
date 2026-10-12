@@ -279,6 +279,16 @@ pub enum Step {
         x: i64,
         y: i64,
     },
+    /// A driver-level command call the extractor recorded generically
+    /// (`(:command NAME ARG…)`), e.g. `pp`, `whynot`, `all-productions`,
+    /// `mp-queue-text`. Replayed through the RPC command layer
+    /// ([`rpc::session::Session::evaluate`]) so the spec exercises the same
+    /// dispatch a Python client hits; `run_model_steps` rejects it (the
+    /// session driver owns it).
+    Command {
+        name: String,
+        args: Vec<sexpr::Sexp>,
+    },
 }
 
 /// Run a scripted sequence of steps over one or more model files (the
@@ -398,6 +408,15 @@ pub fn run_model_steps(
             Step::AlDriver => eng.al_driver()?,
             Step::ModifyVisicon { at_ms, name, x, y } => {
                 eng.schedule_modify_visicon(*at_ms, name, *x, *y)
+            }
+            // Command steps are replayed through the RPC command layer, which
+            // this engine-level driver has no access to; the spec harness uses
+            // its session driver (`tests/test_models.rs::run_spec_session`)
+            // for any spec containing one.
+            Step::Command { name, .. } => {
+                return Err(EngineError::Model(format!(
+                    "command step {name:?} requires the session driver"
+                )));
             }
         }
     }

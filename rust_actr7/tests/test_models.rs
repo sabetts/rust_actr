@@ -21,6 +21,8 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use actr_engine::json::Json;
+use actr_engine::rpc::session::{sexp_to_json, Remote, Session};
 use actr_engine::sexpr::{parse_all, Sexp};
 use actr_engine::trace::Detail;
 use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
@@ -400,6 +402,29 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                     steps.push(Step::BufferChunk(names));
                 }
             }
+            ":COMMAND" => {
+                let name = match v.get(1) {
+                    Some(Sexp::Sym(n)) | Some(Sexp::Str(n)) => n.to_lowercase(),
+                    other => {
+                        note(&mut unsupported, format!("bad :COMMAND {other:?}"));
+                        continue;
+                    }
+                };
+                // The generic wrappers record the `-fct` convention: a single
+                // list argument is the command's argument list
+                // (`(pp-fct '(RETRIEVE0))`), and `NIL` means no arguments.
+                let raw: Vec<Sexp> = v[2..].to_vec();
+                let args = if raw.len() == 1 {
+                    match &raw[0] {
+                        Sexp::List(items) => items.clone(),
+                        Sexp::Sym(s) if s == "NIL" => Vec::new(),
+                        other => vec![other.clone()],
+                    }
+                } else {
+                    raw
+                };
+                steps.push(Step::Command { name, args });
+            }
             ":SGP" | ":SSP" => {
                 let mut i = 1;
                 while i + 1 < v.len() {
@@ -654,9 +679,168 @@ fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> R
 fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     let seed = spec.run_seeds.first().copied().ok_or("no run seed")?;
     let device = load_spec_device(&spec.name)?;
-    let actual = run_model_steps(root, &spec.models, seed, &spec.steps, &device)
-        .map_err(|e| format!("engine error: {e}"))?;
+    // A spec with a recorded command step is driven through the RPC command
+    // layer (`Session::evaluate`), so the spec exercises the same dispatch a
+    // Python client hits; everything else keeps the engine-level driver.
+    let actual = if spec.steps.iter().any(|s| matches!(s, Step::Command { .. })) {
+        run_spec_session(root, spec, &device)?
+    } else {
+        run_model_steps(root, &spec.models, seed, &spec.steps, &device)
+            .map_err(|e| format!("engine error: {e}"))?
+    };
     Ok(normalize(&actual))
+}
+
+/// A remote-command sink that refuses every callback: the spec corpus never
+/// registers a client-owned command.
+struct NoRemote;
+
+impl Remote for NoRemote {
+    fn call(&mut self, _n: &str, _m: Option<&str>, _a: Vec<Json>) -> Result<Vec<Json>, String> {
+        Err("no remote client".into())
+    }
+}
+
+/// Drive a spec through a [`Session`]: load the model chain, then apply each
+/// step — commands via `evaluate`, the rest at the engine level, mirroring
+/// `run_model_steps` so the two drivers cannot diverge on trace shape.
+fn run_spec_session(
+    root: &Path,
+    spec: &Spec,
+    device: &DeviceSetup,
+) -> Result<String, String> {
+    let seed = spec.run_seeds.first().copied().ok_or("no run seed")?;
+    let mut session = Session::new(root.to_path_buf(), seed);
+    let mut remote = NoRemote;
+    for m in &spec.models {
+        session
+            .evaluate("load-act-r-model", None, &[Json::Str(m.clone())], &mut remote)
+            .map_err(|e| format!("load {m}: {e}"))?;
+    }
+    session.set_device(device.clone())?;
+    for step in &spec.steps {
+        apply_session_step(&mut session, step, &mut remote)?;
+    }
+    Ok(session.take_trace().join("\n"))
+}
+
+fn apply_session_step(
+    session: &mut Session,
+    step: &Step,
+    remote: &mut dyn Remote,
+) -> Result<(), String> {
+    let no_model = || "no model loaded".to_string();
+    match step {
+        Step::Command { name, args } => {
+            let jargs: Vec<Json> = args.iter().map(sexp_to_json).collect();
+            session
+                .evaluate(name, None, &jargs, remote)
+                .map_err(|e| format!("command {name}: {e}"))?;
+        }
+        Step::Run { secs, trace, width } => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            eng.set_module_width(*width);
+            eng.set_trace(*trace);
+            eng.run_secs(*secs).map_err(|e| e.to_string())?;
+        }
+        Step::RunFullTime {
+            secs,
+            trace,
+            width,
+            seed,
+        } => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            if let Some(s) = seed {
+                eng.set_seed(*s);
+            }
+            eng.set_module_width(*width);
+            eng.set_trace(*trace);
+            eng.run_full_time(*secs).map_err(|e| e.to_string())?;
+        }
+        Step::RunUntilTime { time, trace, width } => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            eng.set_module_width(*width);
+            eng.set_trace(*trace);
+            eng.run_until(*time).map_err(|e| e.to_string())?;
+        }
+        Step::RunNEvents {
+            count,
+            trace,
+            width,
+        } => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            eng.set_module_width(*width);
+            eng.set_trace(*trace);
+            eng.run_n_events(*count).map_err(|e| e.to_string())?;
+        }
+        Step::ModelOutput(s) => session.engine_mut().ok_or_else(no_model)?.model_output(s),
+        Step::GoalFocus(desc) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .goal_focus(desc)
+            .map_err(|e| e.to_string())?,
+        Step::Seed(s) => session.engine_mut().ok_or_else(no_model)?.set_seed(*s),
+        Step::ConsumeRng(n) => session.engine_mut().ok_or_else(no_model)?.consume_rng(*n),
+        Step::Sdm(spec) => {
+            session.engine_mut().ok_or_else(no_model)?.print_sdm(spec);
+        }
+        Step::RecordHistory(buffers) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .set_bold_buffers(buffers),
+        Step::PredictBold => session.engine_mut().ok_or_else(no_model)?.print_bold(),
+        Step::SetDetail(d) => session.engine_mut().ok_or_else(no_model)?.set_detail(*d),
+        Step::Sgp(k, v) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .apply_sgp(k, v)
+            .map_err(|e| e.to_string())?,
+        Step::Reset => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .reset()
+            .map_err(|e| e.to_string())?,
+        Step::PDisable(names) => session.engine_mut().ok_or_else(no_model)?.pdisable(names),
+        Step::PEnable(names) => session.engine_mut().ok_or_else(no_model)?.penable(names),
+        Step::BufferChunk(buffers) => {
+            session
+                .engine_mut()
+                .ok_or_else(no_model)?
+                .print_buffer_chunk(buffers);
+        }
+        Step::DummyEvent(at_ms) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .schedule_dummy(*at_ms),
+        Step::EmitWarning(msg) => session.engine_mut().ok_or_else(no_model)?.emit_warning(msg),
+        Step::StartHandAtTouch(hand) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .start_hand_at_touch(hand),
+        Step::ModFocus(slots) => session.engine_mut().ok_or_else(no_model)?.mod_focus(slots),
+        Step::AddVisicon(slots) => {
+            session.engine_mut().ok_or_else(no_model)?.add_visicon(slots);
+        }
+        Step::TrackerSetup(slots) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .tracker_setup(slots),
+        Step::ZzDriver => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .zz_driver()
+            .map_err(|e| e.to_string())?,
+        Step::AlDriver => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .al_driver()
+            .map_err(|e| e.to_string())?,
+        Step::ModifyVisicon { at_ms, name, x, y } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .schedule_modify_visicon(*at_ms, name, *x, *y),
+    }
+    Ok(())
 }
 
 fn load_enabled() -> BTreeSet<String> {

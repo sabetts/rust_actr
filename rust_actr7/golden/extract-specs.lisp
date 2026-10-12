@@ -28,11 +28,21 @@
 ;;;; effective seeds can be recorded.
 
 (defparameter *command-tokens*
-  '("command-output" "(sdp" "(spp" "(whynot" "(dm " "(dm)"
-    "(buffer-chunk" "buffer-status" "(sji" "(pprint"
-    "print-conflict-tree" "print-visicon" "print-all-visicon"
-    "with-open-file" "read-line" "multiple-value-bind")
-  "Stub text that means the ref contains non-trace output: out of scope.
+  '("command-output" "with-open-file" "read-line" "multiple-value-bind"
+    "add-pre-event-hook" "add-post-event-hook")
+  "Stub text that means the ref is *not replayable* from the spec, so the
+stub is classified without executing it. Two kinds qualify:
+
+  - source scrapes (`with-open-file`/`read-line`/`multiple-value-bind`):
+    the stub re-reads the tutorial source and echoes a fragment, so the ref
+    validates the tutorial text, not the engine;
+  - Lisp event hooks (`add-pre/post-event-hook`): the hook body is arbitrary
+    Lisp (`evt-time`/`format-event`/`get-event-by-id`), which the engine
+    cannot execute — the documented \"no arbitrary Lisp\" divergence.
+
+Everything else is *executed* and its commands recorded (see
+`*generic-commands*`); a command the engine cannot reproduce now fails
+visibly against the ref instead of being silently skipped.
 `(sgp :v …)`/`(sgp-fct (list :v …))`/`*out-file*` are only trace toggles and
 targets, not command output, so they must not classify a stub (they made
 `tutorial-unit5modeling-v7-p4-run` etc. look like command specs).
@@ -46,9 +56,44 @@ echo), and a filtered `model-output` fragment is caught by the ref check.")
   "Stub text that means the test drives a device: out of scope for now.")
 
 (defparameter *driver-tokens*
-  '("(pdisable" "(penable" "(pbreak" "(punbreak" "(sdp" "(spp" "(whynot")
-  "Run-it operations the engine has no equivalent for (production
-disable/enable, breakpoints); not trace-only drivers.")
+  '()
+  "Run-it operations the engine has no equivalent for. Production
+disable/enable and `pbreak`/`sdp`/`spp`/`whynot` are now recorded commands
+(`*generic-commands*`), so this list is empty; it remains as a hook for
+operations that turn out not to be replayable.")
+
+(defparameter *generic-commands*
+  '(("pp" . pp-fct)
+    ("whynot" . whynot-fct)
+    ("whynot-dm" . whynot-dm-fct)
+    ("dm" . dm-fct)
+    ("pprint-chunks" . pprint-chunks-fct)
+    ("all-productions" . all-productions)
+    ("buffers" . buffers)
+    ("buffer-status" . buffer-status)
+    ("mp-queue-text" . mp-queue-text)
+    ("used-production-buffers" . used-production-buffers)
+    ("print-conflict-tree" . print-conflict-tree)
+    ("print-visicon" . print-visicon)
+    ("printed-visicon" . printed-visicon)
+    ("print-dm-finsts" . print-dm-finsts)
+    ("print-activation-trace" . print-activation-trace)
+    ("print-chunk-activation-trace" . print-chunk-activation-trace-fct)
+    ("mod-chunk" . mod-chunk-fct)
+    ("merge-dm" . merge-dm-chunks-fct)
+    ("chunk-type" . chunk-type-fct)
+    ("extend-possible-slots" . extend-possible-slots)
+    ("mod-buffer-chunk" . mod-buffer-chunk-fct)
+    ("overwrite-buffer-chunk" . overwrite-buffer-chunk-fct)
+    ("schedule-simple-mod-buffer-chunk" . schedule-simple-mod-buffer-chunk)
+    ("schedule-simple-set-buffer-chunk" . schedule-simple-set-buffer-chunk)
+    ("sji" . sji-fct)
+    ("sdp" . sdp-fct))
+  "Commands to record generically, as `(:command NAME ARG…)`, mapped to the
+function the stubs' macros expand to. Each is recorded only when it is not
+already covered by a dedicated step (`install-wrappers`); the re-entrancy
+guard `*recording-command*` suppresses a command a recorded command calls
+internally (`no-output` → its argument command).")
 
 ;;; ---------------------------------------------------------------- state
 
@@ -69,11 +114,17 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defvar *rng-count* 0)
 (defvar *sgp-calls* nil)
 (defvar *suppress* nil)
-;; The model-tester binds `*out-file*` to the ref file and stubs direct the
-;; trace to it with `(sgp-fct (list :v *out-file*))`. The extractor only
-;; records steps, so bind it to `t` (trace to stdout) — the engine reads the
-;; resulting `(:sgp :v t)` step and does not need the file.
-(defvar *out-file* t)
+;; Re-entrancy guard for the generic command wrappers: while one recorded
+;; command runs, a command it calls internally (`no-output "spp" …`) is not
+;; recorded again.
+(defvar *recording-command* nil)
+;; `*out-file*` is a real stream (the model-tester binds it to the ref file),
+;; so a stub that does `(let ((*error-output* *out-file*)) …)` or `(format
+;; *out-file* …)` works. It is a null stream: the extractor records steps, not
+;; output, and `w-sgp` maps the stream back to `T` when a stub says
+;; `(sgp :v *out-file*)`.
+(defvar *null-stream* (make-broadcast-stream))
+(defvar *out-file* *null-stream*)
 (defvar *wrapped* nil)
 ;; Device calls made by an executed stub (`add-text-to-exp-window` etc.),
 ;; as `(ms text x y)` / `ms`; written to `<name>.device.sexp`.
@@ -161,9 +212,18 @@ disable/enable, breakpoints); not trace-only drivers.")
   (pushnew name *wrapped*))
 
 (defun call-orig (name &rest args)
-  (apply (gethash name *orig-fns*) args))
+  ;; A dedicated wrapper owns this call, so a command its underlying function
+  ;; invokes internally (`buffer-chunk` → `pprint-chunks`) must not also be
+  ;; recorded: bind the generic guard for the duration.
+  (let ((*recording-command* t))
+    (apply (gethash name *orig-fns*) args)))
 
 (defvar *last-sgp-params* nil)
+
+(defun normalize-params (params)
+  "Replace a stream value (`(sgp :v *out-file*)`) with `T` so the recorded
+step is printable and matches what the engine expects."
+  (mapcar (lambda (x) (if (streamp x) t x)) params))
 
 (defun eff-param (key)
   "Read a parameter without recording the call."
@@ -374,8 +434,9 @@ disable/enable, breakpoints); not trace-only drivers.")
   (when (and (eq *mode* :drive) (not *suppress*)
              ;; Drop read-only getters like `(sgp :alpha)` (GOTCHAS #12).
              (not (every #'keywordp params)))
-    (push params *sgp-calls*)
-    (push (cons :sgp params) *steps*))
+    (let ((rec (normalize-params params)))
+      (push rec *sgp-calls*)
+      (push (cons :sgp rec) *steps*)))
   (call-orig 'sgp-fct params))
 
 (defun w-ssp (params)
@@ -385,8 +446,9 @@ disable/enable, breakpoints); not trace-only drivers.")
     (when ss (setf *starting-seed* ss)))
   (when (and (eq *mode* :drive) (not *suppress*)
              (not (every #'keywordp params)))
-    (push (cons :ssp params) *sgp-calls*)
-    (push (cons :ssp params) *steps*))
+    (let ((rec (normalize-params params)))
+      (push (cons :ssp rec) *sgp-calls*)
+      (push (cons :ssp rec) *steps*)))
   (call-orig 'ssp-fct params))
 
 (defun w-actr-load (&rest args)
@@ -485,6 +547,34 @@ disable/enable, breakpoints); not trace-only drivers.")
     (push (cons :penable productions) *steps*))
   (call-orig 'penable-fct productions))
 
+;;; ---------------------------------------------------------------- generic
+;;;
+;;; Commands without a dedicated step are recorded from the function their
+;;; stub macro expands to (`*generic-commands*`). A stub calls the command
+;;; macro, which expands to `NAME-FCT`; wrapping that symbol catches the
+;;; driver-level call with the arguments the RPC layer would receive.
+
+(defun install-generic-command (name sym)
+  ;; Skip a symbol a dedicated wrapper already owns (e.g. `buffer-chunk-fct`)
+  ;; so its richer step shape wins and it is not recorded twice.
+  (when (and (fboundp sym) (not (gethash sym *orig-fns*)))
+    (let ((orig (symbol-function sym))
+          (cname (intern (string-upcase name))))
+      (setf (gethash sym *orig-fns*) orig)
+      (setf (symbol-function sym)
+            (lambda (&rest args)
+              (let ((outer *recording-command*))
+                (let ((*recording-command* t))
+                  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*)
+                             (not outer))
+                    (push (cons :command (cons cname args)) *steps*))
+                  (apply orig args)))))
+      (pushnew sym *wrapped*))))
+
+(defun install-generic-commands ()
+  (dolist (entry *generic-commands*)
+    (install-generic-command (first entry) (cdr entry))))
+
 (defun write-device (name)
   (when (or *device-texts* *device-clears* *device-commands*)
     (let ((path (merge-pathnames (concatenate 'string name ".device.sexp") *out-dir*)))
@@ -547,7 +637,8 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'penable-fct #'w-penable)
   (wrap-fn 'schedule-event-relative #'w-schedule-event-relative)
   (wrap-fn 'schedule-event #'w-schedule-event)
-  (wrap-fn 'evaluate-act-r-command #'w-evaluate-act-r-command))
+  (wrap-fn 'evaluate-act-r-command #'w-evaluate-act-r-command)
+  (install-generic-commands))
 
 ;;; ---------------------------------------------------------------- extraction
 

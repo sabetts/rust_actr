@@ -181,6 +181,8 @@ pub struct Session {
     /// `set-system-parameter-value` settings (`:starting-parameters`, …),
     /// re-applied on reset (`central-parameters.lisp:140`).
     system_params: std::collections::BTreeMap<String, Json>,
+    /// The scripted device the engine is built with (empty by default).
+    device: DeviceSetup,
 }
 
 impl Session {
@@ -202,6 +204,7 @@ impl Session {
             seed,
             symbol_count: 0,
             system_params: Default::default(),
+            device: DeviceSetup::default(),
         }
     }
 
@@ -281,6 +284,19 @@ impl Session {
 
     pub fn current_model(&self) -> Option<&str> {
         self.current_model.as_deref()
+    }
+
+    /// The live engine, for a harness that drives non-command steps at the
+    /// engine level while routing commands through [`Session::evaluate`].
+    pub fn engine_mut(&mut self) -> Option<&mut Engine> {
+        self.engine.as_mut()
+    }
+
+    /// Install a scripted device and rebuild the engine around it (the spec
+    /// harness's `<name>.device.sexp` sidecar).
+    pub fn set_device(&mut self, device: DeviceSetup) -> Result<(), String> {
+        self.device = device;
+        self.build_engine()
     }
 
     pub fn set_current_model(&mut self, name: Option<String>) {
@@ -1133,7 +1149,7 @@ impl Session {
         };
         self.current_model = Some(def.name.clone());
         let mut eng =
-            Engine::new(def, self.seed, 0.0, DeviceSetup::default()).map_err(|e| e.to_string())?;
+            Engine::new(def, self.seed, 0.0, self.device.clone()).map_err(|e| e.to_string())?;
         eng.set_user_fns(self.user_fns.clone());
         self.engine = Some(eng);
         self.trace_pos = 0;
@@ -1174,6 +1190,28 @@ pub fn json_to_sexp(j: &Json) -> Sexp {
         Json::Str(s) => Sexp::Sym(s.to_uppercase()),
         Json::Arr(items) => Sexp::List(items.iter().map(json_to_sexp).collect()),
         Json::Obj(_) => Sexp::Sym("NIL".into()),
+    }
+}
+
+/// The engine's `Sexp` → JSON, the inverse of [`json_to_sexp`], for replaying a
+/// recorded command step's arguments through [`Session::evaluate`]. `NIL`/`T`
+/// become `null`/`true`; other symbols and strings become JSON strings (what
+/// the client sends for names).
+pub fn sexp_to_json(s: &Sexp) -> Json {
+    match s {
+        Sexp::Int(i) => Json::Int(*i),
+        Sexp::Float(x) => Json::Float(*x),
+        Sexp::Str(t) => Json::Str(t.clone()),
+        Sexp::Sym(name) => {
+            if name == "NIL" {
+                Json::Null
+            } else if name == "T" {
+                Json::Bool(true)
+            } else {
+                Json::Str(name.clone())
+            }
+        }
+        Sexp::List(items) => Json::Arr(items.iter().map(sexp_to_json).collect()),
     }
 }
 
