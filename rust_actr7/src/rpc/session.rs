@@ -701,8 +701,24 @@ impl Session {
                     .unwrap_or_default();
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
-            "whynot" | "mp-show-queue" => {
-                // Deferred (R3 tail / R4).
+            "whynot" => {
+                if std::env::var("RPC_DEBUG").is_ok() {
+                    eprintln!("WHYNOT args={args:?} engine={}", self.engine.is_some());
+                }
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_whynot(&names))
+                    .unwrap_or_default();
+                // `whynot-fct` returns the conflict set.
+                Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
+            }
+            "mp-show-queue" => {
+                // Deferred.
                 Ok(vec![Json::Null])
             }
             // The trace streams are written by the engine already; their

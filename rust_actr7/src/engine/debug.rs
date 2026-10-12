@@ -888,3 +888,140 @@ impl Engine {
         b("VISUAL") || b("VISUAL-LOCATION")
     }
 }
+
+/// `whynot` (`commands/procedural-cmds.lisp:597`): print, for each named
+/// production, whether it is in the current conflict set plus its definition
+/// and (when not) why it fails. Returns the conflict set, as `whynot-fct` does.
+impl Engine {
+    pub fn print_whynot(&mut self, names: &[String]) -> Vec<String> {
+        let prods: Vec<crate::model::Production> = names
+            .iter()
+            .filter_map(|n| {
+                let up = n.to_uppercase();
+                self.model
+                    .productions
+                    .iter()
+                    .find(|p| p.name == up)
+                    .cloned()
+            })
+            .collect();
+        for prod in &prods {
+            // `command-output "~%Production …"` prints a leading newline.
+            self.out_lines.push(String::new());
+            if self.last_conflict_set.iter().any(|n| n == &prod.name) {
+                self.out_lines
+                    .push(format!("Production {} matches:", prod.name));
+            } else {
+                self.out_lines
+                    .push(format!("Production {} does NOT match.", prod.name));
+            }
+            let text = super::compilation::render_production(prod, &Bindings::new(), &[]);
+            for line in text.lines() {
+                self.out_lines.push(line.to_string());
+            }
+            if !self.last_conflict_set.iter().any(|n| n == &prod.name) {
+                self.out_lines.push("It fails because: ".to_string());
+                let reason = self.why_not_match(prod);
+                self.out_lines.push(reason);
+            }
+        }
+        self.last_conflict_set.clone()
+    }
+
+    /// The first failing LHS condition's explanation
+    /// (`failure-reason-string`, `procedural.lisp:1981`). The compiled `isa`
+    /// condition is checked first (its `nil`-valued slots report "has the
+    /// slot"), then the remaining slot tests with real binding so `=var`
+    /// reuse reports "does not satisfy the constraints".
+    fn why_not_match(&self, prod: &crate::model::Production) -> String {
+        use crate::model::SlotOp;
+        let mut b = Bindings::new();
+        for item in &prod.lhs {
+            match item {
+                LhsItem::Match { buffer, tests } => {
+                    let chunk = match self.buffers.get(buffer).and_then(|x| x.chunk.as_ref()) {
+                        Some(c) => c,
+                        None => return format!("The {buffer} buffer is empty."),
+                    };
+                    for t in tests {
+                        if let Pattern::Nil = t.value {
+                            if chunk.get(&t.slot) != Value::Nil {
+                                return format!(
+                                    "The chunk in the {buffer} buffer has the slot {}.",
+                                    t.slot
+                                );
+                            }
+                        }
+                    }
+                    for t in tests {
+                        if t.slot == "ISA" {
+                            continue;
+                        }
+                        let slot = self.resolve_slot_name(&t.slot, &b);
+                        let got = chunk.get(&slot);
+                        let mut ppm = Vec::new();
+                        let ok = match t.op {
+                            SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
+                                self.rel_test(t.op, &t.value, &got)
+                            }
+                            SlotOp::Neg => self
+                                .test_value(&t.value, &got, &mut b, true)
+                                .unwrap_or(false),
+                            SlotOp::Eq => self
+                                .match_eq(buffer, &slot, &t.value, &got, &mut b, &mut ppm)
+                                .unwrap_or(false),
+                        };
+                        if !ok {
+                            return match &t.value {
+                                Pattern::Nil => {
+                                    format!("The chunk in the {buffer} buffer does not have slot {slot}.")
+                                }
+                                Pattern::Var(_) => format!(
+                                    "The value in the {slot} slot of the chunk in the {buffer} buffer does not satisfy the constraints."
+                                ),
+                                other => format!(
+                                    "The {slot} slot of the chunk in the {buffer} buffer does not have the value {}.",
+                                    super::compilation::show_pat(other, &Bindings::new())
+                                ),
+                            };
+                        }
+                    }
+                }
+                LhsItem::Query { buffer, queries } => {
+                    for (attr, val) in queries {
+                        let v = super::compilation::show_pat(val, &Bindings::new());
+                        if !self.query_holds(buffer, attr, val) {
+                            return format!("The {attr} {v} query of the {buffer} buffer failed.");
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        "The production did not match.".to_string()
+    }
+
+    /// Whether a `?buffer>` query holds (the subset `crt_failure_reason` uses).
+    fn query_holds(&self, buffer: &str, attr: &str, val: &Pattern) -> bool {
+        match (attr, val) {
+            ("BUFFER", Pattern::Sym(s)) if s == "FAILURE" => {
+                self.buffers.get(buffer).map(|b| b.failed).unwrap_or(false)
+            }
+            ("BUFFER", Pattern::Sym(s)) if s == "EMPTY" => self
+                .buffers
+                .get(buffer)
+                .map(|b| b.chunk.is_none() && !b.failed)
+                .unwrap_or(false),
+            ("BUFFER", Pattern::Sym(s)) if s == "FULL" => self
+                .buffers
+                .get(buffer)
+                .map(|b| b.chunk.is_some())
+                .unwrap_or(false),
+            ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer).unwrap_or(false),
+            ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer).unwrap_or(false),
+            ("ERROR", Pattern::Nil) => self.buffer_error(buffer),
+            ("ERROR", Pattern::Sym(s)) if s == "T" => !self.buffer_error(buffer),
+            _ => true,
+        }
+    }
+}

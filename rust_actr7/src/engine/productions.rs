@@ -66,6 +66,10 @@ impl Engine {
                 self.out(reason);
             }
         }
+        self.last_conflict_set = matched
+            .iter()
+            .map(|(idx, _, _, _)| self.model.productions[*idx].name.clone())
+            .collect();
         if crt {
             for (idx, _, _, _) in &matched {
                 let name = &self.model.productions[*idx].name;

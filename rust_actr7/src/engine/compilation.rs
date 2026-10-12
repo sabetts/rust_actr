@@ -1003,12 +1003,18 @@ pub(super) fn render_production(
             RhsAction::Modify { buffer, slots } => {
                 s.push_str(&format!("   ={buffer}>\n"));
                 for (name, val) in slots {
+                    if name == "ISA" {
+                        continue;
+                    }
                     s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
                 }
             }
             RhsAction::ModifyRequest { buffer, slots } => {
                 s.push_str(&format!("   *{buffer}>\n"));
                 for (name, val) in slots {
+                    if name == "ISA" {
+                        continue;
+                    }
                     s.push_str(&format!("       {name} {}\n", show_pat(val, b)));
                 }
             }

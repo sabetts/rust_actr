@@ -1576,6 +1576,9 @@ pub struct Engine {
     /// conflict resolution. Cleared on `reset` (the model body is
     /// re-evaluated, recreating the productions).
     disabled_prods: HashSet<String>,
+    /// Names of the productions in the last computed conflict set (returned
+    /// by `whynot`, `procedural-cmds.lisp:597`).
+    last_conflict_set: Vec<String>,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -1860,6 +1863,7 @@ impl Engine {
             out_lines: Vec::new(),
             exec_prods: Vec::new(),
             disabled_prods: HashSet::new(),
+            last_conflict_set: Vec::new(),
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,

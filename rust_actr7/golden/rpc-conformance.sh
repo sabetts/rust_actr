@@ -16,8 +16,10 @@ PORT="${RPC_PORT:-2699}"
 
 cargo build --manifest-path "$CRATE/Cargo.toml" --bins >/dev/null
 
+# The vendored client auto-connects from `~/act-r-port-num.txt`, so let the
+# server write it (do not pass --no-port-file).
 "$CRATE/target/debug/actr-server" --port "$PORT" --actr "$ACTR_DIR" \
-  --no-port-file >/dev/null 2>&1 &
+  >/dev/null 2>&1 &
 SERVER=$!
 # Wait for the listener.
 for _ in $(seq 1 50); do
