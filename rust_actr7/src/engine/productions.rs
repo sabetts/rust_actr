@@ -37,16 +37,16 @@ impl Engine {
                 if self.cfg.egs != 0.0 {
                     u += self.rng.borrow_mut().noise(self.cfg.egs);
                 }
-                // `compute-utility` with `save` (`utility-and-reward-1.lisp:357`,
-                // called at `procedural.lisp:2230`) caches the value *before*
-                // the ppm search offsets are folded in; `spp` prints it.
-                self.production_utility[ep.index] = Some(u);
                 // `ppm-offset` (procedural.lisp:2373): penalty is
                 // `:ppm * Σ similarity` over the mismatched slots (the
                 // similarities are negative, so this lowers utility).
                 if let Some(p) = self.cfg.ppm {
                     u += p * mism.iter().map(|m| m.4).sum::<f32>();
                 }
+                // `compute-utility` with `save` (`utility-and-reward-1.lisp:357`,
+                // called at `procedural.lisp:2230`) caches the value with the
+                // ppm/search offsets folded in; `spp` prints it.
+                self.production_utility[ep.index] = Some(u);
                 matched.push((ep.index, b.clone(), u, mism));
                 match best_u {
                     None => {
@@ -86,10 +86,15 @@ impl Engine {
                 // time, so split the render.
                 lines.extend(render_production(prod, b, mism).lines().map(str::to_string));
                 lines.push(format!("Parameters for production {}:", prod.name));
+                // `spp-fct (list name :utility :u)` uses the `parameters`
+                // branch (`utility-and-reward-1.lisp:666`), which prints the
+                // keyword with `~S` (upper-case) and the cached value.
                 if self.cfg.esc {
-                    lines.push(format!(" :utility {}", fmt_6_3(*u)));
+                    lines.push(format!(" :UTILITY {u:6.3}"));
                 }
-                lines.push(format!(" :u {}", fmt_6_3(0.0)));
+                // `:u` is the base production-u, not the adjusted value.
+                let base = self.utilities[*idx];
+                lines.push(format!(" :U {base:6.3}"));
             }
             for l in lines {
                 self.out(l);
