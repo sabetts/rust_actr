@@ -182,6 +182,68 @@ Enable a passing spec by appending its name to
 - [x] Engine split into `rust_actr7/src/engine/*.rs` (commit `3b5c476`).
 - [x] `cargo fmt` the crate (commit `8494640`).
 
+## Phase R — RPC engine (drop-in for the Python/other-language clients)
+
+Goal: the vendored Python client (`actr7.x/tutorial/python/actr.py`) and the
+other-language interfaces connect to the Rust engine over the ACT-R RPC
+protocol and drive models the engine already loads — **no embedded Lisp**
+(the bounded Rust parser only, extended as far as the tutorial needs).
+Scope excludes client-defined modules (`define-module`).
+
+Protocol facts: TCP `127.0.0.1:2650` (or `~/act-r-port-num.txt` /
+`~/act-r-address.txt`); JSON messages terminated by `chr(4)`; each request is
+`{"method","id","params"}` and each reply `{"id","result","error"}`; the work
+is `evaluate <command-name> <args>` (a name→handler lookup). Client-registered
+commands fire via a server→client `{"method":"evaluate","params":[name,model,
+…]}` callback (`actr.py:297`, `dispatcher.lisp:1663`). Methods: `add`,
+`remove`, `evaluate`, `monitor`, `remove-monitor`, `list-commands`,
+`list-connections`, `check`, `set-name`, `close`.
+
+- [x] **R1. Transport + protocol.** `src/json.rs` (dependency-free JSON),
+      `src/rpc.rs` (framing, methods, envelopes, callback shape),
+      `src/rpc/server.rs` (TCP listener + port/host files + the server→client
+      `evaluate` callback), `src/bin/actr-server.rs`. Verified end-to-end
+      against the vendored `actr.py`: it connects, `load_act_r_model`,
+      `run`, `reset`, `goal-focus` all round-trip. (TCP only; the
+      `p_interface` pipe variant is skipped when `start-pipe-connection` is
+      not implemented.)
+- [ ] **R2. Command registry + core commands.** `name → handler`
+      (built-in / task-defun / remote) routed through `evaluate`. Done:
+      `run`/`run-full-time`/`run-until-time`/`run-n-events`, `reset`,
+      `load-act-r-model`/`load-act-r-code`, `goal-focus`, `new-symbol`,
+      `current-model`/`set-current-model`, `set-parameter-value`,
+      `model-output`/`command-output`/`print-warning`/`act-r-output`,
+      `buffer-chunk`, `mp-time`/`get-time`, and the protocol-level
+      `add`/`remove`/`monitor`/`remove-monitor`/`check`/`set-name`. Remaining:
+      `reload`, `mod-focus`, `get-parameter-value`,
+      `set-system-parameter-value`, `add-dm(-fct)`/`define-chunks(-fct)`,
+      `buffer-read`, `clear-buffer`, `set-buffer-chunk`,
+      `schedule-event-*`/`schedule-set-buffer-chunk`/
+      `schedule-mod-buffer-chunk`/`schedule-event-after-module`,
+      `mp-time-ms`, `act-r-random`/`permute-list`, `chunk-p`/
+      `chunk-copied-from`/`chunk-slot-value`, `release-chunk-spec-id`.
+- [ ] **R3. Output commands** (shared with Phase C1): `pprint-a-chunk`/
+      `pprint-chunks` (`+pprint-chunk-string+` format), `buffer-chunk`, `dm`,
+      `sdm`, `whynot`, `mp-show-queue`, `buffer-status`, `pp`,
+      `sgp`/`spp`/`sdp`/`sji` getters.
+- [ ] **R4. Device/vision/motor** as the tutorial needs: `open-exp-window`,
+      `add-text`/`add-line`/`add-button-to-exp-window`, `modify-text-for-exp-
+      window`, `remove-items-from-exp-window`, `clear-exp-window`,
+      `install-device`, `process-events`, `add`/`modify`/`delete-visicon-
+      features`, `print-visicon`, `new-tone-sound`/`new-word-sound`/
+      `new-digit-sound`.
+- [ ] **R5. Bounded Lisp subset → whole tutorial.** Extend `model.rs`/`eval.rs`
+      to load every tutorial model **and task file** the Python tests exercise,
+      driven by failures (macros, `let`, loops, `format`, string ops,
+      `multiple-value-bind`, …). Bounded to the tutorial; `model-tester.cl`
+      only if we want `tester.py` itself.
+- [ ] **R6. Conformance harness.** End-to-end: start the Rust server, attach
+      the vendored `actr.py`, run `test-models/*.py`, diff `.out` against the
+      same `.ref`s. Wire as an ignored `cargo test` (like `probe_runnable`).
+
+Ordering: R1 → R2 → R3 first (fastest demonstrable loop against `count.py`/
+`semantic.py`), then R4/R5 per tutorial unit.
+
 ---
 
 ## Explicitly out of scope (revisit only on request)

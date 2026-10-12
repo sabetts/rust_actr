@@ -2925,3 +2925,27 @@ Event ordering:
 New steps: `run-until-time` (absolute end; its stop test is `next-time > end`,
 so an event *at* the end is still processed, unlike `run-full-time`) and
 `run-n-events`.
+
+## 195. The RPC bridge is transport over a name→handler registry (verified)
+
+The Python/other-language clients are not a Lisp feature: the wire protocol
+(`framework/dispatcher.lisp:1663`, client `tutorial/python/actr.py`) is TCP +
+JSON terminated by `chr(4)`, methods `add`/`remove`/`evaluate`/`monitor`/
+`remove-monitor`/`list-commands`/`list-connections`/`check`/`set-name`/`close`,
+requests `{"method","id","params"}`, replies `{"id","result","error"}`. All
+real work is `evaluate <name> <args>` — the same `dispatcher-command-table`
+lookup the Lisp side uses. Args are data (strings/lists/numbers), not code, so
+a Rust server needs no Lisp.
+
+Details that break a naive server:
+
+- `check <name>` must reply `[null]` when the name is free and `[true,owned,
+  doc]` when taken. `actr.py:438` loops generating a fresh `python-echoNNNN` and
+  treats `result[0] == None` as "free"; returning `[false,…]` spins forever.
+- The host file `~/act-r-address.txt` is used verbatim (`actr.py:212`), so it
+  must carry no trailing newline (the port file is `int()`-parsed, so it may).
+- A client-registered command fires via a server→client
+  `{"method":"evaluate","params":[local_name,model,…],"id":N}` and the client
+  replies `{"id","result","error"}`; trace output reaches monitors through the
+  four trace commands `model-trace`/`command-trace`/`warning-trace`/
+  `general-trace`.

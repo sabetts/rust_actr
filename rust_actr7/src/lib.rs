@@ -126,8 +126,10 @@
 //!    `------ Stopped because ...` terminator. No banner, no warnings.
 
 pub mod engine;
+pub mod json;
 pub mod model;
 pub mod rand;
+pub mod rpc;
 pub mod sexpr;
 pub mod trace;
 

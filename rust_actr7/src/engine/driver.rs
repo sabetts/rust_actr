@@ -14,6 +14,17 @@ impl Engine {
         s
     }
 
+    /// Number of trace lines emitted so far (the RPC server streams the tail
+    /// to `model-trace` monitors).
+    pub fn out_len(&self) -> usize {
+        self.out_lines.len()
+    }
+
+    /// The trace lines emitted since index `start`.
+    pub fn out_since(&self, start: usize) -> Vec<String> {
+        self.out_lines.get(start..).unwrap_or(&[]).to_vec()
+    }
+
     /// `(goal-focus <spec>)`: place a chunk in the goal buffer at the
     /// current time (`core-modules/goal.lisp:275`, priority `:max`,
     /// `requested nil`). Any armed conflict-resolution wakes on the buffer
