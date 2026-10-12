@@ -434,6 +434,7 @@ pub(super) fn render_compiled(
     doc: &str,
     lhs: &[(String, Vec<(String, SlotVal)>)],
     rhs: &[(String, Vec<(String, String)>)],
+    b: &Bindings,
 ) -> String {
     let mut s = format!("(P {name}\n  \"{doc}\"\n");
     for (token, slots) in lhs {
@@ -447,14 +448,16 @@ pub(super) fn render_compiled(
         }
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {
-            s.push_str(&format!("       {n} {}\n", v.render()));
+            // A dynamic slot shows its bound name (the canonical form keeps
+            // `=var`, so substitute only for the trace).
+            s.push_str(&format!("       {} {}\n", slot_disp(n, b), v.render()));
         }
     }
     s.push_str(" ==>\n");
     for (token, slots) in rhs {
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {
-            s.push_str(&render_rhs_slot(n, v));
+            s.push_str(&render_rhs_slot(&slot_disp(n, b), v));
         }
     }
     s.push(')');

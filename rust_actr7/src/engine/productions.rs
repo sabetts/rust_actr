@@ -1193,7 +1193,7 @@ impl Engine {
                             rest.sort_by(|a, b| sort_token(&a.0).cmp(&sort_token(&b.0)));
                             let sorted: Vec<(String, Vec<(String, SlotVal)>)> =
                                 bangs.into_iter().chain(rest).collect();
-                            self.out(render_compiled(&cname, &doc, &sorted, &rhs));
+                            self.out(render_compiled(&cname, &doc, &sorted, &rhs, bindings));
                             // A freshly compiled production has no cached
                             // `production-utility` yet and `u = :nu` (0).
                             self.print_prod_params(&cname, 0.0, None, reward);
