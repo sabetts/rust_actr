@@ -224,17 +224,17 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       remainder (unused by the tutorial tests): `set-chunk-slot-value`/
       `copy-chunk`/`delete-chunk`, `schedule-set-buffer-chunk`/
       `schedule-mod-buffer-chunk`/`schedule-event-after-module`.
-- [x] **R3. Output commands** (partly; shared with Phase C1): `pprint-chunks`/
+- [x] **R3. Output commands** (shared with Phase C1): `pprint-chunks`/
       `pprint-chunks-fct`, `dm` (newest-first), `sdm` (with a spec matcher),
-      `buffer-chunk`, `buffer-status`. Verified through `actr.py` against the
-      shared refs: `tutorial_unit2code_{dm,sdm,buffer_status}` match. Remaining:
+      `buffer-chunk`, `buffer-status`, `sgp`/`spp`/`sdp` getters+setters.
+      `pprint-a-chunk` now sorts slots by chunk-type order, skips NIL/ISA, and
+      names a spec-built goal chunk `GOAL-CHUNK{n}`. Verified through
+      `actr.py`: `tutorial_unit2code_{dm,sdm,buffer_status}` and
+      `tutor-model-solution` match. Remaining:
   - `whynot` (production match details) — `tutorial_unit2code_whynot`.
-  - `mp-show-queue` (`Events in the queue:`).
-  - `pprint-a-chunk` details: an anonymous goal chunk must print named
-    `GOAL-CHUNK0`, and slots must print in slot-index order — blocks
-    `tutor-model-solution` and `tutorial_unit2code_buffer_chunk` (the goal is a
-    scheduled event, so it is also unset before a run).
-  - `sgp`/`spp`/`sdp`/`sji` getters, `pp`.
+  - `mp-show-queue` (`Events in the queue:`), `pp`, `sji`.
+  - `tutorial_unit2code_buffer_chunk` still shows a stray `SEVEN ` line (a
+    `!output!` leaking before the run) — investigate the `model-output` path.
 - [ ] **R4. Device/vision/motor** as the tutorial needs: `open-exp-window`,
       `add-text`/`add-line`/`add-button-to-exp-window`, `modify-text-for-exp-
       window`, `remove-items-from-exp-window`, `clear-exp-window`,
@@ -249,11 +249,14 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
 - [ ] **R6. Conformance harness.** End-to-end: start the Rust server, attach
       the vendored `actr.py`, run `test-models/*.py`, diff against the same
       `.ref`s. A manual harness (`/tmp/opencode/rpc_conf.py`) already drives
-      the vendored client and compares; 7/22 Python test-models match
+      the vendored client and compares; 8/22 Python test-models match
       (`addition`, `count`, `semantic`, `semantic-dynamic`,
-      `tutorial_unit2code_{dm,sdm,buffer_status}`). Wire this into `cargo test`
-      as an ignored integration test (like `probe_runnable`) once the server
-      can be started/stopped from the harness.
+      `tutorial_unit2code_{dm,sdm,buffer_status}`, `tutor-model-solution`).
+      Seven more (`bst-*`, `fan-no-pm`, `paired-learning-dynamic`,
+      `tutorial_unit5_onehit_*`) need the `tester.py` harness
+      (`sys.stdout = tester.out_file`), and `simple-dynamic-model`/
+      `simple-ppm-test` need R4 device commands. Wire into `cargo test` as an
+      ignored integration test once the server starts/stops from the harness.
 
 Ordering: R1 → R2 → R3 first (fastest demonstrable loop against `count.py`/
 `semantic.py`), then R4/R5 per tutorial unit.
