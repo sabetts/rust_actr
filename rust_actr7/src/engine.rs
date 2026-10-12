@@ -2878,6 +2878,63 @@ impl Engine {
         self.zz_run_step_mode(secs, true).map(|_| ())
     }
 
+    /// `run-until-time` (`framework/scheduling.lisp:1030`): run to an absolute
+    /// model time (seconds). Its stop test is `next-time > end`, so an event
+    /// *at* the end is still processed (`run-full-time` leaves it queued),
+    /// while the hidden dummy event at the end keeps the terminator "time
+    /// limit reached" rather than "no events left".
+    pub fn run_until(&mut self, time: f64) -> Result<(), EngineError> {
+        let end_ms = (time * 1000.0).round() as i64;
+        let secs = (end_ms - self.time_ms) as f64 / 1000.0;
+        if secs > 0.0 {
+            self.push_m(end_ms, Prio::Min, Out::Never, true, Event::Dummy);
+            self.zz_run_step_mode(secs, false).map(|_| ())
+        } else {
+            Ok(())
+        }
+    }
+
+    /// `run-n-events` (`framework/scheduling.lisp:1081`): process `count`
+    /// events, then stop ("event limit reached"); an exhausted queue stops
+    /// with "no events to process".
+    pub fn run_n_events(&mut self, count: u64) -> Result<(), EngineError> {
+        let mut n = 0u64;
+        loop {
+            self.skip_unnecessary_events();
+            if self.queue.peek().is_none() {
+                self.emit("------", "Stopped because no events to process".into());
+                break;
+            }
+            let next = self.queue.pop().expect("peeked non-empty");
+            self.time_ms = next.time_ms;
+            let show = self.cfg.detail.shows(next.out);
+            let is_cr = matches!(next.event, Event::ConflictResolution);
+            let maintenance = next.maintenance;
+            self.exec(next.event, show)?;
+            self.bold_record();
+            n += 1;
+            if self.zz_break_hit {
+                self.zz_break_hit = false;
+                break;
+            }
+            if self.stopped {
+                self.queue.clear();
+                self.emit("------", "BREAK-EVENT Stopped by !stop!".into());
+                break;
+            }
+            let silent = self.event_silent;
+            self.event_silent = false;
+            if !is_cr && !maintenance && !silent {
+                self.changed();
+            }
+            if n >= count {
+                self.emit("------", "Stopped because event limit reached".into());
+                break;
+            }
+        }
+        Ok(())
+    }
+
     /// Like `run_secs`, but reports whether any event was executed. The
     /// `zz` task driver loops `(run 10)` until it returns 0 (`test-model.lisp`
     /// `test5`): a run that processes nothing is the terminator.

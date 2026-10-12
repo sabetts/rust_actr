@@ -224,6 +224,35 @@ fn parse_steps(items: &[Sexp]) -> Result<(Vec<Step>, Option<String>), String> {
                     seed,
                 });
             }
+            ":RUN-UNTIL-TIME" => {
+                let time = match v.get(1) {
+                    Some(Sexp::Int(i)) => *i as f64,
+                    Some(Sexp::Float(x)) => *x,
+                    _ => {
+                        note(&mut unsupported, format!("bad :RUN-UNTIL-TIME in {st:?}"));
+                        continue;
+                    }
+                };
+                let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
+                let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
+                steps.push(Step::RunUntilTime { time, trace, width });
+            }
+            ":RUN-N-EVENTS" => {
+                let count = match v.get(1).and_then(as_i64) {
+                    Some(i) if i > 0 => i as u64,
+                    _ => {
+                        note(&mut unsupported, format!("bad :RUN-N-EVENTS in {st:?}"));
+                        continue;
+                    }
+                };
+                let trace = matches!(v.get(3), Some(Sexp::Sym(s)) if s != "NIL");
+                let width = v.get(4).and_then(as_i64).unwrap_or(22).max(1) as usize;
+                steps.push(Step::RunNEvents {
+                    count,
+                    trace,
+                    width,
+                });
+            }
             ":GOAL-FOCUS" => {
                 let item = match v.get(1) {
                     Some(i) => i,

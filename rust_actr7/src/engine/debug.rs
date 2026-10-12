@@ -319,6 +319,10 @@ impl Engine {
             ":RIR" => self.cfg.rir = truthy,
             ":EPL" => self.cfg.epl = truthy,
             ":PCT" => self.cfg.pct = truthy,
+            // `(sgp :v nil)` hides a trace segment (`printing.lisp:399`,
+            // default `t`); a scripted driver toggles it mid-run
+            // (`tutorial-unit5modeling-v7-p4-run`).
+            ":V" => self.trace_on = truthy,
             ":LF" => {
                 if let Some(x) = num(val) {
                     self.cfg.lf_ms = (x * 1000.0).round() as i64;

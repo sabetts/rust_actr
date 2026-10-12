@@ -53,6 +53,10 @@ tutorial-unit5modeling-v3-first-run
 tutorial-unit5modeling-v4-p3-run
 tutorial-unit5modeling-v6-p4-run-with-mp-2
 tutorial-unit5modeling-v6-run-p3
+tutorial-unit5modeling-v7-p4-run
+tutorial-unit5modeling-v8-p6-run-high-detail
+tutorial-unit5modeling-v9-p6-retrieval
+tutorial-unit5modeling-v9-p8-actions
 tutorial-unit7modeling-pcomp-issues-v2-one-trial
 tutorial-unit7modeling-pcomp-issues-v4-one-trial
 tutorial-unit7modeling-ul-issues-first-run

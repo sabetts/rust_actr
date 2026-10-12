@@ -1,1 +1,1 @@
-(:NAME "imaginal-action" :REF "imaginal-action.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "imaginal-action" :REF "imaginal-action.ref" :MODELS ("test-models;models;imaginal-action.lisp") :SEED-SET NIL :RUNS ((5 (100 0) T 22)) :STEPS ((:RESET) (:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 5 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

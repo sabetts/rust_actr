@@ -210,6 +210,20 @@ pub enum Step {
         width: usize,
         seed: Option<(u64, u64)>,
     },
+    /// `(run-until-time end)` (`scheduling.lisp:1030`): run to an absolute
+    /// model time (seconds).
+    RunUntilTime {
+        time: f64,
+        trace: bool,
+        width: usize,
+    },
+    /// `(run-n-events n)` (`scheduling.lisp:1081`): run until `n` events have
+    /// been processed.
+    RunNEvents {
+        count: u64,
+        trace: bool,
+        width: usize,
+    },
     /// `(goal-focus <spec>)`.
     GoalFocus(ChunkDesc),
     /// `(sgp :seed (S C))`.
@@ -335,6 +349,20 @@ pub fn run_model_steps(
                 eng.set_module_width(*width);
                 eng.set_trace(*trace);
                 eng.run_full_time(*secs)?;
+            }
+            Step::RunUntilTime { time, trace, width } => {
+                eng.set_module_width(*width);
+                eng.set_trace(*trace);
+                eng.run_until(*time)?;
+            }
+            Step::RunNEvents {
+                count,
+                trace,
+                width,
+            } => {
+                eng.set_module_width(*width);
+                eng.set_trace(*trace);
+                eng.run_n_events(*count)?;
             }
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::Seed(s) => eng.set_seed(*s),

@@ -29,10 +29,13 @@
 
 (defparameter *command-tokens*
   '("model-output" "command-output" "(sdp" "(spp" "(whynot" "(dm " "(dm)"
-    "buffer-chunk" "buffer-status" "(sji" "(pprint" "(sgp-fct (list :v"
-    "(sgp :v" "print-conflict-tree" "print-visicon" "print-all-visicon"
-    "*out-file*" "with-open-file" "read-line" "multiple-value-bind")
-  "Stub text that means the ref contains non-trace output: out of scope.")
+    "(buffer-chunk" "buffer-status" "(sji" "(pprint"
+    "print-conflict-tree" "print-visicon" "print-all-visicon"
+    "with-open-file" "read-line" "multiple-value-bind")
+  "Stub text that means the ref contains non-trace output: out of scope.
+`(sgp :v …)`/`(sgp-fct (list :v …))`/`*out-file*` are only trace toggles and
+targets, not command output, so they must not classify a stub (they made
+`tutorial-unit5modeling-v7-p4-run` etc. look like command specs).")
 
 (defparameter *device-tokens*
   '("install-device" "open-exp-window" "add-text-to-exp-window"
@@ -64,6 +67,11 @@ disable/enable, breakpoints); not trace-only drivers.")
 (defvar *rng-count* 0)
 (defvar *sgp-calls* nil)
 (defvar *suppress* nil)
+;; The model-tester binds `*out-file*` to the ref file and stubs direct the
+;; trace to it with `(sgp-fct (list :v *out-file*))`. The extractor only
+;; records steps, so bind it to `t` (trace to stdout) — the engine reads the
+;; resulting `(:sgp :v t)` step and does not need the file.
+(defvar *out-file* t)
 (defvar *wrapped* nil)
 ;; Device calls made by an executed stub (`add-text-to-exp-window` etc.),
 ;; as `(ms text x y)` / `ms`; written to `<name>.device.sexp`.
@@ -189,18 +197,12 @@ disable/enable, breakpoints); not trace-only drivers.")
         (t nil)))
 
 (defun flush-sgp-params ()
-  ;; The `:testing-function` re-applies `:act`/`:epl`/`:pct` on each reset
-  ;; (`paired`'s `set-paired-params`); record a step when they change so the
-  ;; engine turns tracing/compilation on and off per run.
+  ;; The `:testing-function` re-applies `:act`/`:epl`/`:pct`/`:alpha` on each
+  ;; reset (`paired`'s `set-paired-params`, `set-testing-traces`); it is called
+  ;; from `w-reset` (the model-tester applies it on reset). Record a step when
+  ;; those change so the engine turns tracing/compilation/learning on and off
+  ;; per run.
   (when (and (eq *mode* :drive) (not *suppress*))
-    ;; The stub's `ssp :starting-parameters (:testing-function fn)` is applied
-    ;; by the model-tester on each reset; the single-threaded load does not,
-    ;; so call it here (it sets `:act`/`:epl`/`:pct` from the task's globals).
-    (when *testing-function*
-      ;; Suppress the harness trace setup (`set-testing-traces` sets
-      ;; `:v`/`:cmdt`, already encoded in each `:RUN` step).
-      (let ((*suppress* t))
-        (ignore-errors (funcall *testing-function*))))
     (let* ((act (eff-param :act)) (epl (eff-param :epl)) (pct (eff-param :pct))
            ;; The testing function may also change `:alpha` (paired-learning
            ;; runs its second task with `:alpha 1.0`); record it so utility
@@ -272,12 +274,12 @@ disable/enable, breakpoints); not trace-only drivers.")
   ;; without changing model output.
   (declare (ignore real-time))
   (when (and (eq *mode* :drive) (not *suppress*))
-    ;; The trace-reference harness monitors the model-trace regardless of the
-    ;; model's `:v` (which only gates the stdout echo), so the recorded run is
-    ;; always traced.
+    ;; The run's trace flag is the model's `:v` state (the harness's
+    ;; `set-testing-traces` sets it to `t` at reset; a stub may hide a segment
+    ;; with `(sgp :v nil)`, e.g. `tutorial-unit5modeling-v7-p4-run`).
     (flush-sgp-params)
     (flush-rng-count)
-    (let ((rec (list run-time (eff-seed) t
+    (let ((rec (list run-time (eff-seed) (eff-v)
                      (ignore-errors (max-module-name-length)))))
       (push rec *runs*)
       (push (cons :run rec) *steps*)))
@@ -292,12 +294,42 @@ disable/enable, breakpoints); not trace-only drivers.")
   (when (and (eq *mode* :drive) (not *suppress*))
     (flush-sgp-params)
     (flush-rng-count)
-    (let ((rec (list run-time (eff-seed) t
+    (let ((rec (list run-time (eff-seed) (eff-v)
                      (ignore-errors (max-module-name-length)))))
       (push rec *runs*)
       (push (cons :run-full-time rec) *steps*)))
   (let ((*in-run* t))
     (call-orig 'run-full-time run-time nil)))
+
+(defun w-run-until-time (end-time &optional real-time)
+  ;; `run-until-time` (`scheduling.lisp:1030`): run to an *absolute* model
+  ;; time (used to trace the tail of a long run, e.g.
+  ;; `tutorial-unit5modeling-v7-p4-run`). Recorded as its own step.
+  (declare (ignore real-time))
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (flush-sgp-params)
+    (flush-rng-count)
+    (let ((rec (list end-time (eff-seed) (eff-v)
+                     (ignore-errors (max-module-name-length)))))
+      (push rec *runs*)
+      (push (cons :run-until-time rec) *steps*)))
+  (let ((*in-run* t))
+    (call-orig 'run-until-time end-time nil)))
+
+(defun w-run-n-events (event-count &optional real-time)
+  ;; `run-n-events` (`scheduling.lisp:1081`): run until `event-count` events
+  ;; have been processed (used to skip a trace prefix, e.g.
+  ;; `tutorial-unit1-semantic-g2-trace`).
+  (declare (ignore real-time))
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (flush-sgp-params)
+    (flush-rng-count)
+    (let ((rec (list event-count (eff-seed) (eff-v)
+                     (ignore-errors (max-module-name-length)))))
+      (push rec *runs*)
+      (push (cons :run-n-events rec) *steps*)))
+  (let ((*in-run* t))
+    (call-orig 'run-n-events event-count nil)))
 
 (defun w-goal-focus (spec)
   ;; Only record driver-level goal-focus calls; calls made *during* a run
@@ -317,7 +349,11 @@ disable/enable, breakpoints); not trace-only drivers.")
     ;; Emulate `central-parameters-reset`: re-apply the stub's
     ;; `:starting-parameters` seed after every reset.
     (when *starting-seed*
-      (call-orig 'sgp-fct (list :seed *starting-seed*)))))
+      (call-orig 'sgp-fct (list :seed *starting-seed*)))
+    ;; ...and its `:testing-function` (`set-testing-traces` sets `:v t`, which
+    ;; is why a model with `:v nil` still produces a trace in the harness).
+    (when *testing-function*
+      (ignore-errors (funcall *testing-function*)))))
 
 (defun w-sgp (params)
   (when (and (eq *mode* :drive) (not *suppress*)
@@ -475,6 +511,8 @@ disable/enable, breakpoints); not trace-only drivers.")
   (wrap-fn 'predict-bold-response #'w-predict-bold)
   (wrap-fn 'run #'w-run)
   (wrap-fn 'run-full-time #'w-run-full-time)
+  (wrap-fn 'run-until-time #'w-run-until-time)
+  (wrap-fn 'run-n-events #'w-run-n-events)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
   (wrap-fn 'reset #'w-reset)
   (wrap-fn 'sgp-fct #'w-sgp)
@@ -498,13 +536,29 @@ disable/enable, breakpoints); not trace-only drivers.")
     ((any-token src *device-tokens*) :device)
     ((any-token src *driver-tokens*) :driver)))
 
+(defun ref-has-run-end-p (name)
+  "True when NAME's ref ends a run (`Stopped`), i.e. it is a *full* trace the
+engine can replay. A ref assembled with `model-output` from a pre-event hook
+(a filtered fragment, e.g. `tutorial-unit3modeling-v3-clear-imaginal`) lacks
+it, so those stay command-scoped. This is the Phase B ref-content triage: the
+stub source alone is not a reliable signal."
+  (let ((p (merge-pathnames (concatenate 'string name ".ref") *tm-dir*)))
+    (and (probe-file p)
+         (let ((s (ignore-errors (slurp p))))
+           (and s (search "Stopped" s :test #'char-equal) t)))))
+
 (defun fresh-state ()
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
         *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil
         *device-commands* nil *device-modifies* nil
         *item-texts* (make-hash-table :test 'equal)
         *item-pos* (make-hash-table :test 'equal)
-        *rng-count* 0 *last-sgp-params* nil *testing-function* nil
+        *rng-count* 0 *last-sgp-params* nil
+        ;; The model-tester sets a global default
+        ;; `ssp :starting-parameters (:testing-function set-testing-traces)`
+        ;; before loading the stub (`model-tester.cl:356`); a stub may
+        ;; override it. Applied at reset by `w-reset`.
+        *testing-function* 'set-testing-traces
         *starting-seed* nil))
 
 (defun dedupe-preserve (list)
@@ -596,15 +650,18 @@ after an undefined-function error. Returns whether anything was loaded."
 
 (defun extract-one (name)
   "Return a spec plist for NAME, or a scope-error spec on failure."
+  (fresh-state)
   (let ((lisp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
     (let ((static-scope (scope-of (or src ""))))
       ;; Command stubs need the command layer (out of scope, classified from
       ;; source without executing). Device and driver stubs ARE executed so
       ;; their run steps and device script are captured (the ref is the
-      ;; oracle; the spec replays it).
-      (if (eq static-scope :command)
-          (make-spec name static-scope :flags (list static-scope))
+      ;; oracle; the spec replays it). A stub with no command token whose ref
+      ;; is only a filtered fragment (no run end) is likewise command output.
+      (if (or (eq static-scope :command)
+              (and (null static-scope) (not (ref-has-run-end-p name))))
+          (make-spec name :command :flags (list :command))
           (handler-case (extract-one-attempt name lisp static-scope)
             (error (e)
               ;; Retry once with the tutorial task file if `run-it` needed an
@@ -624,11 +681,14 @@ after an undefined-function error. Returns whether anything was loaded."
         (prin1 spec f)
         (terpri f)))))
 
-; The model-tester harness defines `set-testing-traces`; the spec records the
-;; trace itself, so a no-op keeps a `:testing-function` (e.g. paired's
-;; `set-paired-params`) from erroring before it applies `:act`/`:epl`/`:pct`.
+;; The model-tester harness defines `set-testing-traces` (`(sgp :v t :cmdt t)`,
+;; `model-tester.cl:494`); the single-threaded load does not, so provide the
+;; real body. Applied at reset by `w-reset`, it re-enables the trace for a
+;; model that set `:v nil` (e.g. the production-compilation-issues models).
 (unless (fboundp 'set-testing-traces)
-  (defun set-testing-traces (&optional arg) (declare (ignore arg)) t))
+  (defun set-testing-traces (&optional arg)
+    (declare (ignore arg))
+    (sgp-fct (list :v t :cmdt t))))
 
 (defun spec-main ()
   (setf *tm-dir* (pathname (concatenate 'string (sb-ext:posix-getenv "SPEC_TMDIR") "/"))
