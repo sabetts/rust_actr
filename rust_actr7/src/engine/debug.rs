@@ -528,3 +528,181 @@ impl Engine {
         }
     }
 }
+
+/// RPC-facing operations backing the remote command layer
+/// (`framework/*.lisp`, `core-modules/*.lisp`). These expose read-only or
+/// side-effecting primitives that `evaluate <name> <args>` maps onto.
+impl Engine {
+    /// `mp-time` (seconds).
+    pub fn time_secs(&self) -> f64 {
+        self.time_ms as f64 / 1000.0
+    }
+
+    /// `mp-time-ms`.
+    pub fn time_ms(&self) -> i64 {
+        self.time_ms
+    }
+
+    /// `buffer-read <buffer>` (`framework/buffers.lisp:...`): the name of the
+    /// chunk currently in the buffer, or `None`.
+    pub fn buffer_read(&self, buffer: &str) -> Option<String> {
+        let b = self.buffers.get(&buffer.to_uppercase())?;
+        b.chunk.as_ref().and_then(|c| c.name.clone())
+    }
+
+    /// `buffer-status` (`procedural.lisp`): the buffer query state.
+    pub fn buffer_status(&self, buffer: &str) -> &'static str {
+        match self.buffers.get(&buffer.to_uppercase()) {
+            None => "absent",
+            Some(b) if b.failed => "error",
+            Some(b) if b.busy => "busy",
+            Some(b) if b.chunk.is_none() => "empty",
+            Some(_) => "free",
+        }
+    }
+
+    /// `clear-buffer <name>`: empty the buffer.
+    pub fn clear_buffer_rpc(&mut self, buffer: &str) {
+        let b = self.buffer_mut(&buffer.to_uppercase());
+        b.chunk = None;
+        b.failed = false;
+        b.modified = false;
+        self.changed();
+    }
+
+    /// `chunk-p`: whether `name` names a known chunk (DM or `define-chunks`).
+    pub fn chunk_p(&self, name: &str) -> bool {
+        let n = name.to_uppercase();
+        self.named.contains_key(&n)
+            || self
+                .dm
+                .iter()
+                .any(|c| c.name.as_deref() == Some(n.as_str()))
+    }
+
+    /// `chunk-slot-value <chunk> <slot>`: the printed slot value.
+    pub fn chunk_slot(&self, name: &str, slot: &str) -> Option<String> {
+        self.chunk_name_slot(name, &slot.to_uppercase())
+    }
+
+    /// `chunk-copied-from`: the source of a copied chunk, if any.
+    pub fn chunk_copied_from(&self, name: &str) -> Option<String> {
+        self.copy_source.get(&name.to_uppercase()).cloned()
+    }
+
+    /// `act-r-random` for an integer limit (0 when the limit is not positive).
+    pub fn random_int_rpc(&mut self, limit: i64) -> i64 {
+        if limit <= 0 {
+            0
+        } else {
+            self.rng.borrow_mut().random_int(limit as u64) as i64
+        }
+    }
+
+    /// `act-r-random` for a float limit.
+    pub fn random_float_rpc(&mut self, limit: f64) -> f64 {
+        self.rng.borrow_mut().random_float(limit as f32) as f64
+    }
+
+    /// `schedule-event-relative`/`schedule-event-now`/`schedule-event`: queue a
+    /// task command at an absolute model time (`scheduling.lisp`). `params`
+    /// are the command's arguments as AT-R values.
+    pub fn schedule_command_rpc(&mut self, at_ms: i64, name: &str, params: &[crate::sexpr::Sexp]) {
+        use crate::sexpr::Sexp;
+        fn value(s: &Sexp) -> Value {
+            match s {
+                Sexp::Sym(x) => Value::Sym(x.clone()),
+                Sexp::Int(i) => Value::Int(*i),
+                Sexp::Float(x) => Value::Num(*x),
+                Sexp::Str(x) => Value::Str(x.clone()),
+                Sexp::List(items) => Value::List(items.iter().map(value).collect()),
+            }
+        }
+        let params = params.iter().map(value).collect();
+        self.push(
+            at_ms,
+            Prio::Num(0),
+            Out::Medium,
+            Event::Command {
+                name: name.to_string(),
+                params,
+            },
+        );
+    }
+
+    /// A scheduled command's task `defun` names (for name resolution).
+    pub fn has_user_fn(&self, name: &str) -> bool {
+        self.user_fns.contains_key(&name.to_uppercase())
+    }
+
+    /// `set-buffer-chunk <buffer> <chunk-name>`: place a copy of a named
+    /// chunk (`framework/buffers.lisp:1325`).
+    pub fn set_buffer_chunk_named(&mut self, buffer: &str, chunk: &str) -> Result<(), EngineError> {
+        let inst = self.instantiate(buffer, NewChunk::Named(chunk.to_string()))?;
+        let b = self.buffer_mut(&buffer.to_uppercase());
+        b.chunk = Some(inst);
+        b.failed = false;
+        b.modified = false;
+        self.changed();
+        Ok(())
+    }
+
+    /// `set-buffer-chunk <buffer> <spec>`: build a chunk from a description.
+    pub fn set_buffer_chunk_desc(
+        &mut self,
+        buffer: &str,
+        desc: &ChunkDesc,
+    ) -> Result<(), EngineError> {
+        let inst = match super::rhs::new_chunk(desc)? {
+            NewChunk::Instance(c) => c,
+            NewChunk::Spec { ctype, slots, .. } => ChunkInst {
+                name: None,
+                ctype,
+                slots,
+                bare: false,
+            },
+            NewChunk::Named(n) => self.instantiate(buffer, NewChunk::Named(n))?,
+        };
+        let b = self.buffer_mut(&buffer.to_uppercase());
+        b.chunk = Some(inst);
+        b.failed = false;
+        b.modified = false;
+        self.changed();
+        Ok(())
+    }
+
+    /// `(sgp <param>)` / `get-parameter-value`: the printed current value of a
+    /// supported model parameter (`framework/printing.lisp`,
+    /// `modules/utility-and-reward-1.lisp`). `None` for an unknown name.
+    pub fn get_param(&self, key: &str) -> Option<String> {
+        let b = |x: bool| if x { "T" } else { "NIL" }.to_string();
+        Some(match key.to_uppercase().as_str() {
+            ":V" => b(self.trace_on),
+            ":ESC" => b(self.cfg.esc),
+            ":UL" => b(self.cfg.ul),
+            ":ULT" => b(self.cfg.ult),
+            ":EPL" => b(self.cfg.epl),
+            ":PCT" => b(self.cfg.pct),
+            ":CIA" => b(self.cfg.cia),
+            ":RIR" => b(self.cfg.rir),
+            ":RT" => self.cfg.rt.to_string(),
+            ":LF" => format!("{}", self.cfg.lf_ms as f64 / 1000.0),
+            ":BLC" => self.cfg.blc.to_string(),
+            ":EGS" => self.cfg.egs.to_string(),
+            ":ALPHA" => self.cfg.alpha.to_string(),
+            ":IU" => self.cfg.iu.to_string(),
+            ":MD" => self.cfg.md.to_string(),
+            ":MS" => self.cfg.ms.to_string(),
+            ":ANS" => self.cfg.ans.map(|x| x.to_string()).unwrap_or("NIL".into()),
+            ":BLL" => self.cfg.bll.map(|x| x.to_string()).unwrap_or("NIL".into()),
+            ":SJI" => "T".to_string(),
+            ":TRACE-DETAIL" => format!("{:?}", self.cfg.detail).to_uppercase(),
+            ":SEED" => self
+                .cfg
+                .seed
+                .map(|(a, b)| format!("({a} {b})"))
+                .unwrap_or_else(|| "NIL".into()),
+            _ => return None,
+        })
+    }
+}

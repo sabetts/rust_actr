@@ -114,6 +114,9 @@ pub const BUILTINS: &[&str] = &[
     "monitor-command",
     "remove-command-monitor",
     "check",
+    "record-history",
+    "stop-recording-history",
+    "predict-bold-response",
     // The four trace streams (`framework/printing.lisp`); their monitors are
     // what actually receive output (the Rust engine already formatted it).
     "model-trace",
@@ -147,6 +150,9 @@ pub struct Session {
     seed: (u64, u64),
     /// `(new-symbol …)` counter, as in ACT-R's `new-symbol`.
     symbol_count: u64,
+    /// `set-system-parameter-value` settings (`:starting-parameters`, …),
+    /// re-applied on reset (`central-parameters.lisp:140`).
+    system_params: std::collections::BTreeMap<String, Json>,
 }
 
 impl Session {
@@ -168,6 +174,7 @@ impl Session {
             trace_pos: 0,
             seed,
             symbol_count: 0,
+            system_params: Default::default(),
         }
     }
 
@@ -413,7 +420,169 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
-            "mp-time" | "mp-time-ms" | "get-time" => Ok(vec![Json::Int(0)]),
+            "get-parameter-value" => {
+                let key = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("missing parameter")?;
+                let v = self.engine.as_ref().and_then(|e| e.get_param(key));
+                Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
+            }
+            "set-system-parameter-value" => {
+                let key = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("missing parameter")?
+                    .to_uppercase();
+                let val = args.get(1).cloned().unwrap_or(Json::Null);
+                self.set_system_param(&key, val);
+                Ok(vec![Json::Bool(true)])
+            }
+            "get-system-parameter-value" => {
+                let key = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("missing parameter")?
+                    .to_uppercase();
+                Ok(vec![self
+                    .system_params
+                    .get(&key)
+                    .cloned()
+                    .unwrap_or(Json::Null)])
+            }
+            "reload" => {
+                self.build_engine()?;
+                Ok(vec![Json::Bool(true)])
+            }
+            "buffer-read" => {
+                let b = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let v = self.engine.as_ref().and_then(|e| e.buffer_read(b));
+                Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
+            }
+            "buffer-status" => {
+                let vals: Vec<Json> = args
+                    .iter()
+                    .map(|a| {
+                        let b = a.as_str().unwrap_or("");
+                        let s = self
+                            .engine
+                            .as_ref()
+                            .map(|e| e.buffer_status(b))
+                            .unwrap_or("absent");
+                        Json::Str(s.to_string())
+                    })
+                    .collect();
+                if vals.len() == 1 {
+                    Ok(vals)
+                } else {
+                    Ok(vec![Json::Arr(vals)])
+                }
+            }
+            "clear-buffer" => {
+                let b = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                if let Some(eng) = &mut self.engine {
+                    eng.clear_buffer_rpc(b);
+                }
+                Ok(vec![Json::Null])
+            }
+            "set-buffer-chunk" => {
+                // `(set-buffer-chunk buffer chunk {requested})`: a named chunk
+                // (string) or a spec list.
+                let buffer = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("set-buffer-chunk needs a buffer")?;
+                if let Some(eng) = &mut self.engine {
+                    match args.get(1) {
+                        Some(Json::Str(name)) => eng
+                            .set_buffer_chunk_named(buffer, name)
+                            .map_err(|e| e.to_string())?,
+                        Some(Json::Arr(_)) => {
+                            let items = match args.get(1) {
+                                Some(Json::Arr(a)) => a,
+                                _ => unreachable!(),
+                            };
+                            let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();
+                            let desc =
+                                model::parse_chunk_desc(&forms).map_err(|e| e.to_string())?;
+                            eng.set_buffer_chunk_desc(buffer, &desc)
+                                .map_err(|e| e.to_string())?;
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(vec![Json::Null])
+            }
+            "chunk-p" => {
+                let n = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let v = self.engine.as_ref().map(|e| e.chunk_p(n)).unwrap_or(false);
+                Ok(vec![Json::Bool(v)])
+            }
+            "chunk-copied-from" => {
+                let n = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let v = self.engine.as_ref().and_then(|e| e.chunk_copied_from(n));
+                Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
+            }
+            "chunk-slot-value" => {
+                let n = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let s = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
+                let v = self.engine.as_ref().and_then(|e| e.chunk_slot(n, s));
+                Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
+            }
+            "act-r-random" => {
+                let v = args.first().cloned().unwrap_or(Json::Int(1));
+                let out = match (self.engine.as_mut(), v) {
+                    (Some(eng), Json::Int(n)) => Json::Int(eng.random_int_rpc(n)),
+                    (Some(eng), Json::Float(x)) => Json::Float(eng.random_float_rpc(x)),
+                    _ => Json::Null,
+                };
+                Ok(vec![out])
+            }
+            "permute-list" => {
+                let mut out = match args.first() {
+                    Some(Json::Arr(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
+                if let Some(eng) = self.engine.as_mut() {
+                    // `permute-list` (`random.lisp`): a Fisher-Yates shuffle on
+                    // the model stream.
+                    for i in (1..out.len()).rev() {
+                        let j = eng.random_int_rpc((i + 1) as i64) as usize;
+                        out.swap(i, j);
+                    }
+                }
+                Ok(vec![Json::Arr(out)])
+            }
+            "schedule-event-relative" | "schedule-event-now" | "schedule-event" => {
+                self.schedule_event_cmd(name, args);
+                Ok(vec![Json::Null])
+            }
+            "release-chunk-spec-id" => Ok(vec![Json::Null]),
+            "record-history" => {
+                let buffers: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                if let Some(eng) = &mut self.engine {
+                    eng.set_bold_buffers(&buffers);
+                }
+                Ok(vec![Json::Null])
+            }
+            "stop-recording-history" => Ok(vec![Json::Null]),
+            "predict-bold-response" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.print_bold();
+                }
+                Ok(vec![Json::Null])
+            }
+            "mp-time" | "mp-time-ms" | "get-time" => {
+                let v = self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0);
+                if name == "mp-time-ms" {
+                    Ok(vec![Json::Int((v * 1000.0).round() as i64)])
+                } else {
+                    Ok(vec![Json::Float(v)])
+                }
+            }
             "buffer-chunk" => {
                 let names: Vec<String> = args
                     .iter()
@@ -476,6 +645,65 @@ impl Session {
         self.build_engine()
     }
 
+    /// `set-system-parameter-value` (`central-parameters.lisp:131`). Only
+    /// `:starting-parameters` matters here: its `:testing-function` is a remote
+    /// command the client owns (invoked through the callback path), and the
+    /// other entries are re-applied to the engine.
+    fn set_system_param(&mut self, key: &str, val: Json) {
+        if matches!(val, Json::Null) {
+            self.system_params.remove(key);
+            return;
+        }
+        self.system_params.insert(key.to_string(), val.clone());
+        if key == ":STARTING-PARAMETERS" {
+            if let Json::Arr(items) = &val {
+                for pair in items.chunks(2) {
+                    let Some(k) = pair.first().and_then(|j| j.as_str()) else {
+                        continue;
+                    };
+                    if k.eq_ignore_ascii_case(":testing-function") {
+                        continue;
+                    }
+                    let v = pair.get(1).cloned().unwrap_or(Json::Null);
+                    let sexp = json_to_sexp(&v);
+                    if let Some(eng) = &mut self.engine {
+                        let _ = eng.apply_sgp(k, &sexp);
+                    }
+                }
+            }
+        }
+    }
+
+    /// `schedule-event[-relative|-now]`: `(time, action, options)` (or
+    /// `(action, options)` for `-now`). The `:params` option becomes the
+    /// command's arguments.
+    fn schedule_event_cmd(&mut self, kind: &str, args: &[Json]) {
+        let now = self.engine.as_ref().map(|e| e.time_ms()).unwrap_or(0);
+        let (at_ms, action, options) = match kind {
+            "schedule-event-now" => (now, args.first(), args.get(1)),
+            _ => {
+                let t = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let ms = (t * 1000.0).round() as i64;
+                let at = if kind == "schedule-event-relative" {
+                    now + ms
+                } else {
+                    ms
+                };
+                (at, args.get(1), args.get(2))
+            }
+        };
+        let Some(action) = action.and_then(|a| a.as_str()) else {
+            return;
+        };
+        let sexps: Vec<Sexp> = match option(options, "params") {
+            Some(Json::Arr(a)) => a.iter().map(json_to_sexp).collect(),
+            _ => Vec::new(),
+        };
+        if let Some(eng) = &mut self.engine {
+            eng.schedule_command_rpc(at_ms, action, &sexps);
+        }
+    }
+
     /// (Re)build the engine from the loaded models.
     fn build_engine(&mut self) -> Result<(), String> {
         let def = match self.defs.last() {
@@ -526,6 +754,28 @@ pub fn json_to_sexp(j: &Json) -> Sexp {
         Json::Arr(items) => Sexp::List(items.iter().map(json_to_sexp).collect()),
         Json::Obj(_) => Sexp::Sym("NIL".into()),
     }
+}
+
+/// Look up an option in the `[["key",value], …]` list the Python client
+/// passes to `schedule-event-*` (`actr.py:924`).
+fn option<'a>(options: Option<&'a Json>, key: &str) -> Option<&'a Json> {
+    let arr = match options {
+        Some(Json::Arr(a)) => a,
+        _ => return None,
+    };
+    for pair in arr {
+        if let Json::Arr(p) = pair {
+            let matches = p
+                .first()
+                .and_then(|k| k.as_str())
+                .map(|k| k.eq_ignore_ascii_case(key))
+                .unwrap_or(false);
+            if matches {
+                return p.get(1);
+            }
+        }
+    }
+    None
 }
 
 /// JSON → display text (for `model-output`/`print-warning`).
@@ -594,6 +844,73 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    /// A remote client that records the commands it is asked to run.
+    #[derive(Default)]
+    struct Collecting {
+        lines: Vec<String>,
+    }
+    impl Remote for Collecting {
+        fn call(
+            &mut self,
+            name: &str,
+            _m: Option<&str>,
+            args: Vec<Json>,
+        ) -> Result<Vec<Json>, String> {
+            if name == "sink" {
+                if let Some(s) = args.first().and_then(|a| a.as_str()) {
+                    self.lines.push(s.to_string());
+                }
+            }
+            Ok(vec![Json::Null])
+        }
+    }
+
+    #[test]
+    fn remote_monitor_receives_the_trace() {
+        let root = root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut remote = Collecting::default();
+        s.add_remote("sink", None, Some("me".into()));
+        s.add_monitor("model-trace", "sink", MonitorWhen::Simple);
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut remote,
+        )
+        .unwrap();
+        // Parameter getters and the RNG work once a model is loaded.
+        assert_eq!(
+            s.evaluate(
+                "get-parameter-value",
+                None,
+                &[Json::Str(":esc".into())],
+                &mut remote
+            )
+            .unwrap()[0],
+            Json::Str("T".into())
+        );
+        s.evaluate("run", None, &[Json::Int(10)], &mut remote)
+            .unwrap();
+        let lines = s.take_trace();
+        for l in lines {
+            s.deliver_trace(&l, &mut remote);
+        }
+        assert!(
+            remote
+                .lines
+                .iter()
+                .any(|l| l.contains("PRODUCTION-FIRED START")),
+            "monitor saw {:?}",
+            remote.lines
+        );
+        // count.lisp emits a fixed 48-line trace.
+        assert_eq!(remote.lines.len(), 48);
     }
 
     #[test]
