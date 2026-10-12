@@ -295,12 +295,24 @@ commands) ∪ ref-exercised (86), minus implemented → **72 commands**
 window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
 
 - [ ] **M0. Inventory + harness.** Inventory done (`golden/command-inventory.py`
-      + `.txt`). Still: make the command-output refs runnable (a
-      `(:command name args…)` spec step that drives `Session::evaluate` and
-      compares printed output), and a coverage dashboard.
-- [ ] **M1. Implement the 72, by family** (chunk-dm → production → window →
-      audio → modules → history → events → misc), each enabled against its
-      ref(s).
+      + `.txt`). Harness done (`a7f9e50`): the extractor records driver
+      commands generically (`(:command NAME ARG…)`) and the spec harness
+      replays them through `Session::evaluate` (`run_spec_session`), so a spec
+      exercises the same dispatch a client hits. The 122 command-scope specs
+      were regenerated (only those — the enabled corpus is hand-tuned); 43 now
+      execute, `:COMMAND` drops to 79 (source scrapes + Lisp-hook refs = the
+      accepted divergence), and enabled grew 89 → **92**. The 43 new failures
+      are the M1/M2 work list. Still: the coverage dashboard (E1).
+- [ ] **M1. Implement the remaining commands, by family** (chunk-dm →
+      production → window → audio → modules → history → events → misc), each
+      enabled against its ref(s). Corrected gap: **57** (not 72) after
+      excluding the Lisp-hook-only commands (`evt-*`/`format-event`/
+      `add/delete-event-hook`), which no client reaches and no Lisp-free
+      engine can replay. Top blockers from the new probe: `chunk-type` (5
+      specs), `print-conflict-tree` (2), `?visual-location> buffer
+      unrequested` (3), and model-body forms (`start-hand-at-mouse`,
+      `start-hand-at-keypad`, `set-audloc-default`,
+      `written-for-act-r-version`, `chunk-type :include`).
 - [ ] **M2. Trace fidelity** for the command-scope timestamped specs: `:cmdt`
       lines (`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `QUERY-BUFFER-ACTION`,
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
