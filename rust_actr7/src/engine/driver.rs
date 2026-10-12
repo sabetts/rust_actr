@@ -49,7 +49,8 @@ impl Engine {
                 ChunkDesc::Spec { .. } => {
                     let nc = new_chunk(desc)?;
                     let mut c = self.instantiate("GOAL", nc)?;
-                    // `define-chunks-fct` auto-names a spec by its type
+                    // The threads extra defines each goal chunk via
+                    // `define-chunks-fct`, which auto-names it by type
                     // (`(isa initial ...)` -> `INITIAL0`).
                     let ctype = c.ctype.clone();
                     let k = *self.name_count.entry(ctype.clone()).or_insert(0);

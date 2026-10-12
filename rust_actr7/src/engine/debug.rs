@@ -16,7 +16,14 @@ impl Engine {
                 .as_ref()
                 .and_then(|c| c.name.clone())
                 .unwrap_or_default();
-            let mut header = format!("{bname}: {cname} ");
+            // `buffer-chunk-external` prints `~S` for the chunk slot, so an
+            // empty buffer shows `NIL`.
+            let shown = if cname.is_empty() {
+                "NIL".to_string()
+            } else {
+                cname.clone()
+            };
+            let mut header = format!("{bname}: {shown} ");
             if let Some(src) = self.vl_copied_from.get(&cname) {
                 // `~@[[~s]~]` (`chunk-copied-from-fct`): the source chunk.
                 header.push_str(&format!("[{src}]"));
@@ -48,7 +55,29 @@ impl Engine {
     pub(super) fn push_chunk(&mut self, c: &ChunkInst) -> String {
         let name = c.name.clone().unwrap_or_default();
         self.out_lines.push(name.clone());
-        for (k, v) in &c.slots {
+        // `pprint-a-chunk` (`framework/chunks.lisp:674`) sorts the chunk's set
+        // slots by `act-r-slot-index` (the chunk-type declaration order) and
+        // skips unset slots.
+        let order: Vec<String> = self
+            .model
+            .chunk_types
+            .iter()
+            .find(|t| t.name.eq_ignore_ascii_case(&c.ctype))
+            .map(|t| t.slots.clone())
+            .unwrap_or_default();
+        let mut idx: Vec<usize> = (0..c.slots.len()).collect();
+        idx.sort_by_key(|&i| {
+            order
+                .iter()
+                .position(|s| s.eq_ignore_ascii_case(&c.slots[i].0))
+                .unwrap_or(usize::MAX)
+        });
+        for i in idx {
+            let (k, v) = &c.slots[i];
+            // `ISA` is the chunk type, not a stored slot.
+            if k.eq_ignore_ascii_case("ISA") || *v == Value::Nil {
+                continue;
+            }
             self.out_lines.push(format!("   {k}  {}", v.show()));
         }
         self.out_lines.push(String::new());

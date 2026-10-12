@@ -23,6 +23,13 @@ impl Engine {
                     self.name_count.insert("CHUNK".to_string(), n + 1);
                     inst.name = Some(format!("CHUNK{n}"));
                 }
+                // The goal buffer is reusable, so its chunk is named
+                // `(new-name-fct "GOAL-chunk")` (`framework/buffers.lisp:1351`).
+                if inst.name.is_none() && buffer == "GOAL" {
+                    let n = *self.name_count.entry("GOAL-CHUNK".to_string()).or_insert(0);
+                    self.name_count.insert("GOAL-CHUNK".to_string(), n + 1);
+                    inst.name = Some(format!("GOAL-CHUNK{n}"));
+                }
                 if show {
                     let mut details = format!("SET-BUFFER-CHUNK {buffer} {text}");
                     if !requested {
