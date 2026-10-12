@@ -454,6 +454,35 @@ impl Session {
                 self.build_engine()?;
                 Ok(vec![Json::Bool(true)])
             }
+            "add-dm" | "add-dm-fct" | "define-chunks" | "define-chunks-fct" => {
+                // `(add-dm (name isa type …) …)`; a `-fct` variant takes one
+                // list of chunk definitions.
+                let is_fct = name.ends_with("-fct");
+                let is_dm = name.starts_with("add-dm");
+                let chunks: Vec<Json> = if is_fct {
+                    match args.first() {
+                        Some(Json::Arr(a)) => a.clone(),
+                        _ => Vec::new(),
+                    }
+                } else {
+                    args.to_vec()
+                };
+                if let Some(m) = self.defs.last_mut() {
+                    for c in &chunks {
+                        let Json::Arr(items) = c else { continue };
+                        let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();
+                        let sexp = Sexp::List(forms);
+                        if is_dm {
+                            m.chunks
+                                .push(model::parse_dm_entry(&sexp).map_err(|e| e.to_string())?);
+                        } else {
+                            model::define_chunk_table_entry(&sexp, m).map_err(|e| e.to_string())?;
+                        }
+                    }
+                }
+                self.build_engine()?;
+                Ok(vec![Json::Null])
+            }
             "buffer-read" => {
                 let b = args.first().and_then(|a| a.as_str()).unwrap_or("");
                 let v = self.engine.as_ref().and_then(|e| e.buffer_read(b));
@@ -911,6 +940,49 @@ mod tests {
         );
         // count.lisp emits a fixed 48-line trace.
         assert_eq!(remote.lines.len(), 48);
+    }
+
+    #[test]
+    fn chunk_queries_and_add_dm() {
+        let root = root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut remote,
+        )
+        .unwrap();
+        let slot = |s: &mut Session, name: &str, sl: &str| {
+            s.evaluate(
+                "chunk-slot-value",
+                None,
+                &[Json::Str(name.into()), Json::Str(sl.into())],
+                &mut NoRemote,
+            )
+            .unwrap()[0]
+                .clone()
+        };
+        assert_eq!(slot(&mut s, "one", "next"), Json::Str("TWO".into()));
+        // `add-dm` at run time adds a DM chunk.
+        s.evaluate(
+            "add-dm",
+            None,
+            &[Json::Arr(vec![
+                Json::Str("myc".into()),
+                Json::Str("ISA".into()),
+                Json::Str("number".into()),
+                Json::Str("number".into()),
+                Json::Str("nine".into()),
+            ])],
+            &mut remote,
+        )
+        .unwrap();
+        assert_eq!(slot(&mut s, "myc", "number"), Json::Str("NINE".into()));
     }
 
     #[test]

@@ -1507,7 +1507,7 @@ fn sexp_f64(e: &Sexp) -> Option<f64> {
     }
 }
 
-fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
+pub fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
     match form {
         Sexp::List(items) => match items.as_slice() {
             [Sexp::Sym(name)] => Ok(Chunk {
@@ -1538,7 +1538,7 @@ fn parse_dm_entry(form: &Sexp) -> Result<Chunk, LoadError> {
 /// Define one `define-chunks` entry in the model's chunk table and return
 /// the chunk name. Anonymous `(isa TYPE slots...)` entries are named
 /// `TYPE{index}` (`TYPE0`, `TYPE1`, ...) like ACT-R.
-fn define_chunk_table_entry(e: &Sexp, model: &mut Model) -> Result<String, LoadError> {
+pub fn define_chunk_table_entry(e: &Sexp, model: &mut Model) -> Result<String, LoadError> {
     match e {
         Sexp::Sym(n) => {
             model.defined_chunks.push(Chunk {

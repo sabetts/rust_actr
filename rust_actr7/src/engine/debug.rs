@@ -582,7 +582,7 @@ impl Engine {
 
     /// `chunk-slot-value <chunk> <slot>`: the printed slot value.
     pub fn chunk_slot(&self, name: &str, slot: &str) -> Option<String> {
-        self.chunk_name_slot(name, &slot.to_uppercase())
+        self.chunk_name_slot(&name.to_uppercase(), &slot.to_uppercase())
     }
 
     /// `chunk-copied-from`: the source of a copied chunk, if any.
