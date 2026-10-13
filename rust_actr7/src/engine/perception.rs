@@ -927,10 +927,37 @@ impl Engine {
             NewChunk::Spec { slots, rels, .. } => (slots.clone(), rels.clone()),
             _ => return Err(unimpl("non-spec visual-location request")),
         };
+        // `find-current-locs-with-spec` (`vision.lisp:2088`): a `slot lowest` /
+        // `slot highest` value is pulled out of the match set and applied as a
+        // post-filter (the candidate(s) with the min/max numeric value of that
+        // slot).
+        let mut plain = Vec::new();
+        let mut minmax: Vec<(String, bool)> = Vec::new();
+        for (s, v) in &want {
+            let slot = s.trim_start_matches(':').to_uppercase();
+            match v {
+                Value::Sym(x) if x == "LOWEST" => minmax.push((slot, true)),
+                Value::Sym(x) if x == "HIGHEST" => minmax.push((slot, false)),
+                _ => plain.push((s.clone(), v.clone())),
+            }
+        }
         let mut cands: Vec<Feature> = Vec::new();
         for f in &self.features {
-            if loc_matches(f, &want)? && loc_rel_matches(f, &rels) {
+            if loc_matches(f, &plain)? && loc_rel_matches(f, &rels) {
                 cands.push(f.clone());
+            }
+        }
+        for (slot, lowest) in &minmax {
+            let val = |f: &Feature| feature_num(f, slot);
+            let best = cands.iter().filter_map(val).fold(None, |acc: Option<f64>, x| {
+                Some(match acc {
+                    None => x,
+                    Some(a) if (*lowest && x < a) || (!*lowest && x > a) => x,
+                    Some(a) => a,
+                })
+            });
+            if let Some(b) = best {
+                cands.retain(|f| val(f) == Some(b));
             }
         }
         if cands.is_empty() {
@@ -1063,6 +1090,20 @@ impl Feature {
         let prod = ang(self.width) * ang(self.height);
         let q = (prod / 0.01).round();
         (0.01f32 * q as f32) as f64
+    }
+}
+
+/// The numeric value of a feature's slot for a `lowest`/`highest` request
+/// constraint (`fast-chunk-slot-value-fct`, `vision.lisp:2124`); `None` when
+/// the slot is not numeric (such candidates are ignored by the constraint).
+fn feature_num(f: &Feature, slot: &str) -> Option<f64> {
+    match slot {
+        "SCREEN-X" => Some(f.x as f64),
+        "SCREEN-Y" => Some(f.y as f64),
+        "WIDTH" => Some(f.width as f64),
+        "HEIGHT" => Some(f.height as f64),
+        "SIZE" => Some(f.size()),
+        _ => None,
     }
 }
 
