@@ -354,6 +354,25 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        three-valued (`t`/`warn`/`nil`) and the negative-Sji `model-warning` is
        gated on `:model-warnings`, which the golden environment leaves nil.
        **Frontier 101 → 103**; both specs enabled.
+       **The `fan` family was blocked on an extractor gap, not the engine**
+       (GOTCHAS #234/#235). Tasks drive a trial with
+       `(mod-focus-fct (arg1 x arg2 y))` (`tutorial/lisp/fan-no-pm.lisp:57`) and
+       the extractor never recorded it, so the goal's probe slots stayed unset,
+       no production matched, and every run ended at t=0. Recording it (plus the
+       RPC `mod-focus` handler, which was listed but had no arm — the
+       `tutorial_unit5_onehit_*` models errored on it) took `fan-no-pm` from 191
+       to **1830 of 1844** lines, first divergence line 2 → 1830. Two more traps
+       found on the way: `:STARTING-PARAMETERS` carries the reset hook
+       (`trace-fan-run` sets `:act t`) and the harness was applying it straight
+       to the engine, and `run_spec` only uses the session driver for specs with
+       a `:COMMAND` step — both now fixed.
+       **`fan-no-pm`'s remaining 14 lines are the task's `fan-experiment`
+       summary table** (`correlation:`/`mean deviation:` plus the targets/foils
+       grid), which is `format` output the spec cannot replay — so it is the
+       same accepted divergence as the other task-hook refs, not engine work.
+       `fan`/`fan-w-tree` additionally need the `break` mechanism
+       (`break-fan-run` → `pbreak encode-person`), which prints the production
+       text and pauses the run.
        Next in this family: `base-level-safety-check` (also a strict
        subsequence — needs the retrieval-failure render path, the leading
        `--------------------------` header, and `No chunk above the retrieval
