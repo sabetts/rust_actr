@@ -318,6 +318,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
       `visicon-update`, `Find-location`, `Move-attention`, `Encoding-complete`),
       module verbose output, utility-learning lines, `!output!` gating.
+      Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202).
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment) plus `simple-dynamic-model`'s reusable-buffer naming.
 - Known divergence: the pipe transport and `define-module`/`undefine-module`
