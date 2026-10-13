@@ -25,6 +25,7 @@ paired-learning
 paired-learning-dynamic
 ppm-compilation
 precondition-test
+proc-display-with-pending
 remote-bind-test
 retain-indirect-retrievals
 retrieval-request-parameters

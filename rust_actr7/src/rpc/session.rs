@@ -933,11 +933,19 @@ impl Session {
                 }
             }
             "modify-visicon-features" => {
-                for a in args {
-                    let items = match a {
-                        Json::Arr(x) => x.clone(),
-                        _ => continue,
-                    };
+                // A client sends one list argument; the spec harness flattens
+                // a single list into separate arguments.
+                let lists: Vec<Vec<Json>> = if args.first().map(|a| matches!(a, Json::Arr(_))) == Some(true) {
+                    args.iter()
+                        .filter_map(|a| match a {
+                            Json::Arr(x) => Some(x.clone()),
+                            _ => None,
+                        })
+                        .collect()
+                } else {
+                    vec![args.to_vec()]
+                };
+                for items in lists {
                     let name = items.first().map(json_to_text).unwrap_or_default();
                     let mut mods: Vec<(String, Sexp)> = Vec::new();
                     let mut i = 1;
@@ -1462,7 +1470,13 @@ pub fn json_to_sexp(j: &Json) -> Sexp {
         Json::Float(x) => Sexp::Float(*x),
         Json::Str(s) => Sexp::Sym(s.to_uppercase()),
         Json::Arr(items) => Sexp::List(items.iter().map(json_to_sexp).collect()),
-        Json::Obj(_) => Sexp::Sym("NIL".into()),
+        // The spec harness wraps a *string* argument in `{"str": …}` because
+        // JSON cannot distinguish a Lisp string from a symbol name, and the
+        // generic command path would otherwise turn `"changed"` into `CHANGED`.
+        Json::Obj(o) => match o.iter().find(|(k, _)| k == "str") {
+            Some((_, Json::Str(s))) => Sexp::Str(s.clone()),
+            _ => Sexp::Sym("NIL".into()),
+        },
     }
 }
 

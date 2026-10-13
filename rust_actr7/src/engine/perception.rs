@@ -36,6 +36,15 @@ impl Engine {
     /// Device request routing for the visual buffer: only
     /// move-attention in M5a (plus finst assignment later).
     pub(super) fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        // `pm-module-request` for the visual buffer (`vision.lisp:3240`): a
+        // request releases the vision module's proc-display lock and schedules
+        // the deferred `unlock-vision`, which re-runs a blocked proc-display.
+        if self.visual_lock {
+            self.visual_lock = false;
+            // `:maintenance t` (`vision.lisp:3244`): a maintenance event does
+            // not mark buffers changed, so it must not wake conflict resolution.
+            self.push_m(self.time_ms, Prio::Min, Out::Never, true, Event::UnlockVision);
+        }
         let (slots, ctype) = match &spec {
             NewChunk::Spec { ctype, slots, .. } => (slots.clone(), ctype.clone()),
             _ => return Err(unimpl("non-spec visual request")),
@@ -439,6 +448,13 @@ impl Engine {
 
     pub(super) fn proc_display(&mut self) -> Result<(), EngineError> {
         let now = self.time_ms;
+        // `internal-proc-display` (`vision.lisp:1577`): while the vision module
+        // is locked the display is skipped and flagged, to be re-run by
+        // `unlock-vision`.
+        if self.visual_lock {
+            self.blocked_proc_display = true;
+            return Ok(());
+        }
         // This *is* the display wave for `now`, so window ops applied inside it
         // (the scripted buttons/lines below, and the `add-text` a button's
         // label goes through) must not queue another one — the ref has a single
@@ -452,7 +468,12 @@ impl Engine {
         // the others add, remove or modify one feature.
         for u in std::mem::take(&mut self.visicon_pending) {
             match u {
-                VisPending::Add(f) => self.features.push(f),
+                VisPending::Add(mut f) => {
+                    // `process-display` stamps the feature at *processing*
+                    // time (`vision.lisp:1640`), which `newest_feature` uses.
+                    f.tstamp_ms = now;
+                    self.features.push(f);
+                }
                 VisPending::Delete(name) => self.features.retain(|f| f.name != name),
                 VisPending::Update(name, mods) => {
                     if let Some(f) = self.features.iter_mut().find(|f| f.name == name) {

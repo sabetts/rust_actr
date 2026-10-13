@@ -1413,6 +1413,9 @@ enum Event {
     ProcDisplay,
     /// Vision marker that the visicon was updated.
     VisiconUpdate,
+    /// `unlock-vision` (`vision.lisp:1553`): release the vision proc-display
+    /// lock and re-run a blocked proc-display.
+    UnlockVision,
     /// Visual-location request resolution.
     FindLocation {
         spec: NewChunk,
@@ -1874,6 +1877,11 @@ pub struct Engine {
     /// reports as pending. The RPC `[add|delete|modify]-visicon-features`
     /// queue here instead of touching `features` directly.
     visicon_pending: Vec<VisPending>,
+    /// `add-visicon-features` names its chunks `VISICON-ID{n}`
+    /// (`new-name`, `vision.lisp:3856`) while the table shows the location
+    /// chunk's `CHUNK{n}`; a later `[delete|modify]-visicon-features` uses the
+    /// former. This maps the alias to the feature name.
+    visicon_alias: HashMap<String, String>,
     feat_seq: u64,
     /// Live experiment-window origin (`open-exp-window` x/y; ACT-R default
     /// 300,300). RPC-driven window items are placed relative to it.
@@ -1939,6 +1947,16 @@ pub struct Engine {
     /// (`chunk-visicon-entry`), for tracking's `vis-obj-marker` test.
     obj_feature: HashMap<String, String>,
     visual_busy: bool,
+    /// `warn-vision`/`pm-module-request` (`vision.lisp:3224`/`3240`): the
+    /// vision module's proc-display lock. A production's `?visual>` query
+    /// locks it (a query during conflict resolution calls the module's
+    /// `warn`), and a `+visual>` request unlocks it and re-runs the
+    /// proc-display that was blocked while it was held.
+    visual_lock: bool,
+    /// `blocked-proc-display` (`vision.lisp:1578`): a proc-display arrived
+    /// while `visual_lock` was held, so it did nothing and must be re-run on
+    /// unlock (which emits `visicon-update` but no `proc-display` line).
+    blocked_proc_display: bool,
     /// `loc-failure` (`vision.lisp:2931`): the last `find-location` found no
     /// matching location; `?visual-location> state error` tests it.
     loc_failure: bool,
@@ -2249,6 +2267,7 @@ impl Engine {
             consume_rng,
             features: Vec::new(),
             visicon_pending: Vec::new(),
+            visicon_alias: HashMap::new(),
             feat_seq: 0,
             window_origin: (300, 300),
             display_queued_ms: None,
@@ -2276,6 +2295,8 @@ impl Engine {
             obj_built: HashMap::new(),
             obj_feature: HashMap::new(),
             visual_busy: false,
+            visual_lock: false,
+            blocked_proc_display: false,
             loc_failure: false,
             visual_prep_busy: false,
             last_attention: None,
@@ -2763,6 +2784,8 @@ impl Engine {
         self.visual_busy = false;
         self.visual_prep_busy = false;
         self.loc_failure = false;
+        self.visual_lock = false;
+        self.blocked_proc_display = false;
         self.last_attention = None;
         self.tracked = None;
         self.tracked_lastloc = None;

@@ -59,6 +59,17 @@ impl Engine {
             let prod = self.model.productions[ep.index].clone();
             let mut mism: Vec<PpmMismatch> = Vec::new();
             if let Some(b) = self.match_prod(&prod, &ep.implicit_queries, &mut mism)? {
+                // `warn-vision` (`vision.lisp:3224`): the conflict code of a
+                // *matched* production with a `+visual>` RHS request calls the
+                // vision module's `warn` (`production-parsing.lisp:1439`),
+                // locking proc-display until a `+visual>` request unlocks it.
+                if !self.visual_lock
+                    && prod.rhs.iter().any(
+                        |a| matches!(a, RhsAction::Request { buffer, .. } if buffer == "VISUAL"),
+                    )
+                {
+                    self.visual_lock = true;
+                }
                 let mut u = self.utilities[ep.index];
                 if self.cfg.egs != 0.0 {
                     u += self.rng.borrow_mut().noise(self.cfg.egs);

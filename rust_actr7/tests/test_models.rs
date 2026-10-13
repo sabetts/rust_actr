@@ -794,7 +794,7 @@ fn apply_session_step(
     let no_model = || "no model loaded".to_string();
     match step {
         Step::Command { name, args } => {
-            let jargs: Vec<Json> = args.iter().map(sexp_to_json).collect();
+            let jargs: Vec<Json> = args.iter().map(cmd_arg_json).collect();
             session
                 .evaluate(name, None, &jargs, remote)
                 .map_err(|e| format!("command {name}: {e}"))?;
@@ -1053,5 +1053,15 @@ fn dump_spec() {
     let actual = run_spec(&root, spec).unwrap();
     for (i, l) in actual.iter().enumerate() {
         println!("{:>4}: {}", i + 1, l);
+    }
+}
+
+/// `sexp_to_json` for a recorded command's arguments, but keeping Lisp strings
+/// distinct from symbol names (`json_to_sexp` cannot tell them apart, and the
+/// generic command path uppercases symbols).
+fn cmd_arg_json(s: &Sexp) -> Json {
+    match s {
+        Sexp::Str(x) => Json::Obj(vec![("str".to_string(), Json::Str(x.clone()))]),
+        other => sexp_to_json(other),
     }
 }

@@ -3995,3 +3995,77 @@ out. `schedule-event-now` is a genuine task call in
 spec was reverted rather than the pair, because the pair is correct and the leak
 is the thing to fix. The general fix is the same one #236 points at: cover the
 outer primitives (`module-request`, `merge-dm`) so the guard applies.
+
+## 238. `printed-visicon`'s slot order is `[SIZE, DISTANCE] ++ construction spec`
+
+A visicon chunk's slots are stored by `push`, so `chunk-filled-slots-list-fct`
+(`chunks.lisp:1330`) returns them in *reverse* set order, and
+`define-chunks-fct` sets them in reverse spec order. The two reversals cancel:
+the printed list is the construction spec with `SIZE` and `DISTANCE` prepended
+(they are computed after the spec, `vision.lisp:1741-1747`). The construction
+spec is `build-string-feats` for window text — `screen-y height value width
+screen-x`, then the device appends `color`, and the isa marker
+`(isa (visual-location text))` supplies `kind`/`text` — the recorded argument
+order for `add-visicon-features`, and `build-vis-locs-for` for lines and
+buttons.
+
+Two consequences that are easy to get wrong:
+
+* the **column order** is the union of the features' non-loc slots with a
+  per-slot width and count, `stable-sort`ed by count *descending*
+  (`vision.lisp:4126`) — and because attributes are `push`ed, ties keep
+  *reverse*-first-seen order;
+* a slot set later (`modify-visicon-features`) is `push`ed onto the front of
+  the chunk's slot list, so it renders *before* the construction spec, not
+  after (`Feature::spec_pre`).
+
+`SIZE` is `simple-size` (`vision.lisp:3698`), and when `width`/`height` are
+absent it falls back to `compute-vis-loc-size`'s `1.0`, not `0.0`. Rows are the
+visicon in location order (`insert-into-visicon`), and `Att` is `feat-attended`
+(`vision.lisp:2269`): a finst is `T`, the in-flight attention target is `REQ`
+(a location *copy* like `VISUAL-LOCATION0-1` stands for its original via
+`chunk-visicon-entry`), a new feature is `NEW`.
+
+## 239. `warn-vision` holds a proc-display lock across a run boundary
+
+`printed-visicon`'s pending sections are not decoration: a proc-display can be
+*skipped*. `warn-vision` (`vision.lisp:3224`) is called from a matched
+production's conflict code when it has a `+visual>` RHS request
+(`production-parsing.lisp:1439`) and takes the vision module's proc-display
+lock. `pm-module-request` (`vision.lisp:3240`) releases it on the next
+`+visual>` request and schedules a deferred `unlock-vision`, which re-runs the
+display that was blocked. So a `+visual>` production's selection and its
+request can straddle a run boundary, and any visicon op in between — a task's
+`add-visicon-features`, or a window item — stays pending.
+
+Two things the engine must get right:
+
+* `unlock-vision`'s re-run emits `visicon-update` but **no** `proc-display`
+  line (the ref has only the former);
+* it is a `:maintenance t` event. The engine's run loop marks buffers changed
+  for any non-maintenance event, so scheduling it as an ordinary event wakes an
+  extra `CONFLICT-RESOLUTION` and breaks every `+visual>` golden.
+
+## 240. The spec harness keeps Lisp strings distinct from symbol names
+
+A recorded command's arguments go through JSON, which has no symbol type:
+`json_to_sexp` maps `Json::Str` to an *uppercased symbol*, which is right for
+names but turns `(modify-visicon-features (x value "changed"))` into
+`VALUE CHANGED`. The harness therefore wraps a `Sexp::Str` argument as
+`{"str": …}` and `json_to_sexp` decodes that back to `Sexp::Str`. Real clients
+are unaffected — they send plain strings, which still become symbols.
+
+A related trap: `(:COMMAND NAME (a b c))` is *flattened* into three arguments
+by the harness, while a client sends one list argument. `modify-visicon-features`
+accepts both shapes.
+
+## 241. `add-visicon-features` names its chunks `VISICON-ID{n}`
+
+The visicon chunk's name is `(new-name "visicon-id")` (`vision.lisp:3856`), and
+that is what `add-visicon-features` returns and what a later
+`[delete|modify]-visicon-features` passes back — while `printed-visicon` shows
+the *location* chunk's name (`CHUNK{n}`, from `chunk-visual-loc`). The engine
+queues under the location name, so it keeps an alias map from the
+creation-order `VISICON-ID{n}` to `CHUNK{n}` (`Feature`s created so far,
+including queued and pending ones). The recorded symbol carries the reader
+prefix (`#:VISICON-ID1`), which the lookup strips.

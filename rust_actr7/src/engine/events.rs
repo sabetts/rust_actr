@@ -869,6 +869,19 @@ impl Engine {
                     self.emit("VISION", "visicon-update".into());
                 }
             }
+            Event::UnlockVision => {
+                // `unlock-vision` (`vision.lisp:1553`): drop the lock, and if a
+                // proc-display was blocked while it was held, run it now (no
+                // `proc-display` trace line — the ref has only `visicon-update`).
+                self.visual_lock = false;
+                if std::mem::take(&mut self.blocked_proc_display) {
+                    self.proc_display()?;
+                    // The re-run consumed the wave; a new op at this time may
+                    // schedule its own (`internal-proc-display` clears
+                    // `scheduled-proc-display`, `vision.lisp:1577`).
+                    self.display_queued_ms = None;
+                }
+            }
             Event::FindLocation { spec } => {
                 if show {
                     self.emit("VISION", "Find-location".into());

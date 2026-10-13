@@ -352,6 +352,18 @@ impl Engine {
     pub fn add_visicon(&mut self, slots: &[(String, Sexp)]) -> String {
         let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
         self.name_count.insert("CHUNK".to_string(), n + 1);
+        // The visicon chunk's `new-name "visicon-id"` counter is the number of
+        // features created so far (including ones still queued or pending as
+        // window items), which is what a later delete/modify references.
+        let vid = self.features.len()
+            + self
+                .visicon_pending
+                .iter()
+                .filter(|u| matches!(u, VisPending::Add(_)))
+                .count()
+            + self.pending_added_features().len();
+        self.visicon_alias
+            .insert(format!("VISICON-ID{vid}"), format!("CHUNK{n}"));
         let mut x = 0i64;
         let mut y = 0i64;
         let mut w = 0i64;
@@ -387,8 +399,7 @@ impl Engine {
                 }
             }
         }
-        self.visicon_pending.push(VisPending::Add(Feature {
-            name: format!("CHUNK{n}"),
+        self.visicon_pending.push(VisPending::Add(Feature {            name: format!("CHUNK{n}"),
             kind: "VISUAL-LOCATION".to_string(),
             value: String::new(),
             x,
@@ -1328,15 +1339,27 @@ impl Engine {
 impl Engine {
     /// `delete-visicon-features` / `delete-all-visicon-features`.
     pub fn remove_visicon(&mut self, name: &str) {
-        self.visicon_pending
-            .push(VisPending::Delete(name.to_string()));
+        let name = self.resolve_visicon_name(name);
+        self.visicon_pending.push(VisPending::Delete(name));
         self.now_display();
+    }
+
+    /// `add-visicon-features` names its chunks with `new-name "visicon-id"`
+    /// (`vision.lisp:3856`), and a later `[delete|modify]-visicon-features`
+    /// references *that* name, while the visicon table shows the location
+    /// chunk's `CHUNK{n}`. Resolve the alias so both address the same feature.
+    fn resolve_visicon_name(&self, name: &str) -> String {
+        let key = name.trim_start_matches("#:").to_uppercase();
+        self.visicon_alias
+            .get(&key)
+            .cloned()
+            .unwrap_or_else(|| name.to_string())
     }
 
     /// `modify-visicon-features`: queue a slot update (`vision.lisp:4039`).
     pub fn queue_visicon_modify(&mut self, name: &str, mods: Vec<(String, Value)>) {
-        self.visicon_pending
-            .push(VisPending::Update(name.to_string(), mods));
+        let name = self.resolve_visicon_name(name);
+        self.visicon_pending.push(VisPending::Update(name, mods));
         self.now_display();
     }
 
@@ -1504,8 +1527,18 @@ impl Engine {
         if f.finst_ms.is_some() {
             return "T".to_string();
         }
-        if self.visual_busy && self.last_attention.as_deref() == Some(f.name.as_str()) {
-            return "REQ".to_string();
+        if self.visual_busy {
+            if let Some(name) = &self.last_attention {
+                // `chunk-visicon-entry`: a location *copy* (`VISUAL-LOCATION0-1`)
+                // stands for the feature it was copied from.
+                let base = match self.vl_copies.get(name) {
+                    Some(&i) => self.features.get(i).map(|x| x.name.clone()),
+                    None => Some(name.clone()),
+                };
+                if base.as_deref() == Some(f.name.as_str()) {
+                    return "REQ".to_string();
+                }
+            }
         }
         if f.new_p {
             "NEW".to_string()
