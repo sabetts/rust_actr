@@ -1030,6 +1030,11 @@ struct Buffer {
     /// Set by `mod-buffer-chunk` (a production's `=buffer>` RHS): the vision
     /// module's `check-unstuff-buffer` only unstuffs an *unmodified* copy.
     modified: bool,
+    /// `act-r-buffer-requested` (`buffers.lisp`): whether the chunk in the
+    /// buffer was explicitly requested. A `?buffer> buffer requested/
+    /// unrequested` query tests it (`buffers.lisp:1113`), and the vision
+    /// module auto-stuffs a location with `:requested nil`.
+    requested: bool,
 }
 
 /// Base-level history per DM chunk, aligned with `Engine.dm` by index:
@@ -1054,6 +1059,7 @@ impl Buffer {
             failed: false,
             busy: false,
             modified: false,
+            requested: true,
         }
     }
 }

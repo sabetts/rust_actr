@@ -107,6 +107,27 @@ impl Engine {
         name
     }
 
+    /// `(chunk-type)` with no name (`print-all-chunk-types`,
+    /// `framework/chunk-types.lisp:533`): print every chunk type. The
+    /// `:include` parents and documentation string are not stored, so the
+    /// `<- parents` / doc parts of `+pprint-chunk-type-string+` are omitted.
+    pub fn print_chunk_types(&mut self) -> Vec<String> {
+        let types = self.model.chunk_types.clone();
+        let mut names = Vec::new();
+        for ct in &types {
+            self.out_lines.push(ct.name.clone());
+            for s in &ct.slots {
+                match ct.defaults.iter().find(|(k, _)| k.eq_ignore_ascii_case(s)) {
+                    Some((_, p)) => self.out_lines.push(format!("   {s} ({})", pattern_show(p))),
+                    None => self.out_lines.push(format!("   {s}")),
+                }
+            }
+            self.out_lines.push(String::new());
+            names.push(ct.name.clone());
+        }
+        names
+    }
+
     /// `dm {names}` (`commands/dm-commands.lisp:437`): print and return the
     /// named (or all) declarative-memory chunks.
     pub fn print_dm(&mut self, names: &[String]) -> Vec<String> {
@@ -1433,5 +1454,19 @@ impl Engine {
             f.tstamp_ms = self.time_ms;
         }
         self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+}
+
+/// A chunk-type default value as Lisp `~S` would print it
+/// (`(chunk-type … (slot default))`).
+fn pattern_show(p: &crate::model::Pattern) -> String {
+    use crate::model::Pattern;
+    match p {
+        Pattern::Nil => "NIL".to_string(),
+        Pattern::Var(v) => format!("={v}"),
+        Pattern::Sym(s) => s.clone(),
+        Pattern::Int(i) => i.to_string(),
+        Pattern::Num(x) => x.to_string(),
+        Pattern::Str(s) => format!("\"{s}\""),
     }
 }

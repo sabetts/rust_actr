@@ -55,6 +55,7 @@ impl Engine {
                 self.buffer_mut(&buffer).chunk = Some(inst);
                 self.buffer_mut(&buffer).failed = false;
                 self.buffer_mut(&buffer).modified = false;
+                self.buffer_mut(&buffer).requested = requested;
                 if buffer == "GOAL" {
                     self.bold_point("GOAL");
                 }
@@ -100,6 +101,7 @@ impl Engine {
                 self.buffer_mut(&buffer).chunk = Some(inst);
                 self.buffer_mut(&buffer).failed = false;
                 self.buffer_mut(&buffer).modified = false;
+                self.buffer_mut(&buffer).requested = requested;
                 self.changed();
             }
             Event::EraseBuffer { buffer, module } => {

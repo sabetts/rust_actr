@@ -1467,35 +1467,61 @@ fn parse_production(form: &Sexp, extra_buffers: &[String]) -> Result<Production,
 fn parse_chunk_type(form: &Sexp) -> Result<ChunkType, LoadError> {
     match form {
         Sexp::List(items) => match items.as_slice() {
-            [Sexp::Sym(h), Sexp::Sym(name), slots @ ..] if h == "CHUNK-TYPE" => {
-                let mut out = Vec::new();
-                let mut defaults = Vec::new();
-                for s in slots {
-                    match s {
-                        Sexp::Sym(t) => out.push(t.clone()),
-                        // `(slot default)` — slot with a default value.
-                        Sexp::List(pair) => match pair.as_slice() {
-                            [Sexp::Sym(t), default] => {
-                                out.push(t.clone());
-                                defaults.push((t.clone(), Pattern::from_sexp(default)?));
-                            }
-                            got => return structural(format!("bad chunk-type slot: {got:?}")),
-                        },
-                        got => {
-                            return structural(format!("chunk-type slot must be a symbol: {got:?}"))
-                        }
-                    }
-                }
-                Ok(ChunkType {
-                    name: name.clone(),
-                    slots: out,
-                    defaults,
-                })
-            }
+            [Sexp::Sym(h), rest @ ..] if h == "CHUNK-TYPE" => parse_chunk_type_spec(rest),
             got => structural(format!("bad chunk-type form: {got:?}")),
         },
         got => structural(format!("bad chunk-type form: {got:?}")),
     }
+}
+
+/// Parse a chunk type's `name-and-slots` list (`chunk-type-fct`,
+/// `framework/chunk-types.lisp:340`): `name` or `(name (:include parent)*)`,
+/// an optional documentation string, then `slot` or `(slot default)` entries.
+/// Also the RPC `chunk-type` command's payload. `:include` parents are
+/// accepted and ignored: the engine only needs a type's own slots/defaults,
+/// and the module types the parents name (`visual-object`, `audio-event`, …)
+/// are not in the model.
+pub fn parse_chunk_type_spec(items: &[Sexp]) -> Result<ChunkType, LoadError> {
+    let mut it = items.iter();
+    let name_desc = match it.next() {
+        Some(x) => x,
+        None => return structural("chunk-type with no name".to_string()),
+    };
+    let name = match name_desc {
+        Sexp::Sym(n) => n.clone(),
+        // `(name (:include parent) …)`: the modifiers are the rest.
+        Sexp::List(parts) => match parts.first() {
+            Some(Sexp::Sym(n)) => n.clone(),
+            got => return structural(format!("bad chunk-type name: {got:?}")),
+        },
+        got => return structural(format!("bad chunk-type name: {got:?}")),
+    };
+    let mut rest: Vec<&Sexp> = it.collect();
+    // An optional documentation string follows the name.
+    if matches!(rest.first(), Some(Sexp::Str(_))) {
+        rest.remove(0);
+    }
+    let mut out = Vec::new();
+    let mut defaults = Vec::new();
+    for s in rest {
+        match s {
+            Sexp::Sym(t) => out.push(t.clone()),
+            // `(slot default)` — slot with a default value.
+            Sexp::List(pair) => match pair.as_slice() {
+                [Sexp::Sym(t), default] => {
+                    out.push(t.clone());
+                    defaults.push((t.clone(), Pattern::from_sexp(default)?));
+                }
+                got => return structural(format!("bad chunk-type slot: {got:?}")),
+            },
+            got => return structural(format!("chunk-type slot must be a symbol: {got:?}")),
+        }
+    }
+    Ok(ChunkType {
+        name,
+        slots: out,
+        defaults,
+    })
 }
 
 /// Numeric S-expression (`Int` or `Float`) as f64.

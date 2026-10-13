@@ -397,6 +397,23 @@ impl Engine {
                             .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
                             .chunk
                             .is_some(),
+                        // `?buffer> buffer requested/unrequested`
+                        // (`buffers.lisp:1113`): a chunk (or failure flag) in
+                        // the buffer whose `act-r-buffer-requested` matches.
+                        ("BUFFER", Pattern::Sym(s)) if s == "REQUESTED" => {
+                            let b = self
+                                .buffers
+                                .get(buffer)
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?;
+                            (b.chunk.is_some() || b.failed) && b.requested
+                        }
+                        ("BUFFER", Pattern::Sym(s)) if s == "UNREQUESTED" => {
+                            let b = self
+                                .buffers
+                                .get(buffer)
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?;
+                            (b.chunk.is_some() || b.failed) && !b.requested
+                        }
                         ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
                         // extended-motor-actions adds per-stage queries.

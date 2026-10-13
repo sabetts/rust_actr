@@ -92,6 +92,7 @@ pub const BUILTINS: &[&str] = &[
     "define-chunks",
     "define-chunks-fct",
     "define-chunk-spec",
+    "chunk-type",
     "dm",
     "sdm",
     "pprint-chunks",
@@ -567,6 +568,31 @@ impl Session {
                 }
                 self.build_engine()?;
                 Ok(vec![Json::Null])
+            }
+            "chunk-type" => {
+                // `chunk-type-fct` (`framework/chunk-types.lisp:340`): define a
+                // chunk type, or print them all with no name. The client sends
+                // the `name-and-slots` list as separate args (the `-fct`
+                // convention).
+                if args.is_empty() {
+                    let out = self
+                        .engine
+                        .as_mut()
+                        .map(|e| e.print_chunk_types())
+                        .unwrap_or_default();
+                    return Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())]);
+                }
+                let forms: Vec<Sexp> = args.iter().map(json_to_sexp).collect();
+                let ct = model::parse_chunk_type_spec(&forms).map_err(|e| e.to_string())?;
+                let name = ct.name.clone();
+                if let Some(m) = self.defs.last_mut() {
+                    // ACT-R forbids redefinition (it warns); the engine keeps
+                    // the latest, as with production redefinition.
+                    m.chunk_types.retain(|t| !t.name.eq_ignore_ascii_case(&name));
+                    m.chunk_types.push(ct);
+                }
+                self.build_engine()?;
+                Ok(vec![Json::Str(name)])
             }
             "buffer-read" => {
                 let b = args.first().and_then(|a| a.as_str()).unwrap_or("");
