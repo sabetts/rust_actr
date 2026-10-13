@@ -1193,6 +1193,20 @@ impl Session {
         eng.set_user_fns(self.user_fns.clone());
         self.engine = Some(eng);
         self.trace_pos = 0;
+        // `set-system-parameter-value` settings are global in ACT-R and
+        // survive a model (re)load — `:starting-parameters` is re-applied by
+        // the central-parameters reset hook (`central-parameters.lisp:131`).
+        // The engine is rebuilt from scratch here, so replay them, or a
+        // `load_act_r_model` after `set-system-parameter-value` would silently
+        // drop e.g. the `:seed` and fall back to the model body's.
+        let params: Vec<(String, Json)> = self
+            .system_params
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        for (k, v) in params {
+            self.set_system_param(&k, v);
+        }
         Ok(())
     }
 }

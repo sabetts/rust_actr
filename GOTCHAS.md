@@ -3431,3 +3431,31 @@ Note the two paths cannot be unified by pushing a `pending_clear` from
 consumed by the next wave would run `self.features.clear()` *after* the add and
 wipe the new text (the model then never places a visual-location at all).
 `clear_window` must therefore schedule the re-encode itself.
+
+## 217. `set-system-parameter-value` survives a model load
+
+ACT-R's `set-system-parameter-value` sets a *global* (`central-parameters.lisp:131`)
+which the central-parameters reset hook re-applies at every reset; loading a
+model does not clear it. The RPC session kept the settings in `system_params`
+but rebuilt the engine from scratch on every `load-act-r-model`
+(`build_engine`, `rpc/session.rs`), so they were dropped.
+
+That mattered for the seed specifically. `test-models/paired-learning-dynamic.py`
+does
+
+```python
+paired = general_import.import_path('../tutorial/python/paired.py', True)   # loads unit4's model
+actr.set_system_parameter_value(':starting-parameters', [..., ':seed', [1,0], ...])
+actr.load_act_r_model('ACT-R:tutorial;unit8;paired-dynamic-model.lisp')    # rebuilds
+```
+
+`paired.py:19` loads `tutorial;unit4;paired-model.lisp`, whose body sets
+`(sgp :seed (200 4))`. After the rebuild the session's `:seed (1 0)` was gone
+and the run's stream was `init_genrand(200)` instead of the `init_genrand(1)`
+the ref used. `build_engine` now replays the stored system parameters onto the
+fresh engine.
+
+Verification that it is the right stream: with the fix the RPC run's `noise`
+draws are *value-for-value identical* to the golden run's 95 draws, merely
+shifted by one index — i.e. the model is on ACT-R's stream and only one
+pre-run draw differs (see TODO M3).
