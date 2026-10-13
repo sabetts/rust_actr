@@ -3943,3 +3943,36 @@ messages — `Chunk ~s with activation ~f is the best` for a unique best
 (`declarative-memory.lisp:1488`) and `Chunk ~s chosen among the chunks with
 activation ~f` when the winner came out of a tie (`:1515`). The engine used the
 first for both.
+
+## 236. The extractor's wrapper list, not its nesting, was the gap
+
+Wrapping a primitive is *transitive*: a stub's `run-it` calls a task function
+(`fan-sentence`, `run-test`), and any wrapped primitive *that* calls is recorded
+normally. So the recurring "the task's setup vanished" failures were never a
+nesting or scoping problem — the wrapper list was simply incomplete. The audit
+that shows this, and how to rerun it: take every symbol a stub/task/model calls,
+intersect it with the functions the *core* modules define (`core-modules`,
+`commands`, `framework`, `other-files`, `modules`), and subtract the wrapped set.
+It yields 97 symbols, which fall into exactly three classes:
+
+* **model-body forms** (`sgp`, `spp`, `define-chunks`, `set-base-levels`,
+  `declare-buffer-usage`, …) — the model parser owns these, not the extractor;
+* **Lisp/task machinery** (`add-act-r-command`, `monitor-act-r-command`,
+  `evt-*`, `add-pre/post-event-hook`, `while`, `push-last`, …) — the documented
+  "no arbitrary Lisp" divergence;
+* **task-level state changes** — the real gaps, and a short list:
+  `add-dm`, `module-request`, `set-buffer-chunk`, `clear-buffer`,
+  `schedule-event-now`, `schedule-{mod,set}-buffer-chunk`,
+  `add/delete/modify-visicon-features`, `permute-list`, `correlation`,
+  `mean-deviation`, `merge-dm`, `new-ongoing-sound`, `end-ongoing-sound`,
+  `new-digit-sound`, `pbreak`, `open-exp-window`, `add/remove-items-from-exp-window`,
+  `create-{text,button,line}-for-exp-window`, `modify-{button,line}-for-exp-window`,
+  `delete-production`.
+
+Recording one is cheap when the engine already has the command: add a
+`("name" . function)` pair to `*generic-commands*`. Scope is decided by
+`*command-tokens*` (a deliberately tiny list of source-scrape/hook tokens), *not*
+by which commands were recorded, so extending the list cannot reclassify a spec.
+Changing the extractor also does not touch any committed spec — only a targeted
+`SPEC_LIST` regen does, which is why this can be landed and verified safely
+before the engine side catches up.

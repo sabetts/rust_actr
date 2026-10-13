@@ -354,6 +354,25 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        three-valued (`t`/`warn`/`nil`) and the negative-Sji `model-warning` is
        gated on `:model-warnings`, which the golden environment leaves nil.
        **Frontier 101 → 103**; both specs enabled.
+       **Extractor audit (GOTCHAS #236).** The recurring "the task's setup
+       vanished" failures were an incomplete wrapper list, not nesting. Audit
+       recipe + the 97-symbol result are in GOTCHAS #236; the actionable part is
+       a short list of task-level state changes. Recording one is a
+       `("name" . function)` pair in `*generic-commands*` when the engine already
+       has the command — `add-dm`, `set-buffer-chunk`, `clear-buffer`,
+       `schedule-event-now`, `schedule-{mod,set}-buffer-chunk`,
+       `add/delete/modify-visicon-features`, `permute-list`, `correlation`,
+       `mean-deviation` are now recorded (and `base-level-safety-check`,
+       `proc-display-with-pending`, `removed-and-restored-visual-item`
+       regenerated), which is the precondition for the specs below but flips
+       none of them yet.
+       Still needs an engine command first: `module-request`, `merge-dm`,
+       `delete-production`, `buffer-slot-value`, `new-ongoing-sound`,
+       `end-ongoing-sound`, `new-digit-sound`, `pbreak`.
+       **`proc-display-with-pending` is now fully specced and is the best
+       next target**: its visicon ops are recorded, so only the `print-visicon`
+       table renderer (plus the pending add/delete/modify sections) is missing.
+       `removed-and-restored-visual-item` is the same table with callbacks.
        **The `fan` family was blocked on an extractor gap, not the engine**
        (GOTCHAS #234/#235). Tasks drive a trial with
        `(mod-focus-fct (arg1 x arg2 y))` (`tutorial/lisp/fan-no-pm.lisp:57`) and

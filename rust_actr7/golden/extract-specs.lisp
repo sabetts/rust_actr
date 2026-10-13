@@ -89,7 +89,24 @@ operations that turn out not to be replayable.")
     ("schedule-simple-mod-buffer-chunk" . schedule-simple-mod-buffer-chunk)
     ("schedule-simple-set-buffer-chunk" . schedule-simple-set-buffer-chunk)
     ("sji" . sji-fct)
-    ("sdp" . sdp-fct))
+    ("sdp" . sdp-fct)
+    ;; Task-level state changes a stub makes outside a run. These are the
+    ;; calls a *task function* (not the stub's own top level) makes to drive a
+    ;; trial, so missing them left the replayed model in the wrong state — the
+    ;; same class of gap as `mod-focus-fct` (GOTCHAS #234). Each is recorded as
+    ;; `(:command NAME ARGS)` and replayed through the engine's command table.
+    ("add-dm" . add-dm-fct)
+    ("set-buffer-chunk" . set-buffer-chunk)
+    ("clear-buffer" . clear-buffer)
+    ("schedule-event-now" . schedule-event-now)
+    ("schedule-mod-buffer-chunk" . schedule-mod-buffer-chunk)
+    ("schedule-set-buffer-chunk" . schedule-set-buffer-chunk)
+    ("add-visicon-features" . add-visicon-features)
+    ("delete-visicon-features" . delete-visicon-features)
+    ("modify-visicon-features" . modify-visicon-features)
+    ("permute-list" . permute-list)
+    ("correlation" . correlation)
+    ("mean-deviation" . mean-deviation))
   "Commands to record generically, as `(:command NAME ARG…)`, mapped to the
 function the stubs' macros expand to. Each is recorded only when it is not
 already covered by a dedicated step (`install-wrappers`); the re-entrancy
