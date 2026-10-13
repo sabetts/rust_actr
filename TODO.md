@@ -324,10 +324,12 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       a production naming a buffer's variable makes it non-reusable, so
       `simple-dynamic-model` is `IMAGINAL-CHUNK0` while `act-touch`/
       `merging-test` are `CHUNK{n}` (`d0ee65b`, GOTCHAS #205), and a merge
-      renames references to the merged buffer chunk (`9a413cd`, GOTCHAS #206).
-      Flips
-      `simple-dynamic-model`, `tutorial-unit5modeling-v9-p7-8-run` and
-      `tutorial-unit5-fan-lawyer-store-trace` — **95 pass / 40 fail**.
+      renames references to the merged buffer chunk (`9a413cd`, GOTCHAS #206),
+      and chunk slots print in model-wide slot order (`8436c08`,
+      GOTCHAS #207). Flips `simple-dynamic-model`,
+      `tutorial-unit5modeling-v9-p7-8-run`, `tutorial-unit5-fan-lawyer-store-trace`
+      and `tutorial-unit5modeling-v8-p6-run-retrieved-chunk` —
+      **96 pass / 39 fail**.
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
