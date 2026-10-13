@@ -451,11 +451,12 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       (`Model::no_reuse_buffers`) and a modify storing a chunk-valued
       `=buffer` ref by name rather than copying it, `simple-dynamic-model`
       is green with no regressions.
-       **Re-baselined 2026-10-13: 11/22 → 13/22** — `rpc-enabled.txt` was
-       stale at the start (9/22) and `simple-dynamic-model` /
-       `simple-ppm-test` already conformed; `tutorial_unit2code_buffer_chunk`
-       (`!output!` gating, #215) and `paired-learning-dynamic` (#216/#217/#218)
-       followed.
+       **Re-baselined 2026-10-13: 9/22 → 14/22** — `rpc-enabled.txt` was stale
+       at the start (11/22 already conformed), then
+       `tutorial_unit2code_buffer_chunk` (`!output!` gating, #215),
+       `paired-learning-dynamic` (#216/#217/#218) and `paired-learning`
+       (#219/#220). **Both paired models pass, so the paired cluster is
+       closed.**
        Swept all 22 with one process per model (the harness has no per-test
        timeout), against a live `actr-server`:
        - OK (11): addition, count, semantic, semantic-dynamic,
@@ -468,7 +469,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
          `tutorial_unit5_onehit_blocks` (2/21/2),
          `tutorial_unit5_onehit_hands` (2/13/6),
          `tutorial_unit5_onehit_learning` (2/9952/2).
-       - Blocked (4): `paired-learning` (hangs), and `bst-learn`,
+       - Blocked (now 3): `bst-learn`,
          `bst-learn-ppm`, `fan-no-pm`, where the driver process exits mid-run
          (`bst-learn`'s `bst.experiment` calls `exit`) before any verdict.
          `rpc-conformance.sh --expect` now requires the `RPC-RESULT` line so
