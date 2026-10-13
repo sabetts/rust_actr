@@ -425,6 +425,16 @@ step is printable and matches what the engine expects."
     (push (list :goal-focus spec) *steps*))
   (call-orig 'goal-focus-fct spec))
 
+(defun w-mod-focus (spec)
+  ;; `(mod-focus-fct (slot value ...))` (`goal.lisp:378`): modify the goal
+  ;; buffer's chunk. Tasks use it to drive a trial — e.g. `fan-sentence` sets
+  ;; the goal's `arg1`/`arg2` (`tutorial/lisp/fan-no-pm.lisp:57`), without which
+  ;; the model's first production cannot match and the run ends at t=0. Recorded
+  ;; as a flat `(:mod-focus SLOT VALUE ...)` step.
+  (when (and (eq *mode* :drive) (not *suppress*) (not *in-run*))
+    (push (cons :mod-focus (copy-list spec)) *steps*))
+  (call-orig 'mod-focus-fct spec))
+
 (defun w-reset ()
   (when (and (eq *mode* :drive) (not *suppress*))
     (incf *reset-count*)
@@ -707,6 +717,7 @@ step is printable and matches what the engine expects."
   (wrap-fn 'run-until-time #'w-run-until-time)
   (wrap-fn 'run-n-events #'w-run-n-events)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
+  (wrap-fn 'mod-focus-fct #'w-mod-focus)
   (wrap-fn 'install-device #'w-install-device)
   (wrap-fn 'reset #'w-reset)
   (wrap-fn 'sgp-fct #'w-sgp)

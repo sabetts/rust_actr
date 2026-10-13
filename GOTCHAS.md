@@ -3900,3 +3900,46 @@ it on with an explicit `(:SGP :MODEL-WARNINGS T)` step (which is what
 `tutorial-unit5modeling-v8-p6-run` does, while its `-high-detail` sibling does
 not). This is a deliberate ref-first choice: a real ACT-R client that relies on
 the `t` default would see one extra warning line that we omit.
+
+## 234. A task's `mod-focus` was never recorded, so whole models never started
+
+`(mod-focus-fct (arg1 x arg2 y))` (`goal.lisp:378`) is how a task drives a
+trial: `fan-sentence` sets the goal's probe slots with it
+(`tutorial/lisp/fan-no-pm.lisp:57`). The extractor wrapped `goal-focus-fct` but
+not `mod-focus-fct`, so every spec whose task used it replayed a goal with the
+slot *unset* — the model's first production could not match, the queue was empty
+at t=0, and the run ended after one conflict-resolution.
+
+`fan-no-pm` was the visible case: 191 trace lines, first divergence at line 2.
+Recording the step (a flat `(:mod-focus SLOT VALUE ...)`, which the harness
+already parsed) took it to **1830 of 1844** with the first divergence at line
+1830 — the remaining gap is the task's own `fan-experiment` summary table, which
+is `format` output the spec cannot replay. The same gap is why the
+`tutorial_unit5_onehit_*` RPC models never ran: the RPC side had no `mod-focus`
+handler at all (`session.rs` listed the name but had no arm), so the request
+errored.
+
+## 235. The reset hook lives in the session, and the golden harness must use it
+
+Two independent traps, both of which silently drop output rather than error:
+
+* **`:STARTING-PARAMETERS` carries the reset hook.** A stub sets
+  `(ssp :starting-parameters (:testing-function trace-fan-run))`, and
+  `trace-fan-run` = `(set-testing-traces)` + `(sgp :act t)`
+  (`test-models/fan-no-pm.lisp:3`). ACT-R calls it from inside `reset`
+  (`model-tester.cl:485`), which the *session* implements (`invoke_testing_fn`),
+  reading the testing function out of its system-parameter store. The harness
+  applied `:STARTING-PARAMETERS` straight to the engine, so the store stayed
+  empty and the hook never fired — the activation trace was simply absent.
+
+* **`run_spec` picks its driver from the steps.** It routes a spec through the
+  session (`run_spec_session`) only when the spec has a `Step::Command`, and
+  otherwise through the engine-level `run_model_steps`. `fan-no-pm` has no
+  command step, so edits to the session path did nothing for it. Both a
+  `:COMMAND` and a `:STARTING-PARAMETERS` step now select the session driver.
+
+Also in this area: the retrieval's tie-break narration is two different
+messages — `Chunk ~s with activation ~f is the best` for a unique best
+(`declarative-memory.lisp:1488`) and `Chunk ~s chosen among the chunks with
+activation ~f` when the winner came out of a tie (`:1515`). The engine used the
+first for both.

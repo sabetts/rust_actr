@@ -471,6 +471,16 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "mod-focus" => {
+                // `mod-focus` (`goal.lisp:378`): modify the goal buffer's chunk
+                // with the given slot/value pairs, passed as one flat list
+                // (`'{<slot> <value>}*`).
+                let slots = mod_focus_slots(args)?;
+                if let Some(eng) = &mut self.engine {
+                    eng.mod_focus(&slots);
+                }
+                Ok(vec![Json::Null])
+            }
             "set-parameter-value" => {
                 let key = args
                     .first()
@@ -1204,7 +1214,7 @@ impl Session {
     /// `:starting-parameters` matters here: its `:testing-function` is a remote
     /// command the client owns (invoked through the callback path), and the
     /// other entries are re-applied to the engine.
-    fn set_system_param(&mut self, key: &str, val: Json) {
+    pub fn set_system_param(&mut self, key: &str, val: Json) {
         if matches!(val, Json::Null) {
             self.system_params.remove(key);
             return;
@@ -1227,6 +1237,32 @@ impl Session {
                 let _ = eng.apply_sgp(":starting-parameters", &sexp);
             }
         }
+    }
+
+    /// `:starting-parameters` replayed from a spec's `(:SGP :STARTING-PARAMETERS
+    /// …)` step. Routing it through the session (rather than straight to the
+    /// engine) is what lets the reset hook see its `:testing-function`.
+    pub fn set_starting_params(&mut self, val: &Sexp) {
+        self.set_system_param(":STARTING-PARAMETERS", sexp_to_json(val));
+    }
+
+    /// Reset the model and run the `:testing-function` hook — the path the RPC
+    /// `reset` command takes (`invoke_testing_fn`). The golden harness replays a
+    /// spec's `(:RESET)` through this rather than the engine directly, or a spec
+    /// whose runs depend on the hook (the fan stubs' `trace-fan-run`, which sets
+    /// `:act t`) silently loses the trace it enables.
+    pub fn reset_model(&mut self) -> Result<(), String> {
+        if let Some(eng) = &mut self.engine {
+            eng.reset().map_err(|e| e.to_string())?;
+        }
+        struct NoRemote;
+        impl Remote for NoRemote {
+            fn call(&mut self, _n: &str, _m: Option<&str>, _a: Vec<Json>) -> Result<Vec<Json>, String> {
+                Err("no remote client".into())
+            }
+        }
+        self.invoke_testing_fn(&mut NoRemote);
+        Ok(())
     }
 
     /// The `:testing-function` from `:starting-parameters`, quotes stripped
@@ -1286,6 +1322,18 @@ impl Session {
             if let Some(eng) = &mut self.engine {
                 let _ = eng.apply_sgp(":v", &Sexp::Sym("T".into()));
                 let _ = eng.apply_sgp(":cmdt", &Sexp::Sym("T".into()));
+            }
+            return;
+        }
+        // The tutorial fan stubs' testing functions
+        // (`test-models/fan-no-pm.lisp:3`, `fan.lisp:9`):
+        // `trace-fan-run` = `(set-testing-traces)` + `(sgp :act t)`, which is why
+        // every run it covers shows the declarative activation trace.
+        if name.eq_ignore_ascii_case("trace-fan-run") {
+            if let Some(eng) = &mut self.engine {
+                let _ = eng.apply_sgp(":v", &Sexp::Sym("T".into()));
+                let _ = eng.apply_sgp(":cmdt", &Sexp::Sym("T".into()));
+                let _ = eng.apply_sgp(":act", &Sexp::Sym("T".into()));
             }
         }
     }
@@ -1936,8 +1984,26 @@ mod tests {
 
 /// A `goal-focus` argument: a flat `["ISA","type","slot","val", …]` list (a
 /// chunk spec) or a chunk name string.
-fn goal_desc(args: &[Json]) -> Result<ChunkDesc, String> {
-    match args.first() {
+/// A `mod-focus` argument: slot/value pairs, given either as one flat array
+/// (`'{<slot> <value>}*`) or as separate arguments.
+fn mod_focus_slots(args: &[Json]) -> Result<Vec<(String, Sexp)>, String> {
+    let flat: Vec<Json> = match args {
+        [Json::Arr(items)] => items.clone(),
+        other => other.to_vec(),
+    };
+    let mut slots = Vec::new();
+    let mut i = 0;
+    while i + 1 < flat.len() {
+        let k = flat[i]
+            .as_str()
+            .ok_or_else(|| "mod-focus needs slot names".to_string())?;
+        slots.push((k.to_uppercase(), json_to_sexp(&flat[i + 1])));
+        i += 2;
+    }
+    Ok(slots)
+}
+
+fn goal_desc(args: &[Json]) -> Result<ChunkDesc, String> {    match args.first() {
         Some(Json::Str(name)) => Ok(ChunkDesc::Named(name.to_uppercase())),
         Some(Json::Arr(items)) => {
             let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();

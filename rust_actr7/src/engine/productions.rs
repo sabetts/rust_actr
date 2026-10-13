@@ -2830,7 +2830,11 @@ impl Engine {
                 _ => {}
             }
         }
-        let best = match tied.len() {
+        // A unique best and a tie-break narrate differently
+        // (`declarative-memory.lisp:1488` vs `:1515`), so the tie set's size has
+        // to survive the selection below.
+        let ntied = tied.len();
+        let best = match ntied {
             0 => None,
             1 => Some(tied.into_iter().next().unwrap()),
             _ if self.cfg.er => {
@@ -2861,10 +2865,17 @@ impl Engine {
                 }
                 Some(w) => {
                     let wname = w.name.clone().unwrap_or_default();
-                    self.out(format!(
-                        "Chunk {wname} with activation {} is the best",
-                        lisp_f(act)
-                    ));
+                    if ntied > 1 {
+                        self.out(format!(
+                            "Chunk {wname} chosen among the chunks with activation {}",
+                            lisp_f(act)
+                        ));
+                    } else {
+                        self.out(format!(
+                            "Chunk {wname} with activation {} is the best",
+                            lisp_f(act)
+                        ));
+                    }
                 }
                 None => {
                     self.out("No matching chunk found retrieval failure".to_string());

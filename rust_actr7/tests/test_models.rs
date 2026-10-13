@@ -735,7 +735,16 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     // A spec with a recorded command step is driven through the RPC command
     // layer (`Session::evaluate`), so the spec exercises the same dispatch a
     // Python client hits; everything else keeps the engine-level driver.
-    let actual = if spec.steps.iter().any(|s| matches!(s, Step::Command { .. })) {
+    //
+    // A `:STARTING-PARAMETERS` step also needs the session: its
+    // `:testing-function` drives the reset hook, which lives there (`fan-no-pm`
+    // and `fan` rely on `trace-fan-run` turning `:act` on for every run).
+    let needs_session = spec.steps.iter().any(|s| match s {
+        Step::Command { .. } => true,
+        Step::Sgp(k, _) => k.eq_ignore_ascii_case(":STARTING-PARAMETERS"),
+        _ => false,
+    });
+    let actual = if needs_session {
         run_spec_session(root, spec, &device)?
     } else {
         run_model_steps(root, &spec.models, seed, &spec.steps, &device)
@@ -847,16 +856,27 @@ fn apply_session_step(
             .set_bold_buffers(buffers),
         Step::PredictBold => session.engine_mut().ok_or_else(no_model)?.print_bold(),
         Step::SetDetail(d) => session.engine_mut().ok_or_else(no_model)?.set_detail(*d),
-        Step::Sgp(k, v) => session
-            .engine_mut()
-            .ok_or_else(no_model)?
-            .apply_sgp(k, v)
-            .map_err(|e| e.to_string())?,
-        Step::Reset => session
-            .engine_mut()
-            .ok_or_else(no_model)?
-            .reset()
-            .map_err(|e| e.to_string())?,
+        Step::Sgp(k, v) => {
+            // `:starting-parameters` must go through the session, not straight
+            // to the engine: its `:testing-function` drives the reset hook
+            // (`invoke_testing_fn`), which reads the session's system-parameter
+            // store. Routing it to the engine alone left the hook unknown, so a
+            // spec whose runs depend on it (e.g. the fan stubs'
+            // `trace-fan-run`) silently lost the trace it enables.
+            if std::env::var("DBG_SGP").is_ok() {
+                eprintln!("SGP step {k} = {v:?}");
+            }
+            if k.eq_ignore_ascii_case(":STARTING-PARAMETERS") {
+                session.set_starting_params(v);
+            } else {
+                session
+                    .engine_mut()
+                    .ok_or_else(no_model)?
+                    .apply_sgp(k, v)
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Step::Reset => session.reset_model()?,
         Step::PDisable(names) => session.engine_mut().ok_or_else(no_model)?.pdisable(names),
         Step::PEnable(names) => session.engine_mut().ok_or_else(no_model)?.penable(names),
         Step::BufferChunk(buffers) => {
