@@ -1410,6 +1410,32 @@ impl Engine {
     pub fn clear_window(&mut self) {
         self.window_items.clear();
         self.features.clear();
+        // `update-attended-loc` (`vision.lisp:1870`): the attended object is
+        // gone, so the visual module re-encodes it and stays busy for
+        // `:visual-attention-latency`. The device timeline reaches that from
+        // `proc_display`, which only sees a clear through `pending_clears`
+        // (the scripted `CLEAR` ops). A client `clear-exp-window` empties the
+        // visicon here, so it has to schedule the re-encode itself — without
+        // it a following production sees `?visual> state free` 85 ms early
+        // and fires at 5.050 instead of 5.135.
+        if let Some(loc) = self.last_attention.clone() {
+            if self.cfg.emma {
+                let end = self.emma_loc_xyz(&loc);
+                self.emma_attention_hook(end);
+            } else {
+                self.visual_busy = true;
+                let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
+                self.push(
+                    at,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::EncodingComplete {
+                        loc,
+                        requested: false,
+                    },
+                );
+            }
+        }
         self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
     }
 

@@ -3408,3 +3408,26 @@ model runs with `(:v nil)`, so the addition model's `!output! (SEVEN)` must not
 appear, and the ref goes straight from the `>>>` echo to the buffer dump. The
 leaked `SEVEN` was also what put the engine's output *first*, ahead of the
 `>>> actr.buffer_chunk('goal','visual')` echo line.
+
+## 216. A client `clear-exp-window` must schedule the attended-location re-encode
+
+`update-attended-loc` (`vision.lisp:1870`) re-encodes the attended object when it
+is gone, and the re-encode holds the visual module busy for
+`:visual-attention-latency` (default 0.085 s, `engine.rs:925`). The scripted
+device timeline reaches that from `proc_display`, which only learns about a
+clear through `pending_clears` — so the `(CLEAR ms)` sidecar ops are loaded into
+`pending_clears` at build time (`engine.rs:2051`) and the wave sets `cleared`.
+
+The RPC `clear-exp-window` instead calls `Engine::clear_window`, which emptied
+the visicon directly and scheduled only a `ProcDisplay`, so `cleared` stayed
+false and the re-encode never happened: the visual module looked free 85 ms too
+early. In `paired-learning-dynamic` that moved `production-fired read` from
+5.135 to 5.050, and every later event inherited the 85 ms offset (the first
+divergence was line 207 of 803).
+
+Note the two paths cannot be unified by pushing a `pending_clear` from
+`clear_window`: `clear_window` empties the visicon *immediately* while
+`add-text-to-exp-window` also adds its features immediately, so a pending clear
+consumed by the next wave would run `self.features.clear()` *after* the add and
+wipe the new text (the model then never places a visual-location at all).
+`clear_window` must therefore schedule the re-encode itself.
