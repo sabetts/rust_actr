@@ -359,14 +359,15 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       ref records a Lisp error. Neither is counted as an engine gap.
       **Audio cluster — narrower than it looked (2026-10-13).** The three audio
       specs do *not* share one mechanism (GOTCHAS #227/#228):
-      - `unstuff-aural` — tones via `new-tone-sound`; the replay + units fixes
-        took its first divergence 5 → 19 → **248** of 448. The rest is the
-        unstuff half of `stuff-sound-buffer` (`audio.lisp:1056`): the erase is
-        armed at each stuff (`offset + decay-time` for `t`, a delay for a
-        number) and its precondition (`aural-location-unstuff-check`) tests only
-        the chunk's `id` — *not* the unmodified copy the stuff test wants. An
-        attempt at it armed the erase against the wrong block, so the state
-        after a modified chunk needs care before retrying.
+      - `unstuff-aural` — **DONE, enabled** (golden 101). The replay + units
+        fixes took it 5 → 19 → 248 → 448 of 448 byte-exact. The last piece was
+        the unstuff half of `stuff-sound-buffer` (`audio.lisp:1056`): armed at
+        each stuff (`offset + :decay-time` for `t`, a delay for a number), its
+        precondition requires an unmodified copy like the stuff test, and
+        `:decay-time` is 3000 ms. Two ACT-R probes of the block settled both —
+        guessing `decay-time` from the ref's first erase (5000) put every
+        later erase in the wrong block, and reading the precondition as
+        `id`-only did the same in the other direction. GOTCHAS #227/#228.
       - `audio-updates` — also creates `new-ongoing-sound`/`end-ongoing-sound`,
         which the engine does not implement; its tones alone cannot finish it.
       - `siegler` — **does not call `new-tone-sound` at all**. Its sounds come

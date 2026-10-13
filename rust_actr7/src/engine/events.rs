@@ -330,6 +330,26 @@ impl Engine {
                 // (`audio.lisp:1056`): `t` unstuffs at `offset + decay-time`, a
                 // number that many ms from now, with the same "still the
                 // unchanged auto-stuffed copy" precondition.
+                // `stuff-sound-buffer` also arms the unstuff
+                // (`audio.lisp:1056`): `t` unstuffs at `offset + decay-time`, a
+                // number that many ms from now. Each stuff arms its own — the
+                // probe shows all four accumulating, and the stale ones failing
+                // their precondition.
+                if let Some(delay) = self.cfg.unstuff_aural {
+                    let at = match delay {
+                        Some(ms) => self.time_ms + ms,
+                        None => s.offset + self.cfg.decay_time_ms,
+                    };
+                    self.push_m(
+                        at,
+                        Prio::Min,
+                        Out::Never,
+                        true,
+                        Event::UnstuffAural {
+                            copy: s.ename.clone(),
+                        },
+                    );
+                }
                 // `find-sound` also schedules the end check at the sound's
                 // `offset` (`audio.lisp:1048`). Only the speech path reached it
                 // before, so a tone never reported `audio-event-ended`.
@@ -438,6 +458,20 @@ impl Engine {
                     }
                 }
                 self.changed();
+            }
+            Event::UnstuffAural { copy } => {
+                // `unstuff-buffer` (`audio.lisp:1056`) with `:output nil`: the
+                // scheduled event prints nothing, only the erase shows.
+                if self.unstuff_aural_valid(&copy) {
+                    self.now(
+                        Prio::Min,
+                        Out::Medium,
+                        Event::EraseBuffer {
+                            buffer: "AURAL-LOCATION".to_string(),
+                            module: "AUDIO".to_string(),
+                        },
+                    );
+                }
             }
             Event::UnstuffVl { copy } => {
                 // `check-unstuff-buffer` (`vision.lisp:1944`): only an

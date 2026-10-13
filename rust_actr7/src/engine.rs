@@ -307,6 +307,15 @@ struct Config {
     /// chunk already stuffed into `AURAL-LOCATION` may be overwritten by a
     /// later sound (`stuff-sound-buffer`, `audio.lisp:716`).
     overstuff_aural: bool,
+    /// `:unstuff-aural-location` (`audio.lisp:1534`, default nil): `None` is
+    /// off, `Some(None)` is `t` (unstuff at `offset + :decay-time`) and
+    /// `Some(Some(ms))` an explicit delay.
+    unstuff_aural: Option<Option<i64>>,
+    /// The audio module's `decay-time`, used by `t` unstuffing. Ground truth
+    /// from an ACT-R probe of `unstuff-aural` block 10: `decay-time 3000`, and
+    /// `audio-event1` stuffed at 50 armed its unstuff at 5100 = `edge (2100)
+    /// + 3000` (`audio.lisp:1062`).
+    decay_time_ms: i64,
     imaginal_delay_ms: i64,
     feat_prep_ms: i64,
     init_ms: i64,
@@ -753,6 +762,17 @@ fn sgp_single(params: &[(String, Sexp)], key: &str) -> Result<Option<f32>, Engin
         Some((_, got)) => Err(bad(format!("{key} must be a number or nil, got {got:?}"))),
     }
 }
+/// `:unstuff-aural-location` from a model body (`audio.lisp:1534`): nil off,
+/// `t` the module's decay time, a number a delay in seconds.
+fn unstuff_aural_from(params: &[(String, Sexp)]) -> Option<Option<i64>> {
+    match params.iter().find(|(k, _)| k == ":UNSTUFF-AURAL-LOCATION") {
+        Some((_, Sexp::Sym(s))) if s == "T" => Some(None),
+        Some((_, Sexp::Int(i))) => Some(Some(*i * 1000)),
+        Some((_, Sexp::Float(x))) => Some(Some((*x * 1000.0).round() as i64)),
+        _ => None,
+    }
+}
+
 fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
     match params.iter().find(|(k, _)| k == key) {
         // `t` (any non-nil symbol) is true; explicit NIL is false.
@@ -967,6 +987,8 @@ impl Config {
             attention_ms: secs_to_ms(":VISUAL-ATTENTION-LATENCY", 0.085)?,
             unstuff_vl_ms,
             overstuff_aural: sgp_bool(&m.params, ":OVERSTUFF-AURAL-LOCATION"),
+            unstuff_aural: unstuff_aural_from(&m.params),
+            decay_time_ms: secs_to_ms(":DECAY-TIME", 3.0)?,
             imaginal_delay_ms: secs_to_ms(":IMAGINAL-DELAY", 0.2)?,
             feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
@@ -1373,6 +1395,11 @@ enum Event {
     /// Vision `unstuff-buffer` (`general-pm.lisp:896`): erase an unused
     /// auto-stuffed visual-location chunk once `new-span` elapses.
     UnstuffVl {
+        copy: String,
+    },
+    /// Audio `unstuff-buffer` (`audio.lisp:1056`): the same for the
+    /// aural-location buffer once `:unstuff-aural-location` elapses.
+    UnstuffAural {
         copy: String,
     },
     /// Run-full-time dummy: keeps the run going to the time limit. Also used
@@ -3272,6 +3299,21 @@ impl Engine {
         buf.chunk.is_none() || (self.cfg.overstuff_aural && !buf.requested && !buf.modified)
     }
 
+    /// `aural-location-unstuff-check` (`audio.lisp:1068`): the aural-location
+    /// buffer still holds this event's chunk, unmodified.
+    ///
+    /// An ACT-R probe of `unstuff-aural`'s blocks settles both halves. With the
+    /// model running, the check is evaluated when the next run starts and
+    /// returns **NIL** (the model's `mod-buffer-chunk` disqualified the copy),
+    /// so those blocks erase nothing; without it, of the four armed unstuffs
+    /// only the ones whose sound is still the buffer's chunk erase — which is
+    /// why the ref shows two erases at `5100` and `10550`, not four.
+    fn unstuff_aural_valid(&self, copy: &str) -> bool {
+        self.buffers.get("AURAL-LOCATION").map_or(false, |b| {
+            !b.modified && b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(copy)
+        })
+    }
+
     /// `skip-unnecessary-events` (`scheduling.lisp:588`): drop the next
     /// queued event while its precondition no longer holds. Only the vision
     /// unstuff event has one, so a run that modified the location stops
@@ -3281,6 +3323,7 @@ impl Engine {
             let stale = match self.queue.peek() {
                 Some(q) => match &q.event {
                     Event::UnstuffVl { copy } => !self.unstuff_valid(copy),
+                    Event::UnstuffAural { copy } => !self.unstuff_aural_valid(copy),
                     _ => false,
                 },
                 None => false,

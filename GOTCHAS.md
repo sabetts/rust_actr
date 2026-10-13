@@ -3753,12 +3753,19 @@ With `:stuffed t` on a non-empty buffer the set becomes an **overwrite**
 `OVERWRITE-BUFFER-CHUNK` rather than `SET-BUFFER-CHUNK`. The engine set the
 buffer unconditionally, so it matched neither block.
 
-Still missing for `unstuff-aural`: the unstuff half. `unstuff-buffer` is armed
-at each stuff (`audio.lisp:1056`) — at `offset + decay-time` for `t`, after a
-delay for a number — and erases the location, but its precondition
-(`aural-location-unstuff-check`, `audio.lisp:1068`) only compares the chunk's
-`id` to the event's name: unlike the *stuff* test it does **not** require an
-unmodified chunk. An attempt that required "unmodified" there armed the erase
-against the wrong block (the trace grew to 518 lines with an erase at 5.100
-where the ref has none), so the state after a modified chunk needs to be
-established before retrying.
+**Done**: the unstuff half. `unstuff-buffer` is armed at each stuff
+(`audio.lisp:1056`) — at `offset + :decay-time` for `t`, after a delay for a
+number — and erases the location. Two constants had to be right, and guessing
+either wrong puts the erases in the wrong blocks:
+
+- `decay-time` is **3000** ms, not the 5000 the first arithmetic suggested. An
+  ACT-R probe of the `unstuff-aural` blocks settled it (`decay-time 3000`, and
+  `audio-event1` stuffed at 50 armed its unstuff at 5100 = `offset 2100 + 3000`).
+- the precondition **does** require an unmodified copy, like the stuff test —
+  the probe shows the check returning NIL when the model has modified the chunk
+  (`(:CHECK 2000 3 (module AURAL-LOCATION NIL) NIL AUDIO-EVENT0)`), so a block
+  where the model runs erases nothing.
+
+With both right, of the four armed unstuffs only the two whose sound is still
+the buffer's chunk erase, at 5100 and 10550 — matching the ref exactly, and
+`unstuff-aural` is byte-exact (448/448, enabled).

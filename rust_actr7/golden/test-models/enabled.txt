@@ -102,5 +102,6 @@ tutorial-unit8-semantic-dynamic-g2-trace
 tutorial-unit8-simple-ppm-model-initial-run
 tutorial-unit8-simple-ppm-model-medium-chosen-run
 tutorial-unit8-simple-ppm-model-ppm-run
+unstuff-aural
 z-threads
 zz-extended-motor-actions

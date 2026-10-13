@@ -618,6 +618,22 @@ impl Engine {
             // sound may overwrite the chunk in `AURAL-LOCATION`
             // (`stuff-sound-buffer`, `audio.lisp:716`).
             ":OVERSTUFF-AURAL-LOCATION" => self.cfg.overstuff_aural = truthy,
+            // `:unstuff-aural-location` (`audio.lisp:1534`): nil off, t the
+            // module's decay time after the sound's offset, a number a delay in
+            // seconds (`safe-seconds->ms`).
+            ":UNSTUFF-AURAL-LOCATION" => {
+                self.cfg.unstuff_aural = match val {
+                    Sexp::Sym(s) if s == "T" => Some(None),
+                    Sexp::Int(i) => Some(Some(i * 1000)),
+                    Sexp::Float(x) => Some(Some((x * 1000.0).round() as i64)),
+                    _ => None,
+                }
+            }
+            ":DECAY-TIME" => {
+                if let Some(secs) = num(val) {
+                    self.cfg.decay_time_ms = (secs * 1000.0).round() as i64;
+                }
+            }
             // `:UTILITY-OFFSETS`, seeds, etc. accepted without an observable
             // effect here (the ppm offset is implicit in `:ppm`).
             _ => {}
