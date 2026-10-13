@@ -502,12 +502,26 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        conflict-resolution. `Session::rebuild_engine_in_place` now carries the
        run across the rebuild.
        All four `bst-*` specs build the display and run into the model's first
-       manual action. The blocker is now the **motor request slot**
+       manual action. The next blocker was the **motor request slot**
        `(:loc <visual-location>)` (`not implemented: manual request slot
-       ("LOC", …)`), which `keypad-test` (`("HAND", RIGHT)`) shares — one
-       motor-module feature, so this cluster is
-       `bst-learn`, `bst-learn-ppm`, `bst-nolearn` (golden + RPC) and
-       `keypad-test`.
+       ("LOC", …)`), which `keypad-test` (`("HAND", RIGHT)`) shares — fixed by
+       ungating the built-in manual commands (GOTCHAS #225/#226), after which
+       `bst-nolearn` matches the ref for 81 lines.
+       **The blocker is now the button feature** (`827480d` + this session,
+       GOTCHAS #229). The productions ask for the buttons as
+       `kind oval, value "b"` / `value "reset"`, but the engine builds a
+       `kind BUTTON` box whose value is the window-item key, plus a separate
+       `kind TEXT` label — so no request can match, the model takes
+       `find-loc-failure`, and the run ends. The `!eval!`/`=over`/`=under`
+       theory was **wrong**: instrumenting the LHS shows the evaluation and the
+       selection are correct (`(< 97 (- 62 25))` → NIL, `(< 62 (- 97 25))` → T,
+       `DECIDE-UNDER` wins the equal-utility tie and is fired). Next: probe
+       ACT-R for the button feature's real `kind`/`value`/case (the GOTCHAS
+       #227/#228 technique), build it that way, re-diff.
+       Caveat on this spec's traces: the trace's `production-fired` line reads
+       `decide-over` where the handler logs `DECIDE-UNDER` for the same firing,
+       and its later times match a *later* trial — settle that bookkeeping
+       before trusting line-by-line diffs here.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
        queue-draining terminator ("no events left to process") is *correct*;
