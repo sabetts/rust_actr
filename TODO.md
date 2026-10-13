@@ -518,10 +518,21 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        `DECIDE-UNDER` wins the equal-utility tie and is fired). Next: probe
        ACT-R for the button feature's real `kind`/`value`/case (the GOTCHAS
        #227/#228 technique), build it that way, re-diff.
-       Caveat on this spec's traces: the trace's `production-fired` line reads
-       `decide-over` where the handler logs `DECIDE-UNDER` for the same firing,
-       and its later times match a *later* trial — settle that bookkeeping
-       before trusting line-by-line diffs here.
+       **Trace bookkeeping — SETTLED** (GOTCHAS #231). The trace's
+       `decide-over`/`DECIDE-UNDER` puzzle was a rebuild bug, not model
+       semantics: `chunk-type` rebuilds the engine in place and a fresh engine
+       clears `out_lines`, so every trial's trace was wiped before its run and
+       only the last survived. `rebuild_engine_in_place` now carries the trace
+       across; it accumulates 150 → 297 → 447 → 594 lines and the first
+       divergence moves 82 → 97.
+       **Next for `bst-*`: the mouse movement's duration.** At 1.375 both fire
+       `move-cursor`; ours frees the manual module at 1.625 (250 ms) and the ref
+       at 1.926 (551 ms), so `click-mouse` fires 300 ms early and everything
+       after drifts. `zz_mouse_request` uses the extended-motor-actions
+       feature-prep model (4 features × 50 ms); ACT-R's `move-cursor` goes
+       through the mouse device and its Fitts/minjerk time. Ours also emits
+       `MOUSE CLICK-MOUSE BST (0 0 1)` / `release-mouse` device lines the ref
+       does not have.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
        queue-draining terminator ("no events left to process") is *correct*;

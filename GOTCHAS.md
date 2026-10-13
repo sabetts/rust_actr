@@ -3826,3 +3826,23 @@ pending), but the `bst` Python driver calls `no-output spp` *between* trials, so
 each call wiped the previous trials' trace. The handler now records the engine's
 `out_len` before the call and truncates back to it afterwards (clamping
 `trace_pos`), which is the stream-binding behaviour.
+
+## 231. An in-place rebuild must keep the trace history
+
+`build_engine` creates a fresh engine, and `Engine::new` clears `out_lines` —
+the construction reset is deliberately not part of the recorded trace
+(`engine.rs:2310`). That is right for a model load but wrong for `chunk-type` /
+`add-dm`, which rebuild *in place* for a definition change; ACT-R's `chunk-type`
+does not touch the trace.
+
+The symptom is subtle: a spec that interleaves a rebuild with its runs keeps only
+the **last** trial's output, because every earlier trial's lines are discarded
+before its run. `bst-nolearn` was compared as 147 lines (one trial) against a
+2484-line ref, and the trial that survived was the one whose decision happened
+to differ from the ref's first — which made the divergence look like a model
+semantics bug (see #229) rather than a bookkeeping one.
+
+`rebuild_engine_in_place` now carries `out_since(0)` across the rebuild. The
+trace accumulates 150 → 297 → 447 → 594 lines and `bst-nolearn`'s first
+divergence moves 82 → 97. Diagnostic: log `out_len()` before/after each run
+step — it read `before=0` for every trial, which is what located it.

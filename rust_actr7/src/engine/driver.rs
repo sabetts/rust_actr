@@ -20,6 +20,12 @@ impl Engine {
         self.out_lines.len()
     }
 
+    /// Replace the trace history (`build_engine` restores it after an
+    /// in-place rebuild, which otherwise starts from an empty engine).
+    pub fn set_out_lines(&mut self, lines: Vec<String>) {
+        self.out_lines = lines;
+    }
+
     /// Drop the trace lines from `len` on (`no-output` binds the output
     /// stream to nothing in ACT-R, so the suppressed command's lines never
     /// exist; this is the equivalent).

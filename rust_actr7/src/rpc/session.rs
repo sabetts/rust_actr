@@ -1330,9 +1330,20 @@ impl Session {
     /// run position across, and re-arm that run.
     fn rebuild_engine_in_place(&mut self) -> Result<(), String> {
         let run = self.engine.as_ref().map(|e| e.device_run()).unwrap_or(0);
+        // The rebuild is for a definition change, not a new model: ACT-R's
+        // `chunk-type` does not clear the trace, and a fresh engine starts with
+        // an empty one. Losing it wiped every earlier trial's output whenever a
+        // spec interleaves a rebuild with its runs (`bst`'s per-trial
+        // `chunk-type`), leaving only the last trial in the compared trace.
+        let trace = self
+            .engine
+            .as_ref()
+            .map(|e| e.out_since(0))
+            .unwrap_or_default();
         self.build_engine()?;
         if let Some(eng) = self.engine.as_mut() {
             eng.set_device_run(run);
+            eng.set_out_lines(trace);
         }
         Ok(())
     }
