@@ -352,6 +352,38 @@ pub(super) fn key_table() -> HashMap<String, KeySpec> {
     ])
 }
 
+/// ACT-R 7's built-in manual command chunk types: the `defStyle`s in
+/// `core-modules/motor.lisp` (`punch`, `peck`, `peck-recoil`, `hold-punch`,
+/// `hold-peck`, `point-finger`, `release`, `hand-to-home`) plus the mouse and
+/// keypad styles the virtual devices use (`move-cursor`, `click-mouse`,
+/// `hold-mouse`, `release-mouse`).
+///
+/// These are **not** experimental. `extended-motor-actions` adds *further*
+/// commands on top (`hold-key`, `type-key`, `prepare`/`execute`,
+/// `delayed-punch`, …), which stay behind that flag — so a request naming one
+/// of these must resolve with or without the extra module installed, or a
+/// plain tutorial model (`bst`'s `move-cursor`, `keypad-test`'s `punch`)
+/// cannot run at all.
+pub(super) const STANDARD_MANUAL_CMDS: &[&str] = &[
+    "PUNCH",
+    "PECK",
+    "PECK-RECOIL",
+    "HOLD-PUNCH",
+    "HOLD-PECK",
+    "POINT-FINGER",
+    "RELEASE",
+    "HAND-TO-HOME",
+    "MOVE-CURSOR",
+    "CLICK-MOUSE",
+    "HOLD-MOUSE",
+    "RELEASE-MOUSE",
+];
+
+/// The slots a built-in style's chunk carries (`defStyle`): the movement
+/// itself (`hand`/`finger`/`r`/`theta`) and, for the cursor styles, the target
+/// location (`loc`).
+pub(super) const STANDARD_MANUAL_SLOTS: &[&str] = &["HAND", "FINGER", "LOC", "R", "THETA"];
+
 /// Keys whose `key->cmd` mapping is a `punch` movement (`other-files/keyboard.lisp`
 /// ASDF row and space): the finger is already home, so no polar geometry is
 /// prepared. Everything else is a `peck-recoil` with hand/finger/r/theta.
@@ -2594,6 +2626,11 @@ impl Engine {
         // `isa press-key key X` (no `cmd`).
         let mut cmd: Option<String> = if ctype.eq_ignore_ascii_case("PRESS-KEY") {
             Some("PRESS-KEY".to_string())
+        } else if STANDARD_MANUAL_CMDS
+            .iter()
+            .any(|c| c.eq_ignore_ascii_case(&ctype))
+        {
+            Some(ctype.to_uppercase())
         } else if self.cfg.touch || self.cfg.zz_ext {
             // act-touch / extended-motor-actions request chunk types carry
             // the command as their type name (`extend-manual-requests-fct`).
@@ -2650,6 +2687,9 @@ impl Engine {
                 ("KEY", Value::Str(k)) => key = Some(k.clone()),
                 ("KEY", Value::Int(i)) => key = Some(i.to_string()),
                 ("KEY", Value::Num(x)) => key = Some(lisp_s_f32(*x as f32)),
+                // A built-in style's own slots (hand/finger/r/theta/loc) are
+                // consumed by its handler below.
+                (s, _) if STANDARD_MANUAL_SLOTS.contains(&s) => {}
                 _ if self.cfg.touch || self.cfg.zz_ext => {}
                 got => {
                     return Err(unimpl(format!("manual request slot {got:?}")));
@@ -2690,11 +2730,10 @@ impl Engine {
                 self.touch_request(&slots)
             }
             (Some(c), None)
-                if self.cfg.zz_ext
-                    && matches!(
-                        c,
-                        "MOVE-CURSOR" | "CLICK-MOUSE" | "HOLD-MOUSE" | "RELEASE-MOUSE"
-                    ) =>
+                if matches!(
+                    c,
+                    "MOVE-CURSOR" | "CLICK-MOUSE" | "HOLD-MOUSE" | "RELEASE-MOUSE"
+                ) =>
             {
                 self.zz_mouse_request(c, &slots)
             }
@@ -2717,17 +2756,17 @@ impl Engine {
                 self.zz_key_cmd(c, &slots)
             }
             (Some(c), _)
-                if self.cfg.zz_ext
-                    && matches!(
-                        c,
-                        "HOLD-PUNCH"
-                            | "HOLD-PECK"
-                            | "PUNCH"
-                            | "PECK"
-                            | "PECK-RECOIL"
-                            | "POINT-FINGER"
-                            | "RELEASE"
-                    ) =>
+                if matches!(
+                    c,
+                    "HOLD-PUNCH"
+                        | "HOLD-PECK"
+                        | "PUNCH"
+                        | "PECK"
+                        | "PECK-RECOIL"
+                        | "POINT-FINGER"
+                        | "RELEASE"
+                        | "HAND-TO-HOME"
+                ) =>
             {
                 self.zz_direct_style(c, &slots)
             }

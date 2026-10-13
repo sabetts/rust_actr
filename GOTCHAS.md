@@ -3667,3 +3667,37 @@ that suppresses the replacement wave.
 
 Effect: all four `bst-*` specs now run the display and reach the model's first
 manual action. The blocker moves to the motor module's `:loc` request slot.
+
+## 225. The manual module's built-in command types are not behind a flag
+
+`core-modules/motor.lisp` defines the base manual styles unconditionally —
+`punch`, `peck`, `peck-recoil`, `hold-punch`, `hold-peck`, `point-finger`,
+`release`, `hand-to-home` — and the virtual devices add `move-cursor`,
+`click-mouse`, `hold-mouse`, `release-mouse`. Only *further* commands come from
+`extended-motor-actions` (`hold-key`, `type-key`, `prepare`/`execute`,
+`delayed-punch`, …); act-touch's `tap`/`swipe`/… are separately gated.
+
+The engine gated the whole set behind `Config::zz_ext`, so a plain tutorial
+model could not move at all: `bst`'s `+manual> isa move-cursor loc
+=visual-location` died with `manual request slot ("LOC", …)` and keypad-test's
+`isa punch hand right finger index` with `("HAND", RIGHT)` — both *standard*
+ACT-R. The base set (types and their `hand`/`finger`/`loc`/`r`/`theta` slots) is
+now ungated; the extra commands stay gated. That is safe by construction: the
+ungated types previously *errored*, so no passing spec can depend on the old
+behaviour.
+
+## 226. One `proc-display` per window build, not one per item
+
+A window op is only a visicon change, and ACT-R recomputes the visicon once per
+cycle: `bst`'s `build-display` calls `add-button`/`add-line` nine times before
+its run and the ref shows **one** `visicon-update`, not nine. The engine queued
+a `ProcDisplay` per op.
+
+Coalesce the *window helpers* at the same time (`Engine::now_display`) — and
+note the wave being executed already counts as that time's wave, so
+`proc_display` marks itself queued before it applies scripted ops. Without that,
+the first item it adds queues a second wave and the run shows two updates at
+t=0, which is exactly the off-by-one `bst` displayed. Do **not** route this
+through `add-visicon-features`/`delete-visicon-features`/`clear-visicon`: the
+device-timeline specs rely on their per-call push, and doing all nine sites
+dropped the golden suite to 98/100.

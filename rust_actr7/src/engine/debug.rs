@@ -1440,6 +1440,22 @@ impl Engine {
         self.clear_window();
     }
 
+    /// Queue a window display wave, **coalescing requests at the same time**.
+    ///
+    /// A window op is only a visicon change, and ACT-R recomputes the visicon
+    /// once per cycle: `bst`'s `build-display` calls `add-button`/
+    /// `add-line` nine times before the run and the ref shows **one**
+    /// `visicon-update`, not nine. The `add-visicon-features` API and the
+    /// scripted driver keep their own per-call push — the device-timeline
+    /// specs depend on it — so this is deliberately the window helpers only.
+    fn now_display(&mut self) {
+        if self.display_queued_ms == Some(self.time_ms) {
+            return;
+        }
+        self.display_queued_ms = Some(self.time_ms);
+        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+    }
+
     /// `clear-exp-window`: drop all live window items and visicon features.
     pub fn clear_window(&mut self) {
         self.window_items.clear();
@@ -1470,7 +1486,7 @@ impl Engine {
                 );
             }
         }
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.now_display();
     }
 
     /// `add-text-to-exp-window`: word features (`build-string-feats`,
@@ -1522,7 +1538,7 @@ impl Engine {
             }
         }
         self.window_items.push((key.clone(), names));
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.now_display();
         key
     }
 
@@ -1555,7 +1571,7 @@ impl Engine {
             finst_ms: None,
         });
         self.window_items.push((key.clone(), vec![name]));
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.now_display();
         key
     }
 
@@ -1622,7 +1638,7 @@ impl Engine {
         });
         if !dropped.is_empty() {
             self.features.retain(|f| !dropped.contains(&f.name));
-            self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+            self.now_display();
         }
     }
 
@@ -1641,7 +1657,7 @@ impl Engine {
             }
             f.tstamp_ms = self.time_ms;
         }
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.now_display();
     }
 }
 

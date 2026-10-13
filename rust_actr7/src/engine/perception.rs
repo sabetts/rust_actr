@@ -401,6 +401,11 @@ impl Engine {
 
     pub(super) fn proc_display(&mut self) -> Result<(), EngineError> {
         let now = self.time_ms;
+        // This *is* the display wave for `now`, so window ops applied inside it
+        // (the scripted buttons/lines below, and the `add-text` a button's
+        // label goes through) must not queue another one — the ref has a single
+        // `visicon-update` for a whole `build-display`.
+        self.display_queued_ms = Some(now);
         // `proc-display` runs `check-finsts` (`vision.lisp:1796`): finsts older
         // than `:visual-finst-span` are dropped before the display is searched.
         self.check_visual_finsts();
