@@ -614,6 +614,10 @@ impl Engine {
                     self.cfg.dat_ms = (x * 1000.0).round() as i64;
                 }
             }
+            // `:overstuff-aural-location` (`audio.lisp:1544`): whether a later
+            // sound may overwrite the chunk in `AURAL-LOCATION`
+            // (`stuff-sound-buffer`, `audio.lisp:716`).
+            ":OVERSTUFF-AURAL-LOCATION" => self.cfg.overstuff_aural = truthy,
             // `:UTILITY-OFFSETS`, seeds, etc. accepted without an observable
             // effect here (the ppm offset is implicit in `:ppm`).
             _ => {}

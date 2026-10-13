@@ -280,22 +280,56 @@ impl Engine {
                 // `stuff-sound-buffer` -> `find-sound … :stuffed t`
                 // (`audio.lisp:716`): set AURAL-LOCATION to the sound's
                 // `audio-event` chunk with `:requested nil`.
+                //
+                // The overwrite test wraps the `find-sound` call, so a sound
+                // that may not stuff also must not consume that call's RNG
+                // draw — check before drawing.
+                if !self.can_stuff_aural() {
+                    return Ok(());
+                }
                 let s = self.sounds[idx].clone();
                 // `find-sound` (`audio.lisp:1031`) picks
                 // `(random-item matching-chunks)`; even a single live tone
                 // consumes one draw, and it lands between the visual finds.
                 let _ = self.rng_draw(1);
                 let chunk = audio_event_chunk(&s);
-                self.now(
-                    Prio::Num(10),
-                    Out::Low,
-                    Event::SetBuffer {
-                        buffer: "AURAL-LOCATION".to_string(),
-                        chunk: NewChunk::Instance(chunk),
-                        requested: false,
-                        shown: None,
-                    },
-                );
+                // `find-sound` with `:stuffed t` and a chunk already in the
+                // buffer *overwrites* it (`schedule-overwrite-buffer-chunk`,
+                // `audio.lisp:1039`); an empty buffer gets a plain set. The two
+                // print different lines, and `unstuff-aural`'s later runs are
+                // all overwrites.
+                let overwrite = self
+                    .buffers
+                    .get("AURAL-LOCATION")
+                    .is_some_and(|b| b.chunk.is_some());
+                if overwrite {
+                    self.now(
+                        Prio::Num(10),
+                        Out::Low,
+                        Event::OverwriteBuffer {
+                            buffer: "AURAL-LOCATION".to_string(),
+                            chunk: NewChunk::Instance(chunk),
+                            requested: false,
+                            shown: None,
+                            module: "AUDIO".to_string(),
+                        },
+                    );
+                } else {
+                    self.now(
+                        Prio::Num(10),
+                        Out::Low,
+                        Event::SetBuffer {
+                            buffer: "AURAL-LOCATION".to_string(),
+                            chunk: NewChunk::Instance(chunk),
+                            requested: false,
+                            shown: None,
+                        },
+                    );
+                }
+                // `stuff-sound-buffer` also arms the unstuff
+                // (`audio.lisp:1056`): `t` unstuffs at `offset + decay-time`, a
+                // number that many ms from now, with the same "still the
+                // unchanged auto-stuffed copy" precondition.
                 // `find-sound` also schedules the end check at the sound's
                 // `offset` (`audio.lisp:1048`). Only the speech path reached it
                 // before, so a tone never reported `audio-event-ended`.

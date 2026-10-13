@@ -303,6 +303,10 @@ struct Config {
     /// `:unstuff-visual-location` (`vision.lisp:3499`): `None` disables the
     /// automatic unstuff; `Some(delay)` is the unstuff delay in ms.
     unstuff_vl_ms: Option<i64>,
+    /// `:overstuff-aural-location` (`audio.lisp:1544`, default nil): whether a
+    /// chunk already stuffed into `AURAL-LOCATION` may be overwritten by a
+    /// later sound (`stuff-sound-buffer`, `audio.lisp:716`).
+    overstuff_aural: bool,
     imaginal_delay_ms: i64,
     feat_prep_ms: i64,
     init_ms: i64,
@@ -962,6 +966,7 @@ impl Config {
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
             attention_ms: secs_to_ms(":VISUAL-ATTENTION-LATENCY", 0.085)?,
             unstuff_vl_ms,
+            overstuff_aural: sgp_bool(&m.params, ":OVERSTUFF-AURAL-LOCATION"),
             imaginal_delay_ms: secs_to_ms(":IMAGINAL-DELAY", 0.2)?,
             feat_prep_ms: secs_to_ms(":MOTOR-FEATURE-PREP-TIME", 0.05)?,
             init_ms: secs_to_ms(":MOTOR-INITIATION-TIME", 0.05)?,
@@ -3249,6 +3254,22 @@ impl Engine {
         self.buffers.get("VISUAL-LOCATION").map_or(false, |b| {
             !b.modified && b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(copy)
         })
+    }
+
+    /// `stuff-sound-buffer`'s test (`audio.lisp:716`): a sound stuffs
+    /// `AURAL-LOCATION` while the buffer is empty, or when overstuff is on and
+    /// the chunk there was auto-stuffed (`unrequested`) and is an **unmodified**
+    /// copy. Both defaults are nil (`audio.lisp:1534`/`:1544`), so a module that
+    /// is not asked to overstuff keeps its first location (`hear-self`,
+    /// `audio-updates`), and `unstuff-aural`'s first block — where the model
+    /// modifies the location — keeps it too. ACT-R's `or`-branch also accepts a
+    /// chunk still `equal-chunks-fct` to the last stuffed event; no ref reaching
+    /// this point needs that disjunct.
+    fn can_stuff_aural(&self) -> bool {
+        let Some(buf) = self.buffers.get("AURAL-LOCATION") else {
+            return true;
+        };
+        buf.chunk.is_none() || (self.cfg.overstuff_aural && !buf.requested && !buf.modified)
     }
 
     /// `skip-unnecessary-events` (`scheduling.lisp:588`): drop the next

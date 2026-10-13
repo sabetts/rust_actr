@@ -3736,3 +3736,29 @@ buffer is empty, or overstuff applies with the buffer unrequested and the chunk
 unmodified/equal to the last stuffed event (`audio.lisp:716`). The engine sets
 it unconditionally, so `unstuff-aural`'s runs 2–4 stuff again (568 lines
 against 448; it matches to line 19, was 5).
+
+## 228. `stuff-sound-buffer` keeps the first location unless asked to overstuff
+
+`stuff-sound-buffer` (`audio.lisp:716`) reaches `find-sound` only while the
+buffer is empty, or the chunk there is safe to overwrite:
+`:overstuff-aural-location` on, the chunk auto-stuffed (`unrequested`) and an
+**unmodified** copy. Both parameters default to nil
+(`audio.lisp:1534`/`:1544`), so a module that is not asked to overstuff keeps
+its first location — `hear-self` and `audio-updates` show one
+`SET-BUFFER-CHUNK AURAL-LOCATION` and nothing after it, and `unstuff-aural`'s
+first block (`overstuff t`, but the model *modifies* the location) keeps it too.
+
+With `:stuffed t` on a non-empty buffer the set becomes an **overwrite**
+(`schedule-overwrite-buffer-chunk`, `audio.lisp:1039`), which prints
+`OVERWRITE-BUFFER-CHUNK` rather than `SET-BUFFER-CHUNK`. The engine set the
+buffer unconditionally, so it matched neither block.
+
+Still missing for `unstuff-aural`: the unstuff half. `unstuff-buffer` is armed
+at each stuff (`audio.lisp:1056`) — at `offset + decay-time` for `t`, after a
+delay for a number — and erases the location, but its precondition
+(`aural-location-unstuff-check`, `audio.lisp:1068`) only compares the chunk's
+`id` to the event's name: unlike the *stuff* test it does **not** require an
+unmodified chunk. An attempt that required "unmodified" there armed the erase
+against the wrong block (the trace grew to 518 lines with an erase at 5.100
+where the ref has none), so the state after a modified chunk needs to be
+established before retrying.
