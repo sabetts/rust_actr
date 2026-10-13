@@ -357,6 +357,25 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       stub-defined Lisp callback `actr.py` cannot supply (the documented
       "no arbitrary Lisp" divergence). Same for `testing-child-slot`, whose
       ref records a Lisp error. Neither is counted as an engine gap.
+      **Audio cluster — narrower than it looked (2026-10-13).** The three audio
+      specs do *not* share one mechanism (GOTCHAS #227/#228):
+      - `unstuff-aural` — tones via `new-tone-sound`; the replay + units fixes
+        took its first divergence 5 → 19 → **248** of 448. The rest is the
+        unstuff half of `stuff-sound-buffer` (`audio.lisp:1056`): the erase is
+        armed at each stuff (`offset + decay-time` for `t`, a delay for a
+        number) and its precondition (`aural-location-unstuff-check`) tests only
+        the chunk's `id` — *not* the unmodified copy the stuff test wants. An
+        attempt at it armed the erase against the wrong block, so the state
+        after a modified chunk needs care before retrying.
+      - `audio-updates` — also creates `new-ongoing-sound`/`end-ongoing-sound`,
+        which the engine does not implement; its tones alone cannot finish it.
+      - `siegler` — **does not call `new-tone-sound` at all**. Its sounds come
+        from another path (its stub installs a speech monitor), and the ref's
+        `AUDIO new-sound` plus a 300 ms aural-location detection looks like the
+        speech/`new-other-sound` route (`hear-self`'s shape). Before counting it
+        as engine work, confirm which call creates its sounds: if it is a Lisp
+        task hook the engine cannot replay, it belongs in the
+        documented-divergence list, not the work list.
       **`adaptive-noise` is also out of scope** (task driver): the model has no
       productions, and the whole ref trace comes from `run-tests`'s periodic
       `module-request`/`merge-dm`/`erase-buffer` driver, which the extractor
