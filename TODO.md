@@ -376,9 +376,10 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `visicon-update`, `Find-location`, `Move-attention`, `Encoding-complete`),
       module verbose output, utility-learning lines, `!output!` gating.
       Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202).
-      **Compiled-production substitution (`:pct`) — algorithm extracted, not
-      yet ported.** The composed production's printed form and the installed
-      production (which the engine parses back from the rendered text) both
+      **Compiled-production substitution (`:pct`) — DONE for the `:ppm`-off
+      path** (`7dfe8f8`, GOTCHAS #213). The composed production's printed form
+      and the installed production (which the engine parses back from the
+      rendered text) both
       come from substituting ACT-R's `mappings` into `p1-s`/`p2-s` **one
       mapping at a time** (`compose-productions`,
       `modules/production-compilation.lisp:1556-1619`), with a **car-rewrite**
@@ -399,6 +400,11 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `render_compiled` (`:1296`) substitutes with **p2's bindings only**
       (so p1's vars stay symbolic, while a naive p1∪p2 merge wrongly resolves
       `=STATE`); `subst` never rewrites slot *names*; no car-rewrite.
+      — all four now fixed by `Engine::compose_mappings` + the sequential
+      apply with the car-rewrite; the `:ppm`-on path (where the map functions
+      build their slot sets from partially-matched specs with extra
+      `buffer-condition-union` instantiating) still uses the raw firings, so
+      `ppm-compilation` is unaffected.
       Probe: patch `compose-productions` to print `mappings` and drive
       `(load-act-r-code "ACT-R:tutorial;lisp;paired.lisp")` +
       `(load-act-r-model "ACT-R:tutorial;unit8;paired-dynamic-model.lisp")` +
@@ -406,7 +412,9 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `do-experiment` undefined). Independent remaining causes in
       `paired-learning-dynamic`: the compiled-production `:utility` equation
       (15 lines) and retrieval-latency drift (`15.571`→vs→`15.570`, then
-      `21.133` vs `20.748`).
+      `21.133` vs `20.748`). The drift is **not** the `exp` precision:
+      matching `exp-coerced` (double `exp`, narrow to single before `round`)
+      changed nothing, so it is a genuine activation difference that grows.
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment).
       **Reusable-buffer naming — DONE** (`d0ee65b`, GOTCHAS #205). The
