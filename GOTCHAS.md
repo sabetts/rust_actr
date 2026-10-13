@@ -3769,3 +3769,34 @@ either wrong puts the erases in the wrong blocks:
 With both right, of the four armed unstuffs only the two whose sound is still
 the buffer's chunk erase, at 5100 and 10550 — matching the ref exactly, and
 `unstuff-aural` is byte-exact (448/448, enabled).
+
+## 229. A window button is an `oval` whose value is its text
+
+`bst`'s productions ask for the on-screen buttons *by feature*:
+`+visual-location> isa visual-location, kind oval, value "b"`
+(`tutorial/unit6/bst-model.lisp`), and for the reset button `value "reset"`. So
+in ACT-R `add-button-to-exp-window` produces one feature whose `kind` is `oval`
+and whose `value` is the button's text. The engine builds two features with
+neither:
+
+```
+FEAT VISUAL-LOCATION0 kind=BUTTON value=BUTTON-VDI-0   ; our box
+FEAT VISUAL-LOCATION1 kind=TEXT   value=A              ; our label
+```
+
+Every such request therefore fails, the model takes `find-loc-failure`, and the
+run ends — which is what stops `bst-nolearn` at 141 trace lines with the first
+81 matching.
+
+The earlier TODO diagnosis (a `!eval!` / `=over`/`=under` difference) was
+wrong. Instrumenting the LHS shows the evaluation and the selection are both
+correct: for trial 1's bindings `(< 97 (- 62 25))` → NIL and
+`(< 62 (- 97 25))` → T, so `DECIDE-UNDER` is in the conflict set, wins the tie
+(all three candidates have equal utility) and *is* fired (`FIRED idx=21
+DECIDE-UNDER`). The trace's `production-fired decide-over` at the same 1.325 is
+a *different trial's* line — its later times (2.143) match trial 2's selection
+times (trial 1's are 2.186) — so the trace-visibility bookkeeping needs settling
+before line-by-line diffs on this spec are trustworthy.
+
+Next: probe ACT-R (as in #227/#228) for the button feature's exact `kind`,
+`value` and case, then build it that way.
