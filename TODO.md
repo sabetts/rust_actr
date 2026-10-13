@@ -474,6 +474,25 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
          `simple-ppm-test` are golden-PASS, so their gap is the *client
          command surface*, not engine semantics; `bst-*`/`fan-no-pm` are
          golden-FAIL too, so work there counts on both tracks.
+       **Vision timing — half of M3 is done** (`0c9d5df`, GOTCHAS #216). The
+       scripted timeline re-encodes the attended location on a clear via
+       `pending_clears`; the client `clear-exp-window` did not, leaving
+       `?visual> state free` true 85 ms (`:visual-attention-latency`) too
+       early. `paired-learning-dynamic` now matches through line 222; its
+       remaining 90 lines are **all** noise-driven `:utility` values plus 1 ms
+       retrieval latencies — i.e. the other half: **RNG draw alignment**.
+       Both paths seed `(1 0)` (so GOTCHAS #214's fix is not the issue here);
+       the RPC driver's extra client calls must consume a different number of
+       draws before the first utility computation. Next probe: instrument
+       `Mt::noise` / `genrand_real2` on both paths and find the first
+       index where the streams differ.
+       **`tutorial_unit2code_initial` needs a second concurrent connection.**
+       Its model deliberately opens a fresh connection with stdout redirected
+       to capture "ACT-R connection has been started." (then stops it and
+       restores the backup). The Rust server serves one connection at a time,
+       so the second attempt times out and the model outputs
+       "failed to connect to act-r with exception (timeout)". This is a server
+       concurrency gap, not a model/output gap.
 - Known divergence: the pipe transport and `define-module`/`undefine-module`
   (client-defined modules) are covered by "no arbitrary Lisp" unless needed.
 
