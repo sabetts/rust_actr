@@ -3356,3 +3356,31 @@ Ground truth (probe `compose-productions` for the mappings), for
 `RETRIEVE-ASSOCIATE & RETRIEVAL-SUCCESSFUL` in pop order: `=DEST -> =OTHER`,
 `=RETRIEVAL -> RETRIEVAL-CHUNK0`, `RETRIEVING-RESULT -> RETRIEVING-RESULT`,
 `=VAL -> "8"`, `=DEST -> NUMBER`, `=STIMULUS -> "xray"`, `=TARGET -> WORD`.
+
+## 214. A stub's `ssp :starting-parameters :seed` is the effective seed
+
+`(ssp :starting-parameters (:seed (S C)))` in a test-model stub is evaluated at
+*load* and re-applied by the central-parameters reset hook
+(`central-parameters.lisp:131,140`), so it — not a model-body `(sgp :seed …)`
+— is the seed a `:run-full-time` actually ran under. The extractor's `w-ssp`
+only records `:drive`-mode calls, and the stub is evaluated in `:load` mode, so
+the seed was silently dropped from the spec: `:RUNS` carried the `(100 0)`
+placeholder and the engine fell back to seeding with it.
+
+That placeholder is **not** a replayable seed. `canon-runs`/`canon-steps`
+substitute `(100 0)` for any run seed that does not match a literal in the
+model/task sources, so applying it puts the engine on `init_genrand(100)`
+while ACT-R is on whatever state the load left. `make-spec` now records the
+stub seed as an `(:SGP :STARTING-PARAMETERS (:SEED (S C)))` step (which the
+engine stores and `reset` re-applies), and the harness no longer applies a
+per-run seed of `(100 0)` — neither in `Engine::new` nor in the
+`:run-full-time` step (whose comment claimed it "is never canonicalized",
+which is not true for the `:STEPS` form).
+
+This is what `paired-learning-dynamic` needed: with the seed in place its
+trace matches byte-exact, including the `:utility` values that had looked like
+a compiled-production utility-equation bug. Diagnosing it needed a
+draw-by-draw comparison — instrumenting `Mt::noise` against a wrapped
+`genrand_real2`/`act-r-noise` showed both sides made the same number of noise
+draws (95) but different values from the first one, i.e. an aligned draw
+schedule over a different generator state.

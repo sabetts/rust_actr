@@ -782,8 +782,12 @@ fn apply_session_step(
             seed,
         } => {
             let eng = session.engine_mut().ok_or_else(no_model)?;
+            // `(100 0)` is the extractor's placeholder for a run seed it could
+            // not match to a literal, so it is not the RNG state ACT-R was in.
             if let Some(s) = seed {
-                eng.set_seed(*s);
+                if *s != (100, 0) {
+                    eng.set_seed(*s);
+                }
             }
             eng.set_module_width(*width);
             eng.set_trace(*trace);

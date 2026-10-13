@@ -358,8 +358,13 @@ pub fn run_model_steps(
                 width,
                 seed,
             } => {
+                // `(100 0)` is the extractor's placeholder for a run seed it
+                // could not match to a literal, so it is not the RNG state
+                // ACT-R was in — applying it would jump the stream.
                 if let Some(s) = seed {
-                    eng.set_seed(*s);
+                    if *s != (100, 0) {
+                        eng.set_seed(*s);
+                    }
                 }
                 eng.set_module_width(*width);
                 eng.set_trace(*trace);

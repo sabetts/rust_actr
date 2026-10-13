@@ -1976,7 +1976,18 @@ impl Engine {
     ) -> Result<Engine, EngineError> {
         let cfg = Config::from_model(&model)?;
         let mut rng = Mt::fresh();
-        rng.set_seed(seed.0, seed.1);
+        // `(100 0)` is the extractor's canonical placeholder for a run seed it
+        // could not match to a literal (`canon-runs`/`canon-steps`); ACT-R in
+        // that case keeps whatever state the load left, which is the Mersenne
+        // Twister default (`init_genrand(5489)`) that `Mt::fresh` lazily
+        // installs. Seeding with it would put the engine on
+        // `init_genrand(100)` instead. A model-body `:seed` is re-applied by
+        // `reset` anyway.
+        match cfg.seed {
+            Some((s, c)) => rng.set_seed(s, c),
+            None if seed != (100, 0) => rng.set_seed(seed.0, seed.1),
+            None => {}
+        }
         let DeviceSetup {
             texts,
             modifies,

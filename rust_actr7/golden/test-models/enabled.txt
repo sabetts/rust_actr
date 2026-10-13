@@ -22,6 +22,7 @@ merging-test
 # One test name per line (matches golden/test-models/specs/<name>.spec).
 paired
 paired-learning
+paired-learning-dynamic
 ppm-compilation
 precondition-test
 remote-bind-test

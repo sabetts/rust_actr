@@ -745,13 +745,25 @@ and `(100 0)` keeps the spec stable across regens."
 (defun make-spec (name scope &key flags error)
   (let* ((models (dedupe-preserve (mapcar #'logical->rel (reverse *models*))))
          (seedvals (all-seed-values name models))
-         (runs (canon-runs (reverse *runs*) seedvals)))
+         (runs (canon-runs (reverse *runs*) seedvals))
+         (steps (reverse *steps*))
+         ;; A stub's `(ssp :starting-parameters (:seed (S C)))` is evaluated at
+         ;; load (before any run) and re-applied by the central-parameters
+         ;; reset hook, so it *is* the effective seed — but `w-ssp` only records
+         ;; `:drive`-mode calls, so it would otherwise be lost and the engine
+         ;; would fall back to the `(100 0)` run-seed placeholder. Record it as
+         ;; a starting-parameters step (`apply-sgp` stores it and `reset`
+         ;; re-applies it, `central-parameters.lisp:131`).
+         (steps (if *starting-seed*
+                    (cons (list :sgp :starting-parameters (list :seed *starting-seed*))
+                          steps)
+                  steps)))
     (list :name name
           :ref (concatenate 'string name ".ref")
           :models models
           :seed-set (if seedvals t nil)
           :runs runs
-          :steps (canon-steps (reverse *steps*) seedvals)
+          :steps (canon-steps steps seedvals)
           :goal-focus *goal-focus-count*
           :resets *reset-count*
           :sgp (reverse *sgp-calls*)
