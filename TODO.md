@@ -470,6 +470,20 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        `add-visicon`/`clear-visicon`, which the device-timeline specs rely on).
        A narrower version — coalesce only the window helpers, and only while no
        display has executed at that time — is the next thing to try.
+       **Device buttons/lines — plumbing in place, display wave still not
+       reaching the trace** (`f2a472f`, GOTCHAS #223). The extractor records
+       `add-button`/`add-line`, the sidecar carries them, the harness parses
+       them (verified: 16 buttons / 22 lines for `bst-nolearn`) and the engine
+       applies due ops through the same helpers the RPC path uses, merged by
+       `at_ms`. The wave is queued and consumed, but the golden bst trace still
+       shows only the initial goal/CR, and instrumenting `proc_display` proved
+       **it never runs** — so the queued `ProcDisplay` is not executing.
+       The anomaly to chase: the run's trace ends with "no events left to
+       process" even though `run_full_time` pushes a hidden `Dummy` at the
+       limit, which should make that impossible — so either the line comes from
+       a different run entry point than the one the steps drive, or the queue is
+       cleared between `schedule_display()` and the loop's first peek. Start
+       there rather than at the visicon.
        Note the golden `bst-learn` spec is *worse* than the RPC model here: its
        run has no vision events at all, because `build-display` reaches the
        engine as `add-button`/`add-line` ops and the extractor's device sidecar
