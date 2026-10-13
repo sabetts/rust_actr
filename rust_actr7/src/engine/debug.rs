@@ -1032,83 +1032,153 @@ impl Engine {
     }
 
     /// The first failing LHS condition's explanation
-    /// (`failure-reason-string`, `procedural.lisp:1981`). The compiled `isa`
-    /// condition is checked first (its `nil`-valued slots report "has the
-    /// slot"), then the remaining slot tests with real binding so `=var`
-    /// reuse reports "does not satisfy the constraints".
+    /// (`failure-reason-string`, `procedural.lisp:1981`).
+    ///
+    /// ACT-R does not test the conditions in source order: the compiled
+    /// lists are walked in category order (`test-production`,
+    /// `procedural.lisp:2201`): the buffer-state masks, then *constants*
+    /// (isa + literal slot tests), then *binds* (`slot =var` in a fixed
+    /// slot, `production-binds`), then *others* (a variable slot name, an
+    /// already-bound variable value, a negation). The reason is the first
+    /// failure in that order. This is why `=goal> =slot state3` can report
+    /// `=slot` resolved to `state`: the later `=imaginal> slot =slot` is a
+    /// `bind-slot` and runs before the `test-var-slot`.
     fn why_not_match(&self, prod: &crate::model::Production) -> String {
         use crate::model::SlotOp;
-        let mut b = Bindings::new();
+
+        #[derive(Clone, Copy, PartialEq)]
+        enum Cat {
+            Constant,
+            Bind,
+            Other,
+        }
+
+        // Classify every test statically. A `slot =var` binding claims the
+        // variable for the *first* clause that uses it (source order,
+        // `unbound-vars`); later uses become tests.
+        let mut bound: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut cats: Vec<Vec<(Cat, usize)>> = Vec::new();
         for item in &prod.lhs {
-            match item {
-                LhsItem::Match { buffer, tests } => {
-                    let chunk = match self.buffers.get(buffer).and_then(|x| x.chunk.as_ref()) {
-                        Some(c) => c,
-                        None => return format!("The {buffer} buffer is empty."),
+            let mut row = Vec::new();
+            if let LhsItem::Match { tests, .. } = item {
+                for (i, t) in tests.iter().enumerate() {
+                    let cat = if t.slot == "ISA" {
+                        Cat::Constant
+                    } else if t.slot.starts_with('=') {
+                        Cat::Other
+                    } else if let (SlotOp::Eq, Pattern::Var(v)) = (&t.op, &t.value) {
+                        if bound.insert(v.clone()) {
+                            Cat::Bind
+                        } else {
+                            Cat::Other
+                        }
+                    } else {
+                        Cat::Constant
                     };
-                    for t in tests {
-                        if let Pattern::Nil = t.value {
-                            if chunk.get(&t.slot) != Value::Nil {
-                                return format!(
-                                    "The chunk in the {buffer} buffer has the slot {}.",
-                                    t.slot
-                                );
+                    row.push((cat, i));
+                }
+            }
+            cats.push(row);
+        }
+
+        // `test-buffer-states` (`procedural.lisp:2201`) runs before any
+        // condition: a required-but-missing buffer reports empty.
+        for item in &prod.lhs {
+            if let LhsItem::Match { buffer, .. } = item {
+                if self
+                    .buffers
+                    .get(buffer)
+                    .and_then(|x| x.chunk.as_ref())
+                    .is_none()
+                {
+                    return format!("The {buffer} buffer is empty.");
+                }
+            }
+        }
+
+        let mut b = Bindings::new();
+        for cat in [Cat::Constant, Cat::Bind, Cat::Other] {
+            for (ci, item) in prod.lhs.iter().enumerate() {
+                match item {
+                    LhsItem::Match { buffer, tests } => {
+                        let chunk = match self.buffers.get(buffer).and_then(|x| x.chunk.as_ref()) {
+                            Some(c) => c,
+                            None => continue,
+                        };
+                        for (c, i) in &cats[ci] {
+                            if *c != cat {
+                                continue;
+                            }
+                            let t = &tests[*i];
+                            if t.slot == "ISA" {
+                                continue;
+                            }
+                            // An `isa` `empty`-slot requirement (a `nil`
+                            // value) is a constant condition.
+                            if let Pattern::Nil = t.value {
+                                if chunk.get(&t.slot) != Value::Nil {
+                                    return format!(
+                                        "The chunk in the {buffer} buffer has the slot {}.",
+                                        t.slot
+                                    );
+                                }
+                                continue;
+                            }
+                            let slot = self.resolve_slot_name(&t.slot, &b);
+                            let got = chunk.get(&slot);
+                            let mut ppm = Vec::new();
+                            let ok = match t.op {
+                                SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
+                                    self.rel_test(t.op, &t.value, &got)
+                                }
+                                SlotOp::Neg => self
+                                    .test_value(&t.value, &got, &mut b, true)
+                                    .unwrap_or(false),
+                                SlotOp::Eq => self
+                                    .match_eq(buffer, &slot, &t.value, &got, &mut b, &mut ppm)
+                                    .unwrap_or(false),
+                            };
+                            if !ok {
+                                // `test-var-slot` (`procedural.lisp:2034`): the
+                                // slot *name* is a variable (`=slot state3`),
+                                // so the reason names the resolved slot and the
+                                // variable.
+                                if t.slot.starts_with('=') {
+                                    return format!(
+                                        "The value in the {slot} slot (the value of the {} variable) of the chunk of the {buffer} buffer does not satisfy the constraints.",
+                                        t.slot
+                                    );
+                                }
+                                return match &t.value {
+                                    Pattern::Nil => {
+                                        format!("The chunk in the {buffer} buffer does not have slot {slot}.")
+                                    }
+                                    Pattern::Var(_) => format!(
+                                        "The value in the {slot} slot of the chunk in the {buffer} buffer does not satisfy the constraints."
+                                    ),
+                                    other => format!(
+                                        "The {slot} slot of the chunk in the {buffer} buffer does not have the value {}.",
+                                        super::compilation::show_pat(other, &Bindings::new())
+                                    ),
+                                };
                             }
                         }
                     }
-                    for t in tests {
-                        if t.slot == "ISA" {
+                    LhsItem::Query { buffer, queries } => {
+                        if cat != Cat::Constant {
                             continue;
                         }
-                        let slot = self.resolve_slot_name(&t.slot, &b);
-                        let got = chunk.get(&slot);
-                        let mut ppm = Vec::new();
-                        let ok = match t.op {
-                            SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
-                                self.rel_test(t.op, &t.value, &got)
-                            }
-                            SlotOp::Neg => self
-                                .test_value(&t.value, &got, &mut b, true)
-                                .unwrap_or(false),
-                            SlotOp::Eq => self
-                                .match_eq(buffer, &slot, &t.value, &got, &mut b, &mut ppm)
-                                .unwrap_or(false),
-                        };
-                        if !ok {
-                            // `test-var-slot` (`procedural.lisp:2034`): the
-                            // slot *name* is a variable (`=slot state3`), so
-                            // the reason names the resolved slot and the
-                            // variable.
-                            if t.slot.starts_with('=') {
+                        for (attr, val) in queries {
+                            let v = super::compilation::show_pat(val, &Bindings::new());
+                            if !self.query_holds(buffer, attr, val) {
                                 return format!(
-                                    "The value in the {slot} slot (the value of the {} variable) of the chunk of the {buffer} buffer does not satisfy the constraints.",
-                                    t.slot
+                                    "The {attr} {v} query of the {buffer} buffer failed."
                                 );
                             }
-                            return match &t.value {
-                                Pattern::Nil => {
-                                    format!("The chunk in the {buffer} buffer does not have slot {slot}.")
-                                }
-                                Pattern::Var(_) => format!(
-                                    "The value in the {slot} slot of the chunk in the {buffer} buffer does not satisfy the constraints."
-                                ),
-                                other => format!(
-                                    "The {slot} slot of the chunk in the {buffer} buffer does not have the value {}.",
-                                    super::compilation::show_pat(other, &Bindings::new())
-                                ),
-                            };
                         }
                     }
+                    _ => {}
                 }
-                LhsItem::Query { buffer, queries } => {
-                    for (attr, val) in queries {
-                        let v = super::compilation::show_pat(val, &Bindings::new());
-                        if !self.query_holds(buffer, attr, val) {
-                            return format!("The {attr} {v} query of the {buffer} buffer failed.");
-                        }
-                    }
-                }
-                _ => {}
             }
         }
         "The production did not match.".to_string()
