@@ -197,6 +197,45 @@ pub(super) fn instantiate_var(name: &str, b: &Bindings) -> Option<String> {
     b.get(name).map(|v| v.show())
 }
 
+/// Look up a variable's bound text. A slot variable is stored under its bare
+/// name (`TARGET`); a buffer variable under its `=`-prefixed form
+/// (`=RETRIEVAL`), so `name` is tried both ways.
+pub(super) fn bound_text(name: &str, b: &Bindings) -> Option<String> {
+    let (bare, prefixed) = match name.strip_prefix('=') {
+        Some(v) => (v, Some(name)),
+        None => (name, None),
+    };
+    b.get(bare)
+        .or_else(|| prefixed.and_then(|p| b.get(p)))
+        .map(|v| v.show())
+}
+
+/// `constant-value-p` (`modules/production-compilation.lisp:2336`): a slot
+/// value is a constant unless it is a `=variable` that is not one of the
+/// model's buffer variables. A chunk name *is* a constant here, which is what
+/// puts `=RETRIEVAL -> RETRIEVAL-CHUNK0` in the mapping sort's key-1 group.
+pub(super) fn constant_value(v: &SlotVal) -> bool {
+    match v {
+        SlotVal::Var(n) => is_buffer_name(n),
+        SlotVal::Lit(_) => true,
+    }
+}
+
+/// `instantiate-slot-names` (`modules/production-compilation.lisp:1511`): a
+/// slot whose *name* is a `=variable` takes the variable's bound text.
+pub(super) fn instantiate_slot_names(
+    slots: &[(String, SlotVal)],
+    b: &Bindings,
+) -> Vec<(String, SlotVal)> {
+    slots
+        .iter()
+        .map(|(n, v)| match bound_text(n, b) {
+            Some(t) => (t, v.clone()),
+            None => (n.clone(), v.clone()),
+        })
+        .collect()
+}
+
 /// A canonical production comparison rep (`production-comparison-rep`,
 /// `production-compilation.lisp:2044`): LHS/RHS tokens with their slots,
 /// tokens and slots sorted. Null `=buffer>` modifies are dropped (ACT-R's

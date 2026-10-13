@@ -3321,3 +3321,38 @@ this event (`aural-location-update-check`). So a sound whose offset falls
 the stuffing emits `MOD-BUFFER-CHUNK AURAL-LOCATION`. `hear-self`'s fourth
 run shows both sides: the speak sound (offset 0.500, stuffed 0.550) is
 silent, the subvocalize sound (offset 1.100, stuffed 1.050) is not.
+
+## 213. Composed productions substitute ACT-R's `mappings`, not the firings
+
+A `:pct` composed production is printed — and, because the engine parses the
+rendered text back, *installed* — by substituting `compose-productions`'
+`mappings` (`modules/production-compilation.lisp:1556`), not by instantiating
+every variable the two firings bound. Three consequences:
+
+- A variable that is **bound but never mapped stays `=VAR`**: `paired-learning-
+  dynamic`'s `POST =STATE` keeps its variable although `state` is bound to
+  `RECALLED`. Any "merge p1∪p2 bindings" shortcut is therefore wrong.
+- The mappings are applied **one at a time**, and after each one every
+  still-queued entry whose car equals the applied entry's car has its car
+  rewritten to that entry's cdr (`(dolist (x mappings) (when (eq (car x) (car
+  mapping)) (replace … (cons (cdr mapping) (cdr x)))))`). That is how the
+  inert-looking `(=DEST . =OTHER)` plus a later `(=DEST . NUMBER)` resolve
+  `=OTHER` to `NUMBER`.
+- `constant-value-p` (`:2336`) is true unless the value is a `=variable` that
+  is *not* a buffer name — so `=RETRIEVAL -> RETRIEVAL-CHUNK0` sorts as a
+  *non*-constant cdr (key 0), ahead of the constant/symbol pairs. The sort
+  order is load-bearing: the cascade above only fires when the var-to-var entry
+  precedes the var-to-constant one.
+
+`mappings` itself is the union of each used buffer's `MAP-*` function. The
+engine ports `MAP-RETRIEVAL-BUFFER` (`tools/retrieval-compilation.lisp:71`)
+and the `MAP-GOAL-BUFFER` RHS `=` to LHS `=` case
+(`tools/goal-compilation.lisp:216`), and only when `:ppm` is **off**: with
+`:ppm` the same functions build their slot sets from partially-matched specs
+with extra `buffer-condition-union` instantiating, so `ppm-compilation`
+(`(sgp :ppm 1.0)`) keeps using the raw firing bindings for its trace.
+
+Ground truth (probe `compose-productions` for the mappings), for
+`RETRIEVE-ASSOCIATE & RETRIEVAL-SUCCESSFUL` in pop order: `=DEST -> =OTHER`,
+`=RETRIEVAL -> RETRIEVAL-CHUNK0`, `RETRIEVING-RESULT -> RETRIEVING-RESULT`,
+`=VAL -> "8"`, `=DEST -> NUMBER`, `=STIMULUS -> "xray"`, `=TARGET -> WORD`.
