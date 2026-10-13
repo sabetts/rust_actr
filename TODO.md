@@ -325,11 +325,12 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `simple-dynamic-model` is `IMAGINAL-CHUNK0` while `act-touch`/
       `merging-test` are `CHUNK{n}` (`d0ee65b`, GOTCHAS #205), and a merge
       renames references to the merged buffer chunk (`9a413cd`, GOTCHAS #206),
-      and chunk slots print in model-wide slot order (`8436c08`,
-      GOTCHAS #207). Flips `simple-dynamic-model`,
-      `tutorial-unit5modeling-v9-p7-8-run`, `tutorial-unit5-fan-lawyer-store-trace`
-      and `tutorial-unit5modeling-v8-p6-run-retrieved-chunk` —
-      **96 pass / 39 fail**.
+      chunk slots print in model-wide slot order (`8436c08`, GOTCHAS #207),
+      and a non-numeric `:reward` clears the utility-learning history
+      (`aab5f28`, GOTCHAS #208). Flips `simple-dynamic-model`,
+      `tutorial-unit5modeling-v9-p7-8-run`, `tutorial-unit5-fan-lawyer-store-trace`,
+      `tutorial-unit5modeling-v8-p6-run-retrieved-chunk` and
+      `tutorial-unit7modeling-ul-issues-v2-first-run` — **97 pass / 38 fail**.
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
