@@ -724,10 +724,12 @@ impl Engine {
                     if slots.is_empty() {
                         continue;
                     }
-                    // A `=buffer>` modify stores chunk-valued refs by
-                    // reference unless the ref is an unnamed spec chunk
-                    // (`paired-2x2`), matching `instantiate-chunk-spec`.
-                    let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
+                    // A `=buffer>` modify stores a chunk-valued `=buffer`
+                    // ref by *reference* (the bound chunk name), not a copy
+                    // (`bind-buffer`; `merging-test`'s `=goal> value
+                    // =imaginal` keeps `CHUNK0` so the merge alias to `B`
+                    // applies). Only request specs copy (`instantiate-chunk-spec`).
+                    let copy = false;
                     let mut sub = Vec::new();
                     let mut dyn_slots = Vec::new();
                     for (s, p) in slots {
@@ -759,7 +761,7 @@ impl Engine {
                     if slots.is_empty() {
                         continue;
                     }
-                    let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
+                    let copy = false;
                     let mut sub = Vec::new();
                     let mut dyn_slots = Vec::new();
                     for (s, p) in slots {

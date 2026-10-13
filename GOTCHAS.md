@@ -3155,3 +3155,33 @@ recorded as a sidecar command, but the sound *object* is not — so the
 engine replays the notification without the `stuff-sound-buffer` event that
 follows at `onset + tone-detect-delay`. Recording `new-tone-sound` as a
 replayed step would fix it.
+
+## 205. A production that names `=buffer` makes that buffer non-reusable
+
+Which name a buffer's chunk gets is decided per *model*, not per set. Two
+rules combine:
+
+- Every non-`multi` buffer starts reusable (`framework/model.lisp:499`), so
+  `set-buffer-chunk` names its chunk once and reuses it: `{BUFFER}-CHUNK{n}`
+  via `new-name-fct` (`framework/buffers.lisp:1351`, `reuse-chunk`). The
+  name persists across `clear-buffer` for the whole run.
+- But a production that mentions the buffer's **variable** (`=imaginal`)
+  anywhere in its LHS or RHS calls `buffer-requires-copies` for it
+  (`support/production-parsing.lisp:482-488`), which clears `reuse?`; every
+  set then makes a fresh `CHUNK{n}` (global `CHUNK` counter).
+
+That is the whole difference between the two `simple-*`/`act-touch` shapes:
+`simple-dynamic-model` never names `=imaginal`, so its chunk is
+`IMAGINAL-CHUNK0`; `act-touch` (`+manual> … loc =imaginal`) and
+`merging-test` (`=goal> value =imaginal`) do, so theirs are `CHUNK{n}`. The
+engine computes this set in `Model::no_reuse_buffers` at load
+(`var_referenced_buffers`) and names at set time; the old
+`rhs.rs` heuristic (`{v}-CHUNK0` for GOAL/IMAGINAL, `CHUNK{n}` otherwise)
+was only right by accident.
+
+Related: an unbound `=buffer` reference on an RHS is `bind-buffer`'s binding
+of the buffer's chunk *name* (`core-modules/procedural.lisp:534`). A
+**modify** (`=goal> value =imaginal`) stores that name by reference — no copy
+— so a later merge of the imaginal chunk into DM can alias the name to the
+DM chunk (`merging-test`'s `value B`). Only a **request** spec copies a
+chunk-valued reference (`instantiate-chunk-spec`, GOTCHA #41).

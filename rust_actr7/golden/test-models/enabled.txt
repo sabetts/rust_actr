@@ -28,6 +28,7 @@ retain-indirect-retrievals
 retrieval-request-parameters
 semantic
 semantic-dynamic
+simple-dynamic-model
 simple-ppm-test
 sji-merge
 test-bad-productions

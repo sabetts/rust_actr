@@ -535,6 +535,90 @@ fn is_var(s: &Sexp) -> bool {
     s.as_sym().map(is_var_sym).unwrap_or(false)
 }
 
+/// Normalize a variable reference to a comparison key: strip the leading `=`
+/// (`Pattern::Var` stores without it, `find_variables` with it) and upper-case.
+fn var_key(s: &str) -> String {
+    s.trim_start_matches('=').to_uppercase()
+}
+
+/// The buffers a production makes *non-reusable*: if the buffer's variable
+/// (`=buffer`) appears anywhere in the production's LHS or RHS, ACT-R calls
+/// `buffer-requires-copies` for that buffer
+/// (`support/production-parsing.lisp:482-488`), so every set into it creates a
+/// fresh `CHUNK{n}` instead of reusing `{BUFFER}-CHUNK0`.
+///
+/// That is why `simple-dynamic-model`'s imaginal chunk is `IMAGINAL-CHUNK0`
+/// (no production names `=imaginal`) while `act-touch`'s and
+/// `merging-test`'s are `CHUNK{n}` (`loc =imaginal`, `value =imaginal`).
+pub fn var_referenced_buffers(p: &Production) -> Vec<String> {
+    let mut vars: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let add = |pat: &Pattern, vars: &mut std::collections::HashSet<String>| {
+        if let Pattern::Var(x) = pat {
+            vars.insert(var_key(x));
+        }
+    };
+    for item in &p.lhs {
+        match item {
+            LhsItem::Match { tests, .. } => {
+                for t in tests {
+                    add(&t.value, &mut vars);
+                }
+            }
+            LhsItem::Query { queries, .. } => {
+                for (_, v) in queries {
+                    add(v, &mut vars);
+                }
+            }
+            LhsItem::Eval { value, .. } | LhsItem::Bind { value, .. } | LhsItem::MvBind { value, .. } => {
+                for v in find_variables(value) {
+                    vars.insert(var_key(&v));
+                }
+            }
+        }
+    }
+    for a in &p.rhs {
+        match a {
+            RhsAction::Modify { slots, .. } | RhsAction::ModifyRequest { slots, .. } => {
+                for (_, v) in slots {
+                    add(v, &mut vars);
+                }
+            }
+            RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => {
+                if let ChunkDesc::Spec { slots, neg, rels, .. } = spec {
+                    for (_, v) in slots.iter().chain(neg.iter()) {
+                        add(v, &mut vars);
+                    }
+                    for (_, v, _) in rels {
+                        add(v, &mut vars);
+                    }
+                }
+            }
+            RhsAction::Output { args } | RhsAction::Other { args, .. } => {
+                for x in args {
+                    for v in find_variables(x) {
+                        vars.insert(var_key(&v));
+                    }
+                }
+            }
+            RhsAction::Eval { value, .. } | RhsAction::Bind { value, .. } | RhsAction::MvBind { value, .. } => {
+                for v in find_variables(value) {
+                    vars.insert(var_key(&v));
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    for item in &p.lhs {
+        if let LhsItem::Match { buffer, .. } = item {
+            if vars.contains(&var_key(buffer)) && !out.contains(buffer) {
+                out.push(buffer.clone());
+            }
+        }
+    }
+    out
+}
+
 /// `find-variables` (production-parsing.lisp:1831).
 fn find_variables(s: &Sexp) -> Vec<String> {
     match s {
@@ -2151,6 +2235,16 @@ fn parse_model(
                         c.slots.push((s.clone(), p.clone()));
                     }
                 }
+            }
+        }
+    }
+    // A production that names a buffer's variable (`=buffer`) anywhere makes
+    // that buffer non-reusable (`support/production-parsing.lisp:482`), on top
+    // of any model-body `(buffer-requires-copies …)`.
+    for p in &model.productions {
+        for b in var_referenced_buffers(p) {
+            if !model.no_reuse_buffers.contains(&b) {
+                model.no_reuse_buffers.push(b);
             }
         }
     }

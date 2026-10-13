@@ -18,17 +18,30 @@ impl Engine {
                 // `CHUNK{k}` (`buffers.lisp:1360`); the trace still prints the
                 // spec/chunk-def, so capture it before naming.
                 let text = shown.unwrap_or_else(|| inst.show());
-                if inst.name.is_none() && self.model.no_reuse_buffers.iter().any(|b| b == &buffer) {
-                    let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
-                    self.name_count.insert("CHUNK".to_string(), n + 1);
-                    inst.name = Some(format!("CHUNK{n}"));
-                }
-                // The goal buffer is reusable, so its chunk is named
-                // `(new-name-fct "GOAL-chunk")` (`framework/buffers.lisp:1351`).
-                if inst.name.is_none() && buffer == "GOAL" {
-                    let n = *self.name_count.entry("GOAL-CHUNK".to_string()).or_insert(0);
-                    self.name_count.insert("GOAL-CHUNK".to_string(), n + 1);
-                    inst.name = Some(format!("GOAL-CHUNK{n}"));
+                if inst.name.is_none() {
+                    if self.model.no_reuse_buffers.iter().any(|b| b == &buffer) {
+                        // `buffer-requires-copies`: each set makes a fresh
+                        // chunk auto-named `CHUNK{k}` (`buffers.lisp:1360`).
+                        let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
+                        self.name_count.insert("CHUNK".to_string(), n + 1);
+                        inst.name = Some(format!("CHUNK{n}"));
+                    } else {
+                        // A reusable buffer names its chunk once and reuses it
+                        // (`act-r-buffer-reuse-chunk`, `buffers.lisp:1351`):
+                        // `{BUFFER}-CHUNK{n}` via `new-name-fct`.
+                        let base = format!("{buffer}-CHUNK");
+                        let name = match self.buffer_reuse.get(&buffer).cloned() {
+                            Some(n) => n,
+                            None => {
+                                let n = *self.name_count.entry(base.clone()).or_insert(0);
+                                self.name_count.insert(base.clone(), n + 1);
+                                let name = format!("{base}{n}");
+                                self.buffer_reuse.insert(buffer.clone(), name.clone());
+                                name
+                            }
+                        };
+                        inst.name = Some(name);
+                    }
                 }
                 if show {
                     let mut details = format!("SET-BUFFER-CHUNK {buffer} {text}");

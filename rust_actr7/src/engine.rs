@@ -1677,6 +1677,10 @@ pub struct Engine {
     tone_seq: u64,
     /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
     name_count: HashMap<String, u64>,
+    /// A reusable buffer's chunk name (`act-r-buffer-reuse-chunk`,
+    /// `framework/buffers.lisp:1351`): assigned once per run and reused, so
+    /// every set into the buffer keeps the same `{BUFFER}-CHUNK{n}` name.
+    buffer_reuse: HashMap<String, String>,
     /// SET-copy name -> feature index, resolving copies back for
     /// attention and encoding.
     vl_copies: HashMap<String, usize>,
@@ -1981,6 +1985,7 @@ impl Engine {
             sounds: Vec::new(),
             tone_seq: 0,
             name_count: HashMap::new(),
+            buffer_reuse: HashMap::new(),
             vl_copies: HashMap::new(),
             vl_copied_from: HashMap::new(),
             obj_built: HashMap::new(),
@@ -2400,6 +2405,7 @@ impl Engine {
             self.push(s.at_ms, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
         }
         self.name_count.clear();
+        self.buffer_reuse.clear();
         self.vl_copies.clear();
         self.vl_copied_from.clear();
         self.vl_xy.clear();

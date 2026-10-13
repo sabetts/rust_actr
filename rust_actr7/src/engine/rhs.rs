@@ -188,19 +188,28 @@ impl Engine {
                 }
             }
         }
-        // A non-copy `=buffer` reference to an unnamed spec chunk: the
-        // module names it (`CHUNK{n}`, `new-name-fct`) so it can be
-        // referenced (`=imaginal` in act-touch).
+        // An unbound `=buffer` reference resolves to the chunk in that buffer
+        // (`bind-buffer`, `procedural.lisp:534`): a modify stores that
+        // reference by *name* — the module has already named the chunk
+        // (`CHUNK{n}` for a `buffer-requires-copies` buffer,
+        // `{BUFFER}-CHUNK0` otherwise).
         if !copy {
             if let Pattern::Var(v) = p {
                 if !b.contains_key(v) {
-                    let unnamed = self
+                    let existing = self
                         .buffers
                         .get(v)
                         .and_then(|buf| buf.chunk.as_ref())
-                        .map(|c| c.name.is_none())
+                        .and_then(|c| c.name.clone());
+                    if let Some(name) = existing {
+                        return Ok(Value::Sym(name));
+                    }
+                    let has_chunk = self
+                        .buffers
+                        .get(v)
+                        .map(|buf| buf.chunk.is_some())
                         .unwrap_or(false);
-                    if unnamed {
+                    if has_chunk {
                         let n = *self.name_count.entry("CHUNK".to_string()).or_insert(0);
                         self.name_count.insert("CHUNK".to_string(), n + 1);
                         let name = format!("CHUNK{n}");
