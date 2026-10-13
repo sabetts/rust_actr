@@ -1104,20 +1104,20 @@ impl Session {
         }
         self.system_params.insert(key.to_string(), val.clone());
         if key == ":STARTING-PARAMETERS" {
-            if let Json::Arr(items) = &val {
-                for pair in items.chunks(2) {
-                    let Some(k) = pair.first().and_then(|j| j.as_str()) else {
-                        continue;
-                    };
-                    if k.eq_ignore_ascii_case(":testing-function") {
-                        continue;
-                    }
-                    let v = pair.get(1).cloned().unwrap_or(Json::Null);
-                    let sexp = json_to_sexp(&v);
-                    if let Some(eng) = &mut self.engine {
-                        let _ = eng.apply_sgp(k, &sexp);
-                    }
-                }
+            // Route the whole list through the engine's own handler instead of
+            // applying each pair here. Only that path records the entries in
+            // `starting_params`, which is what makes `reset` re-apply them
+            // (`central-parameters.lisp:131`). Applying them pair-by-pair set
+            // e.g. `:seed` once at load and then lost it at every reset —
+            // `paired-learning` needs the seed re-applied at the task boundary
+            // so its RNG stream restarts where ACT-R's does.
+            //
+            // `:testing-function` names a client-owned command; `apply_sgp` has
+            // no arm for it, so it is stored and re-applied as a no-op (the
+            // reset hook invokes it separately, GOTCHAS #219).
+            if let Some(eng) = &mut self.engine {
+                let sexp = json_to_sexp(&val);
+                let _ = eng.apply_sgp(":starting-parameters", &sexp);
             }
         }
     }

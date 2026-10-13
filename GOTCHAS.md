@@ -3523,3 +3523,30 @@ Other callback sites (monitors, remote commands invoked outside reset) are still
 called from inside `evaluate` and have the same latent deadlock. The general fix
 is the same shape — run callbacks with the borrow released, i.e. an effect
 queue rather than a nested call — but only the reset hook is exercised so far.
+
+## 220. `:starting-parameters` must go through the engine, not pair-by-pair
+
+`(ssp :starting-parameters (:key val …))` is special: `Engine::apply_sgp` has an
+arm for the `:STARTING-PARAMETERS` *key* which both applies each nested parameter
+and records it in `starting_params`, so `reset` re-applies the whole set
+(`central-parameters.lisp:131`).
+
+The RPC `set_system-parameter` handler skipped that arm and walked the client's
+list itself, calling `apply_sgp(k, v)` per pair. The parameters therefore took
+effect once, at the moment the client set them, and were **forgotten**: nothing
+recorded them, so no `reset` ever re-applied them. (It also had to skip
+`:testing-function` by hand, a symptom of doing the engine's job outside it.)
+
+`paired-learning` is what that costs. Its driver runs two tasks back to back
+(`paired.task(2,2)` then `paired.task(1,10)`) and each `do_experiment` calls
+`actr.reset()`. ACT-R re-applies `(:seed (1 0))` at each of those resets, so the
+second task's random stream *restarts* — visible as a backwards jump in the
+`noise` draw positions (stream index 112 → 3) in the reference run. With the
+parameters forgotten there was no re-seed, the stream ran straight on, and the
+second task diverged.
+
+Diagnosis that pinned it, in order: map each logged `noise` value back to its
+index in `init_genrand(1)` and diff the index sequences (only the golden path
+jumps backwards); then log `cfg.seed` at the reset's seed point — which showed
+the three load-time resets seeding `(200 4)` from unit4's model body and the two
+task resets seeding nothing at all.
