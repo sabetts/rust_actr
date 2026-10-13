@@ -132,26 +132,29 @@ impl Engine {
                 self.vocal_busy = false;
                 self.changed();
             }
-            Event::Speak { text } => {
-                self.emit("SPEECH", format!("SPEAK TEXT {text}"));
+            Event::Speak { style, text } => {
+                self.emit("SPEECH", format!("{} TEXT {text}", style.trace()));
                 self.vocal_busy = true;
-                // `speak` preparation (`speech.lisp:278`/`291`): 3 features
-                // for a fresh style, else 0 for the same text, 2 otherwise.
-                let feats = match self.last_speak.as_deref() {
+                // `compute-prep-time` (`general-pm.lisp:670`): a fresh module
+                // or a different style name preps all `num-to-prepare`
+                // features (3, `speech.lisp:278`); the same style preps only
+                // `feat-differences` (0 for the same text, else 2).
+                let feats = match &self.last_speech {
                     None => 3,
-                    Some(prev) if prev.eq_ignore_ascii_case(&text) => 0,
+                    Some((prev, _)) if *prev != style => 3,
+                    Some((_, prev)) if prev.eq_ignore_ascii_case(&text) => 0,
                     Some(_) => 2,
                 };
-                self.last_speak = Some(text.clone());
+                self.last_speech = Some((style, text.clone()));
                 let prep = feats * self.cfg.feat_prep_ms;
                 self.push(
                     self.time_ms + prep,
                     Prio::Num(0),
                     Out::Always,
-                    Event::SpeechPrep { text },
+                    Event::SpeechPrep { style, text },
                 );
             }
-            Event::SpeechPrep { text } => {
+            Event::SpeechPrep { style, text } => {
                 // `perform-movement`: initiation-complete at init-time, then
                 // finish at exec + articulation (`speech.lisp:281`/`285`).
                 // The hear-self sound onset equals the exec time.
@@ -160,17 +163,31 @@ impl Engine {
                     .max(150.0 * text.chars().count() as f32 / 3.0)
                     .round() as i64;
                 let finish = init + art;
+                // `queue-output-events` (`speech.lisp:294`/`:314`) creates the
+                // sound — when `:hear-self` admits this style — *before*
+                // scheduling the device notification, so `new-sound` precedes
+                // the `SPEAK <text>` line at the same instant.
+                if self.cfg.hear_self.hears(style) {
+                    let evt = self.audio_events;
+                    self.audio_events += 1;
+                    self.push(
+                        self.time_ms + init,
+                        Prio::Num(0),
+                        Out::Medium,
+                        Event::NewSound {
+                            evt,
+                            offset: self.time_ms + init + art,
+                        },
+                    );
+                }
                 self.push(
                     self.time_ms + init,
                     Prio::Num(0),
                     Out::Always,
-                    Event::SpeechInit,
-                );
-                self.push(
-                    self.time_ms + init,
-                    Prio::Num(0),
-                    Out::Medium,
-                    Event::NewSound,
+                    Event::SpeechInit {
+                        style,
+                        text: text.clone(),
+                    },
                 );
                 self.push(
                     self.time_ms + finish,
@@ -179,30 +196,58 @@ impl Engine {
                     Event::VocalFree,
                 );
             }
-            Event::SpeechInit => {}
-            Event::NewSound => {
+            Event::SpeechInit { style, text } => {
+                // `notify-speech-device` (`speech.lisp:267`): with no speech
+                // device installed, a `speak` start schedules
+                // `default-speech-action` at `:output medium`, whose details
+                // render as `SPEAK <text>`. With a device the module notifies
+                // it instead (no trace), and `subvocalize` only notifies when
+                // `:notify-subvocalize` is on (off by default).
+                if style == SpeechStyle::Speak
+                    && !self.speech_device
+                    && self.cfg.detail.shows(Out::Medium)
+                {
+                    self.emit("SPEECH", format!("{} {text}", style.trace()));
+                }
+            }
+            Event::NewSound { evt, offset } => {
                 if show {
                     self.emit("AUDIO", "new-sound".to_string());
                 }
                 // `stuff-sound-buffer` only sets AURAL-LOCATION while the
                 // buffer is empty (`audio.lisp:716`); later sounds leave the
                 // first location in place. Aural detection/recode delay.
-                if self.audio_events == 0 {
+                if self.aural_loc_evt.is_none() {
                     self.push(
                         self.time_ms + 300,
                         Prio::Num(0),
                         Out::Medium,
-                        Event::AuralLocation,
+                        Event::AuralLocation { evt },
                     );
                 }
-            }
-            Event::AuralLocation => {
-                let n = self.audio_events;
-                self.audio_events += 1;
-                self.emit(
-                    "AUDIO",
-                    format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{n} NIL"),
+                // `find-sound` (`audio.lisp:1045`): a word/tone event whose
+                // chunk has no `offset`/`duration` schedules
+                // `audio-event-ended` at the sound's offset.
+                self.push_m(
+                    offset,
+                    Prio::Num(0),
+                    Out::Always,
+                    false,
+                    Event::AudioEventEnded { evt },
                 );
+            }
+            Event::AuralLocation { evt } => {
+                self.aural_loc_evt = Some(evt);
+                self.emit("AUDIO", format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{evt} NIL"));
+            }
+            Event::AudioEventEnded { evt } => {
+                // `audio-event-ended` (`audio.lisp:1077`) fires only while the
+                // `AURAL-LOCATION` buffer still holds this event
+                // (`aural-location-update-check`), then `mod-buffer-chunk`s
+                // its `offset`/`duration`.
+                if self.aural_loc_evt == Some(evt) {
+                    self.emit("AUDIO", "MOD-BUFFER-CHUNK AURAL-LOCATION".to_string());
+                }
             }
             Event::ToneSound { idx } => {
                 // `new-sound-event :around` (`audio.lisp:733`): `new-sound`

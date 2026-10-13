@@ -15,6 +15,7 @@ dynamic-real-time
 dynamic-slot-compilation
 emma
 grouped
+hear-self
 # Grow this list with:
 indirect-action-compilation
 merging-test

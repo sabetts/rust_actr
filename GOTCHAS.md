@@ -3280,3 +3280,44 @@ location chunk falls off the fast path and the re-encode
 (`update-attended-loc`) draws; a normal `move-attention` encode does not. The
 engine keeps its own object choice but consumes the draw, which is what keeps
 `tutorial-unit3modeling-v6-next-run`'s later `:er` selection aligned.
+
+## 211. Speech: `:hear-self`, the style-change prep reset, and the notify line
+
+The speech module has two movement styles, `speak` and `subvocalize`
+(`defStyle`, `core-modules/speech.lisp:274`/`:310`). Three behaviours the
+trace depends on:
+
+- `queue-output-events` creates the self-heard sound only when `:hear-self`
+  admits the style (`speech.lisp:294`/`:314`): `t` = both, `nil` = neither,
+  `speak`/`subvocalize` = only that one. `hear-self` test-models the four
+  modes across four runs, so the same model yields four different traces.
+- `compute-prep-time` (`support/general-pm.lisp:670`) compares the *style
+  name*, not the text: a style change is a fresh movement (3 features =
+  150 ms), and only the same style falls back to `feat-differences` (0 for
+  the same text, 2 otherwise). So `speak "Hello"` followed by
+  `subvocalize "Goodbye"` preps 150 ms, not 100.
+- `notify-speech-device` (`speech.lisp:267`) schedules a traced
+  `default-speech-action` (rendered `SPEAK <text>`) **only when no device is
+  installed**; otherwise it notifies the device and nothing is traced. A
+  `speak` request itself always traces `SPEAK TEXT <text>`, and
+  `subvocalize` traces `SUBVOCALIZE TEXT <text>` (its start notification is
+  off by default). The sound is queued before the notification, so
+  `new-sound` precedes the `SPEAK <text>` line at the same instant.
+
+The device flag comes from `(INSTALL)` in the sidecar, which `write-device`
+now emits when the task's `run-it` calls `install-device`. `z-threads`
+relies on it (`m()` installs an empty window, so the ref has no notify line
+even though the model speaks); its spec cannot replay the device, so the
+sidecar carries the flag.
+
+## 212. `audio-event-ended` needs the sound to still be in `AURAL-LOCATION`
+
+`find-sound` (`core-modules/audio.lisp:1045`) schedules `audio-event-ended`
+at the sound's `offset = onset + duration` when its event chunk has no
+`offset`/`duration`. That handler
+`mod-buffer-chunk`s `AURAL-LOCATION` — but only while the buffer still holds
+this event (`aural-location-update-check`). So a sound whose offset falls
+*before* its location is stuffed produces nothing, while one that outlives
+the stuffing emits `MOD-BUFFER-CHUNK AURAL-LOCATION`. `hear-self`'s fourth
+run shows both sides: the speak sound (offset 0.500, stuffed 0.550) is
+silent, the subvocalize sound (offset 1.100, stuffed 1.050) is not.

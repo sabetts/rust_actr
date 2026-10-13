@@ -138,6 +138,7 @@ internally (`no-output` → its argument command).")
 ;; `!eval!`, so the engine cannot replay the item position from the model
 ;; alone; the captured op re-applies it at the same model time.
 (defvar *device-modifies* nil)
+(defvar *device-installs* nil)
 ;; `item-key -> text` and `item-key -> (x . y)` so a modify can record the
 ;; item's text and the coordinates it does not pass.
 (defvar *item-texts* nil)
@@ -513,6 +514,15 @@ step is printable and matches what the engine expects."
     (push (list *reset-count* (mp-time-ms)) *device-clears*))
   (call-orig 'clear-exp-window win))
 
+;; `(install-device window)`: only a flag is recorded. The engine needs it
+;; because the speech module notifies an installed device instead of
+;; scheduling a traced `default-speech-action` (`speech.lisp:267`), so a
+;; bare spec (which cannot replay the device) must still know one exists.
+(defun w-install-device (device &rest keys)
+  (when (and (eq *mode* :drive) (not *suppress*))
+    (push (list *reset-count*) *device-installs*))
+  (apply (gethash 'install-device *orig-fns*) device keys))
+
 ;;; A scheduled command event (`(schedule-event-relative t "cmd" :params ...)`)
 ;;; prints `NONE <action> <params>` at its `:output` level. Record it so the
 ;;; engine can replay the line (the ref is the oracle).
@@ -588,7 +598,7 @@ step is printable and matches what the engine expects."
     (install-generic-command (first entry) (cdr entry))))
 
 (defun write-device (name)
-  (when (or *device-texts* *device-clears* *device-commands*)
+  (when (or *device-texts* *device-clears* *device-commands* *device-installs*)
     (let ((path (merge-pathnames (concatenate 'string name ".device.sexp") *out-dir*)))
       (when (probe-file path)
         (format t "SPEC-NOTE ~a : keeping hand-authored device sidecar~%" name)
@@ -602,11 +612,13 @@ step is printable and matches what the engine expects."
                (clears (dedupe-preserve (reverse *device-clears*)))
                (commands (dedupe-preserve (reverse *device-commands*)))
                (modifies (dedupe-preserve (reverse *device-modifies*)))
+               (installs (dedupe-preserve (reverse *device-installs*)))
                (runs (sort (remove-duplicates
                             (append (mapcar #'first texts)
                                     (mapcar #'first clears)
                                     (mapcar #'first commands)
-                                    (mapcar #'first modifies)))
+                                    (mapcar #'first modifies)
+                                    (mapcar #'first installs)))
                            #'<)))
           (dolist (r runs)
             (format f "(RUN ~a~%" r)
@@ -625,6 +637,9 @@ step is printable and matches what the engine expects."
               (when (= (first m) r)
                 (format f " (MODIFY-TEXT ~a ~s ~a ~a)~%" (second m) (third m)
                         (fourth m) (fifth m))))
+            (dolist (c installs)
+              (when (= (first c) r)
+                (format f " (INSTALL)~%")))
             (format f ")~%")))))))
 
 (defun install-wrappers ()
@@ -637,6 +652,7 @@ step is printable and matches what the engine expects."
   (wrap-fn 'run-until-time #'w-run-until-time)
   (wrap-fn 'run-n-events #'w-run-n-events)
   (wrap-fn 'goal-focus-fct #'w-goal-focus)
+  (wrap-fn 'install-device #'w-install-device)
   (wrap-fn 'reset #'w-reset)
   (wrap-fn 'sgp-fct #'w-sgp)
   (wrap-fn 'ssp-fct #'w-ssp)
@@ -680,7 +696,7 @@ stub source alone is not a reliable signal."
 (defun fresh-state ()
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
         *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil
-        *device-commands* nil *device-modifies* nil
+        *device-commands* nil *device-modifies* nil *device-installs* nil
         *item-texts* (make-hash-table :test 'equal)
         *item-pos* (make-hash-table :test 'equal)
         *rng-count* 0 *last-sgp-params* nil

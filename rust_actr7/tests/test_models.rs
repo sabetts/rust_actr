@@ -646,6 +646,10 @@ fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> R
                 run,
             }),
             "CLEAR" => device.clears.push((ms()?, run)),
+            // `(INSTALL)`: the task called `install-device`. Not a timed op;
+            // it only records that a device exists (see
+            // `DeviceSetup::installed`).
+            "INSTALL" => device.installed = true,
             "COMMAND" => {
                 // `(COMMAND ms output [module] details)`: the module is
                 // present only for commands the task scheduled with an

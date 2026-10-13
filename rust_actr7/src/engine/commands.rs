@@ -215,16 +215,26 @@ impl Engine {
                 Value::Str(s) | Value::Sym(s) => Some(s.clone()),
                 _ => None,
             });
-        let is_speak = ctype.eq_ignore_ascii_case("SPEAK")
+        // `pm-module-last-cmd-name` (`speech.lisp:341`): the style is the
+        // request's `isa` type, or the `cmd` slot's value.
+        let style = if ctype.eq_ignore_ascii_case("SPEAK")
             || slots.iter().any(|(s, v)| {
                 s == "CMD" && matches!(v, Value::Sym(x) if x.eq_ignore_ascii_case("SPEAK"))
-            });
-        if is_speak {
-            if let Some(t) = text {
-                // The `speak` action is scheduled at default priority so the
-                // request's implicit clear-buffer precedes it.
-                self.now(Prio::Num(0), Out::Medium, Event::Speak { text: t });
-            }
+            }) {
+            Some(SpeechStyle::Speak)
+        } else if ctype.eq_ignore_ascii_case("SUBVOCALIZE")
+            || slots.iter().any(|(s, v)| {
+                s == "CMD" && matches!(v, Value::Sym(x) if x.eq_ignore_ascii_case("SUBVOCALIZE"))
+            })
+        {
+            Some(SpeechStyle::Subvocalize)
+        } else {
+            None
+        };
+        if let (Some(style), Some(t)) = (style, text) {
+            // The speech action is scheduled at default priority so the
+            // request's implicit clear-buffer precedes it.
+            self.now(Prio::Num(0), Out::Medium, Event::Speak { style, text: t });
         }
         Ok(())
     }

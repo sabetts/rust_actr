@@ -374,6 +374,8 @@ struct Config {
     er: bool,
     do_not_query: Vec<String>,
     do_not_harvest: Vec<String>,
+    /// `:hear-self` (`speech.lisp:210`).
+    hear_self: HearSelf,
     /// Module column width in trace lines (`max-module-name-length`). The
     /// normal value is 22; test-model stubs may override it (GOTCHAS M10).
     module_width: usize,
@@ -472,6 +474,11 @@ pub struct DeviceSetup {
     /// selecting the window text), consumed after the initial reset so
     /// `:randomize-time` draws line up.
     pub consume_rng: u64,
+    /// The task called `install-device` (`(INSTALL)` in the sidecar). With a
+    /// device present, the speech module notifies *it* instead of scheduling
+    /// a traced `default-speech-action` (`speech.lisp:267`), so the
+    /// `SPEAK <text>` line is suppressed.
+    pub installed: bool,
 }
 
 /// EMMA `saccade` movement style (`emma.lisp:448`): the geometry and times
@@ -980,6 +987,13 @@ impl Config {
                 Some(_) => true,
             },
             er: sgp_bool(&m.params, ":ER"),
+            // `:hear-self` (`speech.lisp:210`, `:initform t`).
+            hear_self: match m.params.iter().find(|(k, _)| k == ":HEAR-SELF") {
+                Some((_, Sexp::Sym(s))) if s == "NIL" => HearSelf::None,
+                Some((_, Sexp::Sym(s))) if s == "SPEAK" => HearSelf::Speak,
+                Some((_, Sexp::Sym(s))) if s == "SUBVOCALIZE" => HearSelf::Subvocalize,
+                _ => HearSelf::All,
+            },
             do_not_query,
             do_not_harvest,
             module_width: MODULE_WIDTH,
@@ -1085,6 +1099,48 @@ impl Buffer {
             busy: false,
             modified: false,
             requested: true,
+        }
+    }
+}
+
+/// Speech module movement styles (`defStyle`, `speech.lisp:274`/`:310`). The
+/// style *name* drives `compute-prep-time` (`general-pm.lisp:670`): a style
+/// change is treated as a fresh movement (3 prep features).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpeechStyle {
+    Speak,
+    Subvocalize,
+}
+
+impl SpeechStyle {
+    /// The style name (`style-name`), used by the trace and by the prep
+    /// comparison.
+    fn trace(self) -> &'static str {
+        match self {
+            SpeechStyle::Speak => "SPEAK",
+            SpeechStyle::Subvocalize => "SUBVOCALIZE",
+        }
+    }
+}
+
+/// `:hear-self` (`core-modules/speech.lisp:210`): which of the model's own
+/// utterances it perceives. `t` = all, `nil` = none, `speak`/`subvocalize` =
+/// only that style.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HearSelf {
+    All,
+    None,
+    Speak,
+    Subvocalize,
+}
+
+impl HearSelf {
+    fn hears(self, style: SpeechStyle) -> bool {
+        match (self, style) {
+            (HearSelf::All, _) => true,
+            (HearSelf::Speak, SpeechStyle::Speak) => true,
+            (HearSelf::Subvocalize, SpeechStyle::Subvocalize) => true,
+            _ => false,
         }
     }
 }
@@ -1461,21 +1517,41 @@ enum Event {
     },
     /// Speech module: the vocal buffer finished its utterance.
     VocalFree,
-    /// Speech module: an utterance starts (`SPEAK TEXT ...`).
+    /// Speech module: an utterance starts (`SPEAK TEXT ...` /
+    /// `SUBVOCALIZE TEXT ...`).
     Speak {
+        style: SpeechStyle,
         text: String,
     },
-    /// Speech module: `speak` preparation completed; queues initiation,
-    /// the hear-self sound onset, and the finish.
+    /// Speech module: preparation completed; queues initiation, the
+    /// hear-self sound onset, and the finish.
     SpeechPrep {
+        style: SpeechStyle,
         text: String,
     },
-    /// Speech module: `initiation-complete` (procedural released).
-    SpeechInit,
-    /// Audio module: a sound begins (`new-sound`).
-    NewSound,
+    /// Speech module: `initiation-complete` (procedural released); for
+    /// `speak` this is also the device-notify line (`SPEAK <text>`).
+    SpeechInit {
+        style: SpeechStyle,
+        text: String,
+    },
+    /// Audio module: a self-generated (outside-the-run) sound begins
+    /// (`new-sound`). The event index is the sound's `AUDIO-EVENT{n}`; the
+    /// offset is where its `audio-event-ended` lands.
+    NewSound {
+        evt: u64,
+        offset: i64,
+    },
     /// Audio module: the sound's aural location is set.
-    AuralLocation,
+    AuralLocation {
+        evt: u64,
+    },
+    /// Audio module: `audio-event-ended` (`audio.lisp:1077`) at the sound's
+    /// offset, when the `AURAL-LOCATION` buffer still holds that event:
+    /// `MOD-BUFFER-CHUNK AURAL-LOCATION`.
+    AudioEventEnded {
+        evt: u64,
+    },
     /// Audio module: a tone's onset (`new-sound`, then schedule
     /// `stuff-sound-buffer` at `onset + detect-delay`).
     ToneSound {
@@ -1646,6 +1722,8 @@ pub struct Engine {
     /// the device script.
     device_commands: Vec<DeviceCommand>,
     /// Scripted tone sounds, re-armed on every `reset`.
+    /// A speech device is installed (see [`DeviceSetup::installed`]).
+    speech_device: bool,
     device_sounds: Vec<DeviceSound>,
     /// The current run index for `(RUN n …)` device groups; the construction
     /// reset is run 0, the spec's first `(reset)` run 1.
@@ -1692,6 +1770,9 @@ pub struct Engine {
     vocal_busy: bool,
     /// Audio module: sounds emitted so far (`AUDIO-EVENT{n}`).
     audio_events: u64,
+    /// The `AUDIO-EVENT{n}` currently in the `AURAL-LOCATION` buffer, if any
+    /// (`aural-location-update-check`).
+    aural_loc_evt: Option<u64>,
     /// Audio module: live sound events (`TONE{n}`/`AUDIO-EVENT{n}`).
     sounds: Vec<Sound>,
     /// Audio module: next `TONE{n}` index (`new-name-fct "TONE"`).
@@ -1837,8 +1918,9 @@ pub struct Engine {
     /// Last press-key `(key, hand, finger, r, theta)`, for preparation
     /// differences (style is recovered from the key).
     last_press: Option<(String, String, String, f32, f32)>,
-    /// Last spoken text, for the `speak` style's preparation differences.
-    last_speak: Option<String>,
+    /// Last speech movement's `(style-name, text)`, for `compute-prep-time`'s
+    /// `feat-differences` (`general-pm.lisp:670`).
+    last_speech: Option<(SpeechStyle, String)>,
     /// act-touch: which hands are on the touch device (left=0, right=1).
     touch_hands: [bool; 2],
     /// act-touch: finger positions `[hand][finger] = (x, y, z)`, z=1 up.
@@ -1906,6 +1988,7 @@ impl Engine {
             sims,
             clear_on_keypress,
             consume_rng,
+            installed,
         } = device;
         let base_prods = model.productions.len();
         let valid_slots: HashSet<String> = model
@@ -1979,6 +2062,7 @@ impl Engine {
                 v.sort_by_key(|c| c.at_ms);
                 v
             },
+            speech_device: installed,
             device_sounds: {
                 let mut v = sounds;
                 v.sort_by_key(|s| s.at_ms);
@@ -2003,6 +2087,7 @@ impl Engine {
             goal_set: Vec::new(),
             vocal_busy: false,
             audio_events: 0,
+            aural_loc_evt: None,
             sounds: Vec::new(),
             tone_seq: 0,
             name_count: HashMap::new(),
@@ -2085,7 +2170,7 @@ impl Engine {
             prev_prod: None,
             prev_prod_ms: 0,
             last_press: None,
-            last_speak: None,
+            last_speech: None,
             touch_hands: [false, false],
             touch_fingers: [[(0, 0, 1); 5]; 2],
             touch_last: None,
@@ -2414,6 +2499,7 @@ impl Engine {
         self.goal_set.clear();
         self.vocal_busy = false;
         self.audio_events = 0;
+        self.aural_loc_evt = None;
         // Scripted tones: the task calls `new-tone-sound` during per-run
         // setup, creating the event and scheduling its onset (`new-sound`).
         self.sounds.clear();
@@ -2512,7 +2598,7 @@ impl Engine {
         self.prev_prod = None;
         self.prev_prod_ms = 0;
         self.last_press = None;
-        self.last_speak = None;
+        self.last_speech = None;
         self.touch_hands = [false, false];
         self.touch_fingers = [[(0, 0, 1); 5]; 2];
         self.touch_last = None;

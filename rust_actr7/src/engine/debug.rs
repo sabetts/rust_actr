@@ -579,6 +579,15 @@ impl Engine {
                 }
             }
             ":ER" => self.cfg.er = truthy,
+            // `:hear-self` (`speech.lisp:210`): `t`/`nil`/`speak`/`subvocalize`.
+            ":HEAR-SELF" => {
+                self.cfg.hear_self = match val {
+                    Sexp::Sym(s) if s == "NIL" => HearSelf::None,
+                    Sexp::Sym(s) if s == "SPEAK" => HearSelf::Speak,
+                    Sexp::Sym(s) if s == "SUBVOCALIZE" => HearSelf::Subvocalize,
+                    _ => HearSelf::All,
+                }
+            }
             ":CRT" => self.cfg.crt = truthy,
             ":CST" => self.cfg.cst = truthy,
             ":ACT" => {
