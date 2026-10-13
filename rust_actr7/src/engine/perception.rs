@@ -504,6 +504,46 @@ impl Engine {
                 finst_ms: None,
             });
         }
+        // Scripted buttons and lines (`add-button-to-exp-window` /
+        // `add-line-to-exp-window`): build their features through the same
+        // helpers the RPC device API uses, so a scripted replay and a driven
+        // run produce the same visicon. They are merged by `at_ms` because the
+        // task interleaves them with texts and with each other.
+        let mut due_buttons = Vec::new();
+        self.pending_buttons.retain(|b| {
+            if b.at_ms <= now {
+                due_buttons.push(b.clone());
+                false
+            } else {
+                true
+            }
+        });
+        let mut due_lines = Vec::new();
+        self.pending_lines.retain(|l| {
+            if l.at_ms <= now {
+                due_lines.push(l.clone());
+                false
+            } else {
+                true
+            }
+        });
+        let (mut bi, mut li) = (0usize, 0usize);
+        while bi < due_buttons.len() || li < due_lines.len() {
+            let take_button = match (due_buttons.get(bi), due_lines.get(li)) {
+                (Some(b), Some(l)) => b.at_ms <= l.at_ms,
+                (Some(_), None) => true,
+                _ => false,
+            };
+            if take_button {
+                let b = &due_buttons[bi];
+                self.add_window_button(&b.text, b.x, b.y, b.width, b.height, &b.color);
+                bi += 1;
+            } else {
+                let l = &due_lines[li];
+                self.add_window_line((l.x1, l.y1), (l.x2, l.y2), &l.color);
+                li += 1;
+            }
+        }
         let empty = self
             .buffers
             .get("VISUAL-LOCATION")
@@ -531,6 +571,12 @@ impl Engine {
         }
         if let Some(clear) = self.pending_clears.first() {
             next_at = Some(next_at.map_or(*clear, |n| n.min(*clear)));
+        }
+        if let Some(b) = self.pending_buttons.first() {
+            next_at = Some(next_at.map_or(b.at_ms, |n| n.min(b.at_ms)));
+        }
+        if let Some(l) = self.pending_lines.first() {
+            next_at = Some(next_at.map_or(l.at_ms, |n| n.min(l.at_ms)));
         }
         if let Some(at) = next_at {
             self.push_m(at, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);

@@ -399,6 +399,39 @@ pub struct DeviceText {
     pub run: Option<u32>,
 }
 
+/// One scripted button (`add-button-to-exp-window`). It contributes two
+/// visicon features — the box and its centred label — and the model's initial
+/// visual-location is chosen from them, so a device task cannot be replayed
+/// without it (`bst`'s `build-display`).
+#[derive(Debug, Clone)]
+pub struct DeviceButton {
+    pub at_ms: i64,
+    pub text: String,
+    pub x: i64,
+    pub y: i64,
+    pub width: i64,
+    pub height: i64,
+    pub color: String,
+    /// The `:action` form as written (`("bst-button-pressed" 15 "under")`),
+    /// kept verbatim for a button-press path to dispatch.
+    pub action: Option<String>,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
+/// One scripted line (`add-line-to-exp-window`): a `line` visicon feature.
+#[derive(Debug, Clone)]
+pub struct DeviceLine {
+    pub at_ms: i64,
+    pub x1: i64,
+    pub y1: i64,
+    pub x2: i64,
+    pub y2: i64,
+    pub color: String,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
 /// One scripted window-item move (`modify-text-for-exp-window`): the task's
 /// `move-it` is scheduled by the model's `!eval!`, so the engine replays the
 /// resulting position change from the captured op.
@@ -445,6 +478,11 @@ pub struct DeviceSound {
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
+    /// Scripted buttons and lines (`add-button-to-exp-window` /
+    /// `add-line-to-exp-window`), which the `bst` task draws to build its
+    /// display.
+    pub buttons: Vec<DeviceButton>,
+    pub lines: Vec<DeviceLine>,
     /// Scripted window-item moves (`modify-text-for-exp-window`).
     pub modifies: Vec<DeviceModify>,
     /// Window clears at ms (clear-exp-window), with the run grouping.
@@ -1709,6 +1747,9 @@ pub struct Engine {
     valid_slots: HashSet<String>,
     /// Scripted device items not yet shown, by appearance time.
     pending_texts: Vec<DeviceText>,
+    /// Scripted window buttons/lines not yet applied, by time.
+    pending_buttons: Vec<DeviceButton>,
+    pending_lines: Vec<DeviceLine>,
     /// Scripted window-item moves not yet applied, by time.
     pending_modifies: Vec<DeviceModify>,
     /// Scripted window clears not yet applied, sorted.
@@ -1716,6 +1757,8 @@ pub struct Engine {
     /// The full device script, re-armed on every `reset` (a task re-applies
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
+    device_buttons: Vec<DeviceButton>,
+    device_lines: Vec<DeviceLine>,
     device_modifies: Vec<DeviceModify>,
     device_clears: Vec<(i64, Option<u32>)>,
     /// Scheduled command lines, re-armed on every `reset` like the rest of
@@ -1738,6 +1781,10 @@ pub struct Engine {
     /// Live experiment-window origin (`open-exp-window` x/y; ACT-R default
     /// 300,300). RPC-driven window items are placed relative to it.
     window_origin: (i64, i64),
+    /// Model time of a window `ProcDisplay` this engine queued, so a second
+    /// request at the same time coalesces instead of emitting two
+    /// `visicon-update` lines.
+    display_queued_ms: Option<i64>,
     /// Live window items: item key -> the visicon feature names it created
     /// (`add-text-to-exp-window` etc.), for `remove-items-from-exp-window`.
     window_items: Vec<(String, Vec<String>)>,
@@ -1990,6 +2037,8 @@ impl Engine {
         }
         let DeviceSetup {
             texts,
+            buttons,
+            lines,
             modifies,
             clears,
             commands,
@@ -2043,6 +2092,16 @@ impl Engine {
                 v.sort_by_key(|t| t.at_ms);
                 v
             },
+            pending_buttons: {
+                let mut v = buttons.clone();
+                v.sort_by_key(|b| b.at_ms);
+                v
+            },
+            pending_lines: {
+                let mut v = lines.clone();
+                v.sort_by_key(|l| l.at_ms);
+                v
+            },
             pending_modifies: {
                 let mut v = modifies.clone();
                 v.sort_by_key(|m| m.at_ms);
@@ -2056,6 +2115,16 @@ impl Engine {
             device_texts: {
                 let mut v = texts;
                 v.sort_by_key(|t| t.at_ms);
+                v
+            },
+            device_buttons: {
+                let mut v = buttons;
+                v.sort_by_key(|b| b.at_ms);
+                v
+            },
+            device_lines: {
+                let mut v = lines;
+                v.sort_by_key(|l| l.at_ms);
                 v
             },
             device_modifies: {
@@ -2084,6 +2153,7 @@ impl Engine {
             features: Vec::new(),
             feat_seq: 0,
             window_origin: (300, 300),
+            display_queued_ms: None,
             window_items: Vec::new(),
             window_item_seq: 0,
             bold_buffers: Vec::new(),
@@ -2463,6 +2533,34 @@ impl Engine {
             .filter(|t| t.run.is_none() || t.run == Some(run))
             .cloned()
             .collect();
+        self.pending_buttons = self
+            .device_buttons
+            .iter()
+            .filter(|b| b.run.is_none() || b.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_lines = self
+            .device_lines
+            .iter()
+            .filter(|l| l.run.is_none() || l.run == Some(run))
+            .cloned()
+            .collect();
+        // A task re-applies its window per run, so ops already due when this
+        // reset arms them still need a display wave: the construction-time push
+        // only covers run 0 (`bst`'s `build-display` draws at ms 0 in every
+        // run, so without this the replayed run had no visicon at all).
+        let due_now = self
+            .pending_texts
+            .first()
+            .map(|t| t.at_ms)
+            .into_iter()
+            .chain(self.pending_buttons.first().map(|b| b.at_ms))
+            .chain(self.pending_lines.first().map(|l| l.at_ms))
+            .min()
+            .is_some_and(|t| t <= self.time_ms);
+        if due_now {
+            self.schedule_display();
+        }
         self.pending_modifies = self
             .device_modifies
             .iter()
@@ -2638,7 +2736,16 @@ impl Engine {
             })
             .collect();
         // Device proc-display already due at t=0 (maintenance).
-        if !self.pending_texts.is_empty() && self.pending_texts[0].at_ms <= 0 {
+        let due0 = self
+            .pending_texts
+            .first()
+            .map(|t| t.at_ms)
+            .into_iter()
+            .chain(self.pending_buttons.first().map(|b| b.at_ms))
+            .chain(self.pending_lines.first().map(|l| l.at_ms))
+            .min()
+            .is_some_and(|t| t <= 0);
+        if due0 {
             self.push_m(0, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
         if self.cfg.threads {
@@ -3230,7 +3337,43 @@ impl Engine {
     /// stay queued. The task's window change between runs schedules its
     /// `proc-display` at the boundary *after* the previous run returns
     /// (`paired`), so the engine must not consume it in the earlier run.
+    /// Queue a window `ProcDisplay` for device ops already due, unless one is
+    /// already queued at this time.
+    ///
+    /// A task re-applies its window per run, and the reset that arms the ops can
+    /// be followed by a command that rebuilds the engine (`chunk-type` in a
+    /// device spec's steps), which drops a wave pushed at reset time. Checking
+    /// again when a run starts is what gets the display onto the queue.
+    fn schedule_display(&mut self) {
+        if self.display_queued_ms == Some(self.time_ms) {
+            return;
+        }
+        // Scripted texts already reach the display through the
+        // construction-time push and `proc_display`'s own `next_at`
+        // scheduling; buttons and lines are new to the scripted timeline and
+        // have no such push, so only they need this check.
+        let due = self
+            .pending_buttons
+            .first()
+            .map(|b| b.at_ms)
+            .into_iter()
+            .chain(self.pending_lines.first().map(|l| l.at_ms))
+            .min()
+            .is_some_and(|t| t <= self.time_ms);
+        if due {
+            self.display_queued_ms = Some(self.time_ms);
+            self.push_m(
+                self.time_ms,
+                Prio::Num(-100),
+                Out::Always,
+                true,
+                Event::ProcDisplay,
+            );
+        }
+    }
+
     fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
+        self.schedule_display();
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         let mut processed = false;
         loop {

@@ -638,6 +638,27 @@ fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> R
                 y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
                 run,
             }),
+            "ADD-BUTTON" => device.buttons.push(actr_engine::engine::DeviceButton {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
+                x: as_i64(v.get(3).ok_or("missing x")?).ok_or("bad x")?,
+                y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
+                width: as_i64(v.get(5).ok_or("missing width")?).ok_or("bad width")?,
+                height: as_i64(v.get(6).ok_or("missing height")?).ok_or("bad height")?,
+                color: as_str(v.get(7).ok_or("missing color")?).ok_or("bad color")?,
+                // The `:action` form, kept verbatim as written by the task.
+                action: v.get(8).and_then(as_str),
+                run,
+            }),
+            "ADD-LINE" => device.lines.push(actr_engine::engine::DeviceLine {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
+                y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
+                x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
+                y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
+                color: as_str(v.get(6).ok_or("missing color")?).ok_or("bad color")?,
+                run,
+            }),
             "MODIFY-TEXT" => device.modifies.push(actr_engine::engine::DeviceModify {
                 at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
                 text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,

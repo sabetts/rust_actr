@@ -139,6 +139,14 @@ internally (`no-output` → its argument command).")
 ;; alone; the captured op re-applies it at the same model time.
 (defvar *device-modifies* nil)
 (defvar *device-installs* nil)
+;; Buttons and lines the task draws (`add-button-to-exp-window` /
+;; `add-line-to-exp-window`), as `(run ms …)`. Both become visicon features, and
+;; the model's initial visual-location is chosen from them, so a device task
+;; cannot be replayed without them (the bst `build-display`). The button's
+;; `:action` is recorded verbatim as a form string so a later button-press path
+;; can dispatch it.
+(defvar *device-buttons* nil)
+(defvar *device-lines* nil)
 ;; `item-key -> text` and `item-key -> (x . y)` so a modify can record the
 ;; item's text and the coordinates it does not pass.
 (defvar *item-texts* nil)
@@ -514,6 +522,32 @@ step is printable and matches what the engine expects."
     (push (list *reset-count* (mp-time-ms)) *device-clears*))
   (call-orig 'clear-exp-window win))
 
+;; `(add-button-to-exp-window win :text "A" :x 5 :y 23 :width 40 :height 24
+;;                            :action (...) :color "gray")`: the box *and* its
+;; label are visicon features. Record what the engine needs to rebuild them.
+(defun w-add-button (win &rest keys)
+  (let ((key (apply (gethash 'add-button-to-exp-window *orig-fns*) win keys)))
+    (when (and (eq *mode* :drive) (not *suppress*))
+      (push (list *reset-count* (mp-time-ms)
+                  (or (getf keys :text) "")
+                  (or (getf keys :x) 0) (or (getf keys :y) 0)
+                  (or (getf keys :width) 0) (or (getf keys :height) 0)
+                  (string-downcase (string (or (getf keys :color) "gray")))
+                  (unless (null (getf keys :action))
+                    (format nil "~s" (getf keys :action))))
+            *device-buttons*))
+    key))
+
+;; `(add-line-to-exp-window win (list x1 y1) (list x2 y2) 'black)`.
+(defun w-add-line (win start end &optional (color 'black))
+  (let ((key (call-orig 'add-line-to-exp-window win start end color)))
+    (when (and (eq *mode* :drive) (not *suppress*))
+      (push (list *reset-count* (mp-time-ms)
+                  (first start) (second start) (first end) (second end)
+                  (string-downcase (string color)))
+            *device-lines*))
+    key))
+
 ;; `(install-device window)`: only a flag is recorded. The engine needs it
 ;; because the speech module notifies an installed device instead of
 ;; scheduling a traced `default-speech-action` (`speech.lisp:267`), so a
@@ -598,7 +632,8 @@ step is printable and matches what the engine expects."
     (install-generic-command (first entry) (cdr entry))))
 
 (defun write-device (name)
-  (when (or *device-texts* *device-clears* *device-commands* *device-installs*)
+  (when (or *device-texts* *device-clears* *device-commands* *device-installs*
+            *device-buttons* *device-lines*)
     (let ((path (merge-pathnames (concatenate 'string name ".device.sexp") *out-dir*)))
       (when (probe-file path)
         (format t "SPEC-NOTE ~a : keeping hand-authored device sidecar~%" name)
@@ -613,12 +648,16 @@ step is printable and matches what the engine expects."
                (commands (dedupe-preserve (reverse *device-commands*)))
                (modifies (dedupe-preserve (reverse *device-modifies*)))
                (installs (dedupe-preserve (reverse *device-installs*)))
+               (buttons (dedupe-preserve (reverse *device-buttons*)))
+               (lines (dedupe-preserve (reverse *device-lines*)))
                (runs (sort (remove-duplicates
                             (append (mapcar #'first texts)
                                     (mapcar #'first clears)
                                     (mapcar #'first commands)
                                     (mapcar #'first modifies)
-                                    (mapcar #'first installs)))
+                                    (mapcar #'first installs)
+                                    (mapcar #'first buttons)
+                                    (mapcar #'first lines)))
                            #'<)))
           (dolist (r runs)
             (format f "(RUN ~a~%" r)
@@ -626,6 +665,16 @@ step is printable and matches what the engine expects."
               (when (= (first item) r)
                 (format f " (ADD-TEXT ~a ~s ~a ~a)~%" (second item) (third item)
                         (fourth item) (fifth item))))
+            (dolist (b buttons)
+              (when (= (first b) r)
+                (format f " (ADD-BUTTON ~a ~s ~a ~a ~a ~a ~s~@[ ~s~])~%"
+                        (second b) (third b) (fourth b) (fifth b)
+                        (sixth b) (seventh b) (eighth b) (ninth b))))
+            (dolist (l lines)
+              (when (= (first l) r)
+                (format f " (ADD-LINE ~a ~a ~a ~a ~a ~s)~%"
+                        (second l) (third l) (fourth l) (fifth l)
+                        (sixth l) (seventh l))))
             (dolist (c clears)
               (when (= (first c) r)
                 (format f " (CLEAR ~a)~%" (second c))))
@@ -665,6 +714,8 @@ step is printable and matches what the engine expects."
   (wrap-fn 'load-act-r-code #'w-load-code)
   (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk)
   (wrap-fn 'add-text-to-exp-window #'w-add-text)
+  (wrap-fn 'add-button-to-exp-window #'w-add-button)
+  (wrap-fn 'add-line-to-exp-window #'w-add-line)
   (wrap-fn 'modify-text-for-exp-window #'w-modify-text)
   (wrap-fn 'clear-exp-window #'w-clear-exp-window)
   (wrap-fn 'pdisable-fct #'w-pdisable)
@@ -697,6 +748,7 @@ stub source alone is not a reliable signal."
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
         *reset-count* 0 *sgp-calls* nil *device-texts* nil *device-clears* nil
         *device-commands* nil *device-modifies* nil *device-installs* nil
+        *device-buttons* nil *device-lines* nil
         *item-texts* (make-hash-table :test 'equal)
         *item-pos* (make-hash-table :test 'equal)
         *rng-count* 0 *last-sgp-params* nil

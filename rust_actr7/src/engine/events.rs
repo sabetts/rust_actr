@@ -755,6 +755,7 @@ impl Engine {
                 }
             }
             Event::ProcDisplay => {
+                self.display_queued_ms = None;
                 if show {
                     self.emit("VISION", "proc-display".into());
                 }

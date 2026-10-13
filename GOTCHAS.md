@@ -3606,3 +3606,34 @@ earlier attempt that emitted one feature per button (assuming ACT-R keeps no
 separate label item) gave the right column set but the wrong numbering —
 `VISUAL-LOCATION1` — so the two-feature layout is right and only the centring
 was wrong.
+
+## 223. Device buttons and lines are visicon features, not decoration
+
+A device task's window can be built from `add-button-to-exp-window` and
+`add-line-to-exp-window`, not just text. Both become **visicon features**
+(`uwi.lisp:358`/`:511`), the model's initial visual-location is chosen from
+them, and `bst`'s whole experiment is four buttons plus four lines — so the
+golden corpus could not replay a bst run at all: the extractor recorded only
+`add-text-to-exp-window`/`clear-exp-window`, its sidecar therefore described an
+empty window, and the run produced no vision events (17 trace lines against a
+8872-line ref).
+
+The extractor now wraps both calls, the sidecar carries
+`(ADD-BUTTON ms "text" x y w h "color" "action-form")` and
+`(ADD-LINE ms x1 y1 x2 y2 "color")`, `DeviceSetup` gained `buttons`/`lines`
+with the same per-run (`(RUN n …)`) grouping as texts, and `proc_display`
+applies due ops **through the same `add_window_button`/`add_window_line`
+helpers the RPC device API uses** — so a scripted replay and a driven run build
+the same visicon. Buttons and lines are merged by `at_ms` because a task
+interleaves them with each other and with texts.
+
+Two scheduling details matter and are easy to get wrong:
+
+- the construction-time "display already due at t=0" push covers run 0 only; a
+  task re-applies its window per run, so a reset that arms ops already due needs
+  its own wave;
+- that wave must be queued when a **run** starts, not only at reset: a device
+  spec's steps can call a command that rebuilds the engine (`chunk-type`),
+  which drops a wave pushed at reset time. Restricting the run-start check to
+  buttons/lines keeps it from disturbing the text path, which already has its
+  own push (`tests/golden.rs`'s cases caught that immediately).
