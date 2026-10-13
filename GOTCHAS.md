@@ -3976,3 +3976,22 @@ by which commands were recorded, so extending the list cannot reclassify a spec.
 Changing the extractor also does not touch any committed spec — only a targeted
 `SPEC_LIST` regen does, which is why this can be landed and verified safely
 before the engine side catches up.
+
+## 237. Wrapping a subset leaks a wrapped call made by an unwrapped caller
+
+`install-generic-command` guards *nested* calls with `*recording-command*`: while a
+recorded command runs, a command it calls internally is not recorded again. That
+guard only covers recorded callers. `module-request` is not a command (it is a
+`buffers.lisp` defun with no engine equivalent yet), so when the newly-wrapped
+`schedule-event-now` is added, `module-request`'s *internal* schedule leaked into
+the spec as 20 bogus steps — and replaying them took `base-level-safety-check`
+from 36 trace lines to zero.
+
+So the rule is: adding a pair to `*generic-commands*` is safe only if every
+*unwrapped* caller of that primitive is also harmless to record — i.e. wrap the
+outer primitive too (which needs an engine command for it), or leave the pair
+out. `schedule-event-now` is a genuine task call in
+`removed-and-restored-visual-item` and a leak in `base-level-safety-check`; the
+spec was reverted rather than the pair, because the pair is correct and the leak
+is the thing to fix. The general fix is the same one #236 points at: cover the
+outer primitives (`module-request`, `merge-dm`) so the guard applies.
