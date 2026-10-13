@@ -323,13 +323,16 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       (`1ecc980`, GOTCHAS #204), and reusable-buffer naming is correct:
       a production naming a buffer's variable makes it non-reusable, so
       `simple-dynamic-model` is `IMAGINAL-CHUNK0` while `act-touch`/
-      `merging-test` are `CHUNK{n}` (`d0ee65b`, GOTCHAS #205 — flips
-      `simple-dynamic-model`, 93 pass / 42 fail).
+      `merging-test` are `CHUNK{n}` (`d0ee65b`, GOTCHAS #205), and a merge
+      renames references to the merged buffer chunk (`9a413cd`, GOTCHAS #206).
+      Flips
+      `simple-dynamic-model`, `tutorial-unit5modeling-v9-p7-8-run` and
+      `tutorial-unit5-fan-lawyer-store-trace` — **95 pass / 40 fail**.
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
-      motor/device work (`keypad-test`, `agi-modify-test`), and
-      `chunk-type :include` in `audio-updates`.
+      motor/device work (`keypad-test`, `agi-modify-test`), and the audio
+      sound-object gap.
       **The audio specs need sound objects, not just notifications**: a task
       that calls `new-tone-sound` outside a run (`unstuff-aural`, `siegler`,
       `audio-updates`) has its `new-sound` line recorded as a sidecar
