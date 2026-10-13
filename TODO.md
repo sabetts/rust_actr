@@ -470,38 +470,30 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        `add-visicon`/`clear-visicon`, which the device-timeline specs rely on).
        A narrower version — coalesce only the window helpers, and only while no
        display has executed at that time — is the next thing to try.
-       **Device buttons/lines — plumbing in place, display wave still not
-       reaching the trace** (`f2a472f`, GOTCHAS #223). The extractor records
+       **Device buttons/lines — DONE; `bst-*` now blocks on the motor module**
+       (`f2a472f` + `6cf13f9`, GOTCHAS #223/#224). The extractor records
        `add-button`/`add-line`, the sidecar carries them, the harness parses
-       them (verified: 16 buttons / 22 lines for `bst-nolearn`) and the engine
-       applies due ops through the same helpers the RPC path uses, merged by
-       `at_ms`. The wave is queued and consumed, but the golden bst trace still
-       shows only the initial goal/CR, and instrumenting `proc_display` proved
-       **it never runs** — so the queued `ProcDisplay` is not executing.
-       The anomaly to chase: the run's trace ends with "no events left to
-       process" even though `run_full_time` pushes a hidden `Dummy` at the
-       limit, which should make that impossible — so either the line comes from
-       a different run entry point than the one the steps drive, or the queue is
-       cleared between `schedule_display()` and the loop's first peek. Start
-       there rather than at the visicon.
-       Note the golden `bst-learn` spec is *worse* than the RPC model here: its
-       run has no vision events at all, because `build-display` reaches the
-       engine as `add-button`/`add-line` ops and the extractor's device sidecar
-       records only texts/clears/modifies. That is a separate extractor gap
-       from the off-by-one above.
-       The engine emits the initial goal, one conflict-resolution, then "no
-       events left to process", while the ref continues with vision. The first
-       difference is *which* location is placed: ref `visual-location2`,
-       engine `visual-location3`. `build_display` (`tutorial/lisp/bst.lisp:53`)
-       adds 4 buttons then 4 lines, and both `add_window_button` and
-       `add_window_line` consume a `feat_seq` index — so the newest should be 7
-       if both ran, yet the engine places 3, meaning the line features are not
-       created before the placing wave. The ref's 2 implies ACT-R numbers them
-       differently again (cf. the column-major naming note in
-       `perception.rs`). Next probe: log every `features.push` in `debug.rs`
-       (name/kind) at t=0. Note the single-threaded SBCL load cannot supply
-       ground truth here — `print-visicon` returns nothing without a device —
-       so settle it from the ref plus the client's call sequence.
+       them (16 buttons / 22 lines for `bst-nolearn`), and the engine applies
+       due ops through the same helpers the RPC path uses, merged by `at_ms`.
+       The wave did not run because `chunk-type` rebuilds the engine for its
+       in-place definition change and a fresh engine arms device **run 0** — so
+       the `(RESET) (CHUNK-TYPE …) (RUN 60 …)` replay wiped the display the
+       reset had just armed, and the run ended after the initial goal + one
+       conflict-resolution. `Session::rebuild_engine_in_place` now carries the
+       run across the rebuild.
+       All four `bst-*` specs build the display and run into the model's first
+       manual action. The blocker is now the **motor request slot**
+       `(:loc <visual-location>)` (`not implemented: manual request slot
+       ("LOC", …)`), which `keypad-test` (`("HAND", RIGHT)`) shares — one
+       motor-module feature, so this cluster is
+       `bst-learn`, `bst-learn-ppm`, `bst-nolearn` (golden + RPC) and
+       `keypad-test`.
+       Diagnostic note that cost a session: **check which run step the spec
+       uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
+       queue-draining terminator ("no events left to process") is *correct*;
+       only `:RUN-FULL-TIME` pushes a hidden `Dummy` at the limit ("time limit
+       reached"). The earlier "the Dummy should make this impossible" reasoning
+       was based on the wrong step.
        Swept all 22 with one process per model (the harness has no per-test
        timeout), against a live `actr-server`:
        - OK (11): addition, count, semantic, semantic-dynamic,
