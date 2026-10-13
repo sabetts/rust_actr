@@ -20,6 +20,13 @@ impl Engine {
         self.out_lines.len()
     }
 
+    /// Drop the trace lines from `len` on (`no-output` binds the output
+    /// stream to nothing in ACT-R, so the suppressed command's lines never
+    /// exist; this is the equivalent).
+    pub fn truncate_out(&mut self, len: usize) {
+        self.out_lines.truncate(len);
+    }
+
     /// The trace lines emitted since index `start`.
     pub fn out_since(&self, start: usize) -> Vec<String> {
         self.out_lines.get(start..).unwrap_or(&[]).to_vec()

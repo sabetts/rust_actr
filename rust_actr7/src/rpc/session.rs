@@ -639,10 +639,20 @@ impl Session {
                     .ok_or("no-output needs a command name")?
                     .to_string();
                 let sub_args: Vec<Json> = args.iter().skip(1).cloned().collect();
-                let out = self.evaluate(&sub, None, &sub_args, remote);
                 // The suppressed command's trace must not reach the client's
-                // monitors, so drop whatever it queued.
-                let _ = self.take_trace();
+                // monitors — but only *its* lines. ACT-R's `no-output` binds the
+                // output stream to nothing for the duration of the call, so
+                // anything queued before it stays; dropping the whole pending
+                // trace instead erased earlier output (a `no-output spp` per
+                // trial wiped every previous trial's trace in `bst-*`).
+                let mark = self.engine.as_ref().map(|e| e.out_len());
+                let out = self.evaluate(&sub, None, &sub_args, remote);
+                if let (Some(mark), Some(eng)) = (mark, self.engine.as_mut()) {
+                    eng.truncate_out(mark);
+                    if self.trace_pos > mark {
+                        self.trace_pos = mark;
+                    }
+                }
                 out
             }
             "add-dm" | "add-dm-fct" | "define-chunks" | "define-chunks-fct" => {

@@ -3812,3 +3812,17 @@ builds `kind OVAL` with the text as value. Note also that the *text* features ar
 co-located with the oval (same `screen-x/y`), and that ACT-R matches a requested
 `value` case-insensitively — `bst` asks `value "b"` / `value "reset"` against the
 visicon's `"B"` / `"Reset"` — so `loc_matches` compares strings that way now.
+
+## 230. `no-output` suppresses one command, not everything queued before it
+
+ACT-R's `no-output` runs a command with the output stream bound to nothing, so
+*that command's* lines never exist — the lines already emitted stay. The RPC
+handler instead called `take_trace()`, which advances the read cursor to the end
+of the queue and so discarded **every pending line**, including output from
+before the call.
+
+That is invisible while a spec's command steps precede its runs (nothing is
+pending), but the `bst` Python driver calls `no-output spp` *between* trials, so
+each call wiped the previous trials' trace. The handler now records the engine's
+`out_len` before the call and truncates back to it afterwards (clamping
+`trace_pos`), which is the stream-binding behaviour.
