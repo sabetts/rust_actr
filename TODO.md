@@ -313,17 +313,25 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       (`9f773c0`), visual-location `lowest`/`highest` request constraints
       (`4ce0ccf`), `?visual-location> state error` (`e6b6542`), the
       extractor now records `load-act-r-code` task files (`a6dffeb` — specs
-      were silently missing the task's `defun`s), and `whynot` now
+      were silently missing the task's `defun`s), `whynot` now
       recomputes the conflict set (`Engine::pmatches`) and reports the
       failure reason in ACT-R's compiled condition order
-      (`9384f4c`, `02e64cb`, GOTCHAS #203).
+      (`9384f4c`, `02e64cb`, GOTCHAS #203), the model-body forms
+      `start-hand-at-mouse`/`-keypad`/`set-audloc-default`/
+      `set-parameter-value` are accepted (removes 4 hard load errors), and a
+      scheduled command's trace module is its schedule-time `:module`
+      (`1ecc980`, GOTCHAS #204).
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
-      `print-visicon`'s table format (several), model-body forms
-      (`start-hand-at-mouse`/`-keypad`, `set-audloc-default`,
-      `set-parameter-value`, `written-for-act-r-version`, `chunk-type
-      :include`), `!bind!` (`which-one`), and the reusable-buffer naming
-      (`simple-dynamic-model`, M3).
+      `print-visicon`'s table format (several), `!bind!` (`which-one`),
+      and the reusable-buffer naming (`simple-dynamic-model`, M3).
+      **The audio specs need sound objects, not just notifications**: a task
+      that calls `new-tone-sound` outside a run (`unstuff-aural`, `siegler`,
+      `audio-updates`) has its `new-sound` line recorded as a sidecar
+      command, but not the sound itself, so the engine never emits the
+      `set-buffer-chunk aural-location …` that follows at
+      `onset + tone-detect-delay`. Recording `new-tone-sound` as a replayed
+      step (`*generic-commands*` + regen) is the fix.
       **`test-ppm` cannot go green**: its first 122/163 lines now match
       byte-exact, but the third section sets `:PPM-HOOK SHOW-PPM-VALUES`, a
       stub-defined Lisp callback `actr.py` cannot supply (the documented
