@@ -311,15 +311,16 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       engine can replay.
       Done: `chunk-type` (`9f773c0`), `?buffer> buffer requested/unrequested`
       (`9f773c0`), visual-location `lowest`/`highest` request constraints
-      (`4ce0ccf`), and the extractor now records `load-act-r-code` task files
-      (`a6dffeb` — specs were silently missing the task's `defun`s).
+      (`4ce0ccf`), `?visual-location> state error` (`e6b6542`), and the
+      extractor now records `load-act-r-code` task files (`a6dffeb` — specs
+      were silently missing the task's `defun`s).
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), model-body forms
       (`start-hand-at-mouse`/`-keypad`, `set-audloc-default`,
       `set-parameter-value`, `written-for-act-r-version`, `chunk-type
-      :include`), `?visual-location> state error`, `!bind!` (`which-one`),
-      and the reusable-buffer naming (`simple-dynamic-model`, M3).
+      :include`), `!bind!` (`which-one`), and the reusable-buffer naming
+      (`simple-dynamic-model`, M3).
 - [ ] **M2. Trace fidelity** for the command-scope timestamped specs: `:cmdt`
       lines (`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `QUERY-BUFFER-ACTION`,
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
