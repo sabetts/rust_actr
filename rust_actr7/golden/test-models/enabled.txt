@@ -71,6 +71,7 @@ tutorial-unit3modeling-v7-next-run
 tutorial-unit3modeling-v8-next-run
 tutorial-unit3-sperling-trial-trace
 tutorial-unit4-paired-trace
+tutorial-unit5-fan-lawyer-store-trace
 tutorial-unit5modeling-first-run
 tutorial-unit5modeling-v1-run
 tutorial-unit5modeling-v2-first-run
@@ -82,6 +83,7 @@ tutorial-unit5modeling-v6-run-p3
 tutorial-unit5modeling-v7-p4-run
 tutorial-unit5modeling-v8-p6-run-high-detail
 tutorial-unit5modeling-v9-p6-retrieval
+tutorial-unit5modeling-v9-p7-8-run
 tutorial-unit5modeling-v9-p8-actions
 tutorial-unit7modeling-pcomp-issues-v2-one-trial
 tutorial-unit7modeling-pcomp-issues-v4-one-trial

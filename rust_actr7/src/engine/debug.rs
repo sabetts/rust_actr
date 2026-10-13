@@ -195,12 +195,19 @@ impl Engine {
             (c.ctype.clone(), names)
         };
         let mut groups: Vec<Vec<usize>> = Vec::new();
+        // A run-time chunk whose slot signature matches a model chunk joins
+        // that model chunk's `dm-chunks` group (the alist is keyed by
+        // signature), so it prints next to it rather than in the run-time
+        // block — `tutorial-unit5modeling-v9-p7-8-run`'s `IMAGINAL-CHUNK0-0`
+        // follows `OLD-CONTEXT`.
+        let mut attached: Vec<Vec<usize>> = vec![Vec::new(); n_model];
         for i in n_model..self.dm.len() {
             let ki = key(&self.dm[i]);
-            let found = groups.iter().position(|grp| {
-                let j = grp[0];
-                key(&self.dm[j]) == ki
-            });
+            if let Some(j) = (0..n_model).find(|j| key(&self.dm[*j]) == ki) {
+                attached[j].push(i);
+                continue;
+            }
+            let found = groups.iter().position(|grp| key(&self.dm[grp[0]]) == ki);
             match found {
                 Some(g) => groups[g].push(i),
                 None => groups.push(vec![i]),
@@ -210,7 +217,10 @@ impl Engine {
         for grp in groups.iter().rev() {
             prints.extend(grp.iter().copied());
         }
-        prints.extend(0..n_model);
+        for i in 0..n_model {
+            prints.push(i);
+            prints.extend(attached[i].iter().copied());
+        }
         for i in prints {
             let c = self.dm[i].clone();
             if filter && !sdm_match(&c, &preds) {

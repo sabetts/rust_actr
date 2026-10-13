@@ -3185,3 +3185,26 @@ of the buffer's chunk *name* (`core-modules/procedural.lisp:534`). A
 — so a later merge of the imaginal chunk into DM can alias the name to the
 DM chunk (`merging-test`'s `value B`). Only a **request** spec copies a
 chunk-valued reference (`instantiate-chunk-spec`, GOTCHA #41).
+
+## 206. On merge, references to the buffer chunk are renamed to the DM chunk
+
+`merge-chunk-into-dm` (`core-modules/declarative-memory.lisp:1897`) finds an
+existing DM chunk by content and calls `merge-chunks-fct existing chunk`. With
+`update-chunks-on-the-fly` — `:ncnar` non-nil **and** `:dcnn`, both `t` by
+default (`framework/naming-module.lisp:452`) — that rewrites *every slot value
+that names the merged buffer chunk* to the DM chunk's name
+(`framework/chunks.lisp:1736`). So `declarative-issues-v9`'s
+`=imaginal> goal =goal` stores the goal chunk `CHUNK0`, and when `CHUNK0`
+later merges into DM `G1` the imaginal chunk's `goal` becomes `G1` — which is
+why the ref prints `GOAL G1` and the `:ncnar nil` companion ref prints
+`GOAL CHUNK0`. `sji-merge` sets `:dcnn nil` to opt out, and its ref keeps the
+copy name `A-0`. The engine gates `Engine::rename_chunk_refs` on
+`Config::chunk_update`.
+
+Related, for `sdm`: `dm-chunks` is an alist keyed by the chunk's slot
+signature, and `find-matching-chunks` **reverses** each group when collecting
+(`framework/chunk-spec.lisp:1132`), so a chunk merged at run time that shares
+a signature with a model chunk prints *after* it, in insertion order — the
+`OLD-CONTEXT` / `IMAGINAL-CHUNK0-0` pair in
+`tutorial-unit5modeling-v9-p7-8-run`. `Engine::print_sdm` attaches such a
+run-time chunk to the model group it shares a signature with.

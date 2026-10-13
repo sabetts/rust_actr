@@ -265,7 +265,10 @@ struct Config {
     vpft: bool,
     /// `:vidt` — randomize the imaginal module delay.
     vidt: bool,
-    /// `require-extra "threads"`: the goal buffer is a searchable
+    /// `update-chunks-on-the-fly`: `:ncnar` non-nil AND `:dcnn` (both `t` by
+    /// default). On a merge, rewrite references to the merged buffer chunk to
+    /// the DM chunk's name (`framework/naming-module.lisp:452`).
+    chunk_update: bool,    /// `require-extra "threads"`: the goal buffer is a searchable
     /// multi-buffer holding a set of concurrent goals (`new-threads.lisp`).
     threads: bool,
     /// Activation trace (`:act`); see [`Act`].
@@ -708,6 +711,16 @@ fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
     }
 }
 
+/// Like [`sgp_bool`] but `true` when the key is absent — for parameters whose
+/// ACT-R default is `t` (`:ncnar`, `:dcnn`).
+fn sgp_tri_state(params: &[(String, Sexp)], key: &str) -> bool {
+    match params.iter().find(|(k, _)| k == key) {
+        Some((_, Sexp::Sym(s))) => s != "NIL",
+        Some(_) => true,
+        None => true,
+    }
+}
+
 impl Config {
     fn from_model(m: &Model) -> Result<Config, EngineError> {
         // Still beyond reach: utility learning hooks, permanent activation
@@ -857,6 +870,12 @@ impl Config {
             },
             vpft: sgp_bool(&m.params, ":VPFT"),
             vidt: sgp_bool(&m.params, ":VIDT"),
+            // `update-chunks-on-the-fly` = `:ncnar` non-nil AND `:dcnn`
+            // (`framework/naming-module.lisp:452`). Both default to `t`; a
+            // model that sets either to nil opts out of name remapping
+            // (`sji-merge` sets `:dcnn nil`).
+            chunk_update: sgp_tri_state(&m.params, ":NCNAR")
+                && sgp_tri_state(&m.params, ":DCNN"),
             threads: m
                 .required_extras
                 .iter()
@@ -2822,6 +2841,45 @@ impl Engine {
             .or_insert_with(Buffer::empty)
     }
 
+    /// `merge-chunks-fct`'s on-the-fly renaming
+    /// (`framework/chunks.lisp:1736`): rewrite every slot value that names
+    /// the merged buffer chunk (`from`) to the DM chunk it merged into (`to`),
+    /// across DM, `define-chunks` chunks, buffer contents, retrieval finsts
+    /// and copy-source records. Enabled by `update-chunks-on-the-fly`
+    /// (`:ncnar`/`:dcnn`, both `t` by default; `naming-module.lisp:452`).
+    fn rename_chunk_refs(&mut self, from: &str, to: &str) {
+        fn rewrite(slots: &mut [(String, Value)], from: &str, to: &str) {
+            for (_, v) in slots.iter_mut() {
+                if let Value::Sym(s) = v {
+                    if s == from {
+                        *s = to.to_string();
+                    }
+                }
+            }
+        }
+        for c in self.dm.iter_mut() {
+            rewrite(&mut c.slots, from, to);
+        }
+        for c in self.named.values_mut() {
+            rewrite(&mut c.slots, from, to);
+        }
+        for b in self.buffers.values_mut() {
+            if let Some(c) = b.chunk.as_mut() {
+                rewrite(&mut c.slots, from, to);
+            }
+        }
+        for (n, _) in self.finsts.iter_mut() {
+            if n == from {
+                *n = to.to_string();
+            }
+        }
+        for v in self.copy_source.values_mut() {
+            if v == from {
+                *v = to.to_string();
+            }
+        }
+    }
+
     /// Merge a cleared buffer chunk into DM by content match, adding a
     /// reference (`merge-reference-list/count`); fresh contents are
     /// added with creation=now, refs=(now), count=1. Buffers in
@@ -2869,7 +2927,20 @@ impl Engine {
                 if let Some(dm_name) = self.dm[i].name.clone() {
                     if let Some(n) = chunk.name.clone() {
                         if n != dm_name {
-                            self.chunk_alias.insert(n, dm_name);
+                            self.chunk_alias.insert(n.clone(), dm_name.clone());
+                            // `merge-chunks-fct` with on-the-fly naming
+                            // (`update-chunks-on-the-fly`, on by default:
+                            // `:ncnar`/`:dcnn` are `t`) rewrites every slot
+                            // value that referenced the merged buffer chunk to
+                            // the DM chunk's name
+                            // (`framework/chunks.lisp:1736`,
+                            // `naming-module.lisp:452`). That is why the
+                            // imaginal chunk's `goal =goal` later prints `G1`,
+                            // not `CHUNK0` (`sji-merge` sets `:dcnn nil` to opt
+                            // out).
+                            if self.cfg.chunk_update {
+                                self.rename_chunk_refs(&n, &dm_name);
+                            }
                         }
                     }
                 }
