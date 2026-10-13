@@ -841,6 +841,40 @@ impl Engine {
     /// `(sgp <param>)` / `get-parameter-value`: the printed current value of a
     /// supported model parameter (`framework/printing.lisp`,
     /// `modules/utility-and-reward-1.lisp`). `None` for an unknown name.
+    /// `(spp <production> :key …)` read (`utility-and-reward-1.lisp:660`): the
+    /// value of one production parameter. `None` for an unknown production or
+    /// key. `:at` is the global default action time, as ACT-R reports it.
+    pub fn prod_param(&self, name: &str, key: &str) -> Option<Sexp> {
+        let idx = self
+            .model
+            .productions
+            .iter()
+            .position(|p| p.name.eq_ignore_ascii_case(name))?;
+        let prod = &self.model.productions[idx];
+        Some(match key.to_uppercase().as_str() {
+            ":NAME" => Sexp::Sym(prod.name.clone()),
+            ":U" => Sexp::Float(self.utilities[idx] as f64),
+            ":UTILITY" => match self.production_utility[idx] {
+                Some(v) => Sexp::Float(v as f64),
+                None => Sexp::Sym("NIL".into()),
+            },
+            ":AT" => Sexp::Float(self.cfg.dat_ms as f64 / 1000.0),
+            ":REWARD" => match &prod.reward {
+                Some(Reward::Num(r)) => Sexp::Float(*r as f64),
+                Some(Reward::Other(s)) => Sexp::Str(s.clone()),
+                None => Sexp::Sym("NIL".into()),
+            },
+            ":FIXED-UTILITY" => Sexp::Sym("NIL".into()),
+            _ => return None,
+        })
+    }
+
+    /// Every production's name, in load order — `(spp)` with no production
+    /// reports them all (`utility-and-reward-1.lisp:804`).
+    pub fn production_names(&self) -> Vec<String> {
+        self.model.productions.iter().map(|p| p.name.clone()).collect()
+    }
+
     pub fn get_param(&self, key: &str) -> Option<String> {
         let b = |x: bool| if x { "T" } else { "NIL" }.to_string();
         Some(match key.to_uppercase().as_str() {

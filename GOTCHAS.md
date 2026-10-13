@@ -3550,3 +3550,36 @@ index in `init_genrand(1)` and diff the index sequences (only the golden path
 jumps backwards); then log `cfg.seed` at the reset's seed point — which showed
 the three load-time resets seeding `(200 4)` from unit4's model body and the two
 task resets seeding nothing at all.
+
+## 221. `spp` reads production parameters; `no-output` wraps a command
+
+Two commands the `bst` task driver needs, both with a shape that is easy to get
+wrong:
+
+`spp` (`utility-and-reward-1.lisp:800`) is "production :key [value] …". A key
+*followed by a value* is a set; a key with nothing after it is a **read**, and
+ACT-R then returns one value list *per production* — `(spp 'p :u)` → `((13))`.
+Since the dispatcher wraps a command's value in a list, the RPC reply is
+`[[[13]]]`, which is why the client indexes three deep:
+
+```python
+# tutorial/python/bst.py:299
+return actr.no_output("spp",prod,":u")[0][0]
+```
+
+The RPC handler had folded `spp` into the `sgp`/`sdp` arm, so a read fell into
+the setter branch: `("p", ":u")` became the pair `:p → :u`, `apply_sgp` ignored
+it, and the reply was `[null]` — `[0][0]` then raised and killed the driver
+process (which is why the sweep showed no verdict at all rather than a failure).
+
+`no-output` (`external-no-output`, `framework/printing.lisp:470`) runs the named
+command with its output suppressed and returns that command's value. The engine
+must *drop* whatever trace the inner command queued — the RPC layer delivers
+trace to the client's monitors after every request, so leaving it would print
+the report the wrapper exists to hide.
+
+Both had to be added to the built-in command-name table as well: `Session::
+evaluate` looks the name up there before dispatching, so an unregistered
+`no-output` made the inner call fail and the client saw `False` rather than an
+error. That is a quiet failure mode worth remembering — check the table first
+when a new command "returns nothing".

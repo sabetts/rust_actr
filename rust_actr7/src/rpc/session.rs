@@ -121,6 +121,7 @@ pub const BUILTINS: &[&str] = &[
     "sgp",
     "spp",
     "sdp",
+    "no-output",
     "pp",
     // Device / vision / motor.
     "add-visicon-features",
@@ -527,7 +528,7 @@ impl Session {
             // setter (`framework/printing.lisp`). `spp`/`sdp` getters are the
             // per-production/sub-symbolic forms; production params are
             // returned as NIL for now.
-            "sgp" | "spp" | "sdp" => {
+            "sgp" | "sdp" => {
                 let all_keys = !args.is_empty()
                     && args
                         .iter()
@@ -557,6 +558,92 @@ impl Session {
                     }
                     Ok(vec![Json::Null])
                 }
+            }
+            // `spp-fct` (`utility-and-reward-1.lisp:800`): "production
+            // :key [value] …". A key followed by a non-key is a *set* — the
+            // engine has no per-production store, so those fall through to
+            // `apply_sgp` as before. Otherwise it is a read: ACT-R returns one
+            // value list per production, so the reply is `[[values…]…]` and the
+            // client's `no_output("spp", prod, ":u")[0][0]` indexes three deep
+            // (`tutorial/python/bst.py:299`).
+            "spp" => {
+                let mut names: Vec<String> = Vec::new();
+                let mut keys: Vec<String> = Vec::new();
+                let mut sets: Vec<(String, Json)> = Vec::new();
+                let mut i = 0;
+                while i < args.len() && !args[i].as_str().unwrap_or("").starts_with(':') {
+                    names.push(args[i].as_str().unwrap_or("").to_string());
+                    i += 1;
+                }
+                while i < args.len() {
+                    let k = args[i].as_str().unwrap_or("").to_string();
+                    if !k.starts_with(':') {
+                        i += 1;
+                        continue;
+                    }
+                    if i + 1 < args.len()
+                        && !args[i + 1].as_str().unwrap_or("").starts_with(':')
+                    {
+                        sets.push((k, args[i + 1].clone()));
+                        i += 2;
+                    } else {
+                        keys.push(k);
+                        i += 1;
+                    }
+                }
+                if !sets.is_empty() {
+                    let mut out = Vec::new();
+                    for (k, v) in sets {
+                        let sexp = json_to_sexp(&v);
+                        if let Some(eng) = &mut self.engine {
+                            eng.apply_sgp(&k, &sexp).map_err(|e| e.to_string())?;
+                        }
+                        out.push(Json::Null);
+                    }
+                    return Ok(out);
+                }
+                let Some(eng) = &self.engine else {
+                    return Ok(vec![Json::Null]);
+                };
+                if keys.is_empty() {
+                    return Ok(vec![Json::Null]);
+                }
+                let prods = if names.is_empty() {
+                    eng.production_names()
+                } else {
+                    names
+                };
+                let results: Vec<Json> = prods
+                    .iter()
+                    .map(|n| {
+                        Json::Arr(
+                            keys.iter()
+                                .map(|k| {
+                                    eng.prod_param(n, k)
+                                        .map(|v| sexp_to_json(&v))
+                                        .unwrap_or(Json::Null)
+                                })
+                                .collect(),
+                        )
+                    })
+                    .collect();
+                Ok(vec![Json::Arr(results)])
+            }
+            // `external-no-output` (`framework/printing.lisp:470`): run the
+            // named command with its output suppressed and return its value.
+            // `bst.py` uses it to read `spp` without printing the report.
+            "no-output" => {
+                let sub = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("no-output needs a command name")?
+                    .to_string();
+                let sub_args: Vec<Json> = args.iter().skip(1).cloned().collect();
+                let out = self.evaluate(&sub, None, &sub_args, remote);
+                // The suppressed command's trace must not reach the client's
+                // monitors, so drop whatever it queued.
+                let _ = self.take_trace();
+                out
             }
             "add-dm" | "add-dm-fct" | "define-chunks" | "define-chunks-fct" => {
                 // `(add-dm (name isa type …) …)`; a `-fct` variant takes one
