@@ -603,7 +603,17 @@ impl Engine {
                     _ => return Err(bad(format!("bad :act {val:?}"))),
                 };
             }
-            ":NSJI" => self.cfg.nsji = truthy,
+            // `:nsji` (`declarative-memory.lisp:2261`): `t`/`warn`/`nil`.
+            ":NSJI" => {
+                self.cfg.nsji = match val {
+                    Sexp::Sym(s) if s == "NIL" => Nsji::Clamp,
+                    Sexp::Sym(s) if s == "WARN" => Nsji::Warn,
+                    _ => Nsji::Allow,
+                }
+            }
+            // `:model-warnings` (`printing.lisp:341`): whether `model-warning`
+            // output is shown at all.
+            ":MODEL-WARNINGS" => self.cfg.model_warnings = truthy,
             ":GA" => {
                 if let Some(x) = num(val) {
                     self.cfg.ga = x;

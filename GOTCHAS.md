@@ -3846,3 +3846,57 @@ semantics bug (see #229) rather than a bookkeeping one.
 trace accumulates 150 → 297 → 447 → 594 lines and `bst-nolearn`'s first
 divergence moves 82 → 97. Diagnostic: log `out_len()` before/after each run
 step — it read `before=0` for every trial, which is what located it.
+
+## 232. Partial matching narrates nil-valued `-` slots, and always prints the effective value
+
+`partial-matching` (`declarative-memory.lisp:2583`) walks **every** `=`/`-` slot
+spec and skips only request parameters (keywords) and variables:
+
+```lisp
+(when (and (or (eq (car k) '=) (eq (car k) '-))
+           (not (keywordp (second k)))
+           (not (chunk-spec-variable-p (third k))))
+```
+
+A **nil** request value is *not* skipped. The engine skipped it, so a request
+like `+retrieval> isa math-fact - arg1 nil - arg2 nil - result nil` (GOTCHA
+#229's shape, `declarative-issues-v8.lisp:155`) produced no per-slot lines at
+all. It also dropped the closing line in the `sim ≠ ms` branch: ACT-R emits the
+"no effect" note *inside* the `cond`, then prints
+`effective similarity value is` **unconditionally** (`:2599-2607`), so the
+narration for such a slot is five lines, not four.
+
+Neither change moves a number. A nil request against a non-nil slot value has
+`sim = md ≠ ms`, so it contributes 0 — which is what the ref's own
+`Total similarity score 0.0` and `negation test with similarity not ms has no
+effect` say. `tutorial-unit5modeling-v6-p5-run-with-mp-2` and
+`tutorial-unit5modeling-v8-p6-run` were both strict *subsequences* of their refs
+(0 lines ours-only, every diff a pure insertion), which is why the fix could not
+perturb the activations.
+
+## 233. `:nsji` is three-valued, and `:model-warnings` gates the Sji notice
+
+`compute-sji` (`declarative-memory.lisp:2536`) returns the raw
+`mas - log(fan)` value only when `:nsji` is `t`; `warn` (the parameter's default,
+`:2261`) clamps at 0 **and emits a warning**, and `nil` clamps silently:
+
+```lisp
+(if (eq nsji t) val
+  (progn (when (and nsji (minusp val))
+           (model-warning "Calculated Sji value between ~s and ~s is negative, but using a value of 0." j i))
+         (max val 0.0)))
+```
+
+The engine modelled `:nsji` as a bool, so an explicit `(sgp :nsji warn)` was read
+as `t` (allowing negatives). It is now a three-state `Nsji`.
+
+The warning is a `model-warning`, gated on `:v` being non-nil **and**
+`:model-warnings` (`misc-utils.lisp:976-988`). ACT-R's printing module
+initialises `:model-warnings` to `t` (`internal-structures.lisp:689`), but every
+golden stub sets `(ssp :starting-parameters (:model-warnings nil))` — and the
+extractor does not record `ssp` calls made in `:load` mode — so the refs reflect
+`nil`. The engine therefore defaults `:model-warnings` to nil, and a spec turns
+it on with an explicit `(:SGP :MODEL-WARNINGS T)` step (which is what
+`tutorial-unit5modeling-v8-p6-run` does, while its `-high-detail` sibling does
+not). This is a deliberate ref-first choice: a real ACT-R client that relies on
+the `t` default would see one extra warning line that we omit.

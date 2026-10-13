@@ -209,9 +209,26 @@ enum Act {
     Low,
 }
 
+/// `:nsji` (`declarative-memory.lisp:2261`): whether `compute-sji` may return a
+/// negative value. `t` allows it; `warn` (the default) clamps at 0 and warns;
+/// `nil` clamps silently.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Nsji {
+    Allow,
+    Warn,
+    Clamp,
+}
+
 #[derive(Debug, Clone)]
 struct Config {
     detail: Detail,
+    /// `:model-warnings` (`printing.lisp:341`): whether `model-warning` output
+    /// (e.g. the negative-Sji notice, `declarative-memory.lisp:2550`) is
+    /// emitted. ACT-R's printing module initialises the slot to `t`, but every
+    /// golden stub sets `(ssp :starting-parameters (:model-warnings nil))` and
+    /// the extractor does not record that, so the engine defaults to `nil` to
+    /// reproduce the refs (GOTCHAS #232).
+    model_warnings: bool,
     esc: bool,
     lf_ms: i64,
     le: f32,
@@ -246,8 +263,9 @@ struct Config {
     rir: bool,
     /// Maximum associative strength (`:mas`). `Some` enables spreading.
     mas: Option<f32>,
-    /// `:nsji` — do not clamp negative Sji at 0.
-    nsji: bool,
+    /// `:nsji` — whether a negative Sji is allowed, clamped, or clamped with a
+    /// warning (`t`/`warn`/`nil`, default `warn`).
+    nsji: Nsji,
     /// Goal buffer source spread (`:ga`, default 0).
     ga: f32,
     /// Imaginal buffer source spread (`:imaginal-activation`, default 1.0).
@@ -792,6 +810,17 @@ fn sgp_tri_state(params: &[(String, Sexp)], key: &str) -> bool {
     }
 }
 
+/// `:nsji` (`declarative-memory.lisp:2261`): `t` allows a negative Sji, `warn`
+/// (the default) clamps it at 0 and warns, `nil` clamps silently.
+fn sgp_nsji(params: &[(String, Sexp)], key: &str) -> Nsji {
+    match params.iter().find(|(k, _)| k == key) {
+        Some((_, Sexp::Sym(s))) if s == "NIL" => Nsji::Clamp,
+        Some((_, Sexp::Sym(s))) if s == "WARN" => Nsji::Warn,
+        Some(_) => Nsji::Allow,
+        None => Nsji::Warn,
+    }
+}
+
 impl Config {
     fn from_model(m: &Model) -> Result<Config, EngineError> {
         // Still beyond reach: utility learning hooks, permanent activation
@@ -914,12 +943,13 @@ impl Config {
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
             ppm: sgp_single(&m.params, ":PPM")?,
             epl: sgp_bool(&m.params, ":EPL"),
+            model_warnings: sgp_bool(&m.params, ":MODEL-WARNINGS"),
             pct: sgp_bool(&m.params, ":PCT"),
             tt_ms: (sgp_num(&m.params, ":TT", 2.0)? * 1000.0).round() as i64,
             cia: sgp_bool(&m.params, ":CIA"),
             rir: sgp_bool(&m.params, ":RIR"),
             mas: sgp_single(&m.params, ":MAS")?,
-            nsji: sgp_bool(&m.params, ":NSJI"),
+            nsji: sgp_nsji(&m.params, ":NSJI"),
             ga: sgp_single(&m.params, ":GA")?.unwrap_or(0.0),
             imaginal_activation: sgp_single(&m.params, ":IMAGINAL-ACTIVATION")?.unwrap_or(1.0),
             time_noise: sgp_single(&m.params, ":TIME-NOISE")?.unwrap_or(0.015),
@@ -2942,7 +2972,22 @@ impl Engine {
                 fo + self.c_fan_out.get(j).copied().unwrap_or(0).max(1) as f32
             };
             let val = mas - (eff / *cnt as f32).ln();
-            return if self.cfg.nsji { val } else { val.max(0.0) };
+            // `compute-sji` (`declarative-memory.lisp:2548`): `t` keeps a
+            // negative Sji, `warn` (the default) clamps at 0 and warns, `nil`
+            // clamps silently. `model-warning` is itself gated on `:v` being
+            // non-nil (`misc-utils.lisp:996`), which `out` already enforces.
+            return match self.cfg.nsji {
+                Nsji::Allow => val,
+                Nsji::Warn => {
+                    if val < 0.0 && self.cfg.model_warnings {
+                        self.out(format!(
+                            "#|Warning: Calculated Sji value between {j} and {i} is negative, but using a value of 0. |#"
+                        ));
+                    }
+                    val.max(0.0)
+                }
+                Nsji::Clamp => val.max(0.0),
+            };
         }
         0.0
     }

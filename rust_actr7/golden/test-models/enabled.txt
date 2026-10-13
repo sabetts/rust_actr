@@ -82,8 +82,10 @@ tutorial-unit5modeling-v2-longer-run
 tutorial-unit5modeling-v3-first-run
 tutorial-unit5modeling-v4-p3-run
 tutorial-unit5modeling-v6-p4-run-with-mp-2
+tutorial-unit5modeling-v6-p5-run-with-mp-2
 tutorial-unit5modeling-v6-run-p3
 tutorial-unit5modeling-v7-p4-run
+tutorial-unit5modeling-v8-p6-run
 tutorial-unit5modeling-v8-p6-run-high-detail
 tutorial-unit5modeling-v8-p6-run-retrieved-chunk
 tutorial-unit5modeling-v9-p6-retrieval

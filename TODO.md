@@ -345,6 +345,20 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
       motor/device work (`keypad-test`, `agi-modify-test`), and the audio
       sound-object gap.
+       **Declarative activation-trace narration — DONE** (GOTCHAS #232/#233).
+       `partial-matching` narrates nil-valued `-` slots and always prints
+       `effective similarity value is`; the engine skipped nil slots and dropped
+       that line in the `sim ≠ ms` branch. Both `tutorial-unit5modeling-v6-p5-run-with-mp-2`
+       and `-v8-p6-run` were strict subsequences of their refs (pure
+       insertions), so the fix could not move a number. `:nsji` is now
+       three-valued (`t`/`warn`/`nil`) and the negative-Sji `model-warning` is
+       gated on `:model-warnings`, which the golden environment leaves nil.
+       **Frontier 101 → 103**; both specs enabled.
+       Next in this family: `base-level-safety-check` (also a strict
+       subsequence — needs the retrieval-failure render path, the leading
+       `--------------------------` header, and `No chunk above the retrieval
+       threshold`), and `fan-saved-act` (needs the
+       `print-chunk-activation-trace` command).
       **The audio specs need sound objects, not just notifications**: a task
       that calls `new-tone-sound` outside a run (`unstuff-aural`, `siegler`,
       `audio-updates`) has its `new-sound` line recorded as a sidecar

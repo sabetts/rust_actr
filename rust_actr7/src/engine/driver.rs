@@ -854,8 +854,9 @@ impl Engine {
             self.al_out(format!("      Sji = {}", lisp_f(sji)));
         }
 
-        // `:nsji`: `nil` (the default) clamps negatives to 0; `t` keeps them.
-        if sji < 0.0 && !self.cfg.nsji {
+        // `:nsji`: only `t` keeps a negative Sji; `warn`/`nil` clamp at 0 (the
+        // associative-learning trace shows no warning).
+        if sji < 0.0 && self.cfg.nsji != Nsji::Allow {
             sji = 0.0;
         }
         sji
