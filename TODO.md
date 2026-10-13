@@ -447,6 +447,29 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       (`Model::no_reuse_buffers`) and a modify storing a chunk-valued
       `=buffer` ref by name rather than copying it, `simple-dynamic-model`
       is green with no regressions.
+       **Re-baselined 2026-10-13: 11/22** — `rpc-enabled.txt` was stale
+       (9/22) and `simple-dynamic-model` / `simple-ppm-test` already conform.
+       Swept all 22 with one process per model (the harness has no per-test
+       timeout), against a live `actr-server`:
+       - OK (11): addition, count, semantic, semantic-dynamic,
+         simple-dynamic-model, simple-ppm-test, tutorial_unit2code_dm,
+         tutorial_unit2code_sdm, tutorial_unit2code_buffer_status,
+         tutorial_unit2code_whynot, tutor-model-solution.
+       - FAIL (7): `bst-nolearn` (line 2/380/2484),
+         `paired-learning-dynamic` (207/803), `tutorial_unit2code_buffer_chunk`
+         (1/9), `tutorial_unit2code_initial` (2/65/64),
+         `tutorial_unit5_onehit_blocks` (2/21/2),
+         `tutorial_unit5_onehit_hands` (2/13/6),
+         `tutorial_unit5_onehit_learning` (2/9952/2).
+       - Blocked (4): `paired-learning` (hangs), and `bst-learn`,
+         `bst-learn-ppm`, `fan-no-pm`, where the driver process exits mid-run
+         (`bst-learn`'s `bst.experiment` calls `exit`) before any verdict.
+         `rpc-conformance.sh --expect` now requires the `RPC-RESULT` line so
+         that early exit cannot read as a false pass.
+       - `paired-learning`/`paired-learning-dynamic`/`simple-dynamic-model`/
+         `simple-ppm-test` are golden-PASS, so their gap is the *client
+         command surface*, not engine semantics; `bst-*`/`fan-no-pm` are
+         golden-FAIL too, so work there counts on both tracks.
 - Known divergence: the pipe transport and `define-module`/`undefine-module`
   (client-defined modules) are covered by "no arbitrary Lisp" unless needed.
 

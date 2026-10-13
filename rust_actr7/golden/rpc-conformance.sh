@@ -33,7 +33,15 @@ cleanup() { kill "$SERVER" 2>/dev/null || true; }
 trap cleanup EXIT
 
 if [[ "$MODE" == "--expect" ]]; then
-  python3 "$HERE/rpc-conformance.py" "$PORT" --expect "$HERE/rpc-enabled.txt"
+  # Some test-models end the driver process mid-run (e.g. `bst-learn`'s
+  # `bst.experiment` calls `exit`), so the script can finish *before* it
+  # prints a verdict — and `set -e` would not notice. Require the result line.
+  out="$(python3 "$HERE/rpc-conformance.py" "$PORT" --expect "$HERE/rpc-enabled.txt")"
+  printf '%s\n' "$out"
+  grep -q '^RPC-RESULT' <<<"$out" || {
+    echo "rpc-conformance: driver exited without printing RPC-RESULT" >&2
+    exit 1
+  }
 elif [[ "$MODE" == "--all" ]]; then
   python3 "$HERE/rpc-conformance.py" "$PORT" --all
 else
