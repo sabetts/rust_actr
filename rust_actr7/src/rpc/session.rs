@@ -686,18 +686,29 @@ impl Session {
                 Ok(vec![out])
             }
             "permute-list" => {
-                let mut out = match args.first() {
+                let items = match args.first() {
                     Some(Json::Arr(a)) => a.clone(),
                     _ => Vec::new(),
                 };
-                if let Some(eng) = self.engine.as_mut() {
-                    // `permute-list` (`random.lisp`): a Fisher-Yates shuffle on
-                    // the model stream.
-                    for i in (1..out.len()).rev() {
-                        let j = eng.random_int_rpc((i + 1) as i64) as usize;
-                        out.swap(i, j);
+                let out = match self.engine.as_mut() {
+                    // ACT-R's `permute-list` (`random.lisp:562`) picks a random
+                    // element each pass and removes it, and the step form runs
+                    // *before* the end test — so the final single-element pass
+                    // still draws (`(nth (act-r-random (length temp)) temp)`)
+                    // and an n-element list consumes n draws. Fisher-Yates
+                    // consumes n-1, which left the stream one draw behind.
+                    Some(eng) => {
+                        let mut temp = items;
+                        let mut result = Vec::with_capacity(temp.len());
+                        while !temp.is_empty() {
+                            let i = eng.random_int_rpc(temp.len() as i64) as usize;
+                            // `(cons item result)`: each pick goes on the front.
+                            result.insert(0, temp.remove(i));
+                        }
+                        result
                     }
-                }
+                    None => items,
+                };
                 Ok(vec![Json::Arr(out)])
             }
             "schedule-event-relative" | "schedule-event-now" | "schedule-event" => {

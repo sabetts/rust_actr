@@ -3459,3 +3459,35 @@ Verification that it is the right stream: with the fix the RPC run's `noise`
 draws are *value-for-value identical* to the golden run's 95 draws, merely
 shifted by one index — i.e. the model is on ACT-R's stream and only one
 pre-run draw differs (see TODO M3).
+
+## 218. `permute-list` draws n times, including the final single-element pass
+
+ACT-R's `permute-list` (`framework/random.lisp:562`) picks a random element each
+pass and removes it:
+
+```lisp
+(do* ((item (nth (act-r-random (length lis)) lis)
+           (nth (act-r-random (length temp)) temp))
+      (temp (remove item lis :count 1) ...)
+      (result (list item) (cons item result)))
+     ((null temp) result))
+```
+
+`do*` evaluates the step forms *before* the end test, so the pass that empties
+`temp` still draws — `(act-r-random (length temp))` with `length` 1. An n-element
+list therefore consumes **n** draws, not n-1.
+
+`Mt::permute_list` (`rand.rs`) already models this (`while !temp.is_empty()`),
+but the RPC `permute-list` handler was a Fisher-Yates loop
+(`for i in (1..n).rev()`), which consumes n-1. The client's `actr.permute_list`
+sends a 2-element index list, so every RPC run of a permuting task sat one draw
+behind ACT-R for the rest of the model.
+
+This is the "one pre-run draw short" symptom that kept `paired-learning-dynamic`
+failing: it showed up only after GOTCHAS #217 put the run on the right
+`init_genrand(1)` stream, at which point the whole 95-draw `noise` sequence
+matched the ref value-for-value but shifted by one index. Confirmed by tagging
+every `random_int` call site under `DBG_RNG`: the golden spec logged
+`RNG_DRAW n=1` before its first `noise`, the RPC model only
+`AR_RANDOM_RPC limit=2`; after the fix it logs `limit=2` then `limit=1` and the
+two streams coincide.
