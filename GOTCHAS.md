@@ -3208,3 +3208,21 @@ a signature with a model chunk prints *after* it, in insertion order — the
 `OLD-CONTEXT` / `IMAGINAL-CHUNK0-0` pair in
 `tutorial-unit5modeling-v9-p7-8-run`. `Engine::print_sdm` attaches such a
 run-time chunk to the model group it shares a signature with.
+
+## 207. Chunk slots print in model-wide slot order, not the chunk's type order
+
+`pprint-a-chunk` sorts a chunk's set slots by `act-r-slot-index`
+(`framework/chunks.lisp:686`). That index is **model-wide**: `chunk-type-fct`
+keeps one `slot->index` table per model and gives a slot name the next index
+the *first* time it appears in *any* chunk-type definition
+(`framework/chunk-types.lisp:434`), so a type's own declaration order is not
+the print order. In `declarative-issues-v8`, `result` is declared first (in
+`simple-value`), so `math-fact`'s `1-1=0` prints `RESULT ARG1 ARG2 OPERATOR`
+even though the type lists `arg1 arg2 result operator`. `Model::slot_index`
+rebuilds the table from the model's chunk types in definition order.
+
+Also on the command path: ACT-R's `command-output` appends a newline, so a
+`pprint-chunks` result ends with a blank line. `Engine::output` models this by
+pushing a trailing `\n` after joining `out_lines` (`engine/driver.rs:12`), but
+the session driver joined without it, dropping a final blank trace line.
+`Session::take_trace_output` mirrors `Engine::output` so both drivers agree.

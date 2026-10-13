@@ -749,7 +749,7 @@ fn run_spec_session(
     for step in &spec.steps {
         apply_session_step(&mut session, step, &mut remote)?;
     }
-    Ok(session.take_trace().join("\n"))
+    Ok(session.take_trace_output())
 }
 
 fn apply_session_step(

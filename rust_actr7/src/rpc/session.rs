@@ -283,6 +283,20 @@ impl Session {
         }
     }
 
+    /// The trace since the last call as an output string, in the same shape as
+    /// [`Engine::output`] — the trailing newline is included so a final blank
+    /// trace line survives `str::lines`. A command whose output ends with
+    /// `command-output`'s newline (e.g. `pprint-chunks`) leaves that blank line.
+    pub fn take_trace_output(&mut self) -> String {
+        let lines = self.take_trace();
+        if lines.is_empty() {
+            return String::new();
+        }
+        let mut s = lines.join("\n");
+        s.push('\n');
+        s
+    }
+
     pub fn current_model(&self) -> Option<&str> {
         self.current_model.as_deref()
     }

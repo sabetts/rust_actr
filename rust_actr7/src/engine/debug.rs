@@ -79,21 +79,16 @@ impl Engine {
         let name = c.name.clone().unwrap_or_default();
         self.out_lines.push(name.clone());
         // `pprint-a-chunk` (`framework/chunks.lisp:674`) sorts the chunk's set
-        // slots by `act-r-slot-index` (the chunk-type declaration order) and
-        // skips unset slots.
-        let order: Vec<String> = self
-            .model
-            .chunk_types
-            .iter()
-            .find(|t| t.name.eq_ignore_ascii_case(&c.ctype))
-            .map(|t| t.slots.clone())
-            .unwrap_or_default();
+        // slots by `act-r-slot-index` and skips unset slots. That index is
+        // model-wide (`chunk-type-fct`, `chunk-types.lisp:434`), not the
+        // chunk's own type order: `math-fact`'s `result` sorts first because
+        // `simple-value` declared it earlier.
+        let slot_index = self.model.slot_index();
         let mut idx: Vec<usize> = (0..c.slots.len()).collect();
         idx.sort_by_key(|&i| {
-            order
-                .iter()
-                .position(|s| s.eq_ignore_ascii_case(&c.slots[i].0))
-                .unwrap_or(usize::MAX)
+            *slot_index
+                .get(&c.slots[i].0.to_uppercase())
+                .unwrap_or(&usize::MAX)
         });
         for i in idx {
             let (k, v) = &c.slots[i];

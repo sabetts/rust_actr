@@ -360,6 +360,24 @@ impl Model {
             }
         }
     }
+
+    /// ACT-R's model-wide `slot->index` table (`chunk-type-fct`,
+    /// `framework/chunk-types.lisp:434`): a slot name takes the next index the
+    /// first time it appears in *any* chunk-type definition, so the table is
+    /// shared across types rather than per type. `pprint-a-chunk`
+    /// (`framework/chunks.lisp:686`) prints a chunk's set slots sorted by this
+    /// index — which is why `math-fact`'s `result` (declared first, in
+    /// `simple-value`) precedes `arg1`/`arg2`. Keyed upper-case.
+    pub fn slot_index(&self) -> HashMap<String, usize> {
+        let mut map: HashMap<String, usize> = HashMap::new();
+        for ct in &self.chunk_types {
+            for s in &ct.slots {
+                let n = map.len();
+                map.entry(s.to_uppercase()).or_insert(n);
+            }
+        }
+        map
+    }
 }
 
 #[derive(Debug)]
