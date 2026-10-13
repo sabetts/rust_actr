@@ -377,8 +377,12 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       lines (`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `QUERY-BUFFER-ACTION`,
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
       `visicon-update`, `Find-location`, `Move-attention`, `Encoding-complete`),
-      module verbose output, utility-learning lines, `!output!` gating.
-      Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202).
+      module verbose output, utility-learning lines.
+      Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202);
+      **`!output!` gating** — `RhsAction::Output` now goes through `out()`, so
+      it is suppressed by `(:v nil)` like ACT-R's `model-output`
+      (`framework/misc-utils.lisp:801`); flips the RPC model
+      `tutorial_unit2code_buffer_chunk` (GOTCHAS #215).
       **Compiled-production substitution (`:pct`) — DONE for the `:ppm`-off
       path** (`7dfe8f8`, GOTCHAS #213). The composed production's printed form
       and the installed production (which the engine parses back from the

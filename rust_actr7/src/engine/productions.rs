@@ -700,7 +700,11 @@ impl Engine {
                         text.push_str(&self.show_output_arg(a, &b)?);
                         text.push(' ');
                     }
-                    self.out_lines.push(text);
+                    // `!output!` expands to `model-output`, which ACT-R gates
+                    // on the printing module's `:v` stream
+                    // (`framework/misc-utils.lisp:801`): with `(:v nil)`
+                    // there is no stream, so nothing is printed at all.
+                    self.out(text);
                 }
                 RhsAction::Other { head, .. } => {
                     // `!stop!` ends the run with a BREAK-EVENT.

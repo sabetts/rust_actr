@@ -3384,3 +3384,27 @@ draw-by-draw comparison — instrumenting `Mt::noise` against a wrapped
 `genrand_real2`/`act-r-noise` showed both sides made the same number of noise
 draws (95) but different values from the first one, i.e. an aligned draw
 schedule over a different generator state.
+
+## 215. `!output!` is gated by the printing module's `:v` stream
+
+`!output!` expands to `model-output`, and ACT-R's `model-output` reads the
+printing module's `V` and does nothing when there is no stream
+(`framework/misc-utils.lisp:801`):
+
+```lisp
+(setf ,stream (act-r-output-stream (printing-module-v ,module)))
+(when ,stream (evaluate-act-r-command "model-output" ...))
+```
+
+So `(sgp :v nil)` suppresses `!output!` along with the trace — and since the
+trace is off there is nothing else in the stream to mark the gap, which is why
+this hides so well: the `!output!` text simply appears where ACT-R printed
+nothing. The engine has an `out()` helper that applies exactly this gate for
+raw `model-output` lines, but `RhsAction::Output` in `Engine::fire` pushed
+straight onto `out_lines`, so it leaked with the trace off.
+
+The oracle is `actr7.x/test-models/tutorial_unit2code_buffer_chunk.ref`: the
+model runs with `(:v nil)`, so the addition model's `!output! (SEVEN)` must not
+appear, and the ref goes straight from the `>>>` echo to the buffer dump. The
+leaked `SEVEN` was also what put the engine's output *first*, ahead of the
+`>>> actr.buffer_chunk('goal','visual')` echo line.

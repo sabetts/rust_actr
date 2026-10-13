@@ -14,6 +14,7 @@ simple-dynamic-model
 simple-ppm-test
 tutorial_unit2code_dm
 tutorial_unit2code_sdm
+tutorial_unit2code_buffer_chunk
 tutorial_unit2code_buffer_status
 tutorial_unit2code_whynot
 tutor-model-solution
