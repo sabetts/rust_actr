@@ -354,12 +354,59 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       stub-defined Lisp callback `actr.py` cannot supply (the documented
       "no arbitrary Lisp" divergence). Same for `testing-child-slot`, whose
       ref records a Lisp error. Neither is counted as an engine gap.
+      **`adaptive-noise` is also out of scope** (task driver): the model has no
+      productions, and the whole ref trace comes from `run-tests`'s periodic
+      `module-request`/`merge-dm`/`erase-buffer` driver, which the extractor
+      cannot record (in-run commands are dropped; symbol actions fail its
+      `(stringp action)` guard) and the engine cannot replay. Only
+      `adaptive-noise` + `base-level-inhibition` use `schedule-periodic-event`.
+      **`print-visicon`'s table format is a poor spec target**: of the vision
+      cluster, `removed-and-restored-visual-item`, `sperling`,
+      `tutorial-unit3-sperling-experiment` and `creating-an-image` all
+      `add-act-r-command`/`monitor-act-r-command` (client callbacks the golden
+      harness cannot supply), so only `proc-display-with-pending` is
+      callback-free — and it also needs the pending
+      add/delete/modify sections plus `add-visicon-features` recording and
+      regen. The table columns are the feature chunk's insertion order
+      (`chunk-filled-slots-list-fct`), reversed, which is *not* the engine's
+      `Feature::loc_slots()` order and differs per feature construction path.
 - [ ] **M2. Trace fidelity** for the command-scope timestamped specs: `:cmdt`
       lines (`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `QUERY-BUFFER-ACTION`,
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
       `visicon-update`, `Find-location`, `Move-attention`, `Encoding-complete`),
       module verbose output, utility-learning lines, `!output!` gating.
       Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202).
+      **Compiled-production substitution (`:pct`) — algorithm extracted, not
+      yet ported.** The composed production's printed form and the installed
+      production (which the engine parses back from the rendered text) both
+      come from substituting ACT-R's `mappings` into `p1-s`/`p2-s` **one
+      mapping at a time** (`compose-productions`,
+      `modules/production-compilation.lisp:1556-1619`), with a **car-rewrite**
+      that cascades later entries (this is how `=OTHER` resolves to `NUMBER`).
+      A variable that is bound but never mapped stays `=VAR` (so `POST =STATE`
+      stays symbolic). `mappings` = the union of each used buffer's `MAP-*`
+      function (`tools/goal-compilation.lisp:216` (9)/(8 9 12 13) branch for a
+      GOAL RHS `=` firing against a GOAL LHS `=`; `tools/retrieval-compilation
+      .lisp:71` for a RETRIEVAL `+` firing against a `=`), sorted by the
+      `constant-value-p` keys `0`/`1`/`2` — **a chunk name is not a constant**.
+      Ground truth for `paired-learning-dynamic`'s `PRODUCTION15`, in pop order:
+      `=DEST→=OTHER`, `=RETRIEVAL→RETRIEVAL-CHUNK0`,
+      `RETRIEVING-RESULT→RETRIEVING-RESULT`, `=VAL→"8"`, `=DEST→NUMBER`,
+      `=STIMULUS→"xray"`, `=TARGET→WORD`. Engine gaps (all in `compose_pair`,
+      `engine/productions.rs:1339`): the `map` port omits p1's request
+      *slot-name* vars, p2's LHS *dynamic slot names* and the value lookup at
+      the *instantiated* name, and the whole `MAP-GOAL-BUFFER` (9) branch;
+      `render_compiled` (`:1296`) substitutes with **p2's bindings only**
+      (so p1's vars stay symbolic, while a naive p1∪p2 merge wrongly resolves
+      `=STATE`); `subst` never rewrites slot *names*; no car-rewrite.
+      Probe: patch `compose-productions` to print `mappings` and drive
+      `(load-act-r-code "ACT-R:tutorial;lisp;paired.lisp")` +
+      `(load-act-r-model "ACT-R:tutorial;unit8;paired-dynamic-model.lisp")` +
+      `(paired-task 2 2)` (a plain `load` of `paired.lisp` leaves
+      `do-experiment` undefined). Independent remaining causes in
+      `paired-learning-dynamic`: the compiled-production `:utility` equation
+      (15 lines) and retrieval-latency drift (`15.571`→vs→`15.570`, then
+      `21.133` vs `20.748`).
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment).
       **Reusable-buffer naming — DONE** (`d0ee65b`, GOTCHAS #205). The
