@@ -69,7 +69,50 @@ fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
             return Ok(());
         }
         let reply = dispatch(session, &mut conn, method, &params, id.as_ref());
+        // A `reset` defers a client-owned `:testing-function` to here
+        // (`model-tester.cl:485`); run it with the session borrow released.
+        if let Some(name) = session.take_pending_testing_fn() {
+            call_remote_reentrant(session, &mut conn, &name)?;
+        }
         write_message(&mut conn.stream, &reply)?;
+    }
+}
+
+/// Invoke a client-owned command and service any requests the client makes
+/// from inside it.
+///
+/// [`Conn::call`] cannot do this: it runs while `Session::evaluate` holds
+/// `&mut Session`, so a nested request from the callback has no way to reach
+/// the session and is dropped — leaving the client blocked forever waiting for
+/// a reply. Here the borrow is released, so nested requests (`paired-learning`'s
+/// testing function calls `set-parameter-value`) are dispatched normally.
+fn call_remote_reentrant(
+    session: &mut Session,
+    conn: &mut Conn,
+    name: &str,
+) -> std::io::Result<()> {
+    let id = conn.next_id;
+    conn.next_id += 1;
+    let msg = callback(name, None, Vec::new(), id);
+    write_message(&mut conn.stream, &msg)?;
+    loop {
+        let reply = match read_message(&mut conn.stream)? {
+            Some(m) => m,
+            None => return Ok(()),
+        };
+        let rid = reply.get("id").and_then(|i| match i {
+            Json::Int(n) => Some(*n),
+            _ => None,
+        });
+        if rid == Some(id) {
+            // The callback returned; its reply carries nothing we need.
+            return Ok(());
+        }
+        // A request the client made from inside the callback: dispatch it.
+        if let Ok((method, params, nid)) = parse_request(&reply) {
+            let out = dispatch(session, conn, method, &params, nid.as_ref());
+            write_message(&mut conn.stream, &out)?;
+        }
     }
 }
 

@@ -182,6 +182,9 @@ pub struct Session {
     /// `set-system-parameter-value` settings (`:starting-parameters`, …),
     /// re-applied on reset (`central-parameters.lisp:140`).
     system_params: std::collections::BTreeMap<String, Json>,
+    /// A `:testing-function` that lives on the client, deferred to the
+    /// connection layer (`model-tester.cl:485`). See `invoke_testing_fn`.
+    pending_testing_fn: Option<String>,
     /// The scripted device the engine is built with (empty by default).
     device: DeviceSetup,
 }
@@ -205,6 +208,7 @@ impl Session {
             seed,
             symbol_count: 0,
             system_params: Default::default(),
+            pending_testing_fn: None,
             device: DeviceSetup::default(),
         }
     }
@@ -1142,6 +1146,11 @@ impl Session {
         None
     }
 
+    /// The client-owned `:testing-function` a `reset` deferred, if any.
+    pub fn take_pending_testing_fn(&mut self) -> Option<String> {
+        self.pending_testing_fn.take()
+    }
+
     /// `(call-testing-module-function)` (`model-tester.cl:485`): ACT-R's
     /// `:testing-module` reset hook. Dispatches the named client command, or
     /// applies the well-known `set-testing-traces` effect.
@@ -1150,6 +1159,18 @@ impl Session {
             return;
         };
         if let Some(c) = self.commands.get(&name).cloned() {
+            if matches!(c.owner, Owner::Remote { .. }) {
+                // A client-owned command. ACT-R fires this hook from inside
+                // `reset`, but `remote.call` holds `&mut Session` across the
+                // callback, so a testing function that calls back in (e.g.
+                // `set-parameter-value`, as `paired-learning`'s does) would
+                // block forever: its nested request arrives while the session
+                // is borrowed and cannot be dispatched. Hand it to the
+                // connection layer instead, which runs it with the borrow
+                // released and services nested requests reentrantly.
+                self.pending_testing_fn = Some(name);
+                return;
+            }
             let _ = self.underlying(&c, &name, None, &[], remote);
             return;
         }

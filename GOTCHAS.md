@@ -3491,3 +3491,35 @@ every `random_int` call site under `DBG_RNG`: the golden spec logged
 `RNG_DRAW n=1` before its first `noise`, the RPC model only
 `AR_RANDOM_RPC limit=2`; after the fix it logs `limit=2` then `limit=1` and the
 two streams coincide.
+
+## 219. A remote callback that calls back in needs the session borrow released
+
+The server implements `Remote` on the connection
+(`rpc/server.rs`): to invoke a client-owned command it writes an `evaluate`
+callback and reads until the matching reply, **dropping** anything else —
+"a well-behaved client won't" interleave.
+
+`paired-learning`'s `:testing-function` is not well-behaved in that sense, and
+legitimately so. `test-models/paired-learning.py` registers a Python command and
+passes it as `:testing-function`; the model-tester's reset hook
+(`model-tester.cl:485`) fires it at each `reset`, and the function itself calls
+`actr.set_parameter_value(':v'/'cmdt'/'alpha', …)`. Those nested requests arrive
+while the server is inside the callback, get dropped, and the client blocks
+forever waiting for replies that never come — the RPC run hung with *zero* trace
+output.
+
+The borrow is why: `Session::evaluate` holds `&mut Session` across
+`remote.call`, so the nested request has no way to reach the session. Dropping
+it was the only option available there.
+
+Fix: a `reset` defers a *client-owned* `:testing-function` to the connection
+layer (`Session::take_pending_testing_fn`), which runs it with the borrow
+released (`server.rs::call_remote_reentrant`) and dispatches the callback's
+nested requests through the ordinary `dispatch`, so they are answered and the
+client can return. The local `set-testing-traces` fallback still runs inline —
+it needs no callback.
+
+Other callback sites (monitors, remote commands invoked outside reset) are still
+called from inside `evaluate` and have the same latent deadlock. The general fix
+is the same shape — run callbacks with the borrow released, i.e. an effect
+queue rather than a nested call — but only the reset hook is exercised so far.
