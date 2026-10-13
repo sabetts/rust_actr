@@ -415,6 +415,26 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `21.133` vs `20.748`). The drift is **not** the `exp` precision:
       matching `exp-coerced` (double `exp`, narrow to single before `round`)
       changed nothing, so it is a genuine activation difference that grows.
+      **Localized to the RNG state, not draw count/order.** Instrumenting
+      `Mt::noise` (engine) vs a wrapped `genrand_real2`/`act-r-noise` (ACT-R)
+      shows both sides make the **same number** of noise draws (95) but the
+      values differ from the **first** `act-r-noise` call — so the draw
+      *events* align and the generator *state* does not. Two candidate causes
+      were ruled out: the retrieval candidate order (switching to the
+      `dm-chunks` signature-alist order, `dm_alist_order()`, changed nothing)
+      and the latency `exp` precision (above). The likely cause is the seed:
+      the engine's `cfg.seed` is `None` here (the last-loaded
+      `unit8;paired-dynamic-model.lisp` sets no `:seed`; `unit4;paired-model
+      .lisp`'s `(sgp :seed (200 4))` is not carried), so `Engine::new` falls
+      back to the harness's canonical placeholder `(100 0)` →
+      `init_genrand(100)`. ACT-R's ref stream is *not* that: the extractor
+      only writes `(100 0)` when `seed-reproducible-p` fails, i.e. when the
+      run's seed matches no literal in the model/task files — so ACT-R ran
+      from whatever state load/`reset` left (`:seed` unset). Next step: probe
+      `(sgp :seed)` after load+reset for a model with no `:seed`, then make
+      `Engine::new` match when `cfg.seed` is `None` (probably: do not reseed at
+      all) — verifying the specs whose run seed is a real literal (not the
+      placeholder) do not move.
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment).
       **Reusable-buffer naming — DONE** (`d0ee65b`, GOTCHAS #205). The
