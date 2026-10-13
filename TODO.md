@@ -457,6 +457,22 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        `paired-learning-dynamic` (#216/#217/#218) and `paired-learning`
        (#219/#220). **Both paired models pass, so the paired cluster is
        closed.**
+       **`bst-learn`/`bst-learn-ppm` — the driver runs, the model stops at
+       t=0.** GOTCHAS #221 fixed the `spp`/`no-output` crash that made them
+       vanish from the sweep; they now FAIL at line 2 (362/8870 and 308/8383).
+       The engine emits the initial goal, one conflict-resolution, then "no
+       events left to process", while the ref continues with vision. The first
+       difference is *which* location is placed: ref `visual-location2`,
+       engine `visual-location3`. `build_display` (`tutorial/lisp/bst.lisp:53`)
+       adds 4 buttons then 4 lines, and both `add_window_button` and
+       `add_window_line` consume a `feat_seq` index — so the newest should be 7
+       if both ran, yet the engine places 3, meaning the line features are not
+       created before the placing wave. The ref's 2 implies ACT-R numbers them
+       differently again (cf. the column-major naming note in
+       `perception.rs`). Next probe: log every `features.push` in `debug.rs`
+       (name/kind) at t=0. Note the single-threaded SBCL load cannot supply
+       ground truth here — `print-visicon` returns nothing without a device —
+       so settle it from the ref plus the client's call sequence.
        Swept all 22 with one process per model (the harness has no per-test
        timeout), against a live `actr-server`:
        - OK (11): addition, count, semantic, semantic-dynamic,
