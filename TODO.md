@@ -369,10 +369,22 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        Still needs an engine command first: `module-request`, `merge-dm`,
        `delete-production`, `buffer-slot-value`, `new-ongoing-sound`,
        `end-ongoing-sound`, `new-digit-sound`, `pbreak`.
-       **`proc-display-with-pending` is now fully specced and is the best
-       next target**: its visicon ops are recorded, so only the `print-visicon`
-       table renderer (plus the pending add/delete/modify sections) is missing.
-       `removed-and-restored-visual-item` is the same table with callbacks.
+       **`proc-display-with-pending` is DONE and enabled** (golden 104/135):
+       `printed-visicon` (the table, its column order, and the pending
+       additions/deletions/modifications) plus the vision proc-display lock
+       that makes the pending sections meaningful (GOTCHAS #238-#241).
+       `removed-and-restored-visual-item` was also carrying the leak-polluted
+       `ADD-VISICON-FEATURES (ISA (VISUAL-LOCATION TEXT) …)` steps from the
+       earlier extractor commit and has been regenerated: 830 → 114 lines and
+       its tables now match. What is left there is behavioural, not a renderer
+       gap — the ref's restore produces a *new* `VISUAL-LOCATION1` where ours
+       reuses `VISUAL-LOCATION0`, and the ref has events ours stops before
+       (`encoding-complete`, `no visual-object found`, a second `visicon-update`
+       at 0.845). The lock is modelled only for `warn-vision`'s pair; other
+       ACT-R lock/unlock pairs (`find-location`, `stuff-visloc-buffer`,
+       `update-tracking-mth`) are not, so a model that locks without a later
+       `+visual>` request stays blocked — worth checking if a vision spec runs
+       to the event limit.
        **The `fan` family was blocked on an extractor gap, not the engine**
        (GOTCHAS #234/#235). Tasks drive a trial with
        `(mod-focus-fct (arg1 x arg2 y))` (`tutorial/lisp/fan-no-pm.lisp:57`) and
