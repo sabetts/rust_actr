@@ -336,7 +336,10 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `tutorial-unit7modeling-ul-issues-v2-first-run`,
       `tutorial-unit3modeling-v6-next-run` and `hear-self` (speech
       `:hear-self` gating, style-change prep, subvocalize, the device-notify
-      line; `0e556df`, GOTCHAS #211/#212) — **99 pass / 36 fail**.
+      line; `0e556df`, GOTCHAS #211/#212). Then `paired-learning-dynamic`:
+      the composed-production `mappings` substitution (`7dfe8f8`, GOTCHAS #213)
+      and the stub's starting-parameters seed (`1a3a4b7`, GOTCHAS #214) —
+      **100 pass / 35 fail**.
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
@@ -422,19 +425,17 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       *events* align and the generator *state* does not. Two candidate causes
       were ruled out: the retrieval candidate order (switching to the
       `dm-chunks` signature-alist order, `dm_alist_order()`, changed nothing)
-      and the latency `exp` precision (above). The likely cause is the seed:
-      the engine's `cfg.seed` is `None` here (the last-loaded
-      `unit8;paired-dynamic-model.lisp` sets no `:seed`; `unit4;paired-model
-      .lisp`'s `(sgp :seed (200 4))` is not carried), so `Engine::new` falls
-      back to the harness's canonical placeholder `(100 0)` →
-      `init_genrand(100)`. ACT-R's ref stream is *not* that: the extractor
-      only writes `(100 0)` when `seed-reproducible-p` fails, i.e. when the
-      run's seed matches no literal in the model/task files — so ACT-R ran
-      from whatever state load/`reset` left (`:seed` unset). Next step: probe
-      `(sgp :seed)` after load+reset for a model with no `:seed`, then make
-      `Engine::new` match when `cfg.seed` is `None` (probably: do not reseed at
-      all) — verifying the specs whose run seed is a real literal (not the
-      placeholder) do not move.
+      and the latency `exp` precision (above). The cause was the **seed**: a
+      stub's `(ssp :starting-parameters (:seed (1 0)))` is evaluated at load
+      and re-applied by the central-parameters reset hook, so it is the seed
+      the run used — but `w-ssp` only records `:drive`-mode calls and the stub
+      is loaded in `:load` mode, so it was dropped from the spec; `:RUNS` kept
+      the `(100 0)` placeholder and the engine seeded with it
+      (`init_genrand(100)`). **Fixed** (`1a3a4b7`, GOTCHAS #214): `make-spec`
+      prepends an `(:SGP :STARTING-PARAMETERS (:SEED (S C)))` step, and the
+      harness no longer applies a per-run `(100 0)`. `paired-learning-dynamic`
+      is byte-exact — the `:utility` lines were a symptom, not a separate
+      compiled-production utility-equation bug.
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment).
       **Reusable-buffer naming — DONE** (`d0ee65b`, GOTCHAS #205). The
