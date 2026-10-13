@@ -2148,6 +2148,9 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
                 Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => {
                     models.push(parse_model(&form, &defs)?)
                 }
+                // `(written-for-act-r-version "7.15" "...")`: a version
+                // annotation with no runtime effect.
+                Some(Sexp::Sym(h)) if h == "WRITTEN-FOR-ACT-R-VERSION" => {}
                 // Task-file data alongside a model (`defun`/`defvar`/...):
                 // skipped, not treated as a model form.
                 Some(Sexp::Sym(h))

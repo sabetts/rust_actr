@@ -329,6 +329,20 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202).
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment) plus `simple-dynamic-model`'s reusable-buffer naming.
+      **Reusable-buffer naming — attempted, reverted.** ACT-R names a
+      reusable buffer's chunk once and reuses it
+      (`act-r-buffer-reuse-chunk`, `set-buffer-chunk`, `buffers.lisp:1351`):
+      `{BUFFER}-CHUNK{n}`, assigned at the first set. The engine instead has
+      two partial paths — the GOAL-only SetBuffer naming (`GOAL-CHUNK{n}`,
+      *incrementing*) and `rhs.rs`'s `=buffer`-reference naming
+      (`{v}-CHUNK0` when the target buffer is GOAL/IMAGINAL, `CHUNK{n}`
+      otherwise). Naming at SetBuffer time (reuse semantics) fixed
+      `simple-dynamic-model` but regressed `merging-test` (lost
+      `PRODUCTION-SELECTED P4` — the imaginal chunk's merge-into-DM alias no
+      longer let `=goal> value =imaginal` match `b`) and `act-touch`
+      (`loc CHUNK1` vs `IMAGINAL-CHUNK0`). Needs the merge alias /
+      `=buffer`-reference resolution untangled first, then a single naming
+      path.
 - Known divergence: the pipe transport and `define-module`/`undefine-module`
   (client-defined modules) are covered by "no arbitrary Lisp" unless needed.
 
