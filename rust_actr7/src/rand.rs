@@ -156,6 +156,22 @@ impl Mt {
         }
     }
 
+    /// `permute-list` (`framework/random.lisp:562`): reorder a non-empty list
+    /// by repeatedly drawing `act-r-random` over the remaining items and
+    /// removing the pick. The result is built with `cons`, so it comes back in
+    /// reverse pick order — the item drawn last is first. Draws once per item
+    /// (an empty list draws nothing).
+    pub fn permute_list<T>(&mut self, lis: Vec<T>) -> Vec<T> {
+        let mut result: Vec<T> = Vec::with_capacity(lis.len());
+        let mut temp = lis;
+        while !temp.is_empty() {
+            let idx = self.random_int(temp.len() as u64) as usize;
+            let item = temp.remove(idx);
+            result.insert(0, item);
+        }
+        result
+    }
+
     /// `act-r-noise`: logistic sample, mean 0, scale `s`, in f32.
     /// (`:ans` is validated positive-or-nil upstream, as in Lisp.)
     pub fn noise(&mut self, s: f32) -> f32 {

@@ -67,6 +67,7 @@ tutorial-unit3modeling-v4-previous-run
 tutorial-unit3modeling-v4-run
 tutorial-unit3modeling-v5-next-run
 tutorial-unit3modeling-v5-previous-run
+tutorial-unit3modeling-v6-next-run
 tutorial-unit3modeling-v7-next-run
 tutorial-unit3modeling-v8-next-run
 tutorial-unit3-sperling-trial-trace

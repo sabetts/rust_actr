@@ -1019,6 +1019,20 @@ impl Engine {
             }
         };
         let feat = self.features[idx].clone();
+        // `find-best-feature` (`vision.lisp:2573`) short-circuits when the
+        // location chunk's visicon entry is still live — the same feature,
+        // same timestamp, unmodified copy — and otherwise selects among the
+        // nearest features with `random-item`, consuming exactly one draw
+        // (even for a singleton). The engine keeps its own object choice but
+        // must consume that draw so later `:er` selections line up.
+        let entry_live = self
+            .vl_copied_from
+            .get(&loc)
+            .map(|base| self.features.iter().any(|f| &f.name == base))
+            .unwrap_or(false);
+        if !entry_live {
+            self.rng_draw(1);
+        }
         let k = self.obj_built.entry(feat.kind.clone()).or_insert(0);
         let source = format!("{}{}", feat.kind, *k);
         *k += 1;

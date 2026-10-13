@@ -129,10 +129,13 @@ impl Engine {
         }
         let winner = match tied.len() {
             0 => None,
-            1 => Some(tied.into_iter().next().unwrap()),
+            // `conflict-resolution` permutes the whole best list when `:er` is
+            // on (`procedural.lisp:2261`) — even for a single candidate — and
+            // takes its head, so the draw count follows the candidate count
+            // (`permute-list`, `framework/random.lisp:562`).
             _ if self.cfg.er => {
-                let i = self.rng.borrow_mut().random_int(tied.len() as u64) as usize;
-                Some(tied.into_iter().nth(i).unwrap())
+                let permuted = self.rng.borrow_mut().permute_list(tied);
+                Some(permuted.into_iter().next().unwrap())
             }
             _ => Some(tied.into_iter().last().unwrap()),
         };

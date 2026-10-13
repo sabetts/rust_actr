@@ -3245,3 +3245,38 @@ ACT-R's `or`-chain (numeric max when both parents are numeric).
 
 The `PROPAGATE-REWARD` trace line prints the reward with `~s`, so an integer
 reward reads `0`, not `0.0`.
+
+## 209. `:er` permutes the whole conflict set — even a lone candidate
+
+With `:er` on, `conflict-resolution` ends with
+`(when (and (listp best) best er) (setf best (permute-list best)))`
+(`core-modules/procedural.lisp:2261`) and takes `(car best)`. Two consequences
+the trace depends on: the permutation runs **even when only one production
+matched**, and `permute-list` (`framework/random.lisp:562`) draws
+`act-r-random` once per remaining item — `n` draws for an `n`-element list,
+`random(1)` included. `permute-list` builds its result with `cons`, so the
+returned list is in *reverse* pick order: the item drawn last comes first.
+Probing ACT-R confirms both (`(permute-list '(x))` advances the stream by one
+draw; for `(p q)` the head is the element *not* drawn first).
+
+The conflict-set order is the order productions were compiled
+(`push-last production conflict-set` over `test-set`), which matches the
+engine's definition order — verified by instrumenting `conflict-resolution` to
+print the set. So only the draw count was wrong: the engine drew once for any
+tie and picked `tied[draw]`, which desynchronised the stream for every later
+`:er` selection (`tutorial-unit3modeling-v6-next-run` first diverged one
+conflict resolution after the first real tie).
+
+## 210. `find-best-feature` draws unless the location chunk's entry is still live
+
+`encoding-complete` -> `get-obj-at-location` -> `featlis-to-focus` ->
+`find-best-feature` (`core-modules/vision.lisp:2573`). When the location
+chunk's `visicon-entry` is a chunk, still among the features within the
+movement allowance, an unmodified copy, and has the *same* `visual-tstamp`,
+the entry is returned directly and **no draw** happens. Otherwise it selects
+among the nearest features with `random-item`, which consumes exactly one draw
+(even for a singleton). A window clear purges the visicon, so the stale
+location chunk falls off the fast path and the re-encode
+(`update-attended-loc`) draws; a normal `move-attention` encode does not. The
+engine keeps its own object choice but consumes the draw, which is what keeps
+`tutorial-unit3modeling-v6-next-run`'s later `:er` selection aligned.
