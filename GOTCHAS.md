@@ -3583,3 +3583,26 @@ evaluate` looks the name up there before dispatching, so an unregistered
 `no-output` made the inner call fail and the client saw `False` rather than an
 error. That is a quiet failure mode worth remembering — check the table first
 when a new command "returns nothing".
+
+## 222. A button's label must be centred on the button
+
+`add-button-to-exp-window` creates the button box *and* a separate text item for
+its label. Where that label sits matters more than it looks: the initial
+visual-location is chosen by `newest_feature` (`vision.lisp:1978`), which takes
+the **leftmost still-`NEW` column**, then the newest tstamp, sorts the ties by
+name, and picks one with `random-item`.
+
+The engine placed the label left-aligned inside the button (`x + 1`, as
+`add_window_text` does for a standalone text item), which put the four labels in
+a column of their own — left of the boxes — so the candidate set was the four
+labels and the engine placed `VISUAL-LOCATION3`. ACT-R centres the button's
+text, so its leftmost column holds the box/label pairs (0,1,2,3) and the ref
+places `VISUAL-LOCATION2`. Centring the label (`lx = x + (width - 7·len)/2`)
+makes the engine place 2 as well.
+
+The oracle proved the feature *count* too: `bst-learn.ref`'s stick items are
+`VISUAL-LOCATION8..11`, i.e. 8 button features precede the 4 line features. An
+earlier attempt that emitted one feature per button (assuming ACT-R keeps no
+separate label item) gave the right column set but the wrong numbering —
+`VISUAL-LOCATION1` — so the two-feature layout is right and only the centring
+was wrong.

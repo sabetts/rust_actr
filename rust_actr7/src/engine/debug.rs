@@ -1589,8 +1589,16 @@ impl Engine {
             finst_ms: None,
         });
         let mut names = vec![name];
-        // The button's text is a separate text item (centered on the button).
-        let tkey = self.add_window_text(text, x, y, width, height, 12);
+        // The button's text is a separate text item, **centred** on the button
+        // (ACT-R's uwi centres it). Its x must land on the box's centre column:
+        // `newest_feature` picks among the leftmost column's newest items, so an
+        // uncentred label puts the labels in a column of their own and changes
+        // which location gets placed. Verified against the oracle: `bst-learn`'s
+        // ref places VISUAL-LOCATION2 (the box/label pair of button B) and the
+        // engine placed 3 until this centring.
+        let tw = 7 * text.chars().count() as i64;
+        let lx = x + (width - tw).div_euclid(2);
+        let tkey = self.add_window_text(text, lx, y, width, height, 12);
         if let Some((_, tnames)) = self.window_items.iter().find(|(k, _)| k == &tkey) {
             names.extend(tnames.iter().cloned());
         }

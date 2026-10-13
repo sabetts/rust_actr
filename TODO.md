@@ -459,7 +459,22 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        closed.**
        **`bst-learn`/`bst-learn-ppm` — the driver runs, the model stops at
        t=0.** GOTCHAS #221 fixed the `spp`/`no-output` crash that made them
-       vanish from the sweep; they now FAIL at line 2 (362/8870 and 308/8383).
+       vanish from the sweep; GOTCHAS #222 (centring the button label) then
+       fixed the placed location, so all three `bst-*` specs now diverge at
+       line 4 rather than line 2 — the first two trace lines match.
+       Remaining: the engine emits one `visicon-update` per queued
+       `ProcDisplay` (9 at t=0 for the 8-item display + the clear) where the
+       ref has one. Coalescing same-time displays was tried and **reverted**:
+       routing it through `debug.rs` wholesale dropped the golden suite to
+       98/100 (the same `Event::ProcDisplay` line is used by the visicon API
+       `add-visicon`/`clear-visicon`, which the device-timeline specs rely on).
+       A narrower version — coalesce only the window helpers, and only while no
+       display has executed at that time — is the next thing to try.
+       Note the golden `bst-learn` spec is *worse* than the RPC model here: its
+       run has no vision events at all, because `build-display` reaches the
+       engine as `add-button`/`add-line` ops and the extractor's device sidecar
+       records only texts/clears/modifies. That is a separate extractor gap
+       from the off-by-one above.
        The engine emits the initial goal, one conflict-resolution, then "no
        events left to process", while the ref continues with vision. The first
        difference is *which* location is placed: ref `visual-location2`,
