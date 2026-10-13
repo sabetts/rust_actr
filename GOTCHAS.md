@@ -3798,5 +3798,17 @@ a *different trial's* line — its later times (2.143) match trial 2's selection
 times (trial 1's are 2.186) — so the trace-visibility bookkeeping needs settling
 before line-by-line diffs on this spec are trustworthy.
 
-Next: probe ACT-R (as in #227/#228) for the button feature's exact `kind`,
-`value` and case, then build it that way.
+**Fixed** by probing ACT-R's own visicon (`print-visicon` after
+`build-display`, `uwi.lisp:401`):
+
+```
+VISUAL-LOCATION0  NEW  (325 335 1080)  OVAL  GRAY   "A"  24  40
+VISUAL-LOCATION1  NEW  (325 335 1080)  TEXT  BLACK  "A"  10  7
+```
+
+`add-button-to-exp-window` makes `(isa (visual-location oval) … value (oval
+<text>) …)`: the button is an **oval** whose value is its text. The engine now
+builds `kind OVAL` with the text as value. Note also that the *text* features are
+co-located with the oval (same `screen-x/y`), and that ACT-R matches a requested
+`value` case-insensitively — `bst` asks `value "b"` / `value "reset"` against the
+visicon's `"B"` / `"Reset"` — so `loc_matches` compares strings that way now.

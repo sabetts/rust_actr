@@ -1616,10 +1616,16 @@ impl Engine {
         let (ox, oy) = self.window_origin;
         let name = format!("VISUAL-LOCATION{}", self.feat_seq);
         self.feat_seq += 1;
+        // `add-button-to-exp-window`'s visicon feature (`uwi.lisp:401`):
+        // `(isa (visual-location oval) … value (oval <text>) …)` — the button is
+        // an **oval** whose value is its text, which is how the tutorial models
+        // ask for it (`+visual-location> kind oval, value "b"`). It was built
+        // as `kind BUTTON` with the window-item key as its value, so no such
+        // request could ever match (GOTCHAS #229).
         self.features.push(Feature {
             name: name.clone(),
-            kind: "BUTTON".to_string(),
-            value: key.clone(),
+            kind: "OVAL".to_string(),
+            value: text.to_string(),
             x: ox + x + width.div_euclid(2),
             y: oy + y + height.div_euclid(2),
             width,

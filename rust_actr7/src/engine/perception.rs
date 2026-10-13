@@ -1211,13 +1211,17 @@ pub(super) fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bo
                     return Ok(false);
                 }
             }
+            // ACT-R compares the text of a visual feature case-insensitively:
+            // `bst` asks for `value "b"` / `value "reset"` and the visicon holds
+            // `"B"` / `"Reset"` (`uwi.lisp:401`), and the ref shows the request
+            // matching.
             ("VALUE", Value::Str(val)) => {
-                if *val != feat.value {
+                if !val.eq_ignore_ascii_case(&feat.value) {
                     return Ok(false);
                 }
             }
             ("VALUE", Value::Sym(val)) => {
-                if *val != feat.value {
+                if !val.eq_ignore_ascii_case(&feat.value) {
                     return Ok(false);
                 }
             }
