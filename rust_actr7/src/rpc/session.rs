@@ -933,16 +933,21 @@ impl Session {
                 }
             }
             "modify-visicon-features" => {
-                let now = self.engine.as_ref().map(|e| e.time_ms()).unwrap_or(0);
                 for a in args {
                     let items = match a {
                         Json::Arr(x) => x.clone(),
                         _ => continue,
                     };
                     let name = items.first().map(json_to_text).unwrap_or_default();
-                    let (x, y) = feature_xy(&items[1..]);
+                    let mut mods: Vec<(String, Sexp)> = Vec::new();
+                    let mut i = 1;
+                    while i + 1 < items.len() {
+                        let k = json_to_text(&items[i]).to_uppercase();
+                        mods.push((k, json_to_sexp(&items[i + 1])));
+                        i += 2;
+                    }
                     if let Some(eng) = &mut self.engine {
-                        eng.schedule_modify_visicon(now, &name, x, y);
+                        eng.queue_visicon_modify_sexp(&name, &mods);
                     }
                 }
                 Ok(vec![Json::Null])
@@ -964,7 +969,7 @@ impl Session {
             }
             "print-visicon" => {
                 if let Some(eng) = &mut self.engine {
-                    eng.print_visicon_rpc();
+                    eng.print_visicon_rpc(true);
                 }
                 Ok(vec![Json::Null])
             }

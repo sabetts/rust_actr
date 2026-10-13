@@ -245,6 +245,14 @@ internally (`no-output` → its argument command).")
   (let ((*recording-command* t))
     (apply (gethash name *orig-fns*) args)))
 
+(defun call-orig* (name args)
+  ;; `call-orig` for a wrapper whose arguments are already a list (a `&rest`
+  ;; tail). Same guard: `install-device` converts the window's items by
+  ;; calling `add-visicon-features` internally, and that is implementation,
+  ;; not a task step (GOTCHAS #237).
+  (let ((*recording-command* t))
+    (apply (gethash name *orig-fns*) args)))
+
 (defvar *last-sgp-params* nil)
 
 (defun normalize-params (params)
@@ -524,7 +532,7 @@ step is printable and matches what the engine expects."
 ;;; derive, e.g. CONSUME-RNG / CLEAR-ON-KEYPRESS) is never overwritten.
 
 (defun w-add-text (win text &rest keys)
-  (let ((key (apply (gethash 'add-text-to-exp-window *orig-fns*) win text keys)))
+  (let ((key (call-orig* 'add-text-to-exp-window (list* win text keys))))
     (when (and (eq *mode* :drive) (not *suppress*))
       (push (list *reset-count* (mp-time-ms) text (or (getf keys :x) 0) (or (getf keys :y) 0))
             *device-texts*)
@@ -543,7 +551,7 @@ step is printable and matches what the engine expects."
       (when txt
         (push (list *reset-count* (mp-time-ms) txt x y) *device-modifies*)
         (setf (gethash item *item-pos*) (cons x y)))))
-  (apply (gethash 'modify-text-for-exp-window *orig-fns*) item keys))
+  (call-orig* 'modify-text-for-exp-window (list* item keys)))
 
 (defun w-clear-exp-window (&optional win)
   (when (and (eq *mode* :drive) (not *suppress*))
@@ -554,7 +562,7 @@ step is printable and matches what the engine expects."
 ;;                            :action (...) :color "gray")`: the box *and* its
 ;; label are visicon features. Record what the engine needs to rebuild them.
 (defun w-add-button (win &rest keys)
-  (let ((key (apply (gethash 'add-button-to-exp-window *orig-fns*) win keys)))
+  (let ((key (call-orig* 'add-button-to-exp-window (list* win keys))))
     (when (and (eq *mode* :drive) (not *suppress*))
       (push (list *reset-count* (mp-time-ms)
                   (or (getf keys :text) "")
@@ -583,7 +591,7 @@ step is printable and matches what the engine expects."
 (defun w-install-device (device &rest keys)
   (when (and (eq *mode* :drive) (not *suppress*))
     (push (list *reset-count*) *device-installs*))
-  (apply (gethash 'install-device *orig-fns*) device keys))
+  (call-orig* 'install-device (list* device keys)))
 
 ;;; A scheduled command event (`(schedule-event-relative t "cmd" :params ...)`)
 ;;; prints `NONE <action> <params>` at its `:output` level. Record it so the

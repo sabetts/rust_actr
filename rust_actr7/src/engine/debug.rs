@@ -357,21 +357,37 @@ impl Engine {
         let mut w = 0i64;
         let mut ht = 0i64;
         let mut extra: Vec<(String, Value)> = Vec::new();
+        // The rendered slot order is the argument order (`printed-visicon`
+        // reverses the construction spec; GOTCHAS #238).
+        let mut spec: Vec<(String, Value)> = Vec::new();
         for (k, v) in slots {
             let ku = k.to_uppercase();
             match (ku.as_str(), v) {
-                ("SCREEN-X", Sexp::Int(i)) => x = *i,
-                ("SCREEN-Y", Sexp::Int(i)) => y = *i,
-                ("WIDTH", Sexp::Int(i)) => w = *i,
-                ("HEIGHT", Sexp::Int(i)) => ht = *i,
+                ("SCREEN-X", Sexp::Int(i)) => {
+                    x = *i;
+                    spec.push((ku.clone(), Value::Int(*i)));
+                }
+                ("SCREEN-Y", Sexp::Int(i)) => {
+                    y = *i;
+                    spec.push((ku.clone(), Value::Int(*i)));
+                }
+                ("WIDTH", Sexp::Int(i)) => {
+                    w = *i;
+                    spec.push((ku.clone(), Value::Int(*i)));
+                }
+                ("HEIGHT", Sexp::Int(i)) => {
+                    ht = *i;
+                    spec.push((ku.clone(), Value::Int(*i)));
+                }
                 _ => {
                     if let Ok(val) = Value::from_sexp(v) {
+                        spec.push((ku.clone(), val.clone()));
                         extra.push((ku, val));
                     }
                 }
             }
         }
-        self.features.push(Feature {
+        self.visicon_pending.push(VisPending::Add(Feature {
             name: format!("CHUNK{n}"),
             kind: "VISUAL-LOCATION".to_string(),
             value: String::new(),
@@ -380,11 +396,13 @@ impl Engine {
             width: w,
             height: ht,
             extra,
+            spec,
+            spec_pre: Vec::new(),
             tstamp_ms: self.time_ms,
             new_p: true,
             finst_ms: None,
-        });
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        }));
+        self.now_display();
         format!("CHUNK{n}")
     }
 
@@ -1310,33 +1328,218 @@ impl Engine {
 impl Engine {
     /// `delete-visicon-features` / `delete-all-visicon-features`.
     pub fn remove_visicon(&mut self, name: &str) {
-        self.features.retain(|f| f.name != name);
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.visicon_pending
+            .push(VisPending::Delete(name.to_string()));
+        self.now_display();
+    }
+
+    /// `modify-visicon-features`: queue a slot update (`vision.lisp:4039`).
+    pub fn queue_visicon_modify(&mut self, name: &str, mods: Vec<(String, Value)>) {
+        self.visicon_pending
+            .push(VisPending::Update(name.to_string(), mods));
+        self.now_display();
+    }
+
+    /// `queue_visicon_modify` for callers outside the engine (the RPC layer),
+    /// which hold raw sexps rather than `Value`s.
+    pub fn queue_visicon_modify_sexp(&mut self, name: &str, mods: &[(String, Sexp)]) {
+        let mods = mods
+            .iter()
+            .filter_map(|(k, s)| Value::from_sexp(s).ok().map(|v| (k.clone(), v)))
+            .collect();
+        self.queue_visicon_modify(name, mods);
     }
 
     pub fn clear_visicon(&mut self) {
-        self.features.clear();
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.visicon_pending.push(VisPending::DeleteAll);
+        self.now_display();
     }
 
-    /// `print-visicon` (`vision.lisp`): one line per feature with its slots.
-    pub fn print_visicon_rpc(&mut self) -> Vec<String> {
-        let feats = self.features.clone();
-        let mut out = vec![format!("The visicon contains {} features:", feats.len())];
-        for f in &feats {
-            let mut parts = vec![format!("SCREEN-X {}", f.x), format!("SCREEN-Y {}", f.y)];
-            if f.width != 0 {
-                parts.push(format!("WIDTH {}", f.width));
-            }
-            if f.height != 0 {
-                parts.push(format!("HEIGHT {}", f.height));
-            }
-            for (k, v) in &f.extra {
-                parts.push(format!("{k} {}", v.show()));
-            }
-            out.push(format!("({})", parts.join(" ")));
-        }
+    /// `print-visicon` (`vision.lisp:4090`) → `printed-visicon`
+    /// (`vision.lisp:4098`): the visicon table, then the pending
+    /// `visicon-updates`.
+    pub fn print_visicon_rpc(&mut self, show_pending: bool) -> Vec<String> {
+        let mut out = self.printed_visicon(show_pending);
+        // `command-output` ends its string with `~%`, so the ref has a blank
+        // line after each `print-visicon` block.
+        out.push(String::new());
         self.out_lines.extend(out.clone());
+        out
+    }
+
+    /// The `printed-visicon` body, without touching the output log (so the
+    /// `printed-visicon` command can return it as a string).
+    pub fn printed_visicon(&mut self, show_pending: bool) -> Vec<String> {
+        // The visicon stays ordered by location (`insert-into-visicon`,
+        // `vision.lisp:1592`): `(screen-x, screen-y, distance, name)`.
+        let mut feats = self.features.clone();
+        feats.sort_by(|a, b| (a.x, a.y, a.name.clone()).cmp(&(b.x, b.y, b.name.clone())));
+        let loc_slots = ["SCREEN-X", "SCREEN-Y", "DISTANCE"];
+        // `(width slot count)` in push order; `stable-sort` by count
+        // descending keeps reverse-first-seen order for ties
+        // (`vision.lisp:4126`).
+        let mut attributes: Vec<(usize, String, usize)> = Vec::new();
+        let mut name_w = 4usize;
+        let mut loc = [0usize; 3];
+        for f in &feats {
+            name_w = name_w.max(f.name.chars().count());
+            for (slot, val) in f.filled_slots() {
+                let w = val.show().chars().count();
+                if let Some(i) = loc_slots.iter().position(|s| *s == slot) {
+                    loc[i] = loc[i].max(w);
+                } else if let Some(a) = attributes.iter_mut().find(|a| a.1 == slot) {
+                    if w > a.0 {
+                        a.0 = w;
+                    }
+                    a.2 += 1;
+                } else {
+                    attributes.push((w.max(slot.chars().count()), slot.clone(), 1));
+                }
+            }
+        }
+        attributes.reverse();
+        attributes.sort_by(|a, b| b.2.cmp(&a.2));
+        let loc_w = loc.iter().sum::<usize>() + 4;
+        let mut out = Vec::new();
+        // Header and separator (`~v,a` is left-aligned, `~v,,,'-a` pads with
+        // dashes).
+        let mut header = format!("{:<name_w$}  Att  {:<loc_w$}  ", "Name", "Loc");
+        for (w, slot, _) in &attributes {
+            header.push_str(&format!("{:<w$}  ", slot));
+        }
+        out.push(header);
+        let mut sep = format!(
+            "{:<name_w$}  ---  {:<loc_w$}  ",
+            "-".repeat(name_w),
+            "-".repeat(loc_w)
+        );
+        for (w, _, _) in &attributes {
+            sep.push_str(&format!("{:<w$}  ", "-".repeat(*w)));
+        }
+        out.push(sep);
+
+        for f in &feats {
+            let filled = f.filled_slots();
+            let slot = |n: &str| filled.iter().find(|(k, _)| k == n).map(|(_, v)| v.clone());
+            let att = self.feat_attended(f);
+            let num = |n: &str| match slot(n) {
+                Some(Value::Int(i)) => i.to_string(),
+                Some(v) => v.show(),
+                None => "NIL".to_string(),
+            };
+            let mut row = format!(
+                "{:<name_w$}  {:<3}  ({:>w0$} {:>w1$} {:>w2$})  ",
+                f.name,
+                att,
+                num("SCREEN-X"),
+                num("SCREEN-Y"),
+                num("DISTANCE"),
+                w0 = loc[0],
+                w1 = loc[1],
+                w2 = loc[2],
+            );
+            for (w, name, _) in &attributes {
+                match slot(name) {
+                    // `(if v (format "~v,s" v) (format "~v,a" ""))`: a bound
+                    // slot prints as `~S`, an unbound one as blanks.
+                    Some(v) if !matches!(v, Value::Nil) => {
+                        row.push_str(&format!("{:<w$}  ", v.show()));
+                    }
+                    _ => row.push_str(&format!("{:<w$}  ", "")),
+                }
+            }
+            out.push(row);
+        }
+        if show_pending {
+            let mut adds: Vec<String> = Vec::new();
+            let mut deletes: Vec<String> = Vec::new();
+            let mut updates: Vec<String> = Vec::new();
+            let pending_adds: Vec<Feature> = self.pending_added_features();
+            let add_entry = |f: &Feature| {
+                let mut parts = vec![f.name.clone()];
+                for (k, v) in f.filled_slots() {
+                    parts.push(k);
+                    parts.push(v.show());
+                }
+                format!("({})", parts.join(" "))
+            };
+            for f in &pending_adds {
+                adds.push(add_entry(f));
+            }
+            for u in &self.visicon_pending {
+                match u {
+                    // `(format "~s" (cons name (slots…)))`: the loc name then
+                    // the slot/value pairs in printed order.
+                    VisPending::Add(f) => adds.push(add_entry(f)),
+                    VisPending::Delete(n) => deletes.push(n.clone()),
+                    VisPending::Update(n, mods) => {
+                        let mut parts = vec![n.clone()];
+                        for (k, v) in mods {
+                            parts.push(k.clone());
+                            parts.push(v.show());
+                        }
+                        updates.push(format!("({})", parts.join(" ")));
+                    }
+                    VisPending::DeleteAll => {}
+                }
+            }
+            for (label, items) in [
+                ("Pending additions", &adds),
+                ("Pending deletions", &deletes),
+                ("Pending modifications", &updates),
+            ] {
+                if !items.is_empty() {
+                    out.push(String::new());
+                    out.push(format!("{label}:"));
+                    out.extend(items.iter().cloned());
+                }
+            }
+        }
+        out
+    }
+
+    /// `feat-attended` (`vision.lisp:2269`): a finst is `T`, the in-flight
+    /// attention target is `REQ`, a new feature is `NEW`, else `NIL`.
+    fn feat_attended(&self, f: &Feature) -> String {
+        if f.finst_ms.is_some() {
+            return "T".to_string();
+        }
+        if self.visual_busy && self.last_attention.as_deref() == Some(f.name.as_str()) {
+            return "REQ".to_string();
+        }
+        if f.new_p {
+            "NEW".to_string()
+        } else {
+            "NIL".to_string()
+        }
+    }
+
+    /// The features a queued `visicon-updates` `:add` would create, in the
+    /// order `process-display` would apply them (`vision.lisp:1634`). Window
+    /// items due but not yet proc-displayed are pending adds too: the device
+    /// queues its visicon features and `install-device` schedules the wave.
+    fn pending_added_features(&self) -> Vec<Feature> {
+        let mut due: Vec<&DeviceText> = self
+            .pending_texts
+            .iter()
+            .filter(|t| t.at_ms <= self.time_ms)
+            .collect();
+        due.sort_by_key(|t| (t.x, t.y));
+        let mut seq = self.feat_seq;
+        let mut out = Vec::new();
+        for t in due {
+            let width = 7 * t.text.chars().count() as i64;
+            let sx = t.x + 305 + (width - 7) / 2;
+            let sy = t.y + 306;
+            out.push(self.text_feature(
+                format!("VISUAL-LOCATION{seq}"),
+                &t.text,
+                sx,
+                sy,
+                self.time_ms,
+            ));
+            seq += 1;
+        }
         out
     }
 
@@ -1483,7 +1686,7 @@ impl Engine {
     /// `visicon-update`, not nine. The `add-visicon-features` API and the
     /// scripted driver keep their own per-call push — the device-timeline
     /// specs depend on it — so this is deliberately the window helpers only.
-    fn now_display(&mut self) {
+    pub(super) fn now_display(&mut self) {
         if self.display_queued_ms == Some(self.time_ms) {
             return;
         }
@@ -1553,15 +1756,31 @@ impl Engine {
                     let wd = char_w * w.chars().count() as i64;
                     let name = format!("VISUAL-LOCATION{}", self.feat_seq);
                     self.feat_seq += 1;
+                    let sx = curr_x + ox + round_half_even(wd, 2);
                     self.features.push(Feature {
                         name: name.clone(),
                         kind: "TEXT".to_string(),
                         value: w.clone(),
-                        x: curr_x + ox + round_half_even(wd, 2),
+                        x: sx,
                         y: y_screen,
                         width: wd,
                         height: text_h,
                         extra: vec![("TEXT".to_string(), Value::Sym("T".to_string()))],
+                        // `build-string-feats` (`vision.lisp:3558`) builds
+                        // `(isa (visual-location text) <y-slot> … height …
+                        // value … width … <x-slot> …)`, and the device appends
+                        // `color`, `kind` and `text` (GOTCHAS #238)."
+                        spec: vec![
+                            ("SCREEN-Y".to_string(), Value::Int(y_screen)),
+                            ("HEIGHT".to_string(), Value::Int(text_h)),
+                            ("VALUE".to_string(), Value::Str(w.clone())),
+                            ("WIDTH".to_string(), Value::Int(wd)),
+                            ("SCREEN-X".to_string(), Value::Int(sx)),
+                            ("COLOR".to_string(), Value::Sym("BLACK".to_string())),
+                            ("KIND".to_string(), Value::Sym("TEXT".to_string())),
+                            ("TEXT".to_string(), Value::Sym("T".to_string())),
+                        ],
+                        spec_pre: Vec::new(),
                         tstamp_ms: self.time_ms,
                         new_p: true,
                         finst_ms: None,
@@ -1601,6 +1820,28 @@ impl Engine {
                 ("END2-X".to_string(), Value::Int(x2)),
                 ("END2-Y".to_string(), Value::Int(y2)),
             ],
+            // `build-vis-locs-for` for a `v-liner` (`uwi.lisp:511`): the spec
+            // order is `color value screen-x screen-y width height end1-x
+            // end1-y end2-x end2-y`, and the isa marker `(visual-location
+            // line)` adds `kind` and `line` (GOTCHAS #238)."
+            spec: vec![
+                ("COLOR".to_string(), Value::Sym(color.to_uppercase())),
+                (
+                    "VALUE".to_string(),
+                    Value::Int(pts_to_orientation((x1, y1), (x2, y2))),
+                ),
+                ("SCREEN-X".to_string(), Value::Int(ox + (start.0 + end.0).div_euclid(2))),
+                ("SCREEN-Y".to_string(), Value::Int(oy + (start.1 + end.1).div_euclid(2))),
+                ("WIDTH".to_string(), Value::Int((start.0 - end.0).abs())),
+                ("HEIGHT".to_string(), Value::Int((start.1 - end.1).abs())),
+                ("END1-X".to_string(), Value::Int(x1)),
+                ("END1-Y".to_string(), Value::Int(y1)),
+                ("END2-X".to_string(), Value::Int(x2)),
+                ("END2-Y".to_string(), Value::Int(y2)),
+                ("KIND".to_string(), Value::Sym("LINE".to_string())),
+                ("LINE".to_string(), Value::Sym("T".to_string())),
+            ],
+            spec_pre: Vec::new(),
             tstamp_ms: self.time_ms,
             new_p: true,
             finst_ms: None,
@@ -1641,6 +1882,20 @@ impl Engine {
             width,
             height,
             extra: vec![("COLOR".to_string(), Value::Sym(color.to_uppercase()))],
+            // `build-vis-locs-for` for a `button-vdi` (`uwi.lisp:358`): the
+            // oval's spec order is `screen-x screen-y width height value
+            // color`, and the isa marker adds `kind` and `oval` (GOTCHAS #238)."
+            spec: vec![
+                ("SCREEN-X".to_string(), Value::Int(ox + x + width.div_euclid(2))),
+                ("SCREEN-Y".to_string(), Value::Int(oy + y + height.div_euclid(2))),
+                ("WIDTH".to_string(), Value::Int(width)),
+                ("HEIGHT".to_string(), Value::Int(height)),
+                ("VALUE".to_string(), Value::Str(text.to_string())),
+                ("COLOR".to_string(), Value::Sym(color.to_uppercase())),
+                ("KIND".to_string(), Value::Sym("OVAL".to_string())),
+                ("OVAL".to_string(), Value::Sym("T".to_string())),
+            ],
+            spec_pre: Vec::new(),
             tstamp_ms: self.time_ms,
             new_p: true,
             finst_ms: None,

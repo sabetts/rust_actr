@@ -399,6 +399,44 @@ impl Engine {
         self.emma_exec_s = false;
     }
 
+    /// A window-text visicon feature (`build-string-feats` + the device's
+    /// `color`/`kind`/`text`), shared by `proc_display` and the pending
+    /// (`printed-visicon`) view so the two agree.
+    pub(super) fn text_feature(
+        &self,
+        name: String,
+        text: &str,
+        sx: i64,
+        sy: i64,
+        tstamp: i64,
+    ) -> Feature {
+        let width = 7 * text.chars().count() as i64;
+        Feature {
+            name,
+            kind: "TEXT".to_string(),
+            value: text.to_string(),
+            x: sx,
+            y: sy,
+            width,
+            height: 10,
+            extra: Vec::new(),
+            spec: vec![
+                ("SCREEN-Y".to_string(), Value::Int(sy)),
+                ("HEIGHT".to_string(), Value::Int(10)),
+                ("VALUE".to_string(), Value::Str(text.to_string())),
+                ("WIDTH".to_string(), Value::Int(width)),
+                ("SCREEN-X".to_string(), Value::Int(sx)),
+                ("COLOR".to_string(), Value::Sym("BLACK".to_string())),
+                ("KIND".to_string(), Value::Sym("TEXT".to_string())),
+                ("TEXT".to_string(), Value::Sym("T".to_string())),
+            ],
+            spec_pre: Vec::new(),
+            tstamp_ms: tstamp,
+            new_p: true,
+            finst_ms: None,
+        }
+    }
+
     pub(super) fn proc_display(&mut self) -> Result<(), EngineError> {
         let now = self.time_ms;
         // This *is* the display wave for `now`, so window ops applied inside it
@@ -406,9 +444,27 @@ impl Engine {
         // label goes through) must not queue another one — the ref has a single
         // `visicon-update` for a whole `build-display`.
         self.display_queued_ms = Some(now);
-        // `proc-display` runs `check-finsts` (`vision.lisp:1796`): finsts older
+        // `process-display` runs `check-finsts` (`vision.lisp:1796`): finsts older
         // than `:visual-finst-span` are dropped before the display is searched.
         self.check_visual_finsts();
+        // `process-display` (`vision.lisp:1634`): drain the queued
+        // `visicon-updates` into the visicon. `:delete-all` clears everything;
+        // the others add, remove or modify one feature.
+        for u in std::mem::take(&mut self.visicon_pending) {
+            match u {
+                VisPending::Add(f) => self.features.push(f),
+                VisPending::Delete(name) => self.features.retain(|f| f.name != name),
+                VisPending::Update(name, mods) => {
+                    if let Some(f) = self.features.iter_mut().find(|f| f.name == name) {
+                        f.tstamp_ms = now;
+                        for (k, v) in mods {
+                            f.set_slot(&k, v);
+                        }
+                    }
+                }
+                VisPending::DeleteAll => self.features.clear(),
+            }
+        }
         let mut due = Vec::new();
         self.pending_texts.retain(|t| {
             if t.at_ms <= now {
@@ -495,19 +551,10 @@ impl Engine {
             // (300, 300) and the font is 7 px/char, 10 px tall, so the
             // offsets are `305 + (width-7)/2` and `306`.
             let width = 7 * t.text.chars().count() as i64;
-            self.features.push(Feature {
-                name: format!("VISUAL-LOCATION{n}"),
-                kind: "TEXT".to_string(),
-                value: t.text.clone(),
-                x: t.x + 305 + (width - 7) / 2,
-                y: t.y + 306,
-                width,
-                height: 10,
-                extra: Vec::new(),
-                tstamp_ms: now,
-                new_p: true,
-                finst_ms: None,
-            });
+            let sx = t.x + 305 + (width - 7) / 2;
+            let sy = t.y + 306;
+            self.features
+                .push(self.text_feature(format!("VISUAL-LOCATION{n}"), &t.text, sx, sy, now));
         }
         // Scripted buttons and lines (`add-button-to-exp-window` /
         // `add-line-to-exp-window`): build their features through the same
@@ -1152,11 +1199,57 @@ impl Feature {
     /// `simple-size` (`vision.lisp:3698`): `0.01 * round(angle(w) *
     /// angle(h) / 0.01)`, with `angle(px) = 2*atan(px/2, 1080)` in degrees
     /// and single-float arithmetic (`round` returns the integer quotient).
+    /// Returns the `compute-vis-loc-size` fallback `1.0` when `width` or
+    /// `height` is absent (the engine stores an absent slot as 0, and
+    /// `simple-size` requires `numberp`).
     pub(super) fn size(&self) -> f64 {
+        if self.width == 0 || self.height == 0 {
+            return 1.0;
+        }
         let ang = |px: i64| (2.0 * ((px as f64) / 2.0 / 1080.0).atan()).to_degrees();
         let prod = ang(self.width) * ang(self.height);
         let q = (prod / 0.01).round();
         (0.01f32 * q as f32) as f64
+    }
+
+    /// The feature's filled slots in `printed-visicon` order: the computed
+    /// `size`/`distance` (only when the construction spec did not set them)
+    /// followed by the spec order. `chunk-filled-slots-list-fct` is a chunk's
+    /// slots in reverse set order and `define-chunks-fct` sets them in reverse
+    /// spec order, so the printed list is `[SIZE, DISTANCE] ++ spec`
+    /// (GOTCHAS #238).
+    pub(super) fn filled_slots(&self) -> Vec<(String, Value)> {
+        let has = |n: &str| self.spec.iter().any(|(k, _)| k == n) || self.spec_pre.iter().any(|(k, _)| k == n);
+        let mut v: Vec<(String, Value)> = self.spec_pre.clone();
+        if !has("SIZE") {
+            v.push(("SIZE".to_string(), Value::Num(self.size())));
+        }
+        if !has("DISTANCE") {
+            v.push(("DISTANCE".to_string(), Value::Int(1080)));
+        }
+        v.extend(self.spec.iter().cloned());
+        v
+    }
+
+    /// `set-chunk-slot-value-fct` on a visicon feature: an existing slot keeps
+    /// its position, a new one is pushed onto the front of the printed list
+    /// (`chunks.lisp:1459`).
+    pub(super) fn set_slot(&mut self, name: &str, value: Value) {        match (name, &value) {
+            ("SCREEN-X", Value::Int(i)) => self.x = *i,
+            ("SCREEN-Y", Value::Int(i)) => self.y = *i,
+            ("WIDTH", Value::Int(i)) => self.width = *i,
+            ("HEIGHT", Value::Int(i)) => self.height = *i,
+            ("VALUE", Value::Str(s)) => self.value = s.clone(),
+            ("KIND", Value::Sym(s)) => self.kind = s.clone(),
+            _ => {}
+        }
+        if let Some(e) = self.spec.iter_mut().find(|(k, _)| k == name) {
+            e.1 = value;
+        } else if let Some(e) = self.spec_pre.iter_mut().find(|(k, _)| k == name) {
+            e.1 = value;
+        } else {
+            self.spec_pre.insert(0, (name.to_string(), value));
+        }
     }
 }
 

@@ -582,6 +582,20 @@ struct Feature {
     height: i64,
     /// Additional slots (`prompt` etc.) preserved in the visual-location.
     extra: Vec<(String, Value)>,
+    /// The slots in the order the ACT-R construction spec lists them —
+    /// `build-string-feats` for window text, the argument order of a
+    /// recorded `add-visicon-features` otherwise — excluding the computed
+    /// `distance`/`size`. `printed-visicon` renders `[SIZE, DISTANCE]`
+    /// followed by these, because `chunk-filled-slots-list-fct` returns a
+    /// chunk's slots in *reverse* set order and `define-chunks-fct` sets them
+    /// in reverse spec order (GOTCHAS #238).
+    spec: Vec<(String, Value)>,
+    /// Slots set *after* construction (`modify-visicon-features`), most
+    /// recently set first. A `set-chunk-slot-value-fct` on a new slot pushes
+    /// it onto the chunk's slot list, which `chunk-filled-slots-list-fct`
+    /// returns front-first, so these render *before* the construction spec
+    /// (GOTCHAS #238).
+    spec_pre: Vec<(String, Value)>,
     tstamp_ms: i64,
     /// `chunk-visual-new-p`: `NEW` until the feature is attended
     /// (`add-finst` clears it, `vision.lisp:2297`). The default-spec's
@@ -592,6 +606,22 @@ struct Feature {
     /// nil` iff `None`. Capped by `:visual-num-finsts` (oldest evicted), which
     /// is what re-exposes Sperling's auto-stuffed location to a later find.
     finst_ms: Option<i64>,
+}
+
+/// A queued entry of ACT-R's `visicon-updates` (`vision.lisp:3905`), rendered
+/// by `printed-visicon` as the "Pending additions/deletions/modifications"
+/// sections.
+#[derive(Debug, Clone)]
+enum VisPending {
+    /// `:add` — the feature `process-display` will insert.
+    Add(Feature),
+    /// `:delete` — the name of the feature to remove.
+    Delete(String),
+    /// `:update` — a feature name and the slot modifications to apply.
+    Update(String, Vec<(String, Value)>),
+    /// `:delete-all` — clear the whole visicon (`delete-all-visicon-features`).
+    /// Invisible in the pending sections (`vision.lisp:4170`).
+    DeleteAll,
 }
 
 /// Virtual keyboard entry: hand geometry for prep/fitss math.
@@ -1839,6 +1869,11 @@ pub struct Engine {
     consume_rng: u64,
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
+    /// Queued `visicon-updates` (`vision.lisp:1296`): what the next
+    /// `proc-display` will add, delete or modify, and what `printed-visicon`
+    /// reports as pending. The RPC `[add|delete|modify]-visicon-features`
+    /// queue here instead of touching `features` directly.
+    visicon_pending: Vec<VisPending>,
     feat_seq: u64,
     /// Live experiment-window origin (`open-exp-window` x/y; ACT-R default
     /// 300,300). RPC-driven window items are placed relative to it.
@@ -2213,6 +2248,7 @@ impl Engine {
             device_run: 0,
             consume_rng,
             features: Vec::new(),
+            visicon_pending: Vec::new(),
             feat_seq: 0,
             window_origin: (300, 300),
             display_queued_ms: None,

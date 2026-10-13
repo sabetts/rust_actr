@@ -1317,10 +1317,11 @@ impl Engine {
     /// prompt feature and arm the keypress/choose prompt cycling.
     pub fn tracker_setup(&mut self, slots: &[(String, Sexp)]) {
         self.tracker_task = true;
-        let before = self.features.len();
         self.add_visicon(slots);
-        if self.features.len() > before {
-            self.tracker_feature = Some(self.features[before].name.clone());
+        // `add-visicon-features` queues the feature (`visicon-updates`); the
+        // name is the queued `:add` entry.
+        if let Some(VisPending::Add(f)) = self.visicon_pending.last() {
+            self.tracker_feature = Some(f.name.clone());
         }
     }
 
@@ -1336,7 +1337,7 @@ impl Engine {
                 }
             }
         }
-        self.now(Prio::Num(-100), Out::Always, Event::ProcDisplay);
+        self.now_display();
     }
 
     /// extended-motor-actions `maybe-execute-movement`
