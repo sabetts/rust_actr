@@ -990,17 +990,24 @@ impl Engine {
     }
 
     pub fn print_whynot(&mut self, names: &[String]) -> Vec<String> {
-        let prods: Vec<crate::model::Production> = names
-            .iter()
-            .filter_map(|n| {
-                let up = n.to_uppercase();
-                self.model
-                    .productions
-                    .iter()
-                    .find(|p| p.name == up)
-                    .cloned()
-            })
-            .collect();
+        // `whynot-fct` (`procedural-cmds.lisp:597`): with no names it reports
+        // every production in the model (`all-productions`), in definition
+        // order.
+        let prods: Vec<crate::model::Production> = if names.is_empty() {
+            self.model.productions.clone()
+        } else {
+            names
+                .iter()
+                .filter_map(|n| {
+                    let up = n.to_uppercase();
+                    self.model
+                        .productions
+                        .iter()
+                        .find(|p| p.name == up)
+                        .cloned()
+                })
+                .collect()
+        };
         for prod in &prods {
             // `command-output "~%Production …"` prints a leading newline.
             self.out_lines.push(String::new());
@@ -1068,6 +1075,16 @@ impl Engine {
                                 .unwrap_or(false),
                         };
                         if !ok {
+                            // `test-var-slot` (`procedural.lisp:2034`): the
+                            // slot *name* is a variable (`=slot state3`), so
+                            // the reason names the resolved slot and the
+                            // variable.
+                            if t.slot.starts_with('=') {
+                                return format!(
+                                    "The value in the {slot} slot (the value of the {} variable) of the chunk of the {buffer} buffer does not satisfy the constraints.",
+                                    t.slot
+                                );
+                            }
                             return match &t.value {
                                 Pattern::Nil => {
                                     format!("The chunk in the {buffer} buffer does not have slot {slot}.")
