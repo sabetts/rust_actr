@@ -671,7 +671,7 @@ impl Session {
                         }
                     }
                 }
-                self.build_engine()?;
+                self.rebuild_engine_in_place()?;
                 Ok(vec![Json::Null])
             }
             "chunk-type" => {
@@ -696,7 +696,7 @@ impl Session {
                     m.chunk_types.retain(|t| !t.name.eq_ignore_ascii_case(&name));
                     m.chunk_types.push(ct);
                 }
-                self.build_engine()?;
+                self.rebuild_engine_in_place()?;
                 Ok(vec![Json::Str(name)])
             }
             "buffer-read" => {
@@ -1301,6 +1301,22 @@ impl Session {
     }
 
     /// (Re)build the engine from the loaded models.
+    /// Rebuild the engine after an in-place definition change (`chunk-type`,
+    /// `add-dm`, …).
+    ///
+    /// A fresh engine's construction reset arms device run 0, so a device
+    /// task's script for the run in progress would be dropped and the run
+    /// would end with no window at all (`bst`'s `build-display`). Carry the
+    /// run position across, and re-arm that run.
+    fn rebuild_engine_in_place(&mut self) -> Result<(), String> {
+        let run = self.engine.as_ref().map(|e| e.device_run()).unwrap_or(0);
+        self.build_engine()?;
+        if let Some(eng) = self.engine.as_mut() {
+            eng.set_device_run(run);
+        }
+        Ok(())
+    }
+
     fn build_engine(&mut self) -> Result<(), String> {
         let def = match self.defs.last() {
             Some(d) => d.clone(),

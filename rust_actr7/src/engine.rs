@@ -2347,6 +2347,106 @@ impl Engine {
 
     /// The body of `reset`; the construction reset calls this directly so the
     /// spec's first `(reset)` is device run 1.
+    /// Arm the device script for the current run (`self.device_run`).
+    ///
+    /// A device task re-applies its window setup after each reset, and `(RUN n
+    /// …)` ops belong to run `n`. This runs from `reset_impl` and from
+    /// `set_device_run`, which is what keeps a run's ops armed when the engine
+    /// is rebuilt in place mid-run (`chunk-type`, `add-dm`).
+    fn arm_device_script(&mut self) {
+        // A device task re-applies its window setup after each reset; restore
+        // the script so the next run sees it (`pending_*` is consumed as time
+        // advances, and a task runs its setup again per run).
+        // Device script: flat ops re-arm on every reset; `(RUN n …)` ops
+        // belong to run `n` (the task re-applies its window content per run).
+        let run = self.device_run;
+        self.pending_texts = self
+            .device_texts
+            .iter()
+            .filter(|t| t.run.is_none() || t.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_buttons = self
+            .device_buttons
+            .iter()
+            .filter(|b| b.run.is_none() || b.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_lines = self
+            .device_lines
+            .iter()
+            .filter(|l| l.run.is_none() || l.run == Some(run))
+            .cloned()
+            .collect();
+        // A task re-applies its window per run, so ops already due when this
+        // reset arms them still need a display wave: the construction-time push
+        // only covers run 0 (`bst`'s `build-display` draws at ms 0 in every
+        // run, so without this the replayed run had no visicon at all).
+        let due_now = self
+            .pending_texts
+            .first()
+            .map(|t| t.at_ms)
+            .into_iter()
+            .chain(self.pending_buttons.first().map(|b| b.at_ms))
+            .chain(self.pending_lines.first().map(|l| l.at_ms))
+            .min()
+            .is_some_and(|t| t <= self.time_ms);
+        if due_now {
+            self.schedule_display();
+        }
+        self.pending_modifies = self
+            .device_modifies
+            .iter()
+            .filter(|m| m.run.is_none() || m.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_clears = self
+            .device_clears
+            .iter()
+            .filter(|(_, r)| r.is_none() || *r == Some(run))
+            .map(|(t, _)| *t)
+            .collect();
+        // Scheduled command lines re-fire each run (`schedule-event-relative`
+        // runs again in the task's setup).
+        for c in self
+            .device_commands
+            .clone()
+            .into_iter()
+            .filter(|c| c.run.is_none() || c.run == Some(run))
+        {
+            let out = match c.output.as_str() {
+                "low" => Out::Low,
+                "medium" => Out::Medium,
+                "high" | "t" => Out::Always,
+                _ => Out::Low,
+            };
+            self.push_m(
+                c.at_ms,
+                Prio::Num(0),
+                out,
+                false,
+                Event::Emit {
+                    module: c.module.clone(),
+                    line: c.details.clone(),
+                },
+            );
+        }
+    }
+
+    /// The device run the script is armed for (see [`DeviceSetup`]).
+    pub fn device_run(&self) -> u32 {
+        self.device_run
+    }
+
+    /// Arm the device script for `run` without a full reset. Used when the
+    /// engine is rebuilt in place — the fresh engine's construction reset
+    /// armed run 0, so a device task's run-in-progress ops would otherwise be
+    /// dropped (the `bst` display).
+    pub fn set_device_run(&mut self, run: u32) {
+        self.device_run = run;
+        self.arm_device_script();
+    }
+
     fn reset_impl(&mut self) -> Result<(), EngineError> {
         // Driver-set extended-motor-actions params survive a reset.
         let zz = (
@@ -2502,6 +2602,10 @@ impl Engine {
             self.buffers.insert("BLENDING".to_string(), Buffer::empty());
         }
         self.queue = BinaryHeap::new();
+        // `display_queued_ms` describes a wave *in the queue*: a reset drops
+        // that queue, so the flag must go with it or it suppresses the
+        // replacement wave `arm_device_script` is about to ask for.
+        self.display_queued_ms = None;
         // The BOLD demand recorder tracks the current task only: `reset`
         // restarts the meta-process clock, and the buffer-trace recorder the
         // predictor reads is reset with it.
@@ -2521,83 +2625,7 @@ impl Engine {
         self.production_utility = vec![None; self.model.productions.len()];
         self.history.clear();
         self.features.clear();
-        // A device task re-applies its window setup after each reset; restore
-        // the script so the next run sees it (`pending_*` is consumed as time
-        // advances, and a task runs its setup again per run).
-        // Device script: flat ops re-arm on every reset; `(RUN n …)` ops
-        // belong to run `n` (the task re-applies its window content per run).
-        let run = self.device_run;
-        self.pending_texts = self
-            .device_texts
-            .iter()
-            .filter(|t| t.run.is_none() || t.run == Some(run))
-            .cloned()
-            .collect();
-        self.pending_buttons = self
-            .device_buttons
-            .iter()
-            .filter(|b| b.run.is_none() || b.run == Some(run))
-            .cloned()
-            .collect();
-        self.pending_lines = self
-            .device_lines
-            .iter()
-            .filter(|l| l.run.is_none() || l.run == Some(run))
-            .cloned()
-            .collect();
-        // A task re-applies its window per run, so ops already due when this
-        // reset arms them still need a display wave: the construction-time push
-        // only covers run 0 (`bst`'s `build-display` draws at ms 0 in every
-        // run, so without this the replayed run had no visicon at all).
-        let due_now = self
-            .pending_texts
-            .first()
-            .map(|t| t.at_ms)
-            .into_iter()
-            .chain(self.pending_buttons.first().map(|b| b.at_ms))
-            .chain(self.pending_lines.first().map(|l| l.at_ms))
-            .min()
-            .is_some_and(|t| t <= self.time_ms);
-        if due_now {
-            self.schedule_display();
-        }
-        self.pending_modifies = self
-            .device_modifies
-            .iter()
-            .filter(|m| m.run.is_none() || m.run == Some(run))
-            .cloned()
-            .collect();
-        self.pending_clears = self
-            .device_clears
-            .iter()
-            .filter(|(_, r)| r.is_none() || *r == Some(run))
-            .map(|(t, _)| *t)
-            .collect();
-        // Scheduled command lines re-fire each run (`schedule-event-relative`
-        // runs again in the task's setup).
-        for c in self
-            .device_commands
-            .clone()
-            .into_iter()
-            .filter(|c| c.run.is_none() || c.run == Some(run))
-        {
-            let out = match c.output.as_str() {
-                "low" => Out::Low,
-                "medium" => Out::Medium,
-                "high" | "t" => Out::Always,
-                _ => Out::Low,
-            };
-            self.push_m(
-                c.at_ms,
-                Prio::Num(0),
-                out,
-                false,
-                Event::Emit {
-                    module: c.module.clone(),
-                    line: c.details.clone(),
-                },
-            );
-        }
+        self.arm_device_script();
         self.feat_seq = 0;
         self.copy_count.clear();
         self.c_fan_out.clear();
@@ -2613,6 +2641,7 @@ impl Engine {
         // setup, creating the event and scheduling its onset (`new-sound`).
         self.sounds.clear();
         self.tone_seq = 0;
+        let run = self.device_run;
         for s in self
             .device_sounds
             .clone()

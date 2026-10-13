@@ -3637,3 +3637,33 @@ Two scheduling details matter and are easy to get wrong:
   which drops a wave pushed at reset time. Restricting the run-start check to
   buttons/lines keeps it from disturbing the text path, which already has its
   own push (`tests/golden.rs`'s cases caught that immediately).
+
+## 224. An in-place engine rebuild resets the device run counter
+
+A device task's window script is armed **per run**: the sidecar's `(RUN n …)`
+ops are filtered by `Engine::device_run`, which `reset` increments. But several
+commands mutate the model *definition* and then rebuild the engine from scratch
+via `build_engine` — `chunk-type` and `add-dm` both do. A fresh engine's
+construction reset arms **run 0**, so the run in progress (1, 2, …) found no
+window ops at all.
+
+That is what kept the four golden `bst-*` specs stuck. `bst.lisp`'s
+`build-display` draws 4 buttons + 4 lines at ms 0 in every run, and the
+regenerated spec replays `(:RESET) (:COMMAND CHUNK-TYPE …) (:RUN 60 …)` per
+trial — so the `chunk-type` rebuild wiped the ops the reset had just armed, and
+the run ended after the initial goal + one conflict-resolution. The tell is the
+terminator: the queue draining ("no events left to process") is *correct* for a
+plain `:RUN` (`run_secs`); only `:RUN-FULL-TIME` pushes a hidden `Dummy` at the
+limit, so "time limit reached" vs "no events left" says which step the spec
+used. Chasing it as a scheduler fault sent the previous session down a
+blind alley.
+
+Fix: `Session::rebuild_engine_in_place` carries `device_run` across the rebuild
+and re-arms that run (`Engine::set_device_run` → `arm_device_script`, factored
+out of `reset_impl`). Same-commit invariant: `display_queued_ms` describes a
+wave *in the queue*, so `reset_impl` clears it next to
+`self.queue = BinaryHeap::new()` — otherwise a dropped queue leaves a stale flag
+that suppresses the replacement wave.
+
+Effect: all four `bst-*` specs now run the display and reach the model's first
+manual action. The blocker moves to the motor module's `:loc` request slot.
