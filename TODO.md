@@ -333,8 +333,10 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       still live (`73b045f`, GOTCHAS #209/#210). Flips `simple-dynamic-model`,
       `tutorial-unit5modeling-v9-p7-8-run`, `tutorial-unit5-fan-lawyer-store-trace`,
       `tutorial-unit5modeling-v8-p6-run-retrieved-chunk`,
-      `tutorial-unit7modeling-ul-issues-v2-first-run` and
-      `tutorial-unit3modeling-v6-next-run` — **98 pass / 37 fail**.
+      `tutorial-unit7modeling-ul-issues-v2-first-run`,
+      `tutorial-unit3modeling-v6-next-run` and `hear-self` (speech
+      `:hear-self` gating, style-change prep, subvocalize, the device-notify
+      line; `0e556df`, GOTCHAS #211/#212) — **99 pass / 36 fail**.
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
