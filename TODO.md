@@ -311,9 +311,12 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       engine can replay.
       Done: `chunk-type` (`9f773c0`), `?buffer> buffer requested/unrequested`
       (`9f773c0`), visual-location `lowest`/`highest` request constraints
-      (`4ce0ccf`), `?visual-location> state error` (`e6b6542`), and the
+      (`4ce0ccf`), `?visual-location> state error` (`e6b6542`), the
       extractor now records `load-act-r-code` task files (`a6dffeb` — specs
-      were silently missing the task's `defun`s).
+      were silently missing the task's `defun`s), and `whynot` now
+      recomputes the conflict set (`Engine::pmatches`) and reports the
+      failure reason in ACT-R's compiled condition order
+      (`9384f4c`, `02e64cb`, GOTCHAS #203).
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), model-body forms
@@ -321,6 +324,11 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `set-parameter-value`, `written-for-act-r-version`, `chunk-type
       :include`), `!bind!` (`which-one`), and the reusable-buffer naming
       (`simple-dynamic-model`, M3).
+      **`test-ppm` cannot go green**: its first 122/163 lines now match
+      byte-exact, but the third section sets `:PPM-HOOK SHOW-PPM-VALUES`, a
+      stub-defined Lisp callback `actr.py` cannot supply (the documented
+      "no arbitrary Lisp" divergence). Same for `testing-child-slot`, whose
+      ref records a Lisp error. Neither is counted as an engine gap.
 - [ ] **M2. Trace fidelity** for the command-scope timestamped specs: `:cmdt`
       lines (`PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `QUERY-BUFFER-ACTION`,
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
