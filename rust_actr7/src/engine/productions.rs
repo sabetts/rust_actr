@@ -152,6 +152,26 @@ impl Engine {
         Ok(())
     }
 
+    /// The current conflict set with each match's partial-matched slots
+    /// (`pmatches-internal`, `procedural-cmds.lisp:679`). Read-only: no trace
+    /// output, no utility/noise draw, no scheduling, so `whynot` can report
+    /// matches and partial matches without disturbing a run.
+    pub(super) fn pmatches(&self) -> Vec<(usize, Bindings, Vec<PpmMismatch>)> {
+        let mut out = Vec::new();
+        for ep in self.exec_prods.clone() {
+            let pname = self.model.productions[ep.index].name.clone();
+            if self.disabled_prods.contains(&pname.to_uppercase()) {
+                continue;
+            }
+            let prod = self.model.productions[ep.index].clone();
+            let mut mism: Vec<PpmMismatch> = Vec::new();
+            if let Ok(Some(b)) = self.match_prod(&prod, &ep.implicit_queries, &mut mism) {
+                out.push((ep.index, b, mism));
+            }
+        }
+        out
+    }
+
     /// First failing condition reason for `:crt` (`failure-reason-string`,
     /// procedural.lisp:1981). Covers the buffer/state query cases the
     /// corpus exercises; other condition kinds fall back to a generic line.

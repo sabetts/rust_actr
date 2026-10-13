@@ -990,9 +990,12 @@ impl Engine {
     }
 
     pub fn print_whynot(&mut self, names: &[String]) -> Vec<String> {
-        // `whynot-fct` (`procedural-cmds.lisp:597`): with no names it reports
-        // every production in the model (`all-productions`), in definition
-        // order.
+        // `whynot-fct` (`procedural-cmds.lisp:597`) first recomputes the
+        // conflict set (`pmatches-internal`), then reports each production.
+        let conflict = self.pmatches();
+        let ppm = self.cfg.ppm.is_some();
+        // With no names it reports every production in the model
+        // (`all-productions`), in definition order.
         let prods: Vec<crate::model::Production> = if names.is_empty() {
             self.model.productions.clone()
         } else {
@@ -1009,26 +1012,40 @@ impl Engine {
                 .collect()
         };
         for prod in &prods {
+            let hit = conflict.iter().find(|(i, _, _)| {
+                self.model.productions[*i].name == prod.name
+            });
             // `command-output "~%Production …"` prints a leading newline.
             self.out_lines.push(String::new());
-            if self.last_conflict_set.iter().any(|n| n == &prod.name) {
-                self.out_lines
-                    .push(format!("Production {} matches:", prod.name));
-            } else {
-                self.out_lines
-                    .push(format!("Production {} does NOT match.", prod.name));
-            }
-            let text = super::compilation::render_production(prod, &Bindings::new(), &[], &[]);
+            let (header, partials): (String, &[(String, String, Value, Value, f32)]) = match hit {
+                // A ppm partial match renders the mismatched slots inline
+                // (`NAME [requested, actual, similarity]`).
+                Some((_, _, mism)) if ppm && !mism.is_empty() => (
+                    format!(
+                        "Production {} partially matches the current state:",
+                        prod.name
+                    ),
+                    mism,
+                ),
+                Some(_) => (format!("Production {} matches:", prod.name), &[]),
+                None => (format!("Production {} does NOT match.", prod.name), &[]),
+            };
+            self.out_lines.push(header);
+            let b = hit.map(|(_, b, _)| b.clone()).unwrap_or_default();
+            let text = super::compilation::render_production(prod, &b, partials, &[]);
             for line in text.lines() {
                 self.out_lines.push(line.to_string());
             }
-            if !self.last_conflict_set.iter().any(|n| n == &prod.name) {
+            if hit.is_none() {
                 self.out_lines.push("It fails because: ".to_string());
                 let reason = self.why_not_match(prod);
                 self.out_lines.push(reason);
             }
         }
-        self.last_conflict_set.clone()
+        conflict
+            .iter()
+            .map(|(i, _, _)| self.model.productions[*i].name.clone())
+            .collect()
     }
 
     /// The first failing LHS condition's explanation

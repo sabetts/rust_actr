@@ -967,8 +967,14 @@ pub(super) fn render_production(
                     if t.op == SlotOp::Eq {
                         // `production-statement-text` annotates a partial
                         // match as `NAME [requested, actual, similarity]`.
+                        // The recorded slot is the *resolved* name (a
+                        // `test-var-slot` stores
+                        // `(replace-variables slot bindings)`), so match on
+                        // either the raw or resolved form.
                         let ann = partials.iter().find(|(pb, ps, req, _, _)| {
-                            pb == buffer && ps == &t.slot && req.show() == val
+                            pb == buffer
+                                && (ps == &t.slot || ps == &slot)
+                                && req.show() == val
                         });
                         if let Some((_, _, _, actual, sim)) = ann {
                             s.push_str(&format!(

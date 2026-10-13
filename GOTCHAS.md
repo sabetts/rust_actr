@@ -3100,3 +3100,37 @@ line), `retrieve-second-step`'s `=target` = `data3` (not a slot — line).
 green`) are literal, so they must stay line-free. The engine tracks the
 extended set in `Engine::valid_slots` so a later mod of the same slot does not
 extend again.
+
+## 203. `whynot` recomputes the conflict set and tests conditions by category
+
+`whynot` is not a report over the *last* conflict resolution. `whynot-fct`
+(`commands/procedural-cmds.lisp:597`) first recomputes the conflict set with
+`pmatches-internal` (`:679`) — a read-only pass that runs no trace, draws no
+utility/noise, and schedules nothing — then reports every production in
+definition order (`all-productions` when no name is given).
+
+Two consequences the engine had to model:
+
+- The match/no-match decision and the `[requested, actual, similarity]`
+  partial-match annotation both come from that fresh pass, not from
+  `last_conflict_set`. A ppm partial match prints
+  `Production NAME partially matches the current state:` with the mismatched
+  slots rendered inline (`production-statement-text`).
+- The *failure reason* is the first failure in the **compiled condition
+  order**, not source order: `test-production`
+  (`core-modules/procedural.lisp:2201`) walks buffer-states, then constants,
+  then binds (`production-binds`), then others. A `slot =var` in a fixed slot
+  is a `bind-slot` and therefore runs *before* a later clause's
+  `test-var-slot`. So `=goal> =slot state3` / `=imaginal> slot =slot` reports
+  `=slot` resolved to `state` (from the imaginal `bind-slot`) even though the
+  goal clause is first. `Engine::why_not_match` classifies each test into
+  those categories and reports the first failure in that order.
+
+The recorded partial-match slot is the *resolved* name
+(`test-var-slot` stores `(replace-variables slot bindings)`), so
+`render_production` matches the annotation on either the raw or resolved
+slot.
+
+`test-ppm` is the oracle for both. Its remaining diff is the third section,
+`:PPM-HOOK SHOW-PPM-VALUES` — a stub-defined Lisp callback, which `actr.py`
+cannot supply (the documented "no arbitrary Lisp" divergence).
