@@ -662,7 +662,7 @@ impl Engine {
         name: &str,
         u: f32,
         utility: Option<f32>,
-        reward: Option<f32>,
+        reward: Option<Reward>,
     ) {
         self.out(format!("Parameters for production {name}:"));
         if self.cfg.esc {
@@ -675,9 +675,11 @@ impl Engine {
         self.out(format!(" :at {}", fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)));
         if self.cfg.esc && self.cfg.ul {
             // `production-parameter-fct` (`utility-and-reward-1.lisp:686`):
-            // the reward lines print only with `:esc` + `:ul`.
+            // the reward lines print only with `:esc` + `:ul`. A number uses
+            // `~6,3F`; any other value `~6@s` (right-aligned in 6 columns).
             match reward {
-                Some(r) => self.out(format!(" :reward {r:6.3}")),
+                Some(Reward::Num(r)) => self.out(format!(" :reward {r:6.3}")),
+                Some(Reward::Other(s)) => self.out(format!(" :reward {s:>6}")),
                 None => self.out(" :reward    NIL".to_string()),
             }
             self.out(" :fixed-utility    NIL".to_string());

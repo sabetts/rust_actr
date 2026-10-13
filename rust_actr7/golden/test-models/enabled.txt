@@ -94,6 +94,7 @@ tutorial-unit7modeling-ul-issues-second-run
 tutorial-unit7modeling-ul-issues-v1-first-run
 tutorial-unit7modeling-ul-issues-v1-second-run
 tutorial-unit7modeling-ul-issues-v1-third-run
+tutorial-unit7modeling-ul-issues-v2-first-run
 tutorial-unit8-semantic-dynamic-g2-trace
 tutorial-unit8-simple-ppm-model-initial-run
 tutorial-unit8-simple-ppm-model-medium-chosen-run

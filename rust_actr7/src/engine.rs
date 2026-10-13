@@ -32,7 +32,9 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-use crate::model::{Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, RhsAction, SlotOp};
+use crate::model::{
+    Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, Reward, RhsAction, SlotOp,
+};
 use crate::rand::Mt;
 use crate::sexpr::Sexp;
 use crate::trace::{format_line, Detail, Out, MODULE_WIDTH};
@@ -1409,7 +1411,7 @@ enum Event {
     TemporalClear,
     /// Utility reward propagation (output medium).
     PropagateReward {
-        value: f32,
+        value: Reward,
     },
     /// Preparation-state release after a module clear. High-detail
     /// only; matters because executing it wakes armed CR.
@@ -2118,7 +2120,9 @@ impl Engine {
                 *at,
                 Prio::Max,
                 Out::Medium,
-                Event::PropagateReward { value: *value },
+                Event::PropagateReward {
+                    value: Reward::Num(*value),
+                },
             );
         }
         Ok(eng)

@@ -1204,14 +1204,16 @@ impl Engine {
                     // (`utility-and-reward-1.lisp:477`): the composed production's
                     // reward is inherited from its parents (the max when both are
                     // numeric).
-                    let reward: Option<f32> = {
-                        let r1 = self.model.productions[p1_idx].reward;
-                        let r2 = self.model.productions[idx].reward;
-                        match (r1, r2) {
-                            (Some(a), Some(b)) => Some(a.max(b)),
-                            (Some(a), None) => Some(a),
-                            (None, Some(b)) => Some(b),
-                            (None, None) => None,
+                    let reward: Option<Reward> = {
+                        let r1 = self.model.productions[p1_idx].reward.clone();
+                        let r2 = self.model.productions[idx].reward.clone();
+                        match (&r1, &r2) {
+                            (Some(Reward::Num(a)), Some(Reward::Num(b))) => {
+                                Some(Reward::Num(a.max(*b)))
+                            }
+                            (Some(Reward::Num(a)), _) => Some(Reward::Num(*a)),
+                            (_, Some(Reward::Num(b))) => Some(Reward::Num(*b)),
+                            _ => r1.or(r2),
                         }
                     };
                     if trace {
@@ -1234,7 +1236,7 @@ impl Engine {
                                 }
                                 let u = self.utilities[*didx];
                                 let utility = self.production_utility[*didx];
-                                let reward = self.model.productions[*didx].reward;
+                                let reward = self.model.productions[*didx].reward.clone();
                                 self.print_prod_params(dname, u, utility, reward);
                             } else {
                                 self.out(format!(
@@ -1291,7 +1293,7 @@ impl Engine {
                             self.out(render_compiled(&cname, &doc, &sorted, &rhs, bindings));
                             // A freshly compiled production has no cached
                             // `production-utility` yet and `u = :nu` (0).
-                            self.print_prod_params(&cname, 0.0, None, reward);
+                            self.print_prod_params(&cname, 0.0, None, reward.clone());
                         }
                     }
                     if dup.is_none() {

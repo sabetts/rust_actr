@@ -160,11 +160,34 @@ pub struct Production {
     pub rhs: Vec<RhsAction>,
     /// `(spp <name> :reward R)`: propagated as a reward when the production
     /// is selected (`commands/procedural-cmds.lisp`).
-    pub reward: Option<f32>,
+    pub reward: Option<Reward>,
     /// `(spp <name> :at S)`: production action time override in seconds.
     pub at: Option<f32>,
     /// `(spp <name> :u U)`: initial utility override (else `:iu`).
     pub utility: Option<f32>,
+}
+
+/// A `(spp <prod> :reward R)` value. `propagate-reward`
+/// (`modules/utility-and-reward-1.lisp:421`) branches on `numberp`: a number
+/// updates utilities, any other non-nil value clears the utility-learning
+/// history. `Other` carries the Lisp text for the `PROPAGATE-REWARD` trace
+/// line (`:reward t` → `PROPAGATE-REWARD T`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Reward {
+    Num(f32),
+    Other(String),
+}
+
+impl Reward {
+    /// Lisp display for the `PROPAGATE-REWARD <value>` trace line. ACT-R prints
+    /// the event parameter with `~s`, so an integer reward reads `0`, not
+    /// `0.0`; Rust's `f32: Display` matches for the corpus's integer rewards.
+    pub fn trace_text(&self) -> String {
+        match self {
+            Reward::Num(v) => format!("{v}"),
+            Reward::Other(s) => s.clone(),
+        }
+    }
 }
 
 /// Collect `add-act-r-command` name→function aliases from a task file
@@ -2224,8 +2247,15 @@ fn parse_model(
         {
             for (k, v) in kv {
                 if k == ":REWARD" {
+                    // `learn-parameters` (`utility-and-reward-1.lisp:470`)
+                    // schedules a reward only when it is non-nil; a number
+                    // updates utilities, any other value clears the history.
                     if let Some(r) = sexp_f64(v) {
-                        prod.reward = Some(r as f32);
+                        prod.reward = Some(Reward::Num(r as f32));
+                    } else if let Sexp::Sym(s) = v {
+                        if s != "NIL" {
+                            prod.reward = Some(Reward::Other(s.clone()));
+                        }
                     }
                 } else if k == ":AT" {
                     if let Some(a) = sexp_f64(v) {

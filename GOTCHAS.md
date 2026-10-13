@@ -3226,3 +3226,22 @@ Also on the command path: ACT-R's `command-output` appends a newline, so a
 pushing a trailing `\n` after joining `out_lines` (`engine/driver.rs:12`), but
 the session driver joined without it, dropping a final blank trace line.
 `Session::take_trace_output` mirrors `Engine::output` so both drivers agree.
+
+## 208. A non-numeric `:reward` clears the utility-learning history
+
+`(spp <prod> :reward R)` makes `learn-parameters`
+(`modules/utility-and-reward-1.lisp:470`) schedule `trigger-reward` with `R`
+whenever the production is selected — but only for a non-nil `R`, and `R` need
+not be a number. `propagate-reward` (`utility-and-reward-1.lisp:421`) branches
+on `numberp`: a number runs the `U(n) = U(n-1) + alpha*(R(n) - U(n-1))` update
+over the history, while **any other non-nil value clears the history
+outright** (`utility-and-reward-1.lisp:463`), printing `  Non-numeric reward
+clears utility learning history.` under `:ult`. `ul-issues-v2` relies on this:
+`unknown-response` has `:reward t`, so its selection at 12.05 discards the
+`choose-a`/`unknown-response` entries, and the reward `0` at 19.05 updates only
+`choose-b` and `response-doesnt-match`. `model::Reward` carries either a
+number or the source text; the composed-production reward is inherited with
+ACT-R's `or`-chain (numeric max when both parents are numeric).
+
+The `PROPAGATE-REWARD` trace line prints the reward with `~s`, so an integer
+reward reads `0`, not `0.0`.

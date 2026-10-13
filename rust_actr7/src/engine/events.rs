@@ -703,13 +703,10 @@ impl Engine {
                 }
                 self.fire(prod, &bindings)?;
                 // `(spp <prod> :reward R)`: propagate the reward at fire time
-                // (after the RHS actions), like ACT-R's `propagate-reward`.
-                if let Some(r) = self.model.productions[prod].reward {
-                    self.now(
-                        Prio::Num(0),
-                        Out::Medium,
-                        Event::PropagateReward { value: r },
-                    );
+                // (after the RHS actions), like ACT-R's `learn-parameters`
+                // (`utility-and-reward-1.lisp:470`).
+                if let Some(r) = self.model.productions[prod].reward.clone() {
+                    self.now(Prio::Num(0), Out::Medium, Event::PropagateReward { value: r });
                 }
             }
             Event::ProcDisplay => {
@@ -1494,39 +1491,56 @@ impl Engine {
             }
             Event::PropagateReward { value } => {
                 if show {
-                    self.emit("UTILITY", format!("PROPAGATE-REWARD {value}"));
+                    self.emit("UTILITY", format!("PROPAGATE-REWARD {}", value.trace_text()));
                 }
-                // Rewards apply only with subsymbolics + learning on;
-                // otherwise silently ignored (Lisp warns to stdout).
-                if self.cfg.esc && self.cfg.ul {
-                    if self.cfg.ult {
-                        self.out(format!(
-                            " Utility updates with Reward = {}   alpha = {}",
-                            lisp_s_f32(value),
-                            lisp_s_f32(self.cfg.alpha)
-                        ));
-                    }
-                    for (prod, at) in self.history.clone() {
-                        let dt = (self.time_ms - at) as f32 / 1000.0;
-                        let r = value - dt;
-                        let u_old = self.utilities[prod];
-                        let alpha = self.cfg.alpha;
-                        let u_new = u_old + alpha * (r - u_old);
-                        self.utilities[prod] = u_new;
-                        if self.cfg.ult {
-                            let pname = self.model.productions[prod].name.clone();
-                            self.out(format!("  Updating utility of production {pname}"));
-                            self.out(format!(
-                                "   U(n-1) = {}   R(n) = {} [{} - {} seconds since selection]",
-                                lisp_s_f32(u_old),
-                                lisp_s_f32(r),
-                                lisp_s_f32(value),
-                                lisp_s_f32(dt)
-                            ));
-                            self.out(format!("   U(n) = {}", lisp_s_f32(u_new)));
+                match value {
+                    Reward::Num(value) => {
+                        // Rewards apply only with subsymbolics + learning on;
+                        // otherwise silently ignored (Lisp warns to stdout).
+                        if self.cfg.esc && self.cfg.ul {
+                            if self.cfg.ult {
+                                self.out(format!(
+                                    " Utility updates with Reward = {}   alpha = {}",
+                                    lisp_s_f32(value),
+                                    lisp_s_f32(self.cfg.alpha)
+                                ));
+                            }
+                            for (prod, at) in self.history.clone() {
+                                let dt = (self.time_ms - at) as f32 / 1000.0;
+                                let r = value - dt;
+                                let u_old = self.utilities[prod];
+                                let alpha = self.cfg.alpha;
+                                let u_new = u_old + alpha * (r - u_old);
+                                self.utilities[prod] = u_new;
+                                if self.cfg.ult {
+                                    let pname = self.model.productions[prod].name.clone();
+                                    self.out(format!("  Updating utility of production {pname}"));
+                                    self.out(format!(
+                                        "   U(n-1) = {}   R(n) = {} [{} - {} seconds since selection]",
+                                        lisp_s_f32(u_old),
+                                        lisp_s_f32(r),
+                                        lisp_s_f32(value),
+                                        lisp_s_f32(dt)
+                                    ));
+                                    self.out(format!("   U(n) = {}", lisp_s_f32(u_new)));
+                                }
+                            }
+                            self.history.clear();
                         }
                     }
-                    self.history.clear();
+                    // `propagate-reward`'s non-numeric branch
+                    // (`utility-and-reward-1.lisp:463`): any non-nil non-number
+                    // reward clears the utility-learning history, unconditionally
+                    // (the message only with `:ult`).
+                    Reward::Other(_) => {
+                        if self.cfg.ult {
+                            self.out(
+                                "  Non-numeric reward clears utility learning history."
+                                    .to_string(),
+                            );
+                        }
+                        self.history.clear();
+                    }
                 }
             }
             Event::ChangeState { module } => {
