@@ -949,20 +949,30 @@ impl Session {
                 Ok(vec![Json::Null])
             }
             "new-tone-sound" => {
+                // `new-tone-sound <freq> <duration> [onset] [time-in-ms]`
+                // (`audio.lisp:778`): the last argument says whether *both*
+                // numbers are milliseconds; otherwise they are seconds
+                // (`safe-seconds->ms`). Duration is not optional-passed in ms
+                // here — `(new-tone-sound 100 .1)` is 100 ms, so truncating
+                // the seconds value to an integer gave a zero-length sound and
+                // its `audio-event-ended` landed before the buffer was stuffed.
                 let freq = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
-                let duration = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                let duration = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
                 let onset = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
                 let in_ms = args
                     .get(3)
                     .map(|a| matches!(a, Json::Bool(true)))
                     .unwrap_or(false);
-                let onset_ms = if in_ms {
-                    onset as i64
+                let (duration_ms, onset_ms) = if in_ms {
+                    (duration as i64, onset as i64)
                 } else {
-                    (onset * 1000.0).round() as i64
+                    (
+                        (duration * 1000.0).round() as i64,
+                        (onset * 1000.0).round() as i64,
+                    )
                 };
                 if let Some(eng) = &mut self.engine {
-                    eng.new_tone_sound_rpc(freq, duration, onset_ms);
+                    eng.new_tone_sound_rpc(freq, duration_ms, onset_ms);
                 }
                 Ok(vec![Json::Null])
             }

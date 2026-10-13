@@ -3701,3 +3701,38 @@ t=0, which is exactly the off-by-one `bst` displayed. Do **not** route this
 through `add-visicon-features`/`delete-visicon-features`/`clear-visicon`: the
 device-timeline specs rely on their per-call push, and doing all nine sites
 dropped the golden suite to 98/100.
+
+## 227. A task's tones must be *replayed*, not just traced
+
+`new-tone-sound` (`audio.lisp:778`) builds a sound object; `new-sound-event`
+then schedules `new-sound` at the onset and `stuff-sound-buffer` at
+`onset + tone-detect-delay`. Only the *trace line* was reaching a golden replay:
+the task's `(new-tone-sound 100 .1)` schedules `new-sound` outside a run, so
+`record-command` captured it as a sidecar `(COMMAND … "new-sound")`, and the
+engine replayed that line with no sound behind it — hence the aural-location
+events never arrived (`siegler` line 3, `unstuff-aural` line 5).
+
+Fix: record the *call* as a replayed command (`*generic-commands*`, so
+`(:COMMAND NEW-TONE-SOUND 100 0.1)` is a step, exercising the client surface),
+and stop recording its internal `new-sound` schedule — the re-entrancy guard
+`*recording-command*` now applies to the sidecar path too. Three units/detail bugs
+fell out of it:
+
+- `new-tone-sound`'s last argument says whether **both** numbers are
+  milliseconds; otherwise they are seconds (`safe-seconds->ms`). The RPC handler
+  truncated the seconds value, so `(new-tone-sound 100 .1)` was a 0 ms sound and
+  its end check fired before the buffer was even stuffed.
+- ACT-R stores the sound's **absolute** onset (`mp-time-ms` when none is given),
+  and derives `detect-at-time` *and* `offset` from it. Passing the argument
+  through made every tone a task sounded between runs land its detection at
+  `0 + delay`.
+- `AudioEventEnded`'s line is `:output high` (`audio.lisp:1048`). Of the refs
+  that reach `audio-event-ended`, only `unstuff-aural` prints it — it is the
+  only one whose model sets `(sgp :trace-detail high)`; the `mod-buffer-chunk`
+  that follows is medium and shows in all of them.
+
+Still open there: `stuff-sound-buffer` only sets `AURAL-LOCATION` while the
+buffer is empty, or overstuff applies with the buffer unrequested and the chunk
+unmodified/equal to the last stuffed event (`audio.lisp:716`). The engine sets
+it unconditionally, so `unstuff-aural`'s runs 2–4 stuff again (568 lines
+against 448; it matches to line 19, was 5).

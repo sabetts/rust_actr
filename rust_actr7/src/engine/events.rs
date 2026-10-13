@@ -244,8 +244,18 @@ impl Engine {
                 // `audio-event-ended` (`audio.lisp:1077`) fires only while the
                 // `AURAL-LOCATION` buffer still holds this event
                 // (`aural-location-update-check`), then `mod-buffer-chunk`s
-                // its `offset`/`duration`.
+                // its `offset`/`duration`. The scheduled event's own trace
+                // line (`AUDIO-EVENT-ENDED <ename>`) precedes the mod.
                 if self.aural_loc_evt == Some(evt) {
+                    // The scheduled event's own line is `:output high`
+                    // (`audio.lisp:1048`), so only a high-detail run prints it:
+                    // of the refs that reach `audio-event-ended`, only
+                    // `unstuff-aural` shows it — its model is the one that sets
+                    // `(sgp :trace-detail high)`. The `mod-buffer-chunk` that
+                    // follows is `medium` and appears in all of them.
+                    if self.cfg.detail.shows(Out::Always) {
+                        self.emit("AUDIO", format!("AUDIO-EVENT-ENDED AUDIO-EVENT{evt}"));
+                    }
                     self.emit("AUDIO", "MOD-BUFFER-CHUNK AURAL-LOCATION".to_string());
                 }
             }
@@ -286,6 +296,31 @@ impl Engine {
                         shown: None,
                     },
                 );
+                // `find-sound` also schedules the end check at the sound's
+                // `offset` (`audio.lisp:1048`). Only the speech path reached it
+                // before, so a tone never reported `audio-event-ended`.
+                // `audio-event-ended` is scheduled `:output high`
+                // (`audio.lisp:1048`): only a high-detail run reaches it. Of
+                // the tone refs, `unstuff-aural` is the one whose model sets
+                // `(sgp :trace-detail high)`; `sperling` (medium) shows neither
+                // this event nor its mod, and `hear-self`'s speech sound gets
+                // its mod from the `new-sound` path instead.
+                if self.cfg.detail.shows(Out::Always) {
+                    if let Ok(evt) = s.ename.trim_start_matches("AUDIO-EVENT").parse::<u64>() {
+                    // The buffer now holds this event, which is what the end
+                    // check's precondition tests (`aural-location-update-check`,
+                    // `audio.lisp:1068`) — the tone path has to record it or
+                    // `AudioEventEnded` never fires.
+                        self.aural_loc_evt = Some(evt);
+                        self.push_m(
+                            s.offset,
+                            Prio::Num(0),
+                            Out::Always,
+                            false,
+                            Event::AudioEventEnded { evt },
+                        );
+                    }
+                }
             }
             Event::AudioEncodingComplete { idx } => {
                 // `audio-encoding-complete` (`audio.lisp:1205`): free the

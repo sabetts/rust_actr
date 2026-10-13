@@ -1312,8 +1312,13 @@ impl Engine {
 
     /// `new-tone-sound <freq> <duration> [onset] [time-in-ms]`: schedule a tone.
     pub fn new_tone_sound_rpc(&mut self, freq: i64, duration: i64, onset_ms: i64) {
-        let idx = self.add_sound(freq, duration, onset_ms);
+        // ACT-R stores the *absolute* onset (`new-tone-sound` uses `mp-time-ms`
+        // when none is given, `audio.lisp:787`), and the module derives both
+        // `detect-at-time` (`onset + tone-detect-delay`) and the sound's
+        // `offset` from it. Storing the argument instead made every tone a
+        // task sounds between runs land its detection at `0 + delay`.
         let at = self.time_ms().max(onset_ms);
+        let idx = self.add_sound(freq, duration, at);
         self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
     }
 

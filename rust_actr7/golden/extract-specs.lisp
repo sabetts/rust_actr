@@ -63,7 +63,8 @@ disable/enable and `pbreak`/`sdp`/`spp`/`whynot` are now recorded commands
 operations that turn out not to be replayable.")
 
 (defparameter *generic-commands*
-  '(("pp" . pp-fct)
+  '(("new-tone-sound" . new-tone-sound)
+    ("pp" . pp-fct)
     ("whynot" . whynot-fct)
     ("whynot-dm" . whynot-dm-fct)
     ("dm" . dm-fct)
@@ -567,7 +568,12 @@ step is printable and matches what the engine expects."
   ;; dispatches (`ul-issues`'s `present-choose`/`show-result` chain) or an
   ;; internal module event it already emits (`audio`'s `new-sound`), so a
   ;; sidecar entry would duplicate the line.
-  (when (and (stringp action) (not *suppress*) (not *in-run*))
+  ;; A recorded command's *internal* schedule must not add a sidecar line:
+  ;; `new-sound-event` is reached from `new-tone-sound`, whose call is itself
+  ;; replayed and makes the engine emit `new-sound` from the sound object
+  ;; (`audio.lisp:733`), so recording the line too would duplicate it.
+  (when (and (stringp action) (not *suppress*) (not *in-run*)
+             (not *recording-command*))
     (let ((output (getf keys :output t)))
       (when output
         (let* ((ms (if (getf keys :time-in-ms)
