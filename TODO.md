@@ -318,13 +318,18 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       failure reason in ACT-R's compiled condition order
       (`9384f4c`, `02e64cb`, GOTCHAS #203), the model-body forms
       `start-hand-at-mouse`/`-keypad`/`set-audloc-default`/
-      `set-parameter-value` are accepted (removes 4 hard load errors), and a
+      `set-parameter-value` are accepted (removes 4 hard load errors), a
       scheduled command's trace module is its schedule-time `:module`
-      (`1ecc980`, GOTCHAS #204).
+      (`1ecc980`, GOTCHAS #204), and reusable-buffer naming is correct:
+      a production naming a buffer's variable makes it non-reusable, so
+      `simple-dynamic-model` is `IMAGINAL-CHUNK0` while `act-touch`/
+      `merging-test` are `CHUNK{n}` (`d0ee65b`, GOTCHAS #205 — flips
+      `simple-dynamic-model`, 93 pass / 42 fail).
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
-      and the reusable-buffer naming (`simple-dynamic-model`, M3).
+      motor/device work (`keypad-test`, `agi-modify-test`), and
+      `chunk-type :include` in `audio-updates`.
       **The audio specs need sound objects, not just notifications**: a task
       that calls `new-tone-sound` outside a run (`unstuff-aural`, `siegler`,
       `audio-updates`) has its `new-sound` line recorded as a sidecar
@@ -344,21 +349,16 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       module verbose output, utility-learning lines, `!output!` gating.
       Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202).
 - [ ] **M3. RPC 22/22** (the tester cluster: vision timing + RNG draw
-      alignment) plus `simple-dynamic-model`'s reusable-buffer naming.
-      **Reusable-buffer naming — attempted, reverted.** ACT-R names a
-      reusable buffer's chunk once and reuses it
-      (`act-r-buffer-reuse-chunk`, `set-buffer-chunk`, `buffers.lisp:1351`):
-      `{BUFFER}-CHUNK{n}`, assigned at the first set. The engine instead has
-      two partial paths — the GOAL-only SetBuffer naming (`GOAL-CHUNK{n}`,
-      *incrementing*) and `rhs.rs`'s `=buffer`-reference naming
-      (`{v}-CHUNK0` when the target buffer is GOAL/IMAGINAL, `CHUNK{n}`
-      otherwise). Naming at SetBuffer time (reuse semantics) fixed
-      `simple-dynamic-model` but regressed `merging-test` (lost
-      `PRODUCTION-SELECTED P4` — the imaginal chunk's merge-into-DM alias no
-      longer let `=goal> value =imaginal` match `b`) and `act-touch`
-      (`loc CHUNK1` vs `IMAGINAL-CHUNK0`). Needs the merge alias /
-      `=buffer`-reference resolution untangled first, then a single naming
-      path.
+      alignment).
+      **Reusable-buffer naming — DONE** (`d0ee65b`, GOTCHAS #205). The
+      earlier attempt regressed `merging-test`/`act-touch` because it named
+      at set time without the real *non-reuse* rule: a production that
+      names a buffer's variable (`=imaginal`) makes that buffer
+      non-reusable (`buffer-requires-copies`,
+      `support/production-parsing.lisp:482`). With that set computed at load
+      (`Model::no_reuse_buffers`) and a modify storing a chunk-valued
+      `=buffer` ref by name rather than copying it, `simple-dynamic-model`
+      is green with no regressions.
 - Known divergence: the pipe transport and `define-module`/`undefine-module`
   (client-defined modules) are covered by "no arbitrary Lisp" unless needed.
 
