@@ -416,6 +416,12 @@ impl Engine {
                         }
                         ("STATE", Pattern::Sym(s)) if s == "FREE" => self.query_free(buffer)?,
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => !self.query_free(buffer)?,
+                        // `?visual-location> state error` (`vision.lisp:3206`):
+                        // the vision module's `loc-failure` flag (visual
+                        // location requests are otherwise always free).
+                        ("STATE", Pattern::Sym(s)) if s == "ERROR" && buffer == "VISUAL-LOCATION" => {
+                            self.loc_failure
+                        }
                         // extended-motor-actions adds per-stage queries.
                         ("PROCESSOR", Pattern::Sym(s)) if s == "FREE" => {
                             self.query_processor_free(buffer)?

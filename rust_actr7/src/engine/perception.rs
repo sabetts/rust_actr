@@ -961,6 +961,7 @@ impl Engine {
             }
         }
         if cands.is_empty() {
+            self.loc_failure = true;
             self.buffer_mut("VISUAL-LOCATION").failed = true;
             self.now(Prio::Num(0), Out::Low, Event::FindLocFailure);
             return Ok(());
@@ -982,6 +983,7 @@ impl Engine {
             .cloned()
             .unwrap();
         let base = feat.name.clone();
+        self.loc_failure = false;
         self.buffer_mut("VISUAL-LOCATION").failed = false;
         self.place_vl(&base, true)?;
         Ok(())

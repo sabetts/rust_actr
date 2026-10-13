@@ -1685,6 +1685,9 @@ pub struct Engine {
     /// (`chunk-visicon-entry`), for tracking's `vis-obj-marker` test.
     obj_feature: HashMap<String, String>,
     visual_busy: bool,
+    /// `loc-failure` (`vision.lisp:2931`): the last `find-location` found no
+    /// matching location; `?visual-location> state error` tests it.
+    loc_failure: bool,
     /// `clear` on the vision module (`pm-module` clear, `general-pm.lisp:333`)
     /// sets `prep` busy for `feat-prep-time`, so `?visual> state free` stays
     /// false for ~50 ms after a `+visual> cmd clear` (`VISION CLEAR`).
@@ -1979,6 +1982,7 @@ impl Engine {
             obj_built: HashMap::new(),
             obj_feature: HashMap::new(),
             visual_busy: false,
+            loc_failure: false,
             visual_prep_busy: false,
             last_attention: None,
             tracked: None,
@@ -2403,6 +2407,7 @@ impl Engine {
         self.obj_feature.clear();
         self.visual_busy = false;
         self.visual_prep_busy = false;
+        self.loc_failure = false;
         self.last_attention = None;
         self.tracked = None;
         self.tracked_lastloc = None;
