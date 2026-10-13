@@ -530,8 +530,12 @@ step is printable and matches what the engine expects."
                        time
                      (round (* time 1000))))
                (ms (if absolute? ms (+ (mp-time-ms) ms)))
-               (params (getf keys :params)))
-          (push (list *reset-count* ms (string-downcase (string output))
+               (params (getf keys :params))
+               ;; The `:module` is the trace's module column
+               ;; (`schedule-event` defaults it to `:none`); `new-sound`
+               ;; carries `:audio` (`audio.lisp:738`).
+               (module (string-upcase (symbol-name (or (getf keys :module) :none)))))
+          (push (list *reset-count* ms (string-downcase (string output)) module
                       (format nil "~a~{ ~a~}" action params))
                 *device-commands*))))))
 
@@ -615,7 +619,8 @@ step is printable and matches what the engine expects."
                 (format f " (CLEAR ~a)~%" (second c))))
             (dolist (c commands)
               (when (= (first c) r)
-                (format f " (COMMAND ~a ~a ~s)~%" (second c) (third c) (fourth c))))
+                (format f " (COMMAND ~a ~a ~a ~s)~%" (second c) (third c) (fourth c)
+                        (fifth c))))
             (dolist (m modifies)
               (when (= (first m) r)
                 (format f " (MODIFY-TEXT ~a ~s ~a ~a)~%" (second m) (third m)

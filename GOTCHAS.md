@@ -3134,3 +3134,24 @@ slot.
 `test-ppm` is the oracle for both. Its remaining diff is the third section,
 `:PPM-HOOK SHOW-PPM-VALUES` — a stub-defined Lisp callback, which `actr.py`
 cannot supply (the documented "no arbitrary Lisp" divergence).
+
+## 204. A scheduled command's trace module is the schedule-time `:module`
+
+A `(schedule-event … "action")` line prints the *scheduling* module in the
+trace's module column, not `NONE`: `schedule-event` takes `:module` and
+defaults it to `:none` (`framework/scheduling.lisp:1168`). The audio module
+schedules its `new-sound` notification with `:module :audio`
+(`core-modules/audio.lisp:738`), so the ref shows `AUDIO new-sound`, while a
+task's own `clear-exp-window`/`pm-issue-display` show `NONE`.
+
+The device sidecar's `(COMMAND ms output [module] details)` carries it; the
+extractor records `(getf keys :module)` (`extract-specs.lisp`,
+`record-command`) and the engine emits `DeviceCommand::module`. Sidecars
+written before this field default to `NONE`.
+
+Related, still open: a task that calls `new-tone-sound` *outside* a run
+(`unstuff-aural`, `siegler`, `audio-updates`) has its `new-sound` line
+recorded as a sidecar command, but the sound *object* is not — so the
+engine replays the notification without the `stuff-sound-buffer` event that
+follows at `onset + tone-detect-delay`. Recording `new-tone-sound` as a
+replayed step would fix it.

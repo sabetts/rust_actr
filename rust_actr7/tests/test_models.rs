@@ -85,6 +85,15 @@ fn as_str(e: &Sexp) -> Option<String> {
     }
 }
 
+/// A bare symbol (not a string literal) — e.g. a `:module` name in a device
+/// sidecar.
+fn as_sym(e: &Sexp) -> Option<String> {
+    match e {
+        Sexp::Sym(s) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 fn as_i64(e: &Sexp) -> Option<i64> {
     match e {
         Sexp::Int(i) => Some(*i),
@@ -637,14 +646,33 @@ fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> R
                 run,
             }),
             "CLEAR" => device.clears.push((ms()?, run)),
-            "COMMAND" => device.commands.push(actr_engine::engine::DeviceCommand {
-                at_ms: ms()?,
-                output: as_str(v.get(2).ok_or("missing output")?)
-                    .ok_or("bad output")?
-                    .to_lowercase(),
-                details: as_str(v.get(3).ok_or("missing details")?).ok_or("bad details")?,
-                run,
-            }),
+            "COMMAND" => {
+                // `(COMMAND ms output [module] details)`: the module is
+                // present only for commands the task scheduled with an
+                // explicit `:module` (e.g. `new-sound` → `AUDIO`).
+                let (module, details) = if v.len() >= 5 {
+                    (
+                        as_sym(v.get(3).ok_or("missing module")?)
+                            .ok_or("bad module")?
+                            .to_uppercase(),
+                        as_str(v.get(4).ok_or("missing details")?).ok_or("bad details")?,
+                    )
+                } else {
+                    (
+                        "NONE".to_string(),
+                        as_str(v.get(3).ok_or("missing details")?).ok_or("bad details")?,
+                    )
+                };
+                device.commands.push(actr_engine::engine::DeviceCommand {
+                    at_ms: ms()?,
+                    output: as_str(v.get(2).ok_or("missing output")?)
+                        .ok_or("bad output")?
+                        .to_lowercase(),
+                    module,
+                    details,
+                    run,
+                });
+            }
             "SOUND" => device.sounds.push(actr_engine::engine::DeviceSound {
                 at_ms: ms()?,
                 freq: as_i64(v.get(2).ok_or("missing freq")?).ok_or("bad freq")?,

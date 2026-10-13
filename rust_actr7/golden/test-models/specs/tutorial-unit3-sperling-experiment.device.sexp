@@ -12,7 +12,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1078)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1078 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 2
@@ -29,7 +29,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1089)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1089 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 3
@@ -46,7 +46,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 904)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 904 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 4
@@ -63,7 +63,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 949)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 949 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 5
@@ -80,7 +80,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 942)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 942 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 6
@@ -97,7 +97,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1040)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1040 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 7
@@ -114,7 +114,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 991)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 8
@@ -131,7 +131,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 959)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 959 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 9
@@ -148,7 +148,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 958)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 10
@@ -165,7 +165,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 947)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 947 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 11
@@ -182,7 +182,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1096)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1096 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 12
@@ -199,7 +199,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1055)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1055 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 13
@@ -216,7 +216,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 968)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 968 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 14
@@ -233,7 +233,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 980)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 980 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 15
@@ -250,7 +250,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1081)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 16
@@ -267,7 +267,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1093)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1093 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 17
@@ -284,7 +284,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1029)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1029 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 18
@@ -301,7 +301,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1007)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1007 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 19
@@ -318,7 +318,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 913)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 20
@@ -335,7 +335,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 997)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 21
@@ -352,7 +352,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 997)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 22
@@ -369,7 +369,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1045)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1045 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 23
@@ -386,7 +386,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 924)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 924 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 24
@@ -403,7 +403,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 928)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 928 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 25
@@ -420,7 +420,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1062)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1062 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 26
@@ -437,7 +437,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 920)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 920 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 27
@@ -454,7 +454,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 921)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 921 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 28
@@ -471,7 +471,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 904)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 904 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 29
@@ -488,7 +488,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 906)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 906 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 30
@@ -505,7 +505,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 976)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 976 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 31
@@ -522,7 +522,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 903)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 903 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 32
@@ -539,7 +539,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1087)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1087 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 33
@@ -556,7 +556,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 953)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 34
@@ -573,7 +573,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 925)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 925 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 35
@@ -590,7 +590,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 991)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 36
@@ -607,7 +607,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1052)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1052 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 37
@@ -624,7 +624,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 911)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 38
@@ -641,7 +641,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 982)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 982 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 39
@@ -658,7 +658,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 997)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 40
@@ -675,7 +675,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1018)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1018 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 41
@@ -692,7 +692,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 932)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 932 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 42
@@ -709,7 +709,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 911)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 43
@@ -726,7 +726,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 918)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 918 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 44
@@ -743,7 +743,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1014)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1014 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 45
@@ -760,7 +760,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 954)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 954 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 46
@@ -777,7 +777,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1038)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1038 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 47
@@ -794,7 +794,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1013)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1013 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 48
@@ -811,7 +811,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1080)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1080 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 49
@@ -828,7 +828,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1028)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1028 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 50
@@ -845,7 +845,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1015)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1015 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 51
@@ -862,7 +862,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 949)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 949 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 52
@@ -879,7 +879,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1026)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 53
@@ -896,7 +896,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1065)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1065 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 54
@@ -913,7 +913,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1005)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1005 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 55
@@ -930,7 +930,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 966)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 966 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 56
@@ -947,7 +947,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 976)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 976 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 57
@@ -964,7 +964,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1090)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1090 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 58
@@ -981,7 +981,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1022)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1022 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 59
@@ -998,7 +998,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1071)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1071 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 60
@@ -1015,7 +1015,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 941)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 61
@@ -1032,7 +1032,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1099)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1099 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 62
@@ -1049,7 +1049,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 947)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 947 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 63
@@ -1066,7 +1066,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 961)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 961 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 64
@@ -1083,7 +1083,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 947)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 947 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 65
@@ -1100,7 +1100,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 951)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 951 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 66
@@ -1117,7 +1117,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1067)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1067 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 67
@@ -1134,7 +1134,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1083)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 68
@@ -1151,7 +1151,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1043)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1043 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 69
@@ -1168,7 +1168,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 968)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 968 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 70
@@ -1185,7 +1185,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 933)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 71
@@ -1202,7 +1202,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1044)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1044 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 72
@@ -1219,7 +1219,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 933)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 73
@@ -1236,7 +1236,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1026)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 74
@@ -1253,7 +1253,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 935)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 935 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 75
@@ -1270,7 +1270,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1097)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1097 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 76
@@ -1287,7 +1287,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1008)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1008 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 77
@@ -1304,7 +1304,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 908)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 78
@@ -1321,7 +1321,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1038)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1038 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 79
@@ -1338,7 +1338,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1069)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1069 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 80
@@ -1355,7 +1355,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1067)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1067 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 81
@@ -1372,7 +1372,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 925)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 925 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 82
@@ -1389,7 +1389,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 992)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 992 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 83
@@ -1406,7 +1406,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 961)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 961 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 84
@@ -1423,7 +1423,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 974)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 974 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 85
@@ -1440,7 +1440,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1026)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 86
@@ -1457,7 +1457,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1041)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1041 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 87
@@ -1474,7 +1474,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1090)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1090 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 88
@@ -1491,7 +1491,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 986)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 986 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 89
@@ -1508,7 +1508,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 966)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 966 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 90
@@ -1525,7 +1525,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1037)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1037 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 91
@@ -1542,7 +1542,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 979)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 979 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 92
@@ -1559,7 +1559,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1085)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 93
@@ -1576,7 +1576,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 914)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 914 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 94
@@ -1593,7 +1593,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1031)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1031 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 95
@@ -1610,7 +1610,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 919)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 96
@@ -1627,7 +1627,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1053)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1053 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 97
@@ -1644,7 +1644,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 947)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 947 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 98
@@ -1661,7 +1661,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 908)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 99
@@ -1678,7 +1678,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1097)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1097 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 100
@@ -1695,7 +1695,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 929)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 929 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 101
@@ -1712,7 +1712,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1010)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1010 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 102
@@ -1729,7 +1729,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1057)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1057 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 103
@@ -1746,7 +1746,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 947)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 947 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 104
@@ -1763,7 +1763,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1034)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1034 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 105
@@ -1780,7 +1780,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 993)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 993 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 106
@@ -1797,7 +1797,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1069)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1069 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 107
@@ -1814,7 +1814,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 967)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 967 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 108
@@ -1831,7 +1831,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1085)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 109
@@ -1848,7 +1848,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1088)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1088 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 110
@@ -1865,7 +1865,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 964)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 111
@@ -1882,7 +1882,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 941)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 112
@@ -1899,7 +1899,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 917)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 917 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 113
@@ -1916,7 +1916,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1005)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1005 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 114
@@ -1933,7 +1933,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 978)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 978 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 115
@@ -1950,7 +1950,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1074)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1074 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 116
@@ -1967,7 +1967,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1033)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1033 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 117
@@ -1984,7 +1984,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1037)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1037 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 118
@@ -2001,7 +2001,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1089)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1089 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 119
@@ -2018,7 +2018,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 981)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 981 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 120
@@ -2035,7 +2035,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 980)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 980 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 121
@@ -2052,7 +2052,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 921)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 921 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 122
@@ -2069,7 +2069,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 941)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 123
@@ -2086,7 +2086,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 936)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 936 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 124
@@ -2103,7 +2103,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1092)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1092 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 125
@@ -2120,7 +2120,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1047)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1047 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 126
@@ -2137,7 +2137,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 943)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 943 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 127
@@ -2154,7 +2154,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 913)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 128
@@ -2171,7 +2171,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1016)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1016 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 129
@@ -2188,7 +2188,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1027)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1027 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 130
@@ -2205,7 +2205,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 991)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 131
@@ -2222,7 +2222,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 938)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 132
@@ -2239,7 +2239,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 976)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 976 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 133
@@ -2256,7 +2256,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 954)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 954 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 134
@@ -2273,7 +2273,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 964)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 135
@@ -2290,7 +2290,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1083)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 136
@@ -2307,7 +2307,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 956)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 137
@@ -2324,7 +2324,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1099)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1099 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 138
@@ -2341,7 +2341,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 979)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 979 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 139
@@ -2358,7 +2358,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 987)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 140
@@ -2375,7 +2375,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1051)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1051 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 141
@@ -2392,7 +2392,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1089)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1089 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 142
@@ -2409,7 +2409,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 948)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 948 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 143
@@ -2426,7 +2426,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 912)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 912 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 144
@@ -2443,7 +2443,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 921)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 921 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 145
@@ -2460,7 +2460,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1093)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1093 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 146
@@ -2477,7 +2477,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 940)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 940 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 147
@@ -2494,7 +2494,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1019)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1019 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 148
@@ -2511,7 +2511,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 991)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 149
@@ -2528,7 +2528,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 923)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 150
@@ -2545,7 +2545,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1085)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 151
@@ -2562,7 +2562,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 926)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 926 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 152
@@ -2579,7 +2579,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 976)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 976 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 153
@@ -2596,7 +2596,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 959)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 959 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 154
@@ -2613,7 +2613,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1028)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1028 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 155
@@ -2630,7 +2630,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1050)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1050 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 156
@@ -2647,7 +2647,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 952)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 952 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 157
@@ -2664,7 +2664,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 972)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 972 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 158
@@ -2681,7 +2681,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 958)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 159
@@ -2698,7 +2698,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 946)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 946 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 160
@@ -2715,7 +2715,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 915)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 915 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 161
@@ -2732,7 +2732,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 987)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 162
@@ -2749,7 +2749,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1073)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1073 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 163
@@ -2766,7 +2766,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1075)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1075 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 164
@@ -2783,7 +2783,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 921)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 921 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 165
@@ -2800,7 +2800,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 907)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 907 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 166
@@ -2817,7 +2817,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 954)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 954 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 167
@@ -2834,7 +2834,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1012)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1012 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 168
@@ -2851,7 +2851,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 964)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 169
@@ -2868,7 +2868,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 982)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 982 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 170
@@ -2885,7 +2885,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1002)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1002 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 171
@@ -2902,7 +2902,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 979)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 979 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 172
@@ -2919,7 +2919,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1000)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1000 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 173
@@ -2936,7 +2936,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 991)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 174
@@ -2953,7 +2953,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1035)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1035 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 175
@@ -2970,7 +2970,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1053)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1053 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 176
@@ -2987,7 +2987,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 949)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 949 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 177
@@ -3004,7 +3004,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1080)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1080 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 178
@@ -3021,7 +3021,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1065)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1065 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 179
@@ -3038,7 +3038,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1031)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1031 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 180
@@ -3055,7 +3055,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 996)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 996 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 181
@@ -3072,7 +3072,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 909)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 182
@@ -3089,7 +3089,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1010)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1010 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 183
@@ -3106,7 +3106,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 945)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 945 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 184
@@ -3123,7 +3123,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 953)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 185
@@ -3140,7 +3140,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 911)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 186
@@ -3157,7 +3157,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 989)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 187
@@ -3174,7 +3174,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 955)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 955 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 188
@@ -3191,7 +3191,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1023)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1023 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 189
@@ -3208,7 +3208,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 987)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 190
@@ -3225,7 +3225,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1026)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 191
@@ -3242,7 +3242,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 941)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 192
@@ -3259,7 +3259,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1026)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 193
@@ -3276,7 +3276,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1048)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1048 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 194
@@ -3293,7 +3293,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 918)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 918 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 195
@@ -3310,7 +3310,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1000)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1000 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 196
@@ -3327,7 +3327,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 916)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 916 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 197
@@ -3344,7 +3344,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 992)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 992 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 198
@@ -3361,7 +3361,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 963)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 963 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 199
@@ -3378,7 +3378,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1030)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1030 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 200
@@ -3395,7 +3395,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1041)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1041 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 201
@@ -3412,7 +3412,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 907)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 907 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 202
@@ -3429,7 +3429,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 929)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 929 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 203
@@ -3446,7 +3446,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 910)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 910 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 204
@@ -3463,7 +3463,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1018)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1018 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 205
@@ -3480,7 +3480,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 960)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 960 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 206
@@ -3497,7 +3497,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1099)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1099 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 207
@@ -3514,7 +3514,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 999)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 999 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 208
@@ -3531,7 +3531,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1035)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1035 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 209
@@ -3548,7 +3548,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 908)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 210
@@ -3565,7 +3565,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1028)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1028 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 211
@@ -3582,7 +3582,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1032)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1032 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 212
@@ -3599,7 +3599,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1056)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1056 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 213
@@ -3616,7 +3616,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 952)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 952 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 214
@@ -3633,7 +3633,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1019)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1019 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 215
@@ -3650,7 +3650,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 901)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 901 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 216
@@ -3667,7 +3667,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1088)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1088 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 217
@@ -3684,7 +3684,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1038)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1038 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 218
@@ -3701,7 +3701,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1091)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1091 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 219
@@ -3718,7 +3718,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1082)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1082 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 220
@@ -3735,7 +3735,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 942)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 942 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 221
@@ -3752,7 +3752,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 909)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 222
@@ -3769,7 +3769,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 938)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 223
@@ -3786,7 +3786,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1085)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 224
@@ -3803,7 +3803,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1010)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1010 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 225
@@ -3820,7 +3820,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 925)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 925 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 226
@@ -3837,7 +3837,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1045)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1045 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 227
@@ -3854,7 +3854,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 992)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 992 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 228
@@ -3871,7 +3871,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1076)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1076 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 229
@@ -3888,7 +3888,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1060)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1060 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 230
@@ -3905,7 +3905,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 923)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 231
@@ -3922,7 +3922,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1075)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1075 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 232
@@ -3939,7 +3939,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 912)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 912 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 233
@@ -3956,7 +3956,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1021)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1021 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 234
@@ -3973,7 +3973,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1015)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1015 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 235
@@ -3990,7 +3990,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 940)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 940 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 236
@@ -4007,7 +4007,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 950)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 950 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 237
@@ -4024,7 +4024,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1026)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 238
@@ -4041,7 +4041,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 995)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 995 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 239
@@ -4058,7 +4058,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1002)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1002 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 240
@@ -4075,7 +4075,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 993)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 993 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 241
@@ -4092,7 +4092,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 946)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 946 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 242
@@ -4109,7 +4109,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 914)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 914 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 243
@@ -4126,7 +4126,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1043)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1043 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 244
@@ -4143,7 +4143,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 922)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 922 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 245
@@ -4160,7 +4160,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1091)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1091 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 246
@@ -4177,7 +4177,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1046)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1046 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 247
@@ -4194,7 +4194,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1031)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1031 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 248
@@ -4211,7 +4211,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 956)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 249
@@ -4228,7 +4228,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1049)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1049 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 250
@@ -4245,7 +4245,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 933)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 251
@@ -4262,7 +4262,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1007)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1007 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 252
@@ -4279,7 +4279,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 944)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 253
@@ -4296,7 +4296,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1069)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1069 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 254
@@ -4313,7 +4313,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 961)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 961 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 255
@@ -4330,7 +4330,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 923)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 256
@@ -4347,7 +4347,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 930)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 930 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 257
@@ -4364,7 +4364,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 907)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 907 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 258
@@ -4381,7 +4381,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1026)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 259
@@ -4398,7 +4398,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1078)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1078 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 260
@@ -4415,7 +4415,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1020)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1020 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 261
@@ -4432,7 +4432,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1066)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1066 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 262
@@ -4449,7 +4449,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 982)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 982 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 263
@@ -4466,7 +4466,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1066)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1066 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 264
@@ -4483,7 +4483,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1050)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1050 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 265
@@ -4500,7 +4500,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 941)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 266
@@ -4517,7 +4517,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 961)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 961 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 267
@@ -4534,7 +4534,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1051)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1051 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 268
@@ -4551,7 +4551,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1084)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1084 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 269
@@ -4568,7 +4568,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 952)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 952 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 270
@@ -4585,7 +4585,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 989)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 271
@@ -4602,7 +4602,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1081)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 272
@@ -4619,7 +4619,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1065)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1065 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 273
@@ -4636,7 +4636,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1020)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1020 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 274
@@ -4653,7 +4653,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1059)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1059 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 275
@@ -4670,7 +4670,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1037)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1037 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 276
@@ -4687,7 +4687,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 992)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 992 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 277
@@ -4704,7 +4704,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1084)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1084 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 278
@@ -4721,7 +4721,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1067)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1067 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 279
@@ -4738,7 +4738,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 996)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 996 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 280
@@ -4755,7 +4755,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 999)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 999 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 281
@@ -4772,7 +4772,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 903)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 903 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 282
@@ -4789,7 +4789,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1056)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1056 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 283
@@ -4806,7 +4806,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 906)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 906 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 284
@@ -4823,7 +4823,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1041)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1041 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 285
@@ -4840,7 +4840,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 953)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 286
@@ -4857,7 +4857,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1080)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1080 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 287
@@ -4874,7 +4874,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 919)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 288
@@ -4891,7 +4891,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 917)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 917 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 289
@@ -4908,7 +4908,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1013)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1013 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 290
@@ -4925,7 +4925,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 924)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 924 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 291
@@ -4942,7 +4942,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1081)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 292
@@ -4959,7 +4959,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 933)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 293
@@ -4976,7 +4976,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 900)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 900 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 294
@@ -4993,7 +4993,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 908)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 295
@@ -5010,7 +5010,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1000)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1000 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 296
@@ -5027,7 +5027,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1014)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1014 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 297
@@ -5044,7 +5044,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1002)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1002 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 298
@@ -5061,7 +5061,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 933)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 299
@@ -5078,7 +5078,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 975)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 975 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 300
@@ -5095,7 +5095,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1005)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1005 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 301
@@ -5112,7 +5112,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1048)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1048 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 302
@@ -5129,7 +5129,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 949)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 949 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 303
@@ -5146,7 +5146,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 969)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 969 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 304
@@ -5163,7 +5163,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 901)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 901 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 305
@@ -5180,7 +5180,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1083)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 306
@@ -5197,7 +5197,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 919)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 307
@@ -5214,7 +5214,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 934)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 934 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 308
@@ -5231,7 +5231,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 963)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 963 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 309
@@ -5248,7 +5248,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1094)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1094 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 310
@@ -5265,7 +5265,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 936)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 936 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 311
@@ -5282,7 +5282,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 982)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 982 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 312
@@ -5299,7 +5299,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 984)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 984 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 313
@@ -5316,7 +5316,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 996)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 996 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 314
@@ -5333,7 +5333,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 964)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 315
@@ -5350,7 +5350,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 958)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 316
@@ -5367,7 +5367,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1003)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1003 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 317
@@ -5384,7 +5384,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 984)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 984 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 318
@@ -5401,7 +5401,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1031)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1031 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 319
@@ -5418,7 +5418,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 911)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 320
@@ -5435,7 +5435,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1043)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1043 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 321
@@ -5452,7 +5452,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 909)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 322
@@ -5469,7 +5469,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1063)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1063 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 323
@@ -5486,7 +5486,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 983)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 983 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 324
@@ -5503,7 +5503,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 950)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 950 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 325
@@ -5520,7 +5520,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 985)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 985 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 326
@@ -5537,7 +5537,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 935)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 935 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 327
@@ -5554,7 +5554,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 980)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 980 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 328
@@ -5571,7 +5571,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1070)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1070 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 329
@@ -5588,7 +5588,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1075)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1075 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 330
@@ -5605,7 +5605,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1050)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1050 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 331
@@ -5622,7 +5622,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 932)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 932 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 332
@@ -5639,7 +5639,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1063)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1063 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 333
@@ -5656,7 +5656,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1058)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1058 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 334
@@ -5673,7 +5673,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1016)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1016 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 335
@@ -5690,7 +5690,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 945)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 945 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 336
@@ -5707,7 +5707,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 900)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 900 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 337
@@ -5724,7 +5724,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 905)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 905 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 338
@@ -5741,7 +5741,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1006)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1006 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 339
@@ -5758,7 +5758,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 956)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 340
@@ -5775,7 +5775,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 987)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 341
@@ -5792,7 +5792,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1061)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1061 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 342
@@ -5809,7 +5809,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 999)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 999 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 343
@@ -5826,7 +5826,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1068)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1068 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 344
@@ -5843,7 +5843,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 997)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 345
@@ -5860,7 +5860,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1013)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1013 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 346
@@ -5877,7 +5877,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1022)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1022 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 347
@@ -5894,7 +5894,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1029)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1029 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 348
@@ -5911,7 +5911,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 965)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 965 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 349
@@ -5928,7 +5928,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 974)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 974 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 350
@@ -5945,7 +5945,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 933)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 351
@@ -5962,7 +5962,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1020)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1020 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 352
@@ -5979,7 +5979,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1072)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1072 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 353
@@ -5996,7 +5996,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1036)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1036 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 354
@@ -6013,7 +6013,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1026)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 355
@@ -6030,7 +6030,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 977)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 977 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 356
@@ -6047,7 +6047,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1032)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1032 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 357
@@ -6064,7 +6064,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1058)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1058 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 358
@@ -6081,7 +6081,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 911)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 359
@@ -6098,7 +6098,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 930)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 930 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 360
@@ -6115,7 +6115,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 923)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 361
@@ -6132,7 +6132,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1048)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1048 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 362
@@ -6149,7 +6149,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 907)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 907 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 363
@@ -6166,7 +6166,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 942)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 942 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 364
@@ -6183,7 +6183,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 943)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 943 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 365
@@ -6200,7 +6200,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 918)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 918 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 366
@@ -6217,7 +6217,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 928)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 928 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 367
@@ -6234,7 +6234,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1073)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1073 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 368
@@ -6251,7 +6251,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1035)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1035 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 369
@@ -6268,7 +6268,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 994)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 370
@@ -6285,7 +6285,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 913)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 371
@@ -6302,7 +6302,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 919)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 372
@@ -6319,7 +6319,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 933)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 933 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 373
@@ -6336,7 +6336,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1072)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1072 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 374
@@ -6353,7 +6353,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1027)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1027 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 375
@@ -6370,7 +6370,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1004)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1004 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 376
@@ -6387,7 +6387,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1015)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1015 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 377
@@ -6404,7 +6404,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 953)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 378
@@ -6421,7 +6421,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 971)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 971 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 379
@@ -6438,7 +6438,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 951)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 951 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 380
@@ -6455,7 +6455,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 904)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 904 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 381
@@ -6472,7 +6472,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1014)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1014 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 382
@@ -6489,7 +6489,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 997)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 383
@@ -6506,7 +6506,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1000)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1000 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 384
@@ -6523,7 +6523,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1001)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1001 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 385
@@ -6540,7 +6540,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1029)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1029 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 386
@@ -6557,7 +6557,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1078)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1078 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 387
@@ -6574,7 +6574,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1024)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1024 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 388
@@ -6591,7 +6591,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 910)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 910 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 389
@@ -6608,7 +6608,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1026)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1026 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 390
@@ -6625,7 +6625,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 936)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 936 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 391
@@ -6642,7 +6642,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1044)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1044 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 392
@@ -6659,7 +6659,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1088)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1088 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 393
@@ -6676,7 +6676,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1095)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1095 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 394
@@ -6693,7 +6693,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1049)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1049 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 395
@@ -6710,7 +6710,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 966)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 966 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 396
@@ -6727,7 +6727,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1016)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1016 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 397
@@ -6744,7 +6744,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1058)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1058 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 398
@@ -6761,7 +6761,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1001)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1001 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 399
@@ -6778,7 +6778,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 989)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 400
@@ -6795,7 +6795,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1065)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1065 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 401
@@ -6812,7 +6812,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 920)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 920 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 402
@@ -6829,7 +6829,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 980)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 980 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 403
@@ -6846,7 +6846,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1048)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1048 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 404
@@ -6863,7 +6863,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1063)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1063 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 405
@@ -6880,7 +6880,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1097)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1097 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 406
@@ -6897,7 +6897,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 962)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 962 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 407
@@ -6914,7 +6914,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1050)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1050 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 408
@@ -6931,7 +6931,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 920)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 920 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 409
@@ -6948,7 +6948,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1037)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1037 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 410
@@ -6965,7 +6965,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 984)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 984 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 411
@@ -6982,7 +6982,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1080)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1080 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 412
@@ -6999,7 +6999,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1097)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1097 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 413
@@ -7016,7 +7016,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 997)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 414
@@ -7033,7 +7033,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 929)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 929 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 415
@@ -7050,7 +7050,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1051)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1051 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 416
@@ -7067,7 +7067,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1094)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1094 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 417
@@ -7084,7 +7084,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 906)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 906 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 418
@@ -7101,7 +7101,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1081)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 419
@@ -7118,7 +7118,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1051)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1051 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 420
@@ -7135,7 +7135,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 900)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 900 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 421
@@ -7152,7 +7152,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 936)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 936 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 422
@@ -7169,7 +7169,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1057)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1057 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 423
@@ -7186,7 +7186,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 913)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 424
@@ -7203,7 +7203,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1071)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1071 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 425
@@ -7220,7 +7220,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1097)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1097 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 426
@@ -7237,7 +7237,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1024)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1024 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 427
@@ -7254,7 +7254,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 953)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 428
@@ -7271,7 +7271,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1040)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1040 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 429
@@ -7288,7 +7288,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1072)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1072 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 430
@@ -7305,7 +7305,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 989)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 431
@@ -7322,7 +7322,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 944)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 432
@@ -7339,7 +7339,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1068)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1068 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 433
@@ -7356,7 +7356,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1080)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1080 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 434
@@ -7373,7 +7373,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 935)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 935 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 435
@@ -7390,7 +7390,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1001)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1001 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 436
@@ -7407,7 +7407,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1083)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 437
@@ -7424,7 +7424,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 947)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 947 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 438
@@ -7441,7 +7441,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1074)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1074 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 439
@@ -7458,7 +7458,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1080)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1080 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 440
@@ -7475,7 +7475,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1075)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1075 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 441
@@ -7492,7 +7492,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 983)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 983 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 442
@@ -7509,7 +7509,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1072)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1072 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 443
@@ -7526,7 +7526,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1081)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 444
@@ -7543,7 +7543,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1067)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1067 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 445
@@ -7560,7 +7560,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 991)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 446
@@ -7577,7 +7577,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 938)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 447
@@ -7594,7 +7594,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 968)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 968 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 448
@@ -7611,7 +7611,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1077)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1077 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 449
@@ -7628,7 +7628,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 994)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 450
@@ -7645,7 +7645,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1079)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1079 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 451
@@ -7662,7 +7662,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 946)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 946 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 452
@@ -7679,7 +7679,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 920)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 920 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 453
@@ -7696,7 +7696,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1092)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1092 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 454
@@ -7713,7 +7713,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 906)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 906 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 455
@@ -7730,7 +7730,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 903)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 903 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 456
@@ -7747,7 +7747,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 909)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 457
@@ -7764,7 +7764,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1092)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1092 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 458
@@ -7781,7 +7781,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 913)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 459
@@ -7798,7 +7798,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1098)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1098 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 460
@@ -7815,7 +7815,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1057)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1057 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 461
@@ -7832,7 +7832,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1019)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1019 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 462
@@ -7849,7 +7849,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1057)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1057 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 463
@@ -7866,7 +7866,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1069)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1069 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 464
@@ -7883,7 +7883,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 994)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 465
@@ -7900,7 +7900,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1061)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1061 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 466
@@ -7917,7 +7917,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1086)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1086 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 467
@@ -7934,7 +7934,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 958)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 468
@@ -7951,7 +7951,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1029)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1029 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 469
@@ -7968,7 +7968,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 970)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 970 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 470
@@ -7985,7 +7985,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1098)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1098 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 471
@@ -8002,7 +8002,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 938)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 472
@@ -8019,7 +8019,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1083)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 473
@@ -8036,7 +8036,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1085)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 474
@@ -8053,7 +8053,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 979)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 979 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 475
@@ -8070,7 +8070,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 992)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 992 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 476
@@ -8087,7 +8087,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1059)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1059 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 477
@@ -8104,7 +8104,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 948)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 948 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 478
@@ -8121,7 +8121,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 990)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 990 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 479
@@ -8138,7 +8138,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 998)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 998 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 480
@@ -8155,7 +8155,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 950)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 950 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 481
@@ -8172,7 +8172,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 986)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 986 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 482
@@ -8189,7 +8189,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1042)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1042 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 483
@@ -8206,7 +8206,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1025)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1025 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 484
@@ -8223,7 +8223,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 956)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 485
@@ -8240,7 +8240,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1040)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1040 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 486
@@ -8257,7 +8257,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 927)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 927 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 487
@@ -8274,7 +8274,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1068)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1068 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 488
@@ -8291,7 +8291,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 958)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 489
@@ -8308,7 +8308,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1083)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 490
@@ -8325,7 +8325,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1090)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1090 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 491
@@ -8342,7 +8342,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 944)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 492
@@ -8359,7 +8359,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1040)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1040 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 493
@@ -8376,7 +8376,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 956)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 494
@@ -8393,7 +8393,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 979)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 979 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 495
@@ -8410,7 +8410,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1019)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1019 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 496
@@ -8427,7 +8427,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1071)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1071 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 497
@@ -8444,7 +8444,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 935)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 935 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 498
@@ -8461,7 +8461,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1014)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1014 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 499
@@ -8478,7 +8478,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1079)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1079 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 500
@@ -8495,7 +8495,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 909)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 501
@@ -8512,7 +8512,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 958)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 502
@@ -8529,7 +8529,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 986)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 986 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 503
@@ -8546,7 +8546,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 904)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 904 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 504
@@ -8563,7 +8563,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 944)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 505
@@ -8580,7 +8580,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 989)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 506
@@ -8597,7 +8597,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1015)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1015 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 507
@@ -8614,7 +8614,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 902)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 902 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 508
@@ -8631,7 +8631,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 948)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 948 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 509
@@ -8648,7 +8648,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 964)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 510
@@ -8665,7 +8665,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 919)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 511
@@ -8682,7 +8682,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1081)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 512
@@ -8699,7 +8699,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 974)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 974 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 513
@@ -8716,7 +8716,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1083)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 514
@@ -8733,7 +8733,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1000)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1000 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 515
@@ -8750,7 +8750,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 913)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 516
@@ -8767,7 +8767,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 985)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 985 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 517
@@ -8784,7 +8784,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 971)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 971 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 518
@@ -8801,7 +8801,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1034)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1034 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 519
@@ -8818,7 +8818,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 948)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 948 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 520
@@ -8835,7 +8835,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 975)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 975 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 521
@@ -8852,7 +8852,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1047)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1047 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 522
@@ -8869,7 +8869,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 958)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 958 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 523
@@ -8886,7 +8886,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 994)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 524
@@ -8903,7 +8903,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 984)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 984 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 525
@@ -8920,7 +8920,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1010)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1010 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 526
@@ -8937,7 +8937,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1062)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1062 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 527
@@ -8954,7 +8954,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 960)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 960 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 528
@@ -8971,7 +8971,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1020)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1020 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 529
@@ -8988,7 +8988,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1009)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1009 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 530
@@ -9005,7 +9005,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 923)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 531
@@ -9022,7 +9022,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 964)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 532
@@ -9039,7 +9039,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 953)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 533
@@ -9056,7 +9056,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1066)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1066 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 534
@@ -9073,7 +9073,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1039)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1039 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 535
@@ -9090,7 +9090,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1045)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1045 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 536
@@ -9107,7 +9107,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1053)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1053 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 537
@@ -9124,7 +9124,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 979)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 979 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 538
@@ -9141,7 +9141,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1065)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1065 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 539
@@ -9158,7 +9158,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1054)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1054 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 540
@@ -9175,7 +9175,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1091)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1091 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 541
@@ -9192,7 +9192,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 913)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 542
@@ -9209,7 +9209,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1059)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1059 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 543
@@ -9226,7 +9226,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 968)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 968 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 544
@@ -9243,7 +9243,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 913)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 545
@@ -9260,7 +9260,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 963)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 963 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 546
@@ -9277,7 +9277,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 902)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 902 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 547
@@ -9294,7 +9294,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1067)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1067 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 548
@@ -9311,7 +9311,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1020)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1020 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 549
@@ -9328,7 +9328,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 963)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 963 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 550
@@ -9345,7 +9345,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 919)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 551
@@ -9362,7 +9362,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 908)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 552
@@ -9379,7 +9379,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 981)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 981 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 553
@@ -9396,7 +9396,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1095)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1095 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 554
@@ -9413,7 +9413,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 955)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 955 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 555
@@ -9430,7 +9430,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 901)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 901 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 556
@@ -9447,7 +9447,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1076)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1076 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 557
@@ -9464,7 +9464,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 956)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 558
@@ -9481,7 +9481,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1070)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1070 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 559
@@ -9498,7 +9498,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1099)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1099 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 560
@@ -9515,7 +9515,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1077)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1077 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 561
@@ -9532,7 +9532,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 927)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 927 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 562
@@ -9549,7 +9549,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1084)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1084 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 563
@@ -9566,7 +9566,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 967)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 967 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 564
@@ -9583,7 +9583,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1074)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1074 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 565
@@ -9600,7 +9600,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1048)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1048 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 566
@@ -9617,7 +9617,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 927)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 927 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 567
@@ -9634,7 +9634,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 919)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 919 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 568
@@ -9651,7 +9651,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 909)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 569
@@ -9668,7 +9668,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1084)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1084 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 570
@@ -9685,7 +9685,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 939)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 939 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 571
@@ -9702,7 +9702,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 978)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 978 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 572
@@ -9719,7 +9719,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 950)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 950 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 573
@@ -9736,7 +9736,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 935)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 935 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 574
@@ -9753,7 +9753,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 956)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 575
@@ -9770,7 +9770,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 983)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 983 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 576
@@ -9787,7 +9787,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 963)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 963 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 577
@@ -9804,7 +9804,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1031)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1031 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 578
@@ -9821,7 +9821,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1079)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1079 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 579
@@ -9838,7 +9838,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 940)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 940 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 580
@@ -9855,7 +9855,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 945)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 945 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 581
@@ -9872,7 +9872,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 901)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 901 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 582
@@ -9889,7 +9889,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 994)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 583
@@ -9906,7 +9906,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1002)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1002 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 584
@@ -9923,7 +9923,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 953)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 953 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 585
@@ -9940,7 +9940,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1029)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1029 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 586
@@ -9957,7 +9957,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1044)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1044 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 587
@@ -9974,7 +9974,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 998)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 998 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 588
@@ -9991,7 +9991,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 951)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 951 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 589
@@ -10008,7 +10008,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1032)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1032 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 590
@@ -10025,7 +10025,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1092)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1092 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 591
@@ -10042,7 +10042,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1039)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1039 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 592
@@ -10059,7 +10059,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1008)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1008 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 593
@@ -10076,7 +10076,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1037)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1037 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 594
@@ -10093,7 +10093,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 923)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 595
@@ -10110,7 +10110,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 966)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 966 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 596
@@ -10127,7 +10127,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1030)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1030 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 597
@@ -10144,7 +10144,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1086)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1086 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 598
@@ -10161,7 +10161,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1014)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1014 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 599
@@ -10178,7 +10178,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1049)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1049 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 600
@@ -10195,7 +10195,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1002)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1002 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 601
@@ -10212,7 +10212,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 916)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 916 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 602
@@ -10229,7 +10229,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1018)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1018 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 603
@@ -10246,7 +10246,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1096)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1096 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 604
@@ -10263,7 +10263,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 987)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 605
@@ -10280,7 +10280,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 967)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 967 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 606
@@ -10297,7 +10297,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1074)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1074 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 607
@@ -10314,7 +10314,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1077)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1077 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 608
@@ -10331,7 +10331,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1059)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1059 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 609
@@ -10348,7 +10348,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1028)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1028 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 610
@@ -10365,7 +10365,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 923)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 611
@@ -10382,7 +10382,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1086)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1086 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 612
@@ -10399,7 +10399,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1094)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1094 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 613
@@ -10416,7 +10416,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1046)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1046 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 614
@@ -10433,7 +10433,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 906)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 906 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 615
@@ -10450,7 +10450,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1018)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1018 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 616
@@ -10467,7 +10467,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 908)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 617
@@ -10484,7 +10484,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1070)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1070 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 618
@@ -10501,7 +10501,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 928)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 928 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 619
@@ -10518,7 +10518,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 957)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 957 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 620
@@ -10535,7 +10535,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1087)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1087 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 621
@@ -10552,7 +10552,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1016)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1016 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 622
@@ -10569,7 +10569,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 913)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 623
@@ -10586,7 +10586,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 938)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 624
@@ -10603,7 +10603,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1020)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1020 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 625
@@ -10620,7 +10620,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1016)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1016 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 626
@@ -10637,7 +10637,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 987)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 627
@@ -10654,7 +10654,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1084)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1084 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 628
@@ -10671,7 +10671,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 962)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 962 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 629
@@ -10688,7 +10688,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 944)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 630
@@ -10705,7 +10705,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1087)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1087 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 631
@@ -10722,7 +10722,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 987)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 987 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 632
@@ -10739,7 +10739,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 938)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 633
@@ -10756,7 +10756,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1009)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1009 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 634
@@ -10773,7 +10773,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1027)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1027 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 635
@@ -10790,7 +10790,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 984)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 984 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 636
@@ -10807,7 +10807,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1099)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1099 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 637
@@ -10824,7 +10824,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 924)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 924 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 638
@@ -10841,7 +10841,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 983)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 983 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 639
@@ -10858,7 +10858,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1065)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1065 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 640
@@ -10875,7 +10875,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1069)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1069 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 641
@@ -10892,7 +10892,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 968)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 968 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 642
@@ -10909,7 +10909,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1005)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1005 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 643
@@ -10926,7 +10926,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1042)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1042 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 644
@@ -10943,7 +10943,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 945)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 945 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 645
@@ -10960,7 +10960,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 967)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 967 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 646
@@ -10977,7 +10977,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 941)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 647
@@ -10994,7 +10994,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 957)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 957 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 648
@@ -11011,7 +11011,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 902)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 902 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 649
@@ -11028,7 +11028,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 995)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 995 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 650
@@ -11045,7 +11045,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1061)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1061 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 651
@@ -11062,7 +11062,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 974)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 974 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 652
@@ -11079,7 +11079,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1007)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1007 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 653
@@ -11096,7 +11096,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 1004)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1004 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 654
@@ -11113,7 +11113,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 915)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 915 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 655
@@ -11130,7 +11130,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 989)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 656
@@ -11147,7 +11147,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1007)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1007 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 657
@@ -11164,7 +11164,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 910)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 910 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 658
@@ -11181,7 +11181,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1079)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1079 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 659
@@ -11198,7 +11198,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1035)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1035 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 660
@@ -11215,7 +11215,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1030)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1030 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 661
@@ -11232,7 +11232,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 908)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 662
@@ -11249,7 +11249,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 1005)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1005 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 663
@@ -11266,7 +11266,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 930)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 930 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 664
@@ -11283,7 +11283,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1037)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1037 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 665
@@ -11300,7 +11300,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1028)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1028 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 666
@@ -11317,7 +11317,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 975)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 975 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 667
@@ -11334,7 +11334,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1056)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1056 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 668
@@ -11351,7 +11351,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1014)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1014 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 669
@@ -11368,7 +11368,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 964)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 964 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 670
@@ -11385,7 +11385,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1011)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1011 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 671
@@ -11402,7 +11402,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1028)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1028 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 672
@@ -11419,7 +11419,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1052)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1052 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 673
@@ -11436,7 +11436,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 900)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 900 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 674
@@ -11453,7 +11453,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 951)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 951 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 675
@@ -11470,7 +11470,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 956)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 956 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 676
@@ -11487,7 +11487,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 915)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 915 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 677
@@ -11504,7 +11504,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1085)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 678
@@ -11521,7 +11521,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 936)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 936 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 679
@@ -11538,7 +11538,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1088)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1088 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 680
@@ -11555,7 +11555,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1047)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1047 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 681
@@ -11572,7 +11572,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 927)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 927 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 682
@@ -11589,7 +11589,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 957)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 957 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 683
@@ -11606,7 +11606,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1085)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1085 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 684
@@ -11623,7 +11623,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1070)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1070 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 685
@@ -11640,7 +11640,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 966)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 966 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 686
@@ -11657,7 +11657,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 994)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 687
@@ -11674,7 +11674,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1070)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1070 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 688
@@ -11691,7 +11691,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1010)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1010 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 689
@@ -11708,7 +11708,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 951)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 951 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 690
@@ -11725,7 +11725,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1022)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1022 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 691
@@ -11742,7 +11742,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1077)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1077 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 692
@@ -11759,7 +11759,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1000)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1000 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 693
@@ -11776,7 +11776,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1030)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1030 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 694
@@ -11793,7 +11793,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1008)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1008 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 695
@@ -11810,7 +11810,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1056)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1056 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 696
@@ -11827,7 +11827,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1038)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1038 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 697
@@ -11844,7 +11844,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 911)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 698
@@ -11861,7 +11861,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 912)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 912 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 699
@@ -11878,7 +11878,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 915)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 915 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 700
@@ -11895,7 +11895,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 954)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 954 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 701
@@ -11912,7 +11912,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 968)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 968 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 702
@@ -11929,7 +11929,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1027)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1027 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 703
@@ -11946,7 +11946,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 957)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 957 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 704
@@ -11963,7 +11963,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1001)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1001 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 705
@@ -11980,7 +11980,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1066)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1066 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 706
@@ -11997,7 +11997,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 978)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 978 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 707
@@ -12014,7 +12014,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1047)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1047 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 708
@@ -12031,7 +12031,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1081)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1081 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 709
@@ -12048,7 +12048,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 980)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 980 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 710
@@ -12065,7 +12065,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 910)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 910 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 711
@@ -12082,7 +12082,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 1077)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1077 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 712
@@ -12099,7 +12099,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 901)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 901 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 713
@@ -12116,7 +12116,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 931)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 931 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 714
@@ -12133,7 +12133,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "M" 225 200)
  (CLEAR 986)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 986 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 715
@@ -12150,7 +12150,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 974)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 974 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 716
@@ -12167,7 +12167,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1075)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1075 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 717
@@ -12184,7 +12184,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 908)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 908 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 718
@@ -12201,7 +12201,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1096)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1096 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 719
@@ -12218,7 +12218,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 967)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 967 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 720
@@ -12235,7 +12235,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 912)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 912 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 721
@@ -12252,7 +12252,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1063)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1063 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 722
@@ -12269,7 +12269,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1076)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1076 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 723
@@ -12286,7 +12286,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 949)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 949 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 724
@@ -12303,7 +12303,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1033)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1033 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 725
@@ -12320,7 +12320,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1093)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1093 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 726
@@ -12337,7 +12337,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 999)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 999 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 727
@@ -12354,7 +12354,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 932)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 932 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 728
@@ -12371,7 +12371,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 922)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 922 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 729
@@ -12388,7 +12388,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 938)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 938 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 730
@@ -12405,7 +12405,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 1058)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1058 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 731
@@ -12422,7 +12422,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 940)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 940 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 732
@@ -12439,7 +12439,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1033)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1033 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 733
@@ -12456,7 +12456,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1087)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1087 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 734
@@ -12473,7 +12473,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1096)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1096 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 735
@@ -12490,7 +12490,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 982)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 982 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 736
@@ -12507,7 +12507,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 925)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 925 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 737
@@ -12524,7 +12524,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1058)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1058 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 738
@@ -12541,7 +12541,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 994)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 994 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 739
@@ -12558,7 +12558,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1054)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1054 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 740
@@ -12575,7 +12575,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 932)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 932 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 741
@@ -12592,7 +12592,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 1074)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1074 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 742
@@ -12609,7 +12609,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 991)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 991 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 743
@@ -12626,7 +12626,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 944)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 744
@@ -12643,7 +12643,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 921)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 921 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 745
@@ -12660,7 +12660,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1070)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1070 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 746
@@ -12677,7 +12677,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 944)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 944 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 747
@@ -12694,7 +12694,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 1077)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1077 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 748
@@ -12711,7 +12711,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 960)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 960 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 749
@@ -12728,7 +12728,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 926)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 926 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 750
@@ -12745,7 +12745,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1091)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1091 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 751
@@ -12762,7 +12762,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 975)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 975 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 752
@@ -12779,7 +12779,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1090)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1090 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 753
@@ -12796,7 +12796,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 1059)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1059 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 754
@@ -12813,7 +12813,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 1063)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1063 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 755
@@ -12830,7 +12830,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1074)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1074 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 756
@@ -12847,7 +12847,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "G" 225 200)
  (CLEAR 1076)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1076 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 757
@@ -12864,7 +12864,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 909)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 909 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 758
@@ -12881,7 +12881,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 967)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 967 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 759
@@ -12898,7 +12898,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 1038)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1038 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 760
@@ -12915,7 +12915,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 997)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 997 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 761
@@ -12932,7 +12932,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 961)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 961 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 762
@@ -12949,7 +12949,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 961)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 961 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 763
@@ -12966,7 +12966,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 955)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 955 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 764
@@ -12983,7 +12983,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 1011)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1011 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 765
@@ -13000,7 +13000,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 901)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 901 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 766
@@ -13017,7 +13017,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1015)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1015 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 767
@@ -13034,7 +13034,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 965)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 965 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 768
@@ -13051,7 +13051,7 @@
  (ADD-TEXT 0 "P" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1058)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1058 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 769
@@ -13068,7 +13068,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "V" 225 200)
  (CLEAR 940)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 940 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 770
@@ -13085,7 +13085,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1062)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1062 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 771
@@ -13102,7 +13102,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "D" 225 200)
  (CLEAR 917)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 917 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 772
@@ -13119,7 +13119,7 @@
  (ADD-TEXT 0 "Q" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 1079)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1079 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 773
@@ -13136,7 +13136,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 913)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 913 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 774
@@ -13153,7 +13153,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 1016)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1016 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 775
@@ -13170,7 +13170,7 @@
  (ADD-TEXT 0 "S" 175 200)
  (ADD-TEXT 0 "C" 225 200)
  (CLEAR 1024)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1024 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 776
@@ -13187,7 +13187,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 911)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 911 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 777
@@ -13204,7 +13204,7 @@
  (ADD-TEXT 0 "K" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 983)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 983 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 778
@@ -13221,7 +13221,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "S" 225 200)
  (CLEAR 950)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 950 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 779
@@ -13238,7 +13238,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1068)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1068 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 780
@@ -13255,7 +13255,7 @@
  (ADD-TEXT 0 "F" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 923)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 923 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 781
@@ -13272,7 +13272,7 @@
  (ADD-TEXT 0 "X" 175 200)
  (ADD-TEXT 0 "H" 225 200)
  (CLEAR 996)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 996 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 782
@@ -13289,7 +13289,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 1034)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1034 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 783
@@ -13306,7 +13306,7 @@
  (ADD-TEXT 0 "D" 175 200)
  (ADD-TEXT 0 "Y" 225 200)
  (CLEAR 978)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 978 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 784
@@ -13323,7 +13323,7 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "N" 225 200)
  (CLEAR 941)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 785
@@ -13340,7 +13340,7 @@
  (ADD-TEXT 0 "H" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 989)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 989 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 786
@@ -13357,7 +13357,7 @@
  (ADD-TEXT 0 "N" 175 200)
  (ADD-TEXT 0 "P" 225 200)
  (CLEAR 910)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 910 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 787
@@ -13374,7 +13374,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 949)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 949 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 788
@@ -13391,7 +13391,7 @@
  (ADD-TEXT 0 "M" 175 200)
  (ADD-TEXT 0 "Q" 225 200)
  (CLEAR 1018)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1018 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 789
@@ -13408,7 +13408,7 @@
  (ADD-TEXT 0 "Z" 175 200)
  (ADD-TEXT 0 "X" 225 200)
  (CLEAR 927)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 927 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 790
@@ -13425,7 +13425,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1098)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1098 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 791
@@ -13442,7 +13442,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "K" 225 200)
  (CLEAR 1041)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1041 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 792
@@ -13459,7 +13459,7 @@
  (ADD-TEXT 0 "B" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 986)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 986 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 793
@@ -13476,7 +13476,7 @@
  (ADD-TEXT 0 "J" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1083)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 1083 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 794
@@ -13493,7 +13493,7 @@
  (ADD-TEXT 0 "C" 175 200)
  (ADD-TEXT 0 "Z" 225 200)
  (CLEAR 917)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 917 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 795
@@ -13510,7 +13510,7 @@
  (ADD-TEXT 0 "T" 175 200)
  (ADD-TEXT 0 "L" 225 200)
  (CLEAR 1071)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 1071 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 796
@@ -13527,7 +13527,7 @@
  (ADD-TEXT 0 "W" 175 200)
  (ADD-TEXT 0 "B" 225 200)
  (CLEAR 1050)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1050 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 797
@@ -13544,7 +13544,7 @@
  (ADD-TEXT 0 "L" 175 200)
  (ADD-TEXT 0 "W" 225 200)
  (CLEAR 937)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 937 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 798
@@ -13561,7 +13561,7 @@
  (ADD-TEXT 0 "V" 175 200)
  (ADD-TEXT 0 "J" 225 200)
  (CLEAR 948)
- (COMMAND 1000 medium "new-sound")
+ (COMMAND 1000 medium AUDIO "new-sound")
  (COMMAND 948 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 799
@@ -13578,7 +13578,7 @@
  (ADD-TEXT 0 "R" 175 200)
  (ADD-TEXT 0 "T" 225 200)
  (CLEAR 1045)
- (COMMAND 300 medium "new-sound")
+ (COMMAND 300 medium AUDIO "new-sound")
  (COMMAND 1045 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 800
@@ -13595,6 +13595,6 @@
  (ADD-TEXT 0 "Y" 175 200)
  (ADD-TEXT 0 "R" 225 200)
  (CLEAR 1039)
- (COMMAND 0 medium "new-sound")
+ (COMMAND 0 medium AUDIO "new-sound")
  (COMMAND 1039 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )

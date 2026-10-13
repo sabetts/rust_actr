@@ -12,7 +12,7 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 941)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )
 (RUN 2
@@ -29,6 +29,6 @@
  (ADD-TEXT 0 "G" 175 200)
  (ADD-TEXT 0 "F" 225 200)
  (CLEAR 941)
- (COMMAND 150 medium "new-sound")
+ (COMMAND 150 medium AUDIO "new-sound")
  (COMMAND 941 t "clear-exp-window (vision exp-window Sperling Experiment)")
 )

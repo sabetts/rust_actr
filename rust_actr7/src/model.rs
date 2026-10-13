@@ -315,6 +315,19 @@ pub struct Model {
     /// contents applied silently on every reset (the model body is
     /// re-evaluated). `(buffer, chunk-name)`.
     pub initial_buffer_sets: Vec<(String, String)>,
+    /// Model-body `(start-hand-at-mouse)` / `(start-hand-at-keypad)`: the
+    /// right hand starts on the mouse/keypad device instead of the keyboard
+    /// home row (`other-files/mouse.lisp:554`, `keyboard.lisp:766`).
+    pub hand_start: Option<String>,
+    /// Model-body `(set-audloc-default slot value ...)`: the default
+    /// constraints for an unconstrained aural-location request (the audio
+    /// analogue of `set-visloc-default`).
+    pub audloc_default: Vec<(String, Sexp)>,
+    /// Model-body `(set-parameter-value :module-param value)`: a module
+    /// parameter set from a task-file variable. ACT-R re-evaluates the model
+    /// body on every reset (`model.lisp:983`), so the variable's current
+    /// value is re-applied then. `(key, value)`.
+    pub set_param_values: Vec<(String, Sexp)>,
     /// Warning blocks from productions rejected by the validator. ACT-R
     /// re-evaluates the model body on `reset`, so these are re-emitted then
     /// (not at load, where the warning monitor isn't installed yet).
@@ -1702,6 +1715,9 @@ fn parse_model(
         no_reuse_buffers: Vec::new(),
         disabled_prods: Vec::new(),
         initial_buffer_sets: Vec::new(),
+        hand_start: None,
+        audloc_default: Vec::new(),
+        set_param_values: Vec::new(),
         reset_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
@@ -2062,10 +2078,38 @@ fn parse_model(
                     model.initial_buffer_sets.push((b.to_uppercase(), c));
                 }
             }
-            // `(declare-buffer-usage <buffer> <type> <slots>)`: compiler
-            // metadata (which chunk type a buffer holds); it does not affect
-            // the trace, so it is accepted and ignored.
-            "DECLARE-BUFFER-USAGE" => {}
+            // `(start-hand-at-mouse)` / `(start-hand-at-keypad)`: place the
+            // right hand on that device before running
+            // (`other-files/mouse.lisp:554`, `other-files/keyboard.lisp:766`).
+            // The device install is a no-op here (the spec's device sidecar
+            // models observable effects); the position is recorded for the
+            // motor module.
+            "START-HAND-AT-MOUSE" => model.hand_start = Some("MOUSE".to_string()),
+            "START-HAND-AT-KEYPAD" => model.hand_start = Some("KEYPAD".to_string()),
+            // `(set-audloc-default slot value ...)`: default constraints for
+            // an unconstrained aural-location request.
+            "SET-AUDLOC-DEFAULT" => {
+                let mut it = items[1..].iter();
+                while let (Some(Sexp::Sym(slot)), Some(val)) = (it.next(), it.next()) {
+                    model
+                        .audloc_default
+                        .push((slot.to_uppercase(), val.clone()));
+                }
+            }
+            // `(set-parameter-value :module-param value)`: set a module
+            // parameter. The model body is re-evaluated on every reset, so a
+            // task-file variable here is re-read each time.
+            "SET-PARAMETER-VALUE" => {
+                if let (Some(k), Some(v)) = (items.get(1).and_then(|x| x.as_sym()), items.get(2)) {
+                    // Resolve a `*var*` reference to its model-file value
+                    // when known.
+                    let v = match v {
+                        Sexp::Sym(s) => defs.get(&s.to_uppercase()).cloned().unwrap_or_else(|| v.clone()),
+                        _ => v.clone(),
+                    };
+                    model.set_param_values.push((k.to_uppercase(), v));
+                }
+            }
             got => return structural(format!("unknown model body form: {got}")),
         }
     }

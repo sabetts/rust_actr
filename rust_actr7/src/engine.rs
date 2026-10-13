@@ -411,6 +411,10 @@ pub struct DeviceCommand {
     pub at_ms: i64,
     /// `low`/`medium`/`high`/`t` (`:output`).
     pub output: String,
+    /// The `:module` the task scheduled the command under
+    /// (`schedule-event … :module …`), which is the trace's module column.
+    /// Defaults to `NONE`.
+    pub module: String,
     pub details: String,
     /// See [`DeviceText::run`].
     pub run: Option<u32>,
@@ -2367,7 +2371,7 @@ impl Engine {
                 out,
                 false,
                 Event::Emit {
-                    module: "NONE".to_string(),
+                    module: c.module.clone(),
                     line: c.details.clone(),
                 },
             );
