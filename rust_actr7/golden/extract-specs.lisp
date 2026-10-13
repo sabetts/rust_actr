@@ -463,6 +463,14 @@ step is printable and matches what the engine expects."
       (when (stringp file) (push file *models*))))
   (apply (gethash 'load-act-r-model *orig-fns*) args))
 
+(defun w-load-code (&rest args)
+  ;; `load-act-r-code` (a task file: defuns, experiment code) — recorded like
+  ;; `load-act-r-model` but dispatched to its own original.
+  (when (eq *mode* :load)
+    (let ((file (first args)))
+      (when (stringp file) (push file *models*))))
+  (apply (gethash 'load-act-r-code *orig-fns*) args))
+
 (defun w-buffer-chunk (names)
   ;; Task drivers often end with `(buffer-chunk ...)`; record it so the
   ;; spec can reproduce the command-layer dump (z-threads).
@@ -629,6 +637,11 @@ step is printable and matches what the engine expects."
   (wrap-fn 'ssp-fct #'w-ssp)
   (wrap-fn 'actr-load #'w-actr-load)
   (wrap-fn 'load-act-r-model #'w-load-model)
+  ;; `load-act-r-code` loads a task file (defuns, experiment code) that the
+  ;; stub's `run-it` then calls. It defines no model, but the spec's `:MODELS`
+  ;; must list it so the engine can replay the task's `defun`s and scheduled
+  ;; commands (e.g. `siegler`, `fan`, `bst-learn`).
+  (wrap-fn 'load-act-r-code #'w-load-code)
   (wrap-fn 'buffer-chunk-fct #'w-buffer-chunk)
   (wrap-fn 'add-text-to-exp-window #'w-add-text)
   (wrap-fn 'modify-text-for-exp-window #'w-modify-text)
