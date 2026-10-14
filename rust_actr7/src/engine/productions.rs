@@ -565,6 +565,9 @@ impl Engine {
                 }
             }
             "IMAGINAL" => Ok(!self.imag_busy),
+            // The imaginal-action buffer is the imaginal module's second
+            // buffer; `?imaginal-action> state free` tests the same busy flag.
+            "IMAGINAL-ACTION" => Ok(!self.imag_busy),
             "TRACKER" => Ok(true),
             "VOCAL" => Ok(!self.vocal_busy),
             "BLENDING" => Ok(!self.blending_busy),

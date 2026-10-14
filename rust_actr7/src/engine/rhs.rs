@@ -113,6 +113,14 @@ impl Engine {
             .find(|c| c.name.as_deref() == Some(name))
             .cloned()
             .or_else(|| self.named.get(name).cloned())
+            .or_else(|| {
+                self.buffers.values().find_map(|b| {
+                    b.chunk
+                        .as_ref()
+                        .filter(|c| c.name.as_deref() == Some(name))
+                        .cloned()
+                })
+            })
         {
             let mut inst = src;
             inst.name = Some(copy.clone());

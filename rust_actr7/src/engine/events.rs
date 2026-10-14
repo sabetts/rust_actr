@@ -585,6 +585,9 @@ impl Engine {
                             self.push(at, Prio::Num(0), Out::Never, Event::ImaginalDone { spec });
                         }
                     }
+                    "IMAGINAL-ACTION" => {
+                        self.imaginal_action_request(spec)?;
+                    }
                     "TRACKER" => {
                         if let NewChunk::Spec { slots, .. } = spec {
                             self.tracker_request(&slots)?;
@@ -940,6 +943,15 @@ impl Engine {
                         shown: None,
                     },
                 );
+            }
+            Event::ImaginalError => {
+                // set-imaginal-error: free the module and mark the imaginal
+                // buffer failed (`imaginal.lisp:296`).
+                self.imag_busy = false;
+                let b = self.buffer_mut("IMAGINAL");
+                b.busy = false;
+                b.failed = true;
+                self.changed();
             }
             Event::StartTracking => {
                 if show {

@@ -4437,3 +4437,20 @@ the ref's 77 wants the `production`-buffer `module-request` scheduled per
 selection (`procedural.lisp:2594`), the goal's `clear-delayed-goal`
 (`goal.lisp:286`), and the history recorder's `record-buffer-trace-notes`).
 The trace and the time value match; only the count keeps that test failing.
+
+## 266. The `imaginal-action` buffer runs a task function to build the next chunk
+
+The imaginal module has a second buffer, `imaginal-action` (`imaginal.lisp:187`).
+A production's `+imaginal-action>` names an `action` command and, with
+`simple t`, the function runs at request time, the imaginal buffer is cleared,
+and after `:imaginal-delay` its result (a chunk name or a `(slot value …)`
+list) is placed back; `nil` sets the module error state. A generic request
+just runs the function, which schedules its own work. The engine now
+registers the buffer, answers the request, and evaluates the action body —
+which needs `let*`, `buffer-read`, `copy-chunk-fct`, and `mod-chunk-fct`, all
+now in the bounded evaluator. `bst-learn-ppm`'s `encode-line-current` fires
+its `bst-compute-difference` action and the imaginal buffer is set, moving the
+golden trace from line 70 to 146 (of 8385). Two gaps remain there: the
+copy's name (`copy-chunk-fct` should share a per-*base* counter, so ACT-R's
+`imaginal-chunk0-2` is the engine's `imaginal-chunk0-0-0`), and the `length`
+the action reads.

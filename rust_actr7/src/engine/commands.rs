@@ -137,11 +137,192 @@ impl Engine {
                         );
                         return Ok(Value::Nil);
                     }
+                    // `(let* ((var expr) ...) body ...)`: sequential local
+                    // bindings, for a task action body (`compute-difference`).
+                    "LET" | "LET*" => {
+                        let binds = match items.get(1) {
+                            Some(Sexp::List(l)) => l,
+                            other => return Err(format!("let needs a binding list, got {other:?}")),
+                        };
+                        let mut local = b.clone();
+                        for bind in binds {
+                            match bind {
+                                Sexp::List(pair) if pair.len() == 2 => {
+                                    let n = pair[0]
+                                        .as_sym()
+                                        .ok_or_else(|| "let binding needs a name".to_string())?;
+                                    let v = self.m_eval(&pair[1], &local)?;
+                                    local.insert(n.to_uppercase(), v);
+                                }
+                                Sexp::Sym(n) => {
+                                    local.insert(n.to_uppercase(), Value::Nil);
+                                }
+                                other => {
+                                    return Err(format!("bad let binding {other:?}"));
+                                }
+                            }
+                        }
+                        let mut out = Value::Nil;
+                        for e in &items[2..] {
+                            out = self.m_eval(e, &local)?;
+                        }
+                        return Ok(out);
+                    }
+                    // `copy-chunk-fct` (`chunks.lisp:860`): a named copy
+                    // `{name}-{k}` (`copy_chunk`).
+                    "COPY-CHUNK-FCT" => {
+                        let v =
+                            self.m_eval(items.get(1).ok_or("copy-chunk-fct needs a chunk")?, b)?;
+                        let name = match v {
+                            Value::Sym(s) | Value::Str(s) => s,
+                            other => return Err(format!("copy-chunk-fct chunk {}", other.show())),
+                        };
+                        return Ok(Value::Str(self.copy_chunk(&name)));
+                    }
+                    // `mod-chunk-fct` (`chunks.lisp:1054`): set slots on a
+                    // named chunk, returning its name.
+                    "MOD-CHUNK-FCT" => {
+                        let v = self
+                            .m_eval(items.get(1).ok_or("mod-chunk-fct needs a chunk")?, b)?;
+                        let name = match v {
+                            Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                            other => return Err(format!("mod-chunk-fct chunk {}", other.show())),
+                        };
+                        let slots = match self
+                            .m_eval(items.get(2).ok_or("mod-chunk-fct needs slots")?, b)?
+                        {
+                            Value::List(l) => l,
+                            other => return Err(format!("mod-chunk-fct slots {}", other.show())),
+                        };
+                        self.mod_named_chunk(&name, &slots);
+                        return Ok(Value::Str(name));
+                    }
                     _ => {}
                 }
             }
         }
         self.eval_expr(e, b)
+    }
+
+    /// `imaginal-action` request (`imaginal.lisp:343`): a production's
+    /// `+imaginal-action>` asks a task function to compute the imaginal
+    /// buffer's next chunk. A `simple` action clears the imaginal buffer,
+    /// then places the function's result (a chunk name or a slot list) after
+    /// `:imaginal-delay`; a generic action just runs the function, which
+    /// schedules its own work and frees the module.
+    pub(super) fn imaginal_action_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
+        if self.imag_busy {
+            return Ok(());
+        }
+        let slots = match &spec {
+            NewChunk::Spec { slots, .. } => slots.clone(),
+            _ => return Ok(()),
+        };
+        let get = |k: &str| {
+            slots
+                .iter()
+                .find(|(n, _)| n == k)
+                .map(|(_, v)| v.clone())
+        };
+        let Some(action) = get("ACTION") else {
+            return Ok(());
+        };
+        let name = match action {
+            Value::Str(s) | Value::Sym(s) => s,
+            _ => return Ok(()),
+        };
+        let extra: Vec<Value> = match get("SLOTS") {
+            Some(Value::List(v)) => v,
+            _ => Vec::new(),
+        };
+        let simple = get("SIMPLE").map(|v| v != Value::Nil).unwrap_or(false);
+        // The action runs at request time, with the module marked busy.
+        self.imag_busy = true;
+        let result = self.call_action(&name, &extra);
+        if !simple {
+            return Ok(());
+        }
+        // simple action: clear the imaginal buffer now, place the result (or
+        // the error state) after the delay.
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::ClearBuffer {
+                buffer: "IMAGINAL".to_string(),
+                module: "IMAGINAL".to_string(),
+            },
+        );
+        let delay = if self.cfg.vidt {
+            self.randomize_ms(self.cfg.imaginal_delay_ms)
+        } else {
+            self.cfg.imaginal_delay_ms
+        };
+        let at = self.time_ms + delay;
+        match result {
+            Some(chunk) => self.push(
+                at,
+                Prio::Num(-1000),
+                Out::Low,
+                Event::ImaginalDone { spec: chunk },
+            ),
+            None => self.push(at, Prio::Num(0), Out::Never, Event::ImaginalError),
+        }
+        Ok(())
+    }
+
+    /// Run an imaginal-action function with already-evaluated arguments and
+    /// turn its return value into the chunk to place: a chunk name, a
+    /// `(slot value ...)` list, or `nil` (no chunk).
+    fn call_action(&mut self, name: &str, args: &[Value]) -> Option<NewChunk> {
+        let def = self.user_fns.get(&name.to_uppercase()).cloned()?;
+        let mut b: Bindings = HashMap::new();
+        for (p, v) in def.params.iter().zip(args) {
+            b.insert(p.to_uppercase(), v.clone());
+        }
+        let mut out = Value::Nil;
+        for e in &def.body {
+            out = self.m_eval(e, &b).ok()?;
+        }
+        match out {
+            Value::Nil => None,
+            Value::Str(s) | Value::Sym(s) => Some(NewChunk::Named(s)),
+            Value::List(v) => {
+                let mut slots = Vec::new();
+                for pair in v.chunks(2) {
+                    let k = match &pair[0] {
+                        Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                        _ => return None,
+                    };
+                    slots.push((k, pair.get(1).cloned().unwrap_or(Value::Nil)));
+                }
+                Some(NewChunk::Spec {
+                    ctype: "CHUNK".to_string(),
+                    slots,
+                    neg: Vec::new(),
+                    rels: Vec::new(),
+                    bare: true,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    /// `mod-chunk-fct` on a named chunk: overwrite or add each `slot value`.
+    pub(super) fn mod_named_chunk(&mut self, name: &str, slots: &[Value]) {
+        let Some(c) = self.named.get_mut(name) else {
+            return;
+        };
+        for pair in slots.chunks(2) {
+            let k = match &pair[0] {
+                Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                _ => continue,
+            };
+            let v = pair.get(1).cloned().unwrap_or(Value::Nil);
+            match c.slots.iter_mut().find(|(n, _)| n == &k) {
+                Some(s) => s.1 = v,
+                None => c.slots.push((k, v)),
+            }
+        }
     }
 
     /// A `goal-focus` argument: a chunk spec list, a symbol, or a string.

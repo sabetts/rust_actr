@@ -298,6 +298,18 @@ impl Engine {
                 let slot = self.eval_expr(&args[1], b)?;
                 self.chunk_slot_value(&chunk, &slot)
             }
+            "BUFFER-READ" => {
+                // `buffer-read` (`buffers.lisp:1010`): the chunk in a buffer.
+                let bv = self.eval_expr(args.first().ok_or("buffer-read needs a buffer")?, b)?;
+                let name = match bv {
+                    Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                    other => return Err(format!("buffer-read buffer {}", other.show())),
+                };
+                Ok(self
+                    .buffer_read(&name)
+                    .map(Value::Sym)
+                    .unwrap_or(Value::Nil))
+            }
             other => Err(format!("unsupported eval function {other}")),
         }
     }
@@ -381,7 +393,16 @@ impl Engine {
                 .dm
                 .iter()
                 .find(|c| c.name.as_deref() == Some(name.as_str()))
-                .or_else(|| self.named.get(name)),
+                .or_else(|| self.named.get(name))
+                // A buffer's chunk may not be registered by name (an
+                // imaginal request's unnamed chunk); find it live.
+                .or_else(|| {
+                    self.buffers.values().find_map(|b| {
+                        b.chunk
+                            .as_ref()
+                            .filter(|c| c.name.as_deref() == Some(name.as_str()))
+                    })
+                }),
             Value::Nil => return Ok(Value::Nil),
             _ => return Err("chunk-slot-value-fct needs a chunk".to_string()),
         };

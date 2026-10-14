@@ -1560,6 +1560,10 @@ enum Event {
     ImaginalDone {
         spec: NewChunk,
     },
+    /// A simple imaginal-action whose function returned `nil`: set the
+    /// module's error state and free it (`set-imaginal-error`,
+    /// `imaginal.lisp:296`).
+    ImaginalError,
     /// Attention landed: build the visual object.
     EncodingComplete {
         loc: String,
@@ -2986,6 +2990,7 @@ impl Engine {
             "GOAL",
             "RETRIEVAL",
             "IMAGINAL",
+            "IMAGINAL-ACTION",
             "VISUAL",
             "VISUAL-LOCATION",
             "MANUAL",
