@@ -710,10 +710,76 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        1.055 vs the run ending at 1.005) — the same model/strategy
        difference as its golden ref, not the device timeline.
 
-       **bst-learn-ppm / -w-tree** diverge much earlier (line 69): after
-       `encode-line-goal` the ref fires `decide-under` at 1.055 where ours
-       waits for the next window wave. That is a model/strategy difference,
-       not the device timeline — a separate investigation.
+       **bst-learn-ppm (last engine gap): matches to line 146/8385.** Three
+       divergences remain, all inside trial 1:
+       - **L147**: the ref emits a `vision visicon-update` at 2.736 (after the
+         C-button click's `update-current-line` redraw); ours does not. The
+         click's display change reaches the engine (the sidecar replays
+         `MODIFY-LINE`), but the visicon wave is not scheduled.
+       - **L171**: the imaginal SET name. Ref `imaginal-chunk0-2`, ours
+         `imaginal-chunk0-0-0`.
+       - **L179**: ref fires `consider-a` at 3.446, ours `choose-c` — the
+         `difference`-vs-line-`width` test after `consider-c`. This is the
+         *real* behavioural gap; the name is cosmetic but shifts the trace.
+
+       **The naming mechanism (settled by ACT-R instrumentation).** Wrapping
+       `copy-chunk-fct` and `new-name-fct` in a probe run of the task
+       (`(load "actr7.x/load-single-threaded-act-r.lisp")`, load
+       `tutorial;lisp;bst-ppm.lisp`, `(sgp :seed (1 0))`, `(bst-set nil nil
+       (subseq *exp-stims* 0 1))`) shows, per `encode-line-current`:
+       - `copy-chunk-fct` uses a **per-*base* counter**: the source's
+         `base-name` is set once to `{name}-`, and every copy down the chain
+         is `{base}{k}` via `new-name-fct` (`naming-module.lisp:337`). So
+         `IMAGINAL-CHUNK0` -> `-0`, and copying `-0` gives `-1` (NOT
+         `-0-0`). Ours chains the full name, hence `-0-0-0`.
+       - Each action consumes **two** names: `compute-difference`'s
+         `copy-chunk-fct` (`-0`), then the action's `schedule-clear-buffer`
+         clears the imaginal buffer and `merge-chunk-into-dm`
+         (`declarative-memory.lisp:1872`) copies the *reusable* chunk
+         (`-1`). The SET then uses `-0`. Next action: `-2`/`-3`. Hence the
+         ref's `-0`, `-2`, `-4`.
+       - The imaginal buffer itself is a `reuse?` buffer: its chunk is always
+         the reusable `IMAGINAL-CHUNK0`; `set-buffer-chunk` copies content
+         *into* it (`buffers.lisp:1349`), so `buffer-read 'imaginal` returns
+         `IMAGINAL-CHUNK0`, not the placed copy.
+
+       **Attempted and reverted.** A base-name counter in `copy_chunk`
+       (plus a `copy_base` map) makes the naming correct (`-0`) and keeps the
+       golden suite green, BUT it makes `choose-c` stop firing at 2.576: the
+       imaginal buffer chunk then lacks the `DIFFERENCE` slot
+       (`[buf] IMAGINAL IMAGINAL-CHUNK0-0 …` has `LENGTH` but no
+       `DIFFERENCE`), even though the `named` copy has it (`DIFFERENCE=70`).
+       So the SET's `instantiate(Named)` is not carrying the modified copy's
+       slots — likely it rebuilds from the buffer's `declare-buffer-usage`
+       type (which has `difference` declared but perhaps not applied), or the
+       `named`/buffer identity is split. Investigate `Engine::instantiate`
+       for `ChunkDesc`/`NewChunk::Named` and how `mod_named_chunk`'s write
+       reaches the buffer chunk. Reverted to keep the baseline green.
+
+       **Next steps, in order:**
+       1. Fix the `DIFFERENCE`-loss on `SetBuffer(Named)` first (independent
+          of naming): the placed chunk must carry the copy's slots. Then
+          `choose-c` fires again with the correct name.
+       2. Re-apply the base-name counter + the clear-time harvest copy (so
+          the counter advances by 2 per action) and confirm `-0`, `-2`, `-4`.
+       3. Then chase L179 (`consider-a` vs `choose-c`): log the imaginal
+          chunk's `length`/`goal-length`/`difference` and the attended line's
+          `width` at each `encode-line-current` in the golden-equivalent run.
+          Ours' `difference` is 70 (`|55-125|`); the ref must be < the line
+          `width` (55) for `consider-a`. The probe's `bst-set` trial 1 gave
+          `length=110, diff=70` on the 2nd action, so the golden run's
+          `length` (from the blue stick) differs — compare the sidecar's
+          `ADD-LINE … 135 … "blue"` widths against what the engine's
+          `=imaginal> length =current-len` reads.
+       4. L147 `visicon-update` is likely a consequence of the same redraw
+          path; check `schedule_display`/`proc_display` for a `MODIFY-LINE`
+          that changes a feature at an already-built location.
+
+       **Instrumentation recipe** (throwaway, keep out of the tree): wrap
+       `copy-chunk-fct`/`new-name-fct` in a `sbcl --script` probe as above;
+       the probe prints `CC src=… -> …` and `NN base=… -> …`. For the engine
+       side, `DBG_IA=1` gated prints in `call_action`/the empty-queue branch
+       were used (and reverted).
        - GOTCHAS #247–#256 cover the landed bst/motor/vision/utility
          semantics.
        Diagnostic note that cost a session: **check which run step the spec

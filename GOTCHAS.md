@@ -4458,3 +4458,23 @@ golden trace from line 70 to 146 (of 8385). Two gaps remain there: the
 copy's name (`copy-chunk-fct` should share a per-*base* counter, so ACT-R's
 `imaginal-chunk0-2` is the engine's `imaginal-chunk0-0-0`), and the `length`
 the action reads.
+
+## 267. `copy-chunk-fct` names from a per-*base* counter, and a clear harvests a reusable chunk
+
+A chunk copy's name comes from `new-name-fct` (`naming-module.lisp:337`),
+which keeps a counter keyed by the *base-name*: `copy-chunk-fct`
+(`chunks.lisp:860`) sets the source's `base-name` once to `{name}-`, and
+every copy down the chain is `{base}{k}`. So `IMAGINAL-CHUNK0` -> `-0`, and
+copying `-0` gives `-1` — not `-0-0`. The engine's `copy_chunk` keys the
+counter by the full name and chains (`-0-0-0`).
+
+Two names are spent per `imaginal-action` simple request: the action's
+`copy-chunk-fct` (`-0`), then the action's `schedule-clear-buffer` clears the
+imaginal buffer and `merge-chunk-into-dm` (`declarative-memory.lisp:1872`)
+copies the *reusable* chunk before adding it (`-1`). The SET uses `-0`, the
+next action `-2`, so the ref's imaginal SET names run `-0`, `-2`, `-4`, ….
+
+An imaginal buffer is a `reuse?` buffer: its chunk is always the reusable
+`IMAGINAL-CHUNK0`, and `set-buffer-chunk` copies content *into* it
+(`buffers.lisp:1349`), so `buffer-read 'imaginal` returns `IMAGINAL-CHUNK0`
+rather than the placed copy. The engine keeps the placed copy's name instead.
