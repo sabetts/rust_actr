@@ -22,3 +22,4 @@ tutorial_unit2code_whynot
 tutor-model-solution
 tutorial_unit5_onehit_blocks
 tutorial_unit5_onehit_hands
+tutorial_unit5_onehit_learning

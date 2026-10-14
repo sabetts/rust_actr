@@ -4131,3 +4131,26 @@ Client-owned monitors therefore go through `call_remote_reentrant` with the
 borrow released; server-side ones run through `Session::evaluate`. ACT-R fires
 these mid-run, so the dispatch happens before the `run` reply — a task reads
 the handler's effect as soon as `run` returns.
+
+## 245. `sum()` is compensated on Python 3.12+, so an older ref's aggregate can differ by one ULP
+
+`tutorial_unit5_onehit_learning`'s ref records `0.30639999999999995` where the
+same computation now yields `0.3064`. That is not an engine difference: the
+ref's *own* percentage list recomputes to `0.3064` with today's `sum`, and to
+the ref's exact value with a naive left-to-right fold
+(`functools.reduce(operator.add, …)`).
+
+CPython 3.12 gave `sum()` Neumaier compensated summation for floats, so summing
+five percentages is now one ULP more accurate than when the ref was generated.
+The model is untouched: for `onehit.learning(50)` ours reproduces real ACT-R
+**exactly** — every one of the 50 games byte-identical, all 20 per-block win
+counts identical (1523 total), and the whole 20-element percentage list
+identical including its float reprs. Only the four `sum(...)/5` aggregates can
+drift.
+
+`golden/rpc-conformance.py`'s `normalise` therefore canonicalises decimal
+literals with 13+ fractional digits (`format(float(x), ".13g")`) before
+comparing. A double does not meaningfully resolve more than that, a passing
+spec's lines are identical before and after, and every shorter literal in the
+corpus (`0.19999999`, `-1.3374588`, …) is left untouched — so this can only
+absorb interpreter float drift, never hide a real difference.

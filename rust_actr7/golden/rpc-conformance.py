@@ -13,6 +13,7 @@ not. Output is one `RPC-OK <name>` / `RPC-FAIL <name> <detail>` line per test.
 """
 import importlib
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -34,9 +35,22 @@ def all_tests():
     return names
 
 
+# Long decimal literals are canonicalised before comparison. A ref generated
+# under Python <= 3.11 records `sum()`'s naive left-to-right result; 3.12+
+# sums floats with Neumaier compensation, so the same computation can differ
+# by one ULP (e.g. `onehit.learning`'s 0.30639999999999995 vs 0.3064). Only
+# values carrying more digits than a double meaningfully resolves are touched.
+_LONG_FLOAT = re.compile(r"-?\d+\.\d{13,}(?:[eE][-+]?\d+)?")
+
+
+def _canon_float(m):
+    return format(float(m.group(0)), ".13g")
+
+
 def normalise(chunks):
     """Flatten captured trace+stdout chunks into comparable lines."""
-    return [l.rstrip().lower() for l in "".join(chunks).splitlines() if l.strip()]
+    text = _LONG_FLOAT.sub(_canon_float, "".join(chunks))
+    return [l.rstrip().lower() for l in text.splitlines() if l.strip()]
 
 
 class _Collector:
