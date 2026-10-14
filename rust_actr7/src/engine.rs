@@ -2226,6 +2226,15 @@ pub struct Engine {
     /// Visual-location copy name → its captured `(screen-x, screen-y)`
     /// (the chunk keeps its position even if the feature later moves).
     vl_xy: HashMap<String, (i64, i64)>,
+    /// Visual-location copy name → the location slots of the feature it was
+    /// copied from. `define-chunks-fct` merges a new feature's location chunk
+    /// into an existing one with `equal-chunks-fct` slots, and reassigns that
+    /// chunk's `chunk-visicon-entry` to the new feature
+    /// (`vision.lisp:3883`), so a rebuilt display at the same place refreshes
+    /// the entry. `find-best-feature`'s short-circuit tests that entry
+    /// (`vision.lisp:2573`), so the engine must know whether a *live* feature
+    /// shares the copy's location.
+    vl_loc_spec: HashMap<String, Vec<(String, Value)>>,
     /// tracker extra: live trackers.
     trackers: Vec<Tracker>,
     /// tracker extra: generation counter for scheduled update events.
@@ -2558,6 +2567,7 @@ impl Engine {
             touch_fingers: [[(0, 0, 1); 5]; 2],
             touch_last: None,
             vl_xy: HashMap::new(),
+            vl_loc_spec: HashMap::new(),
             trackers: Vec::new(),
             tracker_gen: 0,
             tracker_task: false,
@@ -3008,6 +3018,7 @@ impl Engine {
         self.vl_copies.clear();
         self.vl_copied_from.clear();
         self.vl_xy.clear();
+        self.vl_loc_spec.clear();
         self.trackers.clear();
         self.tracker_gen = 0;
         self.tracker_task = false;

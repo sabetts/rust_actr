@@ -827,6 +827,7 @@ impl Engine {
         self.vl_copies.insert(copy.clone(), idx);
         self.vl_copied_from.insert(copy.clone(), base.to_string());
         self.vl_xy.insert(copy.clone(), (feat.x, feat.y));
+        self.vl_loc_spec.insert(copy.clone(), feat.loc_slots());
         let inst = ChunkInst {
             name: Some(copy.clone()),
             ctype: "VISUAL-LOCATION".to_string(),
@@ -1317,10 +1318,17 @@ impl Engine {
         // nearest features with `random-item`, consuming exactly one draw
         // (even for a singleton). The engine keeps its own object choice but
         // must consume that draw so later `:er` selections line up.
+        //
+        // The entry is live when a *live* feature shares the copy's location
+        // slots: `define-chunks-fct` merges a rebuilt feature's location chunk
+        // into the existing one and reassigns its `chunk-visicon-entry`
+        // (`vision.lisp:3883`), so `bst-learn`'s rebuilt display at the same
+        // place keeps the entry live while `tutorial-unit3modeling-v6`'s
+        // cleared window (a new object elsewhere) leaves it stale.
         let entry_live = self
-            .vl_copied_from
+            .vl_loc_spec
             .get(&loc)
-            .map(|base| self.features.iter().any(|f| &f.name == base))
+            .map(|spec| self.features.iter().any(|f| &f.loc_slots() == spec))
             .unwrap_or(false);
         if !entry_live {
             self.rng_draw(1);

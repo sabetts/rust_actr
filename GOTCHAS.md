@@ -4334,3 +4334,23 @@ candidate set is one shorter. `bst-learn`'s per-trial rebuild re-adds the
 buttons, and the one the model last attended (A's oval, tstamp from the
 attention) is excluded from the trial-start auto-stuff — the ref's set is
 `{15…19}`, not `{14…19}`.
+
+## 260. A rebuilt feature at the same place refreshes its location chunk's entry
+
+`define-chunks-fct` merges a new chunk into an existing one with equal slots
+(`update-chunks-on-the-fly`), so a rebuilt feature whose location spec matches
+an earlier one reuses that **location chunk** — and `build-vis-locs-for` then
+reassigns `(chunk-visicon-entry loc-chunk)` to the new visicon chunk
+(`vision.lisp:3883`). `find-best-feature`'s short-circuit
+(`vision.lisp:2573`) tests exactly that entry, so a window rebuild that
+re-adds an item at the same place keeps the *old* location copy's fast path
+live even though the copy's own feature is long gone. `bst-learn`'s per-trial
+`clear-exp-window` + `build-display` redraws the same sticks at the same
+coordinates, so the re-encoded `visual-location38-0` still short-circuits (the
+ref consumes no `random-item` draw); `tutorial-unit3modeling-v6`'s cleared
+window puts a *different* object elsewhere, so the entry stays stale and the
+re-encode draws. The engine records each copy's location slots
+(`vl_loc_spec`) and treats the entry as live when a live feature shares them —
+the old test (`vl_copied_from`'s base name still present) missed the rebuild,
+adding a spurious draw at t=25.799 that shifted `bst-learn`'s trial-5
+`stuff-visloc-buffer` pick.
