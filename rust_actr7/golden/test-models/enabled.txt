@@ -28,6 +28,7 @@ ppm-compilation
 precondition-test
 proc-display-with-pending
 remote-bind-test
+removed-and-restored-visual-item
 retain-indirect-retrievals
 retrieval-request-parameters
 semantic

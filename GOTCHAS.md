@@ -4287,3 +4287,21 @@ a window rebuild — leaving the run to drain; the rebuild is then drawn by the
 next run's `schedule_display`. The old window is replaced (`(CLEAR ms)` at each
 trial start), which also re-encodes a now-gone attended object
 (`update-attended-loc`).
+
+## 257. A visual object's `screen-pos` is the *merged* name of the location chunk
+
+`featlis-to-focus` sets the object's `screen-pos` from the attention marker
+(`vision.lisp:2524`), but the slot store goes through
+`set-chunk-slot-value-fct` → `get-true-slot-value-name`
+(`framework/chunks.lisp:1106`), which rewrites a chunk-valued slot to
+`true-chunk-name-fct` — the name of the chunk it merged into. An auto-stuffed
+location copy (`…-0`) that a `find-location` later re-stuffs (`…-1`) is an
+*identical* chunk, so on the intervening `clear-buffer` it merges into DM
+(`merge-chunk-into-dm`, `declarative-memory.lisp:1899` →
+`merge-chunks-fct`, `chunks.lisp:1658`, keeping the first name) and every
+reference is remapped. `removed-and-restored-visual-item`'s `buffer-chunk
+visual` therefore prints `screen-pos visual-location0-0` even though the
+encoding trace names the marker `visual-location0-1`. The engine already
+records that alias (`resolve_alias`); `encoding_complete` now applies it when
+building the object. Copies whose slots differ (tracking's moving location)
+never merge, so `tracking-test` keeps its `-1…-4`.

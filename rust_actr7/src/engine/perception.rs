@@ -1332,7 +1332,14 @@ impl Engine {
             // `(chunk-type line (visual-object))`), so the kind is the stored
             // type and `visual-object` matches it as a supertype.
             ctype: feat.kind.clone(),
-            slots: Self::object_slots(&feat, &loc),
+            // `set-chunk-slot-value-fct` stores a chunk slot value under its
+            // *true* name (`get-true-slot-value-name`,
+            // `framework/chunks.lisp:1106`): a location chunk whose
+            // `-k` copy merged into an earlier identical copy (the
+            // auto-stuffed location re-stuffed by `find-location`, which
+            // merges into DM on the intervening clear) prints as that
+            // earlier copy (`removed-and-restored-visual-item`).
+            slots: Self::object_slots(&feat, &self.resolve_alias(&loc)),
             bare: false,
         };
         self.add_visual_finst(idx);
