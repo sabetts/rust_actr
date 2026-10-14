@@ -1570,6 +1570,14 @@ fn parse_production(form: &Sexp, extra_buffers: &[String]) -> Result<Production,
             .collect::<Vec<_>>()
             .join(" ")
     );
+    // An optional documentation string follows the name
+    // (`production-parsing.lisp`: `(p name "doc" lhs ==> rhs)`), exactly as a
+    // chunk type may carry one. It is not an LHS item.
+    let body = if matches!(body.first(), Some(Sexp::Str(_))) {
+        &body[1..]
+    } else {
+        body
+    };
     let Some(split) = body
         .iter()
         .position(|s| matches!(s, Sexp::Sym(t) if t == "==>"))

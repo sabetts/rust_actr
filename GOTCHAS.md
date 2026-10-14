@@ -4410,3 +4410,12 @@ then partially matches at `-0.23 > :md` (default `-1.0`), where the default
 fire. The hook is a task command (`add-act-r-command`), so the engine resolves
 it through `user_fns` and evaluates it with the bounded evaluator (which now
 understands `when`/`unless`/`numberp`/`symbolp`/`stringp`).
+
+## 264. A production may carry a documentation string after its name
+
+`(p name "documentation" lhs ==> rhs)` is the documented form
+(`production-parsing.lisp`), and the string is not an LHS item. The parser
+fed it to `validate-lhs`, which rejected the whole production ("first item on
+lhs is not a valid command") and dropped it — `creating-an-image` lost all
+five of its productions. The docstring is now skipped, matching the optional
+documentation string a chunk type already accepts.
