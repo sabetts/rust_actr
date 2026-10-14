@@ -679,25 +679,31 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
           already at the target, emit the `MOVE-CURSOR LOC …` line but run
           no ply (`motor.lisp:1316`), so the manual module stays free.
 
-       ### bst-learn (in progress, prefix 392/8872) / bst-learn-ppm (69)
+       ### bst-learn (DONE modulo the task summary) / bst-learn-ppm (70)
 
-       `bst-learn`'s sidecar now has the full per-trial `update-current-line`
+       `bst-learn`'s sidecar has the full per-trial `update-current-line`
        redraws (derived from the ref by a throwaway script: per trial, pair
        the ref's click-triggered `production-fired` choices with its
        `visicon-update` times and replay the task rule — a click adds or
        subtracts its `:action` length, and `update-current-line` adds /
-       modifies / removes the line at (75,135)). Its common prefix is now 392
-       (was 157). The run-boundary fix (GOTCHAS #256) and a `(CLEAR ms)` at
-       each trial start (a new window, which re-encodes the gone attended
-       object) landed with it.
+       modifies / removes the line at (75,135)). The run-boundary fix
+       (GOTCHAS #256) and a `(CLEAR ms)` at each trial start landed with it.
 
-       **Next blocker (bst-learn, line 393):** the trial-start auto-stuff
-       picks a feature number one lower than the ref (`visual-location18` vs
-       `19`). Only the *trial-start* auto-stuffs differ; the within-trial
-       `find-location` picks and everything else match. So the ref's new
-       window has one more leftmost-eligible feature (or a different
-       `random-item` draw) than ours. Investigate the visicon feature count
-       and the `random-item` RNG draw at a `build-display`.
+       **Golden: byte-exact to 8862/8872.** The last 10 lines are the task
+       summary (`CORRELATION`/`MEAN DEVIATION`/trial table/utilities) that
+       `bst-experiment` `format`s — client-side output the Rust engine does
+       not compute, so it is the accepted no-arbitrary-Lisp divergence (same
+       as `fan`). Getting there took three vision fixes: the button label
+       sits on the oval (#258), a rebuilt feature at the same place refreshes
+       its location chunk's entry so `find-best-feature` still short-circuits
+       (#260), and the finst survives the rebuild (#259).
+
+       **RPC: DONE (`bst-learn`, `bst-nolearn` both `RPC-OK`).** The device
+       now fires a button's client-owned `:action` mid-run (#261), so the
+       Python task's `update-current-line` actually redraws the display.
+       `bst-learn-ppm` RPC still diverges at line 70 (`decide-under` at
+       1.055 vs the run ending at 1.005) — the same model/strategy
+       difference as its golden ref, not the device timeline.
 
        **bst-learn-ppm / -w-tree** diverge much earlier (line 69): after
        `encode-line-goal` the ref fires `decide-under` at 1.055 where ours
