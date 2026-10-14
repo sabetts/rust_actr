@@ -2269,6 +2269,21 @@ impl Engine {
     }
 
     pub(super) fn similarity(&self, a: &Value, b: &Value) -> f32 {
+        // `:sim-hook` (`declarative-memory.lisp:2218`): a task function's
+        // numeric result overrides the similarity table and `:ms`/`:md`
+        // (`chunks-similarity`, `declarative-memory.lisp:2628`). A non-number
+        // (or an unknown function) falls through to the table.
+        if let Some(hook) = &self.cfg.sim_hook {
+            if let Some(v) = self.call_user_fn(hook, &[a.clone(), b.clone()]) {
+                if let Some(n) = match &v {
+                    Value::Int(i) => Some(*i as f64),
+                    Value::Num(x) => Some(*x as f64),
+                    _ => None,
+                } {
+                    return n as f32;
+                }
+            }
+        }
         let a_name = match a {
             Value::Sym(s) => Some(s.as_str()),
             _ => None,

@@ -118,6 +118,32 @@ impl Engine {
         Ok(out)
     }
 
+    /// Call a task `defun` by name with already-evaluated arguments,
+    /// returning its first value. Used by `:sim-hook`'s similarity function
+    /// (`bst-ppm`'s `number-sims`). `None` when the function is unknown or
+    /// its body errors.
+    pub(super) fn call_user_fn(&self, name: &str, args: &[Value]) -> Option<Value> {
+        let def = self.user_fns.get(&name.to_uppercase())?;
+        let mut b: Bindings = HashMap::new();
+        for (p, v) in def.params.iter().zip(args) {
+            b.insert(p.to_uppercase(), v.clone());
+        }
+        let mut out = Value::Nil;
+        for (i, e) in def.body.iter().enumerate() {
+            if i + 1 == def.body.len() {
+                out = self
+                    .eval_values(e, &b)
+                    .ok()?
+                    .into_iter()
+                    .next()
+                    .unwrap_or(Value::Nil);
+            } else {
+                self.eval_expr(e, &b).ok()?;
+            }
+        }
+        Some(out)
+    }
+
     pub(super) fn eval_call(
         &self,
         head: &Sexp,
@@ -187,6 +213,39 @@ impl Engine {
             "NOT" | "NULL" => {
                 let v = self.eval_expr(args.first().ok_or("not needs an argument")?, b)?;
                 Ok(bool_value(v == Value::Nil))
+            }
+            "NUMBERP" => {
+                let v = self.eval_expr(args.first().ok_or("numberp needs an argument")?, b)?;
+                Ok(bool_value(matches!(
+                    v,
+                    Value::Int(_) | Value::Num(_)
+                )))
+            }
+            "SYMBOLP" => {
+                let v = self.eval_expr(args.first().ok_or("symbolp needs an argument")?, b)?;
+                Ok(bool_value(matches!(v, Value::Sym(_))))
+            }
+            "STRINGP" => {
+                let v = self.eval_expr(args.first().ok_or("stringp needs an argument")?, b)?;
+                Ok(bool_value(matches!(v, Value::Str(_))))
+            }
+            // `when`/`unless`: evaluate the body only if the test passes,
+            // returning the last body value (`nil` otherwise).
+            "WHEN" | "UNLESS" => {
+                let test = self.eval_expr(args.first().ok_or("when needs a test")?, b)?;
+                let pass = if head.eq_ignore_ascii_case("WHEN") {
+                    test != Value::Nil
+                } else {
+                    test == Value::Nil
+                };
+                if !pass {
+                    return Ok(Value::Nil);
+                }
+                let mut out = Value::Nil;
+                for e in &args[1..] {
+                    out = self.eval_expr(e, b)?;
+                }
+                Ok(out)
             }
             "AND" => {
                 for a in args {

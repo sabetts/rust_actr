@@ -248,6 +248,13 @@ struct Config {
     mp: Option<f32>,
     ms: f32,
     md: f32,
+    /// `:sim-hook` (`declarative-memory.lisp:2218`) — the name of a task
+    /// function returning the similarity of two values. When it returns a
+    /// number that overrides the similarity table and `:ms`/`:md`
+    /// (`chunks-similarity`, `declarative-memory.lisp:2628`). `bst-ppm`'s
+    /// `number-sims` is `(|a-b|)/-300`, which lets a partial match fire where
+    /// the default `-1.0` would not.
+    sim_hook: Option<String>,
     /// `:ppm` — procedural partial matching penalty factor. When set, LHS
     /// equality tests may mismatch when the value similarity exceeds `:md`,
     /// and utility is adjusted by `ppm * Σ similarities`.
@@ -923,6 +930,15 @@ fn unstuff_aural_from(params: &[(String, Sexp)]) -> Option<Option<i64>> {
     }
 }
 
+/// `:sim-hook` (`declarative-memory.lisp:2218`): a function, a string naming a
+/// command, or nil. Only the string/command form appears in the corpus.
+fn sgp_str(params: &[(String, Sexp)], key: &str) -> Option<String> {
+    match params.iter().find(|(k, _)| k == key) {
+        Some((_, Sexp::Str(s))) | Some((_, Sexp::Sym(s))) if s != "NIL" => Some(s.clone()),
+        _ => None,
+    }
+}
+
 fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
     match params.iter().find(|(k, _)| k == key) {
         // `t` (any non-nil symbol) is true; explicit NIL is false.
@@ -1073,6 +1089,7 @@ impl Config {
             mp: sgp_single(&m.params, ":MP")?,
             ms: sgp_single(&m.params, ":MS")?.unwrap_or(0.0),
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
+            sim_hook: sgp_str(&m.params, ":SIM-HOOK"),
             ppm: sgp_single(&m.params, ":PPM")?,
             epl: sgp_bool(&m.params, ":EPL"),
             model_warnings: sgp_bool(&m.params, ":MODEL-WARNINGS"),

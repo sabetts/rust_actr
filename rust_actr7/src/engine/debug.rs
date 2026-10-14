@@ -537,6 +537,12 @@ impl Engine {
                     self.cfg.ms = x;
                 }
             }
+            ":SIM-HOOK" => {
+                self.cfg.sim_hook = match val {
+                    Sexp::Str(s) | Sexp::Sym(s) if s != "NIL" => Some(s.clone()),
+                    _ => None,
+                };
+            }
             ":MAS" => self.cfg.mas = num(val),
             ":BLC" => {
                 if let Some(x) = num(val) {
@@ -972,6 +978,11 @@ impl Engine {
             ":IU" => self.cfg.iu.to_string(),
             ":MD" => self.cfg.md.to_string(),
             ":MS" => self.cfg.ms.to_string(),
+            ":SIM-HOOK" => self
+                .cfg
+                .sim_hook
+                .clone()
+                .unwrap_or_else(|| "NIL".into()),
             ":ANS" => self.cfg.ans.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":BLL" => self.cfg.bll.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":SJI" => "T".to_string(),

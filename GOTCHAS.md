@@ -4397,3 +4397,16 @@ reads `run(30)[0]` as its response time, so it was reporting 0.000.
 client's `output_person_location` boolean format differs (`True` vs the Lisp
 `T`), which is the Python port's own output, so the RPC verdict stays
 unenabled.
+
+## 263. `:sim-hook` overrides the similarity table for a task function
+
+`chunks-similarity` (`declarative-memory.lisp:2628`) calls the `:sim-hook`
+function with the two values first and uses its result whenever it is a
+number; only a non-number falls through to the explicit Sji table and
+`:ms`/`:md`. `bst-ppm` sets `(sgp :ppm 40 :sim-hook "bst-number-sims")`, where
+`number-sims` is `(|a-b|)/-300`: `decide-under`'s `goal-length =d, c-len =d`
+then partially matches at `-0.23 > :md` (default `-1.0`), where the default
+`md` similarity `-1.0 > -1.0` would have failed and the production would never
+fire. The hook is a task command (`add-act-r-command`), so the engine resolves
+it through `user_fns` and evaluates it with the bounded evaluator (which now
+understands `when`/`unless`/`numberp`/`symbolp`/`stringp`).
