@@ -1938,6 +1938,10 @@ pub struct Engine {
     seq: u64,
     time_ms: i64,
     limit_ms: i64,
+    /// Events evaluated in the current `run` — ACT-R's `event-count`
+    /// (`run-sched-queue`, `scheduling.lisp:627`), the second value of
+    /// `(run time)`'s `(values seconds events break)`.
+    run_events: u64,
     out_lines: Vec<String>,
     /// Commands the model itself fired during a run (`output-key`, …), as
     /// `(name, model, key)`. ACT-R calls these *inside* the run, so their
@@ -2366,6 +2370,7 @@ impl Engine {
             seq: 0,
             time_ms: 0,
             limit_ms: (run_secs * 1000.0).round() as i64,
+            run_events: 0,
             out_lines: Vec::new(),
             fired_commands: Vec::new(),
             exec_prods: Vec::new(),
@@ -3735,6 +3740,7 @@ impl Engine {
     /// The server then loops `run_slice` (dispatching pending device actions)
     /// until it returns `false`. Returns `(limit_ms, full, should_run)`.
     pub fn run_begin(&mut self, name: &str, secs: f64) -> (i64, bool, bool) {
+        self.run_events = 0;
         match name {
             "run-full-time" => {
                 let end = self.time_ms + (secs * 1000.0).round() as i64;
@@ -3765,6 +3771,12 @@ impl Engine {
     /// Drain the device actions a click queued, for the server to dispatch.
     pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
         std::mem::take(&mut self.pending_device_actions)
+    }
+
+    /// Events evaluated in the current `run` (`run-sched-queue`'s
+    /// `event-count`).
+    pub fn run_events(&self) -> u64 {
+        self.run_events
     }
 
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
@@ -3886,6 +3898,7 @@ impl Engine {
 
     fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
+        self.run_events = 0;
         self.run_to_limit(limit_ms, full, false)
     }
 
@@ -3938,6 +3951,7 @@ impl Engine {
             self.exec(next.event, show)?;
             self.bold_record();
             processed = true;
+            self.run_events += 1;
             if yield_on_action && !self.pending_device_actions.is_empty() {
                 self.device_action_yield = true;
                 break;

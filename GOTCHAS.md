@@ -4419,3 +4419,21 @@ fed it to `validate-lhs`, which rejected the whole production ("first item on
 lhs is not a valid command") and dropped it — `creating-an-image` lost all
 five of its productions. The docstring is now skipped, matching the optional
 documentation string a chunk type already accepts.
+
+## 265. The server accepts clients concurrently; `run` returns its event count
+
+The Lisp server answers a second connection immediately, and
+`tutorial_unit2code_initial` opens one (`actr.connection()`, which sends
+`new-symbol` and waits) beside the driver. The Rust listener served clients
+*sequentially*, so the second `new-symbol` blocked behind the first
+connection's run. Each accepted stream is now handled on its own thread with
+its own `Session` (the existing per-connection isolation, just concurrent).
+
+`run`'s second value is ACT-R's `event-count` (`run-sched-queue`,
+`scheduling.lisp:627`), which `tutorial_unit2code_initial` prints. The engine
+counts each event it evaluates. It does not yet model three internal ACT-R
+events, so its count runs low (the addition model's `run(1)` gives 69 where
+the ref's 77 wants the `production`-buffer `module-request` scheduled per
+selection (`procedural.lisp:2594`), the goal's `clear-delayed-goal`
+(`goal.lisp:286`), and the history recorder's `record-buffer-trace-notes`).
+The trace and the time value match; only the count keeps that test failing.

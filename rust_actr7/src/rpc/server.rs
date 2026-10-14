@@ -15,15 +15,23 @@ use crate::rpc::{
     callback, parse_reply, parse_request, read_message, reply_err, reply_ok, write_message, Method,
 };
 
-/// Serve one client at a time on `addr` (TCP). `root` is the ACT-R checkout.
+/// Serve clients on `addr` (TCP). `root` is the ACT-R checkout.
+///
+/// Each connection is handled on its own thread so a second client (the
+/// Python `actr.connection()` a test may open alongside the driver) is
+/// answered immediately instead of blocking behind the first — the Lisp
+/// server accepts clients concurrently too.
 pub fn serve(addr: &str, root: std::path::PathBuf, seed: (u64, u64)) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr)?;
     for stream in listener.incoming() {
         let stream = stream?;
-        let mut session = Session::new(root.clone(), seed);
-        if let Err(e) = handle(&mut session, stream) {
-            eprintln!("rpc: connection ended: {e}");
-        }
+        let root = root.clone();
+        std::thread::spawn(move || {
+            let mut session = Session::new(root, seed);
+            if let Err(e) = handle(&mut session, stream) {
+                eprintln!("rpc: connection ended: {e}");
+            }
+        });
     }
     Ok(())
 }
@@ -168,7 +176,11 @@ fn run_interleaved(
     if !should_run {
         return reply_ok(
             id,
-            Json::Arr(vec![Json::Float(session.time_secs()), Json::Int(0), Json::Null]),
+            Json::Arr(vec![
+            Json::Float(session.time_secs()),
+            Json::Int(session.run_events() as i64),
+            Json::Null,
+        ]),
         );
     }
     loop {
@@ -190,11 +202,13 @@ fn run_interleaved(
     }
     reply_ok(
         id,
-        Json::Arr(vec![Json::Float(session.time_secs()), Json::Int(0), Json::Null]),
+        Json::Arr(vec![
+            Json::Float(session.time_secs()),
+            Json::Int(session.run_events() as i64),
+            Json::Null,
+        ]),
     )
-}
-
-fn dispatch(
+}fn dispatch(
     session: &mut Session,
     conn: &mut Conn,
     method: Method,

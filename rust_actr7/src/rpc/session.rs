@@ -1260,11 +1260,11 @@ impl Session {
         };
         r.map_err(|e: EngineError| e.to_string())?;
         // `run` returns `(values seconds events break)` in ACT-R; the first is
-        // the model time reached (`scheduling.lisp:877`), which `fan-no-pm`'s
-        // task reads as the response time.
+        // the model time reached and the second the event count
+        // (`scheduling.lisp:877`), which `tutorial_unit2code_initial` prints.
         Ok(vec![
             Json::Float(self.time_secs()),
-            Json::Int(0),
+            Json::Int(self.run_events() as i64),
             Json::Null,
         ])
     }
@@ -1299,6 +1299,11 @@ impl Session {
     /// The model time in seconds, for `run`'s first return value.
     pub fn time_secs(&self) -> f64 {
         self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0)
+    }
+
+    /// Events evaluated in the last `run`, for its second return value.
+    pub fn run_events(&self) -> u64 {
+        self.engine.as_ref().map(|e| e.run_events()).unwrap_or(0)
     }
 
     /// Load an ACT-R logical path (`ACT-R:tutorial;unit1;count.lisp`).
