@@ -411,6 +411,11 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        summary table** (`correlation:`/`mean deviation:` plus the targets/foils
        grid), which is `format` output the spec cannot replay — so it is the
        same accepted divergence as the other task-hook refs, not engine work.
+       On the RPC side the Python task *does* print the table, and after
+       GOTCHAS #262 (decode-string for `mod-focus`, `buffer-slot-value`,
+       `run` returning the model time) its trace and response times match the
+       ref exactly; only the port's `True` vs the Lisp `T` print differs, so
+       the verdict stays unenabled.
        `fan`/`fan-w-tree` additionally need the `break` mechanism
        (`break-fan-run` → `pbreak encode-person`), which prints the production
        text and pauses the run.
