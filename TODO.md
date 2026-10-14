@@ -669,20 +669,31 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
           already at the target, emit the `MOVE-CURSOR LOC …` line but run
           no ply (`motor.lisp:1316`), so the manual module stays free.
 
-       ### bst-learn / bst-learn-ppm / bst-learn-ppm-w-tree (next)
+       ### bst-learn (in progress, prefix 392/8872) / bst-learn-ppm (69)
 
-       These share the machinery above but their device sidecars still lack
-       the per-trial `MODIFY-LINE`/`REMOVE-LINE` ops: `bst-learn` diverges at
-       line 157 (the first `update-current-line` redraw) and the ppm pair at
-       69. `bst-learn` is 15 trials, each with its own buttons
-       (`bst-learn.device.sexp`) and ~8 window updates per trial; the geometry
-       follows the same rule as `bst-nolearn` (line starts at (75,135), a
-       length-L line ends at (75+L,135); a click adds or subtracts its
-       `:action` length, and `update-current-line` redraws/removes). The op
-       *times* are the ref's `visicon-update` times. Note `bst-learn`'s first
-       pass also needs the utility-learning trace to line up (it does for
-       `bst-nolearn`, so the ppm/learning machinery is largely in place).
-       - GOTCHAS #247–#255 cover the landed bst/motor/vision/utility
+       `bst-learn`'s sidecar now has the full per-trial `update-current-line`
+       redraws (derived from the ref by a throwaway script: per trial, pair
+       the ref's click-triggered `production-fired` choices with its
+       `visicon-update` times and replay the task rule — a click adds or
+       subtracts its `:action` length, and `update-current-line` adds /
+       modifies / removes the line at (75,135)). Its common prefix is now 392
+       (was 157). The run-boundary fix (GOTCHAS #256) and a `(CLEAR ms)` at
+       each trial start (a new window, which re-encodes the gone attended
+       object) landed with it.
+
+       **Next blocker (bst-learn, line 393):** the trial-start auto-stuff
+       picks a feature number one lower than the ref (`visual-location18` vs
+       `19`). Only the *trial-start* auto-stuffs differ; the within-trial
+       `find-location` picks and everything else match. So the ref's new
+       window has one more leftmost-eligible feature (or a different
+       `random-item` draw) than ours. Investigate the visicon feature count
+       and the `random-item` RNG draw at a `build-display`.
+
+       **bst-learn-ppm / -w-tree** diverge much earlier (line 69): after
+       `encode-line-goal` the ref fires `decide-under` at 1.055 where ours
+       waits for the next window wave. That is a model/strategy difference,
+       not the device timeline — a separate investigation.
+       - GOTCHAS #247–#256 cover the landed bst/motor/vision/utility
          semantics.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
