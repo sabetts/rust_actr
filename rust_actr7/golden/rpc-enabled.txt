@@ -8,6 +8,8 @@
 # One test name per line. Grow this list as the command surface fills in.
 addition
 count
+bst-learn
+bst-nolearn
 paired-learning
 paired-learning-dynamic
 semantic

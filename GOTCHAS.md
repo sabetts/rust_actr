@@ -4354,3 +4354,26 @@ re-encode draws. The engine records each copy's location slots
 the old test (`vl_copied_from`'s base name still present) missed the rebuild,
 adding a spurious draw at t=25.799 that shifted `bst-learn`'s trial-5
 `stuff-visloc-buffer` pick.
+
+## 261. A window button's `:action` runs as a client callback mid-run
+
+`add-button-to-exp-window`'s `:action` is a command the *client* owns
+(`bst`'s `bst-button-pressed`); when the device processes a click the Lisp
+server calls it back synchronously, and the task's handler issues more window
+commands (`add-line-for-exp-window`) that the server applies at that model
+time. The Rust engine never fired the action, so `bst`'s display never changed
+and its `run` stopped after the first trial (the golden path sidesteps this by
+replaying the task's resulting `ADD-LINE`/`MODIFY-LINE` ops from the device
+sidecar). The server now drives `run` in slices: the engine stops as soon as a
+click queues a button's action (`record_click_action`, scanning the live ovals
+topmost-first) and `run_interleaved` dispatches it through
+`call_remote_reentrant` — releasing the `&mut Session` borrow so the client's
+nested window commands are serviced — then resumes. Only the RPC path stores
+actions, so the golden timeline is unchanged.
+
+`clear_window` no longer schedules the attended-location re-encode itself: the
+`proc_display` that `now_display` queues at the same instant sees the feature
+gone and schedules it, so doing both emitted the
+`encoding-complete`/`no visual-object found` pair twice per rebuilt display
+(`bst-learn`'s trial boundary). `add-button-to-exp-window`/`modify-line-for-
+exp-window` are now part of the server command table.

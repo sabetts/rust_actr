@@ -1505,6 +1505,7 @@ impl Engine {
                     }
                     "CLICK-MOUSE" | "HOLD-MOUSE" => {
                         self.zz_mouse_down = true;
+                        self.record_click_action();
                         if show {
                             self.emit(
                                 "MOUSE",

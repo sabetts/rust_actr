@@ -32,6 +32,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
+use crate::json::Json;
 use crate::model::{
     Chunk, ChunkDesc, LhsItem, Model, Pattern, Production, Reward, RhsAction, SlotOp,
 };
@@ -2026,6 +2027,18 @@ pub struct Engine {
     /// Live window items: item key -> the visicon feature names it created
     /// (`add-text-to-exp-window` etc.), for `remove-items-from-exp-window`.
     window_items: Vec<(String, Vec<String>)>,
+    /// Live window buttons' `:action` forms: item key -> (command, args).
+    /// `add-button-to-exp-window` stores the action with the item; a click on
+    /// the button queues it for the server to dispatch to the client
+    /// (`bst-button-pressed`). Only the RPC path populates this — the
+    /// scripted timeline replays the task's resulting window ops directly.
+    window_actions: HashMap<String, (String, Vec<Json>)>,
+    /// Device actions queued by a click, in order. The run loop yields while
+    /// this is non-empty so the server can call the client back and apply the
+    /// window commands the action issues (`bst`'s `button-pressed`).
+    pending_device_actions: Vec<(String, Vec<Json>)>,
+    /// Set by `run_slice` when it stopped early for a pending device action.
+    device_action_yield: bool,
     /// Auto-naming counter for live window items (`TEXT-VDI-{n}`).
     window_item_seq: u64,
     /// BOLD demand recorder (`other-files/bold.lisp` + the buffer-trace):
@@ -2464,6 +2477,9 @@ impl Engine {
             window_origin,
             display_queued_ms: None,
             window_items: Vec::new(),
+            window_actions: HashMap::new(),
+            pending_device_actions: Vec::new(),
+            device_action_yield: false,
             window_item_seq: 0,
             bold_buffers: Vec::new(),
             bold_open: HashMap::new(),
@@ -3698,6 +3714,42 @@ impl Engine {
     /// `Stopped because ...` terminator, exactly like Lisp `run`
     /// (`framework/scheduling.lisp:816`, which bounds each run relative to
     /// the current model time).
+    /// `run-full-time`/`run-until-time`, push the hidden dummy at the end.
+    /// The server then loops `run_slice` (dispatching pending device actions)
+    /// until it returns `false`. Returns `(limit_ms, full, should_run)`.
+    pub fn run_begin(&mut self, name: &str, secs: f64) -> (i64, bool, bool) {
+        match name {
+            "run-full-time" => {
+                let end = self.time_ms + (secs * 1000.0).round() as i64;
+                self.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
+                (end, true, true)
+            }
+            "run-until-time" => {
+                let end = (secs * 1000.0).round() as i64;
+                if end > self.time_ms {
+                    self.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
+                    (end, false, true)
+                } else {
+                    (end, false, false)
+                }
+            }
+            _ => (self.time_ms + (secs * 1000.0).round() as i64, false, true),
+        }
+    }
+
+    /// One slice of an interleaved run: run toward `limit_ms`, stopping early
+    /// if a click has queued a client device action. Returns `true` when it
+    /// yielded so the caller can dispatch the action and resume.
+    pub fn run_slice(&mut self, limit_ms: i64, full: bool) -> Result<bool, EngineError> {
+        self.run_to_limit(limit_ms, full, true)?;
+        Ok(self.device_action_yield)
+    }
+
+    /// Drain the device actions a click queued, for the server to dispatch.
+    pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
+        std::mem::take(&mut self.pending_device_actions)
+    }
+
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
         self.zz_run_step_mode(secs, false).map(|_| ())
     }
@@ -3816,8 +3868,22 @@ impl Engine {
     }
 
     fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
-        self.schedule_display();
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
+        self.run_to_limit(limit_ms, full, false)
+    }
+
+    /// The run loop shared by `run`/`run-full-time`/`run-until-time`. With
+    /// `yield_on_action` it stops as soon as a click has queued a client
+    /// device action, without emitting the terminator, so the server can
+    /// dispatch the action and then resume with `run_slice`.
+    fn run_to_limit(
+        &mut self,
+        limit_ms: i64,
+        full: bool,
+        yield_on_action: bool,
+    ) -> Result<bool, EngineError> {
+        self.schedule_display();
+        self.device_action_yield = false;
         let mut processed = false;
         loop {
             // `skip-unnecessary-events` runs before the stop check, so a
@@ -3855,6 +3921,10 @@ impl Engine {
             self.exec(next.event, show)?;
             self.bold_record();
             processed = true;
+            if yield_on_action && !self.pending_device_actions.is_empty() {
+                self.device_action_yield = true;
+                break;
+            }
             if self.zz_break_hit {
                 self.zz_break_hit = false;
                 break;

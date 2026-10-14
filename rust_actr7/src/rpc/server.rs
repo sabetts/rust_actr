@@ -118,6 +118,76 @@ fn call_remote_reentrant(
     }
 }
 
+/// Drain the trace and the model-fired commands (`output-key`, …) to their
+/// monitors. ACT-R fires those inside the run, so a task reads its handler's
+/// effect as soon as `run` returns; a handler can in turn emit trace, so drain
+/// until both are quiet.
+fn drain(session: &mut Session, conn: &mut Conn) {
+    for _ in 0..32 {
+        let lines = session.take_trace();
+        for line in lines {
+            session.deliver_trace(&line, conn);
+        }
+        let fired = session.take_fired_commands();
+        if fired.is_empty() {
+            break;
+        }
+        for (cmd, model_name, key) in fired {
+            let a = vec![Json::Str(model_name.clone()), Json::Str(key)];
+            for (monitor, remote) in session.simple_monitors(&cmd) {
+                if remote {
+                    let _ = call_remote_reentrant(
+                        session,
+                        conn,
+                        &monitor,
+                        Some(&model_name),
+                        a.clone(),
+                    );
+                } else {
+                    let _ = session.evaluate(&monitor, Some(&model_name), &a, conn);
+                }
+            }
+        }
+    }
+}
+
+/// A `run`/`run-full-time`/`run-until-time` driven in slices. The engine stops
+/// as soon as a click queues a client-owned device action (a window button's
+/// `:action`, e.g. `bst`'s `bst-button-pressed`); the server calls it back,
+/// services the window commands it issues, and resumes the run. Without this a
+/// task's button handler never ran and its display never changed.
+fn run_interleaved(
+    session: &mut Session,
+    conn: &mut Conn,
+    name: &str,
+    args: &[Json],
+    id: Option<&Json>,
+) -> Json {
+    let secs = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+    let (limit, full, should_run) = session.run_begin(name, secs);
+    if !should_run {
+        return reply_ok(id, Json::Arr(vec![Json::Int(0), Json::Int(0), Json::Null]));
+    }
+    loop {
+        match session.run_slice(limit, full) {
+            Ok(yielded) => {
+                drain(session, conn);
+                if !yielded {
+                    break;
+                }
+            }
+            Err(e) => return reply_err(id, &e),
+        }
+        let actions = session.take_pending_device_actions();
+        for (cmd, a) in actions {
+            if let Err(e) = call_remote_reentrant(session, conn, &cmd, None, a) {
+                return reply_err(id, &e.to_string());
+            }
+        }
+    }
+    reply_ok(id, Json::Arr(vec![Json::Int(0), Json::Int(0), Json::Null]))
+}
+
 fn dispatch(
     session: &mut Session,
     conn: &mut Conn,
@@ -212,38 +282,20 @@ fn dispatch(
             } else {
                 Vec::new()
             };
-            let result = session.evaluate(&name, model, &args, conn);
+            let result = if matches!(
+                name.as_str(),
+                "run" | "run-full-time" | "run-until-time"
+            ) {
+                return run_interleaved(session, conn, &name, &args, id);
+            } else {
+                session.evaluate(&name, model, &args, conn)
+            };
             // Stream any trace the command produced to the trace monitors, and
             // dispatch the commands the model itself fired (`output-key`, …)
             // to their monitors. ACT-R fires those *inside* the run, so a task
             // reads its handler's effect as soon as `run` returns; a handler
             // can in turn emit trace, so drain until both are quiet.
-            for _ in 0..32 {
-                let lines = session.take_trace();
-                for line in lines {
-                    session.deliver_trace(&line, conn);
-                }
-                let fired = session.take_fired_commands();
-                if fired.is_empty() {
-                    break;
-                }
-                for (cmd, model_name, key) in fired {
-                    let a = vec![Json::Str(model_name.clone()), Json::Str(key)];
-                    for (monitor, remote) in session.simple_monitors(&cmd) {
-                        if remote {
-                            let _ = call_remote_reentrant(
-                                session,
-                                conn,
-                                &monitor,
-                                Some(&model_name),
-                                a.clone(),
-                            );
-                        } else {
-                            let _ = session.evaluate(&monitor, Some(&model_name), &a, conn);
-                        }
-                    }
-                }
-            }
+            drain(session, conn);
             match result {
                 Ok(values) => reply_ok(id, Json::Arr(values)),
                 Err(e) => reply_err(id, &e),

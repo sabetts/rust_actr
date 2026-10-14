@@ -144,6 +144,7 @@ pub const BUILTINS: &[&str] = &[
     "add-button-to-exp-window",
     "remove-items-from-exp-window",
     "modify-text-for-exp-window",
+    "modify-line-for-exp-window",
     "open-exp-window",
     "install-device",
     "process-events",
@@ -1150,10 +1151,11 @@ impl Session {
                 let (x, y) = (opt_i(opts, "x", 0), opt_i(opts, "y", 0));
                 let (w, h) = (opt_i(opts, "width", 75), opt_i(opts, "height", 20));
                 let color = opt_str(opts, "color", "gray");
+                let action = parse_action(option(opts, "action"));
                 let key = self
                     .engine
                     .as_mut()
-                    .map(|e| e.add_window_button(&text, x, y, w, h, &color))
+                    .map(|e| e.add_window_button(&text, x, y, w, h, &color, action))
                     .unwrap_or_default();
                 Ok(vec![Json::Str(key)])
             }
@@ -1172,6 +1174,16 @@ impl Session {
                 let y = option(opts, "y").and_then(|j| j.as_f64()).map(|v| v as i64);
                 if let Some(eng) = &mut self.engine {
                     eng.modify_window_text(&key, x, y);
+                }
+                Ok(vec![Json::Null])
+            }
+            "modify-line-for-exp-window" => {
+                let key = args.first().map(json_to_text).unwrap_or_default();
+                let start = pair(args.get(1));
+                let end = pair(args.get(2));
+                let color = args.get(3).and_then(|a| a.as_str());
+                if let Some(eng) = &mut self.engine {
+                    eng.modify_window_line(&key, start, end, color);
                 }
                 Ok(vec![Json::Null])
             }
@@ -1240,6 +1252,33 @@ impl Session {
         // `run` returns `(values seconds events break)` in ACT-R; the client
         // ignores them (`actr.run` returns the list).
         Ok(vec![Json::Int(0), Json::Int(0), Json::Null])
+    }
+
+    /// Interleaved-run support for the server: prepare the absolute limit and
+    /// the hidden dummy (`run_begin`), then drive the run in slices so a click
+    /// can dispatch its client-owned `:action`.
+    pub fn run_begin(&mut self, name: &str, secs: f64) -> (i64, bool, bool) {
+        self.engine
+            .as_mut()
+            .map(|e| e.run_begin(name, secs))
+            .unwrap_or((0, false, false))
+    }
+
+    /// One run slice; `true` when it yielded for a pending device action.
+    pub fn run_slice(&mut self, limit_ms: i64, full: bool) -> Result<bool, String> {
+        self.engine
+            .as_mut()
+            .ok_or_else(|| "no model loaded".to_string())?
+            .run_slice(limit_ms, full)
+            .map_err(|e| e.to_string())
+    }
+
+    /// Drain the device actions a click queued, for the server to dispatch.
+    pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
+        self.engine
+            .as_mut()
+            .map(|e| e.take_pending_device_actions())
+            .unwrap_or_default()
     }
 
     /// Load an ACT-R logical path (`ACT-R:tutorial;unit1;count.lisp`).
@@ -1571,6 +1610,20 @@ fn opt_i(options: Option<&Json>, key: &str, default: i64) -> i64 {
         .and_then(|j| j.as_f64())
         .map(|v| v.round() as i64)
         .unwrap_or(default)
+}
+
+/// `add-button-to-exp-window`'s `:action`: a command name, or a list whose
+/// head is the command and whose tail is its arguments
+/// (`("bst-button-pressed" 15 "under")`).
+fn parse_action(a: Option<&Json>) -> Option<(String, Vec<Json>)> {
+    match a? {
+        Json::Str(s) => Some((s.clone(), Vec::new())),
+        Json::Arr(items) => {
+            let name = items.first().and_then(|j| j.as_str())?.to_string();
+            Some((name, items[1..].to_vec()))
+        }
+        _ => None,
+    }
 }
 
 /// A string option from an `[["key",value], …]` list.

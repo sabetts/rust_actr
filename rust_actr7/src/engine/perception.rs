@@ -726,7 +726,7 @@ impl Engine {
             };
             if take_button {
                 let b = &due_buttons[bi];
-                self.add_window_button(&b.text, b.x, b.y, b.width, b.height, &b.color);
+                self.add_window_button(&b.text, b.x, b.y, b.width, b.height, &b.color, None);
                 bi += 1;
             } else {
                 let l = &due_lines[li];

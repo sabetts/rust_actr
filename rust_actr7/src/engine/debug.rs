@@ -1790,6 +1790,7 @@ impl Engine {
     /// `clear-exp-window`: drop all live window items and visicon features.
     pub fn clear_window(&mut self) {
         self.window_items.clear();
+        self.window_actions.clear();
         // `process-display`'s `:delete-all` collects attended features into
         // `transfer-finsts` (`vision.lisp:1656`), so a rebuilt display can
         // re-attach their finst (`transfer-finst`, `vision.lisp:2306`).
@@ -1800,27 +1801,11 @@ impl Engine {
         // `:visual-attention-latency`. The device timeline reaches that from
         // `proc_display`, which only sees a clear through `pending_clears`
         // (the scripted `CLEAR` ops). A client `clear-exp-window` empties the
-        // visicon here, so it has to schedule the re-encode itself — without
-        // it a following production sees `?visual> state free` 85 ms early
-        // and fires at 5.050 instead of 5.135.
-        if let Some(loc) = self.last_attention.clone() {
-            if self.cfg.emma {
-                let end = self.emma_loc_xyz(&loc);
-                self.emma_attention_hook(end);
-            } else {
-                self.visual_busy = true;
-                let at = self.time_ms + self.randomize_ms(self.cfg.attention_ms);
-                self.push(
-                    at,
-                    Prio::Num(0),
-                    Out::Medium,
-                    Event::EncodingComplete {
-                        loc,
-                        requested: false,
-                    },
-                );
-            }
-        }
+        // visicon here, and the `proc_display` that `now_display` queues below
+        // then sees the attended location's feature gone and schedules the
+        // re-encode itself — scheduling it here too would emit the
+        // `encoding-complete`/`no visual-object found` pair twice
+        // (`bst-learn`'s per-trial window rebuild).
         self.now_display();
     }
 
@@ -1988,6 +1973,7 @@ impl Engine {
         width: i64,
         height: i64,
         color: &str,
+        action: Option<(String, Vec<Json>)>,
     ) -> String {
         let key = format!("BUTTON-VDI-{}", self.window_item_seq);
         self.window_item_seq += 1;
@@ -2056,8 +2042,42 @@ impl Engine {
             names.extend(tnames.iter().cloned());
         }
         self.window_items.push((key.clone(), names));
+        if let Some(action) = action {
+            self.window_actions.insert(key.clone(), action);
+        }
         self.now_display();
         key
+    }
+
+    /// Queue the `:action` of the window button under the cursor, if any
+    /// (`uwi.lisp`'s button press). ACT-R tests the buttons topmost-first, and
+    /// `window_items` is in add order, so scan in reverse. The click lands on
+    /// the button's oval (`build-vis-locs-for`'s `oval` feature).
+    pub(super) fn record_click_action(&mut self) {
+        let (mx, my, _) = self.zz_mouse_pos;
+        let hit = self
+            .window_items
+            .iter()
+            .rev()
+            .find_map(|(key, names)| {
+                if !self.window_actions.contains_key(key) {
+                    return None;
+                }
+                let under = names.iter().any(|n| {
+                    self.features.iter().any(|f| {
+                        &f.name == n
+                            && f.kind == "OVAL"
+                            && (mx - f.x).abs() <= f.width / 2
+                            && (my - f.y).abs() <= f.height / 2
+                    })
+                });
+                under.then(|| key.clone())
+            });
+        if let Some(key) = hit {
+            if let Some((cmd, args)) = self.window_actions.get(&key).cloned() {
+                self.pending_device_actions.push((cmd, args));
+            }
+        }
     }
 
     /// `remove-items-from-exp-window`: drop the named items' features.
@@ -2078,6 +2098,41 @@ impl Engine {
             self.features.retain(|f| !dropped.contains(&f.name));
             self.now_display();
         }
+    }
+
+    /// `modify-line-for-exp-window` (`uwi.lisp:490`): redraw the line item.
+    /// ACT-R mutates the `v-liner` in place and `internal-modify-visicon-
+    /// features` queues an `:update`, so the feature keeps its identity (and
+    /// finst); `color` is only changed when supplied (`colorp`).
+    pub fn modify_window_line(
+        &mut self,
+        key: &str,
+        start: (i64, i64),
+        end: (i64, i64),
+        color: Option<&str>,
+    ) {
+        let Some((_, names)) = self.window_items.iter().find(|(k, _)| k == key) else {
+            return;
+        };
+        let names = names.clone();
+        let origin = self.window_origin;
+        for f in self.features.iter_mut().filter(|f| names.contains(&f.name)) {
+            let color = color
+                .map(str::to_string)
+                .or_else(|| {
+                    f.extra
+                        .iter()
+                        .find(|(k, _)| k == "COLOR")
+                        .and_then(|(_, v)| match v {
+                            Value::Sym(s) => Some(s.clone()),
+                            _ => None,
+                        })
+                })
+                .unwrap_or_else(|| "BLACK".to_string());
+            set_line_geometry(f, start, end, origin, &color);
+            f.tstamp_ms = self.time_ms;
+        }
+        self.now_display();
     }
 
     /// `modify-text-for-exp-window`: move the text item's features by delta.
