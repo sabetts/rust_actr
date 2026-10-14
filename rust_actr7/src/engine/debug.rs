@@ -776,6 +776,25 @@ impl Engine {
         b.chunk.as_ref().and_then(|c| c.name.clone())
     }
 
+    /// `buffer-slot-value` (`buffers.lisp:1030`): the value of `slot` on the
+    /// chunk in `buffer`, encoded the way `encode-string`
+    /// (`dispatcher.lisp:921`) does for the remote protocol — a string value
+    /// is wrapped in single quotes (`"k"` -> `'k'`), which is what the Python
+    /// tutorial tasks compare against.
+    pub fn buffer_slot_value(&self, buffer: &str, slot: &str) -> Option<String> {
+        let b = self.buffers.get(&buffer.to_uppercase())?;
+        let c = b.chunk.as_ref()?;
+        let v = c.get(&slot.to_uppercase());
+        if v == Value::Nil {
+            None
+        } else {
+            Some(match v {
+                Value::Str(s) => format!("'{s}'"),
+                other => other.show(),
+            })
+        }
+    }
+
     /// `buffer-status` (`procedural.lisp`): the buffer query state.
     pub fn buffer_status(&self, buffer: &str) -> &'static str {
         match self.buffers.get(&buffer.to_uppercase()) {

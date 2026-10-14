@@ -79,6 +79,7 @@ pub const BUILTINS: &[&str] = &[
     "buffer-chunk",
     "buffer-status",
     "buffer-read",
+    "buffer-slot-value",
     "clear-buffer",
     "set-buffer-chunk",
     "schedule-event-relative",
@@ -766,6 +767,15 @@ impl Session {
                 let v = self.engine.as_ref().and_then(|e| e.buffer_read(b));
                 Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
             }
+            "buffer-slot-value" => {
+                let b = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let slot = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
+                let v = self
+                    .engine
+                    .as_ref()
+                    .and_then(|e| e.buffer_slot_value(b, slot));
+                Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
+            }
             "buffer-status" => {
                 let names: Vec<String> = args
                     .iter()
@@ -1249,9 +1259,14 @@ impl Session {
             _ => unreachable!(),
         };
         r.map_err(|e: EngineError| e.to_string())?;
-        // `run` returns `(values seconds events break)` in ACT-R; the client
-        // ignores them (`actr.run` returns the list).
-        Ok(vec![Json::Int(0), Json::Int(0), Json::Null])
+        // `run` returns `(values seconds events break)` in ACT-R; the first is
+        // the model time reached (`scheduling.lisp:877`), which `fan-no-pm`'s
+        // task reads as the response time.
+        Ok(vec![
+            Json::Float(self.time_secs()),
+            Json::Int(0),
+            Json::Null,
+        ])
     }
 
     /// Interleaved-run support for the server: prepare the absolute limit and
@@ -1279,6 +1294,11 @@ impl Session {
             .as_mut()
             .map(|e| e.take_pending_device_actions())
             .unwrap_or_default()
+    }
+
+    /// The model time in seconds, for `run`'s first return value.
+    pub fn time_secs(&self) -> f64 {
+        self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0)
     }
 
     /// Load an ACT-R logical path (`ACT-R:tutorial;unit1;count.lisp`).
@@ -2097,6 +2117,25 @@ mod tests {
 
 /// A `goal-focus` argument: a flat `["ISA","type","slot","val", …]` list (a
 /// chunk spec) or a chunk name string.
+/// `decode-string-names` (`dispatcher.lisp:2413`) for one remote argument:
+/// `mod-focus-external` (`goal.lisp:375`) applies it to every slot/value.
+/// A `'quoted'` string is the *string* it wraps (`'lawyer'` -> `"lawyer"`);
+/// anything else is a symbol name (`person` -> `PERSON`). Numbers pass
+/// through unchanged.
+fn decode_string_name(j: &Json) -> Sexp {
+    match j {
+        Json::Str(s) => {
+            let b = s.as_bytes();
+            if b.len() > 1 && b[0] == b'\'' && b[b.len() - 1] == b'\'' {
+                Sexp::Str(s[1..s.len() - 1].to_string())
+            } else {
+                Sexp::Sym(s.to_uppercase())
+            }
+        }
+        other => json_to_sexp(other),
+    }
+}
+
 /// A `mod-focus` argument: slot/value pairs, given either as one flat array
 /// (`'{<slot> <value>}*`) or as separate arguments.
 fn mod_focus_slots(args: &[Json]) -> Result<Vec<(String, Sexp)>, String> {
@@ -2110,7 +2149,7 @@ fn mod_focus_slots(args: &[Json]) -> Result<Vec<(String, Sexp)>, String> {
         let k = flat[i]
             .as_str()
             .ok_or_else(|| "mod-focus needs slot names".to_string())?;
-        slots.push((k.to_uppercase(), json_to_sexp(&flat[i + 1])));
+        slots.push((k.to_uppercase(), decode_string_name(&flat[i + 1])));
         i += 2;
     }
     Ok(slots)

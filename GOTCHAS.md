@@ -4377,3 +4377,23 @@ gone and schedules it, so doing both emitted the
 `encoding-complete`/`no visual-object found` pair twice per rebuilt display
 (`bst-learn`'s trial boundary). `add-button-to-exp-window`/`modify-line-for-
 exp-window` are now part of the server command table.
+
+## 262. The remote protocol decodes `'quoted'` strings; `run` returns the model time
+
+The Python client sends a *string* as `'lawyer'` and a *symbol* as `lawyer`
+(`decode-string`, `dispatcher.lisp:911`): `mod-focus-external` (`goal.lisp:375`)
+runs every argument through `decode-string-names`, so `"'lawyer'"` becomes the
+Lisp string `"lawyer"` and `"person"` becomes `PERSON`. The server passed the
+raw JSON through, so `fan-no-pm`'s goal `arg1` was the string `'lawyer'` and
+the `word =person` retrieval never matched `(lawyer ISA meaning word
+"lawyer")` — it failed and the task then crashed on
+`actr.buffer_slot_value(...).lower()`. `mod-focus` now decodes (and
+`buffer-slot-value`, `buffers.lisp:1030`, is implemented — `encode-string`
+wraps a string value in single quotes). `run` now returns
+`(values (ms->seconds time) events break)` (`scheduling.lisp:877`); the task
+reads `run(30)[0]` as its response time, so it was reporting 0.000.
+
+`fan-no-pm`'s trace and response times now match the ref exactly; only the
+client's `output_person_location` boolean format differs (`True` vs the Lisp
+`T`), which is the Python port's own output, so the RPC verdict stays
+unenabled.

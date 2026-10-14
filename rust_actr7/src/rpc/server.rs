@@ -166,7 +166,10 @@ fn run_interleaved(
     let secs = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
     let (limit, full, should_run) = session.run_begin(name, secs);
     if !should_run {
-        return reply_ok(id, Json::Arr(vec![Json::Int(0), Json::Int(0), Json::Null]));
+        return reply_ok(
+            id,
+            Json::Arr(vec![Json::Float(session.time_secs()), Json::Int(0), Json::Null]),
+        );
     }
     loop {
         match session.run_slice(limit, full) {
@@ -185,7 +188,10 @@ fn run_interleaved(
             }
         }
     }
-    reply_ok(id, Json::Arr(vec![Json::Int(0), Json::Int(0), Json::Null]))
+    reply_ok(
+        id,
+        Json::Arr(vec![Json::Float(session.time_secs()), Json::Int(0), Json::Null]),
+    )
 }
 
 fn dispatch(
