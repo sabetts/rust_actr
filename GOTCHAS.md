@@ -4172,3 +4172,72 @@ at its preparation-complete; the mouse path now does too, and
 
 This alone does not make `bst-nolearn` match — the movement *duration* is still
 wrong (see `TODO.md`) — but it is the correct buffer semantics.
+
+## 247. The base motor module's `click-mouse` never releases; the extended one does
+
+`motor.lisp`'s `punch` (which `click-mouse` is, `mouse.lisp:470`) queues only a
+`notify-motor-device` at exec time (`motor.lisp:955`) — no finger-up. The
+extended-motor-actions module redefines `queue-output-events` for `punch`
+(`motor-extension.lisp:1700`) to also schedule a `set-finger-up` at
+`exec2-time` (`init-time + key-release-time`). That `set-finger-up`
+(`motor-extension.lisp:1579`) is scheduled with `:output nil` but *not*
+`:maintenance`, so it wakes conflict resolution — unlike the `release-mouse`
+notification it triggers, which *is* `:maintenance`.
+
+So a `click-mouse` wakes an extra `conflict-resolution` only when the model
+requires `extended-motor-actions`. `ZzMousePrep` must therefore schedule its
+`ZzMouseRelease` only for a `zz_ext` model; scheduling it unconditionally put a
+spurious `CONFLICT-RESOLUTION` at 2.166 in `bst-nolearn`.
+
+## 248. `stuff-visloc-buffer` uses `set-visloc-default`, and `modify-visicon-features` does not refresh the tstamp
+
+`stuff-visloc-buffer` searches with `(default-spec vis-mod)`
+(`vision.lisp:1978`), which is `screen-x lowest :attended new` by default
+(`vision.lisp:3178`) but is *replaced wholesale* by `set-visloc-default`
+(`vision.lisp:4057`). The tracker model calls `(set-visloc-default :attended
+nil)`, so its auto-stuff ignores `new` entirely.
+
+`modify-visicon-features` queues an `:update` and schedules a `proc-display`
+but `process-display`'s `:update` branch (`vision.lisp:1676`) only
+`mod-chunk-fct`s the slots — it does not touch `chunk-visual-tstamp` or
+`chunk-visual-new-p`. So a feature modified long after creation keeps its
+original (old) tstamp, and `checknew` (`vision.lisp:2227`) clears its `new`
+flag. The tracker still stuffs it at 5.500 because its default spec says
+`:attended nil`. Ours hardcoded `:attended new` in `newest_feature`, so once a
+`new`-age gate was added the tracker stopped stuffing. `newest_feature` now
+reads `Model::visloc_default`.
+
+## 249. A visual object's `isa` is `(visual-object <kind>)`
+
+`(chunk-type line (visual-object))` (`vision.lisp`): `line`, `oval` and `text`
+are *subtypes* of `visual-object`. The encoded object therefore matches both
+`isa line` (e.g. bst's `choose-c`) and `isa visual-object`. The engine stores a
+single `ctype`, so `convert_loc_to_object`/the encode path store the feature's
+kind and `isa_matches` (`productions.rs`) treats `visual-object` as a
+supertype of the three kinds.
+
+## 250. A relational slot test may take a variable on its right-hand side
+
+`choose-c` tests `=visual> <= width =difference`, where `=difference` is bound
+by the preceding `=imaginal>` condition. `Engine::rel_test` returned `false`
+for a non-numeric RHS, so the production never matched. The `Gt|Lt|Ge|Le` arm
+now resolves a `Pattern::Var` RHS from the bindings and defers to
+`rel_test_v`.
+
+## 251. `move-cursor`'s Fitts time is in degrees of visual angle
+
+`move-cursor`'s exec is `fitts(cursor-fitts-coeff, r, w)` (`motor.lisp:1281`),
+with both `r` and `w` in degrees of visual angle: `r =
+pm-pixels-to-angle(pixel-distance)` (`device-interface.lisp:743`, default
+viewing distance `ppi × viewing-distance` = 72×15 = 1080) and `w =
+pm-pixels-to-angle(approach-width(w, h, atan2(dy, dx)))`
+(`vision.lisp:3717`). A target with no width/height falls back to the vision
+module's `default-width` (1.0). The virtual cursor starts at the experiment
+window's origin (`open-exp-window`'s `:x`/`:y`, default `(300,300)`) —
+`mouse.lisp:554`, `initialize-cursor`.
+
+## 252. `move-cursor` to the cursor's current position is a no-op
+
+`motor.lisp:1316` aborts the move when `r = 0` and the target's `z` equals the
+cursor's, emitting the `MOVE-CURSOR LOC …` trace line but scheduling no ply —
+so the manual module stays free and the next action can start immediately.

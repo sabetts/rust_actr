@@ -26,6 +26,13 @@ fn dynamic_slot(slot: &str, b: &Bindings) -> String {
 
 /// Whether an LHS match/query item's dynamic slot-name variables are all bound,
 /// so it can be matched now (ACT-R orders conditions by dependency).
+/// `isa` matching including the vision chunk-type hierarchy: `line`, `oval`
+/// and `text` are subtypes of `visual-object` (`(chunk-type line
+/// (visual-object))`, `vision.lisp`), so `isa visual-object` matches them.
+fn isa_matches(ctype: &str, want: &str) -> bool {
+    ctype == want || (want == "VISUAL-OBJECT" && matches!(ctype, "LINE" | "OVAL" | "TEXT"))
+}
+
 fn lhs_dynamic_ready(item: &LhsItem, b: &Bindings) -> bool {
     match item {
         LhsItem::Match { tests, .. } => tests.iter().all(|t| match t.slot.strip_prefix('=') {
@@ -312,7 +319,7 @@ impl Engine {
             if t.slot == "ISA" {
                 if only_isa {
                     if let Pattern::Sym(want) = &t.value {
-                        if want != "CHUNK" && &chunk.ctype != want {
+                        if want != "CHUNK" && !isa_matches(&chunk.ctype, want) {
                             return Ok(false);
                         }
                     }
@@ -323,7 +330,15 @@ impl Engine {
             let got = chunk.get(&slot);
             let ok = match t.op {
                 SlotOp::Gt | SlotOp::Lt | SlotOp::Ge | SlotOp::Le => {
-                    self.rel_test(t.op, &t.value, &got)
+                    // A relational test's right-hand side may be a variable
+                    // bound by an earlier condition (`<= width =difference`).
+                    match &t.value {
+                        Pattern::Var(v) => match b.get(v) {
+                            Some(rhs) => self.rel_test_v(t.op, rhs, &got),
+                            None => false,
+                        },
+                        _ => self.rel_test(t.op, &t.value, &got),
+                    }
                 }
                 SlotOp::Neg => self.test_value(&t.value, &got, &mut *b, true)?,
                 SlotOp::Eq => self.match_eq(buffer, &slot, &t.value, &got, b, ppm)?,

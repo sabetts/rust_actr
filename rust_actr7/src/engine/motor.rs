@@ -1699,6 +1699,57 @@ impl Engine {
             .iter()
             .find(|(s, _)| s == "LOC")
             .and_then(|(_, v)| self.chunk_xy_name(v));
+        // `move-cursor` aborts when the cursor is already at the requested
+        // target (`motor.lisp:1316`, "r=0 is a no-op"): the trace line is
+        // still emitted but no ply runs, so the manual module stays free.
+        if cmd == "MOVE-CURSOR" {
+            if let Some((tx, ty, name)) = &loc {
+                if *tx == self.zz_mouse_pos.0 && *ty == self.zz_mouse_pos.1 {
+                    self.now(
+                        Prio::Num(0),
+                        Out::Low,
+                        Event::Emit {
+                            module: "MOTOR".to_string(),
+                            line: format!("MOVE-CURSOR LOC {name}"),
+                        },
+                    );
+                    return Ok(());
+                }
+            }
+        }
+        // `move-cursor`'s Fitts time uses the target's *approach width*
+        // (`motor.lisp:1318`): the width/height the target presents to the
+        // approach angle, converted to degrees of visual angle
+        // (`approach-width`, `vision.lisp:3717`; `pm-pixels-to-angle`,
+        // `device-interface.lisp:743`). A target with no width/height falls
+        // back to the vision module's `default-width` (the
+        // `:default-target-width` parameter, 1.0).
+        let fit_ms = if cmd == "MOVE-CURSOR" {
+            loc.as_ref().map(|(tx, ty, name)| {
+                let (cx, cy) = (self.zz_mouse_pos.0, self.zz_mouse_pos.1);
+                let r_pix = (((tx - cx) as f32).powi(2) + ((ty - cy) as f32).powi(2)).sqrt();
+                let theta = ((ty - cy) as f32).atan2((tx - cx) as f32);
+                let w_dva = self
+                    .resolve_loc(name)
+                    .ok()
+                    .map(|i| (self.features[i].width, self.features[i].height))
+                    .filter(|&(w, h)| w > 0 && h > 0)
+                    .map(|(w, h)| pm_pixels_to_angle(approach_width(w as f32, h as f32, theta)))
+                    .unwrap_or(1.0);
+                let mut coef = self.cfg.touch_cursor_coeff;
+                if let Some(d) = self.cfg.zz_cdd {
+                    if self.zz_mouse_down {
+                        coef *= 2.0f32.powf(d as f32);
+                    }
+                }
+                let r_dva = pm_pixels_to_angle(r_pix);
+                let fit = (coef * (r_dva / w_dva + 0.5).log2())
+                    .max(self.cfg.min_fitts_ms as f32 / 1000.0);
+                (fit * 1000.0).round() as i64
+            })
+        } else {
+            None
+        };
         // `(class, style-name, fresh-features)`: the details use the class
         // (`type-of`), `compute-prep-time` compares the style-name.
         let (class, style_name, fresh) = match cmd {
@@ -1755,6 +1806,7 @@ impl Engine {
                 cmd: cmd.to_string(),
                 req_ms,
                 loc,
+                fit_ms,
             },
         );
         Ok(())
@@ -2798,6 +2850,34 @@ pub(super) fn minjerk_dist(tm: f32, a: f32, d: f32) -> f32 {
     } else {
         let td = tm / d;
         a * (10.0 * td.powi(3) - 15.0 * td.powi(4) + 6.0 * td.powi(5))
+    }
+}
+
+/// `pm-pixels-to-angle` (`device-interface.lisp:743`) at the default viewing
+/// distance (`ppi × viewing-distance` = 72 × 15): the visual angle in degrees
+/// subtended by `pixels`.
+pub(super) fn pm_pixels_to_angle(pixels: f32) -> f32 {
+    const DIST: f32 = 72.0 * 15.0;
+    (2.0 * (pixels / 2.0 / DIST).atan()).to_degrees()
+}
+
+/// `approach-width` (`vision.lisp:3717`): the effective width in pixels of a
+/// `w` × `h` target seen from approach angle `theta` (radians).
+pub(super) fn approach_width(w: f32, h: f32, theta: f32) -> f32 {
+    use std::f32::consts::{FRAC_PI_2, PI};
+    let critical = h.atan2(w);
+    let mut theta = theta.abs();
+    if theta > FRAC_PI_2 {
+        theta = PI - theta;
+    }
+    if theta == 0.0 {
+        w
+    } else if theta == FRAC_PI_2 {
+        h
+    } else if theta <= critical {
+        w / theta.cos()
+    } else {
+        h / (FRAC_PI_2 - theta).cos()
     }
 }
 

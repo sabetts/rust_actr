@@ -316,6 +316,9 @@ struct Config {
     /// `vision.lisp`): how many attended features are remembered, and how long.
     visual_num_finsts: usize,
     visual_finst_span_ms: i64,
+    /// `:visual-onset-span` (`vision.lisp:3477`, default 0.5 s): how long a
+    /// newly displayed feature stays marked `new` (`checknew`).
+    onset_span_ms: i64,
     dat_ms: i64,
     attention_ms: i64,
     /// `:unstuff-visual-location` (`vision.lisp:3499`): `None` disables the
@@ -1069,6 +1072,7 @@ impl Config {
             visual_num_finsts: sgp_num(&m.params, ":VISUAL-NUM-FINSTS", 4.0)? as usize,
             visual_finst_span_ms: (sgp_num(&m.params, ":VISUAL-FINST-SPAN", 3.0)? * 1000.0).round()
                 as i64,
+            onset_span_ms,
             bll,
             ol,
             act_scale,
@@ -1582,6 +1586,8 @@ enum Event {
         cmd: String,
         req_ms: i64,
         loc: Option<(i64, i64, String)>,
+        /// `move-cursor`'s Fitts time in ms, computed at request time.
+        fit_ms: Option<i64>,
     },
     /// extended-motor-actions: the MOUSE device signal at execution.
     ZzMouseNotify {
@@ -2187,6 +2193,9 @@ impl Engine {
         module_width: usize,
     ) -> Result<Engine, EngineError> {
         let cfg = Config::from_model(&model)?;
+        // `open-exp-window`'s default origin is (300, 300); a model body may
+        // override it (e.g. the extended-motor-actions test model uses (0, 0)).
+        let window_origin = model.window_origin.unwrap_or((300, 300));
         let mut rng = Mt::fresh();
         // `(100 0)` is the extractor's canonical placeholder for a run seed it
         // could not match to a literal (`canon-runs`/`canon-steps`); ACT-R in
@@ -2343,7 +2352,7 @@ impl Engine {
             visicon_pending: Vec::new(),
             visicon_alias: HashMap::new(),
             feat_seq: 0,
-            window_origin: (300, 300),
+            window_origin,
             display_queued_ms: None,
             window_items: Vec::new(),
             window_item_seq: 0,
@@ -2932,8 +2941,10 @@ impl Engine {
         self.al_last_contexts.clear();
         self.zz_mouse_down = false;
         // The virtual mouse cursor's current/device positions
-        // (`mouse.lisp:178`/`:192`).
-        self.zz_mouse_pos = (0, 0, 1080);
+        // (`mouse.lisp:178`/`:192`). The current position starts at the
+        // experiment window's origin (verified against SBCL: for bst the first
+        // `move-cursor` reads `(300 300 1080)`).
+        self.zz_mouse_pos = (self.window_origin.0, self.window_origin.1, 1080);
         self.zz_mouse_cursor = (28, 2);
         self.zz_hands = [
             ZzHand {

@@ -797,7 +797,10 @@ impl Engine {
             .unwrap_or_else(|| feat.name.clone());
         ChunkInst {
             name: Some(name),
-            ctype: "VISUAL-OBJECT".to_string(),
+            // The object's `isa` is `(visual-object <kind>)` (`vision.lisp`:
+            // `(chunk-type line (visual-object))`), so the kind is the stored
+            // type and `visual-object` matches it as a supertype.
+            ctype: feat.kind.clone(),
             slots: Self::object_slots(feat, &pos),
             bare: false,
         }
@@ -996,27 +999,40 @@ impl Engine {
         }
     }
 
+    /// `checknew` (`vision.lisp:2227`): a feature counts as `new` only until
+    /// `:visual-onset-span` (default 0.5 s) has elapsed since its tstamp, and
+    /// it is cleared early once it is attended (a finst is assigned).
+    pub(super) fn feature_is_new(&self, f: &Feature) -> bool {
+        f.new_p && self.time_ms - f.tstamp_ms <= self.cfg.onset_span_ms
+    }
+
     pub(super) fn newest_feature(&mut self) -> Option<Feature> {
         // `stuff-visloc-buffer` (`vision.lisp:1978`) searches with the
         // vision module's `default-spec` = `screen-x lowest :attended new`
         // (`vision.lisp:3178`): the LEFTMOST still-`NEW` column, then the
         // newest-tstamp ties, sorted by name before `random-item`.
+        // `set-visloc-default` replaces that spec (`vision.lisp:4057`); when
+        // the model drops `:attended new` (e.g. the tracker's `:attended nil`)
+        // no `new` filter applies.
+        let require_new = self.visloc_default_attended_new();
         let min_x = self
             .features
             .iter()
-            .filter(|f| f.new_p)
+            .filter(|f| !require_new || self.feature_is_new(f))
             .map(|f| f.x)
             .min()?;
         let top = self
             .features
             .iter()
-            .filter(|f| f.new_p && f.x == min_x)
+            .filter(|f| (!require_new || self.feature_is_new(f)) && f.x == min_x)
             .map(|f| f.tstamp_ms)
             .max()?;
         let mut names: Vec<String> = self
             .features
             .iter()
-            .filter(|f| f.new_p && f.x == min_x && f.tstamp_ms == top)
+            .filter(|f| {
+                (!require_new || self.feature_is_new(f)) && f.x == min_x && f.tstamp_ms == top
+            })
             .map(|f| f.name.clone())
             .collect();
         names.sort();
@@ -1024,6 +1040,19 @@ impl Engine {
         let pick = self.rng_draw(names.len());
         let want = names[pick].clone();
         self.features.iter().find(|f| f.name == want).cloned()
+    }
+
+    /// Whether the default visual-location spec still requires `:attended
+    /// new`. `stuff-visloc-buffer` searches with `(default-spec vis-mod)`,
+    /// which `set-visloc-default` replaces wholesale (`vision.lisp:4057`); the
+    /// module default (`vision.lisp:3178`) is `screen-x lowest :attended new`.
+    fn visloc_default_attended_new(&self) -> bool {
+        for (k, v) in &self.model.visloc_default {
+            if k == ":ATTENDED" {
+                return v.as_sym().is_some_and(|s| s.eq_ignore_ascii_case("NEW"));
+            }
+        }
+        true
     }
 
     /// `assign-finst` / `add-finst` (`vision.lisp:2282`): record or refresh the
@@ -1099,7 +1128,9 @@ impl Engine {
         }
         let mut cands: Vec<Feature> = Vec::new();
         for f in &self.features {
-            if loc_matches(f, &plain)? && loc_rel_matches(f, &rels) {
+            if loc_matches(f, &plain, self.time_ms, self.cfg.onset_span_ms)?
+                && loc_rel_matches(f, &rels)
+            {
                 cands.push(f.clone());
             }
         }
@@ -1199,7 +1230,10 @@ impl Engine {
             .insert("VISUAL-CHUNK0".to_string(), feat.name.clone());
         let inst = ChunkInst {
             name: Some("VISUAL-CHUNK0".to_string()),
-            ctype: "VISUAL-OBJECT".to_string(),
+            // The object's `isa` is `(visual-object <kind>)` (`vision.lisp`:
+            // `(chunk-type line (visual-object))`), so the kind is the stored
+            // type and `visual-object` matches it as a supertype.
+            ctype: feat.kind.clone(),
             slots: Self::object_slots(&feat, &loc),
             bare: false,
         };
@@ -1329,7 +1363,12 @@ fn feature_num(f: &Feature, slot: &str) -> Option<f64> {
 
 /// Visual-location request matching over features. Unconstrained
 /// requests match everything; unknown slots error.
-pub(super) fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bool, EngineError> {
+pub(super) fn loc_matches(
+    feat: &Feature,
+    want: &[(String, Value)],
+    now_ms: i64,
+    onset_span_ms: i64,
+) -> Result<bool, EngineError> {
     for (s, v) in want {
         // Request parameters are written with a leading colon (`:attended`,
         // `:nearest`, ...); treat them as the plain slot for matching.
@@ -1342,7 +1381,7 @@ pub(super) fn loc_matches(feat: &Feature, want: &[(String, Value)]) -> Result<bo
                 }
             }
             ("ATTENDED", Value::Sym(x)) if x == "NEW" => {
-                if !feat.new_p {
+                if !(feat.new_p && now_ms - feat.tstamp_ms <= onset_span_ms) {
                     return Ok(false);
                 }
             }

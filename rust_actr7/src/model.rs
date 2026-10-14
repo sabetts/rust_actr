@@ -351,6 +351,11 @@ pub struct Model {
     /// body on every reset (`model.lisp:983`), so the variable's current
     /// value is re-applied then. `(key, value)`.
     pub set_param_values: Vec<(String, Sexp)>,
+    /// Model-body `(install-device (open-exp-window … :x X :y Y))`: the
+    /// experiment window's origin. `open-exp-window`'s default is (300, 300);
+    /// the visicon offsets window-relative coords by it and the virtual mouse
+    /// cursor starts there (`mouse.lisp:554`).
+    pub window_origin: Option<(i64, i64)>,
     /// Warning blocks from productions rejected by the validator. ACT-R
     /// re-evaluates the model body on `reset`, so these are re-emitted then
     /// (not at load, where the warning monitor isn't installed yet).
@@ -1843,6 +1848,7 @@ fn parse_model(
         hand_start: None,
         audloc_default: Vec::new(),
         set_param_values: Vec::new(),
+        window_origin: None,
         reset_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
@@ -2132,9 +2138,37 @@ fn parse_model(
                     }
                 }
             }
-            // `(install-device ...)`: task device setup (the spec's device
-            // sidecar models the observable effects).
-            "INSTALL-DEVICE" => {}
+            // `(install-device (open-exp-window …))`: task device setup (the
+            // spec's device sidecar models the observable effects). The
+            // nested `open-exp-window`'s `:x`/`:y` give the window origin,
+            // which offsets visicon coords and is where the virtual mouse
+            // cursor starts.
+            "INSTALL-DEVICE" => {
+                if let Some(Sexp::List(win)) = items.get(1) {
+                    if win.first().and_then(|x| x.as_sym()) == Some("OPEN-EXP-WINDOW") {
+                        // `(open-exp-window "name" :visible v :x X :y Y …)`: the
+                        // name is the first argument, so scan for the keywords
+                        // rather than stepping in pairs from the start.
+                        let (mut x, mut y) = (None, None);
+                        for i in 0..win.len() {
+                            match win[i].as_sym() {
+                                Some(":X") => {
+                                    if let Some(Sexp::Int(v)) = win.get(i + 1) {
+                                        x = Some(*v);
+                                    }
+                                }
+                                Some(":Y") => {
+                                    if let Some(Sexp::Int(v)) = win.get(i + 1) {
+                                        y = Some(*v);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        model.window_origin = Some((x.unwrap_or(300), y.unwrap_or(300)));
+                    }
+                }
+            }
             // `(buffer-requires-copies 'buffer)`: the named buffer will not
             // reuse a single chunk (`buffers.lisp:1920`). Recorded so the
             // imaginal/associative-learning source buffers create a fresh

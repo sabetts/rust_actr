@@ -616,18 +616,72 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        (`set-buffer-chunk visual-location visual-location12` vs
        `…-location2` at 2.136) — a separate vision issue.
 
-       Three things must be handled before landing it:
-       (1) `zz-extended-motor-actions` (enabled) also drives `move-cursor`;
-       its target `LOC1` is a bare `define-chunks` chunk with no
-       width/height, so `approach-width` must fall back to the default
-       (ACT-R's `default-width`) rather than computing from zeros — and the
-       spec's *ref* keeps the `MOUSE move-cursor …` line, so that line is
-       not unconditional (gate on trace detail).
-       (2) The cursor's start must be the window origin *when there is a
-       window* and `(0,0)` otherwise (`window_origin` currently defaults to
-       `(300,300)`, which over-shoots zz's `LOC1` by ~340 px).
-       (3) `man_exec_busy` (GOTCHAS #246, landed) holds the buffer through
-       the finish.
+       **IMPLEMENTED (uncommitted work-in-progress; see below).**
+
+       ### WIP status (bst-nolearn prefix 96 → 157; suite green 104/104)
+
+       `bst-nolearn` now matches the ref through line 157 (was 96) and the
+       model runs (14 764 lines vs the ref's 2 484). Both regressions the
+       first pass introduced are fixed: `tracker` (a `set-visloc-default`
+       issue, GOTCHAS #248) and `zz-extended-motor-actions` (the auto-release
+       is extended-motor-actions-only, GOTCHAS #247). Full `cargo test` is
+       green (104/104 enabled).
+
+       Changes made (all verified against the refs / an SBCL probe):
+
+       1. **Mouse Fitts geometry** (`motor.rs`, `events.rs`): `move-cursor`'s
+          exec is `fitts(cursor-fitts-coeff, r, w)` with both `r` and `w` in
+          degrees of visual angle — `r = pm-pixels-to-angle(pixel-dist)`
+          (default dist `ppi*viewing-distance` = 1080) and
+          `w = pm-pixels-to-angle(approach-width(w,h,atan2(dy,dx)))`
+          (`vision.lisp:3717`), falling back to the vision module's
+          `default-width` (`:default-target-width`, 1.0) when the target has
+          no width/height. Computed at request time (`zz_mouse_request`) and
+          carried on `Event::ZzMousePrep.fit_ms`. SBCL probe
+          (`/tmp/opencode/bst_probe.lisp`) confirms `d=4.6978 w=1.3271 →
+          0.20143` for bst's first move.
+       2. **Cursor starts at the window origin** (`engine.rs`): SBCL probe
+          (`/tmp/opencode/bst_probe2.lisp`) shows the first `move-cursor`
+          reads `start=(300 300 1080) target=(325 385 1080)`. `zz_mouse_pos`
+          is initialised from `window_origin`.
+       3. **Window origin from the model body** (`model.rs`, `engine.rs`):
+          `(install-device (open-exp-window … :x X :y Y))` is parsed into
+          `Model::window_origin` (scan for the keywords, since the window
+          name is the first argument). Default stays `(300,300)`. This makes
+          `zz-extended-motor-actions`'s window `(0,0)` (so its `LOC1` move is
+          ~100 ms) while bst's stays `(300,300)`.
+       4. **`MOUSE` trace lines gated on `show`** (`events.rs`): the refs
+          trace `MOUSE` only at `:trace-detail high` (only
+          `zz-extended-motor-actions` has them).
+       5. **Manual buffer held through the movement** (`events.rs`):
+          `ZzMousePrep` sets `man_exec_busy` (GOTCHAS #246).
+       6. **Time-based `new`** (`engine.rs`, `perception.rs`):
+          `checknew` (`vision.lisp:2227`) clears `new` once
+          `tstamp-elapsed > :visual-onset-span` (default **500 ms**,
+          confirmed by probe). Added `Config::onset_span_ms` and
+          `Engine::feature_is_new`; used by `newest_feature` and the
+          `:attended new` query.
+       7. **Encoded object type = the feature's kind** (`perception.rs`,
+          `productions.rs`): the object's `isa` is `(visual-object <kind>)`,
+          so `convert_loc_to_object`/the encode path store `LINE`/`OVAL`/
+          `TEXT`, and `isa_matches` treats `visual-object` as a supertype.
+          Needed because `bst`'s `choose-c` tests `=visual> isa line`.
+       8. **Relational test with a variable RHS** (`productions.rs`):
+          `<= width =difference` binds the RHS from the bindings
+          (`rel_test_v`) instead of always failing. Needed by `choose-c`.
+       9. **No-op `move-cursor` aborts** (`motor.rs`): when the cursor is
+          already at the target, emit the `MOVE-CURSOR LOC …` line but run
+          no ply (`motor.lisp:1316`), so the manual module stays free.
+
+       ### Remaining blockers
+
+       - **bst vision:** after 157 the next divergence is at 2.941 — the ref
+         has `vision visicon-update` where ours has an extra
+         `procedural conflict-resolution`. The ref's `visicon-update` is the
+         *virtual cursor* moving as a visicon feature (`cursor-feature`,
+         `mouse.lisp`); ours does not model the cursor as a visicon feature.
+         After that `ours` runs 14 764 lines (loops) vs the ref's 2 484.
+       - GOTCHAS #247–#252 cover the landed bst/motor/vision semantics.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
        queue-draining terminator ("no events left to process") is *correct*;

@@ -1365,7 +1365,12 @@ impl Engine {
                 });
                 self.zz_maybe_execute();
             }
-            Event::ZzMousePrep { cmd, req_ms, loc } => {
+            Event::ZzMousePrep {
+                cmd,
+                req_ms,
+                loc,
+                fit_ms,
+            } => {
                 if show {
                     self.emit(
                         "MOTOR",
@@ -1395,24 +1400,39 @@ impl Engine {
                 let burst = self.cfg.burst_ms;
                 let (exec_ms, finish_ms, exec2_ms) = match cmd.as_str() {
                     "MOVE-CURSOR" => {
-                        let (tx, ty, _) = loc.clone().unwrap_or((0, 0, String::new()));
-                        let (cx, cy) = (self.zz_mouse_pos.0, self.zz_mouse_pos.1);
-                        let r = (((tx - cx) as f32).powi(2) + ((ty - cy) as f32).powi(2)).sqrt();
-                        let mut coef = self.cfg.touch_cursor_coeff;
-                        if let Some(d) = self.cfg.zz_cdd {
-                            if self.zz_mouse_down {
-                                coef *= 2.0f32.powf(d as f32);
-                            }
-                        }
-                        let fit = (coef * (r / 18.85 + 0.5).log2())
-                            .max(self.cfg.min_fitts_ms as f32 / 1000.0);
-                        let e = init + (fit * 1000.0).round() as i64;
+                        // The request computed the Fitts time from the target's
+                        // approach width; fall back to a plain pixel ratio if
+                        // the target geometry was unavailable.
+                        let e = init
+                            + fit_ms.unwrap_or_else(|| {
+                                let (tx, ty, _) =
+                                    loc.clone().unwrap_or((0, 0, String::new()));
+                                let (cx, cy) = (self.zz_mouse_pos.0, self.zz_mouse_pos.1);
+                                let r = (((tx - cx) as f32).powi(2)
+                                    + ((ty - cy) as f32).powi(2))
+                                .sqrt();
+                                let mut coef = self.cfg.touch_cursor_coeff;
+                                if let Some(d) = self.cfg.zz_cdd {
+                                    if self.zz_mouse_down {
+                                        coef *= 2.0f32.powf(d as f32);
+                                    }
+                                }
+                                let fit = (coef * (r / 18.85 + 0.5).log2())
+                                    .max(self.cfg.min_fitts_ms as f32 / 1000.0);
+                                (fit * 1000.0).round() as i64
+                            });
                         (e, e + burst, None)
                     }
                     "CLICK-MOUSE" => (
                         init + self.cfg.zz_kct_ms,
                         init + burst + burst,
-                        Some(init + self.cfg.zz_krt_ms),
+                        // Only the extended-motor-actions `punch` queues an
+                        // automatic release (`set-finger-up`,
+                        // `motor-extension.lisp:1716`); the base `punch`
+                        // queues just its press notification
+                        // (`motor.lisp:955`), so a base `click-mouse` never
+                        // releases and never wakes conflict resolution.
+                        self.cfg.zz_ext.then_some(init + self.cfg.zz_krt_ms),
                     ),
                     "HOLD-MOUSE" => (init + self.cfg.zz_kct_ms, init + burst, None),
                     "RELEASE-MOUSE" => (init + self.cfg.zz_krt_ms, init + burst, None),
@@ -1467,23 +1487,29 @@ impl Engine {
                     "MOVE-CURSOR" => {
                         let (tx, ty, _) = loc.clone().unwrap_or((0, 0, String::new()));
                         self.zz_mouse_pos = (tx, ty, 1080);
-                        self.emit(
-                            "MOUSE",
-                            format!(
-                                "move-cursor {} mouse ({} {} {})",
-                                self.model.name, tx, ty, 1080
-                            ),
-                        );
+                        // The device notification is a high-detail trace line
+                        // (the refs trace `MOUSE` only at `:trace-detail high`).
+                        if show {
+                            self.emit(
+                                "MOUSE",
+                                format!(
+                                    "move-cursor {} mouse ({} {} {})",
+                                    self.model.name, tx, ty, 1080
+                                ),
+                            );
+                        }
                     }
                     "CLICK-MOUSE" | "HOLD-MOUSE" => {
                         self.zz_mouse_down = true;
-                        self.emit(
-                            "MOUSE",
-                            format!(
-                                "click-mouse {} ({} {} {}) INDEX",
-                                self.model.name, mx, my, mz
-                            ),
-                        );
+                        if show {
+                            self.emit(
+                                "MOUSE",
+                                format!(
+                                    "click-mouse {} ({} {} {}) INDEX",
+                                    self.model.name, mx, my, mz
+                                ),
+                            );
+                        }
                         self.zz_data.push((
                             "CLICKED".to_string(),
                             self.time_ms,
@@ -1492,13 +1518,15 @@ impl Engine {
                     }
                     "RELEASE-MOUSE" => {
                         self.zz_mouse_down = false;
-                        self.emit(
-                            "MOUSE",
-                            format!(
-                                "release-mouse {} ({} {} {}) index",
-                                self.model.name, mx, my, mz
-                            ),
-                        );
+                        if show {
+                            self.emit(
+                                "MOUSE",
+                                format!(
+                                    "release-mouse {} ({} {} {}) index",
+                                    self.model.name, mx, my, mz
+                                ),
+                            );
+                        }
                         self.zz_data.push((
                             "UNCLICKED".to_string(),
                             self.time_ms,
@@ -1512,13 +1540,15 @@ impl Engine {
                 let _ = req_ms;
                 self.zz_mouse_down = false;
                 let (mx, my, mz) = self.zz_mouse_pos;
-                self.emit(
-                    "MOUSE",
-                    format!(
-                        "release-mouse {} ({} {} {}) INDEX",
-                        self.model.name, mx, my, mz
-                    ),
-                );
+                if show {
+                    self.emit(
+                        "MOUSE",
+                        format!(
+                            "release-mouse {} ({} {} {}) INDEX",
+                            self.model.name, mx, my, mz
+                        ),
+                    );
+                }
                 self.zz_data.push((
                     "UNCLICKED".to_string(),
                     self.time_ms,
