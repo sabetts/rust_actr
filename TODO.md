@@ -616,16 +616,12 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        (`set-buffer-chunk visual-location visual-location12` vs
        `…-location2` at 2.136) — a separate vision issue.
 
-       **IMPLEMENTED (uncommitted work-in-progress; see below).**
-
-       ### WIP status (bst-nolearn prefix 96 → 157; suite green 104/104)
-
-       `bst-nolearn` now matches the ref through line 157 (was 96) and the
-       model runs (14 764 lines vs the ref's 2 484). Both regressions the
-       first pass introduced are fixed: `tracker` (a `set-visloc-default`
-       issue, GOTCHAS #248) and `zz-extended-motor-actions` (the auto-release
-       is extended-motor-actions-only, GOTCHAS #247). Full `cargo test` is
-       green (104/104 enabled).
+       **DONE: `bst-nolearn` passes byte-exactly (2484/2484) and is enabled
+       (suite green 105/105).** The first pass (below) fixed the mouse/vision
+       semantics and the two regressions it introduced; a second pass added
+       the task's dynamic window (`MODIFY-LINE`/`REMOVE-LINE` sidecar ops),
+       case-insensitive string slot matching, and the reward/goal-set ordering
+       (GOTCHAS #247–#255).
 
        Changes made (all verified against the refs / an SBCL probe):
 
@@ -673,15 +669,21 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
           already at the target, emit the `MOVE-CURSOR LOC …` line but run
           no ply (`motor.lisp:1316`), so the manual module stays free.
 
-       ### Remaining blockers
+       ### bst-learn / bst-learn-ppm / bst-learn-ppm-w-tree (next)
 
-       - **bst vision:** after 157 the next divergence is at 2.941 — the ref
-         has `vision visicon-update` where ours has an extra
-         `procedural conflict-resolution`. The ref's `visicon-update` is the
-         *virtual cursor* moving as a visicon feature (`cursor-feature`,
-         `mouse.lisp`); ours does not model the cursor as a visicon feature.
-         After that `ours` runs 14 764 lines (loops) vs the ref's 2 484.
-       - GOTCHAS #247–#252 cover the landed bst/motor/vision semantics.
+       These share the machinery above but their device sidecars still lack
+       the per-trial `MODIFY-LINE`/`REMOVE-LINE` ops: `bst-learn` diverges at
+       line 157 (the first `update-current-line` redraw) and the ppm pair at
+       69. `bst-learn` is 15 trials, each with its own buttons
+       (`bst-learn.device.sexp`) and ~8 window updates per trial; the geometry
+       follows the same rule as `bst-nolearn` (line starts at (75,135), a
+       length-L line ends at (75+L,135); a click adds or subtracts its
+       `:action` length, and `update-current-line` redraws/removes). The op
+       *times* are the ref's `visicon-update` times. Note `bst-learn`'s first
+       pass also needs the utility-learning trace to line up (it does for
+       `bst-nolearn`, so the ppm/learning machinery is largely in place).
+       - GOTCHAS #247–#255 cover the landed bst/motor/vision/utility
+         semantics.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
        queue-draining terminator ("no events left to process") is *correct*;
