@@ -734,11 +734,13 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
          `tutorial_unit5_onehit_blocks` (2/21/2),
          `tutorial_unit5_onehit_hands` (2/13/6),
          `tutorial_unit5_onehit_learning` (2/9952/2).
-       - Blocked (now 3): `bst-learn`,
-         `bst-learn-ppm`, `fan-no-pm`, where the driver process exits mid-run
-         (`bst-learn`'s `bst.experiment` calls `exit`) before any verdict.
+       - Blocked (now 2): `bst-learn-ppm` (the imaginal-action action's copied
+         chunk name and the `length` it reads), `fan-no-pm` (the Python port's
+         `output_person_location` prints `True` where the Lisp ref prints
+         `T`). `bst-learn`/`bst-nolearn`/`tutorial_unit2code_initial` all pass
+         now — the RPC allowlist is **20 of 22**.
          `rpc-conformance.sh --expect` now requires the `RPC-RESULT` line so
-         that early exit cannot read as a false pass.
+         that an early exit cannot read as a false pass.
        - `paired-learning`/`paired-learning-dynamic`/`simple-dynamic-model`/
          `simple-ppm-test` are golden-PASS, so their gap is the *client
          command surface*, not engine semantics; `bst-*`/`fan-no-pm` are
