@@ -1950,6 +1950,11 @@ impl Engine {
                 let _ = req_ms;
             }
             Event::OutputKey { key } => {
+                self.fired_commands.push((
+                    "output-key".to_string(),
+                    self.model.name.clone(),
+                    key.clone(),
+                ));
                 if show {
                     // The device reports its own key name (lowercase as
                     // specified in the keyboard table).

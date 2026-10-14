@@ -4108,3 +4108,26 @@ that identifies the feature (`feat-attended`'s `REQ` test, `loc_feature`,
 lookups that only need the geometry. An encoded visual object also records its
 source visicon chunk, which is what makes `buffer-chunk` print
 `VISUAL-CHUNK0 [TEXT1]`.
+
+## 244. A model's own commands (`output-key`) must be *fired*, not just traced
+
+`output-key` is a command, not merely a trace line: ACT-R's motor module calls
+it from inside the run, and a task monitors it (`monitor-command "output-key"
+"paired-response"`, `paired.lisp:135`). The engine only emitted the
+`KEYBOARD output-key …` trace line and never executed the command, so every
+client monitor on it silently never ran — `onehit.hands` reads its handler's
+`model_action` straight after `run-full-time`, and saw the initial `'s'` on
+every hand, while the model's own trace showed it pressing `h`.
+
+Two halves: `output-key`/`release-key` have to be *registered* (an unregistered
+command cannot take a monitor at all — `add_monitor` drops it), and the engine
+records each press (`Engine::take_fired_commands`) for the server to dispatch.
+
+Dispatch has to be **reentrant**, for the same reason `:testing-function` is
+(`server.rs::call_remote_reentrant`): `respond-to-key-press` is client-owned and
+calls `get-time` from inside its handler, so invoking it under the
+`&mut Session` borrow deadlocks the client (`paired-learning` hangs forever).
+Client-owned monitors therefore go through `call_remote_reentrant` with the
+borrow released; server-side ones run through `Session::evaluate`. ACT-R fires
+these mid-run, so the dispatch happens before the `run` reply — a task reads
+the handler's effect as soon as `run` returns.

@@ -1847,6 +1847,12 @@ pub struct Engine {
     time_ms: i64,
     limit_ms: i64,
     out_lines: Vec<String>,
+    /// Commands the model itself fired during a run (`output-key`, …), as
+    /// `(name, model, key)`. ACT-R calls these *inside* the run, so their
+    /// monitors see them; the RPC session dispatches them to the client's
+    /// monitors before it answers the `run`, which is what a task like
+    /// `onehit.hands` reads back afterwards.
+    fired_commands: Vec<(String, String, String)>,
     exec_prods: Vec<ExecProd>,
     /// `pdisable-fct` (`procedural-cmds.lisp:541`): productions skipped by
     /// conflict resolution. Cleared on `reset` (the model body is
@@ -2234,6 +2240,7 @@ impl Engine {
             time_ms: 0,
             limit_ms: (run_secs * 1000.0).round() as i64,
             out_lines: Vec::new(),
+            fired_commands: Vec::new(),
             exec_prods: Vec::new(),
             disabled_prods: HashSet::new(),
             last_conflict_set: Vec::new(),

@@ -149,6 +149,11 @@ pub const BUILTINS: &[&str] = &[
     "process-events",
     "visible-virtuals-available?",
     "start-hand-at-mouse",
+    // The model's own command output: the motor module calls these, and a
+    // task monitors them (`monitor-command "output-key" …`). The engine
+    // records each press and the server dispatches it to its monitors.
+    "output-key",
+    "release-key",
     // The four trace streams (`framework/printing.lisp`); their monitors are
     // what actually receive output (the Rust engine already formatted it).
     "model-trace",
@@ -273,6 +278,42 @@ impl Session {
     /// Whether a command exists (`check`).
     pub fn has_command(&self, name: &str) -> bool {
         self.commands.contains_key(name)
+    }
+
+    /// The simple monitors of a command, each with whether it is
+    /// client-owned (`call_remote_reentrant`) or server-side
+    /// (`Session::evaluate`). A model-fired command's monitors must run with
+    /// the session borrow released when they are client-owned, since their
+    /// handler may call back in (`paired-learning`'s `respond-to-key-press`
+    /// calls `get-time`).
+    pub fn simple_monitors(&self, name: &str) -> Vec<(String, bool)> {
+        self.commands
+            .get(name)
+            .map(|c| {
+                c.simple
+                    .iter()
+                    .map(|m| {
+                        let remote = self
+                            .commands
+                            .get(m)
+                            .map(|mc| matches!(mc.owner, Owner::Remote { .. }))
+                            .unwrap_or(false);
+                        (m.clone(), remote)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Take the commands the model fired during the last run, as
+    /// `(name, model, key)` (see `Engine::take_fired_commands`). The server
+    /// dispatches them to their monitors so a client's `monitor-command`
+    /// handler runs, as ACT-R's `output-key` does mid-run.
+    pub fn take_fired_commands(&mut self) -> Vec<(String, String, String)> {
+        self.engine
+            .as_mut()
+            .map(|e| e.take_fired_commands())
+            .unwrap_or_default()
     }
 
     /// Take the trace lines emitted since the last call (the RPC server

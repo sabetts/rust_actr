@@ -33,6 +33,14 @@ impl Engine {
         self.out_lines.truncate(len);
     }
 
+    /// Take the commands the model fired since the last call, as
+    /// `(name, model, key)`. The RPC session dispatches these to the client's
+    /// monitors (ACT-R calls `output-key` mid-run, so a task's handler has
+    /// run by the time `run` returns).
+    pub fn take_fired_commands(&mut self) -> Vec<(String, String, String)> {
+        std::mem::take(&mut self.fired_commands)
+    }
+
     /// The trace lines emitted since index `start`.
     pub fn out_since(&self, start: usize) -> Vec<String> {
         self.out_lines.get(start..).unwrap_or(&[]).to_vec()
