@@ -4272,3 +4272,18 @@ runs *after* the goal module's `set-buffer-chunk` (`:priority -1000`,
 fires a single `PropagateReward`, so it must sit between the two: `bst`'s
 `read-done` trace shows `set-buffer-chunk goal (state start)` immediately
 before `propagate-reward 20`.
+
+## 256. A window rebuild ends the `run`, it is not a scheduled event
+
+A task's `build-display` at the start of a new `run` is a *command the harness
+runs between runs*, not a scheduled event, so the previous run drains first:
+`bst-learn`'s 15 trials share one `reset`, and its ref shows
+`stopped because no events left to process` immediately *before* the new
+window's `visicon-update` (both at the same ms). The engine arms a reset's
+whole device script at once and `proc_display` chains a `ProcDisplay` to the
+next pending op, so the rebuild would otherwise be applied inside the previous
+run. `proc_display` now stops chaining when the next op is a *button* re-add —
+a window rebuild — leaving the run to drain; the rebuild is then drawn by the
+next run's `schedule_display`. The old window is replaced (`(CLEAR ms)` at each
+trial start), which also re-encodes a now-gone attended object
+(`update-attended-loc`).

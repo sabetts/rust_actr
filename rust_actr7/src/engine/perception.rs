@@ -774,6 +774,18 @@ impl Engine {
         if let Some(r) = self.pending_removes.first() {
             next_at = Some(next_at.map_or(r.at_ms, |n| n.min(r.at_ms)));
         }
+        // A button re-add marks a window rebuild — the task's `build-display`
+        // at the start of a new `run`. In ACT-R that is a *command the harness
+        // runs between runs*, not a scheduled event, so the current run must
+        // drain there and the new window be drawn when the next run starts
+        // (`schedule_display`). Chaining a display to it would instead apply
+        // the rebuild inside the previous run (`bst-learn`, whose 15 trials
+        // share one `reset`).
+        if let Some(b) = self.pending_buttons.first() {
+            if next_at == Some(b.at_ms) {
+                next_at = None;
+            }
+        }
         if let Some(at) = next_at {
             self.push_m(at, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
