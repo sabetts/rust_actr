@@ -3017,6 +3017,12 @@ impl Engine {
         self.bold_open.clear();
         self.bold_demand.clear();
         self.time_ms = 0;
+        // `central-parameters-reset` (`central-parameters.lisp:141`): every
+        // reset schedules a `check-for-esc-nil` maintenance event (output
+        // nil). It has no state effect, but ACT-R counts it as an event. It
+        // is queued *last* among the t=0 events so it cannot displace a
+        // `run-n-events` window's display draw.
+        self.push_m(0, Prio::Min, Out::Never, true, Event::Dummy);
         self.cr_armed = false;
         self.dm_gen = 0;
         self.dm_busy = false;

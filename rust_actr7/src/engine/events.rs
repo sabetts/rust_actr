@@ -686,6 +686,11 @@ impl Engine {
                             }
                         }
                     }
+                    "PRODUCTION" => {
+                        // `procedural.lisp:2594`: the per-selection
+                        // module-request to the `production` buffer. It has
+                        // no visible effect (output nil).
+                    }
                     got => {
                         return Err(unimpl(format!("request to buffer {got}")));
                     }
@@ -804,6 +809,26 @@ impl Engine {
                 if self.cfg.ul {
                     self.history.push((prod, self.time_ms));
                 }
+                // `procedural.lisp:2594`: selecting a production schedules an
+                // invisible `module-request` to the `production` buffer (its
+                // `details` is the production name). It has no effect on the
+                // trace, but ACT-R counts it as an event.
+                self.now(
+                    Prio::Max,
+                    Out::Never,
+                    Event::ModuleRequest {
+                        buffer: "PRODUCTION".to_string(),
+                        spec: NewChunk::Spec {
+                            ctype: "CHUNK".to_string(),
+                            slots: Vec::new(),
+                            neg: Vec::new(),
+                            rels: Vec::new(),
+                            bare: true,
+                        },
+                        var_slots: Vec::new(),
+                        trace: false,
+                    },
+                );
                 // Reads and queries in LHS order, implicit queries last,
                 // then firing at +dat.
                 for item in self.model.productions[prod].lhs.clone() {

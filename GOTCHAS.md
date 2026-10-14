@@ -4431,12 +4431,16 @@ its own `Session` (the existing per-connection isolation, just concurrent).
 
 `run`'s second value is ACT-R's `event-count` (`run-sched-queue`,
 `scheduling.lisp:627`), which `tutorial_unit2code_initial` prints. The engine
-counts each event it evaluates. It does not yet model three internal ACT-R
-events, so its count runs low (the addition model's `run(1)` gives 69 where
-the ref's 77 wants the `production`-buffer `module-request` scheduled per
-selection (`procedural.lisp:2594`), the goal's `clear-delayed-goal`
-(`goal.lisp:286`), and the history recorder's `record-buffer-trace-notes`).
-The trace and the time value match; only the count keeps that test failing.
+counts each event it evaluates. ACT-R's scheduler has more invisible events
+than the engine's, so the engine also queues a no-op `Dummy` for each: the
+per-selection `module-request` to the `production` buffer
+(`procedural.lisp:2594`), the `record-buffer-trace-notes` that
+`print-production-output` schedules for a production `!output!`
+(`production-parsing.lisp:1826`), and the reset hook's `check-for-esc-nil`
+(`central-parameters.lisp:141`). The last is queued last among the t=0 events
+so it cannot displace a `run-n-events` window's display draw. With them the
+addition model's `run(1)` matches the ref's `[0.55, 77, nil]` and
+`tutorial_unit2code_initial` passes.
 
 ## 266. The `imaginal-action` buffer runs a task function to build the next chunk
 

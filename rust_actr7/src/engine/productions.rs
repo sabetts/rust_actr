@@ -734,6 +734,10 @@ impl Engine {
                     // (`framework/misc-utils.lisp:801`): with `(:v nil)`
                     // there is no stream, so nothing is printed at all.
                     self.out(text);
+                    // `print-production-output` (`production-parsing.lisp:1826`)
+                    // also calls `add-buffer-trace-notes`, which schedules an
+                    // invisible maintenance event ACT-R counts.
+                    self.now_m(Prio::Max, Out::Never, true, Event::Dummy);
                 }
                 RhsAction::Other { head, .. } => {
                     // `!stop!` ends the run with a BREAK-EVENT.
