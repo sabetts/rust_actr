@@ -4154,3 +4154,21 @@ comparing. A double does not meaningfully resolve more than that, a passing
 spec's lines are identical before and after, and every shorter literal in the
 corpus (`0.19999999`, `-1.3374588`, …) is left untouched — so this can only
 absorb interpreter float drift, never hide a real difference.
+
+## 246. A mouse ply holds the manual buffer until `finish-movement`, not `initiation-complete`
+
+`?manual> state free` is the manual *buffer's* state, and ACT-R frees it only
+when the movement finishes. In `bst-nolearn` the model's `click-mouse`
+production (which queries `?manual> state free`) fires at 1.926 — 551 ms after
+the `move-cursor` request — while ours fired it at 1.625, at
+`preparation-complete` + `initiation-time`.
+
+`ZzMousePrep` (`events.rs`) set `man_exec[..]` — which only a `zz_ext` model's
+`query_free` reads — but never `man_exec_busy`, the flag the non-`zz_ext` path
+uses. So after `PREPARATION-COMPLETE` (`man_prep_busy = false`) the buffer
+looked free. `TouchPrep` (the touch path) already sets `man_exec_busy = true`
+at its preparation-complete; the mouse path now does too, and
+`FinishMovement`'s non-`zz_ext` arm clears it.
+
+This alone does not make `bst-nolearn` match — the movement *duration* is still
+wrong (see `TODO.md`) — but it is the correct buffer semantics.

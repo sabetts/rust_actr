@@ -597,6 +597,37 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        through the mouse device and its Fitts/minjerk time. Ours also emits
        `MOUSE CLICK-MOUSE BST (0 0 1)` / `release-mouse` device lines the ref
        does not have.
+
+       **Resolved the recipe (verified by hand, not yet landed).** The ref's
+       phases are prep(200) → init(50) → exec(201) → finish(50), free at
+       finish. `move-cursor`'s exec is `fitts(coeff, r, w)` with
+       `coeff = cursor-fitts-coeff` (0.1), `r` and `w` both in *degrees of
+       visual angle*: `r = pm-pixels-to-angle(pixel-distance)`
+       (`device-interface.lisp:743`, default dist `ppi*viewing-distance` =
+       72×15 = 1080), and `w = approach-width(loc)` (`vision.lisp:3717`) —
+       the target's width/height seen from the approach angle
+       `atan2(dy,dx)`, then converted the same way. **With the cursor's start
+       at the window origin `(300,300)`** (not `(0,0)`), button C at
+       `(325,385)` gives `r/w = 3.539`, `fit = 201 ms`, and the trace lands
+       byte-exactly: notify 1.826, finish 1.876, `click-mouse` 1.926.
+       A prototype (cursor start = `window_origin`, this geometry, and the
+       `MOUSE` line suppressed) matched bst through line 105 (was 96) and
+       moved the first divergence to the visicon feature *numbering*
+       (`set-buffer-chunk visual-location visual-location12` vs
+       `…-location2` at 2.136) — a separate vision issue.
+
+       Three things must be handled before landing it:
+       (1) `zz-extended-motor-actions` (enabled) also drives `move-cursor`;
+       its target `LOC1` is a bare `define-chunks` chunk with no
+       width/height, so `approach-width` must fall back to the default
+       (ACT-R's `default-width`) rather than computing from zeros — and the
+       spec's *ref* keeps the `MOUSE move-cursor …` line, so that line is
+       not unconditional (gate on trace detail).
+       (2) The cursor's start must be the window origin *when there is a
+       window* and `(0,0)` otherwise (`window_origin` currently defaults to
+       `(300,300)`, which over-shoots zz's `LOC1` by ~340 px).
+       (3) `man_exec_busy` (GOTCHAS #246, landed) holds the buffer through
+       the finish.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
        queue-draining terminator ("no events left to process") is *correct*;

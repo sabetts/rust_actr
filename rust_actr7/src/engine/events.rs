@@ -1377,6 +1377,13 @@ impl Engine {
                     );
                 }
                 self.man_prep_busy = false;
+                // The manual buffer stays busy from preparation through the
+                // movement's finish: `?manual> state free` is the *buffer*
+                // state (ACT-R frees it at `finish-movement`, not at
+                // `initiation-complete`). Without a `zz_ext` model the buffer
+                // state is read from `man_exec_busy`, so set it here as
+                // `TouchPrep` does.
+                self.man_exec_busy = true;
                 if self.cfg.zz_two_exec {
                     self.man_exec[1] = true;
                 } else {
