@@ -455,6 +455,9 @@ impl Engine {
             self.blocked_proc_display = true;
             return Ok(());
         }
+        // A task `print-visicon` inside a run is pure output; it is replayed
+        // as an event at the model time the task called it (see
+        // `arm_device_script`), before this wave's `visicon-update`.
         // This *is* the display wave for `now`, so window ops applied inside it
         // (the scripted buttons/lines below, and the `add-text` a button's
         // label goes through) must not queue another one — the ref has a single
@@ -527,13 +530,44 @@ impl Engine {
                 f.tstamp_ms = now;
             }
         }
-        // `update-attended-loc` (`vision.lisp:1870`): re-encode only when
-        // the attended object is gone (a clear) or was modified. A new text
-        // elsewhere leaves it untouched, so adding texts must not trigger
-        // this (paired-static: the old location stays). EMMA re-invokes its
-        // hook instead (a fresh saccade); the base module re-schedules
+        // `remove-items-from-exp-window`: drop the item's visicon feature.
+        // Like a clear it re-encodes the attended location
+        // (`update-attended-loc`), which is how the ref's removed letter
+        // produces `Encoding-complete`/`No visual-object found` 85 ms later.
+        let mut due_removes: Vec<DeviceRemove> = Vec::new();
+        self.pending_removes.retain(|r| {
+            if r.at_ms <= now {
+                due_removes.push(r.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for r in &due_removes {
+            self.features.retain(|f| f.value != r.text);
+        }
+        let removed = !due_removes.is_empty();
+        // `update-attended-loc` (`vision.lisp:1870`): re-encode when the
+        // attended object is gone from the visicon. The attended name is a
+        // *copy* (`VISUAL-LOCATION0-1`), so it is resolved through
+        // `chunk-visicon-entry` first; a new text elsewhere leaves the old
+        // location in place, so adding texts must not trigger this
+        // (paired-static: the old location stays). EMMA re-invokes its hook
+        // instead (a fresh saccade); the base module re-schedules
         // `encoding-complete` after the attention latency.
-        if cleared {
+        let attended_gone = match self.last_attention.clone() {
+            Some(loc) => {
+                let base = self
+                    .vl_copied_from
+                    .get(&loc)
+                    .cloned()
+                    .unwrap_or(loc.clone());
+                !self.features.iter().any(|f| f.name == base)
+            }
+            None => false,
+        };
+        let _ = (cleared, removed);
+        if attended_gone {
             if let Some(loc) = self.last_attention.clone() {
                 if self.cfg.emma {
                     let end = self.emma_loc_xyz(&loc);
@@ -651,6 +685,9 @@ impl Engine {
         if let Some(l) = self.pending_lines.first() {
             next_at = Some(next_at.map_or(l.at_ms, |n| n.min(l.at_ms)));
         }
+        if let Some(r) = self.pending_removes.first() {
+            next_at = Some(next_at.map_or(r.at_ms, |n| n.min(r.at_ms)));
+        }
         if let Some(at) = next_at {
             self.push_m(at, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
@@ -726,9 +763,9 @@ impl Engine {
 
     /// The feature name a visual-location copy aliases (`chunk-visicon-entry`).
     pub(super) fn loc_feature(&self, copy: &str) -> Option<String> {
-        self.vl_copies
-            .get(copy)
-            .map(|&i| self.features[i].name.clone())
+        // The base *name*, not `vl_copies`' feature index: a removal shifts
+        // the feature vector and would leave the index pointing elsewhere.
+        self.vl_copied_from.get(copy).cloned()
     }
 
     /// The source chunk a visual-buffer copy was made from
@@ -1168,8 +1205,10 @@ impl Engine {
         };
         self.add_visual_finst(idx);
         self.visual_busy = false;
-        // An encoded object is not a copy (no `chunk-copied-from-fct`).
-        self.vl_copied_from.remove("VISUAL-CHUNK0");
+        // The encoded object records the visicon chunk it was built from, so
+        // `buffer-chunk` prints `VISUAL-CHUNK0 [TEXT1]` (`chunk-copied-from-fct`).
+        self.vl_copied_from
+            .insert("VISUAL-CHUNK0".to_string(), source.clone());
         self.now(
             Prio::Num(10),
             Out::Low,

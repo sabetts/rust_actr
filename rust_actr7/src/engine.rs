@@ -428,6 +428,31 @@ pub struct DeviceText {
     /// The reset this op belongs to (`(RUN n …)` grouping): the task
     /// re-applies its window content per run. `None` = every reset.
     pub run: Option<u32>,
+    /// Position within its run: the task makes its calls in order, so an op
+    /// and a `print-visicon` at the same instant are ordered by this.
+    pub seq: u32,
+}
+
+/// `remove-items-from-exp-window`: drop the window item whose text this is
+/// (`key-event-handler` in `removed-and-restored-visual-item` removes the
+/// letter it has just encoded, then re-adds it later).
+#[derive(Debug, Clone)]
+pub struct DeviceRemove {
+    pub at_ms: i64,
+    pub text: String,
+    pub run: Option<u32>,
+    pub seq: u32,
+}
+
+/// A `print-visicon` the *task* calls at a model time — inside a run, so it
+/// cannot be a step. `late` marks the one `redisplay-item` schedules with
+/// `:priority :min`, which runs after the display wave it follows.
+#[derive(Debug, Clone)]
+pub struct DevicePrint {
+    pub at_ms: i64,
+    pub late: bool,
+    pub run: Option<u32>,
+    pub seq: u32,
 }
 
 /// One scripted button (`add-button-to-exp-window`). It contributes two
@@ -518,6 +543,11 @@ pub struct DeviceSetup {
     pub modifies: Vec<DeviceModify>,
     /// Window clears at ms (clear-exp-window), with the run grouping.
     pub clears: Vec<(i64, Option<u32>)>,
+    /// `remove-items-from-exp-window` ops (`(REMOVE-TEXT ms "text")`).
+    pub removes: Vec<DeviceRemove>,
+    /// Task `print-visicon` calls inside a run (`(PRINT-VISICON ms)` /
+    /// `(PRINT-VISICON-LATE ms)`).
+    pub prints: Vec<DevicePrint>,
     /// Scheduled command lines `(ms, output, details)` — a task's
     /// `schedule-event-relative`/`schedule-event` with a string action
     /// prints `NONE <action> <params>` at its `:output` level.
@@ -1416,6 +1446,12 @@ enum Event {
     /// `unlock-vision` (`vision.lisp:1553`): release the vision proc-display
     /// lock and re-run a blocked proc-display.
     UnlockVision,
+    /// A task `print-visicon` call inside a run (see [`DevicePrint`]). The
+    /// `(at_ms, seq)` orders the pending additions against the task's calls.
+    PrintVisicon {
+        at_ms: i64,
+        seq: u32,
+    },
     /// Visual-location request resolution.
     FindLocation {
         spec: NewChunk,
@@ -1849,6 +1885,12 @@ pub struct Engine {
     pending_modifies: Vec<DeviceModify>,
     /// Scripted window clears not yet applied, sorted.
     pending_clears: Vec<i64>,
+    /// Scripted window-item removals not yet applied, sorted.
+    pending_removes: Vec<DeviceRemove>,
+    /// Task `print-visicon` calls not yet run, sorted.
+    pending_prints: Vec<DevicePrint>,
+    /// Late (`:priority :min`) prints, queued by the display wave they follow.
+    pending_late_prints: Vec<DevicePrint>,
     /// The full device script, re-armed on every `reset` (a task re-applies
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
@@ -1856,6 +1898,8 @@ pub struct Engine {
     device_lines: Vec<DeviceLine>,
     device_modifies: Vec<DeviceModify>,
     device_clears: Vec<(i64, Option<u32>)>,
+    device_removes: Vec<DeviceRemove>,
+    device_prints: Vec<DevicePrint>,
     /// Scheduled command lines, re-armed on every `reset` like the rest of
     /// the device script.
     device_commands: Vec<DeviceCommand>,
@@ -2156,6 +2200,8 @@ impl Engine {
             lines,
             modifies,
             clears,
+            removes,
+            prints,
             commands,
             sounds,
             end,
@@ -2227,6 +2273,17 @@ impl Engine {
                 v.sort_unstable();
                 v
             },
+            pending_removes: {
+                let mut v = removes.clone();
+                v.sort_by_key(|r| r.at_ms);
+                v
+            },
+            pending_prints: {
+                let mut v = prints.clone();
+                v.sort_by_key(|p| p.at_ms);
+                v
+            },
+            pending_late_prints: Vec::new(),
             device_texts: {
                 let mut v = texts;
                 v.sort_by_key(|t| t.at_ms);
@@ -2250,6 +2307,16 @@ impl Engine {
             device_clears: {
                 let mut v = clears;
                 v.sort_by_key(|(t, _)| *t);
+                v
+            },
+            device_removes: {
+                let mut v = removes;
+                v.sort_by_key(|r| r.at_ms);
+                v
+            },
+            device_prints: {
+                let mut v = prints;
+                v.sort_by_key(|p| p.at_ms);
                 v
             },
             device_commands: {
@@ -2525,6 +2592,44 @@ impl Engine {
             .filter(|(_, r)| r.is_none() || *r == Some(run))
             .map(|(t, _)| *t)
             .collect();
+        self.pending_removes = self
+            .device_removes
+            .iter()
+            .filter(|r| r.run.is_none() || r.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_prints = self
+            .device_prints
+            .iter()
+            .filter(|p| p.run.is_none() || p.run == Some(run))
+            .cloned()
+            .collect();
+        // A task `print-visicon` inside a run is pure output, so it is
+        // replayed as its own event at the model time the task called it: the
+        // direct call just before the display wave (`:priority -200`, ahead of
+        // the wave's `ProcDisplay`) or the one `redisplay-item` schedules with
+        // `:priority :min` (after the wave's `visicon-update`).
+        // The *early* print (the task's direct call) must precede the display
+        // wave at the same instant, so it is queued now at the highest
+        // priority. The *late* one (`:priority :min`) is queued by the wave
+        // it follows, so it lands after that wave's `conflict-resolution`.
+        let prints: Vec<DevicePrint> = std::mem::take(&mut self.pending_prints);
+        for p in prints {
+            if !p.late {
+                self.push_m(
+                    p.at_ms,
+                    Prio::Max,
+                    Out::Always,
+                    true,
+                    Event::PrintVisicon {
+                        at_ms: p.at_ms,
+                        seq: p.seq,
+                    },
+                );
+            } else {
+                self.pending_late_prints.push(p);
+            }
+        }
         // Scheduled command lines re-fire each run (`schedule-event-relative`
         // runs again in the task's setup).
         for c in self

@@ -361,7 +361,7 @@ impl Engine {
                 .iter()
                 .filter(|u| matches!(u, VisPending::Add(_)))
                 .count()
-            + self.pending_added_features().len();
+            + self.pending_added_features(None).len();
         self.visicon_alias
             .insert(format!("VISICON-ID{vid}"), format!("CHUNK{n}"));
         let mut x = 0i64;
@@ -1381,8 +1381,8 @@ impl Engine {
     /// `print-visicon` (`vision.lisp:4090`) → `printed-visicon`
     /// (`vision.lisp:4098`): the visicon table, then the pending
     /// `visicon-updates`.
-    pub fn print_visicon_rpc(&mut self, show_pending: bool) -> Vec<String> {
-        let mut out = self.printed_visicon(show_pending);
+    pub fn print_visicon_rpc(&mut self, show_pending: bool, limit: Option<(i64, u32)>) -> Vec<String> {
+        let mut out = self.printed_visicon(show_pending, limit);
         // `command-output` ends its string with `~%`, so the ref has a blank
         // line after each `print-visicon` block.
         out.push(String::new());
@@ -1392,7 +1392,11 @@ impl Engine {
 
     /// The `printed-visicon` body, without touching the output log (so the
     /// `printed-visicon` command can return it as a string).
-    pub fn printed_visicon(&mut self, show_pending: bool) -> Vec<String> {
+    pub fn printed_visicon(
+        &mut self,
+        show_pending: bool,
+        limit: Option<(i64, u32)>,
+    ) -> Vec<String> {
         // The visicon stays ordered by location (`insert-into-visicon`,
         // `vision.lisp:1592`): `(screen-x, screen-y, distance, name)`.
         let mut feats = self.features.clone();
@@ -1477,7 +1481,7 @@ impl Engine {
             let mut adds: Vec<String> = Vec::new();
             let mut deletes: Vec<String> = Vec::new();
             let mut updates: Vec<String> = Vec::new();
-            let pending_adds: Vec<Feature> = self.pending_added_features();
+            let pending_adds: Vec<Feature> = self.pending_added_features(limit);
             let add_entry = |f: &Feature| {
                 let mut parts = vec![f.name.clone()];
                 for (k, v) in f.filled_slots() {
@@ -1530,11 +1534,10 @@ impl Engine {
         if self.visual_busy {
             if let Some(name) = &self.last_attention {
                 // `chunk-visicon-entry`: a location *copy* (`VISUAL-LOCATION0-1`)
-                // stands for the feature it was copied from.
-                let base = match self.vl_copies.get(name) {
-                    Some(&i) => self.features.get(i).map(|x| x.name.clone()),
-                    None => Some(name.clone()),
-                };
+                // stands for the feature it was copied from. `vl_copied_from`
+                // holds the base *name*, which survives a removal shifting the
+                // feature vector (`vl_copies`' index would not).
+                let base = self.vl_copied_from.get(name).cloned();
                 if base.as_deref() == Some(f.name.as_str()) {
                     return "REQ".to_string();
                 }
@@ -1551,11 +1554,17 @@ impl Engine {
     /// order `process-display` would apply them (`vision.lisp:1634`). Window
     /// items due but not yet proc-displayed are pending adds too: the device
     /// queues its visicon features and `install-device` schedules the wave.
-    fn pending_added_features(&self) -> Vec<Feature> {
+    fn pending_added_features(&self, limit: Option<(i64, u32)>) -> Vec<Feature> {
+        // A `print-visicon` the task calls at instant M runs *before* the
+        // ops it calls at M but later (`seq`), so those are not pending yet.
+        let before = |ms: i64, seq: u32| match limit {
+            Some((lms, lseq)) => (ms, seq) < (lms, lseq),
+            None => ms <= self.time_ms,
+        };
         let mut due: Vec<&DeviceText> = self
             .pending_texts
             .iter()
-            .filter(|t| t.at_ms <= self.time_ms)
+            .filter(|t| before(t.at_ms, t.seq))
             .collect();
         due.sort_by_key(|t| (t.x, t.y));
         let mut seq = self.feat_seq;

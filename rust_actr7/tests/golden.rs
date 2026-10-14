@@ -206,6 +206,7 @@ fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
                     x: x.parse().map_err(|_| format!("bad x in {form}"))?,
                     y: y.parse().map_err(|_| format!("bad y in {form}"))?,
                     run: None,
+                    seq: 0,
                 });
             }
             [op, ms] if op == "CLEAR" => {

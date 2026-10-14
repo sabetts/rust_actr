@@ -977,7 +977,7 @@ impl Session {
             }
             "print-visicon" => {
                 if let Some(eng) = &mut self.engine {
-                    eng.print_visicon_rpc(true);
+                    eng.print_visicon_rpc(true, None);
                 }
                 Ok(vec![Json::Null])
             }

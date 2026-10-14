@@ -610,8 +610,8 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
         if let Some(v) = list(form) {
             if v.first().and_then(|s| s.as_sym()) == Some("RUN") {
                 let run = as_i64(v.get(1).ok_or("missing run")?).ok_or("bad run")? as u32;
-                for op in &v[2..] {
-                    parse_device_op(op, Some(run), &mut device)
+                for (i, op) in v[2..].iter().enumerate() {
+                    parse_device_op(op, Some(run), i as u32, &mut device)
                         .map_err(|e| format!("{}: {e}", path.display()))?;
                 }
                 continue;
@@ -619,13 +619,19 @@ fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
         }
         flat.push(form.clone());
     }
-    for form in &flat {
-        parse_device_op(form, None, &mut device).map_err(|e| format!("{}: {e}", path.display()))?;
+    for (i, form) in flat.iter().enumerate() {
+        parse_device_op(form, None, i as u32, &mut device)
+            .map_err(|e| format!("{}: {e}", path.display()))?;
     }
     Ok(device)
 }
 
-fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> Result<(), String> {
+fn parse_device_op(
+    form: &Sexp,
+    run: Option<u32>,
+    seq: u32,
+    device: &mut DeviceSetup,
+) -> Result<(), String> {
     {
         let v = list(form).ok_or_else(|| format!("bad device form: {form:?}"))?;
         let op = v.first().and_then(|s| s.as_sym()).unwrap_or("");
@@ -637,6 +643,7 @@ fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> R
                 x: as_i64(v.get(3).ok_or("missing x")?).ok_or("bad x")?,
                 y: as_i64(v.get(4).ok_or("missing y")?).ok_or("bad y")?,
                 run,
+                seq,
             }),
             "ADD-BUTTON" => device.buttons.push(actr_engine::engine::DeviceButton {
                 at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
@@ -667,6 +674,22 @@ fn parse_device_op(form: &Sexp, run: Option<u32>, device: &mut DeviceSetup) -> R
                 run,
             }),
             "CLEAR" => device.clears.push((ms()?, run)),
+            "REMOVE-TEXT" => device.removes.push(actr_engine::engine::DeviceRemove {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
+                run,
+                seq,
+            }),
+            // `(PRINT-VISICON ms)` / `(PRINT-VISICON-LATE ms)`: a task
+            // `print-visicon` called inside a run, which cannot be a step.
+            "PRINT-VISICON" | "PRINT-VISICON-LATE" => {
+                device.prints.push(actr_engine::engine::DevicePrint {
+                    at_ms: ms()?,
+                    late: op == "PRINT-VISICON-LATE",
+                    run,
+                    seq,
+                })
+            }
             // `(INSTALL)`: the task called `install-device`. Not a timed op;
             // it only records that a device exists (see
             // `DeviceSetup::installed`).

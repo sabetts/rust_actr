@@ -868,9 +868,38 @@ impl Engine {
                 if show {
                     self.emit("VISION", "visicon-update".into());
                 }
+                // A late print the task scheduled for this instant runs at the
+                // very end of the display wave, after the wave's own
+                // `conflict-resolution` (which the buffer stuffing queues).
+                let now = self.time_ms;
+                let mut late = Vec::new();
+                self.pending_late_prints.retain(|p| {
+                    if p.at_ms <= now {
+                        late.push(p.clone());
+                        false
+                    } else {
+                        true
+                    }
+                });
+                for p in late {
+                    self.push_m(
+                        p.at_ms,
+                        Prio::Min,
+                        Out::Always,
+                        true,
+                        Event::PrintVisicon {
+                            at_ms: p.at_ms,
+                            seq: p.seq,
+                        },
+                    );
+                }
             }
-            Event::UnlockVision => {
-                // `unlock-vision` (`vision.lisp:1553`): drop the lock, and if a
+            Event::PrintVisicon { at_ms, seq } => {
+                // A task's `print-visicon` inside a run: pure output, so it
+                // emits no trace line of its own, just the table.
+                self.print_visicon_rpc(true, Some((at_ms, seq)));
+            }
+            Event::UnlockVision => {                // `unlock-vision` (`vision.lisp:1553`): drop the lock, and if a
                 // proc-display was blocked while it was held, run it now (no
                 // `proc-display` trace line — the ref has only `visicon-update`).
                 self.visual_lock = false;

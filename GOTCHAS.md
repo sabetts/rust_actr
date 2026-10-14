@@ -4069,3 +4069,42 @@ queues under the location name, so it keeps an alias map from the
 creation-order `VISICON-ID{n}` to `CHUNK{n}` (`Feature`s created so far,
 including queued and pending ones). The recorded symbol carries the reader
 prefix (`#:VISICON-ID1`), which the lookup strips.
+
+## 242. A task's mid-run device calls are ops, not steps
+
+A monitored-command callback (`add-act-r-command` + `monitor-act-r-command`)
+runs *inside* a run, and `install-generic-command` deliberately records nothing
+while `*in-run*` is set — so its `print-visicon` calls and its
+`remove-items-from-exp-window`/`add-items-to-exp-window` effects vanish from a
+step-based spec. The device sidecar is the mechanism for exactly this: a
+hand-authored sidecar records them as timed ops, and `write-device` never
+overwrites one.
+
+Two shapes the engine now replays:
+
+* `(REMOVE-TEXT ms "text")` — drop the feature carrying that text. A removal
+  re-encodes the attended location exactly when the attended object is *gone*
+  from the visicon (`update-attended-loc`), which is why run 2 of
+  `removed-and-restored-visual-item` re-encodes nothing: its removal takes out
+  "a" while the model is attending "b".
+* `(PRINT-VISICON ms)` / `(PRINT-VISICON-LATE ms)` — a task `print-visicon`
+  inside a run, pure output with no trace line. The direct call must precede
+  the display wave at the same instant (the engine's queue pops *higher*
+  priority first, so it is `Prio::Max`); the one `redisplay-item` schedules with
+  `:priority :min` must follow that wave's own `conflict-resolution`, so it is
+  queued from the wave's `visicon-update`, not up front.
+
+Ops and prints at the *same* instant are ordered by the task's call order, so
+sidecar ops carry a per-run `seq`: a print at M must not report an op the task
+calls at M but later as pending.
+
+## 243. `vl_copies`' feature *index* does not survive a removal
+
+`vl_copies` maps a location copy (`VISUAL-LOCATION0-1`) to its feature's index
+in `features`, which a `remove-items-from-exp-window` (or a visicon delete)
+shifts. `vl_copied_from` already holds the base *name* — use that for anything
+that identifies the feature (`feat-attended`'s `REQ` test, `loc_feature`,
+`update-attended-loc`'s "is it gone" test), and leave `vl_copies` for the
+lookups that only need the geometry. An encoded visual object also records its
+source visicon chunk, which is what makes `buffer-chunk` print
+`VISUAL-CHUNK0 [TEXT1]`.
