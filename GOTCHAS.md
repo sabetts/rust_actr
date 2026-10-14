@@ -4241,3 +4241,34 @@ window's origin (`open-exp-window`'s `:x`/`:y`, default `(300,300)`) —
 `motor.lisp:1316` aborts the move when `r = 0` and the target's `z` equals the
 cursor's, emitting the `MOVE-CURSOR LOC …` trace line but scheduling no ply —
 so the manual module stays free and the next action can start immediately.
+
+## 253. `modify-line-for-exp-window` keeps the line's identity; horizontal lines share a `value`
+
+`bst`'s `update-current-line` redraws the "current" stick after every click:
+`add-line-to-exp-window` the first time, then `modify-line-for-exp-window`,
+`remove-items-from-exp-window` on a reset, and a modify to the target plus the
+"Done" text on the done click. A line's `value` is its *orientation*
+(`pts_to_orientation`, `uwi.lisp:511`), so every horizontal line has the same
+`value` (90) — a device op cannot key on it. `MODIFY-LINE`/`REMOVE-LINE`
+therefore match the line's old endpoints (window-relative), and the redraw
+keeps the feature's name and finst (ACT-R's `:update` path,
+`internal-modify-visicon-features`).
+
+## 254. `chunk-slot-equal` compares strings case-insensitively
+
+`chunk-slot-equal` (`chunks.lisp:1854`) uses `string-equal` for two strings.
+`bst`'s `pick-another-strategy` tests `=visual> value "reset"` against the
+Reset button's encoded `"Reset"`, and the request path already compared
+case-insensitively (`loc_matches`); the LHS path did not. `Engine::value_eq`
+and `test_value`'s `Pattern::Str` arm now match `string-equal`.
+
+## 255. A production's reward propagates after its goal's `set-buffer-chunk`
+
+`learn-parameters` (`utility-and-reward-1.lisp:475`) schedules `trigger-reward`
+with `:priority :min`, and `trigger-reward-internal` then schedules
+`propagate-reward` with `:priority :max`. The net effect is that the reward
+runs *after* the goal module's `set-buffer-chunk` (`:priority -1000`,
+`goal-style-module.lisp:245`) but before the conflict-resolution. The engine
+fires a single `PropagateReward`, so it must sit between the two: `bst`'s
+`read-done` trace shows `set-buffer-chunk goal (state start)` immediately
+before `propagate-reward 20`.

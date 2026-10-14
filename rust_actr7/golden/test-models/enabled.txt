@@ -5,6 +5,7 @@ addition
 associative-learning
 bind-test
 blending
+bst-nolearn
 buffer-queries
 #   cargo test --test test_models probe_runnable -- --ignored --nocapture
 count

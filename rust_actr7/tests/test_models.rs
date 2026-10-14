@@ -666,6 +666,30 @@ fn parse_device_op(
                 color: as_str(v.get(6).ok_or("missing color")?).ok_or("bad color")?,
                 run,
             }),
+            // `(MODIFY-LINE ms x1 y1 x2 y2 nx1 ny1 nx2 ny2)`: redraw the line
+            // whose old endpoints match (window-relative).
+            "MODIFY-LINE" => device.line_modifies.push(actr_engine::engine::DeviceLineModify {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
+                y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
+                x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
+                y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
+                nx1: as_i64(v.get(6).ok_or("missing nx1")?).ok_or("bad nx1")?,
+                ny1: as_i64(v.get(7).ok_or("missing ny1")?).ok_or("bad ny1")?,
+                nx2: as_i64(v.get(8).ok_or("missing nx2")?).ok_or("bad nx2")?,
+                ny2: as_i64(v.get(9).ok_or("missing ny2")?).ok_or("bad ny2")?,
+                run,
+            }),
+            // `(REMOVE-LINE ms x1 y1 x2 y2)`: drop the line whose endpoints
+            // match (window-relative).
+            "REMOVE-LINE" => device.line_removes.push(actr_engine::engine::DeviceLineRemove {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
+                y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
+                x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
+                y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
+                run,
+            }),
             "MODIFY-TEXT" => device.modifies.push(actr_engine::engine::DeviceModify {
                 at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
                 text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,

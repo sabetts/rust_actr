@@ -530,6 +530,86 @@ impl Engine {
                 f.tstamp_ms = now;
             }
         }
+        // `modify-line-for-exp-window` (e.g. the `bst` task's
+        // `update-current-line`): redraw the line whose *old* endpoints match,
+        // keeping its identity — ACT-R's `internal-modify-visicon-features`
+        // queues an `:update`, so the chunk (and its finst) survives.
+        let mut due_line_mods: Vec<DeviceLineModify> = Vec::new();
+        self.pending_line_modifies.retain(|m| {
+            if m.at_ms <= now {
+                due_line_mods.push(m.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for m in &due_line_mods {
+            let (ox, oy) = self.window_origin;
+            let matches = |f: &Feature| {
+                f.kind == "LINE"
+                    && f.extra.iter().any(|(k, v)| {
+                        k == "END1-X" && *v == Value::Int(ox + m.x1)
+                    })
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END1-Y" && *v == Value::Int(oy + m.y1))
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END2-X" && *v == Value::Int(ox + m.x2))
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END2-Y" && *v == Value::Int(oy + m.y2))
+            };
+            if let Some(f) = self.features.iter_mut().find(|f| matches(f)) {
+                let color = f
+                    .extra
+                    .iter()
+                    .find(|(k, _)| k == "COLOR")
+                    .and_then(|(_, v)| match v {
+                        Value::Sym(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| "BLACK".to_string());
+                let origin = (ox, oy);
+                debug::set_line_geometry(
+                    f,
+                    (m.nx1, m.ny1),
+                    (m.nx2, m.ny2),
+                    origin,
+                    &color,
+                );
+                f.tstamp_ms = now;
+            }
+        }
+        // `remove-items-from-exp-window` of a line item: drop the line whose
+        // endpoints match.
+        let mut due_line_removes: Vec<DeviceLineRemove> = Vec::new();
+        self.pending_line_removes.retain(|r| {
+            if r.at_ms <= now {
+                due_line_removes.push(r.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for r in &due_line_removes {
+            let (ox, oy) = self.window_origin;
+            self.features.retain(|f| {
+                !(f.kind == "LINE"
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END1-X" && *v == Value::Int(ox + r.x1))
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END1-Y" && *v == Value::Int(oy + r.y1))
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END2-X" && *v == Value::Int(ox + r.x2))
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END2-Y" && *v == Value::Int(oy + r.y2)))
+            });
+        }
         // `remove-items-from-exp-window`: drop the item's visicon feature.
         // Like a clear it re-encodes the attended location
         // (`update-attended-loc`), which is how the ref's removed letter
@@ -684,6 +764,12 @@ impl Engine {
         }
         if let Some(l) = self.pending_lines.first() {
             next_at = Some(next_at.map_or(l.at_ms, |n| n.min(l.at_ms)));
+        }
+        if let Some(m) = self.pending_line_modifies.first() {
+            next_at = Some(next_at.map_or(m.at_ms, |n| n.min(m.at_ms)));
+        }
+        if let Some(r) = self.pending_line_removes.first() {
+            next_at = Some(next_at.map_or(r.at_ms, |n| n.min(r.at_ms)));
         }
         if let Some(r) = self.pending_removes.first() {
             next_at = Some(next_at.map_or(r.at_ms, |n| n.min(r.at_ms)));

@@ -1697,6 +1697,57 @@ fn round_half_even_f(x: f64) -> i64 {
 }
 
 /// `pts-to-orientation` (`uwi.lisp:503`): degrees from -89..90, 0 vertical.
+/// Set a line feature's geometry from its window-relative endpoints.
+/// `build-vis-locs-for` for a `v-liner` (`uwi.lisp:511`): the spec order is
+/// `color value screen-x screen-y width height end1-x end1-y end2-x end2-y`,
+/// and the isa marker `(visual-location line)` adds `kind` and `line`
+/// (GOTCHAS #238). Shared by `add-line-to-exp-window` and
+/// `modify-line-for-exp-window` (which keeps the item, so the feature's name
+/// and finst are untouched).
+pub(super) fn set_line_geometry(
+    f: &mut Feature,
+    start: (i64, i64),
+    end: (i64, i64),
+    origin: (i64, i64),
+    color: &str,
+) {
+    let (ox, oy) = origin;
+    let (x1, y1) = (ox + start.0, oy + start.1);
+    let (x2, y2) = (ox + end.0, oy + end.1);
+    let mx = ox + (start.0 + end.0).div_euclid(2);
+    let my = oy + (start.1 + end.1).div_euclid(2);
+    let orient = pts_to_orientation((x1, y1), (x2, y2));
+    let width = (start.0 - end.0).abs();
+    let height = (start.1 - end.1).abs();
+    let c = Value::Sym(color.to_uppercase());
+    f.value = orient.to_string();
+    f.x = mx;
+    f.y = my;
+    f.width = width;
+    f.height = height;
+    f.extra = vec![
+        ("COLOR".to_string(), c.clone()),
+        ("END1-X".to_string(), Value::Int(x1)),
+        ("END1-Y".to_string(), Value::Int(y1)),
+        ("END2-X".to_string(), Value::Int(x2)),
+        ("END2-Y".to_string(), Value::Int(y2)),
+    ];
+    f.spec = vec![
+        ("COLOR".to_string(), c),
+        ("VALUE".to_string(), Value::Int(orient)),
+        ("SCREEN-X".to_string(), Value::Int(mx)),
+        ("SCREEN-Y".to_string(), Value::Int(my)),
+        ("WIDTH".to_string(), Value::Int(width)),
+        ("HEIGHT".to_string(), Value::Int(height)),
+        ("END1-X".to_string(), Value::Int(x1)),
+        ("END1-Y".to_string(), Value::Int(y1)),
+        ("END2-X".to_string(), Value::Int(x2)),
+        ("END2-Y".to_string(), Value::Int(y2)),
+        ("KIND".to_string(), Value::Sym("LINE".to_string())),
+        ("LINE".to_string(), Value::Sym("T".to_string())),
+    ];
+}
+
 fn pts_to_orientation(p1: (i64, i64), p2: (i64, i64)) -> i64 {
     let dx = (p2.0 - p1.0) as f64;
     let dy = (p2.1 - p1.1) as f64;
@@ -1842,52 +1893,25 @@ impl Engine {
     pub fn add_window_line(&mut self, start: (i64, i64), end: (i64, i64), color: &str) -> String {
         let key = format!("LINE-VDI-{}", self.window_item_seq);
         self.window_item_seq += 1;
-        let (ox, oy) = self.window_origin;
-        let (x1, y1) = (ox + start.0, oy + start.1);
-        let (x2, y2) = (ox + end.0, oy + end.1);
         let name = format!("VISUAL-LOCATION{}", self.feat_seq);
         self.feat_seq += 1;
-        self.features.push(Feature {
+        let mut f = Feature {
             name: name.clone(),
             kind: "LINE".to_string(),
-            value: pts_to_orientation((x1, y1), (x2, y2)).to_string(),
-            x: ox + (start.0 + end.0).div_euclid(2),
-            y: oy + (start.1 + end.1).div_euclid(2),
-            width: (start.0 - end.0).abs(),
-            height: (start.1 - end.1).abs(),
-            extra: vec![
-                ("COLOR".to_string(), Value::Sym(color.to_uppercase())),
-                ("END1-X".to_string(), Value::Int(x1)),
-                ("END1-Y".to_string(), Value::Int(y1)),
-                ("END2-X".to_string(), Value::Int(x2)),
-                ("END2-Y".to_string(), Value::Int(y2)),
-            ],
-            // `build-vis-locs-for` for a `v-liner` (`uwi.lisp:511`): the spec
-            // order is `color value screen-x screen-y width height end1-x
-            // end1-y end2-x end2-y`, and the isa marker `(visual-location
-            // line)` adds `kind` and `line` (GOTCHAS #238)."
-            spec: vec![
-                ("COLOR".to_string(), Value::Sym(color.to_uppercase())),
-                (
-                    "VALUE".to_string(),
-                    Value::Int(pts_to_orientation((x1, y1), (x2, y2))),
-                ),
-                ("SCREEN-X".to_string(), Value::Int(ox + (start.0 + end.0).div_euclid(2))),
-                ("SCREEN-Y".to_string(), Value::Int(oy + (start.1 + end.1).div_euclid(2))),
-                ("WIDTH".to_string(), Value::Int((start.0 - end.0).abs())),
-                ("HEIGHT".to_string(), Value::Int((start.1 - end.1).abs())),
-                ("END1-X".to_string(), Value::Int(x1)),
-                ("END1-Y".to_string(), Value::Int(y1)),
-                ("END2-X".to_string(), Value::Int(x2)),
-                ("END2-Y".to_string(), Value::Int(y2)),
-                ("KIND".to_string(), Value::Sym("LINE".to_string())),
-                ("LINE".to_string(), Value::Sym("T".to_string())),
-            ],
+            value: String::new(),
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            extra: Vec::new(),
+            spec: Vec::new(),
             spec_pre: Vec::new(),
             tstamp_ms: self.time_ms,
             new_p: true,
             finst_ms: None,
-        });
+        };
+        set_line_geometry(&mut f, start, end, self.window_origin, color);
+        self.features.push(f);
         self.window_items.push((key.clone(), vec![name]));
         self.now_display();
         key

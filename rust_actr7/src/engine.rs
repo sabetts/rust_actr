@@ -504,6 +504,39 @@ pub struct DeviceModify {
     pub run: Option<u32>,
 }
 
+/// One scripted line redraw (`modify-line-for-exp-window`, e.g. the `bst`
+/// task's `update-current-line`): the line whose endpoints are `(x1,y1,x2,y2)`
+/// (window-relative) is replaced by `(nx1,ny1,nx2,ny2)`. The line's *value* is
+/// its orientation, so horizontal lines are indistinguishable by value; the
+/// op matches the old endpoints instead.
+#[derive(Debug, Clone)]
+pub struct DeviceLineModify {
+    pub at_ms: i64,
+    pub x1: i64,
+    pub y1: i64,
+    pub x2: i64,
+    pub y2: i64,
+    pub nx1: i64,
+    pub ny1: i64,
+    pub nx2: i64,
+    pub ny2: i64,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
+/// One scripted line removal (`remove-items-from-exp-window` of a line item):
+/// drop the line whose endpoints are `(x1,y1,x2,y2)` (window-relative).
+#[derive(Debug, Clone)]
+pub struct DeviceLineRemove {
+    pub at_ms: i64,
+    pub x1: i64,
+    pub y1: i64,
+    pub x2: i64,
+    pub y2: i64,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
 /// One scripted command trace line: a task's scheduled command event.
 #[derive(Debug, Clone)]
 pub struct DeviceCommand {
@@ -542,6 +575,10 @@ pub struct DeviceSetup {
     /// display.
     pub buttons: Vec<DeviceButton>,
     pub lines: Vec<DeviceLine>,
+    /// Scripted line redraws (`modify-line-for-exp-window`).
+    pub line_modifies: Vec<DeviceLineModify>,
+    /// Scripted line removals (`remove-items-from-exp-window` of a line).
+    pub line_removes: Vec<DeviceLineRemove>,
     /// Scripted window-item moves (`modify-text-for-exp-window`).
     pub modifies: Vec<DeviceModify>,
     /// Window clears at ms (clear-exp-window), with the run grouping.
@@ -1893,6 +1930,9 @@ pub struct Engine {
     /// Scripted window buttons/lines not yet applied, by time.
     pending_buttons: Vec<DeviceButton>,
     pending_lines: Vec<DeviceLine>,
+    /// Scripted line redraws/removals not yet applied, by time.
+    pending_line_modifies: Vec<DeviceLineModify>,
+    pending_line_removes: Vec<DeviceLineRemove>,
     /// Scripted window-item moves not yet applied, by time.
     pending_modifies: Vec<DeviceModify>,
     /// Scripted window clears not yet applied, sorted.
@@ -1908,6 +1948,8 @@ pub struct Engine {
     device_texts: Vec<DeviceText>,
     device_buttons: Vec<DeviceButton>,
     device_lines: Vec<DeviceLine>,
+    device_line_modifies: Vec<DeviceLineModify>,
+    device_line_removes: Vec<DeviceLineRemove>,
     device_modifies: Vec<DeviceModify>,
     device_clears: Vec<(i64, Option<u32>)>,
     device_removes: Vec<DeviceRemove>,
@@ -2213,6 +2255,8 @@ impl Engine {
             texts,
             buttons,
             lines,
+            line_modifies,
+            line_removes,
             modifies,
             clears,
             removes,
@@ -2279,6 +2323,16 @@ impl Engine {
                 v.sort_by_key(|l| l.at_ms);
                 v
             },
+            pending_line_modifies: {
+                let mut v = line_modifies.clone();
+                v.sort_by_key(|m| m.at_ms);
+                v
+            },
+            pending_line_removes: {
+                let mut v = line_removes.clone();
+                v.sort_by_key(|r| r.at_ms);
+                v
+            },
             pending_modifies: {
                 let mut v = modifies.clone();
                 v.sort_by_key(|m| m.at_ms);
@@ -2313,6 +2367,16 @@ impl Engine {
             device_lines: {
                 let mut v = lines;
                 v.sort_by_key(|l| l.at_ms);
+                v
+            },
+            device_line_modifies: {
+                let mut v = line_modifies;
+                v.sort_by_key(|m| m.at_ms);
+                v
+            },
+            device_line_removes: {
+                let mut v = line_removes;
+                v.sort_by_key(|r| r.at_ms);
                 v
             },
             device_modifies: {
@@ -2578,6 +2642,18 @@ impl Engine {
             .device_lines
             .iter()
             .filter(|l| l.run.is_none() || l.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_line_modifies = self
+            .device_line_modifies
+            .iter()
+            .filter(|m| m.run.is_none() || m.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_line_removes = self
+            .device_line_removes
+            .iter()
+            .filter(|r| r.run.is_none() || r.run == Some(run))
             .cloned()
             .collect();
         // A task re-applies its window per run, so ops already due when this

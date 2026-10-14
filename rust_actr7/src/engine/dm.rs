@@ -778,6 +778,11 @@ impl Engine {
     pub(super) fn value_eq(&self, a: &Value, b: &Value) -> bool {
         match (a, b) {
             (Value::Sym(x), Value::Sym(y)) => self.resolve_alias(x) == self.resolve_alias(y),
+            // `chunk-slot-equal` compares strings with `string-equal`
+            // (`chunks.lisp:1854`), i.e. case-insensitively: `bst`'s
+            // `pick-another-strategy` tests `value "reset"` against the
+            // Reset button's encoded `"Reset"`.
+            (Value::Str(x), Value::Str(y)) => x.eq_ignore_ascii_case(y),
             _ => a == b,
         }
     }
@@ -830,7 +835,7 @@ impl Engine {
             Pattern::Sym(s) => self.value_eq(got, &Value::Sym(s.clone())),
             Pattern::Int(i) => *got == Value::Int(*i),
             Pattern::Num(x) => *got == Value::Num(*x),
-            Pattern::Str(s) => *got == Value::Str(s.clone()),
+            Pattern::Str(s) => self.value_eq(got, &Value::Str(s.clone())),
         };
         Ok(if negated { !ok } else { ok })
     }

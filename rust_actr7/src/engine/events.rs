@@ -852,9 +852,13 @@ impl Engine {
                 self.fire(prod, &bindings)?;
                 // `(spp <prod> :reward R)`: propagate the reward at fire time
                 // (after the RHS actions), like ACT-R's `learn-parameters`
-                // (`utility-and-reward-1.lisp:470`).
+                // (`utility-and-reward-1.lisp:475`), which schedules
+                // `trigger-reward` with `:priority :min` — so the goal's
+                // `set-buffer-chunk` (priority -1000, `goal-style-module.lisp:245`)
+                // lands first. bst's `read-done` trace shows the goal set before
+                // `propagate-reward`.
                 if let Some(r) = self.model.productions[prod].reward.clone() {
-                    self.now(Prio::Num(0), Out::Medium, Event::PropagateReward { value: r });
+                    self.now(Prio::Num(-1001), Out::Medium, Event::PropagateReward { value: r });
                 }
             }
             Event::ProcDisplay => {
