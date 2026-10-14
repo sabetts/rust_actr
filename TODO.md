@@ -385,6 +385,16 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        `update-tracking-mth`) are not, so a model that locks without a later
        `+visual>` request stays blocked — worth checking if a vision spec runs
        to the event limit.
+       **`removed-and-restored-visual-item` is DONE and enabled** (golden
+       106/135). Its one real divergence was line 70: the object's `screen-pos`
+       printed `visual-location0-1` where the ref has `-0`. The auto-stuffed
+       `-0` and the `find-location` `-1` are identical chunks, so on the
+       intervening `clear-buffer` the second merges into the first in DM and
+       every reference is remapped; `set-chunk-slot-value-fct` stores the
+       *true* name, so the object prints `-0` while the encoding trace still
+       names the marker `-1`. `encoding_complete` now resolves the alias
+       (GOTCHAS #257). Copies with differing slots (tracking) never merge, so
+       `tracking-test` is untouched.
        **The `fan` family was blocked on an extractor gap, not the engine**
        (GOTCHAS #234/#235). Tasks drive a trial with
        `(mod-focus-fct (arg1 x arg2 y))` (`tutorial/lisp/fan-no-pm.lisp:57`) and
