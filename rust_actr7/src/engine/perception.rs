@@ -508,6 +508,9 @@ impl Engine {
             }
         });
         if cleared {
+            // `:delete-all` collects attended features for the rebuilt display
+            // (`transfer-finsts`, `vision.lisp:1656`).
+            self.collect_finst_transfers();
             self.features.clear();
         }
         // Window-item moves: re-apply the captured position change to the
@@ -736,6 +739,10 @@ impl Engine {
             .get("VISUAL-LOCATION")
             .and_then(|b| b.chunk.as_ref())
             .is_none();
+        // A rebuilt display re-attaches the finsts of the features that were
+        // attended when it was cleared (`transfer-finst`, `vision.lisp:2306`),
+        // before the auto-stuff searches it.
+        self.apply_finst_transfers();
         if empty && self.tracked.is_none() {
             if let Some(feat) = self.newest_feature() {
                 let base = feat.name.clone();

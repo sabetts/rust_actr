@@ -1790,6 +1790,10 @@ impl Engine {
     /// `clear-exp-window`: drop all live window items and visicon features.
     pub fn clear_window(&mut self) {
         self.window_items.clear();
+        // `process-display`'s `:delete-all` collects attended features into
+        // `transfer-finsts` (`vision.lisp:1656`), so a rebuilt display can
+        // re-attach their finst (`transfer-finst`, `vision.lisp:2306`).
+        self.collect_finst_transfers();
         self.features.clear();
         // `update-attended-loc` (`vision.lisp:1870`): the attended object is
         // gone, so the visual module re-encodes it and stays busy for
@@ -1820,6 +1824,43 @@ impl Engine {
         self.now_display();
     }
 
+    /// Collect the live features that are currently attended, so a rebuilt
+    /// display can move their finst onto the matching new feature
+    /// (`transfer-finsts`, `vision.lisp:1656`).
+    pub(super) fn collect_finst_transfers(&mut self) {
+        for f in &self.features {
+            if let Some(t) = f.finst_ms {
+                self.pending_finst_transfers.push(FinstTransfer {
+                    kind: f.kind.clone(),
+                    x: f.x,
+                    y: f.y,
+                    width: f.width,
+                    height: f.height,
+                    value: f.value.clone(),
+                    finst_ms: t,
+                });
+            }
+        }
+    }
+
+    /// Apply the collected finst transfers to the rebuilt display
+    /// (`transfer-finst`, `vision.lisp:2306`): the matching new feature keeps
+    /// the finst, is stamped with the finst's time, and is left not-`new`.
+    /// The list is per-display, so it is drained here.
+    pub(super) fn apply_finst_transfers(&mut self) {
+        if self.pending_finst_transfers.is_empty() {
+            return;
+        }
+        let transfers = std::mem::take(&mut self.pending_finst_transfers);
+        for f in self.features.iter_mut() {
+            if let Some(t) = transfers.iter().find(|t| t.matches(f)) {
+                f.finst_ms = Some(t.finst_ms);
+                f.new_p = false;
+                f.tstamp_ms = t.finst_ms;
+            }
+        }
+    }
+
     /// `add-text-to-exp-window`: word features (`build-string-feats`,
     /// `optimize-p` t) placed relative to the window origin. Returns the item
     /// key.
@@ -1840,22 +1881,44 @@ impl Engine {
         let char_w = round_half_even_f(font_size as f64 * 7.0 / 12.0).max(1);
         let text_h = round_half_even_f(font_size as f64 * 10.0 / 12.0).max(1);
         let line_h = round_half_even_f(text_h as f64 / 0.8).max(text_h + 1);
+        // `static-text-vdi` (`uwi.lisp:459`): `start-x = (1+ (x-pos self))`,
+        // `y-pos = y-pos + round(line-height, 2)`, and no `x-fct`, so
+        // `build-string-feats` starts each line at `start-x`.
         let y_screen = y + oy + round_half_even(line_h, 2);
+        self.push_text_item(&key, text, x + 1 + ox, y_screen, char_w, text_h);
+        self.now_display();
+        key
+    }
+
+    /// Push a text item's word features (`build-string-feats`,
+    /// `vision.lisp:3558`). Each word's `screen-x` is
+    /// `start + round(word-width, 2)` (`vision.lisp:3586`), `screen-y` is
+    /// fixed for the item, and a space run advances the cursor. `start` is
+    /// already in screen coordinates (the caller's `x-fct`/`x-off` folded in).
+    fn push_text_item(
+        &mut self,
+        key: &str,
+        text: &str,
+        start_screen_x: i64,
+        screen_y: i64,
+        char_w: i64,
+        text_h: i64,
+    ) {
         let mut names = Vec::new();
-        let mut curr_x = x + 1;
+        let mut curr_x = start_screen_x;
         for tok in chop_string(text) {
             match tok {
                 Chop::Word(w) => {
                     let wd = char_w * w.chars().count() as i64;
                     let name = format!("VISUAL-LOCATION{}", self.feat_seq);
                     self.feat_seq += 1;
-                    let sx = curr_x + ox + round_half_even(wd, 2);
+                    let sx = curr_x + round_half_even(wd, 2);
                     self.features.push(Feature {
                         name: name.clone(),
                         kind: "TEXT".to_string(),
                         value: w.clone(),
                         x: sx,
-                        y: y_screen,
+                        y: screen_y,
                         width: wd,
                         height: text_h,
                         extra: vec![("TEXT".to_string(), Value::Sym("T".to_string()))],
@@ -1864,7 +1927,7 @@ impl Engine {
                         // value … width … <x-slot> …)`, and the device appends
                         // `color`, `kind` and `text` (GOTCHAS #238)."
                         spec: vec![
-                            ("SCREEN-Y".to_string(), Value::Int(y_screen)),
+                            ("SCREEN-Y".to_string(), Value::Int(screen_y)),
                             ("HEIGHT".to_string(), Value::Int(text_h)),
                             ("VALUE".to_string(), Value::Str(w.clone())),
                             ("WIDTH".to_string(), Value::Int(wd)),
@@ -1884,9 +1947,7 @@ impl Engine {
                 Chop::Spaces(n) => curr_x += n * char_w,
             }
         }
-        self.window_items.push((key.clone(), names));
-        self.now_display();
-        key
+        self.window_items.push((key.to_string(), names));
     }
 
     /// `add-line-to-exp-window`: a `line` feature (`uwi.lisp:511`).
@@ -1967,20 +2028,35 @@ impl Engine {
             finst_ms: None,
         });
         let mut names = vec![name];
-        // The button's text is a separate text item, **centred** on the button
-        // (ACT-R's uwi centres it). Its x must land on the box's centre column:
-        // `newest_feature` picks among the leftmost column's newest items, so an
-        // uncentred label puts the labels in a column of their own and changes
-        // which location gets placed. Verified against the oracle: `bst-learn`'s
-        // ref places VISUAL-LOCATION2 (the box/label pair of button B) and the
-        // engine placed 3 until this centring.
-        let tw = 7 * text.chars().count() as i64;
-        let lx = x + (width - tw).div_euclid(2);
-        let tkey = self.add_window_text(text, lx, y, width, height, 12);
+        // The button's text is a separate `text` feature at the **same**
+        // screen position as the oval. `button-vdi` (`uwi.lisp:366`) builds it
+        // with `start-x = px(view-loc)`, `y-pos = py(view-loc)` and
+        // `x-fct = (lambda (s startx obj) (- startx (round (str-width obj) 2)))`,
+        // so `build-string-feats`' `(+ curr-x x-off (round curr-width 2))`
+        // collapses to `px(top-xy) + px(view-loc)` — exactly the oval's own
+        // `screen-x`/`screen-y`. (A label one pixel off lands in a column of
+        // its own and changes `newest_feature`'s pick: bst-learn's ref places
+        // VISUAL-LOCATION19, a label, at a trial start.)
+        let char_w = round_half_even_f(12.0 * 7.0 / 12.0).max(1);
+        let text_h = round_half_even_f(12.0 * 10.0 / 12.0).max(1);
+        let total_w = char_w * text.chars().count() as i64;
+        let oval_x = ox + x + width.div_euclid(2);
+        let oval_y = oy + y + height.div_euclid(2);
+        let tkey = format!("TEXT-VDI-{}", self.window_item_seq);
+        self.window_item_seq += 1;
+        self.push_text_item(
+            &tkey,
+            text,
+            oval_x - round_half_even(total_w, 2),
+            oval_y,
+            char_w,
+            text_h,
+        );
         if let Some((_, tnames)) = self.window_items.iter().find(|(k, _)| k == &tkey) {
             names.extend(tnames.iter().cloned());
         }
         self.window_items.push((key.clone(), names));
+        self.now_display();
         key
     }
 

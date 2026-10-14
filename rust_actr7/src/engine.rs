@@ -678,6 +678,37 @@ struct Feature {
     finst_ms: Option<i64>,
 }
 
+/// A feature that was attended when the display was rebuilt: `process-display`
+/// collects deleted attended features into `transfer-finsts`
+/// (`vision.lisp:1656`), then `transfer-finst` (`vision.lisp:2306`) moves the
+/// finst onto the matching feature the rebuilt display re-adds — stamping it
+/// with the finst's time and leaving it *not* `new`. So an attended item
+/// survives a `clear-exp-window`/`build-display` rebuild and the default
+/// spec's `:attended new` skips it (`bst-learn`'s rebuilt display omits the
+/// attended button's oval from the auto-stuff).
+struct FinstTransfer {
+    kind: String,
+    x: i64,
+    y: i64,
+    width: i64,
+    height: i64,
+    value: String,
+    finst_ms: i64,
+}
+
+impl FinstTransfer {
+    /// `equal-chunks-fct` on the visicon chunks (`vision.lisp:1765`): the
+    /// rebuilt feature carries the same location and value.
+    fn matches(&self, f: &Feature) -> bool {
+        self.kind == f.kind
+            && self.x == f.x
+            && self.y == f.y
+            && self.width == f.width
+            && self.height == f.height
+            && self.value == f.value
+    }
+}
+
 /// A queued entry of ACT-R's `visicon-updates` (`vision.lisp:3905`), rendered
 /// by `printed-visicon` as the "Pending additions/deletions/modifications"
 /// sections.
@@ -1970,6 +2001,10 @@ pub struct Engine {
     consume_rng: u64,
     /// Live visicon features, in proc-display order.
     features: Vec<Feature>,
+    /// Attended features collected when the display was cleared, waiting for
+    /// the rebuilt display to re-add them (`transfer-finsts`,
+    /// `vision.lisp:1656`).
+    pending_finst_transfers: Vec<FinstTransfer>,
     /// Queued `visicon-updates` (`vision.lisp:1296`): what the next
     /// `proc-display` will add, delete or modify, and what `printed-visicon`
     /// reports as pending. The RPC `[add|delete|modify]-visicon-features`
@@ -2414,6 +2449,7 @@ impl Engine {
             consume_rng,
             features: Vec::new(),
             visicon_pending: Vec::new(),
+            pending_finst_transfers: Vec::new(),
             visicon_alias: HashMap::new(),
             feat_seq: 0,
             window_origin,

@@ -4305,3 +4305,32 @@ encoding trace names the marker `visual-location0-1`. The engine already
 records that alias (`resolve_alias`); `encoding_complete` now applies it when
 building the object. Copies whose slots differ (tracking's moving location)
 never merge, so `tracking-test` keeps its `-1…-4`.
+
+## 258. A button's text label sits exactly on the oval, not centred beside it
+
+`button-vdi`'s `build-vis-locs-for` (`uwi.lisp:358`) builds the label with
+`start-x = px(view-loc)`, `y-pos = py(view-loc)` and an `x-fct` of
+`(- startx (round (str-width obj) 2))`. `build-string-feats`
+(`vision.lisp:3586`) then adds `(round curr-width 2)` per word, so the two
+cancel: the label's `screen-x` is `px(top-xy) + px(view-loc)` — the oval's own
+`screen-x` — and its `screen-y` is likewise the oval's `screen-y`. A label one
+pixel off lands in a column of its own, which changes `newest_feature`'s
+candidate set (and hence the draw). Verified against the oracle: for
+`build-display`'s buttons the ref visicon has VISUAL-LOCATION0/1 (A's oval and
+label) both at `(325 335)`. A standalone `add-text-to-exp-window` is a
+`static-text-vdi` and keeps the `(1+ x)` / `y + round(line-height, 2)`
+placement (`uwi.lisp:459`).
+
+## 259. An attended feature survives a display rebuild, keeping its finst
+
+`process-display` collects every *attended* feature it deletes into
+`transfer-finsts` (`vision.lisp:1656`) and, after the rebuilt display is
+inserted, `transfer-finst` (`vision.lisp:2306`) moves the finst onto the
+matching new feature (`equal-chunks-fct`), stamping it with the finst's time
+and copying `chunk-visual-new-p`. So a `clear-exp-window` + `build-display`
+rebuild does not make an attended item `new` again: the default spec's
+`:attended new` (`vision.lisp:3178`) skips it, and `newest_feature`'s
+candidate set is one shorter. `bst-learn`'s per-trial rebuild re-adds the
+buttons, and the one the model last attended (A's oval, tstamp from the
+attention) is excluded from the trial-start auto-stuff — the ref's set is
+`{15…19}`, not `{14…19}`.
