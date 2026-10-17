@@ -2,7 +2,8 @@
 # rpc-conformance.sh — run the Python test-models through the Rust RPC server
 # and compare against the shared `.ref` files.
 #
-# Requires: a built `actr-server`, Python 3, and the ACT-R checkout.
+# Requires: a built `actr` binary (`actr server`), Python 3, and the ACT-R
+# checkout.
 # Usage: rpc-conformance.sh [--expect|--all|<test>...]
 set -euo pipefail
 
@@ -18,7 +19,7 @@ cargo build --manifest-path "$CRATE/Cargo.toml" --bins >/dev/null
 
 # The vendored client auto-connects from `~/act-r-port-num.txt`, so let the
 # server write it (do not pass --no-port-file).
-"$CRATE/target/debug/actr-server" --port "$PORT" --actr "$ACTR_DIR" \
+"$CRATE/target/debug/actr" server --port "$PORT" --actr "$ACTR_DIR" \
   >/dev/null 2>&1 &
 SERVER=$!
 # Wait for the listener.

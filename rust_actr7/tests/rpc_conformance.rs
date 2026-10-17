@@ -1,4 +1,4 @@
-//! RPC conformance: start the `actr-server` binary, drive the vendored
+//! RPC conformance: start the `actr` binary (`actr server`), drive the vendored
 //! `actr7.x/tutorial/python/actr.py` client against it, and compare the Python
 //! test-models to the shared `.ref` files (`golden/rpc-enabled.txt`).
 //!

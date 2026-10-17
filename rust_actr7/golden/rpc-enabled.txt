@@ -1,5 +1,5 @@
 # ACT-R RPC conformance: Python test-models that must match their `.ref`
-# through the vendored actr.py client driving `actr-server`.
+# through the vendored actr.py client driving `actr server`.
 #
 #   cargo test --test rpc_conformance -- --ignored --nocapture
 #   # or directly:

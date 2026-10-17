@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """RPC conformance driver: drive the vendored actr.py client against a
-running `actr-server` and compare each Python test-model's output to the
+running `actr server` and compare each Python test-model's output to the
 shared `.ref` files.
 
 Usage:
