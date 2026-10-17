@@ -596,6 +596,20 @@ pub struct RetrievalChunk {
     pub activation_trace: String,
 }
 
+/// `buffer-history` state (`other-files/buffer-history.lisp`): buffer-change
+/// rows grouped by the time segment they occurred in.
+#[derive(Debug, Clone, Default)]
+struct BufferHistory {
+    enabled: bool,
+    /// Closed segments: `(segment-start time_ms, rows)`.
+    recorded: Vec<(i64, Vec<Vec<String>>)>,
+    /// Rows since the last time boundary: `[buffer, action, what, status]`.
+    current: Vec<Vec<String>>,
+    /// Buffer snapshot at the last boundary: `(buffer, chunk-text, status)`.
+    start: Vec<(String, String, String)>,
+    last_time: i64,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
@@ -1990,6 +2004,8 @@ pub struct Engine {
     retrieval_history: Vec<RetrievalRecord>,
     /// Whether `retrieval-history` recording is enabled (`record-history`).
     record_retrieval_history: bool,
+    /// `buffer-history` state (`record-history "buffer-history"`).
+    buffer_history: BufferHistory,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -2414,6 +2430,10 @@ impl Engine {
             last_conflict_set: Vec::new(),
             retrieval_history: Vec::new(),
             record_retrieval_history: false,
+            buffer_history: BufferHistory {
+                last_time: -1,
+                ..Default::default()
+            },
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -2931,6 +2951,11 @@ impl Engine {
         // The retrieval-history module clears on reset
         // (`reset-dm-history-module`).
         self.retrieval_history.clear();
+        // `reset-buffer-history-module`: clear the data and disable recording.
+        self.buffer_history = BufferHistory {
+            last_time: -1,
+            ..Default::default()
+        };
         self.named = HashMap::new();
         // `create-model-default-chunks` (`model.lisp:753`): every model starts
         // with these state chunks (`(free name free)` etc., plus `clear`); a
@@ -3886,10 +3911,13 @@ impl Engine {
             }
             let next = self.queue.pop().expect("peeked non-empty");
             self.time_ms = next.time_ms;
+            self.bh_pre_hook();
+            let bh_info = self.bh_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
+            self.bh_record(bh_info);
             self.bold_record();
             n += 1;
             if self.zz_break_hit {
@@ -4031,10 +4059,13 @@ impl Engine {
             }
             let next = self.queue.pop().expect("peeked non-empty");
             self.time_ms = next.time_ms;
+            self.bh_pre_hook();
+            let bh_info = self.bh_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
+            self.bh_record(bh_info);
             self.bold_record();
             processed = true;
             self.run_events += 1;

@@ -2454,6 +2454,160 @@ impl Engine {
     }
 }
 
+/// `buffer-history` recording (`other-files/buffer-history.lisp`).
+impl Engine {
+    /// Enable/disable `buffer-history` recording.
+    pub fn set_buffer_history(&mut self, on: bool) {
+        self.buffer_history.enabled = on;
+    }
+
+    /// The recorded `buffer-history` segments `(time_ms, rows)`, where each row
+    /// is `[buffer, action, what, status, prev-chunk, prev-status, next-chunk,
+    /// next-status]`.
+    pub fn buffer_history(&self) -> Vec<(i64, Vec<Vec<String>>)> {
+        let bh = &self.buffer_history;
+        if bh.current.is_empty() {
+            return bh.recorded.clone();
+        }
+        let mut results: Vec<Vec<String>> = Vec::new();
+        for x in &bh.current {
+            let mut row = x.clone();
+            push_snapshot(&mut row, &bh.start, &x[0]);
+            row.push(String::new());
+            row.push(String::new());
+            results.push(row);
+        }
+        let mut all = bh.recorded.clone();
+        all.push((bh.last_time, results));
+        all
+    }
+
+    /// A snapshot of every buffer: `(name, printed chunk or "buffer empty",
+    /// printed status)`.
+    fn bh_snapshot(&mut self) -> Vec<(String, String, String)> {
+        let names = self.buffer_names();
+        names
+            .into_iter()
+            .map(|b| {
+                let chunk = match self.buffer_read(&b) {
+                    Some(n) if !n.is_empty() => self.printed_chunk(&n).unwrap_or(n),
+                    _ => "buffer empty".to_string(),
+                };
+                let status = self.printed_buffer_status(&b);
+                (b, chunk, status)
+            })
+            .collect()
+    }
+
+    /// The pre-event hook (`buffer-start-time-recorder`): close out the
+    /// previous time segment when the model clock advances.
+    pub(super) fn bh_pre_hook(&mut self) {
+        if !self.buffer_history.enabled {
+            return;
+        }
+        let t = self.time_ms;
+        if t == self.buffer_history.last_time {
+            return;
+        }
+        let snap = self.bh_snapshot();
+        if self.buffer_history.last_time != -1 {
+            let prev = self.buffer_history.start.clone();
+            let mut results: Vec<Vec<String>> = Vec::new();
+            for x in self.buffer_history.current.clone() {
+                let mut row = x.clone();
+                let buf = x[0].clone();
+                push_snapshot(&mut row, &prev, &buf);
+                push_snapshot(&mut row, &snap, &buf);
+                results.push(row);
+            }
+            let time = self.buffer_history.last_time;
+            self.buffer_history.recorded.push((time, results));
+        }
+        self.buffer_history.current.clear();
+        self.buffer_history.start = snap;
+        self.buffer_history.last_time = t;
+    }
+
+    /// The `(buffer, action, what)` of a buffer event when recording (the post
+    /// hook's input, captured before `exec` consumes the event).
+    pub(super) fn bh_event_info_take(&self, ev: &Event) -> Option<(String, String, String)> {
+        if !self.buffer_history.enabled {
+            return None;
+        }
+        self.bh_event_info(ev)
+    }
+
+    /// The post-event hook (`buffer-event-recorder`): record a buffer change
+    /// (status read after the event has run).
+    pub(super) fn bh_record(&mut self, info: Option<(String, String, String)>) {
+        let Some((buffer, action, what)) = info else {
+            return;
+        };
+        let status = self.printed_buffer_status(&buffer);
+        self.buffer_history
+            .current
+            .push(vec![buffer, action, what, status]);
+    }
+
+    /// `(buffer, action, what)` for a buffer-changing event, or `None`.
+    fn bh_event_info(&self, ev: &Event) -> Option<(String, String, String)> {
+        match ev {
+            Event::SetBuffer { buffer, chunk, .. } => {
+                let what = match chunk {
+                    NewChunk::Named(n) => self.printed_chunk(n).unwrap_or_else(|| n.clone()),
+                    _ => super::productions::render_request_spec(chunk),
+                };
+                Some((buffer.clone(), "set-buffer-chunk".to_string(), what))
+            }
+            Event::ClearBuffer { buffer, .. } => {
+                Some((buffer.clone(), "clear-buffer".to_string(), String::new()))
+            }
+            Event::ModBuffer {
+                buffer,
+                slots,
+                module,
+            } => {
+                let action = if module == "PROCEDURAL" {
+                    "mod-buffer-chunk"
+                } else {
+                    "module-mod-request"
+                };
+                Some((buffer.clone(), action.to_string(), render_slots_spec(slots)))
+            }
+            Event::ModuleRequest { buffer, spec, .. } => Some((
+                buffer.clone(),
+                "module-request".to_string(),
+                super::productions::render_request_spec(spec),
+            )),
+            _ => None,
+        }
+    }
+}
+
+/// Append a snapshot's `(chunk-text, status)` for `buf` to a history row,
+/// empty when the buffer is absent from the snapshot.
+fn push_snapshot(row: &mut Vec<String>, snap: &[(String, String, String)], buf: &str) {
+    match snap.iter().find(|e| e.0 == buf) {
+        Some(s) => {
+            row.push(s.1.clone());
+            row.push(s.2.clone());
+        }
+        None => {
+            row.push(String::new());
+            row.push(String::new());
+        }
+    }
+}
+
+/// `slot value` lines for a chunk spec (the mod/request `what` column).
+fn render_slots_spec(slots: &[(String, Value)]) -> String {
+    slots
+        .iter()
+        .map(|(s, v)| format!("{s} {}", v.show()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// A chunk-type default value as Lisp `~S` would print it
 /// (`(chunk-type … (slot default))`).
 fn pattern_show(p: &crate::model::Pattern) -> String {

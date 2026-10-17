@@ -3031,7 +3031,7 @@ impl Engine {
 /// `printed-chunk-spec`: the retrieval request as written -- `isa TYPE` then
 /// `slot value` and `- slot value` lines -- for the retrieval history's
 /// request column.
-fn render_request_spec(spec: &NewChunk) -> String {
+pub(super) fn render_request_spec(spec: &NewChunk) -> String {
     match spec {
         NewChunk::Named(n) => n.clone(),
         NewChunk::Instance(c) => c.name.clone().unwrap_or_default(),

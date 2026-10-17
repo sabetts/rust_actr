@@ -423,6 +423,17 @@ impl Session {
                     .map(|e| e.retrieval_history().iter().map(retrieval_record).collect())
                     .unwrap_or_default(),
             ),
+            "BUFFER-HISTORY" => Some(
+                self.engine
+                    .as_ref()
+                    .map(|e| {
+                        e.buffer_history()
+                            .into_iter()
+                            .map(|(t, rows)| buffer_history_record(t, &rows))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            ),
             _ => None,
         }
     }
@@ -1027,30 +1038,37 @@ impl Session {
                     }
                 }
                 // `record-history` with buffer names drives the BOLD predictor;
-                // `"retrieval-history"` enables the DM retrieval recorder.
+                // the history names enable their engine-side recorders.
                 if let Some(eng) = &mut self.engine {
                     eng.set_bold_buffers(&names);
-                    if names
-                        .iter()
-                        .any(|n| n.eq_ignore_ascii_case("retrieval-history"))
-                    {
-                        eng.set_retrieval_history(true);
+                    for n in &names {
+                        if n.eq_ignore_ascii_case("retrieval-history") {
+                            eng.set_retrieval_history(true);
+                        } else if n.eq_ignore_ascii_case("buffer-history") {
+                            eng.set_buffer_history(true);
+                        }
                     }
                 }
                 Ok(vec![Json::Null])
             }
             "stop-recording-history" => {
                 let mut stop_retrieval = false;
+                let mut stop_buffer = false;
                 for n in args.iter().filter_map(|a| a.as_str()) {
                     let key = n.to_uppercase();
-                    if key == "RETRIEVAL-HISTORY" {
-                        stop_retrieval = true;
+                    match key.as_str() {
+                        "RETRIEVAL-HISTORY" => stop_retrieval = true,
+                        "BUFFER-HISTORY" => stop_buffer = true,
+                        _ => {}
                     }
                     self.hist_recording.remove(&key);
                 }
-                if stop_retrieval {
-                    if let Some(eng) = &mut self.engine {
+                if let Some(eng) = &mut self.engine {
+                    if stop_retrieval {
                         eng.set_retrieval_history(false);
+                    }
+                    if stop_buffer {
+                        eng.set_buffer_history(false);
                     }
                 }
                 Ok(vec![Json::Null])
@@ -2385,6 +2403,16 @@ fn retrieval_record(r: &crate::engine::RetrievalRecord) -> String {
     .write()
 }
 
+/// One `buffer-history` segment as JSON: `[time_ms, [[row, …], …]]`
+/// (`other-files/buffer-history.lisp`).
+fn buffer_history_record(time_ms: i64, rows: &[Vec<String>]) -> String {
+    let rows: Vec<Json> = rows
+        .iter()
+        .map(|r| Json::Arr(r.iter().cloned().map(Json::Str).collect()))
+        .collect();
+    Json::Arr(vec![Json::Int(time_ms), Json::Arr(rows)]).write()
+}
+
 /// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
 /// valid array, so the client can decode it independently).
 fn chunk_records(records: &[String], size: usize) -> Vec<String> {
@@ -2781,6 +2809,73 @@ mod tests {
                 "params sdp block: {params:?}"
             );
         }
+    }
+
+    /// `record-history "buffer-history"` records buffer changes in the
+    /// Environment's segment/row shape.
+    #[test]
+    fn buffer_history_records() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("buffer-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("buffer-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("buffer-history".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let text = chunk[0].as_str().unwrap();
+        let Json::Arr(segs) = crate::json::parse(text).unwrap() else {
+            panic!("buffer-history payload is not a JSON array");
+        };
+        assert!(!segs.is_empty(), "expected at least one segment");
+        let Json::Arr(seg) = &segs[0] else {
+            panic!("segment is not an array");
+        };
+        assert!(matches!(seg[0], Json::Int(_)), "segment[0] = time");
+        let Json::Arr(rows) = &seg[1] else {
+            panic!("segment[1] is not the row list");
+        };
+        assert!(!rows.is_empty(), "expected at least one buffer row");
+        let Json::Arr(row) = &rows[0] else {
+            panic!("row is not an array");
+        };
+        assert_eq!(row.len(), 8, "row has 8 fields");
     }
 
     /// The Environment viewer commands return the model's productions,
