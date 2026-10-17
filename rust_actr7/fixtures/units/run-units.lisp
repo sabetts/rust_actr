@@ -1,4 +1,4 @@
-;;;; run-units.lisp â€” unit-table oracle driver.
+;;;; run-units.lisp — unit-table oracle driver.
 ;;;;
 ;;;; Loaded *after* single-threaded ACT-R in a headless SBCL:
 ;;;;   sbcl --non-interactive --disable-debugger \
