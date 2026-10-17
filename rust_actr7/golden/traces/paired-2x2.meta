@@ -1,7 +1,0 @@
-name: paired-2x2
-model: tutorial;unit4;paired-model.lisp
-seed: (200 4)
-run: 60
-task: "user-loads;paired2-task.lisp"
-act-r-version: ("7.31.4-<3489:2026-06-10>")
-lisp: SBCL 2.4.5.122-e2a9148
