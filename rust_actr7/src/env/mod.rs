@@ -137,4 +137,58 @@ mod tests {
             .expect("filter-dm-chunks");
         assert!(matches!(chunks.first(), Some(Json::Arr(_))));
     }
+
+    /// The in-process backend collects the visible-window display ops the
+    /// engine pushes to the registered handler.
+    #[test]
+    fn inproc_collects_window_ops() {
+        let root = actr_dir();
+        if !root.is_dir() {
+            eprintln!("skipping: no ACT-R checkout at {}", root.display());
+            return;
+        }
+        let mut b = InProc::new(root, (100, 0));
+        b.evaluate(
+            "load-act-r-model",
+            None,
+            vec![Json::Str("tutorial;unit1;count.lisp".into())],
+        )
+        .expect("load-act-r-model");
+        b.register_window_handler("env-vv-handler");
+        b.evaluate(
+            "add-virtual-window-handler",
+            None,
+            vec![Json::Str("env-vv-handler".into())],
+        )
+        .expect("add-virtual-window-handler");
+        b.evaluate(
+            "open-exp-window",
+            None,
+            vec![
+                Json::Str("W".into()),
+                Json::Obj(vec![
+                    ("x".into(), Json::Int(10)),
+                    ("y".into(), Json::Int(20)),
+                ]),
+            ],
+        )
+        .expect("open-exp-window");
+        b.evaluate(
+            "add-text-to-exp-window",
+            None,
+            vec![
+                Json::Str("hi".into()),
+                Json::Obj(vec![("x".into(), Json::Int(1)), ("y".into(), Json::Int(2))]),
+            ],
+        )
+        .expect("add-text-to-exp-window");
+
+        let ops = b.take_window_ops();
+        let verbs: Vec<&str> = ops
+            .iter()
+            .filter_map(|o| o.first().and_then(|x| x.as_str()))
+            .collect();
+        assert!(verbs.contains(&"open"), "ops: {verbs:?}");
+        assert!(verbs.contains(&"text"), "ops: {verbs:?}");
+    }
 }

@@ -37,6 +37,10 @@ pub struct Client {
     writer: Arc<Mutex<TcpStream>>,
     pending: Pending,
     trace: Arc<Mutex<Vec<String>>>,
+    /// The visible-window handler command name (set by
+    /// [`EnvBackend::register_window_handler`]) and the ops it collected.
+    vv_name: Arc<Mutex<Option<String>>>,
+    ops: Arc<Mutex<Vec<Vec<Json>>>>,
     next_id: AtomicI64,
     /// Cached `current-model` (queried on demand; the trait getter is `&self`).
     model: Option<String>,
@@ -52,18 +56,24 @@ impl Client {
         let writer = Arc::new(Mutex::new(stream));
         let pending: Pending = Arc::new(Mutex::new(HashMap::new()));
         let trace = Arc::new(Mutex::new(Vec::new()));
+        let vv_name: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+        let ops = Arc::new(Mutex::new(Vec::new()));
 
         spawn_reader(
             BufReader::new(read_stream),
             writer.clone(),
             pending.clone(),
             trace.clone(),
+            vv_name.clone(),
+            ops.clone(),
         );
 
         let mut client = Client {
             writer,
             pending,
             trace,
+            vv_name,
+            ops,
             next_id: AtomicI64::new(1),
             model: None,
             addr: format!("{host}:{port}"),
@@ -175,6 +185,24 @@ impl EnvBackend for Client {
     fn describe(&self) -> String {
         format!("RPC client → {}", self.addr)
     }
+
+    fn register_window_handler(&mut self, name: &str) {
+        *self.vv_name.lock().unwrap() = Some(name.to_string());
+        let _ = self.request(
+            "add",
+            vec![
+                Json::Str(name.to_string()),
+                Json::Str(name.to_string()),
+                Json::Str("Environment visible-window handler".into()),
+                Json::Null,
+                Json::Str(name.to_string()),
+            ],
+        );
+    }
+
+    fn take_window_ops(&mut self) -> Vec<Vec<Json>> {
+        std::mem::take(&mut *self.ops.lock().unwrap())
+    }
 }
 
 /// The reader loop: replies to pending requests, and trace callbacks to the
@@ -184,6 +212,8 @@ fn spawn_reader(
     writer: Arc<Mutex<TcpStream>>,
     pending: Pending,
     trace: Arc<Mutex<Vec<String>>>,
+    vv_name: Arc<Mutex<Option<String>>>,
+    ops: Arc<Mutex<Vec<Vec<Json>>>>,
 ) {
     thread::spawn(move || loop {
         let msg = match read_message(&mut reader) {
@@ -195,9 +225,28 @@ fn spawn_reader(
             if let Ok((method, params, id)) = parse_request(&msg) {
                 if method == Method::Evaluate {
                     let name = params.first().and_then(|p| p.as_str()).unwrap_or("");
+                    let is_vv = vv_name
+                        .lock()
+                        .unwrap()
+                        .as_deref()
+                        .map(|n| n == name)
+                        .unwrap_or(false);
                     let reply = if name == TRACE_HANDLER {
                         if let Some(line) = params.get(2).and_then(|p| p.as_str()) {
                             trace.lock().unwrap().push(line.to_string());
+                        }
+                        reply_ok(id.as_ref(), Json::Arr(vec![Json::Bool(true)]))
+                    } else if is_vv {
+                        // `[name, model, verb, …]`; `check` answers true, every
+                        // other verb is a display op for the UI thread.
+                        let op: Vec<Json> = params.iter().skip(2).cloned().collect();
+                        let check = op
+                            .first()
+                            .and_then(|x| x.as_str())
+                            .map(|s| s == "check")
+                            .unwrap_or(false);
+                        if !check {
+                            ops.lock().unwrap().push(op);
                         }
                         reply_ok(id.as_ref(), Json::Arr(vec![Json::Bool(true)]))
                     } else {

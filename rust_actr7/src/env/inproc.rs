@@ -2,42 +2,62 @@
 //!
 //! This is the default `actr env` wiring. Commands go through
 //! [`Session::evaluate`], so the exact same dispatch the RPC server uses is
-//! exercised; trace is drained from the session's `out_lines`.
+//! exercised; trace is drained from the session's `out_lines`, and visible
+//! window display ops are collected from the client handler's `Remote`.
 
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use crate::json::Json;
 use crate::rpc::session::{Remote, Session};
 
 use super::backend::EnvBackend;
 
-/// A [`Remote`] for client-owned commands (monitors, virtual-window handlers).
+/// A [`Remote`] for the client-owned visible-window handler.
 ///
-/// In-process the GUI registers nothing with the dispatcher yet, so any call
-/// back to a "client" command is unexpected and reported as an error rather
-/// than silently dropped. Later phases hand this a queue of display ops.
-struct GuiRemote;
+/// The engine calls it (via `Session::evaluate`) with each display op; `check`
+/// is answered `true` (the GUI always displays), everything else is queued for
+/// the UI thread. Any other client command is unexpected and reported.
+struct GuiRemote {
+    handler: String,
+    ops: Arc<Mutex<Vec<Vec<Json>>>>,
+}
 
 impl Remote for GuiRemote {
     fn call(
         &mut self,
         name: &str,
         _model: Option<&str>,
-        _args: Vec<Json>,
+        args: Vec<Json>,
     ) -> Result<Vec<Json>, String> {
-        Err(format!("no in-process handler for client command {name:?}"))
+        if name != self.handler {
+            return Err(format!("no in-process handler for client command {name:?}"));
+        }
+        let check = args
+            .first()
+            .and_then(|a| a.as_str())
+            .map(|s| s == "check")
+            .unwrap_or(false);
+        if !check {
+            self.ops.lock().unwrap().push(args);
+        }
+        Ok(vec![Json::Bool(true)])
     }
 }
 
 /// The GUI owns the session and drives it on the UI thread.
 pub struct InProc {
     session: Session,
+    handler: String,
+    ops: Arc<Mutex<Vec<Vec<Json>>>>,
 }
 
 impl InProc {
     pub fn new(root: PathBuf, seed: (u64, u64)) -> InProc {
         InProc {
             session: Session::new(root, seed),
+            handler: String::new(),
+            ops: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -54,7 +74,10 @@ impl EnvBackend for InProc {
         model: Option<&str>,
         args: Vec<Json>,
     ) -> Result<Vec<Json>, String> {
-        let mut remote = GuiRemote;
+        let mut remote = GuiRemote {
+            handler: self.handler.clone(),
+            ops: self.ops.clone(),
+        };
         self.session.evaluate(name, model, &args, &mut remote)
     }
 
@@ -72,5 +95,14 @@ impl EnvBackend for InProc {
 
     fn describe(&self) -> String {
         "in-process".to_string()
+    }
+
+    fn register_window_handler(&mut self, name: &str) {
+        self.handler = name.to_string();
+        self.session.add_remote(name, Some(name.to_string()), None);
+    }
+
+    fn take_window_ops(&mut self) -> Vec<Vec<Json>> {
+        std::mem::take(&mut *self.ops.lock().unwrap())
     }
 }

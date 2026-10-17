@@ -19,6 +19,86 @@ enum Tab {
     Parameters,
 }
 
+/// A visible experiment window the engine is displaying, with its items.
+#[derive(Default, Clone)]
+struct VisWin {
+    title: String,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    items: Vec<WinItem>,
+    attention: Option<(f32, f32, egui::Color32)>,
+    cursor: Option<(f32, f32, egui::Color32)>,
+}
+
+/// One item in a visible window (`env-window-features`).
+#[derive(Clone)]
+enum WinItem {
+    Button {
+        id: String,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        text: String,
+        color: egui::Color32,
+    },
+    Text {
+        id: String,
+        x: f32,
+        y: f32,
+        text: String,
+        color: egui::Color32,
+        size: f32,
+    },
+    Line {
+        id: String,
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        color: egui::Color32,
+    },
+}
+
+impl WinItem {
+    fn id(&self) -> &str {
+        match self {
+            WinItem::Button { id, .. } | WinItem::Text { id, .. } | WinItem::Line { id, .. } => id,
+        }
+    }
+}
+
+/// An ACT-R colour name → egui colour (`color->name`, `misc-utils.lisp`).
+fn color(name: &str) -> egui::Color32 {
+    use egui::Color32 as C;
+    match name.to_lowercase().as_str() {
+        "black" => C::BLACK,
+        "white" => C::WHITE,
+        "red" => C::RED,
+        "green" => C::GREEN,
+        "blue" => C::BLUE,
+        "yellow" => C::YELLOW,
+        "cyan" => C::from_rgb(0, 255, 255),
+        "magenta" => C::from_rgb(255, 0, 255),
+        "pink" => C::from_rgb(255, 192, 203),
+        "brown" => C::from_rgb(150, 75, 0),
+        "gray" | "grey" => C::GRAY,
+        "light-gray" => C::LIGHT_GRAY,
+        "dark-gray" => C::DARK_GRAY,
+        "purple" => C::from_rgb(128, 0, 128),
+        "dark-red" => C::from_rgb(139, 0, 0),
+        "dark-green" => C::from_rgb(0, 100, 0),
+        "dark-blue" => C::from_rgb(0, 0, 139),
+        "dark-cyan" => C::from_rgb(0, 139, 139),
+        "dark-magenta" => C::from_rgb(139, 0, 139),
+        "dark-yellow" => C::from_rgb(139, 139, 0),
+        "light-blue" => C::from_rgb(173, 216, 230),
+        _ => C::BLACK,
+    }
+}
+
 pub struct App {
     backend: Box<dyn EnvBackend>,
     /// Where the file dialog opens (the ACT-R root; `None` in client mode).
@@ -51,10 +131,20 @@ pub struct App {
     params: Vec<String>,
     param_sel: Option<usize>,
     param_detail: String,
+    /// The visible experiment windows the engine is displaying.
+    windows: Vec<VisWin>,
 }
 
 impl App {
-    pub fn new(backend: Box<dyn EnvBackend>, start_dir: Option<PathBuf>) -> App {
+    pub fn new(mut backend: Box<dyn EnvBackend>, start_dir: Option<PathBuf>) -> App {
+        // Register the client command the engine calls with window ops.
+        let handler = "env-vv-handler";
+        backend.register_window_handler(handler);
+        let _ = backend.evaluate(
+            "add-virtual-window-handler",
+            None,
+            vec![Json::Str(handler.to_string())],
+        );
         App {
             backend,
             start_dir,
@@ -82,6 +172,228 @@ impl App {
             params: Vec::new(),
             param_sel: None,
             param_detail: String::new(),
+            windows: Vec::new(),
+        }
+    }
+
+    /// Apply the display ops the handler received to the window list.
+    fn apply_window_ops(&mut self) {
+        for op in self.backend.take_window_ops() {
+            let s = |i: usize| op.get(i).and_then(|x| x.as_str()).unwrap_or("").to_string();
+            let n = |i: usize| op.get(i).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
+            match op.first().and_then(|x| x.as_str()).unwrap_or("") {
+                "open" => {
+                    let title = s(1);
+                    let win = VisWin {
+                        title: title.clone(),
+                        x: n(2),
+                        y: n(3),
+                        w: n(4),
+                        h: n(5),
+                        ..Default::default()
+                    };
+                    self.windows.retain(|w| w.title != title);
+                    self.windows.push(win);
+                }
+                "close" => {
+                    let title = s(1);
+                    self.windows.retain(|w| w.title != title);
+                }
+                "select" => {}
+                "text" => {
+                    let (title, id) = (s(1), s(2));
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        upsert(
+                            &mut w.items,
+                            WinItem::Text {
+                                id,
+                                x: n(3),
+                                y: n(4),
+                                text: s(5),
+                                color: color(&s(6)),
+                                size: n(7).max(6.0),
+                            },
+                        );
+                    }
+                }
+                "button" => {
+                    let (title, id) = (s(1), s(2));
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        upsert(
+                            &mut w.items,
+                            WinItem::Button {
+                                id,
+                                x: n(3),
+                                y: n(4),
+                                w: n(5),
+                                h: n(6),
+                                text: s(7),
+                                color: color(&s(8)),
+                            },
+                        );
+                    }
+                }
+                "line" => {
+                    let (title, id) = (s(1), s(2));
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        upsert(
+                            &mut w.items,
+                            WinItem::Line {
+                                id,
+                                x1: n(3),
+                                y1: n(4),
+                                x2: n(5),
+                                y2: n(6),
+                                color: color(&s(7)),
+                            },
+                        );
+                    }
+                }
+                "remove" => {
+                    let (title, id) = (s(1), s(2));
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        w.items.retain(|it| it.id() != id);
+                    }
+                }
+                "attention" => {
+                    let title = s(1);
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        w.attention = Some((n(3), n(4), color(&s(5))));
+                    }
+                }
+                "clearattention" => {
+                    let title = s(1);
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        w.attention = None;
+                    }
+                }
+                "cursor" => {
+                    let title = s(1);
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        w.cursor = Some((n(3), n(4), color(&s(5))));
+                    }
+                }
+                "clearcursor" => {
+                    let title = s(1);
+                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                        w.cursor = None;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Draw each visible window and forward clicks back to the engine.
+    fn render_windows(&mut self, ctx: &egui::Context) {
+        let wins = self.windows.clone();
+        let mut click: Option<(String, f64, f64)> = None;
+        for w in &wins {
+            egui::Window::new(&w.title)
+                .default_pos([w.x, w.y])
+                .resizable(false)
+                .collapsible(false)
+                .show(ctx, |ui| {
+                    let (rect, resp) =
+                        ui.allocate_exact_size(egui::vec2(w.w, w.h), egui::Sense::click());
+                    let p = ui.painter_at(rect);
+                    p.rect_filled(rect, egui::CornerRadius::ZERO, egui::Color32::WHITE);
+                    for it in &w.items {
+                        match it {
+                            WinItem::Line {
+                                x1,
+                                y1,
+                                x2,
+                                y2,
+                                color,
+                                ..
+                            } => {
+                                p.line_segment(
+                                    [
+                                        rect.min + egui::vec2(*x1, *y1),
+                                        rect.min + egui::vec2(*x2, *y2),
+                                    ],
+                                    egui::Stroke::new(2.0, *color),
+                                );
+                            }
+                            WinItem::Text {
+                                x,
+                                y,
+                                text,
+                                color,
+                                size,
+                                ..
+                            } => {
+                                p.text(
+                                    rect.min + egui::vec2(*x, *y),
+                                    egui::Align2::LEFT_TOP,
+                                    text,
+                                    egui::FontId::monospace(*size),
+                                    *color,
+                                );
+                            }
+                            WinItem::Button {
+                                x,
+                                y,
+                                w: bw,
+                                h: bh,
+                                text,
+                                color,
+                                ..
+                            } => {
+                                let r = egui::Rect::from_min_size(
+                                    rect.min + egui::vec2(*x, *y),
+                                    egui::vec2(*bw, *bh),
+                                );
+                                p.rect_filled(r, egui::CornerRadius::ZERO, *color);
+                                p.rect_stroke(
+                                    r,
+                                    egui::CornerRadius::ZERO,
+                                    egui::Stroke::new(1.0, egui::Color32::BLACK),
+                                    egui::StrokeKind::Inside,
+                                );
+                                p.text(
+                                    r.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    text,
+                                    egui::FontId::proportional(14.0),
+                                    egui::Color32::BLACK,
+                                );
+                            }
+                        }
+                    }
+                    if let Some((x, y, c)) = w.attention {
+                        p.circle_stroke(
+                            rect.min + egui::vec2(x, y),
+                            10.0,
+                            egui::Stroke::new(4.0, c),
+                        );
+                    }
+                    if let Some((x, y, c)) = w.cursor {
+                        p.text(
+                            rect.min + egui::vec2(x, y),
+                            egui::Align2::LEFT_TOP,
+                            "\u{279A}",
+                            egui::FontId::proportional(16.0),
+                            c,
+                        );
+                    }
+                    if resp.clicked() {
+                        if let Some(q) = resp.interact_pointer_pos() {
+                            click = Some((
+                                w.title.clone(),
+                                (q.x - rect.min.x) as f64,
+                                (q.y - rect.min.y) as f64,
+                            ));
+                        }
+                    }
+                });
+        }
+        if let Some((title, x, y)) = click {
+            self.eval(
+                "visible-virtual-window-mouse-click",
+                vec![Json::Str(title), Json::Float(x), Json::Float(y)],
+            );
         }
     }
 
@@ -457,9 +769,19 @@ impl App {
     }
 }
 
+/// Replace an item with the same id, or append it.
+fn upsert(items: &mut Vec<WinItem>, item: WinItem) {
+    if let Some(slot) = items.iter_mut().find(|it| it.id() == item.id()) {
+        *slot = item;
+    } else {
+        items.push(item);
+    }
+}
+
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.drain_trace();
+        self.apply_window_ops();
 
         let model = self
             .backend
@@ -489,5 +811,8 @@ impl eframe::App for App {
             });
 
         egui::CentralPanel::default().show(ui, |ui| self.central(ui));
+
+        let ctx = ui.ctx().clone();
+        self.render_windows(&ctx);
     }
 }

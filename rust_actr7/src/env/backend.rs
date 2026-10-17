@@ -29,6 +29,14 @@ pub trait EnvBackend {
 
     /// A short description of the backend for the status bar.
     fn describe(&self) -> String;
+
+    /// Register `name` as the client command the engine calls with
+    /// visible-virtual window ops (`add-virtual-window-handler`'s handler).
+    fn register_window_handler(&mut self, name: &str);
+
+    /// Drain the display ops the engine pushed to the window handler since
+    /// the last call (each is `[verb, …args]`).
+    fn take_window_ops(&mut self) -> Vec<Vec<Json>>;
 }
 
 /// Render a command result the way a dialog would show it: `~A`-style items
