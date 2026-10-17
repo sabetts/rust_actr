@@ -3946,6 +3946,34 @@ impl Engine {
         Ok(self.run_capped)
     }
 
+    /// Execute exactly one event (the Environment's single-step), without a
+    /// stop terminator. Returns `false` when the queue is empty.
+    pub fn step_once(&mut self) -> Result<bool, EngineError> {
+        self.skip_unnecessary_events();
+        if self.queue.peek().is_none() {
+            return Ok(false);
+        }
+        let next = self.queue.pop().expect("peeked non-empty");
+        self.time_ms = next.time_ms;
+        self.bh_pre_hook();
+        self.bt_pre_hook();
+        let bh_info = self.bh_event_info_take(&next.event);
+        let bt_info = self.bt_event_info_take(&next.event);
+        let show = self.cfg.detail.shows(next.out);
+        let is_cr = matches!(next.event, Event::ConflictResolution);
+        let maintenance = next.maintenance;
+        self.exec(next.event, show)?;
+        self.bh_record(bh_info);
+        self.bt_post(bt_info);
+        self.bold_record();
+        let silent = self.event_silent;
+        self.event_silent = false;
+        if !is_cr && !maintenance && !silent {
+            self.changed();
+        }
+        Ok(true)
+    }
+
     /// Drain the device actions a click queued, for the server to dispatch.
     pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
         std::mem::take(&mut self.pending_device_actions)

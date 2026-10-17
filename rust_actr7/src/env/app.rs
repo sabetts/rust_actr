@@ -627,6 +627,14 @@ impl App {
             {
                 self.start_run(true);
             }
+            if ui
+                .add_enabled(!running, egui::Button::new("Step"))
+                .clicked()
+            {
+                self.eval("step-once", Vec::new());
+                self.drain_trace();
+                self.refresh_pending = true;
+            }
             if ui.add_enabled(running, egui::Button::new("Stop")).clicked() {
                 self.backend.stop_run();
             }

@@ -57,6 +57,7 @@ pub const BUILTINS: &[&str] = &[
     "run-full-time",
     "run-until-time",
     "run-n-events",
+    "step-once",
     "reset",
     "reload",
     "load-act-r-model",
@@ -684,7 +685,9 @@ impl Session {
                 self.invoke_testing_fn(remote);
                 Ok(vec![Json::Bool(true)])
             }
-            "run" | "run-full-time" | "run-until-time" | "run-n-events" => self.run_cmd(name, args),
+            "run" | "run-full-time" | "run-until-time" | "run-n-events" | "step-once" => {
+                self.run_cmd(name, args)
+            }
             "goal-focus" => {
                 let desc = goal_desc(args)?;
                 if let Some(eng) = &mut self.engine {
@@ -1924,6 +1927,10 @@ impl Session {
 
     fn run_cmd(&mut self, name: &str, args: &[Json]) -> Result<Vec<Json>, String> {
         let secs = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+        // The Environment's single-step (one event, no terminator).
+        if name == "step-once" {
+            return self.step_once().map(|b| vec![Json::Bool(b)]);
+        }
         let eng = self.engine.as_mut().ok_or("no model loaded")?;
         let r = match name {
             "run" => eng.run_secs(secs),
@@ -1977,6 +1984,14 @@ impl Session {
             .ok_or_else(|| "no model loaded".to_string())?
             .run_chunk(limit_ms, full, max_events, soft_ms)
             .map_err(|e| e.to_string())
+    }
+
+    /// The Environment's single-step: execute one event (no stop terminator).
+    pub fn step_once(&mut self) -> Result<bool, String> {
+        self.engine
+            .as_mut()
+            .map(|e| e.step_once().map_err(|err| err.to_string()))
+            .unwrap_or(Ok(false))
     }
 
     /// Drain the device actions a click queued, for the server to dispatch.
@@ -3494,6 +3509,39 @@ mod tests {
         assert!(matches!(grid.first(), Some(Json::Arr(f)) if f[1].as_str() == Some("info")));
         assert!(grid.iter().any(|x| matches!(x, Json::Arr(f)
             if f.get(1).and_then(|y| y.as_str()) == Some("conflict-resolution"))));
+    }
+
+    /// `step-once` executes one event without a stop terminator.
+    #[test]
+    fn single_step_executes_one_event() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        let mut steps = 0;
+        for _ in 0..5 {
+            let b = s.evaluate("step-once", None, &[], &mut r).unwrap();
+            if b[0] == Json::Bool(false) {
+                break;
+            }
+            steps += 1;
+        }
+        assert!(steps >= 1, "expected to step at least one event");
+        let trace = s.take_trace();
+        assert!(!trace.is_empty(), "stepping should produce trace");
+        assert!(
+            !trace.iter().any(|l| l.contains("Stopped because")),
+            "single-step must not emit a stop terminator"
+        );
     }
 
     /// The Environment viewer commands return the model's productions,
