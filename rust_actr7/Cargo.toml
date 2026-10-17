@@ -1,5 +1,5 @@
 [package]
-name = "actr_engine"
+name = "actr-engine"
 version = "0.1.0"
 edition = "2021"
 description = "Rust port of the ACT-R 7 single-threaded kernel"

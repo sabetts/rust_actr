@@ -9,7 +9,7 @@ that arbitrary Lisp cannot be executed.
 
 | path | what |
 |---|---|
-| `rust_actr7/` | the crate, `actr_engine` |
+| `rust_actr7/` | the crate, `actr-engine` (`actr_engine` in code) |
 | `rust_actr7/src/` | engine (`engine/`), s-expression reader, model loader, RNG, RPC server, wasm ABI, native GUI (`env/`, feature `env`) |
 | `rust_actr7/src/bin/actr.rs` | CLI: `actr run <model>`, `actr server`, `actr env` |
 | `rust_actr7/tests/` | integration suites (below) |
