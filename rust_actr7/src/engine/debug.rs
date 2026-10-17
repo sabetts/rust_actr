@@ -2184,6 +2184,200 @@ impl Engine {
     }
 }
 
+/// Introspection for the Environment viewers (`environment/environment-cmds.lisp`
+/// plus the `printed-*`/`all-productions`/`buffers`/`chunks` families). These
+/// return data rather than pushing to the output stream.
+impl Engine {
+    /// `act-r-version`: the architecture version string.
+    pub fn act_r_version(&self) -> String {
+        "7.0".to_string()
+    }
+
+    /// `all-productions`: every production name, in definition order.
+    pub fn all_production_names(&self) -> Vec<String> {
+        self.model
+            .productions
+            .iter()
+            .map(|p| p.name.clone())
+            .collect()
+    }
+
+    /// `buffers` / `model-buffers`: every model buffer name, sorted.
+    pub fn buffer_names(&self) -> Vec<String> {
+        let mut v: Vec<String> = self.buffers.keys().cloned().collect();
+        v.sort();
+        v
+    }
+
+    /// `chunks`: the declarative-memory chunk names.
+    pub fn dm_chunk_names(&self) -> Vec<String> {
+        self.dm.iter().filter_map(|c| c.name.clone()).collect()
+    }
+
+    /// `chunk-filled-slots-list`: the filled (non-`ISA`, non-nil) slot names.
+    pub fn chunk_filled_slots(&self, name: &str) -> Vec<String> {
+        match self.find_chunk(&name.to_uppercase()) {
+            Some(c) => c
+                .slots
+                .iter()
+                .filter(|(k, v)| !k.eq_ignore_ascii_case("ISA") && *v != Value::Nil)
+                .map(|(k, _)| k.clone())
+                .collect(),
+            None => Vec::new(),
+        }
+    }
+
+    /// `printed-chunk`: the `pprint-a-chunk` text of a chunk (name + slots).
+    pub fn printed_chunk(&self, name: &str) -> Option<String> {
+        self.find_chunk(&name.to_uppercase())
+            .map(|c| self.chunk_text(c))
+    }
+
+    /// `pprint-a-chunk` (`chunks.lisp:674`) as a string, mirroring
+    /// [`Self::push_chunk`] without emitting: name, the filled slots sorted by
+    /// the model-wide slot index, and a trailing blank line.
+    fn chunk_text(&self, c: &ChunkInst) -> String {
+        let mut out = String::new();
+        out.push_str(c.name.as_deref().unwrap_or(""));
+        out.push('\n');
+        let slot_index = self.model.slot_index();
+        let mut idx: Vec<usize> = (0..c.slots.len()).collect();
+        idx.sort_by_key(|&i| {
+            *slot_index
+                .get(&c.slots[i].0.to_uppercase())
+                .unwrap_or(&usize::MAX)
+        });
+        for i in idx {
+            let (k, v) = &c.slots[i];
+            if k.eq_ignore_ascii_case("ISA") || *v == Value::Nil {
+                continue;
+            }
+            out.push_str(&format!("   {k}  {}\n", v.show()));
+        }
+        out.push('\n');
+        out
+    }
+
+    /// `dm-slot-filters`: the distinct filled-slot lists among DM chunks (the
+    /// Environment's filter dropdown), each rendered as a space-joined string
+    /// with the `_none_` sentinel first.
+    pub fn dm_slot_filters(&self) -> Vec<String> {
+        let mut lists: Vec<String> = Vec::new();
+        for c in &self.dm {
+            let mut names: Vec<String> = c
+                .slots
+                .iter()
+                .filter(|(k, v)| !k.eq_ignore_ascii_case("ISA") && *v != Value::Nil)
+                .map(|(k, _)| k.clone())
+                .collect();
+            names.sort();
+            names.dedup();
+            if !names.is_empty() {
+                let joined = names.join(" ");
+                if !lists.contains(&joined) {
+                    lists.push(joined);
+                }
+            }
+        }
+        lists.sort();
+        lists.insert(0, "_none_".to_string());
+        lists
+    }
+
+    /// `filter-dm-chunks`: DM chunks that have every slot in `filter` filled.
+    /// An empty filter (or the `_none_` sentinel) returns every DM chunk.
+    pub fn filter_dm_chunks(&self, filter: &[String]) -> Vec<String> {
+        let want: Vec<String> = filter
+            .iter()
+            .map(|s| s.to_uppercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+        self.dm
+            .iter()
+            .filter_map(|c| {
+                let has = |slot: &String| {
+                    c.slots
+                        .iter()
+                        .any(|(k, v)| k.eq_ignore_ascii_case(slot) && *v != Value::Nil)
+                };
+                if want.iter().all(has) {
+                    c.name.clone()
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// `used-production-buffers`: the buffers any production reads or writes.
+    pub fn used_production_buffers(&self) -> Vec<String> {
+        let mut set: Vec<String> = Vec::new();
+        let mut add = |b: &String| {
+            if !set.contains(b) {
+                set.push(b.clone());
+            }
+        };
+        for p in &self.model.productions {
+            for item in &p.lhs {
+                match item {
+                    LhsItem::Match { buffer, .. } | LhsItem::Query { buffer, .. } => add(buffer),
+                    _ => {}
+                }
+            }
+            for a in &p.rhs {
+                match a {
+                    RhsAction::Modify { buffer, .. }
+                    | RhsAction::ModifyRequest { buffer, .. }
+                    | RhsAction::Request { buffer, .. }
+                    | RhsAction::Clear { buffer }
+                    | RhsAction::DirectSet { buffer, .. }
+                    | RhsAction::DirectErase { buffer } => add(buffer),
+                    _ => {}
+                }
+            }
+        }
+        set.sort();
+        set
+    }
+
+    /// `printed-production` / `pp`: the `(P …)` text of a production.
+    pub fn printed_production(&self, name: &str) -> Option<String> {
+        let up = name.to_uppercase();
+        let prod = self.model.productions.iter().find(|p| p.name == up)?;
+        let exempt = self.cfg.do_not_query.clone();
+        Some(super::compilation::render_production(
+            prod,
+            &Bindings::new(),
+            &[],
+            &pp_implicit_queries(prod, &exempt),
+        ))
+    }
+
+    /// The output text pushed since `mark` (ACT-R's `capture-command-output`).
+    pub fn out_text_since(&self, mark: usize) -> String {
+        self.out_lines[mark.min(self.out_lines.len())..].join("\n")
+    }
+
+    /// `printed-buffer-chunk`: the buffer dump as a string (suppressed from
+    /// the trace), for the Environment buffer viewer.
+    pub fn printed_buffer_chunk(&mut self, name: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_buffer_chunk(&[name.to_string()]);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+
+    /// `printed-buffer-status`: the buffer status block as a string.
+    pub fn printed_buffer_status(&mut self, name: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_buffer_status(&[name.to_string()]);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+}
+
 /// A chunk-type default value as Lisp `~S` would print it
 /// (`(chunk-type … (slot default))`).
 fn pattern_show(p: &crate::model::Pattern) -> String {

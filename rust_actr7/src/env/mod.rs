@@ -123,5 +123,18 @@ mod tests {
             trace.iter().any(|l| l.contains("Stopped because")),
             "expected a stop line in trace: {trace:?}"
         );
+
+        // The Phase 2 viewer commands are reachable through the backend.
+        let prods = b
+            .evaluate("all-productions", None, Vec::new())
+            .expect("all-productions");
+        assert!(
+            matches!(prods.first(), Some(Json::Arr(a)) if !a.is_empty()),
+            "expected productions, got {prods:?}"
+        );
+        let chunks = b
+            .evaluate("filter-dm-chunks", None, vec![Json::Str("_none_".into())])
+            .expect("filter-dm-chunks");
+        assert!(matches!(chunks.first(), Some(Json::Arr(_))));
     }
 }

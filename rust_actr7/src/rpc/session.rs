@@ -98,6 +98,28 @@ pub const BUILTINS: &[&str] = &[
     "sdm",
     "pprint-chunks",
     "pprint-chunks-fct",
+    // Environment viewers (`environment/environment-cmds.lisp` + the
+    // `printed-*`/`all-productions`/`buffers`/`chunks` families).
+    "act-r-version",
+    "all-productions",
+    "buffers",
+    "chunks",
+    "model-buffers",
+    "multi-buffer-p",
+    "get-m-buffer-chunks",
+    "used-production-buffers",
+    "chunk-filled-slots-list",
+    "printed-chunk",
+    "dm-slot-filters",
+    "filter-dm-chunks",
+    "dm-chunk-details",
+    "dm-whynot-text",
+    "production-details",
+    "whynot-text",
+    "printed-visicon",
+    "printed-audicon",
+    "printed-buffer-chunk",
+    "printed-buffer-status",
     "whynot",
     "mp-show-queue",
     "chunk-p",
@@ -965,6 +987,147 @@ impl Session {
                     .unwrap_or_default();
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
+            // --- Environment viewers (Phase 2) ------------------------------
+            "act-r-version" => Ok(vec![Json::Str(
+                self.engine
+                    .as_ref()
+                    .map(|e| e.act_r_version())
+                    .unwrap_or_default(),
+            )]),
+            "all-productions" => Ok(vec![Json::Arr(strings(
+                self.engine.as_ref().map(|e| e.all_production_names()),
+            ))]),
+            "buffers" | "model-buffers" => Ok(vec![Json::Arr(strings(
+                self.engine.as_ref().map(|e| e.buffer_names()),
+            ))]),
+            "chunks" => Ok(vec![Json::Arr(strings(
+                self.engine.as_ref().map(|e| e.dm_chunk_names()),
+            ))]),
+            // Multi-buffer goals (the `threads` extra) are not modelled yet.
+            "multi-buffer-p" | "get-m-buffer-chunks" => Ok(vec![Json::Null]),
+            "used-production-buffers" => Ok(vec![Json::Arr(strings(
+                self.engine.as_ref().map(|e| e.used_production_buffers()),
+            ))]),
+            "chunk-filled-slots-list" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let slots = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.chunk_filled_slots(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(strings(Some(slots)))])
+            }
+            "printed-chunk" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let text = self
+                    .engine
+                    .as_ref()
+                    .and_then(|e| e.printed_chunk(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(text)])
+            }
+            // The filter dropdown's choices, each a space-joined slot-list
+            // string with the `_none_` sentinel first.
+            "dm-slot-filters" => Ok(vec![Json::Arr(strings(Some(
+                self.engine
+                    .as_ref()
+                    .map(|e| e.dm_slot_filters())
+                    .unwrap_or_else(|| vec!["_none_".to_string()]),
+            )))]),
+            "filter-dm-chunks" => {
+                // The Environment sends the chosen filter as one string
+                // ("SLOT1 SLOT2"); a list is accepted too.
+                let filter: Vec<String> = match args.first() {
+                    Some(Json::Arr(a)) => a
+                        .iter()
+                        .filter_map(|x| x.as_str().map(str::to_string))
+                        .collect(),
+                    Some(Json::Str(s)) if !s.eq_ignore_ascii_case("_none_") && s != "null" => {
+                        s.split_whitespace().map(str::to_string).collect()
+                    }
+                    _ => Vec::new(),
+                };
+                let names = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.filter_dm_chunks(&filter))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(strings(Some(names)))])
+            }
+            // The chunk's printed representation (ACT-R shows `sdp` +
+            // `printed-chunk`; the sub-symbolic block is not modelled here).
+            "dm-chunk-details" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let text = self
+                    .engine
+                    .as_ref()
+                    .and_then(|e| e.printed_chunk(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(text)])
+            }
+            "dm-whynot-text" => Ok(vec![Json::Str(String::new())]),
+            // `spp` + the printed production text (the per-production
+            // parameter store is not modelled, so only the text is shown).
+            "production-details" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let text = self
+                    .engine
+                    .as_ref()
+                    .and_then(|e| e.printed_production(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(text)])
+            }
+            // "Time: T" then the `whynot` report (suppressed from the trace).
+            "whynot-text" => {
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let mark = self.engine.as_ref().map(|e| e.out_len()).unwrap_or(0);
+                let time = self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0);
+                let names = [Json::Str(name)];
+                let _ = self.evaluate("whynot", None, &names, remote);
+                let body = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.out_text_since(mark))
+                    .unwrap_or_default();
+                if let Some(eng) = self.engine.as_mut() {
+                    eng.truncate_out(mark);
+                    if self.trace_pos > mark {
+                        self.trace_pos = mark;
+                    }
+                }
+                Ok(vec![Json::Str(format!("Time: {time:.3}\n{body}"))])
+            }
+            "printed-buffer-chunk" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let text = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.printed_buffer_chunk(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(text)])
+            }
+            "printed-buffer-status" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let text = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.printed_buffer_status(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(text)])
+            }
+            "printed-visicon" => {
+                let out = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.print_visicon_rpc(false, None))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(out.join("\n"))])
+            }
+            "printed-audicon" => Ok(vec![Json::Str(String::new())]),
             // --- R4 device / vision / motor ---------------------------------
             // Each feature arg is a flat `[slot, value, …]` list.
             "add-visicon-features" => {
@@ -1708,6 +1871,11 @@ pub fn json_to_text(j: &Json) -> String {
     }
 }
 
+/// A `Vec<String>` (or `None`) as JSON string values.
+fn strings(v: Option<Vec<String>>) -> Vec<Json> {
+    v.unwrap_or_default().into_iter().map(Json::Str).collect()
+}
+
 /// A flat `[slot, value, …]` list (a visicon feature spec) → engine slot pairs.
 fn flat_slots(j: &Json) -> Vec<(String, Sexp)> {
     let items = match j {
@@ -1845,6 +2013,71 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    /// The Environment viewer commands return the model's productions,
+    /// buffers and DM chunks (Phase 2).
+    #[test]
+    fn environment_viewer_commands() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut remote,
+        )
+        .unwrap();
+
+        fn names(v: &[Json]) -> Vec<String> {
+            match v.first() {
+                Some(Json::Arr(a)) => a
+                    .iter()
+                    .filter_map(|x| x.as_str().map(str::to_string))
+                    .collect(),
+                _ => Vec::new(),
+            }
+        }
+
+        let version = s.evaluate("act-r-version", None, &[], &mut remote).unwrap();
+        assert!(matches!(version.first(), Some(Json::Str(_))));
+
+        let prods = s
+            .evaluate("all-productions", None, &[], &mut remote)
+            .unwrap();
+        assert!(!names(&prods).is_empty(), "expected productions");
+
+        let buffers = s.evaluate("buffers", None, &[], &mut remote).unwrap();
+        assert!(names(&buffers).iter().any(|b| b == "GOAL"));
+
+        let chunks = s.evaluate("chunks", None, &[], &mut remote).unwrap();
+        assert!(!names(&chunks).is_empty(), "count.lisp has add-dm chunks");
+
+        // `_none_` (no filter) returns every DM chunk, in the same order.
+        let all = s
+            .evaluate(
+                "filter-dm-chunks",
+                None,
+                &[Json::Str("_none_".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(names(&all), names(&chunks));
+
+        // A slot filter the model cannot satisfy returns nothing.
+        let none = s
+            .evaluate(
+                "filter-dm-chunks",
+                None,
+                &[Json::Str("NO-SUCH-SLOT".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(names(&none).is_empty());
     }
 
     #[test]
