@@ -2110,6 +2110,14 @@ impl Engine {
         }
     }
 
+    /// A human mouse click at global `(x, y)` in the experiment window
+    /// (`visible-virtual-window-mouse-click`): move the virtual cursor there
+    /// and queue any button action under it.
+    pub fn click_window(&mut self, x: i64, y: i64) {
+        self.zz_mouse_pos = (x, y, self.zz_mouse_pos.2);
+        self.record_click_action();
+    }
+
     /// `remove-items-from-exp-window`: drop the named items' features.
     pub fn remove_window_items(&mut self, keys: &[String]) {
         let mut dropped: Vec<String> = Vec::new();

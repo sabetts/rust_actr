@@ -173,6 +173,11 @@ pub const BUILTINS: &[&str] = &[
     "modify-text-for-exp-window",
     "modify-line-for-exp-window",
     "open-exp-window",
+    "close-exp-window",
+    "select-exp-window",
+    "add-virtual-window-handler",
+    "remove-virtual-window-handler",
+    "visible-virtual-window-mouse-click",
     "install-device",
     "process-events",
     "visible-virtuals-available?",
@@ -221,6 +226,27 @@ pub struct Session {
     pending_testing_fn: Option<String>,
     /// The scripted device the engine is built with (empty by default).
     device: DeviceSetup,
+    /// Client commands registered to display visible-virtual windows
+    /// (`add-virtual-window-handler`, `tools/visible-virtual.lisp:469`).
+    vwin_handlers: Vec<String>,
+    /// The currently displayed window: title, `(x, y, width, height)`, whether
+    /// a client accepted it (`check`), and its item ids in add order.
+    vwin: Option<VisWindow>,
+}
+
+/// A visible-virtual window the Environment is displaying.
+#[derive(Debug, Clone)]
+struct VisWindow {
+    title: String,
+    x: i64,
+    y: i64,
+    // Sent to the handler in the `open` op; kept here for future hit-testing.
+    #[allow(dead_code)]
+    width: i64,
+    #[allow(dead_code)]
+    height: i64,
+    handlers: Vec<String>,
+    items: Vec<String>,
 }
 
 impl Session {
@@ -244,6 +270,8 @@ impl Session {
             system_params: Default::default(),
             pending_testing_fn: None,
             device: DeviceSetup::default(),
+            vwin_handlers: Vec::new(),
+            vwin: None,
         }
     }
 
@@ -492,6 +520,44 @@ impl Session {
 
     /// A warning that is not itself part of the trace.
     fn warn(&self, _msg: &str) {}
+
+    /// Run each registered handler's `check` and return those that will
+    /// display the window (`check-with-environment-for-visible-virtuals`,
+    /// `tools/visible-virtual.lisp:500`).
+    fn vwin_check(&mut self, remote: &mut dyn Remote) -> Vec<String> {
+        let handlers = self.vwin_handlers.clone();
+        let mut display = Vec::new();
+        for h in handlers {
+            if let Ok(v) = self.evaluate(&h, None, &[Json::Str("check".into())], remote) {
+                let yes = v
+                    .first()
+                    .map(|x| !matches!(x, Json::Bool(false) | Json::Null))
+                    .unwrap_or(false);
+                if yes {
+                    display.push(h);
+                }
+            }
+        }
+        display
+    }
+
+    /// Send a display op to the current window's handlers.
+    fn vwin_send(&mut self, op: &[Json], remote: &mut dyn Remote) {
+        let Some(w) = self.vwin.clone() else {
+            return;
+        };
+        for h in w.handlers {
+            let _ = self.evaluate(&h, None, op, remote);
+        }
+    }
+
+    /// The current visible window's title (or empty).
+    fn vwin_title(&self) -> String {
+        self.vwin
+            .as_ref()
+            .map(|w| w.title.clone())
+            .unwrap_or_default()
+    }
 
     /// The underlying handler for a built-in command.
     fn invoke(
@@ -1328,17 +1394,114 @@ impl Session {
             }
             // --- Live experiment window (`devices/virtual/uwi.lisp`) --------
             "open-exp-window" => {
+                let title = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 let opts = args.get(1);
                 let x = opt_i(opts, "x", 300);
                 let y = opt_i(opts, "y", 300);
+                let width = opt_i(opts, "width", 300);
+                let height = opt_i(opts, "height", 300);
+                let visible = opt_bool(opts, "visible", true);
                 if let Some(eng) = &mut self.engine {
                     eng.open_window(x, y);
                 }
+                // `open-exp-window` builds a visible-virtual window when a
+                // client handler accepts it (`check`), else a headless one.
+                self.vwin = None;
+                if visible {
+                    let handlers = self.vwin_check(remote);
+                    if !handlers.is_empty() {
+                        self.vwin = Some(VisWindow {
+                            title: title.clone(),
+                            x,
+                            y,
+                            width,
+                            height,
+                            handlers,
+                            items: Vec::new(),
+                        });
+                        self.vwin_send(
+                            &[
+                                Json::Str("open".into()),
+                                Json::Str(title),
+                                Json::Int(x),
+                                Json::Int(y),
+                                Json::Int(width),
+                                Json::Int(height),
+                            ],
+                            remote,
+                        );
+                    }
+                }
                 Ok(vec![Json::Str("window".into())])
+            }
+            "close-exp-window" => {
+                let title = self.vwin_title();
+                if !title.is_empty() {
+                    self.vwin_send(&[Json::Str("close".into()), Json::Str(title)], remote);
+                }
+                self.vwin = None;
+                Ok(vec![Json::Bool(true)])
+            }
+            "select-exp-window" => {
+                let title = self.vwin_title();
+                if !title.is_empty() {
+                    self.vwin_send(&[Json::Str("select".into()), Json::Str(title)], remote);
+                }
+                Ok(vec![Json::Bool(true)])
+            }
+            "add-virtual-window-handler" => {
+                if let Some(h) = args.first().and_then(|a| a.as_str()) {
+                    if !self.vwin_handlers.iter().any(|x| x == h) {
+                        self.vwin_handlers.push(h.to_string());
+                    }
+                }
+                Ok(vec![Json::Bool(true)])
+            }
+            "remove-virtual-window-handler" => {
+                if let Some(h) = args.first().and_then(|a| a.as_str()) {
+                    self.vwin_handlers.retain(|x| x != h);
+                }
+                Ok(vec![Json::Bool(true)])
+            }
+            "visible-virtual-window-mouse-click" => {
+                let title = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let x = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                let y = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                // Window-relative → global coordinates (`x-pos`/`y-pos`).
+                let (ox, oy) = self
+                    .vwin
+                    .as_ref()
+                    .filter(|w| w.title == title)
+                    .map(|w| (w.x, w.y))
+                    .unwrap_or((0, 0));
+                if let Some(eng) = &mut self.engine {
+                    eng.click_window(ox + x, oy + y);
+                }
+                Ok(vec![Json::Null])
             }
             "clear-exp-window" => {
                 if let Some(eng) = &mut self.engine {
                     eng.clear_window();
+                }
+                let title = self.vwin_title();
+                if let Some(w) = self.vwin.clone() {
+                    for key in &w.items {
+                        self.vwin_send(
+                            &[
+                                Json::Str("remove".into()),
+                                Json::Str(title.clone()),
+                                Json::Str(key.clone()),
+                            ],
+                            remote,
+                        );
+                    }
+                }
+                if let Some(w) = &mut self.vwin {
+                    w.items.clear();
                 }
                 Ok(vec![Json::Null])
             }
@@ -1348,11 +1511,31 @@ impl Session {
                 let (x, y) = (opt_i(opts, "x", 0), opt_i(opts, "y", 0));
                 let (w, h) = (opt_i(opts, "width", 75), opt_i(opts, "height", 20));
                 let font = opt_i(opts, "font-size", 12);
+                let color = opt_str(opts, "color", "black");
                 let key = self
                     .engine
                     .as_mut()
                     .map(|e| e.add_window_text(text, x, y, w, h, font))
                     .unwrap_or_default();
+                if !key.is_empty() {
+                    let title = self.vwin_title();
+                    if let Some(win) = &mut self.vwin {
+                        win.items.push(key.clone());
+                    }
+                    self.vwin_send(
+                        &[
+                            Json::Str("text".into()),
+                            Json::Str(title),
+                            Json::Str(key.clone()),
+                            Json::Int(x),
+                            Json::Int(y),
+                            Json::Str(text.to_string()),
+                            Json::Str(color),
+                            Json::Int(font),
+                        ],
+                        remote,
+                    );
+                }
                 Ok(vec![Json::Str(key)])
             }
             "add-line-to-exp-window" => {
@@ -1364,6 +1547,25 @@ impl Session {
                     .as_mut()
                     .map(|e| e.add_window_line(start, end, color))
                     .unwrap_or_default();
+                if !key.is_empty() {
+                    let title = self.vwin_title();
+                    if let Some(win) = &mut self.vwin {
+                        win.items.push(key.clone());
+                    }
+                    self.vwin_send(
+                        &[
+                            Json::Str("line".into()),
+                            Json::Str(title),
+                            Json::Str(key.clone()),
+                            Json::Int(start.0),
+                            Json::Int(start.1),
+                            Json::Int(end.0),
+                            Json::Int(end.1),
+                            Json::Str(color.to_string()),
+                        ],
+                        remote,
+                    );
+                }
                 Ok(vec![Json::Str(key)])
             }
             "add-button-to-exp-window" => {
@@ -1378,6 +1580,26 @@ impl Session {
                     .as_mut()
                     .map(|e| e.add_window_button(&text, x, y, w, h, &color, action))
                     .unwrap_or_default();
+                if !key.is_empty() {
+                    let title = self.vwin_title();
+                    if let Some(win) = &mut self.vwin {
+                        win.items.push(key.clone());
+                    }
+                    self.vwin_send(
+                        &[
+                            Json::Str("button".into()),
+                            Json::Str(title),
+                            Json::Str(key.clone()),
+                            Json::Int(x),
+                            Json::Int(y),
+                            Json::Int(w),
+                            Json::Int(h),
+                            Json::Str(text),
+                            Json::Str(color),
+                        ],
+                        remote,
+                    );
+                }
                 Ok(vec![Json::Str(key)])
             }
             "remove-items-from-exp-window" => {
@@ -1385,6 +1607,20 @@ impl Session {
                     args[1.min(args.len())..].iter().map(json_to_text).collect();
                 if let Some(eng) = &mut self.engine {
                     eng.remove_window_items(&keys);
+                }
+                let title = self.vwin_title();
+                for key in &keys {
+                    self.vwin_send(
+                        &[
+                            Json::Str("remove".into()),
+                            Json::Str(title.clone()),
+                            Json::Str(key.clone()),
+                        ],
+                        remote,
+                    );
+                }
+                if let Some(w) = &mut self.vwin {
+                    w.items.retain(|k| !keys.contains(k));
                 }
                 Ok(vec![Json::Null])
             }
@@ -1409,7 +1645,7 @@ impl Session {
                 Ok(vec![Json::Null])
             }
             "install-device" => Ok(vec![Json::Null]),
-            "visible-virtuals-available?" => Ok(vec![Json::Bool(false)]),
+            "visible-virtuals-available?" => Ok(vec![Json::Bool(!self.vwin_handlers.is_empty())]),
             "start-hand-at-mouse" | "process-events" => Ok(vec![Json::Null]),
             "correlation" | "mean-deviation" => {
                 let a = num_list(args.first());
@@ -1887,6 +2123,18 @@ fn parse_action(a: Option<&Json>) -> Option<(String, Vec<Json>)> {
 }
 
 /// A string option from an `[["key",value], …]` list.
+/// A boolean option (`:visible`): absent → `default`; `nil`/`false` → false.
+fn opt_bool(options: Option<&Json>, key: &str, default: bool) -> bool {
+    match option(options, key) {
+        None => default,
+        Some(Json::Bool(b)) => *b,
+        Some(Json::Null) => false,
+        Some(Json::Str(s)) => !s.eq_ignore_ascii_case("nil") && !s.eq_ignore_ascii_case("false"),
+        Some(Json::Int(i)) => *i != 0,
+        Some(_) => true,
+    }
+}
+
 fn opt_str(options: Option<&Json>, key: &str, default: &str) -> String {
     option(options, key)
         .and_then(|j| j.as_str())
@@ -2061,6 +2309,92 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    /// A client-command handler that records the display ops it receives
+    /// (`visible-virtual-window` protocol) and accepts every `check`.
+    #[derive(Default)]
+    struct VvRemote {
+        ops: Vec<Vec<Json>>,
+    }
+    impl Remote for VvRemote {
+        fn call(
+            &mut self,
+            _name: &str,
+            _model: Option<&str>,
+            args: Vec<Json>,
+        ) -> Result<Vec<Json>, String> {
+            self.ops.push(args);
+            Ok(vec![Json::Bool(true)])
+        }
+    }
+
+    /// The visible-virtual window protocol: `check` on open, then the item
+    /// ops, dispatched to the client handler.
+    #[test]
+    fn visible_window_protocol() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = VvRemote::default();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        // Register the handler command, then the virtual-window handler.
+        s.add_remote("env-vv", Some("env-vv".into()), None);
+        s.evaluate(
+            "add-virtual-window-handler",
+            None,
+            &[Json::Str("env-vv".into())],
+            &mut r,
+        )
+        .unwrap();
+        assert_eq!(
+            s.evaluate("visible-virtuals-available?", None, &[], &mut r)
+                .unwrap()[0],
+            Json::Bool(true)
+        );
+
+        let verb = |o: &Vec<Json>| o.first().and_then(|x| x.as_str()).unwrap_or("").to_string();
+        s.evaluate(
+            "open-exp-window",
+            None,
+            &[
+                Json::Str("Test".into()),
+                Json::Obj(vec![
+                    ("x".into(), Json::Int(10)),
+                    ("y".into(), Json::Int(20)),
+                    ("width".into(), Json::Int(100)),
+                    ("height".into(), Json::Int(80)),
+                ]),
+            ],
+            &mut r,
+        )
+        .unwrap();
+        assert!(r.ops.iter().any(|o| verb(o) == "check"));
+        assert!(r.ops.iter().any(|o| verb(o) == "open"));
+
+        s.evaluate(
+            "add-text-to-exp-window",
+            None,
+            &[
+                Json::Str("hi".into()),
+                Json::Obj(vec![("x".into(), Json::Int(5)), ("y".into(), Json::Int(6))]),
+            ],
+            &mut r,
+        )
+        .unwrap();
+        let text = r.ops.iter().find(|o| verb(o) == "text").expect("text op");
+        assert!(text[2]
+            .as_str()
+            .map(|s| s.starts_with("TEXT-VDI"))
+            .unwrap_or(false));
     }
 
     /// The Environment viewer commands return the model's productions,
