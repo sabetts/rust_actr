@@ -2773,6 +2773,115 @@ pub(super) enum BufKind {
     ModRequest(String),
 }
 
+/// A buffer's BOLD demand state (`parse-trace-lists-for-bold`).
+struct BoldDemand {
+    name: String,
+    current: Option<f64>,
+    intervals: Vec<(f64, f64)>,
+}
+
+/// BOLD prediction processors (`other-files/bold.lisp`).
+impl Engine {
+    /// `bold-prediction-with-time` (`-scaled`): the BOLD prediction per
+    /// buffer-trace buffer, sampled over time. The result is the time header
+    /// followed by one `[buffer, value…]` row per buffer, sorted by name.
+    pub fn bold_prediction_with_times(&self, scaled: bool) -> Vec<Json> {
+        const INC: f64 = 2.0;
+        const SETTLE: f64 = 40.0;
+        const EXP: f64 = 5.0;
+        const NEG_EXP: f64 = 15.0;
+        const C1: f64 = 6.0;
+        const C2: f64 = 1.0;
+        fn fact(n: u32) -> f64 {
+            (1..=n).fold(1.0, |a, b| a * b as f64)
+        }
+        let pos_factor = C1 / (C1 - C2) / fact(EXP as u32);
+        let neg_factor = C2 / (C1 - C2) / fact(NEG_EXP as u32);
+
+        // `parse-trace-lists-for-bold`: per-buffer busy demand intervals.
+        let mut demands: Vec<BoldDemand> = Vec::new();
+        for (t_ms, rows) in &self.buffer_trace() {
+            let t = *t_ms as f64 / 1000.0;
+            for s in rows {
+                let di = match demands.iter().position(|d| d.name == s.name) {
+                    Some(i) => i,
+                    None => {
+                        demands.push(BoldDemand {
+                            name: s.name.clone(),
+                            current: None,
+                            intervals: Vec::new(),
+                        });
+                        demands.len() - 1
+                    }
+                };
+                let req = s.request.as_deref().map(|v| !v.is_empty()).unwrap_or(false);
+                let chunk = s
+                    .chunk_name
+                    .as_deref()
+                    .map(|v| !v.is_empty())
+                    .unwrap_or(false);
+                let d = &mut demands[di];
+                if d.current.is_some() {
+                    if !s.busy || s.busy_free || req {
+                        d.intervals.push((d.current.unwrap(), t));
+                        d.current = if req { Some(t) } else { None };
+                    }
+                } else if s.busy {
+                    if req && (chunk || (s.error && !s.error_clear) || s.busy_free) {
+                        d.intervals.push((t, t));
+                    } else {
+                        d.current = Some(t);
+                    }
+                } else if req || chunk {
+                    d.intervals.push((t, t));
+                }
+            }
+        }
+        let end = self.time_ms as f64 / 1000.0;
+        for d in &mut demands {
+            if let Some(c) = d.current {
+                d.intervals.push((c, end));
+            }
+        }
+        let mut names: Vec<String> = demands.iter().map(|d| d.name.clone()).collect();
+        names.sort();
+
+        // Sample times: `start + inc/2`, step `inc`, up to `end - inc/2`.
+        let mut times: Vec<Json> = vec![Json::Str("time".into())];
+        let mut t = INC / 2.0;
+        while t <= end - INC / 2.0 {
+            times.push(Json::Float(t));
+            t += INC;
+        }
+        let mut out = vec![Json::Arr(times)];
+        for name in &names {
+            let d = demands.iter().find(|d| &d.name == name).unwrap();
+            let point = name == "GOAL";
+            let bv = |demand: &[(f64, f64)], t: f64, a: f64| {
+                super::compilation::bold_values(demand, t, INC, SETTLE, a, 1.0, point)
+            };
+            let mut vals: Vec<f64> = Vec::new();
+            let mut t = INC / 2.0;
+            while t <= end - INC / 2.0 {
+                let pos = bv(&d.intervals, t, EXP);
+                let neg = bv(&d.intervals, t, NEG_EXP);
+                vals.push(pos * pos_factor - neg * neg_factor);
+                t += INC;
+            }
+            if scaled {
+                let max = vals.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                let min = vals.iter().cloned().fold(f64::INFINITY, f64::min);
+                let delta = if min == max { 1.0 } else { max - min };
+                vals = vals.into_iter().map(|x| (x - min) / delta).collect();
+            }
+            let mut row = vec![Json::Str(name.clone())];
+            row.extend(vals.into_iter().map(Json::Float));
+            out.push(Json::Arr(row));
+        }
+        out
+    }
+}
+
 /// `production-history` recording (`other-files/production-history.lisp`).
 impl Engine {
     /// Enable/disable `production-history` recording.

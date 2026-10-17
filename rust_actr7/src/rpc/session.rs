@@ -468,6 +468,18 @@ impl Session {
             "PRODUCTION-HISTORY" => self.engine.as_ref().map(production_history_records),
             // `production-grid` is a processor over `production-history`.
             "PRODUCTION-GRID" => self.engine.as_ref().map(production_grid_records),
+            // BOLD predictions are processors over `buffer-trace`.
+            "BOLD-PREDICTION-WITH-TIME" | "BOLD-PREDICTION-WITH-TIME-SCALED" => {
+                let scaled = name == "BOLD-PREDICTION-WITH-TIME-SCALED";
+                self.engine
+                    .as_ref()
+                    .map(|e| e.bold_prediction_with_times(scaled))
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|j| j.write())
+                    .collect::<Vec<_>>()
+                    .into()
+            }
             _ => None,
         }
     }
@@ -3542,6 +3554,59 @@ mod tests {
             !trace.iter().any(|l| l.contains("Stopped because")),
             "single-step must not emit a stop terminator"
         );
+    }
+
+    /// The BOLD predictions are processors over `buffer-trace`.
+    #[test]
+    fn bold_prediction_processes_buffer_trace() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("buffer-trace".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("record-history", None, &[Json::Str("goal".into())], &mut r)
+            .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[
+                    Json::Str("bold-prediction-with-time".into()),
+                    Json::Int(16000),
+                ],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        assert!(matches!(id, Json::Int(_)), "expected an id, got {id:?}");
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let Json::Arr(items) = crate::json::parse(chunk[0].as_str().unwrap()).unwrap() else {
+            panic!("bold payload is not a JSON array");
+        };
+        assert!(items.len() >= 2, "expected a time header + a buffer row");
+        let Json::Arr(header) = &items[0] else {
+            panic!("time header is not an array");
+        };
+        assert_eq!(header[0].as_str(), Some("time"));
     }
 
     /// The Environment viewer commands return the model's productions,
