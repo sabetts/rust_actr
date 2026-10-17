@@ -2201,6 +2201,16 @@ impl Engine {
         "7.0".to_string()
     }
 
+    /// Enable/disable `retrieval-history` recording (`record-history`).
+    pub fn set_retrieval_history(&mut self, on: bool) {
+        self.record_retrieval_history = on;
+    }
+
+    /// The recorded `retrieval-history` records, in request order.
+    pub fn retrieval_history(&self) -> &[RetrievalRecord] {
+        &self.retrieval_history
+    }
+
     /// The parameter groups the Environment's viewer shows, keyed by module
     /// name. ACT-R owns each parameter through its module table; the Rust
     /// engine keeps them in `Config`, so this groups the keys `get_param` can

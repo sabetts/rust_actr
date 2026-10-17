@@ -412,6 +412,21 @@ impl Session {
         lines
     }
 
+    /// The record JSON strings for a history stream, or `None` if the stream
+    /// is not supported.
+    fn history_records(&self, name: &str) -> Option<Vec<String>> {
+        match name {
+            "TRACE-HISTORY" => Some(self.hist_trace.iter().map(|l| trace_record(l)).collect()),
+            "RETRIEVAL-HISTORY" => Some(
+                self.engine
+                    .as_ref()
+                    .map(|e| e.retrieval_history().iter().map(retrieval_record).collect())
+                    .unwrap_or_default(),
+            ),
+            _ => None,
+        }
+    }
+
     /// The trace since the last call as an output string, in the same shape as
     /// [`Engine::output`] — the trailing newline is included so a final blank
     /// trace line survives `str::lines`. A command whose output ends with
@@ -1011,15 +1026,32 @@ impl Session {
                         self.hist_recording.insert(key);
                     }
                 }
-                // `record-history` with buffer names drives the BOLD predictor.
+                // `record-history` with buffer names drives the BOLD predictor;
+                // `"retrieval-history"` enables the DM retrieval recorder.
                 if let Some(eng) = &mut self.engine {
                     eng.set_bold_buffers(&names);
+                    if names
+                        .iter()
+                        .any(|n| n.eq_ignore_ascii_case("retrieval-history"))
+                    {
+                        eng.set_retrieval_history(true);
+                    }
                 }
                 Ok(vec![Json::Null])
             }
             "stop-recording-history" => {
+                let mut stop_retrieval = false;
                 for n in args.iter().filter_map(|a| a.as_str()) {
-                    self.hist_recording.remove(&n.to_uppercase());
+                    let key = n.to_uppercase();
+                    if key == "RETRIEVAL-HISTORY" {
+                        stop_retrieval = true;
+                    }
+                    self.hist_recording.remove(&key);
+                }
+                if stop_retrieval {
+                    if let Some(eng) = &mut self.engine {
+                        eng.set_retrieval_history(false);
+                    }
                 }
                 Ok(vec![Json::Null])
             }
@@ -1031,11 +1063,16 @@ impl Session {
                     .and_then(|a| a.as_str())
                     .unwrap_or("")
                     .to_uppercase();
-                let any = name == "TRACE-HISTORY" && !self.hist_trace.is_empty();
+                let any = self
+                    .history_records(&name)
+                    .map(|r| !r.is_empty())
+                    .unwrap_or(false);
                 Ok(vec![Json::Bool(any)])
             }
             // Start an incremental transfer of a history stream: returns an id
             // whose chunks are fetched with `get-incremental-history-data`.
+            // A non-false third arg names a saved file to load instead of the
+            // live data.
             "start-incremental-history-data" => {
                 let name = args
                     .first()
@@ -1047,10 +1084,29 @@ impl Session {
                     .and_then(|a| a.as_f64())
                     .map(|v| v.max(1.0) as usize)
                     .unwrap_or(16000);
-                if name != "TRACE-HISTORY" || self.hist_trace.is_empty() {
-                    return Ok(vec![Json::Null]);
-                }
-                let chunks = trace_history_chunks(&self.hist_trace, size);
+                let file = match args.get(2) {
+                    Some(Json::Str(s))
+                        if !s.is_empty()
+                            && !s.eq_ignore_ascii_case("false")
+                            && !s.eq_ignore_ascii_case("null") =>
+                    {
+                        Some(s.clone())
+                    }
+                    _ => None,
+                };
+                let chunks = if let Some(f) = file {
+                    let text = std::fs::read_to_string(&f)
+                        .map_err(|e| format!("start-incremental-history-data: {e}"))?;
+                    if text.trim().is_empty() {
+                        return Ok(vec![Json::Null]);
+                    }
+                    vec![text]
+                } else {
+                    match self.history_records(&name) {
+                        Some(r) if !r.is_empty() => chunk_records(&r, size),
+                        _ => return Ok(vec![Json::Null]),
+                    }
+                };
                 self.hist_next_id += 1;
                 let id = self.hist_next_id;
                 self.hist_jobs.insert(id, HistJob { chunks, next: 0 });
@@ -1070,7 +1126,7 @@ impl Session {
                 }
                 Ok(vec![Json::Str(String::new())])
             }
-            // Write a history stream to a file (`trace-history` only).
+            // Write a history stream to a file.
             "save-history-data" => {
                 let name = args
                     .first()
@@ -1078,10 +1134,13 @@ impl Session {
                     .unwrap_or("")
                     .to_uppercase();
                 let file = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
-                if name != "TRACE-HISTORY" || file.is_empty() {
+                let Some(records) = self.history_records(&name) else {
+                    return Ok(vec![Json::Bool(false)]);
+                };
+                if records.is_empty() || file.is_empty() {
                     return Ok(vec![Json::Bool(false)]);
                 }
-                let data = trace_history_json(&self.hist_trace);
+                let data = format!("[{}]", records.join(","));
                 match std::fs::write(file, data) {
                     Ok(()) => Ok(vec![Json::Bool(true)]),
                     Err(e) => Err(format!("save-history-data: {e}")),
@@ -2302,23 +2361,40 @@ fn trace_record(line: &str) -> String {
     .write()
 }
 
-/// The whole `trace-history` payload as a JSON array string.
-fn trace_history_json(lines: &[String]) -> String {
-    let recs: Vec<String> = lines.iter().map(|l| trace_record(l)).collect();
-    format!("[{}]", recs.join(","))
+/// One `retrieval-history` record as JSON:
+/// `[time_ms, request, [[name, text, params, activation-trace], …]]`
+/// (`other-files/retrieval-history.lisp`).
+fn retrieval_record(r: &crate::engine::RetrievalRecord) -> String {
+    let chunks: Vec<Json> = r
+        .chunks
+        .iter()
+        .map(|c| {
+            Json::Arr(vec![
+                Json::Str(c.name.clone()),
+                Json::Str(c.text.clone()),
+                Json::Str(c.params.clone()),
+                Json::Str(c.activation_trace.clone()),
+            ])
+        })
+        .collect();
+    Json::Arr(vec![
+        Json::Int(r.time_ms),
+        Json::Str(r.request.clone()),
+        Json::Arr(chunks),
+    ])
+    .write()
 }
 
-/// Split the `trace-history` records into JSON-array chunks of ~`size` bytes
-/// (each chunk a valid array, so the client can decode it independently).
-fn trace_history_chunks(lines: &[String], size: usize) -> Vec<String> {
+/// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
+/// valid array, so the client can decode it independently).
+fn chunk_records(records: &[String], size: usize) -> Vec<String> {
     let mut chunks = Vec::new();
-    let mut cur: Vec<String> = Vec::new();
+    let mut cur: Vec<&str> = Vec::new();
     let mut cur_len = 2usize; // `[]`
-    for l in lines {
-        let rec = trace_record(l);
+    for rec in records {
         if !cur.is_empty() && cur_len + rec.len() + 1 > size {
             chunks.push(format!("[{}]", cur.join(",")));
-            cur = Vec::new();
+            cur.clear();
             cur_len = 2;
         }
         cur_len += rec.len() + 1;
@@ -2623,6 +2699,74 @@ mod tests {
             assert!(chunks < 1000, "incremental stream did not terminate");
         }
         assert!(chunks >= 1, "expected at least one chunk");
+    }
+
+    /// `record-history "retrieval-history"` records DM retrievals in the
+    /// Environment's record shape.
+    #[test]
+    fn retrieval_history_records() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("retrieval-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("retrieval-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true), "count.lisp retrieves");
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("retrieval-history".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let text = chunk[0].as_str().unwrap();
+        let Json::Arr(recs) = crate::json::parse(text).unwrap() else {
+            panic!("history payload is not a JSON array");
+        };
+        assert!(!recs.is_empty(), "expected at least one retrieval record");
+        let Json::Arr(fields) = &recs[0] else {
+            panic!("record is not an array");
+        };
+        assert!(matches!(fields[0], Json::Int(_)), "record[0] = time");
+        assert!(matches!(fields[1], Json::Str(_)), "record[1] = request");
+        let Json::Arr(chunks) = &fields[2] else {
+            panic!("record[2] is not the chunk set");
+        };
+        // Each chunk: [name, text, params, activation-trace].
+        let Json::Arr(ci) = &chunks[0] else {
+            panic!("chunk record is not an array");
+        };
+        assert_eq!(ci.len(), 4);
     }
 
     /// The Environment viewer commands return the model's productions,

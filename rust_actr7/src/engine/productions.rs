@@ -2612,6 +2612,12 @@ impl Engine {
                 }
             }
         }
+        // `retrieval-history` (`other-files/retrieval-history.lisp`): capture
+        // the printed request and the per-candidate activations.
+        let hist_request = self
+            .record_retrieval_history
+            .then(|| render_request_spec(&spec));
+        let mut acts: Vec<(ChunkInst, f32)> = Vec::new();
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
         // `chunk-list` (the DM hash-table order) is reverse-insertion.
@@ -2842,6 +2848,7 @@ impl Engine {
                 self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
             }
             a += noise;
+            acts.push((c.clone(), a));
             if self.act_low() {
                 self.out(format!("Chunk {cname} has an activation of: {}", lisp_f(a)));
             }
@@ -2903,6 +2910,56 @@ impl Engine {
         };
         let act = best_a.unwrap_or(0.0);
         let below = self.cfg.esc && act < rt;
+        if let Some(request) = hist_request {
+            let failure = |name: &str| RetrievalChunk {
+                failure: true,
+                name: name.to_string(),
+                text: String::new(),
+                params: String::new(),
+                activation_trace: String::new(),
+            };
+            let mut chunks: Vec<RetrievalChunk> = Vec::new();
+            if acts.is_empty() {
+                chunks.push(failure(":retrieval-failure"));
+            } else {
+                if below {
+                    chunks.push(failure(":retrieval-failure"));
+                }
+                // The set is the best chunk first, then the remaining
+                // candidates in `chunk-set` order (`cons (car best)
+                // (remove (car best) chunk-set)`).
+                let winner = best
+                    .as_ref()
+                    .and_then(|b| b.name.as_deref())
+                    .and_then(|bn| acts.iter().position(|(c, _)| c.name.as_deref() == Some(bn)));
+                let mut order: Vec<usize> = Vec::new();
+                if let Some(w) = winner {
+                    order.push(w);
+                }
+                for (j, _) in acts.iter().enumerate() {
+                    if Some(j) != winner {
+                        order.push(j);
+                    }
+                }
+                for j in order {
+                    let c = &acts[j].0;
+                    let name = c.name.clone().unwrap_or_default();
+                    let text = self.printed_chunk(&name).unwrap_or_default();
+                    chunks.push(RetrievalChunk {
+                        failure: false,
+                        name,
+                        text,
+                        params: String::new(),
+                        activation_trace: String::new(),
+                    });
+                }
+            }
+            self.retrieval_history.push(RetrievalRecord {
+                time_ms: self.time_ms,
+                request,
+                chunks,
+            });
+        }
         if self.act_low() {
             match &best {
                 Some(_) if below => {
@@ -2959,5 +3016,30 @@ impl Engine {
             }
         }
         Ok(())
+    }
+}
+
+/// `printed-chunk-spec`: the retrieval request as written -- `isa TYPE` then
+/// `slot value` and `- slot value` lines -- for the retrieval history's
+/// request column.
+fn render_request_spec(spec: &NewChunk) -> String {
+    match spec {
+        NewChunk::Named(n) => n.clone(),
+        NewChunk::Instance(c) => c.name.clone().unwrap_or_default(),
+        NewChunk::Spec {
+            ctype, slots, neg, ..
+        } => {
+            let mut parts: Vec<String> = Vec::new();
+            if !ctype.is_empty() {
+                parts.push(format!("isa {ctype}"));
+            }
+            for (s, v) in slots {
+                parts.push(format!("{s} {}", v.show()));
+            }
+            for (s, v) in neg {
+                parts.push(format!("- {s} {}", v.show()));
+            }
+            parts.join("\n")
+        }
     }
 }

@@ -575,6 +575,27 @@ pub struct DeviceSound {
     pub run: Option<u32>,
 }
 
+/// One recorded retrieval (`other-files/retrieval-history.lisp`): the request
+/// time (ms), the printed request spec, and the candidate set with the best
+/// chunk first.
+#[derive(Debug, Clone)]
+pub struct RetrievalRecord {
+    pub time_ms: i64,
+    pub request: String,
+    pub chunks: Vec<RetrievalChunk>,
+}
+
+/// A candidate in a [`RetrievalRecord`]. A `:retrieval-failure` sentinel is a
+/// chunk with `failure` set and empty text/params/trace.
+#[derive(Debug, Clone)]
+pub struct RetrievalChunk {
+    pub failure: bool,
+    pub name: String,
+    pub text: String,
+    pub params: String,
+    pub activation_trace: String,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSetup {
     pub texts: Vec<DeviceText>,
@@ -1964,6 +1985,11 @@ pub struct Engine {
     /// Names of the productions in the last computed conflict set (returned
     /// by `whynot`, `procedural-cmds.lisp:597`).
     last_conflict_set: Vec<String>,
+    /// `retrieval-history` records, in request order (`record-history
+    /// "retrieval-history"`); cleared on reset.
+    retrieval_history: Vec<RetrievalRecord>,
+    /// Whether `retrieval-history` recording is enabled (`record-history`).
+    record_retrieval_history: bool,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -2386,6 +2412,8 @@ impl Engine {
             exec_prods: Vec::new(),
             disabled_prods: HashSet::new(),
             last_conflict_set: Vec::new(),
+            retrieval_history: Vec::new(),
+            record_retrieval_history: false,
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -2900,6 +2928,9 @@ impl Engine {
         for c in &self.model.chunks {
             self.dm.push(chunk_inst(c)?);
         }
+        // The retrieval-history module clears on reset
+        // (`reset-dm-history-module`).
+        self.retrieval_history.clear();
         self.named = HashMap::new();
         // `create-model-default-chunks` (`model.lisp:753`): every model starts
         // with these state chunks (`(free name free)` etc., plus `clear`); a
