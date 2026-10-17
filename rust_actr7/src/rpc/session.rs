@@ -847,12 +847,26 @@ impl Session {
                     }
                     return Ok(out);
                 }
-                let Some(eng) = &self.engine else {
-                    return Ok(vec![Json::Null]);
-                };
-                if keys.is_empty() {
+                if self.engine.is_none() {
                     return Ok(vec![Json::Null]);
                 }
+                if keys.is_empty() {
+                    // `(spp <name>…)`: print the full parameter block for each
+                    // named (or every) production (`production-parameter-fct`,
+                    // `utility-and-reward-1.lisp:678`). The RPC client wraps
+                    // this in `no-output`, which drops the printed lines.
+                    let prods = if names.is_empty() {
+                        self.engine.as_ref().unwrap().production_names()
+                    } else {
+                        names.clone()
+                    };
+                    let eng = self.engine.as_mut().unwrap();
+                    for n in &prods {
+                        eng.print_prod_params_by_name(n);
+                    }
+                    return Ok(vec![Json::Null]);
+                }
+                let eng = self.engine.as_ref().unwrap();
                 let prods = if names.is_empty() {
                     eng.production_names()
                 } else {

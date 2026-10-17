@@ -388,7 +388,7 @@ spec_case_ignored!(tutorial_unit6_bst_real_encode_line_goal_and_read_done_produc
 spec_case_ignored!(tutorial_unit6_bst_real_encode_line_goal_production, "tutorial-unit6-bst-real-encode-line-goal-production", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(tutorial_unit6_bst_rewards_model, "tutorial-unit6-bst-rewards-model", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit6_bst_spp_after_1_use, "tutorial-unit6-bst-spp-after-1-use", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit6_bst_spp_before, "tutorial-unit6-bst-spp-before", "no run recorded");
+spec_case_ignored!(tutorial_unit6_bst_spp_before, "tutorial-unit6-bst-spp-before", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(tutorial_unit6_bst_spp_model, "tutorial-unit6-bst-spp-model", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit6_bst_utility_trace, "tutorial-unit6-bst-utility-trace", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit6_bst_visual_isa_productions, "tutorial-unit6-bst-visual-isa-productions", "tutorial-source scrape (not an engine trace)");
@@ -482,7 +482,7 @@ spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v9_non_win_composition, "
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v9_non_win_production, "tutorial-unit7modeling-pcomp-issues-v9-non-win-production", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit7modeling_ul_issues_first_run, "tutorial-unit7modeling-ul-issues-first-run");
 spec_case!(tutorial_unit7modeling_ul_issues_first_run_with_ult, "tutorial-unit7modeling-ul-issues-first-run-with-ult");
-spec_case_ignored!(tutorial_unit7modeling_ul_issues_initial_long_term_spp, "tutorial-unit7modeling-ul-issues-initial-long-term-spp", "pending: does not yet match ref");
+spec_case!(tutorial_unit7modeling_ul_issues_initial_long_term_spp, "tutorial-unit7modeling-ul-issues-initial-long-term-spp");
 spec_case_ignored!(tutorial_unit7modeling_ul_issues_rewards, "tutorial-unit7modeling-ul-issues-rewards", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit7modeling_ul_issues_second_run, "tutorial-unit7modeling-ul-issues-second-run");
 spec_case_ignored!(tutorial_unit7modeling_ul_issues_sgp, "tutorial-unit7modeling-ul-issues-sgp", "tutorial-source scrape (not an engine trace)");
@@ -492,8 +492,8 @@ spec_case!(tutorial_unit7modeling_ul_issues_v1_second_run, "tutorial-unit7modeli
 spec_case_ignored!(tutorial_unit7modeling_ul_issues_v1_sgp, "tutorial-unit7modeling-ul-issues-v1-sgp", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit7modeling_ul_issues_v1_third_run, "tutorial-unit7modeling-ul-issues-v1-third-run");
 spec_case!(tutorial_unit7modeling_ul_issues_v2_first_run, "tutorial-unit7modeling-ul-issues-v2-first-run");
-spec_case_ignored!(tutorial_unit7modeling_ul_issues_v2_first_run_spp, "tutorial-unit7modeling-ul-issues-v2-first-run-spp", "pending: does not yet match ref");
-spec_case_ignored!(tutorial_unit7modeling_ul_issues_v2_long_run_spp, "tutorial-unit7modeling-ul-issues-v2-long-run-spp", "pending: does not yet match ref");
+spec_case!(tutorial_unit7modeling_ul_issues_v2_first_run_spp, "tutorial-unit7modeling-ul-issues-v2-first-run-spp");
+spec_case!(tutorial_unit7modeling_ul_issues_v2_long_run_spp, "tutorial-unit7modeling-ul-issues-v2-long-run-spp");
 spec_case_ignored!(tutorial_unit7modeling_ul_issues_v2_spp, "tutorial-unit7modeling-ul-issues-v2-spp", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit8_bst_decide_cst, "tutorial-unit8-bst-decide-cst", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit8_bst_decide_productions, "tutorial-unit8-bst-decide-productions", "tutorial-source scrape (not an engine trace)");

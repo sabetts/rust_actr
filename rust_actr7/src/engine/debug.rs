@@ -743,26 +743,50 @@ impl Engine {
         utility: Option<f32>,
         reward: Option<Reward>,
     ) {
-        self.out(format!("Parameters for production {name}:"));
+        // `command-output` writes to the command stream independently of the
+        // model trace (`:v`), so this is not gated on `trace_on`.
+        self.out_lines
+            .push(format!("Parameters for production {name}:"));
         if self.cfg.esc {
             match utility {
-                Some(v) => self.out(format!(" :utility {v:6.3}")),
-                None => self.out(" :utility    NIL".to_string()),
+                Some(v) => self.out_lines.push(format!(" :utility {v:6.3}")),
+                None => self.out_lines.push(" :utility    NIL".to_string()),
             }
         }
-        self.out(format!(" :u  {u:6.3}"));
-        self.out(format!(" :at {}", fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)));
+        self.out_lines.push(format!(" :u  {u:6.3}"));
+        self.out_lines
+            .push(format!(" :at {}", fmt_6_3(self.cfg.dat_ms as f32 / 1000.0)));
         if self.cfg.esc && self.cfg.ul {
             // `production-parameter-fct` (`utility-and-reward-1.lisp:686`):
             // the reward lines print only with `:esc` + `:ul`. A number uses
             // `~6,3F`; any other value `~6@s` (right-aligned in 6 columns).
             match reward {
-                Some(Reward::Num(r)) => self.out(format!(" :reward {r:6.3}")),
-                Some(Reward::Other(s)) => self.out(format!(" :reward {s:>6}")),
-                None => self.out(" :reward    NIL".to_string()),
+                Some(Reward::Num(r)) => self.out_lines.push(format!(" :reward {r:6.3}")),
+                Some(Reward::Other(s)) => self.out_lines.push(format!(" :reward {s:>6}")),
+                None => self.out_lines.push(" :reward    NIL".to_string()),
             }
-            self.out(" :fixed-utility    NIL".to_string());
+            self.out_lines.push(" :fixed-utility    NIL".to_string());
         }
+    }
+
+    /// `(spp <name>…)` getter: resolve each production's parameters and print
+    /// its `Parameters for production …` block, like ACT-R's
+    /// `production-parameter-fct` (`utility-and-reward-1.lisp:678`); unknown
+    /// names are skipped.
+    pub fn print_prod_params_by_name(&mut self, name: &str) {
+        let Some(idx) = self
+            .model
+            .productions
+            .iter()
+            .position(|p| p.name.eq_ignore_ascii_case(name))
+        else {
+            return;
+        };
+        let pname = self.model.productions[idx].name.clone();
+        let u = self.utilities[idx];
+        let utility = self.production_utility[idx];
+        let reward = self.model.productions[idx].reward.clone();
+        self.print_prod_params(&pname, u, utility, reward);
     }
 }
 

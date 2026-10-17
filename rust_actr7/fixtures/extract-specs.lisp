@@ -96,6 +96,7 @@ operations that turn out not to be replayable.")
     ("schedule-simple-set-buffer-chunk" . schedule-simple-set-buffer-chunk)
     ("sji" . sji-fct)
     ("sdp" . sdp-fct)
+    ("spp" . spp-fct)
     ;; Task-level state changes a stub makes outside a run. These are the
     ;; calls a *task function* (not the stub's own top level) makes to drive a
     ;; trial, so missing them left the replayed model in the wrong state — the
