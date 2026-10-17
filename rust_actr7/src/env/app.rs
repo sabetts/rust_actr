@@ -682,6 +682,8 @@ impl App {
             dlg = dlg.set_directory(dir);
         }
         if let Some(path) = dlg.pick_file() {
+            // A different model gets a fresh trace pane.
+            self.trace.clear();
             self.eval(
                 "load-act-r-model",
                 vec![Json::Str(path.to_string_lossy().into_owned())],
@@ -758,11 +760,19 @@ impl App {
         if ui.button("Load model…").clicked() {
             self.load_dialog();
         }
-        if ui.button("Reset").clicked() {
-            self.eval("reset", Vec::new());
-            self.drain_trace();
-            self.refresh_pending = true;
-        }
+        ui.horizontal(|ui| {
+            if ui.button("Reset").clicked() {
+                // A reset starts a fresh run context: clear the trace pane
+                // (then show only the reset's own output).
+                self.trace.clear();
+                self.eval("reset", Vec::new());
+                self.drain_trace();
+                self.refresh_pending = true;
+            }
+            if ui.button("Clear trace").clicked() {
+                self.trace.clear();
+            }
+        });
         ui.separator();
         ui.horizontal(|ui| {
             ui.label("Run");
