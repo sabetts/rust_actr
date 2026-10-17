@@ -2206,6 +2206,32 @@ impl Engine {
         self.record_retrieval_history = on;
     }
 
+    /// The `sdp` chunk block (`commands/dm-commands.lisp:784`): the esc
+    /// sub-symbolic parameter lines for one DM chunk, for the retrieval
+    /// history's params field. `activation` and `base` are the values computed
+    /// for the request.
+    pub(super) fn sdp_chunk_block(&self, idx: usize, activation: f32, base: f32) -> String {
+        if !self.cfg.esc {
+            return String::new();
+        }
+        let mut s = String::new();
+        s.push_str(&format!(" :Activation {:>6.3}\n", activation));
+        s.push_str(&format!(" :Permanent-Noise {:>6.3}\n", 0.0));
+        s.push_str(&format!(" :Base-Level {:>6.3}\n", base));
+        if self.cfg.bll.is_some() {
+            let h = &self.hist[idx];
+            s.push_str(&format!(" :Creation-Time {}\n", fmt_secs(h.creation_ms)));
+            if !matches!(self.cfg.ol, Ol::Off) {
+                s.push_str(&format!(" :Reference-Count  {}\n", h.count));
+            }
+            if !matches!(self.cfg.ol, Ol::On) {
+                let refs: Vec<String> = h.refs.iter().map(|r| fmt_secs(*r)).collect();
+                s.push_str(&format!(" :Reference-List ({})\n", refs.join(" ")));
+            }
+        }
+        s
+    }
+
     /// The recorded `retrieval-history` records, in request order.
     pub fn retrieval_history(&self) -> &[RetrievalRecord] {
         &self.retrieval_history

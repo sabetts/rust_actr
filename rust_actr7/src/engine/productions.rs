@@ -469,7 +469,9 @@ impl Engine {
                         // `?visual-location> state error` (`vision.lisp:3206`):
                         // the vision module's `loc-failure` flag (visual
                         // location requests are otherwise always free).
-                        ("STATE", Pattern::Sym(s)) if s == "ERROR" && buffer == "VISUAL-LOCATION" => {
+                        ("STATE", Pattern::Sym(s))
+                            if s == "ERROR" && buffer == "VISUAL-LOCATION" =>
+                        {
                             self.loc_failure
                         }
                         // extended-motor-actions adds per-stage queries.
@@ -1394,14 +1396,13 @@ impl Engine {
         b1: &Bindings,
         b2: &Bindings,
     ) -> Vec<(SlotVal, SlotVal)> {
-        let lhs_of = |lhs: &[(String, Vec<(String, SlotVal)>)],
-                      buf: &str|
-         -> Vec<(String, SlotVal)> {
-            lhs.iter()
-                .find(|(b, _)| b == buf)
-                .map(|(_, s)| s.clone())
-                .unwrap_or_default()
-        };
+        let lhs_of =
+            |lhs: &[(String, Vec<(String, SlotVal)>)], buf: &str| -> Vec<(String, SlotVal)> {
+                lhs.iter()
+                    .find(|(b, _)| b == buf)
+                    .map(|(_, s)| s.clone())
+                    .unwrap_or_default()
+            };
         let act_of = |acts: &[(char, String, Vec<(String, SlotVal)>, Option<String>)],
                       buf: &str,
                       ops: &[char]|
@@ -1441,10 +1442,7 @@ impl Engine {
                     }
                     for (name, v) in slots {
                         if let Some(t) = bound_text(name, b1) {
-                            m.push((
-                                SlotVal::Var(name[1..].to_string()),
-                                SlotVal::Lit(t),
-                            ));
+                            m.push((SlotVal::Var(name[1..].to_string()), SlotVal::Lit(t)));
                         }
                         if let SlotVal::Var(n) = v {
                             if let Some(t) = bound_text(n, b1) {
@@ -1508,15 +1506,21 @@ impl Engine {
                 }
             }
             for slot in &interesting {
-                let p1v: Vec<&String> =
-                    vs.iter().filter(|(_, t)| t == slot).map(|(v, _)| v).collect();
+                let p1v: Vec<&String> = vs
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
                 let p1vb: Vec<&String> = vsb
                     .iter()
                     .filter(|(_, t)| t == slot)
                     .map(|(v, _)| v)
                     .collect();
-                let p2v: Vec<&String> =
-                    vs2.iter().filter(|(_, t)| t == slot).map(|(v, _)| v).collect();
+                let p2v: Vec<&String> = vs2
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
                 let p2vb: Vec<&String> = vs2b
                     .iter()
                     .filter(|(_, t)| t == slot)
@@ -2617,7 +2621,8 @@ impl Engine {
         let hist_request = self
             .record_retrieval_history
             .then(|| render_request_spec(&spec));
-        let mut acts: Vec<(ChunkInst, f32)> = Vec::new();
+        // `(dm index, activation, base-level)` for each candidate.
+        let mut acts: Vec<(usize, f32, f32)> = Vec::new();
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
         // `chunk-list` (the DM hash-table order) is reverse-insertion.
@@ -2848,7 +2853,7 @@ impl Engine {
                 self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
             }
             a += noise;
-            acts.push((c.clone(), a));
+            acts.push((idx, a, base));
             if self.act_low() {
                 self.out(format!("Chunk {cname} has an activation of: {}", lisp_f(a)));
             }
@@ -2931,7 +2936,10 @@ impl Engine {
                 let winner = best
                     .as_ref()
                     .and_then(|b| b.name.as_deref())
-                    .and_then(|bn| acts.iter().position(|(c, _)| c.name.as_deref() == Some(bn)));
+                    .and_then(|bn| {
+                        acts.iter()
+                            .position(|(i, _, _)| self.dm[*i].name.as_deref() == Some(bn))
+                    });
                 let mut order: Vec<usize> = Vec::new();
                 if let Some(w) = winner {
                     order.push(w);
@@ -2942,14 +2950,15 @@ impl Engine {
                     }
                 }
                 for j in order {
-                    let c = &acts[j].0;
-                    let name = c.name.clone().unwrap_or_default();
+                    let (cidx, cact, cbase) = acts[j];
+                    let name = self.dm[cidx].name.clone().unwrap_or_default();
                     let text = self.printed_chunk(&name).unwrap_or_default();
+                    let params = self.sdp_chunk_block(cidx, cact, cbase);
                     chunks.push(RetrievalChunk {
                         failure: false,
                         name,
                         text,
-                        params: String::new(),
+                        params,
                         activation_trace: String::new(),
                     });
                 }

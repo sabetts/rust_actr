@@ -2767,6 +2767,20 @@ mod tests {
             panic!("chunk record is not an array");
         };
         assert_eq!(ci.len(), 4);
+        // A real candidate's params carry the sdp activation block.
+        let real = chunks.iter().find_map(|c| match c {
+            Json::Arr(f) if f.first().and_then(|x| x.as_str()) != Some(":retrieval-failure") => {
+                Some(f)
+            }
+            _ => None,
+        });
+        if let Some(f) = real {
+            let params = f[2].as_str().unwrap_or("");
+            assert!(
+                params.contains(":Activation") && params.contains(":Base-Level"),
+                "params sdp block: {params:?}"
+            );
+        }
     }
 
     /// The Environment viewer commands return the model's productions,
