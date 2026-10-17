@@ -10,3 +10,8 @@ rust_actr7/target/
 rust_actr7/web/actr_engine.wasm
 __pycache__/
 *.pyc
+# local unpacked GUI crate sources (not part of the engine)
+contrib/
+# ACT-R GUI runtime files
+actr7.x/environment/gui/error.log
+actr7.x/environment/gui/init/10-userguisettings.tcl

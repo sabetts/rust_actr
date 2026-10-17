@@ -16,7 +16,7 @@ that arbitrary Lisp cannot be executed.
 | `rust_actr7/fixtures/` | test oracles + regen scripts — see `fixtures/README.md` |
 | `rust_actr7/web/` | browser (wasm) build — see `web/README.md` |
 | `actr7.x/` | upstream Lisp ACT-R sources (the oracle) |
-| `contrib/` | vendored GUI deps, not part of the engine |
+| `contrib/` | local unpacked GUI crate sources (untracked, not part of the engine) |
 | `PORTING-NOTES.md` | non-obvious ACT-R/Lisp behaviors the port must match |
 
 ## Build and test
