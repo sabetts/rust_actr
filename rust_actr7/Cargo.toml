@@ -7,3 +7,6 @@ description = "Rust port of the ACT-R 7 single-threaded kernel (M1 harness skele
 [lib]
 name = "actr_engine"
 path = "src/lib.rs"
+# rlib for the native binaries/tests; cdylib so the wasm target emits a
+# loadable `.wasm` (see `src/wasm.rs`).
+crate-type = ["cdylib", "rlib"]

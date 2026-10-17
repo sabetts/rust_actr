@@ -132,6 +132,9 @@ pub mod rand;
 pub mod rpc;
 pub mod sexpr;
 pub mod trace;
+/// WebAssembly entry points (compiled only for `wasm32-unknown-unknown`).
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
 
 pub use engine::{DeviceSetup, DeviceText, EngineError};
 pub use model::{load_models, ChunkDesc, Model};
@@ -190,6 +193,35 @@ pub fn run_model_with(
     let def = models
         .last()
         .ok_or_else(|| EngineError::Model(format!("no define-model in {model}")))?;
+    engine::Engine::new_with_width(def.clone(), seed, run_time, device.clone(), module_width)?.run()
+}
+
+/// Run a model whose Lisp source is already in memory, returning its trace as
+/// exact bytes. The filesystem-free twin of [`run_model`]: `source` is the
+/// whole model file (the last `define-model` in it runs), and `seed`,
+/// `run_time` and `device` have the same meaning. This is the entry point for
+/// embedders with no ACT-R checkout on disk — e.g. the wasm build ([`wasm`]).
+pub fn run_from_source(
+    source: &str,
+    seed: (u64, u64),
+    run_time: f64,
+    device: &DeviceSetup,
+) -> Result<String, EngineError> {
+    run_from_source_with(source, seed, run_time, device, trace::MODULE_WIDTH)
+}
+
+/// Like [`run_from_source`], but with an explicit trace module-column width.
+pub fn run_from_source_with(
+    source: &str,
+    seed: (u64, u64),
+    run_time: f64,
+    device: &DeviceSetup,
+    module_width: usize,
+) -> Result<String, EngineError> {
+    let models = model::load_models_from_str(source)?;
+    let def = models
+        .last()
+        .ok_or_else(|| EngineError::Model("no define-model in source".to_string()))?;
     engine::Engine::new_with_width(def.clone(), seed, run_time, device.clone(), module_width)?.run()
 }
 

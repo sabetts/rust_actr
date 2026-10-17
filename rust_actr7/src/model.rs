@@ -2359,10 +2359,18 @@ fn push_production(model: &mut Model, p: Production) {
 /// `(clear-all)` is acknowledged and skipped; anything else top-level errors.
 pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
     let src = fs::read_to_string(path).map_err(LoadError::Io)?;
+    load_models_from_str(&src)
+}
+
+/// Parse every `define-model` in already-read Lisp source — the filesystem-free
+/// twin of [`load_models`], for embedders (the wasm build) that hold the model
+/// text rather than a path. `(clear-all)` is acknowledged and skipped; anything
+/// else top-level errors.
+pub fn load_models_from_str(src: &str) -> Result<Vec<Model>, LoadError> {
     let mut models = Vec::new();
     let mut required_extras: Vec<String> = Vec::new();
     let mut defs: std::collections::HashMap<String, Sexp> = std::collections::HashMap::new();
-    for form in parse_all(&src)? {
+    for form in parse_all(src)? {
         match &form {
             Sexp::List(items) => match items.first() {
                 Some(Sexp::Sym(h)) if h == "CLEAR-ALL" => {}
