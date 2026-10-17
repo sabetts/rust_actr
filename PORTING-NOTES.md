@@ -3465,7 +3465,7 @@ fresh engine.
 Verification that it is the right stream: with the fix the RPC run's `noise`
 draws are *value-for-value identical* to the golden run's 95 draws, merely
 shifted by one index — i.e. the model is on ACT-R's stream and only one
-pre-run draw differs (see TODO).
+pre-run draw differs.
 
 ## 218. `permute-list` draws n times, including the final single-element pass
 
@@ -4178,7 +4178,7 @@ at its preparation-complete; the mouse path now does too, and
 `FinishMovement`'s non-`zz_ext` arm clears it.
 
 This alone does not make `bst-nolearn` match — the movement *duration* is still
-wrong (see `TODO.md`) — but it is the correct buffer semantics.
+wrong — but it is the correct buffer semantics.
 
 ## 247. The base motor module's `click-mouse` never releases; the extended one does
 

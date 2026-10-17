@@ -60,6 +60,15 @@ and type-free `isa` matching, chunk-valued references + merge aliasing, and
 `!stop!` are handled. The next gaps are `!bind!`/`!eval!` and
 `require-extra`; see `../../../PORTING-NOTES.md` #81–92.
 
+## Conventions
+
+- The `.ref` outputs are the oracle: match them, even where they contradict
+  current ACT-R source.
+- Keep `cargo test` green. A case is promoted by removing its `#[ignore]`
+  (see Grow coverage); only then does it have to pass.
+- Non-obvious behavior gets a `PORTING-NOTES.md` entry tied to a source line —
+  not a changelog.
+
 ## Regenerate
 
 ```sh
@@ -71,7 +80,8 @@ Requires SBCL. The script finds trace refs, runs those stubs under
 instrumentation (capturing model chain, resolved seed, ordered steps, and the
 `max-module-name-length` column width), and rewrites the specs. Seeds that do
 not match a literal `(sgp :seed V ...)` in the sources are canonicalized to
-`(100 0)` so specs are stable across regens.
+`(100 0)` so specs are stable across regens. Regen is additive: hand-authored
+`*.device.sexp` sidecars are read, never overwritten.
 
 ## Grow coverage
 
@@ -84,3 +94,19 @@ cargo test --test test_models -- --ignored <name> --nocapture
 ```
 
 Current status and feature gaps are in `../../../PORTING-NOTES.md`.
+
+## Command layer
+
+The goal is a drop-in RPC replacement: a Python ACT-R client connects and
+behaves like Lisp ACT-R, the only divergence being that arbitrary Lisp cannot
+be executed. Both the client-facing command surface and whatever the refs
+exercise are in scope; `../command-inventory.txt` (regenerate with
+`../command-inventory.py`) is the work list.
+
+## Out of scope
+
+The non-timestamped unit-test refs that only scrape the tutorial source files
+(the stub `with-open-file`/`read-line`s a model file and `model-output`s a
+fragment) validate the tutorial text, not the engine — no client command
+reaches them, so they stay ignored. The remaining non-timestamped refs are
+real command-output tests and are in scope (the command layer above).
