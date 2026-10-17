@@ -11,7 +11,7 @@
 //! because they exercise behavior the upstream corpus does not (activation
 //! noise, base-level learning, device/window scaffolding).
 //!
-//! The case list is static — one `#[test]` each, no directory discovery.
+//! The cases are a static list of `#[test]`s, one per scenario.
 
 use std::fs;
 use std::path::{Path, PathBuf};

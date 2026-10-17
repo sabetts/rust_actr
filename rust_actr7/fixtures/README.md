@@ -29,8 +29,8 @@ fixtures/
 | compared | ACT-R's `compare-test-model-files` (right-trim, case-insensitive) | **byte-exact** (CRLF → LF only) |
 | consumed by | `tests/test_models.rs` | `tests/extra_traces.rs` |
 
-Both suites list their cases **statically** — one `#[test]` per case, no
-runtime directory discovery. Out-of-scope cases are `#[ignore = "reason"]`.
+Both suites list their cases **statically** — one `#[test]` per case.
+Out-of-scope cases are `#[ignore = "reason"]`.
 
 ### regression/
 
