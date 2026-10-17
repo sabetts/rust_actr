@@ -6,5 +6,7 @@ actr7.x/test-models/*.out
 actr7.x/test-models/*.dif
 # Rust build output
 rust_actr7/target/
+# wasm staged next to the web page by rust_actr7/web/build.sh
+rust_actr7/web/actr_engine.wasm
 __pycache__/
 *.pyc

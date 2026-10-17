@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACT-R in the browser</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 1rem; }
+  h1 { font-size: 1.05rem; margin: 0 0 .75rem; }
+  .controls { display: flex; gap: 1.25rem; align-items: flex-end;
+              flex-wrap: wrap; margin-bottom: .75rem; }
+  label { display: block; font-weight: 600; margin-bottom: .2rem; }
+  input[type=number] { width: 5.5rem; padding: .3rem; font: inherit; }
+  button { padding: .5rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { cursor: default; opacity: .6; }
+  #status { margin-left: auto; opacity: .7; font-variant-numeric: tabular-nums; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  textarea {
+    width: 100%; height: 62vh; padding: .4rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.45;
+    white-space: pre; overflow: auto; resize: vertical;
+  }
+  #output { background: color-mix(in srgb, currentColor 6%, transparent); }
+  #output.err { color: #b00020; }
+</style>
+</head>
+<body>
+  <h1>ACT-R 7 (Rust) — run a model in the browser</h1>
+
+  <div class="controls">
+    <div>
+      <label>Seed</label>
+      <span><input id="seed0" type="number" value="100">
+            <input id="seed1" type="number" value="0"></span>
+    </div>
+    <div>
+      <label for="secs">Run time (s)</label>
+      <input id="secs" type="number" value="10" min="0" step="0.5">
+    </div>
+    <button id="run" disabled>Run model</button>
+    <span id="status">loading wasm…</span>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label for="model">Model (.lisp)</label>
+      <textarea id="model" spellcheck="false">(clear-all)
+
+(define-model count
+
+(sgp :esc t :lf .05 :trace-detail high)
+
+
+(chunk-type number number next)
+(chunk-type count-from start end count)
+
+(add-dm
+ (one ISA number number one next two)
+ (two ISA number number two next three)
+ (three ISA number number three next four)
+ (four ISA number number four next five)
+ (five ISA number number five))
+
+(goal-focus (ISA count-from start two end four))
+
+(p start
+   =goal>
+      ISA         count-from
+      start       =num1
+      count       nil
+ ==>
+   =goal>
+      ISA         count-from
+      count       =num1
+   +retrieval>
+      ISA         number
+      number      =num1
+   )
+
+(p increment
+   =goal>
+      ISA         count-from
+      count       =num1
+    - end         =num1
+   =retrieval>
+      ISA         number
+      number      =num1
+      next        =num2
+ ==>
+   =goal>
+      ISA         count-from
+      count       =num2
+   +retrieval>
+      ISA         number
+      number      =num2
+   !output!       (=num1)
+   )
+
+(p stop
+   =goal>
+      ISA         count-from
+      count       =num
+      end         =num
+   =retrieval>
+      ISA         number
+      number      =num
+ ==>
+   -goal>
+   !output!       (=num)
+   )
+)</textarea>
+    </div>
+    <div>
+      <label for="output">Trace</label>
+      <textarea id="output" readonly spellcheck="false"></textarea>
+    </div>
+  </div>
+
+<script type="module">
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+let wasm = null;
+
+// Load the C-ABI module. `arrayBuffer` + `instantiate` (not streaming) so it
+// works regardless of the `.wasm` MIME type the static server sends.
+async function loadWasm() {
+  const res = await fetch("./actr_engine.wasm");
+  if (!res.ok) throw new Error(`fetch actr_engine.wasm: ${res.status} ${res.statusText}`);
+  const { instance } = await WebAssembly.instantiate(await res.arrayBuffer(), {});
+  return instance.exports;
+}
+
+// Mirror of the node harness: copy the source into wasm memory, run, read back.
+function runModelInWasm(source, seed0, seed1, secs) {
+  const bytes = new TextEncoder().encode(source);
+  const ptr = wasm.alloc(bytes.length);
+  let status;
+  try {
+    new Uint8Array(wasm.memory.buffer, ptr, bytes.length).set(bytes);
+    status = wasm.run_model(ptr, bytes.length, BigInt(seed0), BigInt(seed1), secs);
+  } finally {
+    wasm.dealloc(ptr, bytes.length);
+  }
+  const rptr = wasm.result_ptr();
+  const rlen = wasm.result_len();
+  const out = new TextDecoder().decode(new Uint8Array(wasm.memory.buffer, rptr, rlen));
+  return { ok: status === 0, out };
+}
+
+function run() {
+  const source = $("model").value;
+  const seed0 = Math.trunc(Number($("seed0").value) || 0);
+  const seed1 = Math.trunc(Number($("seed1").value) || 0);
+  const secs = Number($("secs").value) || 0;
+
+  $("run").disabled = true;
+  $("status").textContent = "running…";
+  const t0 = performance.now();
+  try {
+    const { ok, out } = runModelInWasm(source, seed0, seed1, secs);
+    $("output").value = out;
+    $("output").classList.toggle("err", !ok);
+    const ms = Math.round(performance.now() - t0);
+    const lines = out ? out.split("\n").length : 0;
+    $("status").textContent = `${ok ? "ok" : "error"} · ${ms} ms · ${lines} lines`;
+  } catch (e) {
+    $("output").value = "error: " + e;
+    $("output").classList.add("err");
+    $("status").textContent = "error";
+  } finally {
+    $("run").disabled = false;
+  }
+}
+
+(async function main() {
+  try {
+    wasm = await loadWasm();
+  } catch (e) {
+    $("status").textContent = "wasm failed to load";
+    $("output").value =
+      String(e) + "\n\nDid you run web/build.sh, and serve this folder over HTTP?\n" +
+      "  cd web && python3 -m http.server 8000";
+    $("output").classList.add("err");
+    return;
+  }
+  $("run").disabled = false;
+  $("status").textContent = "";
+  $("run").addEventListener("click", run);
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      run();
+    }
+  });
+})();
+</script>
+</body>
+</html>
