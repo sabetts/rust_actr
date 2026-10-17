@@ -524,7 +524,9 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
     match spec.scope.as_str() {
         "PURE" | "MULTI" => {}
         "DEVICE" => return Some("device/test scaffolding not in spec yet".into()),
-        "COMMAND" => return Some("command-layer output in ref".into()),
+        "COMMAND" => {
+            return Some("command-layer output (in scope; needs command-output replay)".into())
+        }
         "DRIVER" => return Some("unsupported run-it driver op (pdisable/...)".into()),
         "OTHER" => return Some("no run recorded".into()),
         other => return Some(format!("scope {other}")),
@@ -976,7 +978,7 @@ fn run_case(name: &str) -> Result<(), String> {
     }
     let spec = read_named_spec(name)?;
     if let Some(reason) = ignore_reason(&spec) {
-        return Err(format!("out of scope: {reason}"));
+        return Err(format!("not runnable: {reason}"));
     }
     let ref_path = refs_dir().join(&spec.ref_name);
     let expected = normalize(

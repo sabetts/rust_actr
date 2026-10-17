@@ -911,8 +911,9 @@ after an undefined-function error. Returns whether anything was loaded."
   (let ((lisp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
     (let ((static-scope (scope-of (or src ""))))
-      ;; Command stubs need the command layer (out of scope, classified from
-      ;; source without executing). Device and driver stubs ARE executed so
+      ;; Command stubs need the command layer (in scope, but not replayable
+      ;; yet, so classified from source without executing). Device and driver
+      ;; stubs ARE executed so
       ;; their run steps and device script are captured (the ref is the
       ;; oracle; the spec replays it). A stub with no command token whose ref
       ;; is only a filtered fragment (no run end) is likewise command output.

@@ -41,9 +41,16 @@ The rest have no spec and are ignored; each reason string says which kind:
 - `event-hook Lisp (not replayable)` — `run-it` installs an arbitrary-Lisp
   `add-pre/post-event-hook` the engine cannot run (37 refs; the documented
   "no arbitrary Lisp" divergence).
-- `not an engine trace (command-layer output)` — real command/introspection
-  output (`dm`, `sdp`, `spp`, `whynot`, `sgp`, `pp`, warnings) (104 refs;
-  in scope as command-layer oracles).
+- `command-layer output (in scope; needs a driver spec)` — the stub drives
+  commands only (`dm`, `sdp`, `spp`, `whynot`, `sgp`, `pp`, warnings) with no
+  timestamped trace, so no spec was emitted (104 refs).
+- `command-layer output (in scope; needs command-output replay)` — a
+  `:COMMAND`-scope spec exists, but the harness cannot replay command output
+  yet (79 refs).
+
+The two `command-layer output` reasons are in-scope oracle work, not out of
+scope: the commands themselves are implemented for the RPC surface; what is
+missing is the command-output comparison path.
 
 `extract-specs.lisp` classifies each trace test without executing the ones that
 only make sense in the command/device harness:
