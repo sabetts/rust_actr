@@ -39,6 +39,8 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("run") => cmd_run(&args[1..]),
         Some("server") => cmd_server(&args[1..]),
+        #[cfg(feature = "env")]
+        Some("env") => cmd_env(&args[1..]),
         Some("-h") | Some("--help") | None => {
             print_help();
             ExitCode::SUCCESS
@@ -62,7 +64,12 @@ Usage:
 Commands:
   run     Run a single model file and print its trace.
   server  Start the RPC dispatcher (drop-in ACT-R server).
-
+"
+    );
+    #[cfg(feature = "env")]
+    print!("  env     Launch the native Environment GUI.\n");
+    print!(
+        "
 The ACT-R root defaults to $ACTR_DIR or <crate>/../actr7.x.
 "
     );
@@ -215,6 +222,69 @@ fn cmd_server(args: &[String]) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// `actr env`: launch the native Environment GUI.
+#[cfg(feature = "env")]
+fn cmd_env(args: &[String]) -> ExitCode {
+    let mut root = std::env::var("ACTR_DIR").unwrap_or_else(|_| default_root());
+    let mut seed: (u64, u64) = (100, 0);
+    let mut model: Option<String> = None;
+    let mut connect = false;
+    let mut host = "127.0.0.1".to_string();
+    let mut port: u16 = 2650;
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--actr" | "--actr-dir" => {
+                if let Some(p) = args.get(i + 1) {
+                    root = p.clone();
+                }
+                i += 2;
+            }
+            "--seed" => {
+                let a = args.get(i + 1).and_then(|s| s.parse().ok()).unwrap_or(100);
+                let b = args.get(i + 2).and_then(|s| s.parse().ok()).unwrap_or(0);
+                seed = (a, b);
+                i += 3;
+            }
+            "--connect" => {
+                connect = true;
+                // An optional `host:port` may follow.
+                if let Some(v) = args.get(i + 1) {
+                    if let Some((h, p)) = v.split_once(':') {
+                        host = h.to_string();
+                        if let Ok(pv) = p.parse() {
+                            port = pv;
+                        }
+                        i += 2;
+                        continue;
+                    }
+                }
+                i += 1;
+            }
+            "-h" | "--help" => {
+                println!("actr env [--actr DIR] [--seed S C] [--connect [HOST:PORT]] [model]");
+                return ExitCode::SUCCESS;
+            }
+            other => {
+                model = Some(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    // The model is passed through as an ACT-R logical (`tutorial;unit1;…`) or
+    // root-relative path; the session (or the server) resolves it.
+    actr_engine::env::run(actr_engine::env::EnvArgs {
+        actr_root: PathBuf::from(root),
+        host,
+        port,
+        connect,
+        seed,
+        model,
+    })
 }
 
 fn default_root() -> String {

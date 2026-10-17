@@ -634,9 +634,7 @@ impl Session {
                         i += 1;
                         continue;
                     }
-                    if i + 1 < args.len()
-                        && !args[i + 1].as_str().unwrap_or("").starts_with(':')
-                    {
+                    if i + 1 < args.len() && !args[i + 1].as_str().unwrap_or("").starts_with(':') {
                         sets.push((k, args[i + 1].clone()));
                         i += 2;
                     } else {
@@ -756,7 +754,8 @@ impl Session {
                 if let Some(m) = self.defs.last_mut() {
                     // ACT-R forbids redefinition (it warns); the engine keeps
                     // the latest, as with production redefinition.
-                    m.chunk_types.retain(|t| !t.name.eq_ignore_ascii_case(&name));
+                    m.chunk_types
+                        .retain(|t| !t.name.eq_ignore_ascii_case(&name));
                     m.chunk_types.push(ct);
                 }
                 self.rebuild_engine_in_place()?;
@@ -987,16 +986,17 @@ impl Session {
             "modify-visicon-features" => {
                 // A client sends one list argument; the spec harness flattens
                 // a single list into separate arguments.
-                let lists: Vec<Vec<Json>> = if args.first().map(|a| matches!(a, Json::Arr(_))) == Some(true) {
-                    args.iter()
-                        .filter_map(|a| match a {
-                            Json::Arr(x) => Some(x.clone()),
-                            _ => None,
-                        })
-                        .collect()
-                } else {
-                    vec![args.to_vec()]
-                };
+                let lists: Vec<Vec<Json>> =
+                    if args.first().map(|a| matches!(a, Json::Arr(_))) == Some(true) {
+                        args.iter()
+                            .filter_map(|a| match a {
+                                Json::Arr(x) => Some(x.clone()),
+                                _ => None,
+                            })
+                            .collect()
+                    } else {
+                        vec![args.to_vec()]
+                    };
                 for items in lists {
                     let name = items.first().map(json_to_text).unwrap_or_default();
                     let mut mods: Vec<(String, Sexp)> = Vec::new();
@@ -1375,7 +1375,12 @@ impl Session {
         }
         struct NoRemote;
         impl Remote for NoRemote {
-            fn call(&mut self, _n: &str, _m: Option<&str>, _a: Vec<Json>) -> Result<Vec<Json>, String> {
+            fn call(
+                &mut self,
+                _n: &str,
+                _m: Option<&str>,
+                _a: Vec<Json>,
+            ) -> Result<Vec<Json>, String> {
                 Err("no remote client".into())
             }
         }
@@ -1555,6 +1560,13 @@ pub enum MonitorWhen {
 /// `<root>/tutorial/unit1/count.lisp`. The host prefix up to the first `:`
 /// (`ACT-R:`) is dropped, then `;` becomes the path separator.
 pub fn logical_to_path(root: &std::path::Path, logical: &str) -> PathBuf {
+    // A real filesystem path (Windows `C:\…`, UNC `\\…`, or a rooted path) is
+    // used verbatim; only ACT-R logical hosts (`ACT-R:tutorial;…`) and
+    // root-relative paths resolve under `root`. Without this a client-supplied
+    // absolute path is mangled (`C:\x` → `<root>/x`).
+    if is_filesystem_path(logical) {
+        return PathBuf::from(logical);
+    }
     let after_host = match logical.find(':') {
         Some(i) => &logical[i + 1..],
         None => logical,
@@ -1562,6 +1574,18 @@ pub fn logical_to_path(root: &std::path::Path, logical: &str) -> PathBuf {
     let rel = after_host.replace(';', std::path::MAIN_SEPARATOR_STR);
     let rel = rel.trim_start_matches(std::path::MAIN_SEPARATOR);
     root.join(rel)
+}
+
+/// Whether `s` is a real filesystem path rather than an ACT-R logical name.
+fn is_filesystem_path(s: &str) -> bool {
+    let b = s.as_bytes();
+    // Windows drive-absolute: `C:\…` / `C:/…`.
+    if b.len() >= 3 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/')
+    {
+        return true;
+    }
+    // UNC (`\\server\share`) or a rooted (`/…`, `\…`) path.
+    s.starts_with("\\\\") || s.starts_with('/') || s.starts_with('\\')
 }
 
 /// JSON → the engine's `Sexp`. Strings become symbols (the Python client
@@ -1770,6 +1794,21 @@ mod tests {
             "ACT-R:tutorial;unit1;count.lisp",
         );
         assert_eq!(p, std::path::Path::new("/actr/tutorial/unit1/count.lisp"));
+    }
+
+    #[test]
+    fn absolute_paths_pass_through() {
+        let root = std::path::Path::new("/actr");
+        assert_eq!(
+            logical_to_path(root, "/abs/model.lisp"),
+            std::path::Path::new("/abs/model.lisp")
+        );
+        if cfg!(windows) {
+            assert_eq!(
+                logical_to_path(root, "C:\\models\\m.lisp"),
+                std::path::Path::new("C:\\models\\m.lisp")
+            );
+        }
     }
 
     #[test]
@@ -2143,7 +2182,8 @@ fn mod_focus_slots(args: &[Json]) -> Result<Vec<(String, Sexp)>, String> {
     Ok(slots)
 }
 
-fn goal_desc(args: &[Json]) -> Result<ChunkDesc, String> {    match args.first() {
+fn goal_desc(args: &[Json]) -> Result<ChunkDesc, String> {
+    match args.first() {
         Some(Json::Str(name)) => Ok(ChunkDesc::Named(name.to_uppercase())),
         Some(Json::Arr(items)) => {
             let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();

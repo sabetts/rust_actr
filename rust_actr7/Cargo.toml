@@ -10,3 +10,12 @@ path = "src/lib.rs"
 # rlib for the native binaries/tests; cdylib so the wasm target emits a
 # loadable `.wasm` (see `src/wasm.rs`).
 crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+eframe = { version = "0.37.0", optional = true }
+rfd = { version = "0.17.2", optional = true }
+
+[features]
+# The native Environment GUI (`actr env`). Off by default so the core
+# engine, the golden test suite, and the wasm cdylib stay dependency-free.
+env = ["dep:eframe", "dep:rfd"]

@@ -126,6 +126,10 @@
 //!    `------ Stopped because ...` terminator. No banner, no warnings.
 
 pub mod engine;
+/// The native Environment GUI (`actr env`), behind the `env` feature so the
+/// core engine and the golden test suite stay dependency-free.
+#[cfg(feature = "env")]
+pub mod env;
 pub mod json;
 pub mod model;
 pub mod rand;
