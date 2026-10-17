@@ -2104,7 +2104,7 @@ impl Session {
     }
 
     /// Reset the model and run the `:testing-function` hook — the path the RPC
-    /// `reset` command takes (`invoke_testing_fn`). The golden harness replays a
+    /// `reset` command takes (`invoke_testing_fn`). The test harness replays a
     /// spec's `(:RESET)` through this rather than the engine directly, or a spec
     /// whose runs depend on the hook (the fan stubs' `trace-fan-run`, which sets
     /// `:act t`) silently loses the trace it enables.

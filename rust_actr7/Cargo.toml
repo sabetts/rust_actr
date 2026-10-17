@@ -17,5 +17,5 @@ rfd = { version = "0.17.2", optional = true }
 
 [features]
 # The native Environment GUI (`actr env`). Off by default so the core
-# engine, the golden test suite, and the wasm cdylib stay dependency-free.
+# engine, the trace test suites, and the wasm cdylib stay dependency-free.
 env = ["dep:eframe", "dep:rfd"]

@@ -12,7 +12,7 @@
 //!   and `act-r-random` multiplies by the single `1.0`. All in `f32`.
 //! - `act-r-noise` clamps to `[0.0001, 0.9999]` then returns
 //!   `s * ln((1-p)/p)` in single precision. `ln`/`exp` may differ by
-//!   1ulp from the Lisp's libm; the golden traces adjudicate.
+//!   1ulp from the Lisp's libm; the expected traces adjudicate.
 //! - The int path (`act-r-random` of an integer) uses `real2_L`, a
 //!   LONG-float division. SBCL/CCL on x86-64 implement long as double,
 //!   so `f64` matches; on a platform with 80-bit longs it would not.
@@ -199,7 +199,7 @@ mod tests {
     ///   8x (act-r-random 10) / 8x (act-r-noise 0.5) / 4x (act-r-random 1.0)
     /// plus `init_by_array` #(... 1 2 3) raw draws. Floats printed
     /// `~,20F`; compared here at 1e-6 (single-precision noise) — the
-    /// golden traces are the bit-exact arbiter, not this test.
+    /// expected traces are the bit-exact arbiter, not this test.
     #[test]
     fn stream_matches_lisp_int_path() {
         let mut mt = Mt::fresh();

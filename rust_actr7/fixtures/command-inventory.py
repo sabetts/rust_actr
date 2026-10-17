@@ -9,7 +9,7 @@ The target surface is the union of:
 
 minus the commands the Rust RPC registry already implements.
 
-Writes `golden/command-inventory.txt` (name<TAB>family<TAB>needed-by).
+Writes `fixtures/command-inventory.txt` (name<TAB>family<TAB>needed-by).
 Re-run after adding commands; the file is the work list for Phase R7.
 """
 import os
@@ -104,7 +104,7 @@ def main():
     with open(OUT, "w") as f:
         f.write("# Drop-in command inventory: commands a Python ACT-R client or a\n")
         f.write("# test-model stub can reach, minus those the Rust RPC registry\n")
-        f.write("# already implements.  Regenerate with golden/command-inventory.py.\n")
+        f.write("# already implements.  Regenerate with fixtures/command-inventory.py.\n")
         f.write("# format: name<TAB>family<TAB>needed-by\n")
         for c in gap:
             why = []

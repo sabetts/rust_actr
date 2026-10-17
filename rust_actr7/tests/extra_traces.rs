@@ -40,7 +40,7 @@ trace_case!(mp_test, "mp-test");
 trace_case!(ul_test, "ul-test");
 
 fn traces_dir() -> PathBuf {
-    crate_dir().join("golden").join("traces")
+    crate_dir().join("fixtures").join("extra-traces")
 }
 
 fn run_case(name: &str) -> Result<(), String> {

@@ -3,7 +3,7 @@
 #
 #   cargo test --test rpc_conformance -- --ignored --nocapture
 #   # or directly:
-#   rust_actr7/golden/rpc-conformance.sh
+#   rust_actr7/fixtures/rpc-conformance.sh
 #
 # One test name per line. Grow this list as the command surface fills in.
 addition

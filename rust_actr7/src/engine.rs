@@ -226,7 +226,7 @@ struct Config {
     /// `:model-warnings` (`printing.lisp:341`): whether `model-warning` output
     /// (e.g. the negative-Sji notice, `declarative-memory.lisp:2550`) is
     /// emitted. ACT-R's printing module initialises the slot to `t`, but every
-    /// golden stub sets `(ssp :starting-parameters (:model-warnings nil))` and
+    /// test stub sets `(ssp :starting-parameters (:model-warnings nil))` and
     /// the extractor does not record that, so the engine defaults to `nil` to
     /// reproduce the refs (GOTCHAS #232).
     model_warnings: bool,
@@ -841,7 +841,7 @@ enum VisPending {
 }
 
 /// Virtual keyboard entry: hand geometry for prep/fitss math.
-/// M5a seeds Q; digits etc. join with device-task goldens.
+/// M5a seeds Q; digits etc. join with device-task traces.
 #[derive(Debug, Clone)]
 struct KeySpec {
     hand: &'static str,
@@ -3703,7 +3703,7 @@ impl Engine {
     /// Merge a cleared buffer chunk into DM by content match, adding a
     /// reference (`merge-reference-list/count`); fresh contents are
     /// added with creation=now, refs=(now), count=1. Buffers in
-    /// `:ignore-buffers` skip this; no golden sets it.
+    /// `:ignore-buffers` skip this; no test sets it.
     fn merge_into_dm(&mut self, mut chunk: ChunkInst, buffer: &str) {
         let now = self.time_ms;
         // A vision object's `screen-pos` names a buffer copy that is

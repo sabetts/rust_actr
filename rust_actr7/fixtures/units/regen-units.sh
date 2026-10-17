@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# regen-units.sh — regenerate golden unit tables. Requires: sbcl.
+# regen-units.sh â€” regenerate unit tables. Requires: sbcl.
 # Usage: ./regen-units.sh [output-dir]
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

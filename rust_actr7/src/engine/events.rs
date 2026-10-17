@@ -1085,7 +1085,7 @@ impl Engine {
                 // pm-module clear also frees preparation state 50 ms
                 // later via an (at most high-detail) change-state event;
                 // executing it wakes an armed conflict-resolution.
-                // Details inferred from the scheduled params; no golden
+                // Details inferred from the scheduled params; no test
                 // shows this line yet (high-detail visual clears only).
                 let at = self.time_ms + self.cfg.feat_prep_ms;
                 self.push(

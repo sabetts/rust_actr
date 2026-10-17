@@ -1,4 +1,4 @@
-;;;; run-units.lisp — golden-units oracle driver (M3).
+;;;; run-units.lisp â€” unit-table oracle driver (M3).
 ;;;;
 ;;;; Loaded *after* single-threaded ACT-R in a headless SBCL:
 ;;;;   sbcl --non-interactive --disable-debugger \

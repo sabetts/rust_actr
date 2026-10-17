@@ -1,6 +1,6 @@
 //! Error-path tests: out-of-scope Lisp must fail loudly, never silently.
 //!
-//! Models live in `golden/models/err-*.lisp` (project-owned fixtures,
+//! Models live in `fixtures/errors/err-*.lisp` (project-owned fixtures,
 //! loaded by path — they are not `ACT-R:` goldens and never run green).
 
 use std::path::PathBuf;
@@ -9,7 +9,7 @@ use actr_engine::engine::{Engine, EngineError};
 use actr_engine::load_models;
 
 fn models_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/models")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/errors")
 }
 
 fn load_one(name: &str) -> actr_engine::Model {

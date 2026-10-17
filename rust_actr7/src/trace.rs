@@ -6,9 +6,9 @@
 //! left-justified to the longest module name, space, details text.
 //!
 //! Module width is 22 (`PRODUCTION-COMPILATION`, the longest loaded
-//! module name). Hardcoded rather than computed: the golden traces pin
+//! module name). Hardcoded rather than computed: the expected traces pin
 //! the value, so any drift from loading a different module set fails
-//! loudly in `tests/golden.rs` instead of silently reformatting.
+//! loudly in `tests/extra_traces.rs` instead of silently reformatting.
 
 /// Event output level (`:output` on `schedule-event`).
 /// Visibility rule from `filter-test`

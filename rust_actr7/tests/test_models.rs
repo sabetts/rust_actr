@@ -1,7 +1,7 @@
 //! ACT-R `test-models` corpus: Rust engine vs the checked-in `.ref` traces.
 //!
-//! Phase 1 (`golden/regen-specs.sh`) runs the Lisp stubs under
-//! instrumentation and writes `golden/test-models/specs/*.spec` describing
+//! Phase 1 (`fixtures/regen-specs.sh`) runs the Lisp stubs under
+//! instrumentation and writes `fixtures/regression/specs/*.spec` describing
 //! each test's model chain, resolved seed, and ordered driver steps. This
 //! harness consumes those specs plus `actr7.x/test-models/*.ref`, so
 //! `cargo test` never needs SBCL.
@@ -48,7 +48,7 @@ struct Spec {
 }
 
 fn specs_dir() -> PathBuf {
-    crate_dir().join("golden").join("test-models").join("specs")
+    crate_dir().join("fixtures").join("regression").join("specs")
 }
 
 fn refs_dir() -> PathBuf {
@@ -548,7 +548,7 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
 
 /// Per-spec device sidecar `<name>.device.sexp` in the specs dir, mirroring
 /// the task file's post-reset `add-text-to-exp-window` / `clear-exp-window`
-/// calls (same form as `tests/golden.rs`): `((ADD-TEXT ms "text" x y) ...)`,
+/// calls (same form as `tests/extra_traces.rs`): `((ADD-TEXT ms "text" x y) ...)`,
 /// plus optional `(CLEAR ms)`, `(END ms)`, `(REWARD ms v)`, `(SIMILARITY a b v)`.
 fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
     let path = specs_dir().join(format!("{name}.device.sexp"));

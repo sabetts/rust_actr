@@ -6,8 +6,8 @@
 //!   speaking the same `\x04`-framed JSON protocol as `actr.py` and the Tcl
 //!   environment.
 //!
-//! Compiled only with the `env` feature so the core engine, the golden test
-//! suite, and the wasm cdylib stay dependency-free.
+//! Compiled only with the `env` feature so the core engine, the trace test
+//! suites, and the wasm cdylib stay dependency-free.
 
 mod app;
 mod backend;

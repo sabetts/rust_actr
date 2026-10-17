@@ -1,6 +1,6 @@
 # Drop-in command inventory: commands a Python ACT-R client or a
 # test-model stub can reach, minus those the Rust RPC registry
-# already implements.  Regenerate with golden/command-inventory.py.
+# already implements.  Regenerate with fixtures/command-inventory.py.
 # format: name<TAB>family<TAB>needed-by
 act-r-running-p	misc	actr.py
 add-image-to-exp-window	misc	actr.py

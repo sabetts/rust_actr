@@ -1,8 +1,8 @@
-;;;; extract-specs.lisp — Phase 1 of the ACT-R test-models integration.
+;;;; extract-specs.lisp â€” Phase 1 of the ACT-R test-models integration.
 ;;;;
 ;;;; Runs the ACT-R regression stubs (`actr7.x/test-models/*.lisp`) under a
 ;;;; thin instrumentation layer and emits one machine-readable `.spec` per
-;;;; trace-reference test into `golden/test-models/specs/`. The Rust harness
+;;;; trace-reference test into `fixtures/regression/specs/`. The Rust harness
 ;;;; (`tests/test_models.rs`) consumes the specs + the checked-in `.ref`
 ;;;; files; `cargo test` never invokes SBCL.
 ;;;;
@@ -38,12 +38,12 @@ stub is classified without executing it. Two kinds qualify:
     validates the tutorial text, not the engine;
   - Lisp event hooks (`add-pre/post-event-hook`): the hook body is arbitrary
     Lisp (`evt-time`/`format-event`/`get-event-by-id`), which the engine
-    cannot execute — the documented \"no arbitrary Lisp\" divergence.
+    cannot execute â€” the documented \"no arbitrary Lisp\" divergence.
 
 Everything else is *executed* and its commands recorded (see
 `*generic-commands*`); a command the engine cannot reproduce now fails
 visibly against the ref instead of being silently skipped.
-`(sgp :v …)`/`(sgp-fct (list :v …))`/`*out-file*` are only trace toggles and
+`(sgp :v â€¦)`/`(sgp-fct (list :v â€¦))`/`*out-file*` are only trace toggles and
 targets, not command output, so they must not classify a stub (they made
 `tutorial-unit5modeling-v7-p4-run` etc. look like command specs).
 `model-output` is handled (`w-evaluate-act-r-command` records a literal
@@ -92,7 +92,7 @@ operations that turn out not to be replayable.")
     ("sdp" . sdp-fct)
     ;; Task-level state changes a stub makes outside a run. These are the
     ;; calls a *task function* (not the stub's own top level) makes to drive a
-    ;; trial, so missing them left the replayed model in the wrong state — the
+    ;; trial, so missing them left the replayed model in the wrong state â€” the
     ;; same class of gap as `mod-focus-fct` (GOTCHAS #234). Each is recorded as
     ;; `(:command NAME ARGS)` and replayed through the engine's command table.
     ("add-dm" . add-dm-fct)
@@ -107,11 +107,11 @@ operations that turn out not to be replayable.")
     ("permute-list" . permute-list)
     ("correlation" . correlation)
     ("mean-deviation" . mean-deviation))
-  "Commands to record generically, as `(:command NAME ARG…)`, mapped to the
+  "Commands to record generically, as `(:command NAME ARGâ€¦)`, mapped to the
 function the stubs' macros expand to. Each is recorded only when it is not
 already covered by a dedicated step (`install-wrappers`); the re-entrancy
 guard `*recording-command*` suppresses a command a recorded command calls
-internally (`no-output` → its argument command).")
+internally (`no-output` â†’ its argument command).")
 
 ;;; ---------------------------------------------------------------- state
 
@@ -133,12 +133,12 @@ internally (`no-output` → its argument command).")
 (defvar *sgp-calls* nil)
 (defvar *suppress* nil)
 ;; Re-entrancy guard for the generic command wrappers: while one recorded
-;; command runs, a command it calls internally (`no-output "spp" …`) is not
+;; command runs, a command it calls internally (`no-output "spp" â€¦`) is not
 ;; recorded again.
 (defvar *recording-command* nil)
 ;; `*out-file*` is a real stream (the model-tester binds it to the ref file),
-;; so a stub that does `(let ((*error-output* *out-file*)) …)` or `(format
-;; *out-file* …)` works. It is a null stream: the extractor records steps, not
+;; so a stub that does `(let ((*error-output* *out-file*)) â€¦)` or `(format
+;; *out-file* â€¦)` works. It is a null stream: the extractor records steps, not
 ;; output, and `w-sgp` maps the stream back to `T` when a stub says
 ;; `(sgp :v *out-file*)`.
 (defvar *null-stream* (make-broadcast-stream))
@@ -158,7 +158,7 @@ internally (`no-output` → its argument command).")
 (defvar *device-modifies* nil)
 (defvar *device-installs* nil)
 ;; Buttons and lines the task draws (`add-button-to-exp-window` /
-;; `add-line-to-exp-window`), as `(run ms …)`. Both become visicon features, and
+;; `add-line-to-exp-window`), as `(run ms â€¦)`. Both become visicon features, and
 ;; the model's initial visual-location is chosen from them, so a device task
 ;; cannot be replayed without them (the bst `build-display`). The button's
 ;; `:action` is recorded verbatim as a form string so a later button-press path
@@ -240,7 +240,7 @@ internally (`no-output` → its argument command).")
 
 (defun call-orig (name &rest args)
   ;; A dedicated wrapper owns this call, so a command its underlying function
-  ;; invokes internally (`buffer-chunk` → `pprint-chunks`) must not also be
+  ;; invokes internally (`buffer-chunk` â†’ `pprint-chunks`) must not also be
   ;; recorded: bind the generic guard for the duration.
   (let ((*recording-command* t))
     (apply (gethash name *orig-fns*) args)))
@@ -277,7 +277,7 @@ step is printable and matches what the engine expects."
 ;; `central-parameters-reset` hook on every `(reset)` (see
 ;; `central-parameters.lisp:140`), so the effective run seeds depend on it.
 ;; The single-threaded load does not apply it, so capture and re-apply it
-;; ourselves — otherwise the recorded run seeds (and the RNG stream) diverge
+;; ourselves â€” otherwise the recorded run seeds (and the RNG stream) diverge
 ;; from the reference (paired-learning).
 (defvar *starting-seed* nil)
 
@@ -385,7 +385,7 @@ step is printable and matches what the engine expects."
 
 (defun w-run-full-time (run-time &optional real-time)
   ;; `run-full-time` (`scheduling.lisp:986`): run for `run-time` seconds of
-  ;; model time, guaranteed by a hidden dummy event — recorded as its own
+  ;; model time, guaranteed by a hidden dummy event â€” recorded as its own
   ;; step so the engine runs to the limit instead of stopping early.
   (declare (ignore real-time))
   (when (and (eq *mode* :drive) (not *suppress*))
@@ -452,7 +452,7 @@ step is printable and matches what the engine expects."
 
 (defun w-mod-focus (spec)
   ;; `(mod-focus-fct (slot value ...))` (`goal.lisp:378`): modify the goal
-  ;; buffer's chunk. Tasks use it to drive a trial — e.g. `fan-sentence` sets
+  ;; buffer's chunk. Tasks use it to drive a trial â€” e.g. `fan-sentence` sets
   ;; the goal's `arg1`/`arg2` (`tutorial/lisp/fan-no-pm.lisp:57`), without which
   ;; the model's first production cannot match and the run ends at t=0. Recorded
   ;; as a flat `(:mod-focus SLOT VALUE ...)` step.
@@ -509,7 +509,7 @@ step is printable and matches what the engine expects."
   (apply (gethash 'load-act-r-model *orig-fns*) args))
 
 (defun w-load-code (&rest args)
-  ;; `load-act-r-code` (a task file: defuns, experiment code) — recorded like
+  ;; `load-act-r-code` (a task file: defuns, experiment code) â€” recorded like
   ;; `load-act-r-model` but dispatched to its own original.
   (when (eq *mode* :load)
     (let ((file (first args)))
@@ -681,7 +681,7 @@ step is printable and matches what the engine expects."
         (return-from write-device nil))
       (with-open-file (f path :direction :output :if-exists :supersede
                               :if-does-not-exist :create)
-        ;; Group ops by the reset they belong to (`(RUN n …)`); the task
+        ;; Group ops by the reset they belong to (`(RUN n â€¦)`); the task
         ;; re-applies its window content per run, so ops at the same ms in
         ;; different runs must not collide.
         (let* ((texts (dedupe-preserve (reverse *device-texts*)))
@@ -843,7 +843,7 @@ and `(100 0)` keeps the spec stable across regens."
          (steps (reverse *steps*))
          ;; A stub's `(ssp :starting-parameters (:seed (S C)))` is evaluated at
          ;; load (before any run) and re-applied by the central-parameters
-         ;; reset hook, so it *is* the effective seed — but `w-ssp` only records
+         ;; reset hook, so it *is* the effective seed â€” but `w-ssp` only records
          ;; `:drive`-mode calls, so it would otherwise be lost and the engine
          ;; would fall back to the `(100 0)` run-seed placeholder. Record it as
          ;; a starting-parameters step (`apply-sgp` stores it and `reset`

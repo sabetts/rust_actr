@@ -1,9 +1,10 @@
-# ACT-R test-model corpus (Phases 1–3)
+# ACT-R test-model corpus
 
-`actr7.x/test-models/` is ACT-R's own regression suite: 554 `.lisp` driver
-stubs paired with 563 `.ref` reference outputs. This directory integrates the
-**trace-reference** subset of those refs as a second Rust oracle alongside the
-hand-built `golden/traces/` corpus.
+`actr7.x/test-models/` is ACT-R's own regression suite: `.lisp` driver stubs
+paired with `.ref` reference outputs. This directory integrates the
+**trace-reference** subset of those refs as the primary Rust oracle, compared
+the way ACT-R's own `compare-test-model-files` does (right-trim,
+case-insensitive).
 
 `cargo test` never needs SBCL: the Lisp side runs only during regen.
 
@@ -23,15 +24,17 @@ hand-built `golden/traces/` corpus.
   ```
   `:STEPS` is the ordered driver (`:RUN`, `:GOAL-FOCUS`, `:RESET`, `:SGP`) and
   is what `tests/test_models.rs` executes; `:RUNS` is a convenience view.
-- `enabled.txt` — checked-in allowlist of specs that must pass under
-  `cargo test` (`tests/test_models.rs::enabled_test_models_match`). Everything
-  else is out of scope for now; the gap is visible, not silently skipped.
+
+The case list itself is static: `tests/cases/test_models_cases.rs` has one
+`#[test]` per ref, generated once by `../../tools/gen_test_cases.py` and then
+hand-maintained. There is no `enabled.txt`: a case that must pass is a plain
+test; an out-of-scope case is `#[ignore = "reason"]`.
 
 ## Scope
 
 Only `.ref` files with timestamped trace lines become specs (219 of 563).
 The rest test the command layer (`dm`, `sdp`, `spp`, `whynot`, parsed-source
-dumps) or warnings, and are not engine traces.
+dumps) or warnings, and are not engine traces; they appear as ignored tests.
 
 `extract-specs.lisp` classifies each trace test without executing the ones that
 only make sense in the command/device harness:
@@ -55,13 +58,13 @@ the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
 `:act`/`:crt` traces, unnamed `add-dm` auto-naming, LHS variable slot names,
 and type-free `isa` matching, chunk-valued references + merge aliasing, and
 `!stop!` are handled. The next gaps are `!bind!`/`!eval!` and
-`require-extra`; see `../../GOTCHAS.md` #81–92.
+`require-extra`; see `../../../GOTCHAS.md` #81–92.
 
 ## Regenerate
 
 ```sh
-./regen-specs.sh              # writes test-models/specs/
-./regen-specs.sh /tmp/specs   # write elsewhere
+../regen-specs.sh              # writes regression/specs/
+../regen-specs.sh /tmp/specs   # write elsewhere
 ```
 
 Requires SBCL. The script finds trace refs, runs those stubs under
@@ -72,10 +75,13 @@ not match a literal `(sgp :seed V ...)` in the sources are canonicalized to
 
 ## Grow coverage
 
+Promote a spec by removing its `#[ignore]` in
+`../../tests/cases/test_models_cases.rs` and making it pass. To see what an
+out-of-scope case currently does:
+
 ```sh
-cargo test --test test_models probe_runnable -- --ignored --nocapture
+cargo test --test test_models -- --ignored <name> --nocapture
 ```
 
-reports every runnable (`PURE`/`MULTI`) spec that already matches its ref.
-Promote passing names into `enabled.txt`. Current status and feature gaps are
-in `../../GOTCHAS.md` under "M10 findings".
+Current status and feature gaps are in `../../../GOTCHAS.md` under
+"M10 findings".

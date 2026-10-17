@@ -317,12 +317,12 @@ fn render_production_instantiated() {
         );
 }
 
-/// Row-by-row against `golden/units/tables/latency.sexp`: 802
+/// Row-by-row against `fixtures/units/tables/latency.sexp`: 802
 /// `compute-activation-latency` points plus CL half-even ROUND probes.
 #[test]
 fn latency_matches_lisp_table() {
     use crate::sexpr::{parse_all, Sexp};
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/units/tables/latency.sexp");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/units/tables/latency.sexp");
     let src = std::fs::read_to_string(&path).unwrap();
     let forms = parse_all(&src).unwrap();
     let (mut lat, mut rnd) = (0, 0);
@@ -348,7 +348,7 @@ fn latency_matches_lisp_table() {
     assert!(lat >= 800 && rnd >= 7, "table shrank: lat={lat} rnd={rnd}");
 }
 
-/// Row-by-row against `golden/units/tables/base-level.sexp`:
+/// Row-by-row against `fixtures/units/tables/base-level.sexp`:
 /// act-scale derivation plus the decay equation over three OL
 /// modes. Compared with epsilon (f32 `powf`/`ln` may differ 1ulp
 /// across libms); the table pins the equation, not the last bit.
@@ -356,7 +356,7 @@ fn latency_matches_lisp_table() {
 fn base_level_matches_lisp_table() {
     use crate::sexpr::{parse_all, Sexp};
     let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("golden/units/tables/base-level.sexp");
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/units/tables/base-level.sexp");
     let src = std::fs::read_to_string(&path).unwrap();
     let forms = parse_all(&src).unwrap();
     let (mut acts, mut rows, mut now_ms) = (0, 0, 0i64);
