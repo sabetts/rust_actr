@@ -144,6 +144,10 @@ pub const BUILTINS: &[&str] = &[
     "check",
     "record-history",
     "stop-recording-history",
+    "history-data-available",
+    "start-incremental-history-data",
+    "get-incremental-history-data",
+    "save-history-data",
     "predict-bold-response",
     "sgp",
     "spp",
@@ -232,6 +236,20 @@ pub struct Session {
     /// The currently displayed window: title, `(x, y, width, height)`, whether
     /// a client accepted it (`check`), and its item ids in add order.
     vwin: Option<VisWindow>,
+    /// Names passed to `record-history` (uppercased); `TRACE-HISTORY` makes
+    /// [`Session::take_trace`] also accumulate lines for the history stream.
+    hist_recording: std::collections::BTreeSet<String>,
+    /// Trace lines recorded while `trace-history` is enabled.
+    hist_trace: Vec<String>,
+    /// In-progress `start-incremental-history-data` jobs.
+    hist_jobs: std::collections::HashMap<u64, HistJob>,
+    hist_next_id: u64,
+}
+
+/// An incremental-history transfer: the JSON chunks still to hand out.
+struct HistJob {
+    chunks: Vec<String>,
+    next: usize,
 }
 
 /// A visible-virtual window the Environment is displaying.
@@ -272,6 +290,10 @@ impl Session {
             device: DeviceSetup::default(),
             vwin_handlers: Vec::new(),
             vwin: None,
+            hist_recording: Default::default(),
+            hist_trace: Vec::new(),
+            hist_jobs: Default::default(),
+            hist_next_id: 0,
         }
     }
 
@@ -375,14 +397,19 @@ impl Session {
     /// Take the trace lines emitted since the last call (the RPC server
     /// streams these to the `model-trace` monitors).
     pub fn take_trace(&mut self) -> Vec<String> {
-        if let Some(eng) = &self.engine {
+        let lines = if let Some(eng) = &self.engine {
             let pos = self.trace_pos;
             let lines = eng.out_since(pos);
             self.trace_pos = eng.out_len();
             lines
         } else {
             Vec::new()
+        };
+        // `record-history "trace-history"` captures the trace stream.
+        if self.hist_recording.contains("TRACE-HISTORY") {
+            self.hist_trace.extend(lines.iter().cloned());
         }
+        lines
     }
 
     /// The trace since the last call as an output string, in the same shape as
@@ -971,16 +998,95 @@ impl Session {
             }
             "release-chunk-spec-id" => Ok(vec![Json::Null]),
             "record-history" => {
-                let buffers: Vec<String> = args
+                let names: Vec<String> = args
                     .iter()
                     .filter_map(|a| a.as_str().map(str::to_string))
                     .collect();
+                for n in &names {
+                    let key = n.to_uppercase();
+                    if key == "TRACE-HISTORY" && self.hist_recording.insert(key.clone()) {
+                        // A fresh recording starts empty.
+                        self.hist_trace.clear();
+                    } else {
+                        self.hist_recording.insert(key);
+                    }
+                }
+                // `record-history` with buffer names drives the BOLD predictor.
                 if let Some(eng) = &mut self.engine {
-                    eng.set_bold_buffers(&buffers);
+                    eng.set_bold_buffers(&names);
                 }
                 Ok(vec![Json::Null])
             }
-            "stop-recording-history" => Ok(vec![Json::Null]),
+            "stop-recording-history" => {
+                for n in args.iter().filter_map(|a| a.as_str()) {
+                    self.hist_recording.remove(&n.to_uppercase());
+                }
+                Ok(vec![Json::Null])
+            }
+            // Whether a history stream has data. Only `trace-history` is
+            // recorded by this engine so far.
+            "history-data-available" => {
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_uppercase();
+                let any = name == "TRACE-HISTORY" && !self.hist_trace.is_empty();
+                Ok(vec![Json::Bool(any)])
+            }
+            // Start an incremental transfer of a history stream: returns an id
+            // whose chunks are fetched with `get-incremental-history-data`.
+            "start-incremental-history-data" => {
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_uppercase();
+                let size = args
+                    .get(1)
+                    .and_then(|a| a.as_f64())
+                    .map(|v| v.max(1.0) as usize)
+                    .unwrap_or(16000);
+                if name != "TRACE-HISTORY" || self.hist_trace.is_empty() {
+                    return Ok(vec![Json::Null]);
+                }
+                let chunks = trace_history_chunks(&self.hist_trace, size);
+                self.hist_next_id += 1;
+                let id = self.hist_next_id;
+                self.hist_jobs.insert(id, HistJob { chunks, next: 0 });
+                Ok(vec![Json::Int(id as i64)])
+            }
+            // The next chunk of an incremental transfer (empty string when
+            // done).
+            "get-incremental-history-data" => {
+                let id = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as u64;
+                if let Some(job) = self.hist_jobs.get_mut(&id) {
+                    if job.next < job.chunks.len() {
+                        let chunk = job.chunks[job.next].clone();
+                        job.next += 1;
+                        return Ok(vec![Json::Str(chunk)]);
+                    }
+                    self.hist_jobs.remove(&id);
+                }
+                Ok(vec![Json::Str(String::new())])
+            }
+            // Write a history stream to a file (`trace-history` only).
+            "save-history-data" => {
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_uppercase();
+                let file = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
+                if name != "TRACE-HISTORY" || file.is_empty() {
+                    return Ok(vec![Json::Bool(false)]);
+                }
+                let data = trace_history_json(&self.hist_trace);
+                match std::fs::write(file, data) {
+                    Ok(()) => Ok(vec![Json::Bool(true)]),
+                    Err(e) => Err(format!("save-history-data: {e}")),
+                }
+            }
             "predict-bold-response" => {
                 if let Some(eng) = &mut self.engine {
                     eng.print_bold();
@@ -2184,6 +2290,46 @@ pub fn json_to_text(j: &Json) -> String {
     }
 }
 
+/// One `trace-history` record: `[time, model, module, text]`. The
+/// Environment's text-trace window reads index 3 (`61-trace-history.tcl`).
+fn trace_record(line: &str) -> String {
+    Json::Arr(vec![
+        Json::Int(0),
+        Json::Str(String::new()),
+        Json::Str(String::new()),
+        Json::Str(line.to_string()),
+    ])
+    .write()
+}
+
+/// The whole `trace-history` payload as a JSON array string.
+fn trace_history_json(lines: &[String]) -> String {
+    let recs: Vec<String> = lines.iter().map(|l| trace_record(l)).collect();
+    format!("[{}]", recs.join(","))
+}
+
+/// Split the `trace-history` records into JSON-array chunks of ~`size` bytes
+/// (each chunk a valid array, so the client can decode it independently).
+fn trace_history_chunks(lines: &[String], size: usize) -> Vec<String> {
+    let mut chunks = Vec::new();
+    let mut cur: Vec<String> = Vec::new();
+    let mut cur_len = 2usize; // `[]`
+    for l in lines {
+        let rec = trace_record(l);
+        if !cur.is_empty() && cur_len + rec.len() + 1 > size {
+            chunks.push(format!("[{}]", cur.join(",")));
+            cur = Vec::new();
+            cur_len = 2;
+        }
+        cur_len += rec.len() + 1;
+        cur.push(rec);
+    }
+    if !cur.is_empty() {
+        chunks.push(format!("[{}]", cur.join(",")));
+    }
+    chunks
+}
+
 /// A `Vec<String>` (or `None`) as JSON string values.
 fn strings(v: Option<Vec<String>>) -> Vec<Json> {
     v.unwrap_or_default().into_iter().map(Json::Str).collect()
@@ -2412,6 +2558,71 @@ mod tests {
             .as_str()
             .map(|s| s.starts_with("TEXT-VDI"))
             .unwrap_or(false));
+    }
+
+    /// `record-history "trace-history"` captures the trace and the
+    /// incremental protocol streams it back in JSON chunks.
+    #[test]
+    fn trace_history_incremental() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("trace-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let _ = s.take_trace(); // drain the run's trace into the history
+
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("trace-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("trace-history".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        assert!(matches!(id, Json::Int(_)), "expected an id, got {id:?}");
+
+        let mut chunks = 0;
+        loop {
+            let got = s
+                .evaluate("get-incremental-history-data", None, &[id.clone()], &mut r)
+                .unwrap();
+            match got.first().and_then(|x| x.as_str()) {
+                Some("") | None => break,
+                Some(c) => {
+                    assert!(c.starts_with('['), "chunk not JSON array: {c}");
+                    chunks += 1;
+                }
+            }
+            assert!(chunks < 1000, "incremental stream did not terminate");
+        }
+        assert!(chunks >= 1, "expected at least one chunk");
     }
 
     /// The Environment viewer commands return the model's productions,

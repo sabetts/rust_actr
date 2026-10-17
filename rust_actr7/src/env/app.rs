@@ -17,6 +17,7 @@ enum Tab {
     Buffers,
     Procedural,
     Parameters,
+    History,
 }
 
 /// A visible experiment window the engine is displaying, with its items.
@@ -135,6 +136,8 @@ pub struct App {
     param_detail: String,
     /// The visible experiment windows the engine is displaying.
     windows: Vec<VisWin>,
+    /// The recorded `trace-history` text.
+    history_text: String,
 }
 
 impl App {
@@ -148,6 +151,12 @@ impl App {
             vec![Json::Str(handler.to_string())],
         );
         backend.set_real_time(true);
+        // Record the trace from the start so the History tab has data.
+        let _ = backend.evaluate(
+            "record-history",
+            None,
+            vec![Json::Str("trace-history".to_string())],
+        );
         App {
             backend,
             start_dir,
@@ -177,7 +186,77 @@ impl App {
             param_sel: None,
             param_detail: String::new(),
             windows: Vec::new(),
+            history_text: String::new(),
         }
+    }
+
+    /// Fetch the recorded `trace-history` via the incremental protocol.
+    fn fetch_trace_history(&mut self) -> String {
+        let id = match self.eval(
+            "start-incremental-history-data",
+            vec![Json::Str("trace-history".into()), Json::Int(16000)],
+        ) {
+            Some(v) => v.into_iter().next(),
+            None => None,
+        };
+        let Some(Json::Int(id)) = id else {
+            return String::new();
+        };
+        let mut out = String::new();
+        loop {
+            let chunk = match self.eval("get-incremental-history-data", vec![Json::Int(id)]) {
+                Some(v) => v
+                    .into_iter()
+                    .next()
+                    .and_then(|x| x.as_str().map(str::to_string)),
+                None => None,
+            };
+            let Some(c) = chunk else { break };
+            if c.is_empty() {
+                break;
+            }
+            if let Ok(Json::Arr(recs)) = crate::json::parse(&c) {
+                for r in recs {
+                    if let Json::Arr(fields) = r {
+                        if let Some(Json::Str(line)) = fields.get(3) {
+                            out.push_str(line);
+                            if !line.ends_with('\n') {
+                                out.push('\n');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    fn history_panel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            if ui.button("Refresh").clicked() {
+                self.refresh_pending = true;
+            }
+            if ui.button("Save…").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Text", &["txt", "log"])
+                    .save_file()
+                {
+                    self.eval(
+                        "save-history-data",
+                        vec![
+                            Json::Str("trace-history".into()),
+                            Json::Str(path.to_string_lossy().into_owned()),
+                            Json::Str("Data saved from the ACT-R Environment".into()),
+                        ],
+                    );
+                }
+            }
+        });
+        egui::ScrollArea::vertical()
+            .id_salt("history")
+            .show(ui, |ui| {
+                ui.monospace(&self.history_text);
+            });
     }
 
     /// Apply the display ops the handler received to the window list.
@@ -500,6 +579,9 @@ impl App {
                 self.param_sel = None;
                 self.param_detail.clear();
             }
+            Tab::History => {
+                self.history_text = self.fetch_trace_history();
+            }
         }
     }
 
@@ -764,6 +846,7 @@ impl App {
             ui.selectable_value(&mut self.tab, Tab::Buffers, "Buffers");
             ui.selectable_value(&mut self.tab, Tab::Procedural, "Procedural");
             ui.selectable_value(&mut self.tab, Tab::Parameters, "Parameters");
+            ui.selectable_value(&mut self.tab, Tab::History, "History");
             if ui.button("Refresh").clicked() {
                 self.refresh_pending = true;
             }
@@ -783,6 +866,7 @@ impl App {
             Tab::Buffers => self.buffer_panel(ui),
             Tab::Procedural => self.proc_panel(ui),
             Tab::Parameters => self.param_panel(ui),
+            Tab::History => self.history_panel(ui),
         }
     }
 }
