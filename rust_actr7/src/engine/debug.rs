@@ -2193,6 +2193,38 @@ impl Engine {
         "7.0".to_string()
     }
 
+    /// The parameter groups the Environment's viewer shows, keyed by module
+    /// name. ACT-R owns each parameter through its module table; the Rust
+    /// engine keeps them in `Config`, so this groups the keys `get_param` can
+    /// read. Only queryable keys are listed so the viewer never shows a
+    /// placeholder.
+    pub fn module_parameters(&self) -> Vec<(&'static str, Vec<&'static str>)> {
+        vec![
+            ("central", vec![":V", ":TRACE-DETAIL", ":SEED"]),
+            (
+                "declarative",
+                vec![
+                    ":BLC",
+                    ":BLL",
+                    ":ANS",
+                    ":RT",
+                    ":LF",
+                    ":MD",
+                    ":MS",
+                    ":SJI",
+                    ":EGS",
+                    ":ALPHA",
+                    ":SIM-HOOK",
+                    ":ESC",
+                ],
+            ),
+            (
+                "procedural",
+                vec![":EPL", ":PCT", ":IU", ":UL", ":ULT", ":CIA", ":RIR"],
+            ),
+        ]
+    }
+
     /// `all-productions`: every production name, in definition order.
     pub fn all_production_names(&self) -> Vec<String> {
         self.model

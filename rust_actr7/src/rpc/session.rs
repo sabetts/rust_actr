@@ -120,6 +120,10 @@ pub const BUILTINS: &[&str] = &[
     "printed-audicon",
     "printed-buffer-chunk",
     "printed-buffer-status",
+    "sorted-module-names",
+    "modules-with-parameters",
+    "modules-parameters",
+    "printed-parameter-details",
     "whynot",
     "mp-show-queue",
     "chunk-p",
@@ -1128,6 +1132,50 @@ impl Session {
                 Ok(vec![Json::Str(out.join("\n"))])
             }
             "printed-audicon" => Ok(vec![Json::Str(String::new())]),
+            // The parameter viewer: modules, their parameters, and each
+            // parameter's current value (see `Engine::module_parameters`).
+            "sorted-module-names" | "modules-with-parameters" => {
+                let mut modules: Vec<String> = self
+                    .engine
+                    .as_ref()
+                    .map(|e| {
+                        e.module_parameters()
+                            .into_iter()
+                            .map(|(m, _)| m.to_string())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                modules.sort();
+                Ok(vec![Json::Arr(strings(Some(modules)))])
+            }
+            "modules-parameters" => {
+                let module = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                let params: Vec<String> = self
+                    .engine
+                    .as_ref()
+                    .map(|e| {
+                        e.module_parameters()
+                            .into_iter()
+                            .find(|(m, _)| *m == module)
+                            .map(|(_, p)| p.into_iter().map(str::to_string).collect())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(strings(Some(params)))])
+            }
+            "printed-parameter-details" => {
+                let param = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let value = self
+                    .engine
+                    .as_ref()
+                    .and_then(|e| e.get_param(param))
+                    .unwrap_or_else(|| "NIL".to_string());
+                Ok(vec![Json::Str(format!("{param}: {value}"))])
+            }
             // --- R4 device / vision / motor ---------------------------------
             // Each feature arg is a flat `[slot, value, …]` list.
             "add-visicon-features" => {
@@ -2078,6 +2126,30 @@ mod tests {
             )
             .unwrap();
         assert!(names(&none).is_empty());
+
+        // Parameter viewer: modules, their parameters, and a value read-out.
+        let modules = s
+            .evaluate("modules-with-parameters", None, &[], &mut remote)
+            .unwrap();
+        assert!(names(&modules).iter().any(|m| m == "declarative"));
+        let params = s
+            .evaluate(
+                "modules-parameters",
+                None,
+                &[Json::Str("declarative".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(names(&params).iter().any(|p| p == ":RT"));
+        let detail = s
+            .evaluate(
+                "printed-parameter-details",
+                None,
+                &[Json::Str(":RT".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(matches!(detail.first(), Some(Json::Str(s)) if s.starts_with(":RT:")));
     }
 
     #[test]

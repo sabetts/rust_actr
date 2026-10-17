@@ -16,6 +16,7 @@ enum Tab {
     Declarative,
     Buffers,
     Procedural,
+    Parameters,
 }
 
 pub struct App {
@@ -45,6 +46,11 @@ pub struct App {
     prods: Vec<String>,
     prod_sel: Option<usize>,
     prod_detail: String,
+    modules: Vec<String>,
+    mod_sel: Option<usize>,
+    params: Vec<String>,
+    param_sel: Option<usize>,
+    param_detail: String,
 }
 
 impl App {
@@ -71,6 +77,11 @@ impl App {
             prods: Vec::new(),
             prod_sel: None,
             prod_detail: String::new(),
+            modules: Vec::new(),
+            mod_sel: None,
+            params: Vec::new(),
+            param_sel: None,
+            param_detail: String::new(),
         }
     }
 
@@ -163,6 +174,13 @@ impl App {
                 self.prods = self.list("all-productions", Vec::new());
                 self.prod_sel = None;
                 self.prod_detail.clear();
+            }
+            Tab::Parameters => {
+                self.modules = self.list("modules-with-parameters", Vec::new());
+                self.mod_sel = None;
+                self.params.clear();
+                self.param_sel = None;
+                self.param_detail.clear();
             }
         }
     }
@@ -357,12 +375,65 @@ impl App {
         }
     }
 
+    fn param_panel(&mut self, ui: &mut egui::Ui) {
+        let modules = self.modules.clone();
+        let params = self.params.clone();
+        let mut mod_sel = self.mod_sel;
+        let mut param_sel = self.param_sel;
+        let detail = self.param_detail.clone();
+        ui.columns(3, |cols| {
+            egui::ScrollArea::vertical()
+                .id_salt("mod-list")
+                .show(&mut cols[0], |ui| {
+                    for (i, name) in modules.iter().enumerate() {
+                        if ui.selectable_label(mod_sel == Some(i), name).clicked() {
+                            mod_sel = Some(i);
+                            param_sel = None;
+                        }
+                    }
+                });
+            egui::ScrollArea::vertical()
+                .id_salt("param-list")
+                .show(&mut cols[1], |ui| {
+                    for (i, name) in params.iter().enumerate() {
+                        if ui.selectable_label(param_sel == Some(i), name).clicked() {
+                            param_sel = Some(i);
+                        }
+                    }
+                });
+            egui::ScrollArea::vertical()
+                .id_salt("param-detail")
+                .show(&mut cols[2], |ui| {
+                    ui.monospace(detail);
+                });
+        });
+        if mod_sel != self.mod_sel {
+            self.mod_sel = mod_sel;
+            self.param_sel = None;
+            self.param_detail.clear();
+            self.params = match mod_sel {
+                Some(i) => self.list("modules-parameters", vec![Json::Str(modules[i].clone())]),
+                None => Vec::new(),
+            };
+        } else if param_sel != self.param_sel {
+            self.param_sel = param_sel;
+            self.param_detail = match param_sel {
+                Some(i) => self.text(
+                    "printed-parameter-details",
+                    vec![Json::Str(params[i].clone())],
+                ),
+                None => String::new(),
+            };
+        }
+    }
+
     fn central(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.selectable_value(&mut self.tab, Tab::Trace, "Trace");
             ui.selectable_value(&mut self.tab, Tab::Declarative, "Declarative");
             ui.selectable_value(&mut self.tab, Tab::Buffers, "Buffers");
             ui.selectable_value(&mut self.tab, Tab::Procedural, "Procedural");
+            ui.selectable_value(&mut self.tab, Tab::Parameters, "Parameters");
             if ui.button("Refresh").clicked() {
                 self.refresh_pending = true;
             }
@@ -381,6 +452,7 @@ impl App {
             Tab::Declarative => self.dm_panel(ui),
             Tab::Buffers => self.buffer_panel(ui),
             Tab::Procedural => self.proc_panel(ui),
+            Tab::Parameters => self.param_panel(ui),
         }
     }
 }
