@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit8-simple-dynamic-extend-buffer-chunk" :REF "tutorial-unit8-simple-dynamic-extend-buffer-chunk.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit8-simple-dynamic-extend-buffer-chunk" :REF "tutorial-unit8-simple-dynamic-extend-buffer-chunk.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

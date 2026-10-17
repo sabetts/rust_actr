@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit5-imaginal-mod-event" :REF "tutorial-unit5-imaginal-mod-event.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit5-imaginal-mod-event" :REF "tutorial-unit5-imaginal-mod-event.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

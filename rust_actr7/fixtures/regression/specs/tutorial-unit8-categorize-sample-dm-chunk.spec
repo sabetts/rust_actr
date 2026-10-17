@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit8-categorize-sample-dm-chunk" :REF "tutorial-unit8-categorize-sample-dm-chunk.ref" :MODELS ("tutorial;lisp;categorize.lisp" "tutorial;unit8;categorize-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:COMMAND DM (EXAMPLE1))) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

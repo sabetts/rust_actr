@@ -27,18 +27,24 @@
 ;;;; time-random seeds); everything else is executed so its run steps and
 ;;;; effective seeds can be recorded.
 
-(defparameter *command-tokens*
-  '("command-output" "with-open-file" "read-line" "multiple-value-bind"
-    "add-pre-event-hook" "add-post-event-hook")
-  "Stub text that means the ref is *not replayable* from the spec, so the
-stub is classified without executing it. Two kinds qualify:
+(defparameter *hook-tokens*
+  '("add-pre-event-hook" "add-post-event-hook")
+  "Stub text that installs an arbitrary-Lisp event hook. The hook body
+(`evt-time`/`format-event`/`get-event-by-id`) is Lisp the engine cannot
+execute — the documented \"no arbitrary Lisp\" divergence — so the ref is not
+replayable from the spec.")
 
-  - source scrapes (`with-open-file`/`read-line`/`multiple-value-bind`):
-    the stub re-reads the tutorial source and echoes a fragment, so the ref
-    validates the tutorial text, not the engine;
-  - Lisp event hooks (`add-pre/post-event-hook`): the hook body is arbitrary
-    Lisp (`evt-time`/`format-event`/`get-event-by-id`), which the engine
-    cannot execute — the documented \"no arbitrary Lisp\" divergence.
+(defparameter *scrape-tokens*
+  '("with-open-file" "read-line" "multiple-value-bind")
+  "Stub text that re-reads a tutorial source file and echoes a fragment, so
+the ref validates the tutorial text, not the engine.")
+
+(defparameter *nonreplayable-tokens*
+  '("format" "dolist" "loop " "funcall" "load-act-r-code"
+    "ignore-real-time" "force-virtual-window" "experiment")
+  "Stub text that computes its output in arbitrary Lisp (a real experiment or
+`format`/iteration) the engine cannot rerun, so the recorded steps cannot
+reproduce the ref. Classified as command-layer output without executing.
 
 Everything else is *executed* and its commands recorded (see
 `*generic-commands*`); a command the engine cannot reproduce now fails
@@ -771,20 +777,11 @@ step is printable and matches what the engine expects."
 
 (defun scope-of (src)
   (cond
-    ((any-token src *command-tokens*) :command)
+    ((any-token src *hook-tokens*) :hook)
+    ((any-token src *scrape-tokens*) :scrape)
     ((any-token src *device-tokens*) :device)
-    ((any-token src *driver-tokens*) :driver)))
-
-(defun ref-has-run-end-p (name)
-  "True when NAME's ref ends a run (`Stopped`), i.e. it is a *full* trace the
-engine can replay. A ref assembled with `model-output` from a pre-event hook
-(a filtered fragment, e.g. `tutorial-unit3modeling-v3-clear-imaginal`) lacks
-it, so those stay command-scoped. This is the Phase B ref-content triage: the
-stub source alone is not a reliable signal."
-  (let ((p (merge-pathnames (concatenate 'string name ".ref") *tm-dir*)))
-    (and (probe-file p)
-         (let ((s (ignore-errors (slurp p))))
-           (and s (search "Stopped" s :test #'char-equal) t)))))
+    ((any-token src *driver-tokens*) :driver)
+    ((any-token src *nonreplayable-tokens*) :arbitrary)))
 
 (defun fresh-state ()
   (setf *models* nil *runs* nil *steps* nil *goal-focus-count* 0
@@ -879,6 +876,10 @@ and `(100 0)` keeps the spec stable across regens."
                      ((> *goal-focus-count* 0) :multi)
                      ((> *reset-count* 0) :multi)
                      ((= (length *runs*) 1) :pure)
+                     ;; A command-driven stub with no run (a pure
+                     ;; `pp`/`dm`/`buffer-chunk` dump): replayable, but not a
+                     ;; trace, so it gets its own scope the harness runs.
+                     ((and (null static-scope) *steps*) :command)
                      (t :other))
                :flags (cond ((eq static-scope :device) '(:device))
                             ((eq static-scope :driver) '(:driver))))))
@@ -911,15 +912,13 @@ after an undefined-function error. Returns whether anything was loaded."
   (let ((lisp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
     (let ((static-scope (scope-of (or src ""))))
-      ;; Command stubs need the command layer (in scope, but not replayable
-      ;; yet, so classified from source without executing). Device and driver
-      ;; stubs ARE executed so
-      ;; their run steps and device script are captured (the ref is the
-      ;; oracle; the spec replays it). A stub with no command token whose ref
-      ;; is only a filtered fragment (no run end) is likewise command output.
-      (if (or (eq static-scope :command)
-              (and (null static-scope) (not (ref-has-run-end-p name))))
-          (make-spec name :command :flags (list :command))
+      ;; Non-replayable stubs (hooks, source scrapes, arbitrary-Lisp
+      ;; experiments) are classified from source without executing. Genuine
+      ;; command stubs and device stubs ARE executed so their command steps,
+      ;; run steps and device script are captured (the ref is the oracle; the
+      ;; spec replays it).
+      (if (member static-scope '(:hook :scrape :arbitrary))
+          (make-spec name static-scope :flags (list static-scope))
           (handler-case (extract-one-attempt name lisp static-scope)
             (error (e)
               ;; Retry once with the tutorial task file if `run-it` needed an

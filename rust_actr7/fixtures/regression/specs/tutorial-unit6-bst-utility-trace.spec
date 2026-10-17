@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit6-bst-utility-trace" :REF "tutorial-unit6-bst-utility-trace.ref" :MODELS NIL :SEED-SET T :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit6-bst-utility-trace" :REF "tutorial-unit6-bst-utility-trace.ref" :MODELS NIL :SEED-SET T :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

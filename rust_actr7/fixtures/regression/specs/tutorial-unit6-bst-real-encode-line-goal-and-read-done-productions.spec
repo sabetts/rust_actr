@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit6-bst-real-encode-line-goal-and-read-done-productions" :REF "tutorial-unit6-bst-real-encode-line-goal-and-read-done-productions.ref" :MODELS ("tutorial;lisp;bst.lisp" "tutorial;unit6;bst-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:COMMAND PP (ENCODE-LINE-GOAL READ-DONE))) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

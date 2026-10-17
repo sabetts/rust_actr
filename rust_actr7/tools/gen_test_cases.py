@@ -34,12 +34,16 @@ OUT = CRATE / "tests" / "cases" / "test_models_cases.rs"
 
 SCOPE_REASON = {
     "DEVICE": "device/test scaffolding not in spec yet",
-    "COMMAND": "command-layer output (in scope; needs command-output replay)",
+    "COMMAND": "command-layer output (in scope; pending promotion)",
+    "HOOK": "event-hook Lisp (not replayable)",
+    "SCRAPE": "tutorial-source scrape (not an engine trace)",
+    "ARBITRARY": "arbitrary-Lisp command stub (not replayable)",
     "DRIVER": "unsupported run-it driver op",
     "OTHER": "no run recorded",
+    "ERROR": "extraction error",
 }
 # A ref with no spec is one of three kinds; the stub source says which.
-# These token lists mirror the sub-kinds of `*command-tokens*` in
+# These token lists mirror the sub-kinds of the scope tokens in
 # fixtures/extract-specs.lisp, which classify a stub without running it.
 NO_SPEC_REASON = "command-layer output (in scope; needs a driver spec)"
 SCRAPE_REASON = "tutorial-source scrape (not an engine trace)"

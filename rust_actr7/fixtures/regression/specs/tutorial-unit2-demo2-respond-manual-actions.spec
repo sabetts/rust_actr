@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit2-demo2-respond-manual-actions" :REF "tutorial-unit2-demo2-respond-manual-actions.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit2-demo2-respond-manual-actions" :REF "tutorial-unit2-demo2-respond-manual-actions.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit8-semantic-dynamic-extend-warning" :REF "tutorial-unit8-semantic-dynamic-extend-warning.ref" :MODELS ("tutorial;unit8;semantic-dynamic-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:COMMAND ADD-DM ((P25 ISA PROPERTY OBJECT SHARK TEETH SHARP)))) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

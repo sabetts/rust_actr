@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit6-bst-spp-before" :REF "tutorial-unit6-bst-spp-before.ref" :MODELS ("tutorial;lisp;bst.lisp" "tutorial;unit6;bst-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :OTHER :FLAGS NIL :ERROR NIL)

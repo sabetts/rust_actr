@@ -1,0 +1,1 @@
+(:NAME "tutorial-unit1code-sgp-result" :REF "tutorial-unit1code-sgp-result.ref" :MODELS ("tutorial;unit1;tutor-model-solution.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:MODEL-OUTPUT "? (sgp :trace-detail :lf)")) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

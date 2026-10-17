@@ -32,37 +32,28 @@ test; an out-of-scope case is `#[ignore = "reason"]`.
 
 ## Scope
 
-Only `.ref` files with timestamped trace lines become specs (219 of 563).
-The rest have no spec and are ignored; each reason string says which kind:
-
-- `tutorial-source scrape (not an engine trace)` — the stub re-reads a
-  tutorial source file and echoes a fragment, so the ref validates the
-  tutorial text, not the engine (202 refs; out of scope).
-- `event-hook Lisp (not replayable)` — `run-it` installs an arbitrary-Lisp
-  `add-pre/post-event-hook` the engine cannot run (37 refs; the documented
-  "no arbitrary Lisp" divergence).
-- `command-layer output (in scope; needs a driver spec)` — the stub drives
-  commands only (`dm`, `sdp`, `spp`, `whynot`, `sgp`, `pp`, warnings) with no
-  timestamped trace, so no spec was emitted (104 refs).
-- `command-layer output (in scope; needs command-output replay)` — a
-  `:COMMAND`-scope spec exists, but the harness cannot replay command output
-  yet (79 refs).
-
-The two `command-layer output` reasons are in-scope oracle work, not out of
-scope: the commands themselves are implemented for the RPC surface; what is
-missing is the command-output comparison path.
-
-`extract-specs.lisp` classifies each trace test without executing the ones that
-only make sense in the command/device harness:
+`extract-specs.lisp` emits a spec for every ref that has a stub (554 of 563);
+the `.ref` is the oracle. A spec's `:SCOPE` decides whether the harness can
+replay it:
 
 | scope | meaning | runnable now |
 |---|---|---|
 | `PURE` | one run, one model, trace only | yes (if feature-supported) |
 | `MULTI` | repeated `run`/`goal-focus` | yes, unless it also needs `(reset)` or an unsupported model feature |
+| `COMMAND` | command-only dump (`pp`/`dm`/`sdm`/`buffer-chunk`/…) | yes, replayed through the command layer |
 | `DEVICE` | window/device scaffolding not in the spec | later |
-| `COMMAND` | ref contains command-layer output | later |
-| `DRIVER` | unsupported `run-it` op (`pdisable`, `spp`, …) | out of scope |
-| `ERROR` | stub needed the harness (`*out-file*`, helpers) | out of scope |
+| `HOOK` | `add-pre/post-event-hook` arbitrary Lisp | no — stays ignored |
+| `SCRAPE` | re-reads a tutorial source and echoes a fragment | no — stays ignored |
+| `ARBITRARY` | output computed in arbitrary Lisp (`format`, experiments) | no — stays ignored |
+| `DRIVER` / `ERROR` / `OTHER` | unsupported `run-it` op / extraction failed / no run | ignored |
+
+The remaining `#[ignore]` reason strings say which kind a case is and why it is
+not yet runnable; `HOOK`, `SCRAPE` and `ARBITRARY` are out of scope (no command
+reaches the first two; the third is the "no arbitrary Lisp" divergence), while
+`PURE`/`MULTI`/`COMMAND` ignored cases are measured gaps awaiting promotion.
+
+`extract-specs.lisp` classifies the stubs it cannot replay from source instead
+of executing them (the `HOOK`/`SCRAPE`/`ARBITRARY` scopes above).
 
 The scripted engine supports multiple `run` steps (each bounded relative to
 the current model time), `goal-focus`, mid-driver `:v`/`:trace-detail`,
@@ -119,10 +110,19 @@ be executed. Both the client-facing command surface and whatever the refs
 exercise are in scope; `../command-inventory.txt` (regenerate with
 `../command-inventory.py`) is the work list.
 
+A `COMMAND`-scope spec is a stub whose `run-it` only issues commands (a pure
+`pp`/`dm`/`sdm`/`buffer-chunk`/`sdp` dump). `extract-specs.lisp` executes such a
+stub and records its ordered steps; `tests/test_models.rs` replays them through
+`Session::evaluate` (the same dispatch a Python client hits), and the printing
+commands already append their output to the engine buffer, which the harness
+compares to the `.ref`. Promote a `COMMAND` spec by removing its `#[ignore]`
+once it matches.
+
 ## Out of scope
 
-Refs tagged `tutorial-source scrape` re-read a tutorial source file instead of
-exercising the engine, and no client command reaches them, so they stay
-ignored. So do the `event-hook Lisp` refs. Everything else that is ignored is
-either an in-scope command-layer oracle or a measured spec gap (see Grow
-coverage).
+Refs tagged `SCRAPE` re-read a tutorial source file instead of exercising the
+engine, and no client command reaches them, so they stay ignored. So do the
+`HOOK` (arbitrary-Lisp `add-pre/post-event-hook`) and `ARBITRARY`
+(experiment/`format`) refs. Everything else that is ignored is either an
+in-scope command-layer oracle or a measured `PURE`/`MULTI`/`COMMAND` gap (see
+Grow coverage).

@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit1code-run-semantic" :REF "tutorial-unit1code-run-semantic.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS (:COMMAND) :ERROR NIL)
+(:NAME "tutorial-unit1code-run-semantic" :REF "tutorial-unit1code-run-semantic.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :SCRAPE :FLAGS (:SCRAPE) :ERROR NIL)

@@ -522,11 +522,12 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
         ));
     }
     match spec.scope.as_str() {
-        "PURE" | "MULTI" => {}
+        // Trace specs and replayable command specs both run.
+        "PURE" | "MULTI" | "COMMAND" => {}
         "DEVICE" => return Some("device/test scaffolding not in spec yet".into()),
-        "COMMAND" => {
-            return Some("command-layer output (in scope; needs command-output replay)".into())
-        }
+        "HOOK" => return Some("event-hook Lisp (not replayable)".into()),
+        "SCRAPE" => return Some("tutorial-source scrape (not an engine trace)".into()),
+        "ARBITRARY" => return Some("arbitrary-Lisp command stub (not replayable)".into()),
         "DRIVER" => return Some("unsupported run-it driver op (pdisable/...)".into()),
         "OTHER" => return Some("no run recorded".into()),
         other => return Some(format!("scope {other}")),
@@ -741,7 +742,9 @@ fn parse_device_op(
 }
 
 fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
-    let seed = spec.run_seeds.first().copied().ok_or("no run seed")?;
+    // A command-only spec has no run; the seed is unused, so any default
+    // works (`(100 0)` is the corpus's canonical placeholder).
+    let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
     let device = load_spec_device(&spec.name)?;
     // A spec with a recorded command step is driven through the RPC command
     // layer (`Session::evaluate`), so the spec exercises the same dispatch a
@@ -778,7 +781,7 @@ impl Remote for NoRemote {
 /// step — commands via `evaluate`, the rest at the engine level, mirroring
 /// `run_model_steps` so the two drivers cannot diverge on trace shape.
 fn run_spec_session(root: &Path, spec: &Spec, device: &DeviceSetup) -> Result<String, String> {
-    let seed = spec.run_seeds.first().copied().ok_or("no run seed")?;
+    let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
     let mut session = Session::new(root.to_path_buf(), seed);
     let mut remote = NoRemote;
     for m in &spec.models {
