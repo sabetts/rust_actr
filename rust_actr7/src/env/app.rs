@@ -108,6 +108,8 @@ pub struct App {
     result: String,
     /// `run` duration in seconds.
     run_secs: f64,
+    /// Pace runs to wall-clock time.
+    real_time: bool,
     /// Last error, shown in the status bar.
     error: Option<String>,
 
@@ -145,6 +147,7 @@ impl App {
             None,
             vec![Json::Str(handler.to_string())],
         );
+        backend.set_real_time(true);
         App {
             backend,
             start_dir,
@@ -152,6 +155,7 @@ impl App {
             command: String::new(),
             result: String::new(),
             run_secs: 10.0,
+            real_time: true,
             error: None,
             tab: Tab::Trace,
             last_tab: Tab::Trace,
@@ -440,10 +444,12 @@ impl App {
         }
     }
 
-    fn run(&mut self, name: &str) {
-        self.eval(name, vec![Json::Float(self.run_secs)]);
+    /// Start an interactive (chunked) run; `poll_run` advances it each frame.
+    fn start_run(&mut self, full: bool) {
         self.drain_trace();
-        self.refresh_pending = true;
+        if !self.backend.begin_run(self.run_secs, full) {
+            self.refresh_pending = true;
+        }
     }
 
     fn load_dialog(&mut self) {
@@ -525,12 +531,24 @@ impl App {
             );
             ui.label("s");
         });
-        if ui.button("Run").clicked() {
-            self.run("run");
+        if ui.checkbox(&mut self.real_time, "real time").changed() {
+            self.backend.set_real_time(self.real_time);
         }
-        if ui.button("Run full time").clicked() {
-            self.run("run-full-time");
-        }
+        let running = self.backend.is_running();
+        ui.horizontal(|ui| {
+            if ui.add_enabled(!running, egui::Button::new("Run")).clicked() {
+                self.start_run(false);
+            }
+            if ui
+                .add_enabled(!running, egui::Button::new("Run full time"))
+                .clicked()
+            {
+                self.start_run(true);
+            }
+            if ui.add_enabled(running, egui::Button::new("Stop")).clicked() {
+                self.backend.stop_run();
+            }
+        });
         ui.separator();
         ui.label("Evaluate (debug)");
         ui.horizontal(|ui| {
@@ -782,6 +800,25 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.drain_trace();
         self.apply_window_ops();
+
+        // Advance an interactive run one chunk per frame (keeps the UI live
+        // and honours Stop).
+        if self.backend.is_running() {
+            match self.backend.poll_run() {
+                Ok(true) => {
+                    self.drain_trace();
+                    self.apply_window_ops();
+                    ui.ctx().request_repaint();
+                }
+                Ok(false) => {
+                    self.drain_trace();
+                    self.refresh_pending = true;
+                }
+                Err(e) => {
+                    self.error = Some(e);
+                }
+            }
+        }
 
         let model = self
             .backend

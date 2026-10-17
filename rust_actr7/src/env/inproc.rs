@@ -7,11 +7,22 @@
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use crate::json::Json;
 use crate::rpc::session::{Remote, Session};
 
 use super::backend::EnvBackend;
+
+/// An in-progress interactive run.
+struct RunState {
+    limit_ms: i64,
+    full: bool,
+    /// Model time (ms) at the run's start, for real-time pacing.
+    start_model_ms: i64,
+    wall_start: Instant,
+    real_time: bool,
+}
 
 /// A [`Remote`] for the client-owned visible-window handler.
 ///
@@ -50,6 +61,10 @@ pub struct InProc {
     session: Session,
     handler: String,
     ops: Arc<Mutex<Vec<Vec<Json>>>>,
+    run: Option<RunState>,
+    stop: bool,
+    /// Pace runs to wall-clock time (`run`'s real-time flag).
+    real_time: bool,
 }
 
 impl InProc {
@@ -58,6 +73,9 @@ impl InProc {
             session: Session::new(root, seed),
             handler: String::new(),
             ops: Arc::new(Mutex::new(Vec::new())),
+            run: None,
+            stop: false,
+            real_time: true,
         }
     }
 
@@ -104,5 +122,64 @@ impl EnvBackend for InProc {
 
     fn take_window_ops(&mut self) -> Vec<Vec<Json>> {
         std::mem::take(&mut *self.ops.lock().unwrap())
+    }
+
+    fn begin_run(&mut self, secs: f64, full: bool) -> bool {
+        let name = if full { "run-full-time" } else { "run" };
+        let start_model_ms = (self.session.time_secs() * 1000.0).round() as i64;
+        let (limit_ms, full, should) = self.session.run_begin(name, secs);
+        self.stop = false;
+        if should {
+            self.run = Some(RunState {
+                limit_ms,
+                full,
+                start_model_ms,
+                wall_start: Instant::now(),
+                real_time: self.real_time,
+            });
+            true
+        } else {
+            self.run = None;
+            false
+        }
+    }
+
+    fn poll_run(&mut self) -> Result<bool, String> {
+        if self.stop {
+            // Drop the run (no terminator; the user aborted it).
+            self.stop = false;
+            self.run = None;
+            return Ok(false);
+        }
+        let Some(run) = &self.run else {
+            return Ok(false);
+        };
+        // Real-time pacing: cap the model time at wall-clock elapsed; else
+        // just ~200 events per frame to keep the UI responsive.
+        let soft = if run.real_time {
+            let elapsed = run.wall_start.elapsed().as_millis() as i64;
+            Some(run.start_model_ms + elapsed)
+        } else {
+            None
+        };
+        let running = self
+            .session
+            .run_chunk(run.limit_ms, run.full, Some(200), soft)?;
+        if !running {
+            self.run = None;
+        }
+        Ok(running)
+    }
+
+    fn stop_run(&mut self) {
+        self.stop = true;
+    }
+
+    fn is_running(&self) -> bool {
+        self.run.is_some()
+    }
+
+    fn set_real_time(&mut self, on: bool) {
+        self.real_time = on;
     }
 }

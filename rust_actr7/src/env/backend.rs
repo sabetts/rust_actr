@@ -37,6 +37,23 @@ pub trait EnvBackend {
     /// Drain the display ops the engine pushed to the window handler since
     /// the last call (each is `[verb, …args]`).
     fn take_window_ops(&mut self) -> Vec<Vec<Json>>;
+
+    /// Start an interactive run of `secs` model seconds (`full` = the
+    /// `run-full-time` terminator). Returns whether a run started.
+    fn begin_run(&mut self, secs: f64, full: bool) -> bool;
+
+    /// Advance an interactive run by one chunk. `Ok(true)` while it is still
+    /// going; the caller should call again next frame.
+    fn poll_run(&mut self) -> Result<bool, String>;
+
+    /// Request the current interactive run stop.
+    fn stop_run(&mut self);
+
+    /// Whether an interactive run is in progress.
+    fn is_running(&self) -> bool;
+
+    /// Enable/disable real-time pacing of interactive runs.
+    fn set_real_time(&mut self, on: bool);
 }
 
 /// Render a command result the way a dialog would show it: `~A`-style items

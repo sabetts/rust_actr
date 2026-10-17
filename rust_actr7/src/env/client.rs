@@ -45,6 +45,9 @@ pub struct Client {
     /// Cached `current-model` (queried on demand; the trait getter is `&self`).
     model: Option<String>,
     addr: String,
+    /// A pending interactive run `(secs, full)`. The client runs it in one
+    /// blocking `evaluate` (the server drives its own slicing).
+    run: Option<(f64, bool)>,
 }
 
 impl Client {
@@ -77,6 +80,7 @@ impl Client {
             next_id: AtomicI64::new(1),
             model: None,
             addr: format!("{host}:{port}"),
+            run: None,
         };
 
         client.request("set-name", vec![Json::Str("ACT-R Environment".into())])?;
@@ -203,6 +207,28 @@ impl EnvBackend for Client {
     fn take_window_ops(&mut self) -> Vec<Vec<Json>> {
         std::mem::take(&mut *self.ops.lock().unwrap())
     }
+
+    fn begin_run(&mut self, secs: f64, full: bool) -> bool {
+        self.run = Some((secs, full));
+        true
+    }
+
+    fn poll_run(&mut self) -> Result<bool, String> {
+        let Some((secs, full)) = self.run.take() else {
+            return Ok(false);
+        };
+        let name = if full { "run-full-time" } else { "run" };
+        self.evaluate(name, None, vec![Json::Float(secs)])?;
+        Ok(false)
+    }
+
+    fn stop_run(&mut self) {}
+
+    fn is_running(&self) -> bool {
+        self.run.is_some()
+    }
+
+    fn set_real_time(&mut self, _on: bool) {}
 }
 
 /// The reader loop: replies to pending requests, and trace callbacks to the

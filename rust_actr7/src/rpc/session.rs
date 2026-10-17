@@ -1735,6 +1735,23 @@ impl Session {
             .map_err(|e| e.to_string())
     }
 
+    /// One chunk of an interactive run (Environment): process toward
+    /// `limit_ms`, capped by `max_events`/`soft_ms`, returning whether the run
+    /// is still going. See [`Engine::run_chunk`].
+    pub fn run_chunk(
+        &mut self,
+        limit_ms: i64,
+        full: bool,
+        max_events: Option<u64>,
+        soft_ms: Option<i64>,
+    ) -> Result<bool, String> {
+        self.engine
+            .as_mut()
+            .ok_or_else(|| "no model loaded".to_string())?
+            .run_chunk(limit_ms, full, max_events, soft_ms)
+            .map_err(|e| e.to_string())
+    }
+
     /// Drain the device actions a click queued, for the server to dispatch.
     pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
         self.engine

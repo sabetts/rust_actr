@@ -2067,6 +2067,9 @@ pub struct Engine {
     pending_device_actions: Vec<(String, Vec<Json>)>,
     /// Set by `run_slice` when it stopped early for a pending device action.
     device_action_yield: bool,
+    /// Set when a chunked run ([`Engine::run_chunk`]) stopped early on its
+    /// event/wall budget rather than reaching the run limit.
+    run_capped: bool,
     /// Auto-naming counter for live window items (`TEXT-VDI-{n}`).
     window_item_seq: u64,
     /// BOLD demand recorder (`other-files/bold.lisp` + the buffer-trace):
@@ -2509,6 +2512,7 @@ impl Engine {
             window_actions: HashMap::new(),
             pending_device_actions: Vec::new(),
             device_action_yield: false,
+            run_capped: false,
             window_item_seq: 0,
             bold_buffers: Vec::new(),
             bold_open: HashMap::new(),
@@ -3778,8 +3782,23 @@ impl Engine {
     /// if a click has queued a client device action. Returns `true` when it
     /// yielded so the caller can dispatch the action and resume.
     pub fn run_slice(&mut self, limit_ms: i64, full: bool) -> Result<bool, EngineError> {
-        self.run_to_limit(limit_ms, full, true)?;
+        self.run_to_limit(limit_ms, full, true, None, None)?;
         Ok(self.device_action_yield)
+    }
+
+    /// One chunk of an interactive (Environment) run: process toward
+    /// `limit_ms`, stopping early on `max_events` or once model time reaches
+    /// `soft_ms` — neither emitting the terminator. Returns `true` while the
+    /// run is still going, so the caller can service input and call again.
+    pub fn run_chunk(
+        &mut self,
+        limit_ms: i64,
+        full: bool,
+        max_events: Option<u64>,
+        soft_ms: Option<i64>,
+    ) -> Result<bool, EngineError> {
+        self.run_to_limit(limit_ms, full, false, max_events, soft_ms)?;
+        Ok(self.run_capped)
     }
 
     /// Drain the device actions a click queued, for the server to dispatch.
@@ -3913,7 +3932,7 @@ impl Engine {
     fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         self.run_events = 0;
-        self.run_to_limit(limit_ms, full, false)
+        self.run_to_limit(limit_ms, full, false, None, None)
     }
 
     /// The run loop shared by `run`/`run-full-time`/`run-until-time`. With
@@ -3925,11 +3944,24 @@ impl Engine {
         limit_ms: i64,
         full: bool,
         yield_on_action: bool,
+        max_events: Option<u64>,
+        soft_ms: Option<i64>,
     ) -> Result<bool, EngineError> {
         self.schedule_display();
         self.device_action_yield = false;
+        self.run_capped = false;
         let mut processed = false;
+        let mut chunk_events = 0u64;
         loop {
+            // A chunked run stops on its event budget or wall budget *before*
+            // the stop check, without emitting the terminator, so a long run
+            // can be resumed next frame (the Environment's interactive loop).
+            if let Some(m) = max_events {
+                if chunk_events >= m {
+                    self.run_capped = true;
+                    break;
+                }
+            }
             // `skip-unnecessary-events` runs before the stop check, so a
             // stale maintenance event (failing precondition) doesn't keep
             // the run alive.
@@ -3957,6 +3989,15 @@ impl Engine {
                 }
                 Some(_) => {}
             }
+            // Wall-clock budget: there is a pending event within the limit,
+            // but the chunk has used its real-time slice — stop here and
+            // resume next frame (no terminator).
+            if let Some(soft) = soft_ms {
+                if self.time_ms >= soft {
+                    self.run_capped = true;
+                    break;
+                }
+            }
             let next = self.queue.pop().expect("peeked non-empty");
             self.time_ms = next.time_ms;
             let show = self.cfg.detail.shows(next.out);
@@ -3966,6 +4007,7 @@ impl Engine {
             self.bold_record();
             processed = true;
             self.run_events += 1;
+            chunk_events += 1;
             if yield_on_action && !self.pending_device_actions.is_empty() {
                 self.device_action_yield = true;
                 break;

@@ -191,4 +191,37 @@ mod tests {
         assert!(verbs.contains(&"open"), "ops: {verbs:?}");
         assert!(verbs.contains(&"text"), "ops: {verbs:?}");
     }
+
+    /// The interactive (chunked) run reaches its terminator and yields the
+    /// trace, driven one chunk per `poll_run` as the GUI does.
+    #[test]
+    fn inproc_chunked_run_completes() {
+        let root = actr_dir();
+        if !root.is_dir() {
+            eprintln!("skipping: no ACT-R checkout at {}", root.display());
+            return;
+        }
+        let mut b = InProc::new(root, (100, 0));
+        b.set_real_time(false);
+        b.evaluate(
+            "load-act-r-model",
+            None,
+            vec![Json::Str("tutorial;unit1;count.lisp".into())],
+        )
+        .expect("load-act-r-model");
+        assert!(b.begin_run(10.0, false));
+        let mut chunks = 0;
+        while b.is_running() {
+            if !b.poll_run().expect("poll_run") {
+                break;
+            }
+            chunks += 1;
+            assert!(chunks < 100_000, "run did not terminate");
+        }
+        let trace = b.take_trace();
+        assert!(
+            trace.iter().any(|l| l.contains("Stopped because")),
+            "expected a terminator: {trace:?}"
+        );
+    }
 }
