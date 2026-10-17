@@ -2618,6 +2618,161 @@ impl Engine {
     }
 }
 
+/// `buffer-trace` recording (`tools/buffer-trace.lisp`).
+impl Engine {
+    /// Enable/disable the `buffer-trace` history.
+    pub fn set_buffer_trace(&mut self, on: bool) {
+        self.buffer_trace.enabled = on;
+    }
+
+    /// Whether `name` is a model buffer (`record-history <buffer>`).
+    pub fn is_buffer(&self, name: &str) -> bool {
+        self.buffers.contains_key(&name.to_uppercase())
+    }
+
+    /// Add/remove a traced buffer (`record-history <buffer>` constituent).
+    pub fn trace_buffer(&mut self, name: &str, on: bool) {
+        let up = name.to_uppercase();
+        if on {
+            if !self.buffer_trace.traced.contains(&up) {
+                self.buffer_trace.traced.push(up);
+            }
+        } else {
+            self.buffer_trace.traced.retain(|x| x != &up);
+        }
+    }
+
+    /// The recorded `buffer-trace` records `(time_ms, summaries)`.
+    pub fn buffer_trace(&self) -> Vec<(i64, Vec<BufSummary>)> {
+        let mut out = self.buffer_trace.saved.clone();
+        if let Some(c) = &self.buffer_trace.current {
+            out.push(c.clone());
+        }
+        out
+    }
+
+    /// The pre-event boundary for `buffer-trace`: start a new record when the
+    /// clock advances (`buffer-trace-event-recorder`).
+    pub(super) fn bt_pre_hook(&mut self) {
+        if !self.buffer_trace.enabled {
+            return;
+        }
+        let t = self.time_ms;
+        let new = match &self.buffer_trace.current {
+            None => true,
+            Some((ct, _)) => *ct != t,
+        };
+        if new {
+            if let Some(c) = self.buffer_trace.current.take() {
+                self.buffer_trace.saved.push(c);
+            }
+            let rows = self
+                .buffer_trace
+                .traced
+                .iter()
+                .map(|n| BufSummary {
+                    name: n.clone(),
+                    ..Default::default()
+                })
+                .collect();
+            self.buffer_trace.current = Some((t, rows));
+        }
+    }
+
+    /// The post-event update for `buffer-trace`: apply the event, then refresh
+    /// each traced buffer's busy/error/full flags.
+    pub(super) fn bt_post(&mut self, info: Option<(String, BufKind)>) {
+        if !self.buffer_trace.enabled {
+            return;
+        }
+        if let Some((buffer, kind)) = info {
+            let up = buffer.to_uppercase();
+            if let Some((_, rows)) = self.buffer_trace.current.as_mut() {
+                if let Some(s) = rows.iter_mut().find(|s| s.name == up) {
+                    match kind {
+                        BufKind::SetChunk(t) => s.chunk_name = Some(t),
+                        BufKind::Mod => s.modified = true,
+                        BufKind::Clear => s.cleared = true,
+                        BufKind::Request(t) => s.request = Some(format!("+{up}> {t}")),
+                        BufKind::ModRequest(t) => s.request = Some(format!("*{up}> {t}")),
+                    }
+                }
+            }
+        }
+        // Read the buffer states before borrowing the record mutably.
+        let states: Vec<(bool, bool, bool)> = self
+            .buffer_trace
+            .traced
+            .iter()
+            .map(|n| match self.buffers.get(n) {
+                Some(b) => (b.busy, b.failed, b.chunk.is_some()),
+                None => (false, false, false),
+            })
+            .collect();
+        if let Some((_, rows)) = self.buffer_trace.current.as_mut() {
+            for (s, (busy, failed, full)) in rows.iter_mut().zip(states) {
+                if busy {
+                    s.busy = true;
+                } else if s.busy {
+                    s.busy_free = true;
+                }
+                if failed {
+                    s.error = true;
+                } else if s.error {
+                    s.error_clear = true;
+                }
+                if full {
+                    s.full = true;
+                }
+            }
+        }
+    }
+
+    /// The `(buffer, kind)` of a buffer event for `buffer-trace`, captured
+    /// before `exec` consumes the event.
+    pub(super) fn bt_event_info_take(&self, ev: &Event) -> Option<(String, BufKind)> {
+        if !self.buffer_trace.enabled {
+            return None;
+        }
+        match ev {
+            Event::SetBuffer { buffer, chunk, .. } => {
+                let what = match chunk {
+                    NewChunk::Named(n) => n.clone(),
+                    _ => super::productions::render_request_spec(chunk),
+                };
+                Some((buffer.clone(), BufKind::SetChunk(what)))
+            }
+            Event::ClearBuffer { buffer, .. } => Some((buffer.clone(), BufKind::Clear)),
+            Event::ModBuffer {
+                buffer,
+                slots,
+                module,
+            } => {
+                let kind = if module == "PROCEDURAL" {
+                    BufKind::Mod
+                } else {
+                    BufKind::ModRequest(render_slots_spec(slots))
+                };
+                Some((buffer.clone(), kind))
+            }
+            Event::ModuleRequest { buffer, spec, .. } => Some((
+                buffer.clone(),
+                BufKind::Request(super::productions::render_request_spec(spec)),
+            )),
+            _ => None,
+        }
+    }
+}
+
+/// A `buffer-trace`-relevant buffer event.
+pub(super) enum BufKind {
+    SetChunk(String),
+    Mod,
+    Clear,
+    Request(String),
+    ModRequest(String),
+}
+
 /// Append a snapshot's `(chunk-text, status)` for `buf` to a history row,
 /// empty when the buffer is absent from the snapshot.
 fn push_snapshot(row: &mut Vec<String>, snap: &[(String, String, String)], buf: &str) {

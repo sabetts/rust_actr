@@ -445,6 +445,17 @@ impl Session {
                     })
                     .unwrap_or_default(),
             ),
+            "BUFFER-TRACE" => Some(
+                self.engine
+                    .as_ref()
+                    .map(|e| {
+                        e.buffer_trace()
+                            .into_iter()
+                            .map(|(t, rows)| buffer_trace_record(t, &rows))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            ),
             _ => None,
         }
     }
@@ -1059,34 +1070,34 @@ impl Session {
                             eng.set_buffer_history(true);
                         } else if n.eq_ignore_ascii_case("visicon-history") {
                             eng.set_visicon_history(true);
+                        } else if n.eq_ignore_ascii_case("buffer-trace") {
+                            eng.set_buffer_trace(true);
+                        } else if eng.is_buffer(n) {
+                            // `buffer-trace-<buffer>` constituent, addressed by
+                            // the bare buffer name (`71-pick-buffers.tcl`).
+                            eng.trace_buffer(n, true);
                         }
                     }
                 }
                 Ok(vec![Json::Null])
             }
             "stop-recording-history" => {
-                let mut stop_retrieval = false;
-                let mut stop_buffer = false;
-                let mut stop_visicon = false;
                 for n in args.iter().filter_map(|a| a.as_str()) {
-                    let key = n.to_uppercase();
-                    match key.as_str() {
-                        "RETRIEVAL-HISTORY" => stop_retrieval = true,
-                        "BUFFER-HISTORY" => stop_buffer = true,
-                        "VISICON-HISTORY" => stop_visicon = true,
-                        _ => {}
-                    }
-                    self.hist_recording.remove(&key);
+                    self.hist_recording.remove(&n.to_uppercase());
                 }
                 if let Some(eng) = &mut self.engine {
-                    if stop_retrieval {
-                        eng.set_retrieval_history(false);
-                    }
-                    if stop_buffer {
-                        eng.set_buffer_history(false);
-                    }
-                    if stop_visicon {
-                        eng.set_visicon_history(false);
+                    for n in args.iter().filter_map(|a| a.as_str()) {
+                        if n.eq_ignore_ascii_case("retrieval-history") {
+                            eng.set_retrieval_history(false);
+                        } else if n.eq_ignore_ascii_case("buffer-history") {
+                            eng.set_buffer_history(false);
+                        } else if n.eq_ignore_ascii_case("visicon-history") {
+                            eng.set_visicon_history(false);
+                        } else if n.eq_ignore_ascii_case("buffer-trace") {
+                            eng.set_buffer_trace(false);
+                        } else if eng.is_buffer(n) {
+                            eng.trace_buffer(n, false);
+                        }
                     }
                 }
                 Ok(vec![Json::Null])
@@ -2439,6 +2450,32 @@ fn visicon_history_record(time_ms: i64, items: &[String]) -> String {
     Json::Arr(fields).write()
 }
 
+/// One `buffer-trace` record as JSON: `[time_ms, [summary, …]]` where each
+/// summary is `[name, busy, cleared, busy->free, error, error->clear, full,
+/// modified, request, chunk-name, notes]` (`tools/buffer-trace.lisp`).
+fn buffer_trace_record(time_ms: i64, rows: &[crate::engine::BufSummary]) -> String {
+    let flag = Json::Bool;
+    let rows: Vec<Json> = rows
+        .iter()
+        .map(|s| {
+            Json::Arr(vec![
+                Json::Str(s.name.clone()),
+                flag(s.busy),
+                flag(s.cleared),
+                flag(s.busy_free),
+                flag(s.error),
+                flag(s.error_clear),
+                flag(s.full),
+                flag(s.modified),
+                Json::Str(s.request.clone().unwrap_or_default()),
+                Json::Str(s.chunk_name.clone().unwrap_or_default()),
+                Json::Str(s.notes.clone().unwrap_or_default()),
+            ])
+        })
+        .collect();
+    Json::Arr(vec![Json::Int(time_ms), Json::Arr(rows)]).write()
+}
+
 /// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
 /// valid array, so the client can decode it independently).
 fn chunk_records(records: &[String], size: usize) -> Vec<String> {
@@ -2975,6 +3012,75 @@ mod tests {
         };
         assert!(matches!(entry[0], Json::Int(_)), "entry[0] = time");
         assert!(entry.len() >= 2, "entry has at least one snapshot");
+    }
+
+    /// `record-history "buffer-trace"` + a buffer name records the buffer
+    /// timeline in the Environment's summary shape.
+    #[test]
+    fn buffer_trace_records() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("buffer-trace".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("record-history", None, &[Json::Str("goal".into())], &mut r)
+            .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("buffer-trace".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("buffer-trace".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let text = chunk[0].as_str().unwrap();
+        let Json::Arr(records) = crate::json::parse(text).unwrap() else {
+            panic!("buffer-trace payload is not a JSON array");
+        };
+        assert!(!records.is_empty());
+        let Json::Arr(rec) = &records[0] else {
+            panic!("record is not an array");
+        };
+        assert!(matches!(rec[0], Json::Int(_)), "record[0] = time");
+        let Json::Arr(rows) = &rec[1] else {
+            panic!("record[1] is not the summary list");
+        };
+        let Json::Arr(row) = &rows[0] else {
+            panic!("summary is not an array");
+        };
+        assert_eq!(row.len(), 11, "summary has 11 fields");
+        assert_eq!(row[0].as_str(), Some("GOAL"));
     }
 
     /// The Environment viewer commands return the model's productions,

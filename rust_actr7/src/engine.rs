@@ -596,6 +596,32 @@ pub struct RetrievalChunk {
     pub activation_trace: String,
 }
 
+/// One `buffer-trace` per-buffer summary (`tools/buffer-trace.lisp`).
+#[derive(Debug, Clone, Default)]
+pub struct BufSummary {
+    pub name: String,
+    pub chunk_name: Option<String>,
+    pub busy: bool,
+    pub cleared: bool,
+    pub busy_free: bool,
+    pub error: bool,
+    pub error_clear: bool,
+    pub full: bool,
+    pub modified: bool,
+    pub request: Option<String>,
+    pub notes: Option<String>,
+}
+
+/// `buffer-trace` state (`tools/buffer-trace.lisp`): per-time buffer summaries.
+#[derive(Debug, Clone, Default)]
+struct BufferTrace {
+    enabled: bool,
+    /// Traced buffers (uppercased), in enable order.
+    traced: Vec<String>,
+    current: Option<(i64, Vec<BufSummary>)>,
+    saved: Vec<(i64, Vec<BufSummary>)>,
+}
+
 /// `visicon-history` state (`other-files/perceptual-history.lisp`): printed
 /// visicon snapshots, grouped by time, that changed from the previous one.
 #[derive(Debug, Clone, Default)]
@@ -2019,6 +2045,8 @@ pub struct Engine {
     buffer_history: BufferHistory,
     /// `visicon-history` state (`record-history "visicon-history"`).
     visicon_history: PerceptualHistory,
+    /// `buffer-trace` state (`record-history "buffer-trace"` + buffer names).
+    buffer_trace: BufferTrace,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -2448,6 +2476,7 @@ impl Engine {
                 ..Default::default()
             },
             visicon_history: PerceptualHistory::default(),
+            buffer_trace: BufferTrace::default(),
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -2972,6 +3001,8 @@ impl Engine {
         };
         // `reset-perceptual-history`: clear and disable.
         self.visicon_history = PerceptualHistory::default();
+        // `reset-buffer-trace-module`: clear and disable.
+        self.buffer_trace = BufferTrace::default();
         self.named = HashMap::new();
         // `create-model-default-chunks` (`model.lisp:753`): every model starts
         // with these state chunks (`(free name free)` etc., plus `clear`); a
@@ -3928,12 +3959,15 @@ impl Engine {
             let next = self.queue.pop().expect("peeked non-empty");
             self.time_ms = next.time_ms;
             self.bh_pre_hook();
+            self.bt_pre_hook();
             let bh_info = self.bh_event_info_take(&next.event);
+            let bt_info = self.bt_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
             self.bh_record(bh_info);
+            self.bt_post(bt_info);
             self.bold_record();
             n += 1;
             if self.zz_break_hit {
@@ -4076,12 +4110,15 @@ impl Engine {
             let next = self.queue.pop().expect("peeked non-empty");
             self.time_ms = next.time_ms;
             self.bh_pre_hook();
+            self.bt_pre_hook();
             let bh_info = self.bh_event_info_take(&next.event);
+            let bt_info = self.bt_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.exec(next.event, show)?;
             self.bh_record(bh_info);
+            self.bt_post(bt_info);
             self.bold_record();
             processed = true;
             self.run_events += 1;
