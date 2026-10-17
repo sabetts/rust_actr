@@ -596,6 +596,17 @@ pub struct RetrievalChunk {
     pub activation_trace: String,
 }
 
+/// `visicon-history` state (`other-files/perceptual-history.lisp`): printed
+/// visicon snapshots, grouped by time, that changed from the previous one.
+#[derive(Debug, Clone, Default)]
+struct PerceptualHistory {
+    enabled: bool,
+    /// `(time_ms, [snapshot, …])` — same-time updates append to the entry.
+    data: Vec<(i64, Vec<String>)>,
+    /// The last recorded snapshot (skip unchanged).
+    last_item: String,
+}
+
 /// `buffer-history` state (`other-files/buffer-history.lisp`): buffer-change
 /// rows grouped by the time segment they occurred in.
 #[derive(Debug, Clone, Default)]
@@ -2006,6 +2017,8 @@ pub struct Engine {
     record_retrieval_history: bool,
     /// `buffer-history` state (`record-history "buffer-history"`).
     buffer_history: BufferHistory,
+    /// `visicon-history` state (`record-history "visicon-history"`).
+    visicon_history: PerceptualHistory,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -2434,6 +2447,7 @@ impl Engine {
                 last_time: -1,
                 ..Default::default()
             },
+            visicon_history: PerceptualHistory::default(),
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -2956,6 +2970,8 @@ impl Engine {
             last_time: -1,
             ..Default::default()
         };
+        // `reset-perceptual-history`: clear and disable.
+        self.visicon_history = PerceptualHistory::default();
         self.named = HashMap::new();
         // `create-model-default-chunks` (`model.lisp:753`): every model starts
         // with these state chunks (`(free name free)` etc., plus `clear`); a

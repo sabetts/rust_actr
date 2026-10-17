@@ -2584,6 +2584,40 @@ impl Engine {
     }
 }
 
+/// `visicon-history` recording (`other-files/perceptual-history.lisp`).
+impl Engine {
+    /// Enable/disable `visicon-history` recording.
+    pub fn set_visicon_history(&mut self, on: bool) {
+        self.visicon_history.enabled = on;
+    }
+
+    /// The recorded `visicon-history` entries `(time_ms, snapshots)`.
+    pub fn visicon_history(&self) -> &[(i64, Vec<String>)] {
+        &self.visicon_history.data
+    }
+
+    /// `perceptual-history-update`: record the printed visicon when it differs
+    /// from the last snapshot, appending to the entry at the same time.
+    pub(super) fn record_visicon_snapshot(&mut self) {
+        if !self.visicon_history.enabled {
+            return;
+        }
+        let current = self.printed_visicon(false, None).join("\n");
+        if current == self.visicon_history.last_item {
+            return;
+        }
+        self.visicon_history.last_item = current.clone();
+        let t = self.time_ms;
+        if let Some((lt, items)) = self.visicon_history.data.last_mut() {
+            if *lt == t {
+                items.push(current);
+                return;
+            }
+        }
+        self.visicon_history.data.push((t, vec![current]));
+    }
+}
+
 /// Append a snapshot's `(chunk-text, status)` for `buf` to a history row,
 /// empty when the buffer is absent from the snapshot.
 fn push_snapshot(row: &mut Vec<String>, snap: &[(String, String, String)], buf: &str) {

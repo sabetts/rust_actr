@@ -900,6 +900,8 @@ impl Engine {
                 if show {
                     self.emit("VISION", "visicon-update".into());
                 }
+                // `monitor-visicon-updates` (`perceptual-history.lisp`).
+                self.record_visicon_snapshot();
                 // A late print the task scheduled for this instant runs at the
                 // very end of the display wave, after the wave's own
                 // `conflict-resolution` (which the buffer stuffing queues).

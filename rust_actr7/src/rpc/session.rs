@@ -434,6 +434,17 @@ impl Session {
                     })
                     .unwrap_or_default(),
             ),
+            "VISICON-HISTORY" => Some(
+                self.engine
+                    .as_ref()
+                    .map(|e| {
+                        e.visicon_history()
+                            .iter()
+                            .map(|(t, items)| visicon_history_record(*t, items))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            ),
             _ => None,
         }
     }
@@ -1046,6 +1057,8 @@ impl Session {
                             eng.set_retrieval_history(true);
                         } else if n.eq_ignore_ascii_case("buffer-history") {
                             eng.set_buffer_history(true);
+                        } else if n.eq_ignore_ascii_case("visicon-history") {
+                            eng.set_visicon_history(true);
                         }
                     }
                 }
@@ -1054,11 +1067,13 @@ impl Session {
             "stop-recording-history" => {
                 let mut stop_retrieval = false;
                 let mut stop_buffer = false;
+                let mut stop_visicon = false;
                 for n in args.iter().filter_map(|a| a.as_str()) {
                     let key = n.to_uppercase();
                     match key.as_str() {
                         "RETRIEVAL-HISTORY" => stop_retrieval = true,
                         "BUFFER-HISTORY" => stop_buffer = true,
+                        "VISICON-HISTORY" => stop_visicon = true,
                         _ => {}
                     }
                     self.hist_recording.remove(&key);
@@ -1069,6 +1084,9 @@ impl Session {
                     }
                     if stop_buffer {
                         eng.set_buffer_history(false);
+                    }
+                    if stop_visicon {
+                        eng.set_visicon_history(false);
                     }
                 }
                 Ok(vec![Json::Null])
@@ -2413,6 +2431,14 @@ fn buffer_history_record(time_ms: i64, rows: &[Vec<String>]) -> String {
     Json::Arr(vec![Json::Int(time_ms), Json::Arr(rows)]).write()
 }
 
+/// One `visicon-history` entry as JSON: `[time_ms, snapshot, …]`
+/// (`other-files/perceptual-history.lisp`).
+fn visicon_history_record(time_ms: i64, items: &[String]) -> String {
+    let mut fields = vec![Json::Int(time_ms)];
+    fields.extend(items.iter().cloned().map(Json::Str));
+    Json::Arr(fields).write()
+}
+
 /// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
 /// valid array, so the client can decode it independently).
 fn chunk_records(records: &[String], size: usize) -> Vec<String> {
@@ -2876,6 +2902,79 @@ mod tests {
             panic!("row is not an array");
         };
         assert_eq!(row.len(), 8, "row has 8 fields");
+    }
+
+    /// `record-history "visicon-history"` records the printed visicon on each
+    /// update.
+    #[test]
+    fn visicon_history_records() {
+        use crate::engine::{DeviceSetup, DeviceText};
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.set_device(DeviceSetup {
+            texts: vec![DeviceText {
+                at_ms: 0,
+                text: "A".to_string(),
+                x: 100,
+                y: 100,
+                run: None,
+                seq: 0,
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("visicon-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("visicon-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("visicon-history".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let text = chunk[0].as_str().unwrap();
+        let Json::Arr(entries) = crate::json::parse(text).unwrap() else {
+            panic!("visicon-history payload is not a JSON array");
+        };
+        assert!(!entries.is_empty());
+        let Json::Arr(entry) = &entries[0] else {
+            panic!("entry is not an array");
+        };
+        assert!(matches!(entry[0], Json::Int(_)), "entry[0] = time");
+        assert!(entry.len() >= 2, "entry has at least one snapshot");
     }
 
     /// The Environment viewer commands return the model's productions,
