@@ -41,6 +41,17 @@ fn main() -> ExitCode {
         Some("server") => cmd_server(&args[1..]),
         #[cfg(feature = "env")]
         Some("env") => cmd_env(&args[1..]),
+        // The GUI is feature-gated (see Cargo.toml); say so instead of
+        // reporting "unknown command".
+        #[cfg(not(feature = "env"))]
+        Some("env") => {
+            eprintln!(
+                "actr env: the Environment GUI is not compiled into this build.\n\
+                 Rebuild with the `env` feature:\n\n  \
+                 cargo run --features env -- env\n"
+            );
+            ExitCode::from(2)
+        }
         Some("-h") | Some("--help") | None => {
             print_help();
             ExitCode::SUCCESS
