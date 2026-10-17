@@ -33,8 +33,17 @@ test; an out-of-scope case is `#[ignore = "reason"]`.
 ## Scope
 
 Only `.ref` files with timestamped trace lines become specs (219 of 563).
-The rest test the command layer (`dm`, `sdp`, `spp`, `whynot`, parsed-source
-dumps) or warnings, and are not engine traces; they appear as ignored tests.
+The rest have no spec and are ignored; each reason string says which kind:
+
+- `tutorial-source scrape (not an engine trace)` — the stub re-reads a
+  tutorial source file and echoes a fragment, so the ref validates the
+  tutorial text, not the engine (202 refs; out of scope).
+- `event-hook Lisp (not replayable)` — `run-it` installs an arbitrary-Lisp
+  `add-pre/post-event-hook` the engine cannot run (37 refs; the documented
+  "no arbitrary Lisp" divergence).
+- `not an engine trace (command-layer output)` — real command/introspection
+  output (`dm`, `sdp`, `spp`, `whynot`, `sgp`, `pp`, warnings) (104 refs;
+  in scope as command-layer oracles).
 
 `extract-specs.lisp` classifies each trace test without executing the ones that
 only make sense in the command/device harness:
@@ -105,8 +114,8 @@ exercise are in scope; `../command-inventory.txt` (regenerate with
 
 ## Out of scope
 
-The non-timestamped unit-test refs that only scrape the tutorial source files
-(the stub `with-open-file`/`read-line`s a model file and `model-output`s a
-fragment) validate the tutorial text, not the engine — no client command
-reaches them, so they stay ignored. The remaining non-timestamped refs are
-real command-output tests and are in scope (the command layer above).
+Refs tagged `tutorial-source scrape` re-read a tutorial source file instead of
+exercising the engine, and no client command reaches them, so they stay
+ignored. So do the `event-hook Lisp` refs. Everything else that is ignored is
+either an in-scope command-layer oracle or a measured spec gap (see Grow
+coverage).

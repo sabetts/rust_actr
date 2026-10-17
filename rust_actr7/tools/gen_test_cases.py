@@ -14,6 +14,7 @@ by editing the generated file.
 
 Inputs:
   * <repo>/actr7.x/test-models/*.ref   - one per ACT-R regression test
+  * <repo>/actr7.x/test-models/*.lisp  - stub source (classifies no-spec refs)
   * fixtures/regression/specs/*.spec   - machine-readable driver spec
 
 Output:
@@ -38,6 +39,13 @@ SCOPE_REASON = {
     "OTHER": "no run recorded",
 }
 NO_SPEC_REASON = "not an engine trace (command-layer output)"
+# A ref with no spec can be one of three kinds; the stub source says which.
+# These token lists mirror the sub-kinds of `*command-tokens*` in
+# fixtures/extract-specs.lisp, which classify a stub without running it.
+SCRAPE_REASON = "tutorial-source scrape (not an engine trace)"
+HOOK_REASON = "event-hook Lisp (not replayable)"
+SCRAPE_TOKENS = ("with-open-file", "read-line", "multiple-value-bind")
+HOOK_TOKENS = ("add-pre-event-hook", "add-post-event-hook")
 
 
 def parse_spec(text: str):
@@ -60,6 +68,20 @@ def existing_runnable() -> set:
     if not OUT.exists():
         return set()
     return set(re.findall(r'spec_case!\(\s*\w+\s*,\s*"([^"]+)"', OUT.read_text()))
+
+
+def no_spec_reason(name: str) -> str:
+    """Classify a ref that has no spec, by its stub source."""
+    stub = REFS_DIR / f"{name}.lisp"
+    try:
+        src = stub.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return NO_SPEC_REASON
+    if any(t in src for t in SCRAPE_TOKENS):
+        return SCRAPE_REASON
+    if any(t in src for t in HOOK_TOKENS):
+        return HOOK_REASON
+    return NO_SPEC_REASON
 
 
 def main() -> int:
@@ -98,7 +120,10 @@ def main() -> int:
             runnable += 1
         else:
             scope = spec_scope.get(name)
-            reason = SCOPE_REASON.get(scope, "pending: does not yet match ref") if scope else NO_SPEC_REASON
+            if scope:
+                reason = SCOPE_REASON.get(scope, "pending: does not yet match ref")
+            else:
+                reason = no_spec_reason(name)
             reason = reason.replace("\\", "\\\\").replace('"', '\\"')
             lines.append(f'spec_case_ignored!({ident_name}, "{name}", "{reason}");')
             ignored += 1
