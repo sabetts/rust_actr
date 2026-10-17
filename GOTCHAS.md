@@ -4478,3 +4478,22 @@ An imaginal buffer is a `reuse?` buffer: its chunk is always the reusable
 `IMAGINAL-CHUNK0`, and `set-buffer-chunk` copies content *into* it
 (`buffers.lisp:1349`), so `buffer-read 'imaginal` returns `IMAGINAL-CHUNK0`
 rather than the placed copy. The engine keeps the placed copy's name instead.
+
+## 268. Golden traces are compared CRLF-insensitively (verified)
+
+`golden/traces/*.trace` are committed with LF in the index, but a Windows
+checkout with `core.autocrlf=true` (no `.gitattributes` here) writes them as
+CRLF. The engine always emits LF, so `tests/golden.rs::run_case`'s raw
+`actual == expected` failed with `common prefix identical, length differs`
+(same line count) on every case — the bytes differed only in the newline
+convention. `first_diff` compares via `str::lines()`, which strips `\r`, so
+the reported "first diff" never showed a real difference: a tell-tale for an
+EOL-only mismatch.
+
+`run_case` now compares `normalize_eol(actual) == normalize_eol(expected)`
+where `normalize_eol` maps CRLF→LF. It normalizes the newline convention
+**only** — no trimming or case-folding (that is `test_models.rs`'s
+`normalize`, which mirrors `compare-test-model-files`). Content stays exact.
+This is the sole raw-EOL-sensitive comparison in the suite: the units tables
+parse through the sexpr reader (treats `\r` as whitespace) and the device
+sidecars split on whitespace, so both are already EOL-tolerant.

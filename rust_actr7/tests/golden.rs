@@ -108,6 +108,14 @@ fn discover() -> Result<Vec<Case>, String> {
     Ok(cases)
 }
 
+/// Normalize the newline convention only (CRLF -> LF). Content stays exact:
+/// no trimming or case-folding (`test_models.rs` does that). The engine emits
+/// LF, but a Windows checkout with `core.autocrlf=true` gives the `.trace`
+/// files CRLF, which would otherwise fail a byte comparison.
+fn normalize_eol(s: &str) -> String {
+    s.replace("\r\n", "\n")
+}
+
 /// First divergence between expected and actual, with context lines.
 fn first_diff(expected: &str, actual: &str) -> String {
     let e: Vec<&str> = expected.lines().collect();
@@ -145,7 +153,7 @@ fn run_case(root: &Path, case: &Case) -> Result<(), String> {
     let device = load_device(&case.trace_path)?;
     let actual = run_model(root, &case.model, case.seed, case.run_time, &device)
         .map_err(|e| format!("{}: engine error: {e}", case.name))?;
-    if actual == case.expected {
+    if normalize_eol(&actual) == normalize_eol(&case.expected) {
         Ok(())
     } else {
         Err(format!(
