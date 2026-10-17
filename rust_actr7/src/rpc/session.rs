@@ -2088,7 +2088,7 @@ impl Session {
             //
             // `:testing-function` names a client-owned command; `apply_sgp` has
             // no arm for it, so it is stored and re-applied as a no-op (the
-            // reset hook invokes it separately, GOTCHAS #219).
+            // reset hook invokes it separately, PORTING-NOTES #219).
             if let Some(eng) = &mut self.engine {
                 let sexp = json_to_sexp(&val);
                 let _ = eng.apply_sgp(":starting-parameters", &sexp);

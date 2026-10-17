@@ -1,7 +1,7 @@
 //! Discrete-event engine: scheduler, buffers, procedural cycle,
 //! stub-free declarative retrieval for fully-specified requests.
 //!
-//! Execution model (all from `actr7.x` sources, see GOTCHAS.md):
+//! Execution model (all from `actr7.x` sources, see PORTING-NOTES.md):
 //! - Integer millisecond clock; FIFO queue ordered by (time, priority, seq).
 //!   Priorities: `:max` first, numeric descending, `:min` last; ties FIFO
 //!   (`compare-events`, `framework/meta-process.lisp:659`).
@@ -228,7 +228,7 @@ struct Config {
     /// emitted. ACT-R's printing module initialises the slot to `t`, but every
     /// test stub sets `(ssp :starting-parameters (:model-warnings nil))` and
     /// the extractor does not record that, so the engine defaults to `nil` to
-    /// reproduce the refs (GOTCHAS #232).
+    /// reproduce the refs (PORTING-NOTES #232).
     model_warnings: bool,
     esc: bool,
     lf_ms: i64,
@@ -773,13 +773,13 @@ struct Feature {
     /// `distance`/`size`. `printed-visicon` renders `[SIZE, DISTANCE]`
     /// followed by these, because `chunk-filled-slots-list-fct` returns a
     /// chunk's slots in *reverse* set order and `define-chunks-fct` sets them
-    /// in reverse spec order (GOTCHAS #238).
+    /// in reverse spec order (PORTING-NOTES #238).
     spec: Vec<(String, Value)>,
     /// Slots set *after* construction (`modify-visicon-features`), most
     /// recently set first. A `set-chunk-slot-value-fct` on a new slot pushes
     /// it onto the chunk's slot list, which `chunk-filled-slots-list-fct`
     /// returns front-first, so these render *before* the construction spec
-    /// (GOTCHAS #238).
+    /// (PORTING-NOTES #238).
     spec_pre: Vec<(String, Value)>,
     tstamp_ms: i64,
     /// `chunk-visual-new-p`: `NEW` until the feature is attended
@@ -2828,7 +2828,7 @@ impl Engine {
     /// `(reset)`: re-evaluate the model body's effect on engine state —
     /// rebuild DM and the named-chunk table, clear buffers, reset the clock
     /// to 0, and re-arm the initial goal + conflict resolution. The RNG is
-    /// intentionally NOT reseeded (GOTCHAS #5/#35); scripted `:seed` steps
+    /// intentionally NOT reseeded (PORTING-NOTES #5/#35); scripted `:seed` steps
     /// handle that. Trace history (`out_lines`) is preserved.
     pub fn reset(&mut self) -> Result<(), EngineError> {
         self.device_run += 1;

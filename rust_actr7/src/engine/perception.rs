@@ -1431,7 +1431,7 @@ impl Feature {
     /// followed by the spec order. `chunk-filled-slots-list-fct` is a chunk's
     /// slots in reverse set order and `define-chunks-fct` sets them in reverse
     /// spec order, so the printed list is `[SIZE, DISTANCE] ++ spec`
-    /// (GOTCHAS #238).
+    /// (PORTING-NOTES #238).
     pub(super) fn filled_slots(&self) -> Vec<(String, Value)> {
         let has = |n: &str| self.spec.iter().any(|(k, _)| k == n) || self.spec_pre.iter().any(|(k, _)| k == n);
         let mut v: Vec<(String, Value)> = self.spec_pre.clone();

@@ -633,7 +633,7 @@ impl Engine {
                         // goal-style-request: delay 0, priority -1000, so the
                         // new goal lands after the production's clears
                         // (`support/goal-style-module.lisp:245`). Request
-                        // specs print slots-only (GOTCHA #44); a whole-chunk
+                        // specs print slots-only (PORTING-NOTES #44); a whole-chunk
                         // reference (`+goal> =retrieval`) prints the
                         // referenced chunk's slots.
                         let shown = self.named_chunk_shown(&spec);

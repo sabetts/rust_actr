@@ -13,7 +13,7 @@ Status legend: `- [ ]` todo · `- [x]` done · `(IN PROGRESS)` picked up.
   `probe_runnable`; that workflow is gone.)
 - **Commit as work proceeds**, identity:
   `git -c user.name=sabetts -c user.email=sabetts@localhost commit`.
-- **GOTCHAS.md**: add an entry for non-obvious behavior (tied to a source line),
+- **PORTING-NOTES.md**: add an entry for non-obvious behavior (tied to a source line),
   not a changelog.
 - **Command layer in scope (2026-10-12).** The goal is a drop-in RPC
   replacement: a Python ACT-R client connects and behaves identically to Lisp
@@ -63,7 +63,7 @@ Promote a passing spec by removing its `#[ignore]` in
 - [ ] case promoted (its `#[ignore]` removed)
 - [ ] `cargo test` green
 - [ ] committed
-- [ ] `GOTCHAS.md` entry if the fix is non-obvious
+- [ ] `PORTING-NOTES.md` entry if the fix is non-obvious
 
 ---
 
@@ -79,7 +79,7 @@ Promote a passing spec by removing its `#[ignore]` in
         (evict oldest) + expire by `:visual-finst-span`.
   - [x] Report phase: drop the stale window-clear re-encode when a move-attention
         starts (proc-display lock deferral). Result: 5th find `VISUAL-LOCATION1`,
-        report at `1.110`. GOTCHA #191.
+        report at `1.110`. PORTING-NOTES #191.
   - [x] Enable the spec (59 specs); commit.
   - Refs: `engine/perception.rs` (`find_location`, `encoding_complete`,
     `add_visual_finst`, `check_visual_finsts`, `loc_matches`), `engine.rs`
@@ -91,10 +91,10 @@ Promote a passing spec by removing its `#[ignore]` in
         applied `ssp :starting-parameters (:seed …)` / `:alpha`, and the device
         sidecar was authored with the wrong seed. Fixed in
         `fixtures/extract-specs.lisp` + `Step::RunFullTime` per-run seeding;
-        regenerated the spec/device. GOTCHA #192.
+        regenerated the spec/device. PORTING-NOTES #192.
   - [x] Composition fixes closed the remaining hunks (`rename-variables`
         (buffer, slot), `MAP-IMAGINAL-BUFFER` RHS-`*`, `COMPOSE-GOAL-BUFFER`
-        `(4 12 13 44)` a1=, `buffer=-union` a1*/a2=). GOTCHA #193.
+        `(4 12 13 44)` a1=, `buffer=-union` a1*/a2=). PORTING-NOTES #193.
   - [x] Enable the spec (60 specs); commit.
 
 ## Phase B — unlock hidden real-model traces (coverage ROI)
@@ -106,7 +106,7 @@ Promote a passing spec by removing its `#[ignore]` in
       and `*out-file*` bound. Trace gating: `w-run` records the model's `:v`
       again, `w-reset` applies the testing function (default
       `set-testing-traces`), engine handles `:V`. `run-until-time`/
-      `run-n-events` steps added (extractor + engine). GOTCHA #194.
+      `run-n-events` steps added (extractor + engine). PORTING-NOTES #194.
 - [x] **B2. Regenerate the 23 pure-trace candidates** (additive `SPEC_LIST`),
       recording real steps/seeds. 7 now pass and are enabled
       (`tutorial-unit1-semantic-g2/-g3-trace`,
@@ -183,7 +183,7 @@ Promote a passing spec by removing its `#[ignore]` in
 
 - [ ] **E1.** Probe coverage dashboard: pass / fail / ignored-by-reason plus the
       re-triage candidate list, so coverage is one command away.
-- [ ] **E2.** Keep `GOTCHAS.md` current as fixes land.
+- [ ] **E2.** Keep `PORTING-NOTES.md` current as fixes land.
 - [x] Engine split into `rust_actr7/src/engine/*.rs` (commit `3b5c476`).
 - [x] `cargo fmt` the crate (commit `8494640`).
 
@@ -259,7 +259,7 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       `install-device`/`process-events`). `correlation`/`mean-deviation` are
       exact (Pearson r / RMSD, printing `LABEL: x.xxx`) and unit-tested;
       `print-visicon` is an approximate placeholder (no oracle yet);
-      `new-word`/`new-digit-sound` are no-ops. See `GOTCHAS.md` #196. The
+      `new-word`/`new-digit-sound` are no-ops. See `PORTING-NOTES.md` #196. The
       Python tests that need it all route through `tester.py`, so they still
       need R6b.
 - [ ] **R5. Bounded Lisp subset → whole tutorial.** Extend `model.rs`/`eval.rs`
@@ -279,7 +279,7 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       interleaved with the trace, and the engine gained the two runtime pieces
       the tester needs: `(sgp :seed …)` actually applies now, and
       `:testing-function` is dispatched as the `testing-module` reset hook
-      (`set-testing-traces` / registered client commands). See `GOTCHAS.md`
+      (`set-testing-traces` / registered client commands). See `PORTING-NOTES.md`
       #198. Still failing: `bst-*`, `fan-no-pm`, `paired-learning-dynamic`,
       `tutorial_unit5_onehit_*`. Blocker = a **live** device/window (the R4
       `open-exp-window`/`add-text-to-exp-window`/… are stubs) plus exact
@@ -317,36 +317,36 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       were silently missing the task's `defun`s), `whynot` now
       recomputes the conflict set (`Engine::pmatches`) and reports the
       failure reason in ACT-R's compiled condition order
-      (`9384f4c`, `02e64cb`, GOTCHAS #203), the model-body forms
+      (`9384f4c`, `02e64cb`, PORTING-NOTES #203), the model-body forms
       `start-hand-at-mouse`/`-keypad`/`set-audloc-default`/
       `set-parameter-value` are accepted (removes 4 hard load errors), a
       scheduled command's trace module is its schedule-time `:module`
-      (`1ecc980`, GOTCHAS #204), and reusable-buffer naming is correct:
+      (`1ecc980`, PORTING-NOTES #204), and reusable-buffer naming is correct:
       a production naming a buffer's variable makes it non-reusable, so
       `simple-dynamic-model` is `IMAGINAL-CHUNK0` while `act-touch`/
-      `merging-test` are `CHUNK{n}` (`d0ee65b`, GOTCHAS #205), and a merge
-      renames references to the merged buffer chunk (`9a413cd`, GOTCHAS #206),
-      chunk slots print in model-wide slot order (`8436c08`, GOTCHAS #207),
+      `merging-test` are `CHUNK{n}` (`d0ee65b`, PORTING-NOTES #205), and a merge
+      renames references to the merged buffer chunk (`9a413cd`, PORTING-NOTES #206),
+      chunk slots print in model-wide slot order (`8436c08`, PORTING-NOTES #207),
       a non-numeric `:reward` clears the utility-learning history
-      (`aab5f28`, GOTCHAS #208), `:er` permutes the whole conflict set with
+      (`aab5f28`, PORTING-NOTES #208), `:er` permutes the whole conflict set with
       `permute-list` (one draw per candidate, even a lone one) and
       `find-best-feature` draws unless the location chunk's visicon entry is
-      still live (`73b045f`, GOTCHAS #209/#210). Flips `simple-dynamic-model`,
+      still live (`73b045f`, PORTING-NOTES #209/#210). Flips `simple-dynamic-model`,
       `tutorial-unit5modeling-v9-p7-8-run`, `tutorial-unit5-fan-lawyer-store-trace`,
       `tutorial-unit5modeling-v8-p6-run-retrieved-chunk`,
       `tutorial-unit7modeling-ul-issues-v2-first-run`,
       `tutorial-unit3modeling-v6-next-run` and `hear-self` (speech
       `:hear-self` gating, style-change prep, subvocalize, the device-notify
-      line; `0e556df`, GOTCHAS #211/#212). Then `paired-learning-dynamic`:
-      the composed-production `mappings` substitution (`7dfe8f8`, GOTCHAS #213)
-      and the stub's starting-parameters seed (`1a3a4b7`, GOTCHAS #214) —
+      line; `0e556df`, PORTING-NOTES #211/#212). Then `paired-learning-dynamic`:
+      the composed-production `mappings` substitution (`7dfe8f8`, PORTING-NOTES #213)
+      and the stub's starting-parameters seed (`1a3a4b7`, PORTING-NOTES #214) —
       **100 pass / 35 fail**.
       Current blockers from the probe: `print-conflict-tree` (2 specs),
       `print-chunk-activation-trace`/`print-activation-trace` (1),
       `print-visicon`'s table format (several), `!bind!` (`which-one`),
       motor/device work (`keypad-test`, `agi-modify-test`), and the audio
       sound-object gap.
-       **Declarative activation-trace narration — DONE** (GOTCHAS #232/#233).
+       **Declarative activation-trace narration — DONE** (PORTING-NOTES #232/#233).
        `partial-matching` narrates nil-valued `-` slots and always prints
        `effective similarity value is`; the engine skipped nil slots and dropped
        that line in the `sim ≠ ms` branch. Both `tutorial-unit5modeling-v6-p5-run-with-mp-2`
@@ -355,9 +355,9 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        three-valued (`t`/`warn`/`nil`) and the negative-Sji `model-warning` is
        gated on `:model-warnings`, which the golden environment leaves nil.
        **Frontier 101 → 103**; both specs enabled.
-       **Extractor audit (GOTCHAS #236).** The recurring "the task's setup
+       **Extractor audit (PORTING-NOTES #236).** The recurring "the task's setup
        vanished" failures were an incomplete wrapper list, not nesting. Audit
-       recipe + the 97-symbol result are in GOTCHAS #236; the actionable part is
+       recipe + the 97-symbol result are in PORTING-NOTES #236; the actionable part is
        a short list of task-level state changes. Recording one is a
        `("name" . function)` pair in `*generic-commands*` when the engine already
        has the command — `add-dm`, `set-buffer-chunk`, `clear-buffer`,
@@ -373,7 +373,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        **`proc-display-with-pending` is DONE and enabled** (golden 104/135):
        `printed-visicon` (the table, its column order, and the pending
        additions/deletions/modifications) plus the vision proc-display lock
-       that makes the pending sections meaningful (GOTCHAS #238-#241).
+       that makes the pending sections meaningful (PORTING-NOTES #238-#241).
        `removed-and-restored-visual-item` was also carrying the leak-polluted
        `ADD-VISICON-FEATURES (ISA (VISUAL-LOCATION TEXT) …)` steps from the
        earlier extractor commit and has been regenerated: 830 → 114 lines and
@@ -394,10 +394,10 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        every reference is remapped; `set-chunk-slot-value-fct` stores the
        *true* name, so the object prints `-0` while the encoding trace still
        names the marker `-1`. `encoding_complete` now resolves the alias
-       (GOTCHAS #257). Copies with differing slots (tracking) never merge, so
+       (PORTING-NOTES #257). Copies with differing slots (tracking) never merge, so
        `tracking-test` is untouched.
        **The `fan` family was blocked on an extractor gap, not the engine**
-       (GOTCHAS #234/#235). Tasks drive a trial with
+       (PORTING-NOTES #234/#235). Tasks drive a trial with
        `(mod-focus-fct (arg1 x arg2 y))` (`tutorial/lisp/fan-no-pm.lisp:57`) and
        the extractor never recorded it, so the goal's probe slots stayed unset,
        no production matched, and every run ended at t=0. Recording it (plus the
@@ -413,7 +413,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        grid), which is `format` output the spec cannot replay — so it is the
        same accepted divergence as the other task-hook refs, not engine work.
        On the RPC side the Python task *does* print the table, and after
-       GOTCHAS #262 (decode-string for `mod-focus`, `buffer-slot-value`,
+       PORTING-NOTES #262 (decode-string for `mod-focus`, `buffer-slot-value`,
        `run` returning the model time) its trace and response times match the
        ref exactly; only the port's `True` vs the Lisp `T` print differs, so
        the verdict stays unenabled.
@@ -438,7 +438,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       "no arbitrary Lisp" divergence). Same for `testing-child-slot`, whose
       ref records a Lisp error. Neither is counted as an engine gap.
       **Audio cluster — narrower than it looked (2026-10-13).** The three audio
-      specs do *not* share one mechanism (GOTCHAS #227/#228):
+      specs do *not* share one mechanism (PORTING-NOTES #227/#228):
       - `unstuff-aural` — **DONE, enabled** (golden 101). The replay + units
         fixes took it 5 → 19 → 248 → 448 of 448 byte-exact. The last piece was
         the unstuff half of `stuff-sound-buffer` (`audio.lisp:1056`): armed at
@@ -447,7 +447,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
         `:decay-time` is 3000 ms. Two ACT-R probes of the block settled both —
         guessing `decay-time` from the ref's first erase (5000) put every
         later erase in the wrong block, and reading the precondition as
-        `id`-only did the same in the other direction. GOTCHAS #227/#228.
+        `id`-only did the same in the other direction. PORTING-NOTES #227/#228.
       - `audio-updates` — also creates `new-ongoing-sound`/`end-ongoing-sound`,
         which the engine does not implement; its tones alone cannot finish it.
       - `siegler` — **does not call `new-tone-sound` at all**. Its sounds come
@@ -478,13 +478,13 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       `MODULE-REQUEST`, `MODULE-BUFFER`), `:v high` (`proc-display`,
       `visicon-update`, `Find-location`, `Move-attention`, `Encoding-complete`),
       module verbose output, utility-learning lines.
-      Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, GOTCHAS #202);
+      Done: `EXTEND-BUFFER-CHUNK` (`ba4f292`, PORTING-NOTES #202);
       **`!output!` gating** — `RhsAction::Output` now goes through `out()`, so
       it is suppressed by `(:v nil)` like ACT-R's `model-output`
       (`framework/misc-utils.lisp:801`); flips the RPC model
-      `tutorial_unit2code_buffer_chunk` (GOTCHAS #215).
+      `tutorial_unit2code_buffer_chunk` (PORTING-NOTES #215).
       **Compiled-production substitution (`:pct`) — DONE for the `:ppm`-off
-      path** (`7dfe8f8`, GOTCHAS #213). The composed production's printed form
+      path** (`7dfe8f8`, PORTING-NOTES #213). The composed production's printed form
       and the installed production (which the engine parses back from the
       rendered text) both
       come from substituting ACT-R's `mappings` into `p1-s`/`p2-s` **one
@@ -535,14 +535,14 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
       the run used — but `w-ssp` only records `:drive`-mode calls and the stub
       is loaded in `:load` mode, so it was dropped from the spec; `:RUNS` kept
       the `(100 0)` placeholder and the engine seeded with it
-      (`init_genrand(100)`). **Fixed** (`1a3a4b7`, GOTCHAS #214): `make-spec`
+      (`init_genrand(100)`). **Fixed** (`1a3a4b7`, PORTING-NOTES #214): `make-spec`
       prepends an `(:SGP :STARTING-PARAMETERS (:SEED (S C)))` step, and the
       harness no longer applies a per-run `(100 0)`. `paired-learning-dynamic`
       is byte-exact — the `:utility` lines were a symptom, not a separate
       compiled-production utility-equation bug.
 - [ ] **RPC 22/22** (the tester cluster: vision timing + RNG draw
       alignment).
-      **Reusable-buffer naming — DONE** (`d0ee65b`, GOTCHAS #205). The
+      **Reusable-buffer naming — DONE** (`d0ee65b`, PORTING-NOTES #205). The
       earlier attempt regressed `merging-test`/`act-touch` because it named
       at set time without the real *non-reuse* rule: a production that
       names a buffer's variable (`=imaginal`) makes that buffer
@@ -558,8 +558,8 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        (#219/#220). **Both paired models pass, so the paired cluster is
        closed.**
        **`bst-learn`/`bst-learn-ppm` — the driver runs, the model stops at
-       t=0.** GOTCHAS #221 fixed the `spp`/`no-output` crash that made them
-       vanish from the sweep; GOTCHAS #222 (centring the button label) then
+       t=0.** PORTING-NOTES #221 fixed the `spp`/`no-output` crash that made them
+       vanish from the sweep; PORTING-NOTES #222 (centring the button label) then
        fixed the placed location, so all three `bst-*` specs now diverge at
        line 4 rather than line 2 — the first two trace lines match.
        Remaining: the engine emits one `visicon-update` per queued
@@ -571,7 +571,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        A narrower version — coalesce only the window helpers, and only while no
        display has executed at that time — is the next thing to try.
        **Device buttons/lines — DONE; `bst-*` now blocks on the motor module**
-       (`f2a472f` + `6cf13f9`, GOTCHAS #223/#224). The extractor records
+       (`f2a472f` + `6cf13f9`, PORTING-NOTES #223/#224). The extractor records
        `add-button`/`add-line`, the sidecar carries them, the harness parses
        them (16 buttons / 22 lines for `bst-nolearn`), and the engine applies
        due ops through the same helpers the RPC path uses, merged by `at_ms`.
@@ -585,10 +585,10 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        manual action. The next blocker was the **motor request slot**
        `(:loc <visual-location>)` (`not implemented: manual request slot
        ("LOC", …)`), which `keypad-test` (`("HAND", RIGHT)`) shares — fixed by
-       ungating the built-in manual commands (GOTCHAS #225/#226), after which
+       ungating the built-in manual commands (PORTING-NOTES #225/#226), after which
        `bst-nolearn` matches the ref for 81 lines.
        **The blocker is now the button feature** (`827480d` + this session,
-       GOTCHAS #229). The productions ask for the buttons as
+       PORTING-NOTES #229). The productions ask for the buttons as
        `kind oval, value "b"` / `value "reset"`, but the engine builds a
        `kind BUTTON` box whose value is the window-item key, plus a separate
        `kind TEXT` label — so no request can match, the model takes
@@ -596,9 +596,9 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        theory was **wrong**: instrumenting the LHS shows the evaluation and the
        selection are correct (`(< 97 (- 62 25))` → NIL, `(< 62 (- 97 25))` → T,
        `DECIDE-UNDER` wins the equal-utility tie and is fired). Next: probe
-       ACT-R for the button feature's real `kind`/`value`/case (the GOTCHAS
+       ACT-R for the button feature's real `kind`/`value`/case (the PORTING-NOTES
        #227/#228 technique), build it that way, re-diff.
-       **Trace bookkeeping — SETTLED** (GOTCHAS #231). The trace's
+       **Trace bookkeeping — SETTLED** (PORTING-NOTES #231). The trace's
        `decide-over`/`DECIDE-UNDER` puzzle was a rebuild bug, not model
        semantics: `chunk-type` rebuilds the engine in place and a fresh engine
        clears `out_lines`, so every trial's trace was wiped before its run and
@@ -637,7 +637,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        semantics and the two regressions it introduced; a second pass added
        the task's dynamic window (`MODIFY-LINE`/`REMOVE-LINE` sidecar ops),
        case-insensitive string slot matching, and the reward/goal-set ordering
-       (GOTCHAS #247–#255).
+       (PORTING-NOTES #247–#255).
 
        Changes made (all verified against the refs / an SBCL probe):
 
@@ -666,7 +666,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
           trace `MOUSE` only at `:trace-detail high` (only
           `zz-extended-motor-actions` has them).
        5. **Manual buffer held through the movement** (`events.rs`):
-          `ZzMousePrep` sets `man_exec_busy` (GOTCHAS #246).
+          `ZzMousePrep` sets `man_exec_busy` (PORTING-NOTES #246).
        6. **Time-based `new`** (`engine.rs`, `perception.rs`):
           `checknew` (`vision.lisp:2227`) clears `new` once
           `tstamp-elapsed > :visual-onset-span` (default **500 ms**,
@@ -693,7 +693,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        `visicon-update` times and replay the task rule — a click adds or
        subtracts its `:action` length, and `update-current-line` adds /
        modifies / removes the line at (75,135)). The run-boundary fix
-       (GOTCHAS #256) and a `(CLEAR ms)` at each trial start landed with it.
+       (PORTING-NOTES #256) and a `(CLEAR ms)` at each trial start landed with it.
 
        **Golden: byte-exact to 8862/8872.** The last 10 lines are the task
        summary (`CORRELATION`/`MEAN DEVIATION`/trial table/utilities) that
@@ -781,7 +781,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        the probe prints `CC src=… -> …` and `NN base=… -> …`. For the engine
        side, `DBG_IA=1` gated prints in `call_action`/the empty-queue branch
        were used (and reverted).
-       - GOTCHAS #247–#256 cover the landed bst/motor/vision/utility
+       - PORTING-NOTES #247–#256 cover the landed bst/motor/vision/utility
          semantics.
        Diagnostic note that cost a session: **check which run step the spec
        uses before blaming the scheduler.** `(:RUN 60 …)` → `run_secs`, whose
@@ -812,7 +812,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
          `simple-ppm-test` are golden-PASS, so their gap is the *client
          command surface*, not engine semantics; `bst-*`/`fan-no-pm` are
          golden-FAIL too, so work there counts on both tracks.
-       **Vision timing — DONE** (`0c9d5df`, GOTCHAS #216). The
+       **Vision timing — DONE** (`0c9d5df`, PORTING-NOTES #216). The
        scripted timeline re-encodes the attended location on a clear via
        `pending_clears`; the client `clear-exp-window` did not, leaving
        `?visual> state free` true 85 ms (`:visual-attention-latency`) too
@@ -828,7 +828,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        "failed to connect to act-r with exception (timeout)". This is a server
        concurrency gap, not a model/output gap.
        **RNG draw alignment — DONE** (`paired-learning-dynamic` passes;
-       `3e23b26`/GOTCHAS #217, GOTCHAS #218). Three layers, each of which
+       `3e23b26`/PORTING-NOTES #217, PORTING-NOTES #218). Three layers, each of which
        masked the next:
        - the run used `init_genrand(200)` (unit4's `(sgp :seed (200 4))`)
          instead of the client's `:seed (1 0)`, because `set-system-parameter-value`
@@ -847,7 +847,7 @@ window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
        dominated by `set_seed` preludes) is the reliable stream.
        Remaining vision-adjacent note: the RPC device path still applies window
        ops *immediately* while the scripted timeline schedules them as
-       `pending_*` waves (GOTCHAS #216). That did not matter here, but it is
+       `pending_*` waves (PORTING-NOTES #216). That did not matter here, but it is
        the thing to suspect if a future vision model is off by one event.
 - Known divergence: the pipe transport and `define-module`/`undefine-module`
   (client-defined modules) are covered by "no arbitrary Lisp" unless needed.

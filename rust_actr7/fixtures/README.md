@@ -74,4 +74,4 @@ checkout (`ACTR_DIR`, default `<crate>/../actr7.x`).
 - Seeds are explicit per model. Without them the RNG is time-seeded
   (`actr7.x/framework/random.lisp`) and runs differ.
 - Lisp-side quirks that affect these fixtures are logged in
-  `../../GOTCHAS.md`.
+  `../../PORTING-NOTES.md`.

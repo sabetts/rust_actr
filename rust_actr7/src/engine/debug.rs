@@ -370,7 +370,7 @@ impl Engine {
         let mut ht = 0i64;
         let mut extra: Vec<(String, Value)> = Vec::new();
         // The rendered slot order is the argument order (`printed-visicon`
-        // reverses the construction spec; GOTCHAS #238).
+        // reverses the construction spec; PORTING-NOTES #238).
         let mut spec: Vec<(String, Value)> = Vec::new();
         for (k, v) in slots {
             let ku = k.to_uppercase();
@@ -1731,7 +1731,7 @@ fn round_half_even_f(x: f64) -> i64 {
 /// `build-vis-locs-for` for a `v-liner` (`uwi.lisp:511`): the spec order is
 /// `color value screen-x screen-y width height end1-x end1-y end2-x end2-y`,
 /// and the isa marker `(visual-location line)` adds `kind` and `line`
-/// (GOTCHAS #238). Shared by `add-line-to-exp-window` and
+/// (PORTING-NOTES #238). Shared by `add-line-to-exp-window` and
 /// `modify-line-for-exp-window` (which keeps the item, so the feature's name
 /// and finst are untouched).
 pub(super) fn set_line_geometry(
@@ -1940,7 +1940,7 @@ impl Engine {
                         // `build-string-feats` (`vision.lisp:3558`) builds
                         // `(isa (visual-location text) <y-slot> … height …
                         // value … width … <x-slot> …)`, and the device appends
-                        // `color`, `kind` and `text` (GOTCHAS #238)."
+                        // `color`, `kind` and `text` (PORTING-NOTES #238)."
                         spec: vec![
                             ("SCREEN-Y".to_string(), Value::Int(screen_y)),
                             ("HEIGHT".to_string(), Value::Int(text_h)),
@@ -2015,7 +2015,7 @@ impl Engine {
         // an **oval** whose value is its text, which is how the tutorial models
         // ask for it (`+visual-location> kind oval, value "b"`). It was built
         // as `kind BUTTON` with the window-item key as its value, so no such
-        // request could ever match (GOTCHAS #229).
+        // request could ever match (PORTING-NOTES #229).
         self.features.push(Feature {
             name: name.clone(),
             kind: "OVAL".to_string(),
@@ -2027,7 +2027,7 @@ impl Engine {
             extra: vec![("COLOR".to_string(), Value::Sym(color.to_uppercase()))],
             // `build-vis-locs-for` for a `button-vdi` (`uwi.lisp:358`): the
             // oval's spec order is `screen-x screen-y width height value
-            // color`, and the isa marker adds `kind` and `oval` (GOTCHAS #238)."
+            // color`, and the isa marker adds `kind` and `oval` (PORTING-NOTES #238)."
             spec: vec![
                 ("SCREEN-X".to_string(), Value::Int(ox + x + width.div_euclid(2))),
                 ("SCREEN-Y".to_string(), Value::Int(oy + y + height.div_euclid(2))),

@@ -9,7 +9,7 @@
 ;;;; Why instrument instead of parsing `run-it`:
 ;;;;   - seeds are sometimes computed at run time, e.g.
 ;;;;     `(sgp-fct (list :seed (list (incf *starting-seed*) 0)))`;
-;;;;   - `goal-focus`/`sgp`/`ssp` are macros (GOTCHAS #7) that expand to
+;;;;   - `goal-focus`/`sgp`/`ssp` are macros (PORTING-NOTES #7) that expand to
 ;;;;     `*-fct` functions, so wrapping the functions sees the real calls;
 ;;;;   - the model-chain loaded by a stub isn't always literal in the stub.
 ;;;;
@@ -93,7 +93,7 @@ operations that turn out not to be replayable.")
     ;; Task-level state changes a stub makes outside a run. These are the
     ;; calls a *task function* (not the stub's own top level) makes to drive a
     ;; trial, so missing them left the replayed model in the wrong state â€” the
-    ;; same class of gap as `mod-focus-fct` (GOTCHAS #234). Each is recorded as
+    ;; same class of gap as `mod-focus-fct` (PORTING-NOTES #234). Each is recorded as
     ;; `(:command NAME ARGS)` and replayed through the engine's command table.
     ("add-dm" . add-dm-fct)
     ("set-buffer-chunk" . set-buffer-chunk)
@@ -249,7 +249,7 @@ internally (`no-output` â†’ its argument command).")
   ;; `call-orig` for a wrapper whose arguments are already a list (a `&rest`
   ;; tail). Same guard: `install-device` converts the window's items by
   ;; calling `add-visicon-features` internally, and that is implementation,
-  ;; not a task step (GOTCHAS #237).
+  ;; not a task step (PORTING-NOTES #237).
   (let ((*recording-command* t))
     (apply (gethash name *orig-fns*) args)))
 
@@ -477,7 +477,7 @@ step is printable and matches what the engine expects."
 
 (defun w-sgp (params)
   (when (and (eq *mode* :drive) (not *suppress*)
-             ;; Drop read-only getters like `(sgp :alpha)` (GOTCHAS #12).
+             ;; Drop read-only getters like `(sgp :alpha)` (PORTING-NOTES #12).
              (not (every #'keywordp params)))
     (let ((rec (normalize-params params)))
       (push rec *sgp-calls*)

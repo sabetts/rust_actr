@@ -25,7 +25,7 @@ pub enum Pattern {
     Sym(String),
     /// Integer literal. Kept distinct from [`Pattern::Num`] because Lisp
     /// prints `3` for an integer and `3.0` for a float (`~S`), and traces
-    /// compare byte-for-byte (GOTCHAS #13).
+    /// compare byte-for-byte (PORTING-NOTES #13).
     Int(i64),
     Num(f64),
     Str(String),

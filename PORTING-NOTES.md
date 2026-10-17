@@ -1,4 +1,4 @@
-# ACT-R → Rust Gotchas
+# ACT-R → Rust Porting Notes
 
 Quirks of the Lisp source that have bitten us or will bite the port.
 Each entry is tagged **verified** (confirmed by an end-to-end run) or
@@ -663,7 +663,7 @@ once; Lisp `(run ...)` never reseeds.
 `SET-BUFFER-CHUNK GOAL (spec) NIL` at the current time with `:priority :max`
 and `requested nil`, plus an invisible maintenance `clear-delayed-goal`. The
 `CONFLICT-RESOLUTION` line that follows is the armed wake-on-change
-(GOTCHA #24), not part of goal-focus. A trailing `goal-focus` after the last
+(PORTING-NOTES #24), not part of goal-focus. A trailing `goal-focus` after the last
 `run` never executes and adds no lines (`ul-issues-first-run`), so replaying
 it as a scheduled-but-unprocessed event is correct.
 
@@ -711,7 +711,7 @@ history; `Engine::new` now just calls it.
 warnings (`commands/procedural-cmds.lisp:789`). Model-body `(spp <prod>
 :param value)` sets production parameters (e.g. `:reward`); ignoring it
 changes utility learning only where a production self-reward is actually
-exercised (GOTCHA #58). Both were blocking unit5/UL models at *load* and are
+exercised (PORTING-NOTES #58). Both were blocking unit5/UL models at *load* and are
 now accepted no-ops.
 
 ## 74. `?buffer> buffer empty|full` is buffer presence, not module state (verified)
@@ -734,7 +734,7 @@ retrieval/imaginal request SETs (slots-only, `bare`), the goal SET prints
 The `declarative-issues*` models set `:mas 2`; `Config::from_model` refuses
 `:mas`/`:pas` (`unimpl`). `define-chunks`, `set-base-levels`, and
 `set-similarities` are prerequisites, but exact reproduction needs spreading
-(`compute-sji`: `mas - ln(fan-out/fan-in)`, clamped; GOTCHA #36). Remaining
+(`compute-sji`: `mas - ln(fan-out/fan-in)`, clamped; PORTING-NOTES #36). Remaining
 non-spreading blockers in the corpus: negative request modifiers
 (`+retrieval> ... - slot nil`, refused at load), `:crt`/`:epl`/`:pct`
 conflict-resolution trace text, and `schedule-event` model scaffolding.
@@ -803,7 +803,7 @@ Needed by `semantic-dynamic`.
 ## 83. Request specs copy `=buffer` chunk values (`-k`), with copy fan-out (verified)
 
 In goal/imaginal `+`/`=` specs, an unbound `=buffer` reference is copied to
-`NAME-k` (GOTCHA #41), deduped **within one firing** so a modify and a request
+`NAME-k` (PORTING-NOTES #41), deduped **within one firing** so a modify and a request
 referencing the same buffer share `NAME-0`. A copy is a named, non-DM chunk:
 its fan-out starts at 0 and `c-fan-out` = the source's fan-out at copy time
 (`copy-from-chunk-function chunk-fan-out`). Sji for a non-DM source uses
@@ -870,7 +870,7 @@ spec's filled/empty masks; the chunk **type is never compared**. That is why
 semantic-dynamic retrieves the `CHUNK`-typed imaginal chunk for a request with
 `ISA property`, and why unit5 retrieves a `math-fact` for `ISA simple-value`.
 The engine now ignores `isa`/`want_type` in retrieval candidacy and in LHS
-matching; the per-slot tests reproduce the signature (GOTCHA #81 refined).
+matching; the per-slot tests reproduce the signature (PORTING-NOTES #81 refined).
 `semantic-dynamic` is green.
 
 ## 89. Chunk-valued references, merge aliasing, and `!stop!` (verified)
@@ -1809,7 +1809,7 @@ At exec, the auto-release's `set-finger-up` events are scheduled before
 `releasing-all-fingers` (`perform-movement` releases fingers, then calls
 `queue-output-events`), but each `set-finger-up` only *schedules* its
 `release-key`, so `RELEASING-ALL-FINGERS` still prints before the releases —
-the same deferred-output ordering as GOTCHA #141.
+the same deferred-output ordering as PORTING-NOTES #141.
 
 `zz` test9 is byte-exact through line 3568; with it the whole
 `zz-extended-motor-actions` spec (3568 lines) passes and is now in
@@ -1916,12 +1916,12 @@ Production validation runs on the model body, which ACT-R re-evaluates on
 `reset`; a rejected production's warning block (e.g. a request parameter with a
 modifier other than `=`) therefore reappears at each reset, not at load — the
 load-time warnings are dropped because the tester installs its warning monitor
-*after* `(load file)` (GOTCHA #111). `test-mp-value-req-param` (477 lines) is
+*after* `(load file)` (PORTING-NOTES #111). `test-mp-value-req-param` (477 lines) is
 byte-exact and now in `enabled.txt` (45 specs).
 
 ## 147. `test-bad-productions`: validator warnings are reset-scoped, not load-scoped
 
-GOTCHA #111 is wrong on the mechanism. The `Creating chunk …` and rejection
+PORTING-NOTES #111 is wrong on the mechanism. The `Creating chunk …` and rejection
 warnings are not dropped on load and surfaced later by global suppression
 state — they are re-emitted every time ACT-R re-evaluates the model body,
 which `reset-model` does (`model.lisp:983`). A spec whose driver never resets
@@ -1929,7 +1929,7 @@ which `reset-model` does (`model.lisp:983`). A spec whose driver never resets
 none, while a spec with a `(:RESET)` step shows them once per reset
 (`tutorial-unit1-semantic-warnings` is `semantic` with `(reset)` as its whole
 driver and *does* show `CATEGORY`/`PENDING`/`YES`/`NO`). The `reset_warnings`
-mechanism built for `test-mp-value-req-param` (GOTCHA #146) is the right one;
+mechanism built for `test-mp-value-req-param` (PORTING-NOTES #146) is the right one;
 `test-bad-productions` just needs the full ordered block.
 
 The block is assembled from the production scan in file order
@@ -1965,7 +1965,7 @@ seed a `.ref` reflects is the model body's `(sgp :seed (S C))`
 different trace (`#(427 507 1080)` vs the ref's `#(320 522 1080)`), while the
 model's `(123456 0)` reproduces `emma.ref` byte-for-byte — and twice in a row,
 so the draws are fully seeded, not wall-clock. `Config::from_model` now parses
-`:SEED` and the engine applies it on `reset` (see GOTCHA #152): the model body
+`:SEED` and the engine applies it on `reset` (see PORTING-NOTES #152): the model body
 is re-evaluated there (`model.lisp:983`), and the task's `consume_rng` draws
 follow, which is equivalent for the single-run specs here and correct for the
 per-run loops.
@@ -2002,7 +2002,7 @@ Two things the engine needed beyond the machine:
   wrong and the ref's `#(320 522 1080)` cannot be reproduced.
 
 `emma` (81 lines) is byte-exact and in `enabled.txt` (47 specs); it also
-settles GOTCHA #148's claim that the ref is fully reproducible.
+settles PORTING-NOTES #148's claim that the ref is fully reproducible.
 
 ## 150. Device stubs are extracted by executing them; the vision auto-unstuff
 
@@ -2087,7 +2087,7 @@ The remaining pieces it needed:
 - the model-body seed and the task's `consume_rng` draws are applied **on
   every `reset`** (ACT-R re-evaluates the body, `model.lisp:983`; the task
   redoes its setup per run). This supersedes the "construction only" note in
-  GOTCHA #148 — it is equivalent for the single-run specs and correct for the
+  PORTING-NOTES #148 — it is equivalent for the single-run specs and correct for the
   per-production loop here.
 - the goal buffer is a `reuse?` buffer (`buffers.lisp:1349`), so its chunk is
   the reusable copy `GOAL-CHUNK0`. Implementing the copy itself is entangled
@@ -3191,7 +3191,7 @@ of the buffer's chunk *name* (`core-modules/procedural.lisp:534`). A
 **modify** (`=goal> value =imaginal`) stores that name by reference — no copy
 — so a later merge of the imaginal chunk into DM can alias the name to the
 DM chunk (`merging-test`'s `value B`). Only a **request** spec copies a
-chunk-valued reference (`instantiate-chunk-spec`, GOTCHA #41).
+chunk-valued reference (`instantiate-chunk-spec`, PORTING-NOTES #41).
 
 ## 206. On merge, references to the buffer chunk are renamed to the DM chunk
 
@@ -3491,7 +3491,7 @@ sends a 2-element index list, so every RPC run of a permuting task sat one draw
 behind ACT-R for the rest of the model.
 
 This is the "one pre-run draw short" symptom that kept `paired-learning-dynamic`
-failing: it showed up only after GOTCHAS #217 put the run on the right
+failing: it showed up only after PORTING-NOTES #217 put the run on the right
 `init_genrand(1)` stream, at which point the whole 95-draw `noise` sequence
 matched the ref value-for-value but shifted by one index. Confirmed by tagging
 every `random_int` call site under `DBG_RNG`: the golden spec logged
@@ -3866,7 +3866,7 @@ spec and skips only request parameters (keywords) and variables:
 ```
 
 A **nil** request value is *not* skipped. The engine skipped it, so a request
-like `+retrieval> isa math-fact - arg1 nil - arg2 nil - result nil` (GOTCHA
+like `+retrieval> isa math-fact - arg1 nil - arg2 nil - result nil` (PORTING-NOTES
 #229's shape, `declarative-issues-v8.lisp:155`) produced no per-slot lines at
 all. It also dropped the closing line in the `sim ≠ ms` branch: ACT-R emits the
 "no effect" note *inside* the `cond`, then prints

@@ -77,7 +77,7 @@ pub fn meta_value(meta: &str, key: &str) -> Result<String, String> {
     Err(format!("meta missing key `{key}`"))
 }
 
-/// Parse a seed of the form `(100 0)` (see GOTCHAS.md #5).
+/// Parse a seed of the form `(100 0)` (see PORTING-NOTES.md #5).
 pub fn parse_seed_str(s: &str) -> Result<(u64, u64), String> {
     let inner = s
         .strip_prefix('(')

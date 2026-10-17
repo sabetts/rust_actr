@@ -99,7 +99,7 @@ impl Engine {
         s.to_string()
     }
 
-    /// Copy a chunk to `{name}-{k}` (GOTCHA #41): the copy is a named,
+    /// Copy a chunk to `{name}-{k}` (PORTING-NOTES #41): the copy is a named,
     /// non-DM chunk whose copy fan-out is the source's fan-out at copy
     /// time (`copy-from-chunk-function chunk-fan-out`).
     pub(super) fn copy_chunk(&mut self, name: &str) -> String {
@@ -135,7 +135,7 @@ impl Engine {
 
     /// RHS value substitution. When `copy` is set (goal/imaginal specs),
     /// an unbound `=buffer` reference resolves to a fresh `-k` copy of the
-    /// buffer's chunk (GOTCHA #41), deduped within the firing via `copied`.
+    /// buffer's chunk (PORTING-NOTES #41), deduped within the firing via `copied`.
     pub(super) fn rhs_value(
         &mut self,
         p: &Pattern,

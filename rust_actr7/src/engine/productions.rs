@@ -677,7 +677,7 @@ impl Engine {
     pub(super) fn fire(&mut self, prod_idx: usize, bindings: &Bindings) -> Result<(), EngineError> {
         let prod = self.model.productions[prod_idx].clone();
         // Copies of chunk-valued `=buffer` refs are deduped within one
-        // firing (GOTCHA #41): a modify and a request referencing the same
+        // firing (PORTING-NOTES #41): a modify and a request referencing the same
         // buffer share `NAME-0`.
         let mut copied: HashMap<String, String> = HashMap::new();
         // RHS `!bind!`/`!mv-bind!` run first (they may be referenced by
