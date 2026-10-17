@@ -1,12 +1,12 @@
-;;;; run-golden.lisp — golden-trace generator driver.
+;;;; run-traces.lisp — extra-trace generator driver.
 ;;;;
 ;;;; Loaded *after* single-threaded ACT-R in a headless SBCL:
 ;;;;   sbcl --non-interactive --disable-debugger \
 ;;;;     --load <actr7.x>/load-single-threaded-act-r.lisp \
-;;;;     --load run-golden.lisp \
-;;;;     --eval '(golden-main)'
-;;;; With env vars GOLDEN_MANIFEST (manifest.lisp path) and
-;;;; GOLDEN_OUTDIR (directory receiving *.trace + *.meta).
+;;;;     --load run-traces.lisp \
+;;;;     --eval '(trace-main)'
+;;;; With env vars TRACE_MANIFEST (manifest.lisp path) and
+;;;; TRACE_OUTDIR (directory receiving *.trace + *.meta).
 ;;;;
 ;;;; For each manifest entry (name model-subpath seed run-time):
 ;;;;   load model -> (sgp :seed seed) -> (reset) ->
@@ -26,11 +26,11 @@
 ;;;;   Without an explicit seed the RNG is time-seeded
 ;;;;   (actr7.x/framework/random.lisp) and traces vary run to run.
 
-(defun golden-env (name)
+(defun trace-env (name)
   #+sbcl (sb-ext:posix-getenv name)
-  #-sbcl (error "golden driver currently requires SBCL (missing env ~a)" name))
+  #-sbcl (error "trace driver currently requires SBCL (missing env ~a)" name))
 
-(defun golden-run-one (entry outdir)
+(defun trace-run-one (entry outdir)
   (destructuring-bind (name subpath seed runtime &optional taskpath) entry
     (let ((trace-path (concatenate 'string outdir "/" name ".trace"))
           (meta-path (concatenate 'string outdir "/" name ".meta")))
@@ -77,30 +77,30 @@
               (format m "lisp: ~a ~a~%"
                       (lisp-implementation-type)
                       (lisp-implementation-version)))
-            (format t "GOLDEN-OK ~a -> ~a~%" name trace-path))
+            (format t "TRACE-OK ~a -> ~a~%" name trace-path))
         (error (e)
           (ignore-errors (sgp-fct (list :v t)))
           (when (probe-file trace-path)
             (delete-file trace-path))
           (error e))))))
 
-(defun golden-main ()
-  (let ((manifest-path (golden-env "GOLDEN_MANIFEST"))
-        (outdir (golden-env "GOLDEN_OUTDIR"))
+(defun trace-main ()
+  (let ((manifest-path (trace-env "TRACE_MANIFEST"))
+        (outdir (trace-env "TRACE_OUTDIR"))
         (failures nil))
     (unless (and manifest-path outdir)
-      (error "GOLDEN_MANIFEST and GOLDEN_OUTDIR must both be set"))
+      (error "TRACE_MANIFEST and TRACE_OUTDIR must both be set"))
     (ensure-directories-exist (concatenate 'string outdir "/"))
     (let ((manifest (with-open-file (f manifest-path :direction :input)
                       (read f))))
       (dolist (entry manifest)
-        (handler-case (golden-run-one entry outdir)
+        (handler-case (trace-run-one entry outdir)
           (error (e)
-            (format t "~%GOLDEN-FAIL ~a : ~a~%" (first entry) e)
+            (format t "~%TRACE-FAIL ~a : ~a~%" (first entry) e)
             (push (first entry) failures))))
       (if failures
           (progn
-            (format t "~%GOLDEN-RESULT FAIL ~a~%" (reverse failures))
+            (format t "~%TRACE-RESULT FAIL ~a~%" (reverse failures))
             #+sbcl (sb-ext:exit :code 1)
-            #-sbcl (error "golden failures: ~a" failures))
-          (format t "~%GOLDEN-RESULT OK~%")))))
+            #-sbcl (error "trace failures: ~a" failures))
+          (format t "~%TRACE-RESULT OK~%")))))

@@ -14,7 +14,7 @@ fixtures/
   manifest.lisp    model list for the extra traces
   regen.sh         regenerate extra-traces/ (needs sbcl)
   regen-specs.sh   regenerate regression/specs/ (needs sbcl)
-  run-golden.lisp  extra-trace SBCL driver
+  run-traces.lisp  extra-trace SBCL driver
   extract-specs.lisp  spec extractor for the regression corpus
   rpc-conformance.{sh,py}, rpc-enabled.txt
   command-inventory.{py,txt}
@@ -45,7 +45,7 @@ SBCL — only regeneration does. See `regression/README.md`.
 
 Scenarios the upstream corpus does not cover (activation noise, base-level
 learning, device/window scaffolding). Ground truth is `<name>.trace`,
-captured from the Lisp system by `regen.sh` (+ `run-golden.lisp`,
+captured from the Lisp system by `regen.sh` (+ `run-traces.lisp`,
 `manifest.lisp`) and compared byte-exact. The list is **frozen**: it is not
 expected to grow. See `tests/extra_traces.rs`.
 

@@ -11,7 +11,7 @@
 //!
 //! Lisp-side quirks in `PORTING-NOTES.md`.
 //!
-//! Contract (mirrors `fixtures/run-golden.lisp`):
+//! Contract (mirrors `fixtures/run-traces.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
 //! 2. Seed the RNG with `seed` (equivalent of `(sgp :seed (S C))`).
 //! 3. Reset and run the model for `run_time` seconds of model time.

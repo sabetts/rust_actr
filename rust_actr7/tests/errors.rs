@@ -1,7 +1,7 @@
 //! Error-path tests: out-of-scope Lisp must fail loudly, never silently.
 //!
 //! Models live in `fixtures/errors/err-*.lisp` (project-owned fixtures,
-//! loaded by path — they are not `ACT-R:` goldens and never run green).
+//! loaded by path — they are not `ACT-R:` traces and never run green).
 
 use std::path::PathBuf;
 

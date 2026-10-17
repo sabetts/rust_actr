@@ -5,7 +5,7 @@
 ;;;;     --load <actr7.x>/load-single-threaded-act-r.lisp \
 ;;;;     --load run-units.lisp \
 ;;;;     --eval '(units-main)'
-;;;; With env var GOLDEN_UNITS_DIR (directory receiving *.sexp tables).
+;;;; With env var UNITS_OUTDIR (directory receiving *.sexp tables).
 ;;;;
 ;;;; Evaluates pure ACT-R functions over input grids and prints
 ;;;; machine-readable rows the Rust tests assert against. The latency
@@ -22,9 +22,9 @@
   #-sbcl (error "units driver currently requires SBCL (missing env ~a)" name))
 
 (defun units-main ()
-  (let ((outdir (units-env "GOLDEN_UNITS_DIR")))
+  (let ((outdir (units-env "UNITS_OUTDIR")))
     (unless outdir
-      (error "GOLDEN_UNITS_DIR must be set"))
+      (error "UNITS_OUTDIR must be set"))
     (ensure-directories-exist (concatenate 'string outdir "/"))
     (with-open-file (f (concatenate 'string outdir "/latency.sexp")
                        :direction :output

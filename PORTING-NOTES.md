@@ -4,13 +4,6 @@ Quirks of the Lisp source that have bitten us or will bite the port.
 Each entry is tagged **verified** (confirmed by an end-to-end run) or
 **code-read** (seen in source, not yet exercised end-to-end).
 
-> Paths in older entries reflect the layout at the time. The fixture tree
-> moved: `golden/traces` → `fixtures/extra-traces`, `golden/test-models` →
-> `fixtures/regression`, `golden/models` → `fixtures/errors`,
-> `golden/units` → `fixtures/units`; `tests/golden.rs` →
-> `tests/extra_traces.rs`. The `enabled.txt` allowlist is gone (cases are
-> static; out-of-scope ones are `#[ignore]`d).
-
 ## 1. `sgp` quotes its arguments — use `sgp-fct` programmatically (verified)
 
 `(defmacro sgp (&rest parameters) \`(sgp-fct ',parameters))`
@@ -36,8 +29,8 @@ to the stdout trace (diff-verified).
 ## 3. `:v` file output appends — delete stale traces first (code-read)
 
 `safe-open-printing-stream` opens with `:if-exists :append`
-(`framework/printing.lisp:270`). Regenerating goldens without deleting
-first silently concatenates runs. `run-golden.lisp` deletes before each run.
+(`framework/printing.lisp:270`). Regenerating traces without deleting
+first silently concatenates runs. `run-traces.lisp` deletes before each run.
 
 ## 4. `(reset)` closes `:v`/`:cmdt` file streams (code-read)
 
@@ -78,7 +71,7 @@ macroexpansion semantics decided per form.
 
 A run stops early with `------ Stopped because no events left to
 process` when the event queue drains (all 3 models halt at t<1.0
-under `(run 10)`). Golden run-times must exceed the model's natural halt;
+under `(run 10)`). Trace run-times must exceed the model's natural halt;
 a model that *doesn't* halt is a hang, not a diff — harness timeouts
 belong in `regen.sh`/CI, not in the trace comparison.
 
@@ -105,7 +98,7 @@ threads/sockets and is out of scope.
 No `test/` dir, no fiveam/lisp-unit/prove usage (grep-clean). The
 de-facto suite is `tutorial/unit*/` models + `tutorial/lisp/` task
 drivers + `tutorial/python/` remote-interface scripts, with expected
-behavior buried in PDF prose. Every golden added to `manifest.lisp` is
+behavior buried in PDF prose. Every trace added to `manifest.lisp` is
 a judgment call about "this output is correct" — anchored to tutorial
 text, not to assertions.
 
@@ -126,7 +119,7 @@ weakening anything else.
 
 ---
 
-# Engine core findings (all verified: golden byte-match or source-read)
+# Engine core findings (all verified: trace byte-match or source-read)
 
 ## 14. Trace lines are filtered by event `:output` vs `:trace-detail`
 
@@ -134,7 +127,7 @@ weakening anything else.
 events, `medium` shows `low`+`medium`, `high` shows everything.
 `:trace-detail` defaults to `medium`. Lines visible only at high:
 `PRODUCTION-SELECTED`, `BUFFER-READ-ACTION`, `MOD-BUFFER-CHUNK`,
-`MODULE-REQUEST` (all `:output t`). This is why the semantic golden
+`MODULE-REQUEST` (all `:output t`). This is why the semantic trace
 (default detail) is 13 lines while count (`:trace-detail high`) is 48
 for the same mechanisms — no behavioral difference, pure filtering.
 
@@ -197,7 +190,7 @@ falls through to `0.0`), so every retrieval takes exactly `:lf`.
 
 `core-modules/procedural.lisp:2251`: on `=`, the tied production
 *replaces* rather than joins (unless `:er`). All conflict sets
-are singletons so this is untested by goldens, but implemented per
+are singletons so this is untested by traces, but implemented per
 source.
 
 ## 23. `(run N)` stop conditions
@@ -206,7 +199,7 @@ Events scheduled at exactly the limit still run (strict `>` in
 `scheduling.lisp:821`); queue empty first → `Stopped because no
 events left to process` at the current clock; limit first → a dummy
 event runs the clock to the limit, then `Stopped because time limit
-reached`. Only the first variant is golden-tested.
+reached`. Only the first variant is trace-tested.
 
 ## 24. No-match CR arms a wake-on-change trigger
 
@@ -218,7 +211,7 @@ next set/clear/modify — it is why retrievals wake the cycle at
 
 ---
 
-# Randomness & activation findings (all verified: golden byte-match or source-read)
+# Randomness & activation findings (all verified: trace byte-match or source-read)
 
 ## 25. The RNG is stock MT19937, but the consumers are single-precision
 
@@ -230,7 +223,7 @@ in single precision, and `compute-activation-latency` rounds
 `lf_ms * e^(-le*A)` in single precision too (`:lf` is stored as
 integer ms). The Rust port does all noise/latency math in `f32` and
 matches SBCL bit-exact (14 ms and 27 ms noisy latencies in the
-`noisy-count-7` golden). Residual risk: `ln`/`exp` may differ by 1ulp
+`noisy-count-7` trace). Residual risk: `ln`/`exp` may differ by 1ulp
 across libms; only an exact `.5` rounding boundary would flip a
 latency, and none has appeared.
 
@@ -254,7 +247,7 @@ Any port that skips "unneeded" draws desynchronizes every later one.
 siegler needs audio, past-tense needs imaginal+rewards). Coverage
 therefore comes from a synthetic model,
 `actr7.x/user-loads/noisy-count.lisp` (count + `:ans 0.5`), which is
-also the first golden to show `RETRIEVAL-FAILURE` (noise below
+also the first trace to show `RETRIEVAL-FAILURE` (noise below
 `:rt`), failed-buffer CR stalls, and non-50 ms latencies. Two seeds:
 `(100 0)` fails the first retrieval; `(7 0)` retrieves twice first.
 `user-loads/` is ACT-R's designated user-file directory, so the
@@ -264,9 +257,9 @@ harness loads it through the normal `ACT-R:` logical host.
 
 # Unit tables: oracle tables for pure functions
 
-## 29. End-to-end goldens say what, unit tables say where
+## 29. End-to-end traces say what, unit tables say where
 
-`rust_actr7/golden/units/tables/*.sexp` are produced by
+`rust_actr7/fixtures/units/tables/*.sexp` are produced by
 `run-units.lisp` from side-effect-free ACT-R functions (no model
 needed) and asserted row-by-row by Rust tests, parsed with our own
 `sexpr` reader. Regen via `regen-units.sh`; `cargo test` stays
@@ -278,7 +271,7 @@ anything needing live model context stays in `../traces/`.
 `(round 2.5)` → `2`, `(round 3.5)` → `4` (units table ROUND rows).
 The engine's latency rounding uses a `lisp_round` helper, not
 `f32::round` — identical on all non-half inputs, and the 802-row LAT
-table plus both noisy goldens pass with it. Any future float→int
+table plus both noisy traces pass with it. Any future float→int
 conversion must go through `lisp_round`.
 
 ## 31. `compute-references` OL branches differ in act-scale
@@ -313,7 +306,7 @@ parameters owns them (`support/central-parameters.lisp:192`:
 `:ol :default-value t`). An unset `:ol` reads back `T`, so the
 optimized-learning-`t` branch of `compute-references` is the DEFAULT
 path, not the `nil` one. The engine initially defaulted it off and
-only a golden latency mismatch (11 ms vs 6 ms) exposed it —
+only a trace latency mismatch (11 ms vs 6 ms) exposed it —
 DTO: never trust a `define-parameter` without following the
 `:owner` chain.
 
@@ -334,26 +327,26 @@ exist mid-run via merge paths (fan-out/fan-in are NIL at load even
 with `:mas`, and `setf` on extended chunk slots silently no-ops from
 outside). Fabricating fan state would make the oracle circular (we'd
 assert our own assumptions). Spreading stays an engine-integration
-concern for a future device-task golden; the formula itself
+concern for a future device-task trace; the formula itself
 (`mas - ln(fan)`, clamp, `:nsji`) is 5 lines at
 declarative-memory.lisp:2536.
 
 ---
 
-# Device buffers (all verified: golden byte-match)
+# Device buffers (all verified: trace byte-match)
 
 ## 37. Nested `load-act-r-model` is locked out
 
 Calling it inside a file it is loading warns
 ("currently loading a model") and SKIPS the inner load, leaving a
-stale current model — the attend golden once ran bll-count this way.
+stale current model — the attend trace once ran bll-count this way.
 Task/setup files must use plain `actr-load` for inner model loads.
 
 ## 38. Device state must be built after reset, by the entry that owns it
 
 Reset clears pending visicon additions (and windows do not survive
 from load time), so task files build windows in a `(task-setup)` the
-driver calls post-reset. Two hygiene rules in `run-golden.lisp`: only
+driver calls post-reset. Two hygiene rules in `run-traces.lisp`: only
 an entry that newly defines `task-setup` runs it (startup auto-load
 of `user-loads/` leaks a stale binding into every entry otherwise —
 this contaminated `count` once), and it is always unbound afterwards.
@@ -365,7 +358,7 @@ Manifest entries grew an optional 5th field: the task file.
 `visicon-update` is explicitly non-maintenance so it can trigger).
 The attend trace proves it: CRs follow motor phase events with no
 buffer traffic. The engine triggers after every event except the
-arming CR itself (which would self-loop). Earlier goldens are
+arming CR itself (which would self-loop). Earlier traces are
 unaffected — their post-arm events were always buffer changes anyway.
 
 ## 40. Implicit `?buffer> state free` queries + module exemption lists
@@ -409,7 +402,7 @@ always shown. Later presses need per-key (hand finger r theta) +
 
 ---
 
-# Imaginal buffer & paired task (all verified: golden byte-match)
+# Imaginal buffer & paired task (all verified: trace byte-match)
 
 ## 44. Imaginal = delayed goal-style buffer (200 ms default)
 
@@ -438,7 +431,7 @@ like paired's 3.241).
 `schedule-event-after-change` hardcodes `:min :min`
 (scheduling.lisp:1434). The engine initially woke with priority 0,
 which misordered the imaginal SET (−1000) after the CR. One-line fix,
-caught by golden diff.
+caught by trace diff.
 
 ## 47. SET-to-visual-location stores a `-k` copy, shows the base name
 
@@ -457,15 +450,15 @@ specs; repeat presses use hfrt `feat-differences` (hand 3, finger 2,
 else r/theta diffs) instead of the fresh 5 features. All peck-recoil
 digits land on exec 150 / finish 300 with margin (fitts 99.1 < 100).
 
-## 49. Time-limit stops are real goldens now
+## 49. Time-limit stops are real traces now
 
 Paired-static idles after learning and ends `Stopped because time
-limit reached` at the run limit — the first golden exercising that
+limit reached` at the run limit — the first trace exercising that
 variant (previously only the no-events-left path was covered).
 
 ---
 
-# Multi-trial paired (all verified: golden byte-match)
+# Multi-trial paired (all verified: trace byte-match)
 
 ## 50. Trial reconstruction from CR spacing
 
@@ -473,14 +466,14 @@ Post-keypress CR wakes decode invisible motor phases exactly: trial-3
 (left-hand "1", fresh prep) shows change/prep/init/output/finish wakes
 at +50/+250/+300/+400/+550; trial-4 ("0", right hand) shows
 +50/+200/+250/+350/+500 — prep differences (hand change) move every
-later phase. Any prep-math error shifts the whole tail; the golden
+later phase. Any prep-math error shifts the whole tail; the trace
 pins it.
 
 ## 51. hfrt prep differences need maxfeats 5, not 4
 
 `num-possible-feats` is 1+slots (general-pm.lisp:783), so peck-recoil
 gives hand 4, finger 3, else r/theta diffs. An initial maxfeats-4
-guess failed the golden by exactly one 50 ms prep step.
+guess failed the trace by exactly one 50 ms prep step.
 
 ## 52. Learned pair chunks are reuse-copy named
 
@@ -492,7 +485,7 @@ lines print. The engine names unnamed harvest merges
 
 ---
 
-# Full paired task (all verified: golden byte-match)
+# Full paired task (all verified: trace byte-match)
 
 ## 53. Maintenance never wakes armed CR — with one false friend
 
@@ -507,16 +500,16 @@ notify/output-key events.
 ## 54. Fixed segments + clears replicate the real task — no contingency
 
 The real `paired-task` runs fixed 5 s prompt/study halves and scores
-afterward; responses never steer timing. The golden mirrors it with
+afterward; responses never steer timing. The trace mirrors it with
 `CLEAR`/`ADD-TEXT` sidecar actions and a Lisp stub of scheduled
 events under a single run, plus an `END` dummy on both sides so the
 tail reaches the time limit identically (`run` prints the time-limit
 line when the queue empties exactly at the limit — verified in
-source, now covered by golden).
+source, now covered by trace).
 
 ---
 
-# Partial matching (all verified: golden byte-match)
+# Partial matching (all verified: trace byte-match)
 
 ## 55. Candidacy is exact without `:mp`, signature-only with it
 
@@ -538,9 +531,9 @@ miss once zeroed every similarity to `:md` (loud failure, fixed).
 
 ---
 
-# Utility learning (all verified: golden byte-match)
+# Utility learning (all verified: trace byte-match)
 
-## 57. Penalty flips beat rewards for golden design
+## 57. Penalty flips beat rewards for trace design
 
 History credits every firing since the last reward (decayed by
 recency), so rewarding the winner only widens its lead. A `-10`
@@ -561,7 +554,7 @@ stdout). `:iu` honored for initial utilities; `:ult` trace lines,
 
 ---
 
-# ACT-R regression corpus (all verified: golden byte-match or source-read)
+# ACT-R regression corpus (all verified: trace byte-match or source-read)
 
 ## 59. `test-models/*.ref` are ACT-R's own oracle — and they are trimmed (verified)
 
@@ -571,9 +564,9 @@ is compared to `*.ref`. The refs are **CRLF** and the comparator
 (`compare-test-model-files`, model-tester.cl:373) right-trims every line and
 uses `string-equal` (**case-insensitive**), line by line. Diff raw bytes and
 every line "differs"; mirror the comparator
-(`rust_actr7/tests/test_models.rs::normalize`). Our own
-`golden/traces/count.trace` is byte-identical to `test-models/count.ref`
-after stripping CR, which is what first revealed this.
+(`rust_actr7/tests/test_models.rs::normalize`). Our own `count` trace (since
+retired) was byte-identical to `test-models/count.ref` after stripping CR,
+which is what first revealed this.
 
 ## 60. Refs capture four channels, not just `:v` (verified)
 
@@ -701,7 +694,7 @@ chunks with no type/slots.
 `reset-model` clears the chunk table, rebuilds the starting chunk structs,
 clears every buffer, and **re-evaluates the model body** (so
 `add-dm`/`define-chunks`/`set-base-levels`/`set-similarities` reapply). The
-random seed is a module parameter and survives reset (`run-golden.lisp`
+random seed is a module parameter and survives reset (`run-traces.lisp`
 seeds before reset). `Engine::reset` mirrors this and preserves trace
 history; `Engine::new` now just calls it.
 
@@ -1167,7 +1160,7 @@ schedules an `EncodingComplete` for the last `move-attention` location
 85 ms later.  Because that object is gone, `encoding_complete` now emits
 `No visual-object found` (leaving `VISUAL` empty) instead of erroring.
 The device text (`V` at 125,150) and the flag live in
-`golden/test-models/specs/demo2.device.sexp`, loaded by the test harness.
+`fixtures/regression/specs/demo2.device.sexp`, loaded by the test harness.
 Motor timing for `press-key V` required adding the QWERTY letter geometry
 from `other-files/keyboard.lisp` (`V` = left index, r 1.0, θ 1.57).
 
@@ -2574,7 +2567,7 @@ group order before appending the goals; this matches `paired`'s
 `IMAGINAL, VISUAL, VISUAL-LOCATION, START, …`.
 
 (The visicon's `new-name` counters do *not* reset on a window clear —
-`paired-full`'s golden keeps numbering across `clear-exp-window`
+`paired-full`'s trace keeps numbering across `clear-exp-window`
 (`VISUAL-LOCATION1` after the clear) — so feature ids continue per run.)
 
 ## 174. Merged buffer copies get a `NAME-{k}` name
@@ -2589,7 +2582,7 @@ model `define-chunks` name) to `NAME-{k}`.
 `VISUAL-CHUNK0-0`/`-1`, but the engine still merges all four per-trial objects
 (the reference, verified by dumping ACT-R's `all-dm-chunks`, keeps only the
 first trial's two). The window clear does not reset the visicon ids (confirmed
-by `paired-full`'s golden and by the continuing `VISUAL-LOCATION{n}` in
+by `paired-full`'s trace and by the continuing `VISUAL-LOCATION{n}` in
 `paired`'s own trace), so the two later objects differ only by their
 `screen-pos` copy name and ACT-R is not storing them — the remaining rule to
 pin down.
@@ -2856,7 +2849,7 @@ The model-tester re-applies `ssp :starting-parameters` on every `(reset)`
 `:seed` and the `:testing-function`. The single-threaded extractor only
 called the testing function, so for `paired-learning` (whose model sets no
 seed) it recorded the default seed `618013` and a window that never matched
-the reference. `golden/extract-specs.lisp` now captures
+the reference. `fixtures/extract-specs.lisp` now captures
 `:starting-parameters`' `:seed` and re-applies it in `w-reset`, and
 `flush-sgp-params` also records `:alpha` (the task runs its second block
 with `alpha 1.0`, which makes reward propagation jump straight to the
@@ -2889,7 +2882,7 @@ Four fixes in `compose_pair`/`rename-variables` closed the remaining
 
 ## 194. Phase B triage: ref content, `:v` gating, and event ordering (verified)
 
-Scope triage (`golden/extract-specs.lisp`):
+Scope triage (`fixtures/extract-specs.lisp`):
 
 - `*command-tokens*` is only a *hint*: `(sgp :v …)`/`(sgp-fct (list :v …))`
   and `*out-file*` are trace toggles/targets (not command output), and
@@ -3018,7 +3011,7 @@ had only exercised through load-time model parameters:
   registered (`test-fan-2`, `python-set-testing-traces`), and otherwise applies
   the well-known `set-testing-traces` effect (`sgp :v t :cmdt t`).
 
-`golden/rpc-conformance.py` now captures `tester.out_file` (task `print`s)
+`fixtures/rpc-conformance.py` now captures `tester.out_file` (task `print`s)
 interleaved with the monitored trace, so the tester refs (task stdout +
 trace) can be diffed.
 
@@ -3463,7 +3456,7 @@ the ref used. `build_engine` now replays the stored system parameters onto the
 fresh engine.
 
 Verification that it is the right stream: with the fix the RPC run's `noise`
-draws are *value-for-value identical* to the golden run's 95 draws, merely
+draws are *value-for-value identical* to the trace run's 95 draws, merely
 shifted by one index — i.e. the model is on ACT-R's stream and only one
 pre-run draw differs.
 
@@ -3494,7 +3487,7 @@ This is the "one pre-run draw short" symptom that kept `paired-learning-dynamic`
 failing: it showed up only after PORTING-NOTES #217 put the run on the right
 `init_genrand(1)` stream, at which point the whole 95-draw `noise` sequence
 matched the ref value-for-value but shifted by one index. Confirmed by tagging
-every `random_int` call site under `DBG_RNG`: the golden spec logged
+every `random_int` call site under `DBG_RNG`: the trace spec logged
 `RNG_DRAW n=1` before its first `noise`, the RPC model only
 `AR_RANDOM_RPC limit=2`; after the fix it logs `limit=2` then `limit=1` and the
 two streams coincide.
@@ -3553,7 +3546,7 @@ parameters forgotten there was no re-seed, the stream ran straight on, and the
 second task diverged.
 
 Diagnosis that pinned it, in order: map each logged `noise` value back to its
-index in `init_genrand(1)` and diff the index sequences (only the golden path
+index in `init_genrand(1)` and diff the index sequences (only the trace path
 jumps backwards); then log `cfg.seed` at the reset's seed point — which showed
 the three load-time resets seeding `(200 4)` from unit4's model body and the two
 task resets seeding nothing at all.
@@ -3620,7 +3613,7 @@ A device task's window can be built from `add-button-to-exp-window` and
 `add-line-to-exp-window`, not just text. Both become **visicon features**
 (`uwi.lisp:358`/`:511`), the model's initial visual-location is chosen from
 them, and `bst`'s whole experiment is four buttons plus four lines — so the
-golden corpus could not replay a bst run at all: the extractor recorded only
+trace corpus could not replay a bst run at all: the extractor recorded only
 `add-text-to-exp-window`/`clear-exp-window`, its sidecar therefore described an
 empty window, and the run produced no vision events (17 trace lines against a
 8872-line ref).
@@ -3643,7 +3636,7 @@ Two scheduling details matter and are easy to get wrong:
   spec's steps can call a command that rebuilds the engine (`chunk-type`),
   which drops a wave pushed at reset time. Restricting the run-start check to
   buttons/lines keeps it from disturbing the text path, which already has its
-  own push (`tests/golden.rs`'s cases caught that immediately).
+  own push (`tests/extra_traces.rs`'s cases caught that immediately).
 
 ## 224. An in-place engine rebuild resets the device run counter
 
@@ -3654,7 +3647,7 @@ via `build_engine` — `chunk-type` and `add-dm` both do. A fresh engine's
 construction reset arms **run 0**, so the run in progress (1, 2, …) found no
 window ops at all.
 
-That is what kept the four golden `bst-*` specs stuck. `bst.lisp`'s
+That is what kept the four trace `bst-*` specs stuck. `bst.lisp`'s
 `build-display` draws 4 buttons + 4 lines at ms 0 in every run, and the
 regenerated spec replays `(:RESET) (:COMMAND CHUNK-TYPE …) (:RUN 60 …)` per
 trial — so the `chunk-type` rebuild wiped the ops the reset had just armed, and
@@ -3707,13 +3700,13 @@ the first item it adds queues a second wave and the run shows two updates at
 t=0, which is exactly the off-by-one `bst` displayed. Do **not** route this
 through `add-visicon-features`/`delete-visicon-features`/`clear-visicon`: the
 device-timeline specs rely on their per-call push, and doing all nine sites
-dropped the golden suite to 98/100.
+dropped the trace suite to 98/100.
 
 ## 227. A task's tones must be *replayed*, not just traced
 
 `new-tone-sound` (`audio.lisp:778`) builds a sound object; `new-sound-event`
 then schedules `new-sound` at the onset and `stuff-sound-buffer` at
-`onset + tone-detect-delay`. Only the *trace line* was reaching a golden replay:
+`onset + tone-detect-delay`. Only the *trace line* was reaching a trace replay:
 the task's `(new-tone-sound 100 .1)` schedules `new-sound` outside a run, so
 `record-command` captured it as a sidecar `(COMMAND … "new-sound")`, and the
 engine replayed that line with no sound behind it — hence the aural-location
@@ -3900,7 +3893,7 @@ as `t` (allowing negatives). It is now a three-state `Nsji`.
 The warning is a `model-warning`, gated on `:v` being non-nil **and**
 `:model-warnings` (`misc-utils.lisp:976-988`). ACT-R's printing module
 initialises `:model-warnings` to `t` (`internal-structures.lisp:689`), but every
-golden stub sets `(ssp :starting-parameters (:model-warnings nil))` — and the
+trace stub sets `(ssp :starting-parameters (:model-warnings nil))` — and the
 extractor does not record `ssp` calls made in `:load` mode — so the refs reflect
 `nil`. The engine therefore defaults `:model-warnings` to nil, and a spec turns
 it on with an explicit `(:SGP :MODEL-WARNINGS T)` step (which is what
@@ -3926,7 +3919,7 @@ is `format` output the spec cannot replay. The same gap is why the
 handler at all (`session.rs` listed the name but had no arm), so the request
 errored.
 
-## 235. The reset hook lives in the session, and the golden harness must use it
+## 235. The reset hook lives in the session, and the trace harness must use it
 
 Two independent traps, both of which silently drop output rather than error:
 
@@ -4051,7 +4044,7 @@ Two things the engine must get right:
   line (the ref has only the former);
 * it is a `:maintenance t` event. The engine's run loop marks buffers changed
   for any non-maintenance event, so scheduling it as an ordinary event wakes an
-  extra `CONFLICT-RESOLUTION` and breaks every `+visual>` golden.
+  extra `CONFLICT-RESOLUTION` and breaks every `+visual>` trace.
 
 ## 240. The spec harness keeps Lisp strings distinct from symbol names
 
@@ -4155,7 +4148,7 @@ counts identical (1523 total), and the whole 20-element percentage list
 identical including its float reprs. Only the four `sum(...)/5` aggregates can
 drift.
 
-`golden/rpc-conformance.py`'s `normalise` therefore canonicalises decimal
+`fixtures/rpc-conformance.py`'s `normalise` therefore canonicalises decimal
 literals with 13+ fractional digits (`format(float(x), ".13g")`) before
 comparing. A double does not meaningfully resolve more than that, a passing
 spec's lines are identical before and after, and every shorter literal in the
@@ -4369,14 +4362,14 @@ adding a spurious draw at t=25.799 that shifted `bst-learn`'s trial-5
 server calls it back synchronously, and the task's handler issues more window
 commands (`add-line-for-exp-window`) that the server applies at that model
 time. The Rust engine never fired the action, so `bst`'s display never changed
-and its `run` stopped after the first trial (the golden path sidesteps this by
+and its `run` stopped after the first trial (the trace path sidesteps this by
 replaying the task's resulting `ADD-LINE`/`MODIFY-LINE` ops from the device
 sidecar). The server now drives `run` in slices: the engine stops as soon as a
 click queues a button's action (`record_click_action`, scanning the live ovals
 topmost-first) and `run_interleaved` dispatches it through
 `call_remote_reentrant` — releasing the `&mut Session` borrow so the client's
 nested window commands are serviced — then resumes. Only the RPC path stores
-actions, so the golden timeline is unchanged.
+actions, so the trace timeline is unchanged.
 
 `clear_window` no longer schedules the attended-location re-encode itself: the
 `proc_display` that `now_display` queues at the same instant sees the feature
@@ -4461,7 +4454,7 @@ registers the buffer, answers the request, and evaluates the action body —
 which needs `let*`, `buffer-read`, `copy-chunk-fct`, and `mod-chunk-fct`, all
 now in the bounded evaluator. `bst-learn-ppm`'s `encode-line-current` fires
 its `bst-compute-difference` action and the imaginal buffer is set, moving the
-golden trace from line 70 to 146 (of 8385). Two gaps remain there: the
+trace trace from line 70 to 146 (of 8385). Two gaps remain there: the
 copy's name (`copy-chunk-fct` should share a per-*base* counter, so ACT-R's
 `imaginal-chunk0-2` is the engine's `imaginal-chunk0-0-0`), and the `length`
 the action reads.
@@ -4486,11 +4479,11 @@ An imaginal buffer is a `reuse?` buffer: its chunk is always the reusable
 (`buffers.lisp:1349`), so `buffer-read 'imaginal` returns `IMAGINAL-CHUNK0`
 rather than the placed copy. The engine keeps the placed copy's name instead.
 
-## 268. Golden traces are compared CRLF-insensitively (verified)
+## 268. Trace outputs are compared CRLF-insensitively (verified)
 
-`golden/traces/*.trace` are committed with LF in the index, but a Windows
+`fixtures/extra-traces/*.trace` are committed with LF in the index, but a Windows
 checkout with `core.autocrlf=true` (no `.gitattributes` here) writes them as
-CRLF. The engine always emits LF, so `tests/golden.rs::run_case`'s raw
+CRLF. The engine always emits LF, so `tests/extra_traces.rs`'s raw
 `actual == expected` failed with `common prefix identical, length differs`
 (same line count) on every case — the bytes differed only in the newline
 convention. `first_diff` compares via `str::lines()`, which strips `\r`, so
