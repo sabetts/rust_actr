@@ -441,7 +441,11 @@ impl Engine {
     /// `(model-output "…")` (`misc-utils.lisp:801`): a raw echoed line (no
     /// timestamp/module formatting), gated by the model trace (`:v`).
     pub fn model_output(&mut self, s: &str) {
-        self.out(s.to_string());
+        // `model-output` writes to the command stream, independently of the
+        // model-trace toggle (`:v`): ACT-R captures it whenever the output
+        // stream is live, so a driver that turns `:v` off and then does a
+        // `(model-output "? …")` echo still prints it.
+        self.out_lines.push(s.to_string());
     }
 
     /// Install task-file `defun`s for the bounded `!eval!`/`!bind!` evaluator.

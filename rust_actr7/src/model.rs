@@ -2353,12 +2353,13 @@ fn parse_model(
 
 /// Add a production, replacing any earlier one of the same name
 /// (`redefine-production`): ACT-R keeps the last definition and warns at the
-/// next reset (`#|Warning: Production F already exists …|#`).
+/// next reset (`#|Warning: Production F already exists …|#`). The message is
+/// the *inner* text; `Engine::emit_warning` adds the `#|Warning: … |#` wrap.
 fn push_production(model: &mut Model, p: Production) {
     if let Some(pos) = model.productions.iter().position(|q| q.name == p.name) {
         model.productions.remove(pos);
         model.reset_warnings.push(format!(
-            "#|Warning: Production {} already exists and it is being redefined. |#",
+            "Production {} already exists and it is being redefined.",
             p.name
         ));
     }
