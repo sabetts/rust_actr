@@ -28,6 +28,8 @@ folder over HTTP; opening `index.html` as `file://` fails on the fetch.
   tooling and no dependency added to the native crate.
 - `index.html` — the UI (seed + run-time inputs, model textarea, Run button,
   trace textarea) and the JS glue that copies the model into wasm memory.
+  The seed is ACT-R's `(S C)` pair: `S` initializes the generator, `C` discards
+  that many draws before the first real one (0 = fresh start).
 
 ## Limits (by design, for the MVP)
 

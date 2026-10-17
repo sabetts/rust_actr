@@ -26,6 +26,7 @@
   }
   #output { background: color-mix(in srgb, currentColor 6%, transparent); }
   #output.err { color: #b00020; }
+  .help { cursor: help; border-bottom: 1px dotted currentColor; }
 </style>
 </head>
 <body>
@@ -33,9 +34,13 @@
 
   <div class="controls">
     <div>
-      <label>Seed</label>
-      <span><input id="seed0" type="number" value="100">
-            <input id="seed1" type="number" value="0"></span>
+      <label for="seed0">Seed</label>
+      <input id="seed0" type="number" value="100">
+    </div>
+    <div>
+      <label for="seed1">Advance (<span class="help"
+        title="The seed is a pair (S C), as in ACT-R's (sgp :seed (S C)): S initializes the random generator, and C discards that many draws before the first real one (0 = fresh start). Same model and seed gives an identical trace; change either number and the noise comes out differently.">?</span>)</label>
+      <input id="seed1" type="number" value="0">
     </div>
     <div>
       <label for="secs">Run time (s)</label>
