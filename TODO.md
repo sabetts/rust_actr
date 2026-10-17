@@ -6,8 +6,11 @@ Status legend: `- [ ]` todo · `- [x]` done · `(IN PROGRESS)` picked up.
 
 - **Oracle**: `actr7.x/test-models/*.ref`. Reproduce it **byte-exact**, even where
   it contradicts current ACT-R source.
-- **Keep `cargo test` green.** `rust_actr7/golden/test-models/enabled.txt` is the
-  green allowlist; only add a spec there once it matches.
+- **Keep `cargo test` green.** The case list is static
+  (`rust_actr7/tests/cases/test_models_cases.rs`): a passing case is a plain
+  `#[test]`, an out-of-scope one is `#[ignore = "reason"]`. Promote a case by
+  removing its `#[ignore]`. (Historical notes below may say `enabled.txt` /
+  `probe_runnable`; that workflow is gone.)
 - **Commit as work proceeds**, identity:
   `git -c user.name=sabetts -c user.email=sabetts@localhost commit`.
 - **GOTCHAS.md**: add an entry for non-obvious behavior (tied to a source line),
@@ -16,8 +19,8 @@ Status legend: `- [ ]` todo · `- [x]` done · `(IN PROGRESS)` picked up.
   replacement: a Python ACT-R client connects and behaves identically to Lisp
   ACT-R, the only divergence being that arbitrary Lisp cannot be executed.
   The client-facing command surface *and* whatever the refs exercise are now
-  in scope. The command inventory (`golden/command-inventory.txt`, regenerate
-  with `golden/command-inventory.py`) is the work list.
+  in scope. The command inventory (`fixtures/command-inventory.txt`, regenerate
+  with `fixtures/command-inventory.py`) is the work list.
 - Device sidecars (`*.device.sexp`) are hand-authored and must not be clobbered;
   spec regeneration is additive (`SPEC_LIST`).
 
@@ -26,7 +29,7 @@ Status legend: `- [ ]` todo · `- [x]` done · `(IN PROGRESS)` picked up.
 - 571 `.ref` files (563 top-level); **219 specs**; **58 enabled/green**;
   **2 failing**; **159 ignored**.
 - Of the ignored: **156** are `:COMMAND` (classified from stub source tokens in
-  `golden/extract-specs.lisp`, which is over-broad). Cross-checking the refs:
+  `fixtures/extract-specs.lisp`, which is over-broad). Cross-checking the refs:
   **23 are pure model traces**, **42 near-pure** (≤3 non-trace lines), **91 have
   real command output**.
 - The remaining **344 non-timestamped refs** are unit-test/command dumps
@@ -37,10 +40,8 @@ Status legend: `- [ ]` todo · `- [x]` done · `(IN PROGRESS)` picked up.
 
 ```sh
 cd rust_actr7
-# probe every runnable spec (pass/fail + first diff)
-cargo test --test test_models probe_runnable -- --ignored --nocapture
-# ... with the ignored reasons appended
-PROBE_IGNORED=1 cargo test --test test_models probe_runnable -- --ignored --nocapture
+# run one case (including an ignored one)
+cargo test --test test_models <name> -- --ignored --nocapture
 # dump one spec's actual trace, line-numbered
 DUMP_SPEC=<name> cargo test --test test_models dump_spec -- --ignored --nocapture
 ```
@@ -49,17 +50,17 @@ Regenerate specs (additive; never clobbers hand-authored device sidecars):
 
 ```sh
 # all timestamped refs:
-rust_actr7/golden/regen-specs.sh
+rust_actr7/fixtures/regen-specs.sh
 # explicit subset (one test name per line, no .ref):
-SPEC_LIST=/tmp/opencode/spec-list rust_actr7/golden/regen-specs.sh
+SPEC_LIST=/tmp/opencode/spec-list rust_actr7/fixtures/regen-specs.sh
 ```
 
-Enable a passing spec by appending its name to
-`rust_actr7/golden/test-models/enabled.txt`.
+Promote a passing spec by removing its `#[ignore]` in
+`rust_actr7/tests/cases/test_models_cases.rs`.
 
 ## Definition of done (per task)
 
-- [ ] spec(s) added to `enabled.txt`
+- [ ] case promoted (its `#[ignore]` removed)
 - [ ] `cargo test` green
 - [ ] committed
 - [ ] `GOTCHAS.md` entry if the fix is non-obvious
@@ -89,7 +90,7 @@ Enable a passing spec by appending its name to
   - [x] Root cause was spec generation, not the engine: the extractor never
         applied `ssp :starting-parameters (:seed …)` / `:alpha`, and the device
         sidecar was authored with the wrong seed. Fixed in
-        `golden/extract-specs.lisp` + `Step::RunFullTime` per-run seeding;
+        `fixtures/extract-specs.lisp` + `Step::RunFullTime` per-run seeding;
         regenerated the spec/device. GOTCHA #192.
   - [x] Composition fixes closed the remaining hunks (`rename-variables`
         (buffer, slot), `MAP-IMAGINAL-BUFFER` RHS-`*`, `COMPOSE-GOAL-BUFFER`
@@ -172,7 +173,7 @@ Enable a passing spec by appending its name to
 
 - [ ] **D1.** `unit-1-together-1-mp` — multi-model trace (model column). Needs
       the engine to run several models and emit the model-column trace
-      (`golden/test-models/specs/unit-1-together-1-mp.spec`).
+      (`fixtures/regression/specs/unit-1-together-1-mp.spec`).
 - [ ] **D2.** `tutorial_unit2code_initial` — extraction error: the stub loads a
       missing `.lisp`. Fix the extractor or skip it.
 - [ ] **D3.** `spacing-effect` — `:OTHER` (no run recorded); determine whether it
@@ -266,9 +267,9 @@ commands fire via a server→client `{"method":"evaluate","params":[name,model,
       driven by failures (macros, `let`, loops, `format`, string ops,
       `multiple-value-bind`, …). Bounded to the tutorial; `model-tester.cl`
       only if we want `tester.py` itself.
-- [x] **R6. Conformance harness** (started, growing). `golden/rpc-conformance.py`
-      drives the vendored `actr.py`, `golden/rpc-conformance.sh` starts/stops
-      the server, `golden/rpc-enabled.txt` is the must-pass allowlist, and
+- [x] **R6. Conformance harness** (started, growing). `fixtures/rpc-conformance.py`
+      drives the vendored `actr.py`, `fixtures/rpc-conformance.sh` starts/stops
+      the server, `fixtures/rpc-enabled.txt` is the must-pass allowlist, and
       `tests/rpc_conformance.rs` runs it (`cargo test --test rpc_conformance --
       --ignored`). Currently asserts **9** Python test-models
       (`addition`, `count`, `semantic`, `semantic-dynamic`,
@@ -291,10 +292,10 @@ test-models.
 Goal: a Python ACT-R client can call **every** command it can reach and get
 Lisp-identical output. Target surface = client-facing (`actr.py`, 123
 commands) ∪ ref-exercised (86), minus implemented → **72 commands**
-(`golden/command-inventory.txt`). Families: chunk-dm 7, production 9,
+(`fixtures/command-inventory.txt`). Families: chunk-dm 7, production 9,
 window 8, events 15, audio 6, modules 7, history 2, misc 32 (incl. 3 pipe).
 
-- [ ] **M0. Inventory + harness.** Inventory done (`golden/command-inventory.py`
+- [ ] **M0. Inventory + harness.** Inventory done (`fixtures/command-inventory.py`
       + `.txt`). Harness done (`a7f9e50`): the extractor records driver
       commands generically (`(:command NAME ARG…)`) and the spec harness
       replays them through `Session::evaluate` (`run_spec_session`), so a spec

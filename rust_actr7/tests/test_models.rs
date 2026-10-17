@@ -13,9 +13,11 @@
 //!
 //! `PURE`/`MULTI` trace specs the scripted engine can drive (repeated `run`,
 //! `goal-focus`, `:v`/`:trace-detail`/`:seed`) are runnable; the rest are
-//! reported as ignored with a reason so the coverage gap is visible and only
-//! shrinks. `enabled.txt` is the checked-in allowlist that must stay green;
-//! `probe_runnable` (ignored test) reports which other specs already pass.
+//! emitted as `#[ignore = "reason"]` so the coverage gap stays visible and
+//! only shrinks. The case list is static (`tests/cases/test_models_cases.rs`,
+//! generated once by `tools/gen_test_cases.py`): a passing case is a plain
+//! `#[test]`, an out-of-scope case is ignored. There is no `enabled.txt` and
+//! no directory scan — promote a case by removing its `#[ignore]`.
 
 use std::collections::BTreeSet;
 use std::fs;

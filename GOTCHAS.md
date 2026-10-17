@@ -4,6 +4,13 @@ Quirks of the Lisp source that have bitten us or will bite the port.
 Each entry is tagged **verified** (hit it during M0 execution) or
 **code-read** (seen in source, not yet exercised end-to-end).
 
+> Paths in older entries reflect the layout at the time. The fixture tree
+> moved: `golden/traces` → `fixtures/extra-traces`, `golden/test-models` →
+> `fixtures/regression`, `golden/models` → `fixtures/errors`,
+> `golden/units` → `fixtures/units`; `tests/golden.rs` →
+> `tests/extra_traces.rs`. The `enabled.txt` allowlist is gone (cases are
+> static; out-of-scope ones are `#[ignore]`d).
+
 ## 1. `sgp` quotes its arguments — use `sgp-fct` programmatically (verified)
 
 `(defmacro sgp (&rest parameters) \`(sgp-fct ',parameters))`
