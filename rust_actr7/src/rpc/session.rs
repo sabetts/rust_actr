@@ -1700,23 +1700,6 @@ fn flat_slots(j: &Json) -> Vec<(String, Sexp)> {
     out
 }
 
-/// `[slot, value, …]` → the `(screen-x, screen-y)` a modify carries.
-fn feature_xy(items: &[Json]) -> (i64, i64) {
-    let (mut x, mut y) = (0i64, 0i64);
-    let mut i = 0;
-    while i + 1 < items.len() {
-        let key = json_to_text(&items[i]).to_uppercase();
-        let v = items[i + 1].as_f64().unwrap_or(0.0) as i64;
-        match key.as_str() {
-            "SCREEN-X" => x = v,
-            "SCREEN-Y" => y = v,
-            _ => {}
-        }
-        i += 2;
-    }
-    (x, y)
-}
-
 /// Coerce a JSON list (or scalar) into `f64`s for the stats commands.
 fn num_list(j: Option<&Json>) -> Vec<f64> {
     match j {

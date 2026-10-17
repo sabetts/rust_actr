@@ -1387,7 +1387,7 @@ impl Engine {
     }
 
     /// `modify-visicon-features`: queue a slot update (`vision.lisp:4039`).
-    pub fn queue_visicon_modify(&mut self, name: &str, mods: Vec<(String, Value)>) {
+    fn queue_visicon_modify(&mut self, name: &str, mods: Vec<(String, Value)>) {
         let name = self.resolve_visicon_name(name);
         self.visicon_pending.push(VisPending::Update(name, mods));
         self.now_display();

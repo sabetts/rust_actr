@@ -1402,6 +1402,9 @@ struct Sound {
     content: i64,
     onset: i64,
     offset: i64,
+    /// Sound duration in ms. Written but not yet read — the audio module will
+    /// use it once the unfinished scheduled-event path lands, so keep it.
+    #[allow(dead_code)]
     duration: i64,
     /// `tone-detect-delay` (50 ms): detect time is `onset + delay`.
     delay: i64,
