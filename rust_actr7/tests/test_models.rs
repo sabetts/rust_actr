@@ -27,6 +27,9 @@ use actr_engine::sexpr::{parse_all, Sexp};
 use actr_engine::trace::Detail;
 use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
 
+mod common;
+use common::{actr_dir, crate_dir, first_diff};
+
 // ---------------------------------------------------------------- spec model
 
 #[derive(Debug, Clone)]
@@ -42,16 +45,6 @@ struct Spec {
     steps_unsupported: Option<String>,
     scope: String,
     error: Option<String>,
-}
-
-fn crate_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-fn actr_dir() -> PathBuf {
-    std::env::var("ACTR_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| crate_dir().join("..").join("actr7.x"))
 }
 
 fn specs_dir() -> PathBuf {
@@ -486,36 +479,6 @@ fn normalize(s: &str) -> Vec<String> {
     s.lines()
         .map(|l| l.trim_end_matches([' ', '\r']).to_lowercase())
         .collect()
-}
-
-fn first_diff(expected: &[String], actual: &[String]) -> String {
-    let n = expected.len().min(actual.len());
-    for i in 0..n {
-        if expected[i] != actual[i] {
-            let lo = i.saturating_sub(3);
-            let mut out = format!(
-                "first diff at line {} ({} expected vs {} actual lines):\n",
-                i + 1,
-                expected.len(),
-                actual.len()
-            );
-            for j in lo..(i + 4).min(n) {
-                let mark = if j == i { ">>" } else { "  " };
-                out.push_str(&format!(
-                    "{mark} L{:>4} exp={:?} got={:?}\n",
-                    j + 1,
-                    expected.get(j),
-                    actual.get(j)
-                ));
-            }
-            return out;
-        }
-    }
-    format!(
-        "common prefix identical; length differs: {} expected vs {} actual lines",
-        expected.len(),
-        actual.len()
-    )
 }
 
 /// True when the spec's files define more than one *distinct* model (a
