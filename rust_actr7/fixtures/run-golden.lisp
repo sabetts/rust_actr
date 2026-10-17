@@ -1,4 +1,4 @@
-;;;; run-golden.lisp — M0 golden-trace generator driver.
+;;;; run-golden.lisp — golden-trace generator driver.
 ;;;;
 ;;;; Loaded *after* single-threaded ACT-R in a headless SBCL:
 ;;;;   sbcl --non-interactive --disable-debugger \
@@ -15,14 +15,14 @@
 ;;;; Notes:
 ;;;; - The :v redirect is ACT-R's own trace sink
 ;;;;   (actr7.x/framework/printing.lisp). The file is byte-identical
-;;;;   to the stdout trace (verified by diff in M0).
+;;;;   to the stdout trace (verified by diff).
 ;;;; - Model-load warnings go to stdout, never into the trace, because
 ;;;;   the redirect is installed after load/reset and removed after run.
 ;;;; - (reset) closes :v/:cmdt file streams, so the redirect must be
 ;;;;   installed *after* reset. Stale traces are deleted first because
 ;;;;   :v opens files with :if-exists :append.
 ;;;; - (sgp :seed ...) before (reset) survives reset and makes output
-;;;;   byte-deterministic across processes (verified by diff in M0).
+;;;;   byte-deterministic across processes (verified by diff).
 ;;;;   Without an explicit seed the RNG is time-seeded
 ;;;;   (actr7.x/framework/random.lisp) and traces vary run to run.
 

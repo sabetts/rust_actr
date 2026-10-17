@@ -2670,7 +2670,7 @@ impl Engine {
         )
     }
 
-    /// Manual request routing: only press-key in M5a.
+    /// Manual request routing: press-key only.
     pub(super) fn manual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         let (ctype, slots) = match &spec {
             NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),

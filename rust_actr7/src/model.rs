@@ -137,7 +137,7 @@ pub enum RhsAction {
     /// `@goal>` (no chunk) — direct `erase-buffer`
     /// (`production-parsing.lisp:1140`).
     DirectErase { buffer: String },
-    /// `!output! (...)` — args kept raw for the M2c evaluator.
+    /// `!output! (...)` — args kept raw for the evaluator.
     Output { args: Vec<Sexp> },
     /// `!eval!`/`!safe-eval!` on the RHS.
     Eval { value: Sexp, safe: bool },
@@ -1354,7 +1354,7 @@ fn parse_lhs(forms: &[Sexp]) -> Result<Vec<LhsItem>, LoadError> {
         if let Some((op, buffer)) = buffer_ref(&head) {
             match op {
                 '=' | '+' => {
-                    // `+` on the LHS never occurs in M0 models; accept like `=`
+                    // `+` on the LHS never occurs in models; accept like `=`
                     // so the loader stays total over match-shaped groups.
                     let tests = parse_pairs(body)?;
                     items.push(LhsItem::Match {
@@ -2355,7 +2355,7 @@ fn push_production(model: &mut Model, p: Production) {
     model.productions.push(p);
 }
 
-/// Load every `define-model` in a `.lisp` model file (M0 files hold one).
+/// Load every `define-model` in a `.lisp` model file (these files hold one).
 /// `(clear-all)` is acknowledged and skipped; anything else top-level errors.
 pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
     let src = fs::read_to_string(path).map_err(LoadError::Io)?;
@@ -2429,7 +2429,7 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    fn m0(name: &str) -> PathBuf {
+    fn tutorial_model(name: &str) -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
             .join("actr7.x")
@@ -2439,7 +2439,7 @@ mod tests {
     }
 
     fn the_only(path: &str) -> Model {
-        let models = load_models(&m0(path)).unwrap();
+        let models = load_models(&tutorial_model(path)).unwrap();
         assert_eq!(models.len(), 1);
         models.into_iter().next().unwrap()
     }

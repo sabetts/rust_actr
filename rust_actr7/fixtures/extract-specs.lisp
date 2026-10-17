@@ -1,4 +1,4 @@
-;;;; extract-specs.lisp â€” Phase 1 of the ACT-R test-models integration.
+;;;; extract-specs.lisp â€” ACT-R test-models spec extraction.
 ;;;;
 ;;;; Runs the ACT-R regression stubs (`actr7.x/test-models/*.lisp`) under a
 ;;;; thin instrumentation layer and emits one machine-readable `.spec` per

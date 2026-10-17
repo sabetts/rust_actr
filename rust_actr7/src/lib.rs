@@ -9,7 +9,7 @@
 //! * `fixtures/extra-traces/` — project-authored scenarios, byte-exact
 //!   (`tests/extra_traces.rs`).
 //!
-//! Milestone history is in `CHANGELOG.md`; Lisp-side quirks in `GOTCHAS.md`.
+//! Change history is in `CHANGELOG.md`; Lisp-side quirks in `GOTCHAS.md`.
 //!
 //! Contract (mirrors `fixtures/run-golden.lisp`):
 //! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.

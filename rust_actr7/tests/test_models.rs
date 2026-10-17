@@ -1,7 +1,7 @@
 //! ACT-R `test-models` corpus: Rust engine vs the checked-in `.ref` traces.
 //!
-//! Phase 1 (`fixtures/regen-specs.sh`) runs the Lisp stubs under
-//! instrumentation and writes `fixtures/regression/specs/*.spec` describing
+//! `fixtures/regen-specs.sh` runs the Lisp stubs under instrumentation and
+//! writes `fixtures/regression/specs/*.spec` describing
 //! each test's model chain, resolved seed, and ordered driver steps. This
 //! harness consumes those specs plus `actr7.x/test-models/*.ref`, so
 //! `cargo test` never needs SBCL.

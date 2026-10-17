@@ -1,4 +1,4 @@
-//! M2c random stream: bit-identical port of ACT-R's Mersenne Twister.
+//! Random stream: bit-identical port of ACT-R's Mersenne Twister.
 //!
 //! Mirrors `actr7.x/framework/random.lisp`: `init_genrand`,
 //! `init_by_array`, `genrand_int32` (straight from `mt19937ar.c`,

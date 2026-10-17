@@ -1,7 +1,7 @@
 # ACT-R → Rust Gotchas
 
 Quirks of the Lisp source that have bitten us or will bite the port.
-Each entry is tagged **verified** (hit it during M0 execution) or
+Each entry is tagged **verified** (confirmed by an end-to-end run) or
 **code-read** (seen in source, not yet exercised end-to-end).
 
 > Paths in older entries reflect the layout at the time. The fixture tree
@@ -18,7 +18,7 @@ Each entry is tagged **verified** (hit it during M0 execution) or
 
 `(sgp :seed seed)` passes the *symbol* `SEED`, warns
 (`Parameter :SEED cannot take value SEED...`), and silently keeps the
-old value. Same for `(sgp :v trace-path)`. In M0 this produced
+old value. Same for `(sgp :v trace-path)`. This produced
 plausible-looking output (trace to stdout, time-seeded RNG) with no
 error — the failure mode is silent wrong-behavior, not a crash.
 Programmatic callers must use `(sgp-fct (list :seed seed))`.
@@ -31,7 +31,7 @@ ACT-R's printing module holds its own stream objects per model
 so `let`-binding `*standard-output*` around `(run ...)` captures
 nothing. The sanctioned sink is `(sgp :v <pathname-or-stream>)`
 (+ `:cmdt` for command output), which writes byte-identical content
-to the stdout trace (diff-verified in M0).
+to the stdout trace (diff-verified).
 
 ## 3. `:v` file output appends — delete stale traces first (code-read)
 
@@ -52,14 +52,14 @@ The random module seeds from `get-internal-real-time` at creation
 (`framework/random.lisp:394`). Without an explicit
 `(sgp :seed (S C))` — a 2-int list of seed + advance-count — two
 identical runs diverge whenever subsymbolic noise (`:esc t`) draws
-randomness. M0 sets the seed per model *before* `(reset)` and the
+randomness. The seed is set per model *before* `(reset)` and the
 setting survives reset (cross-process diff-verified).
 
 ## 6. Model files nuke state on load (verified)
 
 Every tutorial model file starts with `(clear-all)`, so loading a model
 wipes previously defined models. Upside: many models can run
-sequentially in one SBCL process (M0 does 3). Downside: load order is
+sequentially in one SBCL process (currently 3). Downside: load order is
 load-bearing, and anything stashed between loads must be re-established
 (seed, `:v` redirect — see 4, 5).
 
@@ -77,7 +77,7 @@ macroexpansion semantics decided per form.
 ## 8. `(run N)` is an upper bound, not an exact duration (verified)
 
 A run stops early with `------ Stopped because no events left to
-process` when the event queue drains (all 3 M0 models halt at t<1.0
+process` when the event queue drains (all 3 models halt at t<1.0
 under `(run 10)`). Golden run-times must exceed the model's natural halt;
 a model that *doesn't* halt is a hang, not a diff — harness timeouts
 belong in `regen.sh`/CI, not in the trace comparison.
@@ -126,7 +126,7 @@ weakening anything else.
 
 ---
 
-# M2b findings (all verified: golden byte-match or source-read)
+# Engine core findings (all verified: golden byte-match or source-read)
 
 ## 14. Trace lines are filtered by event `:output` vs `:trace-detail`
 
@@ -174,7 +174,7 @@ print as `(ISA TYPE SLOT VAL ...)` — hence the two SET shapes.
 ## 19. SET prints under the owning module, not the buffer
 
 `schedule-set-buffer-chunk`'s `:module` arg: goal reset uses `GOAL`,
-retrieval completion uses `DECLARATIVE`. First M2b run was 41/42
+retrieval completion uses `DECLARATIVE`. The first run was 41/42
 lines for exactly this reason.
 
 ## 20. Clock is integer ms; line layout has ghost fields
@@ -191,12 +191,12 @@ Success latency `round(lf_ms * e^(-le*A))`, failure latency the same
 with `A=rt`, threshold is strict (`A < rt` fails, `=` succeeds).
 `:lf` is stored in ms (`:lf .05` → 50). With all subsymbolics at
 defaults, `A` is exactly `0.0` (blc 0; bll/ans/mas/mp nil; spreading
-falls through to `0.0`), so every M2b retrieval takes exactly `:lf`.
+falls through to `0.0`), so every retrieval takes exactly `:lf`.
 
 ## 22. Utility ties go to the LAST production (`:er nil`)
 
 `core-modules/procedural.lisp:2251`: on `=`, the tied production
-*replaces* rather than joins (unless `:er`). All M2b conflict sets
+*replaces* rather than joins (unless `:er`). All conflict sets
 are singletons so this is untested by goldens, but implemented per
 source.
 
@@ -218,7 +218,7 @@ next set/clear/modify — it is why retrievals wake the cycle at
 
 ---
 
-# M2c findings (all verified: golden byte-match or source-read)
+# Randomness & activation findings (all verified: golden byte-match or source-read)
 
 ## 25. The RNG is stock MT19937, but the consumers are single-precision
 
@@ -251,7 +251,7 @@ Any port that skips "unneeded" draws desynchronizes every later one.
 
 ## 28. No device-free tutorial model exercises noise
 `grep :ans` hits only device-bound tasks (paired needs vision/manual,
-siegler needs audio, past-tense needs imaginal+rewards). M2c coverage
+siegler needs audio, past-tense needs imaginal+rewards). Coverage
 therefore comes from a synthetic model,
 `actr7.x/user-loads/noisy-count.lisp` (count + `:ans 0.5`), which is
 also the first golden to show `RETRIEVAL-FAILURE` (noise below
@@ -262,7 +262,7 @@ harness loads it through the normal `ACT-R:` logical host.
 
 ---
 
-# M3 findings: golden units (oracle tables for pure functions)
+# Unit tables: oracle tables for pure functions
 
 ## 29. End-to-end goldens say what, unit tables say where
 
@@ -340,7 +340,7 @@ declarative-memory.lisp:2536.
 
 ---
 
-# M5a findings: device buffers (all verified: golden byte-match)
+# Device buffers (all verified: golden byte-match)
 
 ## 37. Nested `load-act-r-model` is locked out
 
@@ -409,7 +409,7 @@ always shown. Later presses need per-key (hand finger r theta) +
 
 ---
 
-# M5b findings: paired task (all verified: golden byte-match)
+# Imaginal buffer & paired task (all verified: golden byte-match)
 
 ## 44. Imaginal = delayed goal-style buffer (200 ms default)
 
@@ -465,7 +465,7 @@ variant (previously only the no-events-left path was covered).
 
 ---
 
-# M6 findings: multi-trial paired (all verified: golden byte-match)
+# Multi-trial paired (all verified: golden byte-match)
 
 ## 50. Trial reconstruction from CR spacing
 
@@ -492,7 +492,7 @@ lines print. The engine names unnamed harvest merges
 
 ---
 
-# M7 findings: full paired task (all verified: golden byte-match)
+# Full paired task (all verified: golden byte-match)
 
 ## 53. Maintenance never wakes armed CR — with one false friend
 
@@ -516,7 +516,7 @@ source, now covered by golden).
 
 ---
 
-# M8 findings: partial matching (all verified: golden byte-match)
+# Partial matching (all verified: golden byte-match)
 
 ## 55. Candidacy is exact without `:mp`, signature-only with it
 
@@ -538,7 +538,7 @@ miss once zeroed every similarity to `:md` (loud failure, fixed).
 
 ---
 
-# M9 findings: utility learning (all verified: golden byte-match)
+# Utility learning (all verified: golden byte-match)
 
 ## 57. Penalty flips beat rewards for golden design
 
@@ -561,7 +561,7 @@ stdout). `:iu` honored for initial utilities; `:ult` trace lines,
 
 ---
 
-# M10 findings: ACT-R test-model corpus (integration in progress)
+# ACT-R regression corpus (all verified: golden byte-match or source-read)
 
 ## 59. `test-models/*.ref` are ACT-R's own oracle — and they are trimmed (verified)
 
@@ -1286,9 +1286,9 @@ Two findings from working the spec:
   `G-0` already exists from the retrieval), while `sji-merge` needs the
   first copy to be `-0`; our shared copy counter starts at 0, and starting
   at 1 regresses `sji-merge`.  `retain-indirect-retrievals` therefore stays
-  out of `enabled.txt`; the retrieval fix is committed as groundwork.
+  out of the runnable set; the retrieval fix is committed as groundwork.
 
-## 123. M1: retrieval copies its chunk; `+retrieval> =var` expands (verified)
+## 123. Retrieval copies its chunk; `+retrieval> =var` expands (verified)
 
 Three coupled fixes made `retain-indirect-retrievals` **run 1 match
 exactly** (lines 1-104):
@@ -1305,12 +1305,12 @@ exactly** (lines 1-104):
   This is what makes the indirect `+retrieval> =goal` work once the goal is
   a spec-built (unnamed) chunk; `direct_retrieval` was removed.
 
-No enabled spec regressed.  M2 (composed-production instantiation:
-`color =c` → `color red`, and expanding the indirect `+retrieval> =c` action
-to `+RETRIEVAL> COLOR RED`) is the next milestone; `retain` stays disabled
-until M2/M3 land.
+No enabled spec regressed.  The remaining work is composed-production
+instantiation (`color =c` → `color red`, and expanding the indirect
+`+retrieval> =c` action to `+RETRIEVAL> COLOR RED`), so `retain` stays
+disabled until that lands.
 
-## 124. M2: composed-production instantiation + indirect-action expansion (verified)
+## 124. Composed-production instantiation + indirect-action expansion (verified)
 
 `retain-indirect-retrievals` **run 2 now matches exactly** (lines 86-298).
 `compose_pair` was extended:
@@ -1340,7 +1340,7 @@ Run 3 (`:cia t :rir t`) still differs: `:rir` retains indirect retrievals
 with its own rendering rules (`+RETRIEVAL> =C` vs `+RETRIEVAL> RED` vs
 dropped) that are not yet modelled.  `retain` stays disabled.
 
-## 125. M3 (`:rir`) partial: retain-buffer selection implemented
+## 125. `:rir` (partial): retain-buffer selection implemented
 
 `retain-indirect-retrievals` run 3 now matches **PRODUCTION0-3** (lines
 299-417).  Implemented `compute-retain-buffers`
@@ -1363,7 +1363,7 @@ Still open (PRODUCTION4-7 + the I&J "cannot be composed" reason):
   a LHS !safe-bind!").
 `retain` stays disabled.
 
-## 126. M3 (`:rir`) complete: run 3 matches, `retain` green
+## 126. `:rir`: run 3 matches, `retain` green
 
 The tail of run 3 needed four more rules:
 - **Substitute the union of indirect vars globally.**  The same variable on
@@ -1581,7 +1581,7 @@ base motor module doesn't provide:
   `hand-to-home` emit `release-mouse` at 1.828.
 
 `zz` test3 is byte-exact through line 2016 (test1 + test2 + test3); tests
-4–9 (M4–M8) remain.
+4–9 remain.
 
 ## 135. `zz` test4: `move-a-finger` shifts the finger offset, not the hand
 
@@ -1653,7 +1653,7 @@ and `theta` is unset, so the count is `hand` + `r` = 2 (0.100 s) even though
 to the home row.
 
 `zz` test4 is **byte-exact through line 2310** — test1–test4 plus every
-summary. Tests 5–9 (M5–M8) remain.
+summary. Tests 5–9 remain.
 
 ## 139. `zz` test5: the run loop, direct styles, and release/release-recoil
 
@@ -1721,7 +1721,7 @@ requested hand(s) that need it, and the style's `hand` is `both` only when
 `last-command`; a no-slot request (test4/test8) is `both`.
 
 `zz` test5 is **byte-exact through line 2893** — test1–test5 plus every
-summary. Tests 6–9 (M6–M8) remain.
+summary. Tests 6–9 remain.
 
 ## 141. `zz` test6: `type-key`, output-key scheduling, and finger freeing
 
@@ -1754,7 +1754,7 @@ The dual-execution module also exposes per-finger queries
 hand tracker's finger-busy / finger-down state.
 
 `zz` test6 is **byte-exact through line 3034** — test1–test6 plus every
-summary. Tests 7–9 (M7–M8) remain.
+summary. Tests 7–9 remain.
 
 ## 142. `zz` test7: `delayed-punch` and its three delay parameters
 
@@ -1783,7 +1783,7 @@ is not the production's *only* LHS test is ignored
 (`match_chunk_tests`, `only_isa`).
 
 `zz` test7 is **byte-exact through line 3226** — test1–test7 plus every
-summary. Tests 8–9 (M8) remain.
+summary. Tests 8–9 remain.
 
 ## 143. `zz` test8/test9: `release-all-fingers` vs `all-fingers-to-home`
 
@@ -3465,7 +3465,7 @@ fresh engine.
 Verification that it is the right stream: with the fix the RPC run's `noise`
 draws are *value-for-value identical* to the golden run's 95 draws, merely
 shifted by one index — i.e. the model is on ACT-R's stream and only one
-pre-run draw differs (see TODO M3).
+pre-run draw differs (see TODO).
 
 ## 218. `permute-list` draws n times, including the final single-element pass
 

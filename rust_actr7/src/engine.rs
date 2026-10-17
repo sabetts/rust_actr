@@ -1,4 +1,4 @@
-//! M2b discrete-event engine: scheduler, buffers, procedural cycle,
+//! Discrete-event engine: scheduler, buffers, procedural cycle,
 //! stub-free declarative retrieval for fully-specified requests.
 //!
 //! Execution model (all from `actr7.x` sources, see GOTCHAS.md):
@@ -419,7 +419,7 @@ struct Config {
     /// `:hear-self` (`speech.lisp:210`).
     hear_self: HearSelf,
     /// Module column width in trace lines (`max-module-name-length`). The
-    /// normal value is 22; test-model stubs may override it (GOTCHAS M10).
+    /// normal value is 22; test-model stubs may override it.
     module_width: usize,
     /// Model-body `(sgp :seed (S C))` (`random.lisp:417`). ACT-R re-applies
     /// the model's seed on every reset (`model.lisp:972`), so it wins over
@@ -841,7 +841,7 @@ enum VisPending {
 }
 
 /// Virtual keyboard entry: hand geometry for prep/fitss math.
-/// M5a seeds Q; digits etc. join with device-task traces.
+/// Q is seeded; digits etc. join with device-task traces.
 #[derive(Debug, Clone)]
 struct KeySpec {
     hand: &'static str,
@@ -1849,7 +1849,7 @@ enum Event {
     ChangeState {
         module: String,
     },
-    /// Manual style request (only press-key in M5a).
+    /// Manual style request (press-key only).
     PressKey {
         key: String,
         req_ms: i64,

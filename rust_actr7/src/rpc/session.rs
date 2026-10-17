@@ -1300,7 +1300,7 @@ impl Session {
                     .unwrap_or_default();
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
-            // --- Environment viewers (Phase 2) ------------------------------
+            // --- Environment viewers ---------------------------------------
             "act-r-version" => Ok(vec![Json::Str(
                 self.engine
                     .as_ref()
@@ -3666,7 +3666,7 @@ mod tests {
     }
 
     /// The Environment viewer commands return the model's productions,
-    /// buffers and DM chunks (Phase 2).
+    /// buffers and DM chunks.
     #[test]
     fn environment_viewer_commands() {
         let root = root();

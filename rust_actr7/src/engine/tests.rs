@@ -5,7 +5,7 @@ use super::rhs::implicit_clears;
 use super::*;
 use std::path::PathBuf;
 
-fn m0(name: &str) -> Model {
+fn tutorial_model(name: &str) -> Model {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../actr7.x/tutorial/unit1")
         .join(name);
@@ -31,9 +31,9 @@ fn sym(s: &str) -> Value {
 fn scripted_reset_is_idempotent() {
     // Construction performs a reset; an explicit `(reset)` at t=0 must
     // reproduce the same run (same DM, goal, CR) exactly.
-    let a = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let a = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
     let out_a = a.run().unwrap();
-    let mut b = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let mut b = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
     b.reset().unwrap();
     b.run_secs(10.0).unwrap();
     assert_eq!(out_a, b.output());
@@ -41,7 +41,7 @@ fn scripted_reset_is_idempotent() {
 
 #[test]
 fn queue_orders_time_then_priority_then_fifo() {
-    let m = m0("count.lisp");
+    let m = tutorial_model("count.lisp");
     let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
     e.queue.clear();
     e.seq = 0;
@@ -65,7 +65,7 @@ fn queue_orders_time_then_priority_then_fifo() {
 #[test]
 fn harvest_rules() {
     let exempt: Vec<String> = vec!["GOAL".to_string()];
-    let m = m0("count.lisp");
+    let m = tutorial_model("count.lisp");
     let clears = |n: &str| {
         implicit_clears(
             m.productions.iter().find(|p| p.name == n).unwrap(),
@@ -79,7 +79,7 @@ fn harvest_rules() {
     assert_eq!(clears("INCREMENT"), vec!["RETRIEVAL".to_string()]);
     // STOP has explicit -goal>: only the untested-by-rhs retrieval.
     assert_eq!(clears("STOP"), vec!["RETRIEVAL".to_string()]);
-    let s = m0("semantic.lisp");
+    let s = tutorial_model("semantic.lisp");
     let dv = s
         .productions
         .iter()
@@ -128,7 +128,7 @@ fn harvest_rules() {
 
 #[test]
 fn matcher_vars_nil_negation() {
-    let m = m0("count.lisp");
+    let m = tutorial_model("count.lisp");
     let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
     // goal-focus state: COUNT slot absent (= nil for tests).
     e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
@@ -174,7 +174,7 @@ fn matcher_vars_nil_negation() {
 
 #[test]
 fn matcher_failure_query() {
-    let m = m0("semantic.lisp");
+    let m = tutorial_model("semantic.lisp");
     let mut e = Engine::new(m, (100, 0), 10.0, DeviceSetup::default()).unwrap();
     e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst(
         "IS-MEMBER",
@@ -225,7 +225,7 @@ fn remove_dup_keeps_last() {
 #[test]
 fn eval_evaluator() {
     use crate::sexpr::parse_all;
-    let e = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let e = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
     let mut b = Bindings::new();
     b.insert("X".to_string(), Value::Int(3));
     let one = |s: &str| parse_all(s).unwrap().pop().unwrap();
@@ -248,7 +248,7 @@ fn eval_evaluator() {
 fn eval_user_defun() {
     use crate::model::UserDefun;
     use crate::sexpr::parse_all;
-    let mut e = Engine::new(m0("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let mut e = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
     let expr = |s: &str| parse_all(s).unwrap().pop().unwrap();
     let mut fns = HashMap::new();
     fns.insert(

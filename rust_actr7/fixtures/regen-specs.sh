@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# regen-specs.sh — Phase 1 regenerate `test-models/specs/*.spec`.
+# regen-specs.sh — regenerate `fixtures/regression/specs/*.spec`.
 #
 # Runs the ACT-R regression stubs (trace-reference tests only) under
 # `extract-specs.lisp` and rewrites the committed spec corpus. Requires SBCL.

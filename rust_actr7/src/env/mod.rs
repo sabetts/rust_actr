@@ -128,7 +128,7 @@ mod tests {
             "expected a stop line in trace: {trace:?}"
         );
 
-        // The Phase 2 viewer commands are reachable through the backend.
+        // The viewer commands are reachable through the backend.
         let prods = b
             .evaluate("all-productions", None, Vec::new())
             .expect("all-productions");

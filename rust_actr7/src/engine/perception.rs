@@ -34,7 +34,7 @@ impl Engine {
     }
 
     /// Device request routing for the visual buffer: only
-    /// move-attention in M5a (plus finst assignment later).
+    /// move-attention (plus finst assignment later).
     pub(super) fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {
         // `pm-module-request` for the visual buffer (`vision.lisp:3240`): a
         // request releases the vision module's proc-display lock and schedules

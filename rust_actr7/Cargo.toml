@@ -2,7 +2,7 @@
 name = "actr_engine"
 version = "0.1.0"
 edition = "2021"
-description = "Rust port of the ACT-R 7 single-threaded kernel (M1 harness skeleton)"
+description = "Rust port of the ACT-R 7 single-threaded kernel"
 
 [lib]
 name = "actr_engine"

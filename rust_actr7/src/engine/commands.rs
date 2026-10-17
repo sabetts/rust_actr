@@ -548,7 +548,7 @@ impl Engine {
 
     /// Virtual keyboard geometry for press-key movements (hand/finger/r/theta
     /// per key name as requested; output uses the table's lowercase name).
-    /// M5a seeds Q; digits join with device-task traces.
+    /// Q is seeded; digits join with device-task traces.
     pub(super) fn key_spec(key: &str) -> Result<KeySpec, EngineError> {
         key_table()
             .get(&key.to_uppercase())

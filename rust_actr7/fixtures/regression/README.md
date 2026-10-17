@@ -83,5 +83,4 @@ out-of-scope case currently does:
 cargo test --test test_models -- --ignored <name> --nocapture
 ```
 
-Current status and feature gaps are in `../../../GOTCHAS.md` under
-"M10 findings".
+Current status and feature gaps are in `../../../GOTCHAS.md`.

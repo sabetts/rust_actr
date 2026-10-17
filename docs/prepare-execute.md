@@ -1,23 +1,23 @@
-# `zz` M5b handoff — `prepare` / `execute` (test5-8/5-9)
+# `zz` handoff — `prepare` / `execute` (test5-8/5-9)
 
-> **SUPERSEDED — M5 is complete (commit `62fea19`).** test5 is byte-exact
-> through line 2893. This note is kept only as a source-reference for the
-> `prepare`/`execute` mechanics; the next milestone is M6 (test6,
-> `type-key`). See `zz-milestones.md`.
+> **SUPERSEDED — `prepare`/`execute` are complete (commit `62fea19`).** test5
+> is byte-exact through line 2893. This note is kept only as a source-reference
+> for the `prepare`/`execute` mechanics; the remaining work is `type-key`
+> (test6). See `extended-motor-actions.md`.
 
 ## Baseline
 
 - Repo: `/data/sabetts/actr_transpile`
-- Baseline commit: **`03497a6`** (`zz M5a: test5 run loop, direct styles, release/release-recoil — byte-exact through 2519`)
+- Baseline commit: **`03497a6`** (test5 run loop, direct styles, release/release-recoil — byte-exact through 2519).
 - Tree clean, `cargo test` green (42 enabled specs + unit tests).
 - `zz-extended-motor-actions` first diff at **line 2520**; prefix **2519 byte-exact**
   (test1–test4 fully, test5 through test5-7 including both breakpoint dumps).
-- `zz-extended-motor-actions` is **not** in `enabled.txt`; leave it out until tests 5–9 pass.
+- `zz-extended-motor-actions` is excluded until tests 5–9 pass.
 
 ## Goal
 
 Advance the byte-exact prefix past test5-8 (`prepare`) and test5-9 (`execute`), toward
-test5-12. Then M5c = `point-hand-at-key` (test5-10), M5d = `hold-key k` (test5-11) +
+test5-12. Then `point-hand-at-key` (test5-10), `hold-key k` (test5-11), and
 `all-fingers-to-home hand right` (test5-12) + final dump/summary.
 
 ## Oracle (`actr7.x/test-models/zz-extended-motor-actions.ref`)
@@ -115,7 +115,7 @@ an `execute` request arrives.
    `zz_maybe_execute` will re-base them to the current time — exactly what the
    oracle shows (2.700 → 2.850/2.900).
 4. Route `PREPARE` / `EXECUTE` in `manual_request` (they are already in the
-   cmd-detection list; currently they hit a no-op arm with a `TODO(M5b/M5c)`
+   cmd-detection list; currently they hit a no-op arm with a TODO
    comment — replace that).
 5. `zz_style_info` needs `"HAND-PLY" => ("PLY", 4, true)` (fresh = 4) so the
    prepare's prep is 0.200. (Currently `_ => ("PLY", 3, false)`.)
@@ -132,8 +132,8 @@ an `execute` request arrives.
 
 ```
 # prefix probe (workdir rust_actr7)
-cargo test --test test_models probe_runnable -- --ignored --nocapture 2>&1 \
-  | grep -E "first diff|common prefix" | head
+cargo test --test test_models zz_extended_motor_actions -- --ignored --nocapture 2>&1 \
+  | grep -E "first diff" | head
 # expect first diff to move from 2520 to the point-hand-at-key line (~2570+)
 
 # full regression
@@ -142,15 +142,15 @@ cargo test --manifest-path rust_actr7/Cargo.toml 2>&1 | grep -E "test result|FAI
 
 Commit per checkpoint; add a GOTCHA entry (source-tied, non-obvious only).
 
-## Remaining after M5b
+## Remaining at that time
 
-- **M5c** point-hand-at-key (test5-10): `r/theta = xy-to-polar(hand.loc, key_loc)`,
+- point-hand-at-key (test5-10): `r/theta = xy-to-polar(hand.loc, key_loc)`,
   then set `hand.loc = key_loc` and offsets to standard; style `HAND-PLY`, prep 1
   feat when the previous style-name is also `PLY` (only theta differs).
   Trace: `POINT-HAND-AT-KEY HAND RIGHT TO-KEY y`.
-- **M5d** hold-key `k` (test5-11) + `all-fingers-to-home hand right` (test5-12) +
+- hold-key `k` (test5-11) + `all-fingers-to-home hand right` (test5-12) +
   final dump + summary.
-- **M6** test6 `type-key` from non-home (~2872–3020).
-- **M7** test7 delayed punch (~3021–3185).
-- **M8** test8/9 all-fingers-to-home with multiple fingers down + release-all-fingers
+- test6 `type-key` from non-home (~2872–3020).
+- test7 delayed punch (~3021–3185).
+- test8/9 all-fingers-to-home with multiple fingers down + release-all-fingers
   (~3186–3568).

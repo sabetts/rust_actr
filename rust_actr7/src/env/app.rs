@@ -1,4 +1,4 @@
-//! The egui application shell: control panel, trace pane, and the Phase 2
+//! The egui application shell: control panel, trace pane, and the
 //! read-only inspectors (declarative, buffers, procedural).
 
 use std::collections::HashMap;
