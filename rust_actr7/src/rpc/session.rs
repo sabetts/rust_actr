@@ -456,6 +456,14 @@ impl Session {
                     })
                     .unwrap_or_default(),
             ),
+            // Graphic traces are processors over `buffer-trace`.
+            "HORIZONTAL-GRAPHIC-TRACE" | "VERTICAL-GRAPHIC-TRACE" => {
+                let vertical = name == "VERTICAL-GRAPHIC-TRACE";
+                self.engine.as_ref().map(|e| {
+                    let now_ms = (e.time_secs() * 1000.0).round() as i64;
+                    graphic_trace_items(&e.buffer_trace(), vertical, now_ms)
+                })
+            }
             _ => None,
         }
     }
@@ -2476,6 +2484,163 @@ fn buffer_trace_record(time_ms: i64, rows: &[crate::engine::BufSummary]) -> Stri
     Json::Arr(vec![Json::Int(time_ms), Json::Arr(rows)]).write()
 }
 
+/// A graphic-trace rectangle being built (`gt-rect`, `env-graphic-trace.lisp`).
+#[derive(Default, Clone)]
+struct GtRect {
+    start: i64,
+    end: Option<i64>,
+    request: String,
+    chunk: String,
+    notes: String,
+}
+
+/// Whether an optional string field is present and non-empty (`check-bs-*`).
+fn nonempty(s: Option<&str>) -> bool {
+    s.map(|v| !v.is_empty()).unwrap_or(false)
+}
+
+/// `parse-trace-list` (`other-files/env-graphic-trace.lisp:186`): turn the
+/// `buffer-trace` records into the graphic-trace canvas items. The first item
+/// is `("size" N)`; the rest are `("rectangle" …)` / `("label" …)`.
+fn graphic_trace_items(
+    trace: &[(i64, Vec<crate::engine::BufSummary>)],
+    vertical: bool,
+    now_ms: i64,
+) -> Vec<String> {
+    let Some(first) = trace.first() else {
+        return Vec::new();
+    };
+    let mut buffers: Vec<String> = first.1.iter().map(|s| s.name.clone()).collect();
+    if buffers.is_empty() {
+        return Vec::new();
+    }
+    buffers.sort();
+    let n = buffers.len() as i64;
+    let y_inc = std::cmp::min(50, 380 / n);
+    let x_inc = std::cmp::min(190, 960 / n);
+    let size = 100 + trace.last().map(|(t, _)| *t).unwrap_or(0);
+    let mut all = vec![Json::Arr(vec![Json::Str("size".into()), Json::Int(size)]).write()];
+    let mut y = 0i64;
+    let mut x_coord = 0i64;
+    let mut buffer_index = 0i64;
+    for x in &buffers {
+        let mut rects: Vec<GtRect> = Vec::new();
+        let mut current: Option<GtRect> = None;
+        for (ztime, summaries) in trace {
+            let Some(rec) = summaries.iter().find(|s| s.name == *x) else {
+                continue;
+            };
+            let req = nonempty(rec.request.as_deref());
+            let chunk = nonempty(rec.chunk_name.as_deref());
+            let notes = nonempty(rec.notes.as_deref());
+            if let Some(cur) = current.as_mut() {
+                if chunk {
+                    cur.chunk = rec.chunk_name.clone().unwrap_or_default();
+                }
+                if notes {
+                    cur.notes = rec.notes.clone().unwrap_or_default();
+                }
+                if !rec.busy || rec.busy_free || req {
+                    cur.end = Some(*ztime);
+                    rects.push(current.take().unwrap());
+                    if req {
+                        current = Some(GtRect {
+                            start: *ztime,
+                            end: None,
+                            request: rec.request.clone().unwrap_or_default(),
+                            chunk: String::new(),
+                            notes: String::new(),
+                        });
+                    }
+                }
+            } else if rec.busy {
+                let rect = GtRect {
+                    start: *ztime,
+                    end: None,
+                    request: rec.request.clone().unwrap_or_default(),
+                    chunk: rec.chunk_name.clone().unwrap_or_default(),
+                    notes: rec.notes.clone().unwrap_or_default(),
+                };
+                if req && (chunk || (rec.error && !rec.error_clear) || rec.busy_free) {
+                    rects.push(GtRect {
+                        end: Some(*ztime),
+                        ..rect
+                    });
+                } else {
+                    current = Some(rect);
+                }
+            } else if req || chunk {
+                rects.push(GtRect {
+                    start: *ztime,
+                    end: Some(*ztime),
+                    request: rec.request.clone().unwrap_or_default(),
+                    chunk: rec.chunk_name.clone().unwrap_or_default(),
+                    notes: rec.notes.clone().unwrap_or_default(),
+                });
+            }
+        }
+        for z in &rects {
+            let end = z.end.unwrap_or(now_ms);
+            let lastcol = if x == "production" {
+                z.request.clone()
+            } else {
+                z.chunk.clone()
+            };
+            let parts = if !vertical {
+                vec![
+                    Json::Str("rectangle".into()),
+                    Json::Int(z.start),
+                    Json::Int(y),
+                    Json::Int(end),
+                    Json::Int(y + y_inc),
+                    Json::Int(buffer_index),
+                    Json::Str(z.request.clone()),
+                    Json::Str(z.chunk.clone()),
+                    Json::Str(z.notes.clone()),
+                    Json::Str(lastcol),
+                    Json::Str(x.clone()),
+                ]
+            } else {
+                vec![
+                    Json::Str("rectangle".into()),
+                    Json::Int(x_coord),
+                    Json::Int(z.start),
+                    Json::Int(x_coord + x_inc),
+                    Json::Int(end),
+                    Json::Int(buffer_index),
+                    Json::Str(z.request.clone()),
+                    Json::Str(z.chunk.clone()),
+                    Json::Str(z.notes.clone()),
+                    Json::Str(lastcol),
+                    Json::Str(x.clone()),
+                ]
+            };
+            all.push(Json::Arr(parts).write());
+        }
+        let label = if !vertical {
+            vec![
+                Json::Str("label".into()),
+                Json::Str(x.clone()),
+                Json::Int(y + y_inc / 2),
+                Json::Int(buffer_index),
+            ]
+        } else {
+            vec![
+                Json::Str("label".into()),
+                Json::Str(x.clone()),
+                Json::Int(x_coord + x_inc / 2),
+                Json::Int(buffer_index),
+                Json::Int(x_inc),
+            ]
+        };
+        all.push(Json::Arr(label).write());
+        y += y_inc;
+        x_coord += x_inc;
+        buffer_index += 1;
+    }
+    all
+}
+
 /// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
 /// valid array, so the client can decode it independently).
 fn chunk_records(records: &[String], size: usize) -> Vec<String> {
@@ -3081,6 +3246,62 @@ mod tests {
         };
         assert_eq!(row.len(), 11, "summary has 11 fields");
         assert_eq!(row[0].as_str(), Some("GOAL"));
+    }
+
+    /// The graphic traces are processors over `buffer-trace`.
+    #[test]
+    fn graphic_trace_processes_buffer_trace() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("buffer-trace".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("record-history", None, &[Json::Str("goal".into())], &mut r)
+            .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[
+                    Json::Str("horizontal-graphic-trace".into()),
+                    Json::Int(16000),
+                ],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        assert!(matches!(id, Json::Int(_)), "expected an id, got {id:?}");
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let text = chunk[0].as_str().unwrap();
+        let Json::Arr(items) = crate::json::parse(text).unwrap() else {
+            panic!("graphic-trace payload is not a JSON array");
+        };
+        assert!(!items.is_empty());
+        let Json::Arr(first) = &items[0] else {
+            panic!("item is not an array");
+        };
+        assert_eq!(first[0].as_str(), Some("size"));
+        assert!(items.iter().any(|i| matches!(i, Json::Arr(f)
+            if matches!(f[0].as_str(), Some("label") | Some("rectangle")))));
     }
 
     /// The Environment viewer commands return the model's productions,
