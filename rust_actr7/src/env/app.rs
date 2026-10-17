@@ -1,6 +1,7 @@
 //! The egui application shell: control panel, trace pane, and the Phase 2
 //! read-only inspectors (declarative, buffers, procedural).
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use eframe::egui;
@@ -19,6 +20,7 @@ enum Tab {
     Procedural,
     Parameters,
     History,
+    Graph,
 }
 
 /// A visible experiment window the engine is displaying, with its items.
@@ -141,6 +143,9 @@ pub struct App {
     windows: Vec<VisWin>,
     /// The recorded `trace-history` text.
     history_text: String,
+    /// The production transition graph (nodes and counted edges).
+    graph_nodes: Vec<String>,
+    graph_edges: Vec<(String, String, u32)>,
 }
 
 impl App {
@@ -195,7 +200,137 @@ impl App {
             param_detail: String::new(),
             windows: Vec::new(),
             history_text: String::new(),
+            graph_nodes: Vec::new(),
+            graph_edges: Vec::new(),
         }
+    }
+
+    /// Fetch the production transition graph from the backend.
+    fn fetch_graph(&mut self) -> (Vec<String>, Vec<(String, String, u32)>) {
+        let v = match self.eval("production-graph", Vec::new()) {
+            Some(v) => v,
+            None => return (Vec::new(), Vec::new()),
+        };
+        let arr = match v.into_iter().next() {
+            Some(Json::Arr(a)) => a,
+            _ => return (Vec::new(), Vec::new()),
+        };
+        let nodes = match arr.first() {
+            Some(Json::Arr(a)) => a
+                .iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect(),
+            _ => Vec::new(),
+        };
+        let edges = match arr.get(1) {
+            Some(Json::Arr(a)) => a
+                .iter()
+                .filter_map(|x| match x {
+                    Json::Arr(f) => Some((
+                        f.first()?.as_str()?.to_string(),
+                        f.get(1)?.as_str()?.to_string(),
+                        f.get(2)?.as_f64()? as u32,
+                    )),
+                    _ => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        };
+        (nodes, edges)
+    }
+
+    fn graph_panel(&mut self, ui: &mut egui::Ui) {
+        if self.graph_nodes.is_empty() {
+            ui.label("No production-history graph yet. Record \"production-history\", run, then Refresh.");
+            return;
+        }
+        // Relax edge constraints to assign layers (cycles stabilize).
+        let mut layer: HashMap<&str, usize> = self
+            .graph_nodes
+            .iter()
+            .map(|n| (n.as_str(), 0usize))
+            .collect();
+        for _ in 0..self.graph_nodes.len().min(20) {
+            let mut changed = false;
+            for (a, b, _) in &self.graph_edges {
+                let la = layer[a.as_str()];
+                let lb = layer[b.as_str()];
+                if lb <= la {
+                    layer.insert(b.as_str(), (la + 1).min(self.graph_nodes.len()));
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let max_layer = *layer.values().max().unwrap_or(&0);
+        let mut by_layer: Vec<Vec<&String>> = vec![Vec::new(); max_layer + 1];
+        for n in &self.graph_nodes {
+            by_layer[layer[n.as_str()]].push(n);
+        }
+        let box_w = 130.0f32;
+        let box_h = 30.0f32;
+        let h_gap = 20.0f32;
+        let v_gap = 70.0f32;
+        let width =
+            by_layer.iter().map(|l| l.len()).max().unwrap_or(1) as f32 * (box_w + h_gap) + 40.0;
+        let height = (max_layer + 1) as f32 * (box_h + v_gap) + 40.0;
+        let mut pos: HashMap<&str, (f32, f32)> = HashMap::new();
+        for (li, layer_nodes) in by_layer.iter().enumerate() {
+            for (xi, n) in layer_nodes.iter().enumerate() {
+                pos.insert(
+                    n.as_str(),
+                    (
+                        20.0 + xi as f32 * (box_w + h_gap),
+                        20.0 + li as f32 * (box_h + v_gap),
+                    ),
+                );
+            }
+        }
+        egui::ScrollArea::both()
+            .id_salt("prod-graph")
+            .show(ui, |ui| {
+                let (rect, _resp) =
+                    ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+                let p = ui.painter_at(rect);
+                for (a, b, c) in &self.graph_edges {
+                    if let (Some(&(ax, ay)), Some(&(bx, by))) =
+                        (pos.get(a.as_str()), pos.get(b.as_str()))
+                    {
+                        let from = rect.min + egui::vec2(ax + box_w / 2.0, ay + box_h);
+                        let to = rect.min + egui::vec2(bx + box_w / 2.0, by);
+                        let w = 1.0 + (*c as f32).min(6.0);
+                        p.line_segment([from, to], egui::Stroke::new(w, egui::Color32::GRAY));
+                    }
+                }
+                for n in &self.graph_nodes {
+                    if let Some(&(x, y)) = pos.get(n.as_str()) {
+                        let r = egui::Rect::from_min_size(
+                            rect.min + egui::vec2(x, y),
+                            egui::vec2(box_w, box_h),
+                        );
+                        p.rect_filled(
+                            r,
+                            egui::CornerRadius::ZERO,
+                            egui::Color32::from_rgb(230, 230, 230),
+                        );
+                        p.rect_stroke(
+                            r,
+                            egui::CornerRadius::ZERO,
+                            egui::Stroke::new(1.0, egui::Color32::BLACK),
+                            egui::StrokeKind::Inside,
+                        );
+                        p.text(
+                            r.center(),
+                            egui::Align2::CENTER_CENTER,
+                            n,
+                            egui::FontId::proportional(12.0),
+                            egui::Color32::BLACK,
+                        );
+                    }
+                }
+            });
     }
 
     /// Fetch the recorded `trace-history` via the incremental protocol.
@@ -599,6 +734,11 @@ impl App {
             Tab::History => {
                 self.history_text = self.fetch_trace_history();
             }
+            Tab::Graph => {
+                let (n, e) = self.fetch_graph();
+                self.graph_nodes = n;
+                self.graph_edges = e;
+            }
         }
     }
 
@@ -882,6 +1022,7 @@ impl App {
             ui.selectable_value(&mut self.tab, Tab::Procedural, "Procedural");
             ui.selectable_value(&mut self.tab, Tab::Parameters, "Parameters");
             ui.selectable_value(&mut self.tab, Tab::History, "History");
+            ui.selectable_value(&mut self.tab, Tab::Graph, "Prod Graph");
             if ui.button("Refresh").clicked() {
                 self.refresh_pending = true;
             }
@@ -902,6 +1043,7 @@ impl App {
             Tab::Procedural => self.proc_panel(ui),
             Tab::Parameters => self.param_panel(ui),
             Tab::History => self.history_panel(ui),
+            Tab::Graph => self.graph_panel(ui),
         }
     }
 }

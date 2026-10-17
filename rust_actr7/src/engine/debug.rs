@@ -2901,6 +2901,32 @@ impl Engine {
         self.production_history.why_not.clone()
     }
 
+    /// The production transition graph from the recorded `production-history`:
+    /// every production as a node, and an edge (with a count) for each
+    /// consecutive selected pair. A pragmatic stand-in for
+    /// `create-production-graph-coords`' full layout.
+    pub fn production_graph(&self) -> (Vec<String>, Vec<(String, String, u32)>) {
+        let nodes = self.all_production_names();
+        let mut counts: std::collections::BTreeMap<(String, String), u32> = Default::default();
+        let mut prev: Option<String> = None;
+        for r in self.production_history() {
+            match r.tag {
+                PHistTag::Start => prev = None,
+                PHistTag::Conflict => {
+                    if let Some(sel) = &r.selected {
+                        if let Some(p) = &prev {
+                            *counts.entry((p.clone(), sel.clone())).or_insert(0) += 1;
+                        }
+                        prev = Some(sel.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+        let edges = counts.into_iter().map(|((a, b), c)| (a, b, c)).collect();
+        (nodes, edges)
+    }
+
     /// Per-production `[name, utility, u]` rows for the stop/reward markers.
     pub(super) fn p_hist_utility_info(&self) -> Vec<Vec<Json>> {
         self.model

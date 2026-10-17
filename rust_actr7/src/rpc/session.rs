@@ -121,6 +121,7 @@ pub const BUILTINS: &[&str] = &[
     "printed-audicon",
     "printed-buffer-chunk",
     "printed-buffer-status",
+    "production-graph",
     "sorted-module-names",
     "modules-with-parameters",
     "modules-parameters",
@@ -1440,6 +1441,26 @@ impl Session {
                 Ok(vec![Json::Str(out.join("\n"))])
             }
             "printed-audicon" => Ok(vec![Json::Str(String::new())]),
+            // The production transition graph (nodes + counted edges) for the
+            // Environment's Production Graph view.
+            "production-graph" => {
+                let (nodes, edges) = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.production_graph())
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(vec![
+                    Json::Arr(nodes.into_iter().map(Json::Str).collect()),
+                    Json::Arr(
+                        edges
+                            .into_iter()
+                            .map(|(a, b, c)| {
+                                Json::Arr(vec![Json::Str(a), Json::Str(b), Json::Int(c as i64)])
+                            })
+                            .collect(),
+                    ),
+                ])])
+            }
             // The parameter viewer: modules, their parameters, and each
             // parameter's current value (see `Engine::module_parameters`).
             "sorted-module-names" | "modules-with-parameters" => {
@@ -3607,6 +3628,41 @@ mod tests {
             panic!("time header is not an array");
         };
         assert_eq!(header[0].as_str(), Some("time"));
+    }
+
+    /// `production-graph` returns `[nodes, edges]` from production-history.
+    #[test]
+    fn production_graph_command() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("production-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let v = s.evaluate("production-graph", None, &[], &mut r).unwrap();
+        let Json::Arr(parts) = &v[0] else {
+            panic!("production-graph result is not an array");
+        };
+        let Json::Arr(nodes) = &parts[0] else {
+            panic!("nodes are not an array");
+        };
+        assert!(!nodes.is_empty());
+        assert!(matches!(parts.get(1), Some(Json::Arr(_))));
     }
 
     /// The Environment viewer commands return the model's productions,
