@@ -50,7 +50,7 @@ spec_case!(remote_bind_test, "remote-bind-test");
 spec_case!(removed_and_restored_visual_item, "removed-and-restored-visual-item");
 spec_case!(retain_indirect_retrievals, "retain-indirect-retrievals");
 spec_case!(retrieval_request_parameters, "retrieval-request-parameters");
-spec_case_ignored!(safe_queries, "safe-queries", "pending: does not yet match ref");
+spec_case_ignored!(safe_queries, "safe-queries", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(save_model, "save-model", "tutorial-source scrape (not an engine trace)");
 spec_case!(semantic, "semantic");
 spec_case!(semantic_dynamic, "semantic-dynamic");
@@ -98,7 +98,7 @@ spec_case!(tutorial_unit1_semantic_g3_trace, "tutorial-unit1-semantic-g3-trace")
 spec_case_ignored!(tutorial_unit1_semantic_initial_retrieve_production, "tutorial-unit1-semantic-initial-retrieve-production", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit1_semantic_p14_chunk, "tutorial-unit1-semantic-p14-chunk", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit1_semantic_shark_chunks, "tutorial-unit1-semantic-shark-chunks", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit1_semantic_warnings, "tutorial-unit1-semantic-warnings", "pending: does not yet match ref");
+spec_case_ignored!(tutorial_unit1_semantic_warnings, "tutorial-unit1-semantic-warnings", "command-layer output (in scope; pending promotion)");
 spec_case!(tutorial_unit1_tutor_model_goal, "tutorial-unit1-tutor-model-goal");
 spec_case!(tutorial_unit1_tutor_model_partial_trace, "tutorial-unit1-tutor-model-partial-trace");
 spec_case!(tutorial_unit1_tutor_model_trace, "tutorial-unit1-tutor-model-trace");
@@ -131,7 +131,7 @@ spec_case_ignored!(tutorial_unit1modeling_broken_addition_v12_goal_buffer, "tuto
 spec_case!(tutorial_unit1modeling_broken_addition_v12_run_low_detail, "tutorial-unit1modeling-broken-addition-v12-run-low-detail");
 spec_case_ignored!(tutorial_unit1modeling_broken_addition_v2_initialize_addition_production, "tutorial-unit1modeling-broken-addition-v2-initialize-addition-production", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit1modeling_broken_addition_v3_run, "tutorial-unit1modeling-broken-addition-v3-run");
-spec_case_ignored!(tutorial_unit1modeling_broken_addition_v3_whynot, "tutorial-unit1modeling-broken-addition-v3-whynot", "command-layer output (in scope; pending promotion)");
+spec_case!(tutorial_unit1modeling_broken_addition_v3_whynot, "tutorial-unit1modeling-broken-addition-v3-whynot");
 spec_case_ignored!(tutorial_unit1modeling_broken_addition_v4_final_goal, "tutorial-unit1modeling-broken-addition-v4-final-goal", "pending: does not yet match ref");
 spec_case!(tutorial_unit1modeling_broken_addition_v4_run, "tutorial-unit1modeling-broken-addition-v4-run");
 spec_case_ignored!(tutorial_unit1modeling_broken_addition_v5_final_goal, "tutorial-unit1modeling-broken-addition-v5-final-goal", "pending: does not yet match ref");
@@ -367,7 +367,7 @@ spec_case!(tutorial_unit5modeling_v6_run_p3, "tutorial-unit5modeling-v6-run-p3")
 spec_case_ignored!(tutorial_unit5modeling_v6_set_similarities, "tutorial-unit5modeling-v6-set-similarities", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit5modeling_v7_p4_production, "tutorial-unit5modeling-v7-p4-production", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit5modeling_v7_p4_run, "tutorial-unit5modeling-v7-p4-run");
-spec_case_ignored!(tutorial_unit5modeling_v8_chunk_1_plus_2, "tutorial-unit5modeling-v8-chunk-1-plus-2", "command-layer output (in scope; pending promotion)");
+spec_case!(tutorial_unit5modeling_v8_chunk_1_plus_2, "tutorial-unit5modeling-v8-chunk-1-plus-2");
 spec_case_ignored!(tutorial_unit5modeling_v8_p5_6_productions, "tutorial-unit5modeling-v8-p5-6-productions", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit5modeling_v8_p6_compare_traces, "tutorial-unit5modeling-v8-p6-compare-traces", "pending: does not yet match ref");
 spec_case!(tutorial_unit5modeling_v8_p6_run, "tutorial-unit5modeling-v8-p6-run");
@@ -516,7 +516,7 @@ spec_case_ignored!(tutorial_unit8_categorize_sample_dm_chunks, "tutorial-unit8-c
 spec_case_ignored!(tutorial_unit8_categorize_sample_experiment, "tutorial-unit8-categorize-sample-experiment", "arbitrary-Lisp command stub (not replayable)");
 spec_case_ignored!(tutorial_unit8_categorize_sample_goal_chunk, "tutorial-unit8-categorize-sample-goal-chunk", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit8_example_static_extend_slots, "tutorial-unit8-example-static-extend-slots", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit8_extend_warning, "tutorial-unit8-extend-warning", "pending: does not yet match ref");
+spec_case_ignored!(tutorial_unit8_extend_warning, "tutorial-unit8-extend-warning", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(tutorial_unit8_paired_dynamic_chunks, "tutorial-unit8-paired-dynamic-chunks", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit8_paired_dynamic_compiling_to_dynamic, "tutorial-unit8-paired-dynamic-compiling-to-dynamic", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit8_paired_dynamic_compiling_to_static, "tutorial-unit8-paired-dynamic-compiling-to-static", "event-hook Lisp (not replayable)");
@@ -560,7 +560,7 @@ spec_case_ignored!(tutorial_unit2code_whynot, "tutorial_unit2code_whynot", "comm
 spec_case_ignored!(tutorial_unit5_onehit_blocks, "tutorial_unit5_onehit_blocks", "command-layer output (in scope; needs a driver spec)");
 spec_case_ignored!(tutorial_unit5_onehit_hands, "tutorial_unit5_onehit_hands", "command-layer output (in scope; needs a driver spec)");
 spec_case_ignored!(tutorial_unit5_onehit_learning, "tutorial_unit5_onehit_learning", "command-layer output (in scope; needs a driver spec)");
-spec_case_ignored!(undefined_slots, "undefined-slots", "pending: does not yet match ref");
+spec_case_ignored!(undefined_slots, "undefined-slots", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(unit_1_together_1_mp, "unit-1-together-1-mp", "pending: does not yet match ref");
 spec_case!(unstuff_aural, "unstuff-aural");
 spec_case_ignored!(unstuff_visual, "unstuff-visual", "pending: does not yet match ref");

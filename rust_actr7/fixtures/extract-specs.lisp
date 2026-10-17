@@ -873,13 +873,13 @@ and `(100 0)` keeps the spec stable across regens."
   (let ((spec (make-spec
                name
                (cond ((> (length *runs*) 1) :multi)
+                     ;; A command-driven stub with no run (a pure dump, maybe
+                     ;; with a `(reset)`): replayable via the command layer, so
+                     ;; it gets its own scope the harness runs.
+                     ((and (null static-scope) (null *runs*) *steps*) :command)
                      ((> *goal-focus-count* 0) :multi)
                      ((> *reset-count* 0) :multi)
                      ((= (length *runs*) 1) :pure)
-                     ;; A command-driven stub with no run (a pure
-                     ;; `pp`/`dm`/`buffer-chunk` dump): replayable, but not a
-                     ;; trace, so it gets its own scope the harness runs.
-                     ((and (null static-scope) *steps*) :command)
                      (t :other))
                :flags (cond ((eq static-scope :device) '(:device))
                             ((eq static-scope :driver) '(:driver))))))

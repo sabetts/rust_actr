@@ -541,12 +541,16 @@ fn ignore_reason(spec: &Spec) -> Option<String> {
     if let Some(u) = &spec.steps_unsupported {
         return Some(format!("unsupported step: {u}"));
     }
-    if !spec.steps.iter().any(|s| {
-        matches!(
-            s,
-            Step::Run { .. } | Step::RunFullTime { .. } | Step::ZzDriver | Step::AlDriver
-        )
-    }) {
+    // A command-only spec (`:COMMAND`) legitimately has no run; every other
+    // runnable scope needs one.
+    if spec.scope != "COMMAND"
+        && !spec.steps.iter().any(|s| {
+            matches!(
+                s,
+                Step::Run { .. } | Step::RunFullTime { .. } | Step::ZzDriver | Step::AlDriver
+            )
+        })
+    {
         return Some("no run step".into());
     }
     None

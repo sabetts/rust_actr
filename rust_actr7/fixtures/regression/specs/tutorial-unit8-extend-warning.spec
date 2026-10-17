@@ -1,1 +1,1 @@
-(:NAME "tutorial-unit8-extend-warning" :REF "tutorial-unit8-extend-warning.ref" :MODELS ("test-models;models;tutorial-unit8-new-slot-warning-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:RESET)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)
+(:NAME "tutorial-unit8-extend-warning" :REF "tutorial-unit8-extend-warning.ref" :MODELS ("test-models;models;tutorial-unit8-new-slot-warning-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:RESET)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)
