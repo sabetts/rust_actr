@@ -8,6 +8,7 @@ use eframe::egui;
 use crate::json::Json;
 
 use super::backend::{result_text, EnvBackend};
+use super::settings::{self, Settings};
 
 /// The central-area views.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -109,8 +110,10 @@ pub struct App {
     result: String,
     /// `run` duration in seconds.
     run_secs: f64,
-    /// Pace runs to wall-clock time.
-    real_time: bool,
+    /// Persistent GUI settings.
+    settings: Settings,
+    /// Whether the Options window is open.
+    show_options: bool,
     /// Last error, shown in the status bar.
     error: Option<String>,
 
@@ -141,7 +144,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(mut backend: Box<dyn EnvBackend>, start_dir: Option<PathBuf>) -> App {
+    pub fn new(
+        mut backend: Box<dyn EnvBackend>,
+        start_dir: Option<PathBuf>,
+        settings: Settings,
+    ) -> App {
         // Register the client command the engine calls with window ops.
         let handler = "env-vv-handler";
         backend.register_window_handler(handler);
@@ -150,7 +157,7 @@ impl App {
             None,
             vec![Json::Str(handler.to_string())],
         );
-        backend.set_real_time(true);
+        backend.set_real_time(settings.real_time);
         // Record the trace from the start so the History tab has data.
         let _ = backend.evaluate(
             "record-history",
@@ -164,7 +171,8 @@ impl App {
             command: String::new(),
             result: String::new(),
             run_secs: 10.0,
-            real_time: true,
+            settings,
+            show_options: false,
             error: None,
             tab: Tab::Trace,
             last_tab: Tab::Trace,
@@ -564,16 +572,25 @@ impl App {
             }
             Tab::Buffers => {
                 self.buffers = self.list("model-buffers", Vec::new());
+                if self.settings.sort_lists {
+                    self.buffers.sort();
+                }
                 self.buf_sel = None;
                 self.buf_detail.clear();
             }
             Tab::Procedural => {
                 self.prods = self.list("all-productions", Vec::new());
+                if self.settings.sort_lists {
+                    self.prods.sort();
+                }
                 self.prod_sel = None;
                 self.prod_detail.clear();
             }
             Tab::Parameters => {
                 self.modules = self.list("modules-with-parameters", Vec::new());
+                if self.settings.sort_lists {
+                    self.modules.sort();
+                }
                 self.mod_sel = None;
                 self.params.clear();
                 self.param_sel = None;
@@ -588,6 +605,9 @@ impl App {
     fn refresh_dm_list(&mut self) {
         let filter = self.dm_filter.clone();
         self.dm_chunks = self.list("filter-dm-chunks", vec![Json::Str(filter)]);
+        if self.settings.sort_lists {
+            self.dm_chunks.sort();
+        }
         self.dm_sel = None;
         self.dm_detail.clear();
     }
@@ -613,8 +633,15 @@ impl App {
             );
             ui.label("s");
         });
-        if ui.checkbox(&mut self.real_time, "real time").changed() {
-            self.backend.set_real_time(self.real_time);
+        if ui
+            .checkbox(&mut self.settings.real_time, "real time")
+            .changed()
+        {
+            self.backend.set_real_time(self.settings.real_time);
+            settings::save(&self.settings);
+        }
+        if ui.button("Options…").clicked() {
+            self.show_options = true;
         }
         let running = self.backend.is_running();
         ui.horizontal(|ui| {
@@ -932,16 +959,53 @@ impl eframe::App for App {
             });
         });
 
-        egui::Panel::left("controls")
+        let controls = egui::Panel::left("controls")
             .resizable(true)
-            .default_size(200.0)
+            .default_size(self.settings.controls_width)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| self.controls(ui));
             });
+        self.settings.controls_width = controls.response.rect.width();
 
         egui::CentralPanel::default().show(ui, |ui| self.central(ui));
 
         let ctx = ui.ctx().clone();
+        // Remember the window size for the next launch.
+        if let Some(r) = ctx.input(|i| i.viewport().inner_rect) {
+            self.settings.window = Some((r.width(), r.height()));
+        }
+        if self.show_options {
+            let mut open = true;
+            egui::Window::new("Options")
+                .open(&mut open)
+                .show(&ctx, |ui| {
+                    let mut changed = false;
+                    if ui
+                        .checkbox(&mut self.settings.sort_lists, "sort lists")
+                        .changed()
+                    {
+                        self.refresh_pending = true;
+                        changed = true;
+                    }
+                    if ui
+                        .checkbox(&mut self.settings.real_time, "real time")
+                        .changed()
+                    {
+                        self.backend.set_real_time(self.settings.real_time);
+                        changed = true;
+                    }
+                    ui.separator();
+                    ui.label(format!("settings: {}", settings::settings_path().display()));
+                    if changed {
+                        settings::save(&self.settings);
+                    }
+                });
+            self.show_options = open;
+        }
         self.render_windows(&ctx);
+    }
+
+    fn on_exit(&mut self) {
+        settings::save(&self.settings);
     }
 }

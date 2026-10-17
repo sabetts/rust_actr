@@ -13,6 +13,7 @@ mod app;
 mod backend;
 mod client;
 mod inproc;
+mod settings;
 
 pub use backend::EnvBackend;
 pub use client::Client;
@@ -66,16 +67,19 @@ pub fn run(args: EnvArgs) -> ExitCode {
         }
     }
 
+    // Restore the last window size (the Tcl env persists window geometry).
+    let settings = settings::load();
+    let size = settings.window.unwrap_or((900.0, 600.0));
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_inner_size([900.0, 600.0])
+            .with_inner_size([size.0, size.1])
             .with_title("ACT-R Environment"),
         ..Default::default()
     };
     match eframe::run_native(
         "ACT-R Environment",
         options,
-        Box::new(move |_cc| Ok(Box::new(app::App::new(backend, start_dir)))),
+        Box::new(move |_cc| Ok(Box::new(app::App::new(backend, start_dir, settings)))),
     ) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
