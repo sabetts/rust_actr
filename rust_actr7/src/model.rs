@@ -615,7 +615,9 @@ pub fn var_referenced_buffers(p: &Production) -> Vec<String> {
                     add(v, &mut vars);
                 }
             }
-            LhsItem::Eval { value, .. } | LhsItem::Bind { value, .. } | LhsItem::MvBind { value, .. } => {
+            LhsItem::Eval { value, .. }
+            | LhsItem::Bind { value, .. }
+            | LhsItem::MvBind { value, .. } => {
                 for v in find_variables(value) {
                     vars.insert(var_key(&v));
                 }
@@ -630,7 +632,10 @@ pub fn var_referenced_buffers(p: &Production) -> Vec<String> {
                 }
             }
             RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => {
-                if let ChunkDesc::Spec { slots, neg, rels, .. } = spec {
+                if let ChunkDesc::Spec {
+                    slots, neg, rels, ..
+                } = spec
+                {
                     for (_, v) in slots.iter().chain(neg.iter()) {
                         add(v, &mut vars);
                     }
@@ -646,7 +651,9 @@ pub fn var_referenced_buffers(p: &Production) -> Vec<String> {
                     }
                 }
             }
-            RhsAction::Eval { value, .. } | RhsAction::Bind { value, .. } | RhsAction::MvBind { value, .. } => {
+            RhsAction::Eval { value, .. }
+            | RhsAction::Bind { value, .. }
+            | RhsAction::MvBind { value, .. } => {
                 for v in find_variables(value) {
                     vars.insert(var_key(&v));
                 }
@@ -2271,7 +2278,10 @@ fn parse_model(
                     // Resolve a `*var*` reference to its model-file value
                     // when known.
                     let v = match v {
-                        Sexp::Sym(s) => defs.get(&s.to_uppercase()).cloned().unwrap_or_else(|| v.clone()),
+                        Sexp::Sym(s) => defs
+                            .get(&s.to_uppercase())
+                            .cloned()
+                            .unwrap_or_else(|| v.clone()),
                         _ => v.clone(),
                     };
                     model.set_param_values.push((k.to_uppercase(), v));

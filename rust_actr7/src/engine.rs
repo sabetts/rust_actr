@@ -296,7 +296,8 @@ struct Config {
     /// `update-chunks-on-the-fly`: `:ncnar` non-nil AND `:dcnn` (both `t` by
     /// default). On a merge, rewrite references to the merged buffer chunk to
     /// the DM chunk's name (`framework/naming-module.lisp:452`).
-    chunk_update: bool,    /// `require-extra "threads"`: the goal buffer is a searchable
+    chunk_update: bool,
+    /// `require-extra "threads"`: the goal buffer is a searchable
     /// multi-buffer holding a set of concurrent goals (`new-threads.lisp`).
     threads: bool,
     /// Activation trace (`:act`); see [`Act`].
@@ -1231,8 +1232,7 @@ impl Config {
             // (`framework/naming-module.lisp:452`). Both default to `t`; a
             // model that sets either to nil opts out of name remapping
             // (`sji-merge` sets `:dcnn nil`).
-            chunk_update: sgp_tri_state(&m.params, ":NCNAR")
-                && sgp_tri_state(&m.params, ":DCNN"),
+            chunk_update: sgp_tri_state(&m.params, ":NCNAR") && sgp_tri_state(&m.params, ":DCNN"),
             threads: m
                 .required_extras
                 .iter()

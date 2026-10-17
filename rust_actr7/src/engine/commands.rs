@@ -142,7 +142,9 @@ impl Engine {
                     "LET" | "LET*" => {
                         let binds = match items.get(1) {
                             Some(Sexp::List(l)) => l,
-                            other => return Err(format!("let needs a binding list, got {other:?}")),
+                            other => {
+                                return Err(format!("let needs a binding list, got {other:?}"))
+                            }
                         };
                         let mut local = b.clone();
                         for bind in binds {
@@ -182,8 +184,8 @@ impl Engine {
                     // `mod-chunk-fct` (`chunks.lisp:1054`): set slots on a
                     // named chunk, returning its name.
                     "MOD-CHUNK-FCT" => {
-                        let v = self
-                            .m_eval(items.get(1).ok_or("mod-chunk-fct needs a chunk")?, b)?;
+                        let v =
+                            self.m_eval(items.get(1).ok_or("mod-chunk-fct needs a chunk")?, b)?;
                         let name = match v {
                             Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
                             other => return Err(format!("mod-chunk-fct chunk {}", other.show())),
@@ -218,12 +220,7 @@ impl Engine {
             NewChunk::Spec { slots, .. } => slots.clone(),
             _ => return Ok(()),
         };
-        let get = |k: &str| {
-            slots
-                .iter()
-                .find(|(n, _)| n == k)
-                .map(|(_, v)| v.clone())
-        };
+        let get = |k: &str| slots.iter().find(|(n, _)| n == k).map(|(_, v)| v.clone());
         let Some(action) = get("ACTION") else {
             return Ok(());
         };

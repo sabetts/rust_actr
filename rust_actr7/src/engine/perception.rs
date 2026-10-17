@@ -43,7 +43,13 @@ impl Engine {
             self.visual_lock = false;
             // `:maintenance t` (`vision.lisp:3244`): a maintenance event does
             // not mark buffers changed, so it must not wake conflict resolution.
-            self.push_m(self.time_ms, Prio::Min, Out::Never, true, Event::UnlockVision);
+            self.push_m(
+                self.time_ms,
+                Prio::Min,
+                Out::Never,
+                true,
+                Event::UnlockVision,
+            );
         }
         let (slots, ctype) = match &spec {
             NewChunk::Spec { ctype, slots, .. } => (slots.clone(), ctype.clone()),
@@ -550,9 +556,9 @@ impl Engine {
             let (ox, oy) = self.window_origin;
             let matches = |f: &Feature| {
                 f.kind == "LINE"
-                    && f.extra.iter().any(|(k, v)| {
-                        k == "END1-X" && *v == Value::Int(ox + m.x1)
-                    })
+                    && f.extra
+                        .iter()
+                        .any(|(k, v)| k == "END1-X" && *v == Value::Int(ox + m.x1))
                     && f.extra
                         .iter()
                         .any(|(k, v)| k == "END1-Y" && *v == Value::Int(oy + m.y1))
@@ -574,13 +580,7 @@ impl Engine {
                     })
                     .unwrap_or_else(|| "BLACK".to_string());
                 let origin = (ox, oy);
-                debug::set_line_geometry(
-                    f,
-                    (m.nx1, m.ny1),
-                    (m.nx2, m.ny2),
-                    origin,
-                    &color,
-                );
+                debug::set_line_geometry(f, (m.nx1, m.ny1), (m.nx2, m.ny2), origin, &color);
                 f.tstamp_ms = now;
             }
         }
@@ -691,8 +691,13 @@ impl Engine {
             let width = 7 * t.text.chars().count() as i64;
             let sx = t.x + 305 + (width - 7) / 2;
             let sy = t.y + 306;
-            self.features
-                .push(self.text_feature(format!("VISUAL-LOCATION{n}"), &t.text, sx, sy, now));
+            self.features.push(self.text_feature(
+                format!("VISUAL-LOCATION{n}"),
+                &t.text,
+                sx,
+                sy,
+                now,
+            ));
         }
         // Scripted buttons and lines (`add-button-to-exp-window` /
         // `add-line-to-exp-window`): build their features through the same
@@ -1242,13 +1247,16 @@ impl Engine {
         }
         for (slot, lowest) in &minmax {
             let val = |f: &Feature| feature_num(f, slot);
-            let best = cands.iter().filter_map(val).fold(None, |acc: Option<f64>, x| {
-                Some(match acc {
-                    None => x,
-                    Some(a) if (*lowest && x < a) || (!*lowest && x > a) => x,
-                    Some(a) => a,
-                })
-            });
+            let best = cands
+                .iter()
+                .filter_map(val)
+                .fold(None, |acc: Option<f64>, x| {
+                    Some(match acc {
+                        None => x,
+                        Some(a) if (*lowest && x < a) || (!*lowest && x > a) => x,
+                        Some(a) => a,
+                    })
+                });
             if let Some(b) = best {
                 cands.retain(|f| val(f) == Some(b));
             }
@@ -1433,7 +1441,9 @@ impl Feature {
     /// spec order, so the printed list is `[SIZE, DISTANCE] ++ spec`
     /// (PORTING-NOTES #238).
     pub(super) fn filled_slots(&self) -> Vec<(String, Value)> {
-        let has = |n: &str| self.spec.iter().any(|(k, _)| k == n) || self.spec_pre.iter().any(|(k, _)| k == n);
+        let has = |n: &str| {
+            self.spec.iter().any(|(k, _)| k == n) || self.spec_pre.iter().any(|(k, _)| k == n)
+        };
         let mut v: Vec<(String, Value)> = self.spec_pre.clone();
         if !has("SIZE") {
             v.push(("SIZE".to_string(), Value::Num(self.size())));
@@ -1448,7 +1458,8 @@ impl Feature {
     /// `set-chunk-slot-value-fct` on a visicon feature: an existing slot keeps
     /// its position, a new one is pushed onto the front of the printed list
     /// (`chunks.lisp:1459`).
-    pub(super) fn set_slot(&mut self, name: &str, value: Value) {        match (name, &value) {
+    pub(super) fn set_slot(&mut self, name: &str, value: Value) {
+        match (name, &value) {
             ("SCREEN-X", Value::Int(i)) => self.x = *i,
             ("SCREEN-Y", Value::Int(i)) => self.y = *i,
             ("WIDTH", Value::Int(i)) => self.width = *i,

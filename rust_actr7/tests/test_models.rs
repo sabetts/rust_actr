@@ -49,7 +49,10 @@ struct Spec {
 }
 
 fn specs_dir() -> PathBuf {
-    crate_dir().join("fixtures").join("regression").join("specs")
+    crate_dir()
+        .join("fixtures")
+        .join("regression")
+        .join("specs")
 }
 
 fn refs_dir() -> PathBuf {
@@ -623,28 +626,32 @@ fn parse_device_op(
             }),
             // `(MODIFY-LINE ms x1 y1 x2 y2 nx1 ny1 nx2 ny2)`: redraw the line
             // whose old endpoints match (window-relative).
-            "MODIFY-LINE" => device.line_modifies.push(actr_engine::engine::DeviceLineModify {
-                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
-                x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
-                y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
-                x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
-                y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
-                nx1: as_i64(v.get(6).ok_or("missing nx1")?).ok_or("bad nx1")?,
-                ny1: as_i64(v.get(7).ok_or("missing ny1")?).ok_or("bad ny1")?,
-                nx2: as_i64(v.get(8).ok_or("missing nx2")?).ok_or("bad nx2")?,
-                ny2: as_i64(v.get(9).ok_or("missing ny2")?).ok_or("bad ny2")?,
-                run,
-            }),
+            "MODIFY-LINE" => device
+                .line_modifies
+                .push(actr_engine::engine::DeviceLineModify {
+                    at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                    x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
+                    y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
+                    x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
+                    y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
+                    nx1: as_i64(v.get(6).ok_or("missing nx1")?).ok_or("bad nx1")?,
+                    ny1: as_i64(v.get(7).ok_or("missing ny1")?).ok_or("bad ny1")?,
+                    nx2: as_i64(v.get(8).ok_or("missing nx2")?).ok_or("bad nx2")?,
+                    ny2: as_i64(v.get(9).ok_or("missing ny2")?).ok_or("bad ny2")?,
+                    run,
+                }),
             // `(REMOVE-LINE ms x1 y1 x2 y2)`: drop the line whose endpoints
             // match (window-relative).
-            "REMOVE-LINE" => device.line_removes.push(actr_engine::engine::DeviceLineRemove {
-                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
-                x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
-                y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
-                x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
-                y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
-                run,
-            }),
+            "REMOVE-LINE" => device
+                .line_removes
+                .push(actr_engine::engine::DeviceLineRemove {
+                    at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                    x1: as_i64(v.get(2).ok_or("missing x1")?).ok_or("bad x1")?,
+                    y1: as_i64(v.get(3).ok_or("missing y1")?).ok_or("bad y1")?,
+                    x2: as_i64(v.get(4).ok_or("missing x2")?).ok_or("bad x2")?,
+                    y2: as_i64(v.get(5).ok_or("missing y2")?).ok_or("bad y2")?,
+                    run,
+                }),
             "MODIFY-TEXT" => device.modifies.push(actr_engine::engine::DeviceModify {
                 at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
                 text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
@@ -768,17 +775,18 @@ impl Remote for NoRemote {
 /// Drive a spec through a [`Session`]: load the model chain, then apply each
 /// step — commands via `evaluate`, the rest at the engine level, mirroring
 /// `run_model_steps` so the two drivers cannot diverge on trace shape.
-fn run_spec_session(
-    root: &Path,
-    spec: &Spec,
-    device: &DeviceSetup,
-) -> Result<String, String> {
+fn run_spec_session(root: &Path, spec: &Spec, device: &DeviceSetup) -> Result<String, String> {
     let seed = spec.run_seeds.first().copied().ok_or("no run seed")?;
     let mut session = Session::new(root.to_path_buf(), seed);
     let mut remote = NoRemote;
     for m in &spec.models {
         session
-            .evaluate("load-act-r-model", None, &[Json::Str(m.clone())], &mut remote)
+            .evaluate(
+                "load-act-r-model",
+                None,
+                &[Json::Str(m.clone())],
+                &mut remote,
+            )
             .map_err(|e| format!("load {m}: {e}"))?;
     }
     session.set_device(device.clone())?;
@@ -898,7 +906,10 @@ fn apply_session_step(
             .start_hand_at_touch(hand),
         Step::ModFocus(slots) => session.engine_mut().ok_or_else(no_model)?.mod_focus(slots),
         Step::AddVisicon(slots) => {
-            session.engine_mut().ok_or_else(no_model)?.add_visicon(slots);
+            session
+                .engine_mut()
+                .ok_or_else(no_model)?
+                .add_visicon(slots);
         }
         Step::TrackerSetup(slots) => session
             .engine_mut()

@@ -31,9 +31,21 @@ fn sym(s: &str) -> Value {
 fn scripted_reset_is_idempotent() {
     // Construction performs a reset; an explicit `(reset)` at t=0 must
     // reproduce the same run (same DM, goal, CR) exactly.
-    let a = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let a = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
     let out_a = a.run().unwrap();
-    let mut b = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let mut b = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
     b.reset().unwrap();
     b.run_secs(10.0).unwrap();
     assert_eq!(out_a, b.output());
@@ -225,7 +237,13 @@ fn remove_dup_keeps_last() {
 #[test]
 fn eval_evaluator() {
     use crate::sexpr::parse_all;
-    let e = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
     let mut b = Bindings::new();
     b.insert("X".to_string(), Value::Int(3));
     let one = |s: &str| parse_all(s).unwrap().pop().unwrap();
@@ -248,7 +266,13 @@ fn eval_evaluator() {
 fn eval_user_defun() {
     use crate::model::UserDefun;
     use crate::sexpr::parse_all;
-    let mut e = Engine::new(tutorial_model("count.lisp"), (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
     let expr = |s: &str| parse_all(s).unwrap().pop().unwrap();
     let mut fns = HashMap::new();
     fns.insert(

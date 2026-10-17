@@ -238,7 +238,10 @@ impl Engine {
             }
             Event::AuralLocation { evt } => {
                 self.aural_loc_evt = Some(evt);
-                self.emit("AUDIO", format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{evt} NIL"));
+                self.emit(
+                    "AUDIO",
+                    format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{evt} NIL"),
+                );
             }
             Event::AudioEventEnded { evt } => {
                 // `audio-event-ended` (`audio.lisp:1077`) fires only while the
@@ -361,10 +364,10 @@ impl Engine {
                 // its mod from the `new-sound` path instead.
                 if self.cfg.detail.shows(Out::Always) {
                     if let Ok(evt) = s.ename.trim_start_matches("AUDIO-EVENT").parse::<u64>() {
-                    // The buffer now holds this event, which is what the end
-                    // check's precondition tests (`aural-location-update-check`,
-                    // `audio.lisp:1068`) — the tone path has to record it or
-                    // `AudioEventEnded` never fires.
+                        // The buffer now holds this event, which is what the end
+                        // check's precondition tests (`aural-location-update-check`,
+                        // `audio.lisp:1068`) — the tone path has to record it or
+                        // `AudioEventEnded` never fires.
                         self.aural_loc_evt = Some(evt);
                         self.push_m(
                             s.offset,
@@ -886,7 +889,11 @@ impl Engine {
                 // lands first. bst's `read-done` trace shows the goal set before
                 // `propagate-reward`.
                 if let Some(r) = self.model.productions[prod].reward.clone() {
-                    self.now(Prio::Num(-1001), Out::Medium, Event::PropagateReward { value: r });
+                    self.now(
+                        Prio::Num(-1001),
+                        Out::Medium,
+                        Event::PropagateReward { value: r },
+                    );
                 }
             }
             Event::ProcDisplay => {
@@ -933,7 +940,8 @@ impl Engine {
                 // emits no trace line of its own, just the table.
                 self.print_visicon_rpc(true, Some((at_ms, seq)));
             }
-            Event::UnlockVision => {                // `unlock-vision` (`vision.lisp:1553`): drop the lock, and if a
+            Event::UnlockVision => {
+                // `unlock-vision` (`vision.lisp:1553`): drop the lock, and if a
                 // proc-display was blocked while it was held, run it now (no
                 // `proc-display` trace line — the ref has only `visicon-update`).
                 self.visual_lock = false;
@@ -1448,12 +1456,10 @@ impl Engine {
                         // the target geometry was unavailable.
                         let e = init
                             + fit_ms.unwrap_or_else(|| {
-                                let (tx, ty, _) =
-                                    loc.clone().unwrap_or((0, 0, String::new()));
+                                let (tx, ty, _) = loc.clone().unwrap_or((0, 0, String::new()));
                                 let (cx, cy) = (self.zz_mouse_pos.0, self.zz_mouse_pos.1);
-                                let r = (((tx - cx) as f32).powi(2)
-                                    + ((ty - cy) as f32).powi(2))
-                                .sqrt();
+                                let r = (((tx - cx) as f32).powi(2) + ((ty - cy) as f32).powi(2))
+                                    .sqrt();
                                 let mut coef = self.cfg.touch_cursor_coeff;
                                 if let Some(d) = self.cfg.zz_cdd {
                                     if self.zz_mouse_down {
@@ -1763,7 +1769,10 @@ impl Engine {
             }
             Event::PropagateReward { value } => {
                 if show {
-                    self.emit("UTILITY", format!("PROPAGATE-REWARD {}", value.trace_text()));
+                    self.emit(
+                        "UTILITY",
+                        format!("PROPAGATE-REWARD {}", value.trace_text()),
+                    );
                 }
                 // `production-history-reward-markers` (a reward-notify hook).
                 let reward_num = match &value {
@@ -1813,8 +1822,7 @@ impl Engine {
                     Reward::Other(_) => {
                         if self.cfg.ult {
                             self.out(
-                                "  Non-numeric reward clears utility learning history."
-                                    .to_string(),
+                                "  Non-numeric reward clears utility learning history.".to_string(),
                             );
                         }
                         self.history.clear();

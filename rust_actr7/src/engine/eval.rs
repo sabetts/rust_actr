@@ -216,10 +216,7 @@ impl Engine {
             }
             "NUMBERP" => {
                 let v = self.eval_expr(args.first().ok_or("numberp needs an argument")?, b)?;
-                Ok(bool_value(matches!(
-                    v,
-                    Value::Int(_) | Value::Num(_)
-                )))
+                Ok(bool_value(matches!(v, Value::Int(_) | Value::Num(_))))
             }
             "SYMBOLP" => {
                 let v = self.eval_expr(args.first().ok_or("symbolp needs an argument")?, b)?;

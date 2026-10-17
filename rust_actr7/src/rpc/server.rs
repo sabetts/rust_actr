@@ -177,10 +177,10 @@ fn run_interleaved(
         return reply_ok(
             id,
             Json::Arr(vec![
-            Json::Float(session.time_secs()),
-            Json::Int(session.run_events() as i64),
-            Json::Null,
-        ]),
+                Json::Float(session.time_secs()),
+                Json::Int(session.run_events() as i64),
+                Json::Null,
+            ]),
         );
     }
     loop {
@@ -208,7 +208,8 @@ fn run_interleaved(
             Json::Null,
         ]),
     )
-}fn dispatch(
+}
+fn dispatch(
     session: &mut Session,
     conn: &mut Conn,
     method: Method,
@@ -302,10 +303,7 @@ fn run_interleaved(
             } else {
                 Vec::new()
             };
-            let result = if matches!(
-                name.as_str(),
-                "run" | "run-full-time" | "run-until-time"
-            ) {
+            let result = if matches!(name.as_str(), "run" | "run-full-time" | "run-until-time") {
                 return run_interleaved(session, conn, &name, &args, id);
             } else {
                 session.evaluate(&name, model, &args, conn)

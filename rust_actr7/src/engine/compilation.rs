@@ -1011,9 +1011,7 @@ pub(super) fn render_production(
                         // `(replace-variables slot bindings)`), so match on
                         // either the raw or resolved form.
                         let ann = partials.iter().find(|(pb, ps, req, _, _)| {
-                            pb == buffer
-                                && (ps == &t.slot || ps == &slot)
-                                && req.show() == val
+                            pb == buffer && (ps == &t.slot || ps == &slot) && req.show() == val
                         });
                         if let Some((_, _, _, actual, sim)) = ann {
                             s.push_str(&format!(

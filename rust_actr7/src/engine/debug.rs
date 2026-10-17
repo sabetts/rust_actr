@@ -399,7 +399,8 @@ impl Engine {
                 }
             }
         }
-        self.visicon_pending.push(VisPending::Add(Feature {            name: format!("CHUNK{n}"),
+        self.visicon_pending.push(VisPending::Add(Feature {
+            name: format!("CHUNK{n}"),
             kind: "VISUAL-LOCATION".to_string(),
             value: String::new(),
             x,
@@ -956,7 +957,11 @@ impl Engine {
     /// Every production's name, in load order — `(spp)` with no production
     /// reports them all (`utility-and-reward-1.lisp:804`).
     pub fn production_names(&self) -> Vec<String> {
-        self.model.productions.iter().map(|p| p.name.clone()).collect()
+        self.model
+            .productions
+            .iter()
+            .map(|p| p.name.clone())
+            .collect()
     }
 
     pub fn get_param(&self, key: &str) -> Option<String> {
@@ -978,11 +983,7 @@ impl Engine {
             ":IU" => self.cfg.iu.to_string(),
             ":MD" => self.cfg.md.to_string(),
             ":MS" => self.cfg.ms.to_string(),
-            ":SIM-HOOK" => self
-                .cfg
-                .sim_hook
-                .clone()
-                .unwrap_or_else(|| "NIL".into()),
+            ":SIM-HOOK" => self.cfg.sim_hook.clone().unwrap_or_else(|| "NIL".into()),
             ":ANS" => self.cfg.ans.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":BLL" => self.cfg.bll.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":SJI" => "T".to_string(),
@@ -1151,9 +1152,9 @@ impl Engine {
                 .collect()
         };
         for prod in &prods {
-            let hit = conflict.iter().find(|(i, _, _)| {
-                self.model.productions[*i].name == prod.name
-            });
+            let hit = conflict
+                .iter()
+                .find(|(i, _, _)| self.model.productions[*i].name == prod.name);
             // `command-output "~%Production …"` prints a leading newline.
             self.out_lines.push(String::new());
             let (header, partials): (String, &[(String, String, Value, Value, f32)]) = match hit {
@@ -1411,7 +1412,11 @@ impl Engine {
     /// `print-visicon` (`vision.lisp:4090`) → `printed-visicon`
     /// (`vision.lisp:4098`): the visicon table, then the pending
     /// `visicon-updates`.
-    pub fn print_visicon_rpc(&mut self, show_pending: bool, limit: Option<(i64, u32)>) -> Vec<String> {
+    pub fn print_visicon_rpc(
+        &mut self,
+        show_pending: bool,
+        limit: Option<(i64, u32)>,
+    ) -> Vec<String> {
         let mut out = self.printed_visicon(show_pending, limit);
         // `command-output` ends its string with `~%`, so the ref has a blank
         // line after each `print-visicon` block.
@@ -2029,8 +2034,14 @@ impl Engine {
             // oval's spec order is `screen-x screen-y width height value
             // color`, and the isa marker adds `kind` and `oval` (PORTING-NOTES #238)."
             spec: vec![
-                ("SCREEN-X".to_string(), Value::Int(ox + x + width.div_euclid(2))),
-                ("SCREEN-Y".to_string(), Value::Int(oy + y + height.div_euclid(2))),
+                (
+                    "SCREEN-X".to_string(),
+                    Value::Int(ox + x + width.div_euclid(2)),
+                ),
+                (
+                    "SCREEN-Y".to_string(),
+                    Value::Int(oy + y + height.div_euclid(2)),
+                ),
                 ("WIDTH".to_string(), Value::Int(width)),
                 ("HEIGHT".to_string(), Value::Int(height)),
                 ("VALUE".to_string(), Value::Str(text.to_string())),
@@ -2085,24 +2096,20 @@ impl Engine {
     /// the button's oval (`build-vis-locs-for`'s `oval` feature).
     pub(super) fn record_click_action(&mut self) {
         let (mx, my, _) = self.zz_mouse_pos;
-        let hit = self
-            .window_items
-            .iter()
-            .rev()
-            .find_map(|(key, names)| {
-                if !self.window_actions.contains_key(key) {
-                    return None;
-                }
-                let under = names.iter().any(|n| {
-                    self.features.iter().any(|f| {
-                        &f.name == n
-                            && f.kind == "OVAL"
-                            && (mx - f.x).abs() <= f.width / 2
-                            && (my - f.y).abs() <= f.height / 2
-                    })
-                });
-                under.then(|| key.clone())
+        let hit = self.window_items.iter().rev().find_map(|(key, names)| {
+            if !self.window_actions.contains_key(key) {
+                return None;
+            }
+            let under = names.iter().any(|n| {
+                self.features.iter().any(|f| {
+                    &f.name == n
+                        && f.kind == "OVAL"
+                        && (mx - f.x).abs() <= f.width / 2
+                        && (my - f.y).abs() <= f.height / 2
+                })
             });
+            under.then(|| key.clone())
+        });
         if let Some(key) = hit {
             if let Some((cmd, args)) = self.window_actions.get(&key).cloned() {
                 self.pending_device_actions.push((cmd, args));
