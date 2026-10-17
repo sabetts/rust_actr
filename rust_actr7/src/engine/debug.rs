@@ -1199,7 +1199,7 @@ impl Engine {
     /// failure in that order. This is why `=goal> =slot state3` can report
     /// `=slot` resolved to `state`: the later `=imaginal> slot =slot` is a
     /// `bind-slot` and runs before the `test-var-slot`.
-    fn why_not_match(&self, prod: &crate::model::Production) -> String {
+    pub(super) fn why_not_match(&self, prod: &crate::model::Production) -> String {
         use crate::model::SlotOp;
 
         #[derive(Clone, Copy, PartialEq)]
@@ -2771,6 +2771,163 @@ pub(super) enum BufKind {
     Clear,
     Request(String),
     ModRequest(String),
+}
+
+/// `production-history` recording (`other-files/production-history.lisp`).
+impl Engine {
+    /// Enable/disable `production-history` recording.
+    pub fn set_production_history(&mut self, on: bool) {
+        self.production_history.enabled = on;
+    }
+
+    /// The recorded `production-history` records, oldest first.
+    pub fn production_history(&self) -> Vec<PHistRecord> {
+        let mut r = self.production_history.records.clone();
+        r.reverse();
+        r
+    }
+
+    /// The distinct production failure reasons (`why-not-list`).
+    pub fn production_history_why_not(&self) -> Vec<String> {
+        self.production_history.why_not.clone()
+    }
+
+    /// Per-production `[name, utility, u]` rows for the stop/reward markers.
+    pub(super) fn p_hist_utility_info(&self) -> Vec<Vec<Json>> {
+        self.model
+            .productions
+            .iter()
+            .enumerate()
+            .map(|(i, p)| {
+                vec![
+                    Json::Str(p.name.clone()),
+                    self.production_utility[i]
+                        .map(|u| Json::Float(u as f64))
+                        .unwrap_or(Json::Null),
+                    Json::Float(self.utilities[i] as f64),
+                ]
+            })
+            .collect()
+    }
+
+    /// Record a run-start marker (`:run-start`).
+    pub(super) fn p_hist_run_start(&mut self) {
+        if self.production_history.enabled && !self.production_history.running {
+            self.production_history.running = true;
+            self.production_history.records.push(PHistRecord {
+                tag: PHistTag::Start,
+                time_ms: self.time_ms,
+                selected: None,
+                matched: Vec::new(),
+                mismatched: Vec::new(),
+                info: Vec::new(),
+                reward: None,
+            });
+        }
+    }
+
+    /// Record a run-stop marker (`:run-end`).
+    pub(super) fn p_hist_run_stop(&mut self) {
+        if self.production_history.enabled && self.production_history.running {
+            self.production_history.running = false;
+            let info = self.p_hist_utility_info();
+            let time_ms = self.time_ms;
+            self.production_history.records.push(PHistRecord {
+                tag: PHistTag::Stop,
+                time_ms,
+                selected: None,
+                matched: Vec::new(),
+                mismatched: Vec::new(),
+                info,
+                reward: None,
+            });
+        }
+    }
+
+    /// Record a reward marker (`production-history-reward-markers`).
+    pub(super) fn p_hist_reward(&mut self, reward: Option<f32>) {
+        if !self.production_history.enabled {
+            return;
+        }
+        let info = self.p_hist_utility_info();
+        let time_ms = self.time_ms;
+        self.production_history.records.push(PHistRecord {
+            tag: PHistTag::Reward,
+            time_ms,
+            selected: None,
+            matched: Vec::new(),
+            mismatched: Vec::new(),
+            info,
+            reward,
+        });
+    }
+
+    /// Record a conflict-resolution block (`production-history-recorder`).
+    pub(super) fn record_production_history(
+        &mut self,
+        cs: &[(usize, Bindings, f32, Vec<PpmMismatch>)],
+        selected: Option<usize>,
+    ) {
+        if !self.production_history.enabled {
+            return;
+        }
+        let matched: Vec<String> = cs
+            .iter()
+            .map(|(i, _, _, _)| self.model.productions[*i].name.clone())
+            .collect();
+        let mismatched: Vec<String> = self
+            .model
+            .productions
+            .iter()
+            .map(|p| p.name.clone())
+            .filter(|n| !matched.contains(n))
+            .collect();
+        let mut info: Vec<Vec<Json>> = Vec::new();
+        for (i, _, _, _) in cs {
+            let name = self.model.productions[*i].name.clone();
+            info.push(vec![
+                Json::Str(name),
+                self.production_utility[*i]
+                    .map(|u| Json::Float(u as f64))
+                    .unwrap_or(Json::Null),
+                Json::Float(self.utilities[*i] as f64),
+            ]);
+        }
+        for name in &mismatched {
+            let Some(idx) = self.model.productions.iter().position(|p| &p.name == name) else {
+                continue;
+            };
+            let prod = self.model.productions[idx].clone();
+            let reason = self.why_not_match(&prod);
+            let wi = match self
+                .production_history
+                .why_not
+                .iter()
+                .position(|r| r.eq_ignore_ascii_case(&reason))
+            {
+                Some(i) => i,
+                None => {
+                    self.production_history.why_not.push(reason);
+                    self.production_history.why_not.len() - 1
+                }
+            };
+            info.push(vec![
+                Json::Str(name.clone()),
+                Json::Int(wi as i64),
+                Json::Float(self.utilities[idx] as f64),
+            ]);
+        }
+        let time_ms = self.time_ms;
+        self.production_history.records.push(PHistRecord {
+            tag: PHistTag::Conflict,
+            time_ms,
+            selected: selected.map(|i| self.model.productions[i].name.clone()),
+            matched,
+            mismatched,
+            info,
+            reward: None,
+        });
+    }
 }
 
 /// Append a snapshot's `(chunk-text, status)` for `buf` to a history row,

@@ -464,6 +464,9 @@ impl Session {
                     graphic_trace_items(&e.buffer_trace(), vertical, now_ms)
                 })
             }
+            "PRODUCTION-HISTORY" => self.engine.as_ref().map(production_history_records),
+            // `production-grid` is a processor over `production-history`.
+            "PRODUCTION-GRID" => self.engine.as_ref().map(production_grid_records),
             _ => None,
         }
     }
@@ -1080,6 +1083,8 @@ impl Session {
                             eng.set_visicon_history(true);
                         } else if n.eq_ignore_ascii_case("buffer-trace") {
                             eng.set_buffer_trace(true);
+                        } else if n.eq_ignore_ascii_case("production-history") {
+                            eng.set_production_history(true);
                         } else if eng.is_buffer(n) {
                             // `buffer-trace-<buffer>` constituent, addressed by
                             // the bare buffer name (`71-pick-buffers.tcl`).
@@ -1103,6 +1108,8 @@ impl Session {
                             eng.set_visicon_history(false);
                         } else if n.eq_ignore_ascii_case("buffer-trace") {
                             eng.set_buffer_trace(false);
+                        } else if n.eq_ignore_ascii_case("production-history") {
+                            eng.set_production_history(false);
                         } else if eng.is_buffer(n) {
                             eng.trace_buffer(n, false);
                         }
@@ -2641,6 +2648,116 @@ fn graphic_trace_items(
     all
 }
 
+/// The `production-history` info summary (`get-p-history-data`'s first row):
+/// `[0, "info", why-not-list, [[production, printed-text], …]]`.
+fn production_info_summary(e: &crate::engine::Engine) -> Json {
+    let why: Vec<Json> = e
+        .production_history_why_not()
+        .into_iter()
+        .map(Json::Str)
+        .collect();
+    let prods: Vec<Json> = e
+        .all_production_names()
+        .into_iter()
+        .map(|n| {
+            let text = e.printed_production(&n).unwrap_or_default();
+            Json::Arr(vec![Json::Str(n), Json::Str(text)])
+        })
+        .collect();
+    Json::Arr(vec![
+        Json::Int(0),
+        Json::Str("info".into()),
+        Json::Arr(why),
+        Json::Arr(prods),
+    ])
+}
+
+/// The recorded `production-history` records as JSON (`get-p-history-data`),
+/// `[info, …records oldest-first]`.
+fn production_history_records(e: &crate::engine::Engine) -> Vec<String> {
+    use crate::engine::PHistTag;
+    let mut out = vec![production_info_summary(e)];
+    for r in &e.production_history() {
+        let info = Json::Arr(r.info.iter().map(|row| Json::Arr(row.clone())).collect());
+        let rec = match r.tag {
+            PHistTag::Start => Json::Arr(vec![Json::Int(r.time_ms), Json::Str("start".into())]),
+            PHistTag::Stop => Json::Arr(vec![Json::Int(r.time_ms), Json::Str("stop".into()), info]),
+            PHistTag::Reward => Json::Arr(vec![
+                Json::Int(r.time_ms),
+                Json::Str("reward".into()),
+                r.reward
+                    .map(|v| Json::Float(v as f64))
+                    .unwrap_or(Json::Null),
+                info,
+            ]),
+            PHistTag::Conflict => Json::Arr(vec![
+                Json::Int(r.time_ms),
+                Json::Str("conflict-resolution".into()),
+                r.selected.clone().map(Json::Str).unwrap_or(Json::Null),
+                Json::Arr(r.matched.iter().cloned().map(Json::Str).collect()),
+                Json::Arr(r.mismatched.iter().cloned().map(Json::Str).collect()),
+                info,
+            ]),
+        };
+        out.push(rec);
+    }
+    out.into_iter().map(|j| j.write()).collect()
+}
+
+/// `compute-production-grid` (`other-files/production-history.lisp:1177`): the
+/// info summary followed by each conflict resolution reduced to a per-
+/// production status row.
+fn production_grid_records(e: &crate::engine::Engine) -> Vec<String> {
+    use crate::engine::PHistTag;
+    let names = e.all_production_names();
+    let mut out = vec![production_info_summary(e).write()];
+    for r in &e.production_history() {
+        if r.tag != PHistTag::Conflict {
+            continue;
+        }
+        let mut row: Vec<Json> = Vec::new();
+        for y in &names {
+            let detail = r
+                .info
+                .iter()
+                .find(|d| d.first().and_then(|x| x.as_str()) == Some(y));
+            if r.selected.as_deref() == Some(y) {
+                let d = detail.cloned().unwrap_or_default();
+                row.push(Json::Arr(vec![
+                    Json::Int(0),
+                    d.get(1).cloned().unwrap_or(Json::Null),
+                    d.get(2).cloned().unwrap_or(Json::Null),
+                ]));
+            } else if r.matched.contains(y) {
+                let d = detail.cloned().unwrap_or_default();
+                row.push(Json::Arr(vec![
+                    Json::Int(1),
+                    d.get(1).cloned().unwrap_or(Json::Null),
+                    d.get(2).cloned().unwrap_or(Json::Null),
+                ]));
+            } else if r.mismatched.contains(y) {
+                let d = detail.cloned().unwrap_or_default();
+                row.push(Json::Arr(vec![
+                    Json::Int(2),
+                    d.get(1).cloned().unwrap_or(Json::Null),
+                ]));
+            } else {
+                row.push(Json::Arr(vec![Json::Int(-1)]));
+            }
+        }
+        out.push(
+            Json::Arr(vec![
+                Json::Int(r.time_ms),
+                Json::Str("conflict-resolution".into()),
+                Json::Bool(r.selected.is_some()),
+                Json::Arr(row),
+            ])
+            .write(),
+        );
+    }
+    out
+}
+
 /// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
 /// valid array, so the client can decode it independently).
 fn chunk_records(records: &[String], size: usize) -> Vec<String> {
@@ -3302,6 +3419,81 @@ mod tests {
         assert_eq!(first[0].as_str(), Some("size"));
         assert!(items.iter().any(|i| matches!(i, Json::Arr(f)
             if matches!(f[0].as_str(), Some("label") | Some("rectangle")))));
+    }
+
+    /// `record-history "production-history"` records conflict resolutions, and
+    /// the `production-grid` processor reduces them per production.
+    #[test]
+    fn production_history_records() {
+        let root = root();
+        if !root.is_dir() {
+            return; // ACT-R checkout not available
+        }
+        let mut s = Session::new(root, (100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("production-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let fetch = |s: &mut Session, r: &mut NoRemote, name: &str| -> Json {
+            let id = s
+                .evaluate(
+                    "start-incremental-history-data",
+                    None,
+                    &[Json::Str(name.into()), Json::Int(16000)],
+                    r,
+                )
+                .unwrap()[0]
+                .clone();
+            let chunk = s
+                .evaluate("get-incremental-history-data", None, &[id], r)
+                .unwrap();
+            crate::json::parse(chunk[0].as_str().unwrap()).unwrap()
+        };
+
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("production-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+
+        let Json::Arr(recs) = fetch(&mut s, &mut r, "production-history") else {
+            panic!("production-history payload is not a JSON array");
+        };
+        // The info summary is first.
+        let Json::Arr(info) = &recs[0] else {
+            panic!("first record is not an array");
+        };
+        assert_eq!(info[1].as_str(), Some("info"));
+        // A conflict-resolution record with the info field.
+        let conflict = recs
+            .iter()
+            .find(|x| matches!(x, Json::Arr(f) if f.get(1).and_then(|y| y.as_str()) == Some("conflict-resolution")));
+        assert!(conflict.is_some(), "expected a conflict-resolution record");
+
+        // production-grid: info summary then a transformed conflict record.
+        let Json::Arr(grid) = fetch(&mut s, &mut r, "production-grid") else {
+            panic!("production-grid payload is not an JSON array");
+        };
+        assert!(matches!(grid.first(), Some(Json::Arr(f)) if f[1].as_str() == Some("info")));
+        assert!(grid.iter().any(|x| matches!(x, Json::Arr(f)
+            if f.get(1).and_then(|y| y.as_str()) == Some("conflict-resolution"))));
     }
 
     /// The Environment viewer commands return the model's productions,

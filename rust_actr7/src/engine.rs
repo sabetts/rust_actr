@@ -622,6 +622,41 @@ struct BufferTrace {
     saved: Vec<(i64, Vec<BufSummary>)>,
 }
 
+/// The kind of a `production-history` record
+/// (`other-files/production-history.lisp`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PHistTag {
+    Start,
+    Stop,
+    Reward,
+    Conflict,
+}
+
+/// One `production-history` record.
+#[derive(Debug, Clone)]
+pub struct PHistRecord {
+    pub tag: PHistTag,
+    pub time_ms: i64,
+    pub selected: Option<String>,
+    pub matched: Vec<String>,
+    pub mismatched: Vec<String>,
+    /// `[production, …]` detail rows: matched `[name, utility, u]`, mismatched
+    /// `[name, why-not-index, u]`.
+    pub info: Vec<Vec<Json>>,
+    pub reward: Option<f32>,
+}
+
+/// `production-history` state.
+#[derive(Debug, Clone, Default)]
+struct ProductionHistory {
+    enabled: bool,
+    /// Newest-first (push), like ACT-R's history list.
+    records: Vec<PHistRecord>,
+    why_not: Vec<String>,
+    /// Whether a run's start marker has been recorded.
+    running: bool,
+}
+
 /// `visicon-history` state (`other-files/perceptual-history.lisp`): printed
 /// visicon snapshots, grouped by time, that changed from the previous one.
 #[derive(Debug, Clone, Default)]
@@ -2047,6 +2082,8 @@ pub struct Engine {
     visicon_history: PerceptualHistory,
     /// `buffer-trace` state (`record-history "buffer-trace"` + buffer names).
     buffer_trace: BufferTrace,
+    /// `production-history` state (`record-history "production-history"`).
+    production_history: ProductionHistory,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -2477,6 +2514,7 @@ impl Engine {
             },
             visicon_history: PerceptualHistory::default(),
             buffer_trace: BufferTrace::default(),
+            production_history: ProductionHistory::default(),
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -3003,6 +3041,10 @@ impl Engine {
         self.visicon_history = PerceptualHistory::default();
         // `reset-buffer-trace-module`: clear and disable.
         self.buffer_trace = BufferTrace::default();
+        // `reset-p-history-module`: clear the history and why-not list.
+        self.production_history.records.clear();
+        self.production_history.why_not.clear();
+        self.production_history.running = false;
         self.named = HashMap::new();
         // `create-model-default-chunks` (`model.lisp:753`): every model starts
         // with these state chunks (`(free name free)` etc., plus `clear`); a
@@ -3950,6 +3992,7 @@ impl Engine {
     /// with "no events to process".
     pub fn run_n_events(&mut self, count: u64) -> Result<(), EngineError> {
         let mut n = 0u64;
+        self.p_hist_run_start();
         loop {
             self.skip_unnecessary_events();
             if self.queue.peek().is_none() {
@@ -3989,6 +4032,7 @@ impl Engine {
                 break;
             }
         }
+        self.p_hist_run_stop();
         Ok(())
     }
 
@@ -4041,7 +4085,10 @@ impl Engine {
     fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         self.run_events = 0;
-        self.run_to_limit(limit_ms, full, false, None, None)
+        self.p_hist_run_start();
+        let r = self.run_to_limit(limit_ms, full, false, None, None);
+        self.p_hist_run_stop();
+        r
     }
 
     /// The run loop shared by `run`/`run-full-time`/`run-until-time`. With

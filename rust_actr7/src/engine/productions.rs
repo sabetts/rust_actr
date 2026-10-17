@@ -158,6 +158,8 @@ impl Engine {
             }
             _ => Some(tied.into_iter().last().unwrap()),
         };
+        // `production-history-recorder` (a conflict-set hook).
+        self.record_production_history(&matched, winner.as_ref().map(|(i, _)| *i));
         match winner {
             Some((prod, bindings)) => {
                 self.cr_armed = false;

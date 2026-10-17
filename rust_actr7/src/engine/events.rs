@@ -1765,6 +1765,12 @@ impl Engine {
                 if show {
                     self.emit("UTILITY", format!("PROPAGATE-REWARD {}", value.trace_text()));
                 }
+                // `production-history-reward-markers` (a reward-notify hook).
+                let reward_num = match &value {
+                    Reward::Num(v) => Some(*v),
+                    Reward::Other(_) => None,
+                };
+                self.p_hist_reward(reward_num);
                 match value {
                     Reward::Num(value) => {
                         // Rewards apply only with subsymbolics + learning on;
