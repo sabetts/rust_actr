@@ -57,6 +57,47 @@ mod tests;
 use motor::even_references;
 use rhs::{chunk_inst, implicit_clears, implicit_queries, new_chunk};
 
+// ---------------------------------------------------------------- event hooks
+
+/// Outcome of a pre-event hook. `Break` mirrors ACT-R's `run-one-event`
+/// (`framework/scheduling.lisp:717`): a hook returning the string `"break"`
+/// withholds the event (it stays queued and is *not* executed) and stops the
+/// run, so a later `run-n-events` resumes with it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verdict {
+    Continue,
+    Break,
+}
+
+/// Read-only description of an event, handed to [`EventHook`]. Fields mirror
+/// ACT-R's `evt-*` accessors: the module column (`evt-module`), the action
+/// symbol (`evt-action`), the buffer or production named by the action's
+/// first parameter (`evt-params`), and the event's output level plus the
+/// engine's resolved visibility (`evt-output` + `filter-test`).
+#[derive(Debug, Clone)]
+pub struct EventView {
+    pub time_ms: i64,
+    pub module: String,
+    pub action: String,
+    pub buffer: Option<String>,
+    pub production: Option<String>,
+    pub out: Out,
+    pub shown: bool,
+}
+
+/// A two-phase hook, the Rust counterpart of ACT-R's
+/// `add-pre-event-hook`/`add-post-event-hook` pair (`scheduling.lisp:717`,
+/// `:775`). `pre` runs before the event executes and may [`Verdict::Break`];
+/// `post` runs after a shown event with the exact trace line the engine would
+/// have emitted (available even while `:v` is off, matching the pre-hook's
+/// `(format-event evt)`).
+pub trait EventHook {
+    fn pre(&mut self, _ev: &EventView) -> Verdict {
+        Verdict::Continue
+    }
+    fn post(&mut self, _line: &str, _ev: &EventView) {}
+}
+
 #[derive(Debug)]
 pub enum EngineError {
     NotImplemented(String),
@@ -2057,6 +2098,11 @@ pub struct Engine {
     /// `(run time)`'s `(values seconds events break)`.
     run_events: u64,
     out_lines: Vec<String>,
+    /// Optional two-phase event hook (tests only; see [`EventHook`]).
+    event_hook: Option<Box<dyn EventHook>>,
+    /// The trace line of the event currently executing, captured by `emit`
+    /// even when `:v` is off, for delivery to [`EventHook::post`].
+    current_render: Option<String>,
     /// Commands the model itself fired during a run (`output-key`, …), as
     /// `(name, model, key)`. ACT-R calls these *inside* the run, so their
     /// monitors see them; the RPC session dispatches them to the client's
@@ -2502,6 +2548,8 @@ impl Engine {
             limit_ms: (run_secs * 1000.0).round() as i64,
             run_events: 0,
             out_lines: Vec::new(),
+            event_hook: None,
+            current_render: None,
             fired_commands: Vec::new(),
             exec_prods: Vec::new(),
             disabled_prods: HashSet::new(),
@@ -3619,7 +3667,23 @@ impl Engine {
         self.push_m(t, prio, out, maintenance, event);
     }
 
+    /// Install (or clear) the event hook. At most one is active.
+    pub fn set_event_hook(&mut self, hook: Option<Box<dyn EventHook>>) {
+        self.event_hook = hook;
+    }
+
     fn emit(&mut self, module: &str, details: String) {
+        // Capture the rendered line for `EventHook::post` before the `:v`
+        // gate: a pre-hook may turn tracing off (`sgp :v nil`) yet still
+        // project the line (ACT-R's pre-hook `(format-event evt)`).
+        if self.event_hook.is_some() && self.current_render.is_none() {
+            self.current_render = Some(format_line(
+                self.time_ms,
+                module,
+                &details,
+                self.cfg.module_width,
+            ));
+        }
         if !self.trace_on {
             return;
         }
@@ -3629,6 +3693,164 @@ impl Engine {
             &details,
             self.cfg.module_width,
         ));
+    }
+
+    /// The module column an event renders under: buffer-owning module for a
+    /// scheduled `set`/`clear` (`schedule-set-buffer-chunk`), the buffer name
+    /// itself otherwise (`events.rs`).
+    fn module_of_buffer(buffer: &str) -> &str {
+        match buffer {
+            "RETRIEVAL" => "DECLARATIVE",
+            "VISUAL-LOCATION" | "VISUAL" => "VISION",
+            "MANUAL" => "MOTOR",
+            "AURAL" | "AURAL-LOCATION" => "AUDIO",
+            other => other,
+        }
+    }
+
+    /// Describe an event for [`EventHook`], mirroring ACT-R's `evt-*`
+    /// accessors. Variants without a trace action get an empty action (so no
+    /// predicate matches them rather than mis-firing).
+    fn event_view(&self, e: &Event, out: Out, shown: bool) -> EventView {
+        let (action, module, buffer, production): (&str, String, Option<String>, Option<String>) =
+            match e {
+                Event::SetBuffer { buffer, .. } => (
+                    "set-buffer-chunk",
+                    Self::module_of_buffer(buffer).to_string(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::OverwriteBuffer { buffer, module, .. } => (
+                    "overwrite-buffer-chunk",
+                    module.clone(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::EraseBuffer { buffer, module } => {
+                    ("erase-buffer", module.clone(), Some(buffer.clone()), None)
+                }
+                Event::ClearBuffer { buffer, module } => {
+                    ("clear-buffer", module.clone(), Some(buffer.clone()), None)
+                }
+                Event::ClearGoalThread { .. } => (
+                    "clear-buffer",
+                    "PROCEDURAL".into(),
+                    Some("GOAL".into()),
+                    None,
+                ),
+                Event::ModBuffer { buffer, module, .. } => (
+                    "mod-buffer-chunk",
+                    module.clone(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::ModuleRequest { buffer, .. } => (
+                    "module-request",
+                    "PROCEDURAL".into(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::StartRetrieval { .. } => (
+                    "start-retrieval",
+                    "DECLARATIVE".into(),
+                    Some("RETRIEVAL".into()),
+                    None,
+                ),
+                Event::RetrievedChunk { .. } => (
+                    "retrieved-chunk",
+                    "DECLARATIVE".into(),
+                    Some("RETRIEVAL".into()),
+                    None,
+                ),
+                Event::RetrievalFailure { .. } => (
+                    "retrieval-failure",
+                    "DECLARATIVE".into(),
+                    Some("RETRIEVAL".into()),
+                    None,
+                ),
+                Event::StartBlending { .. } => (
+                    "start-blending",
+                    "BLENDING".into(),
+                    Some("BLENDING".into()),
+                    None,
+                ),
+                Event::BlendingComplete { .. } => (
+                    "blending-complete",
+                    "BLENDING".into(),
+                    Some("BLENDING".into()),
+                    None,
+                ),
+                Event::BlendingFailure => (
+                    "blending-failure",
+                    "BLENDING".into(),
+                    Some("BLENDING".into()),
+                    None,
+                ),
+                Event::ConflictResolution => ("conflict-resolution", "PROCEDURAL".into(), None, None),
+                Event::ProductionSelected { prod, .. } => (
+                    "production-selected",
+                    "PROCEDURAL".into(),
+                    None,
+                    Some(self.model.productions[*prod].name.clone()),
+                ),
+                Event::BufferRead { buffer } => (
+                    "buffer-read-action",
+                    "PROCEDURAL".into(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::QueryBuffer { buffer } => (
+                    "query-buffer-action",
+                    "PROCEDURAL".into(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::ProductionFired { prod, .. } => (
+                    "production-fired",
+                    "PROCEDURAL".into(),
+                    None,
+                    Some(self.model.productions[*prod].name.clone()),
+                ),
+                Event::ProcDisplay => ("proc-display", "VISION".into(), None, None),
+                Event::VisiconUpdate => ("visicon-update", "VISION".into(), None, None),
+                Event::FindLocation { .. } => (
+                    "find-location",
+                    "VISION".into(),
+                    Some("VISUAL-LOCATION".into()),
+                    None,
+                ),
+                Event::FindLocFailure => (
+                    "find-loc-failure",
+                    "VISION".into(),
+                    Some("VISUAL-LOCATION".into()),
+                    None,
+                ),
+                Event::MoveAttention { .. } => (
+                    "move-attention",
+                    "VISION".into(),
+                    Some("VISUAL-LOCATION".into()),
+                    None,
+                ),
+                Event::EncodingComplete { .. } => (
+                    "encoding-complete",
+                    "VISION".into(),
+                    Some("VISUAL".into()),
+                    None,
+                ),
+                Event::VisualClear => ("clear", "VISION".into(), Some("VISUAL".into()), None),
+                Event::StartTracking => ("start-tracking", "VISION".into(), None, None),
+                Event::PropagateReward { .. } => ("propagate-reward", "PROCEDURAL".into(), None, None),
+                _ => ("", String::new(), None, None),
+            };
+        EventView {
+            time_ms: self.time_ms,
+            module,
+            action: action.to_string(),
+            buffer,
+            production,
+            out,
+            shown,
+        }
     }
 
     /// Raw command/`model-output` line (no timestamp/module formatting),
@@ -3960,9 +4182,25 @@ impl Engine {
         let bh_info = self.bh_event_info_take(&next.event);
         let bt_info = self.bt_event_info_take(&next.event);
         let show = self.cfg.detail.shows(next.out);
+        let hook_view = if self.event_hook.is_some() {
+            let view = self.event_view(&next.event, next.out, show);
+            if self.event_hook.as_mut().unwrap().pre(&view) == Verdict::Break {
+                self.queue.push(next);
+                return Ok(true);
+            }
+            Some(view)
+        } else {
+            None
+        };
         let is_cr = matches!(next.event, Event::ConflictResolution);
         let maintenance = next.maintenance;
+        self.current_render = None;
         self.exec(next.event, show)?;
+        if let Some(h) = self.event_hook.as_mut() {
+            if let Some(line) = self.current_render.take() {
+                h.post(&line, hook_view.as_ref().unwrap());
+            }
+        }
         self.bh_record(bh_info);
         self.bt_post(bt_info);
         self.bold_record();
@@ -4034,9 +4272,25 @@ impl Engine {
             let bh_info = self.bh_event_info_take(&next.event);
             let bt_info = self.bt_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
+            let hook_view = if self.event_hook.is_some() {
+                let view = self.event_view(&next.event, next.out, show);
+                if self.event_hook.as_mut().unwrap().pre(&view) == Verdict::Break {
+                    self.queue.push(next);
+                    break;
+                }
+                Some(view)
+            } else {
+                None
+            };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
+            self.current_render = None;
             self.exec(next.event, show)?;
+            if let Some(h) = self.event_hook.as_mut() {
+                if let Some(line) = self.current_render.take() {
+                    h.post(&line, hook_view.as_ref().unwrap());
+                }
+            }
             self.bh_record(bh_info);
             self.bt_post(bt_info);
             self.bold_record();
@@ -4189,9 +4443,27 @@ impl Engine {
             let bh_info = self.bh_event_info_take(&next.event);
             let bt_info = self.bt_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
+            let hook_view = if self.event_hook.is_some() {
+                let view = self.event_view(&next.event, next.out, show);
+                if self.event_hook.as_mut().unwrap().pre(&view) == Verdict::Break {
+                    // Withhold the event (it stays queued) and stop the run,
+                    // like `run-one-event`'s `"break"` return.
+                    self.queue.push(next);
+                    break;
+                }
+                Some(view)
+            } else {
+                None
+            };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
+            self.current_render = None;
             self.exec(next.event, show)?;
+            if let Some(h) = self.event_hook.as_mut() {
+                if let Some(line) = self.current_render.take() {
+                    h.post(&line, hook_view.as_ref().unwrap());
+                }
+            }
             self.bh_record(bh_info);
             self.bt_post(bt_info);
             self.bold_record();

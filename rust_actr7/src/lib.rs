@@ -34,7 +34,7 @@ pub mod trace;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-pub use engine::{DeviceSetup, DeviceText, EngineError};
+pub use engine::{DeviceSetup, DeviceText, EngineError, EventHook, EventView, Verdict};
 pub use model::{load_models, ChunkDesc, Model};
 
 use std::collections::HashMap;
@@ -235,6 +235,20 @@ pub fn run_model_steps(
     steps: &[Step],
     device: &DeviceSetup,
 ) -> Result<String, EngineError> {
+    run_model_steps_with_hook(actr_root, models, seed, steps, device, None)
+}
+
+/// Like [`run_model_steps`], but installs an [`EventHook`] on the engine
+/// before the driver steps run (the hook is what the `:SCOPE :HOOK` cases use
+/// to reproduce ACT-R's `add-pre/post-event-hook` filters).
+pub fn run_model_steps_with_hook(
+    actr_root: &Path,
+    models: &[String],
+    seed: (u64, u64),
+    steps: &[Step],
+    device: &DeviceSetup,
+    hook: Option<Box<dyn EventHook>>,
+) -> Result<String, EngineError> {
     let mut defs = Vec::new();
     let mut user_fns: HashMap<String, model::UserDefun> = HashMap::new();
     let mut commands: HashMap<String, String> = HashMap::new();
@@ -274,6 +288,7 @@ pub fn run_model_steps(
         .last()
         .ok_or_else(|| EngineError::Model("no define-model in step script".to_string()))?;
     let mut eng = engine::Engine::new(def.clone(), seed, 0.0, device.clone())?;
+    eng.set_event_hook(hook);
     eng.set_user_fns(user_fns);
     for step in steps {
         match step {
