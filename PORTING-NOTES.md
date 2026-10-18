@@ -4497,3 +4497,41 @@ where `normalize_eol` maps CRLF→LF. It normalizes the newline convention
 This is the sole raw-EOL-sensitive comparison in the suite: the units tables
 parse through the sexpr reader (treats `\r` as whitespace) and the device
 sidecars split on whitespace, so both are already EOL-tolerant.
+
+## 269. Event hooks: two-phase engine API + a closed projection IR
+
+The `:SCOPE :HOOK` regression refs drive the model through an
+`add-pre/post-event-hook` filter written in arbitrary Lisp, which the engine
+cannot execute (`README.md:5`, the "no arbitrary Lisp" divergence). Rather
+than leave all 73 ignored, the *effect* of the projection filters is
+reproduced in Rust.
+
+Engine side (`src/engine.rs`): `EventHook` mirrors ACT-R's pre/post pair
+(`framework/scheduling.lisp:717`/`:775`). `pre(&EventView)` runs before the
+event and may return `Verdict::Break` — which, like ACT-R's `"break"`
+return, *withholds* the event (it stays queued, so a later `run-n-events`
+executes it) and stops the run; `post(&line, &EventView)` receives each trace
+line the event emitted. Two subtleties:
+
+* A filter is a **pre**-hook, but `format-event` needs the rendered line,
+  which in Rust is only known after `exec`. So the predicate is evaluated
+  from the structural `EventView` (its `evt-action`/`evt-module`/`evt-params`
+  fields) and the line is projected at `post`.
+* A hook that turns tracing off (`sgp :v nil`) must still see the line, so
+  `emit` captures `(module, details)` into `current_lines` *before* the `:v`
+  gate. One event can emit several lines (`encoding-complete` then
+  `No visual-object found`), so `post` fires once per line.
+
+`EventView.shown` = `cfg.detail.shows(out)` is the engine's own answer to the
+filter's `evt-output` + `filter-test` pair — never re-derived test-side, so
+the projected set matches by construction.
+
+Test side (`tests/hooks/mod.rs`): the closed IR (`HookIr`/`Rule`/`Pred`) is
+executed by one `EventHook`; `run_hook_case` drives a case with an existing
+`.spec`'s models/steps/seed/device and compares the projection to the case's
+own `.ref`. `tools/gen_hook_ir.py` translates the Lisp patterns (the `evt-*`
+predicate grammar, the `push-last`/`model-output` shape, the `*…-started*`
+latch) into that IR for `fixtures/regression/hook-cases.txt`; anything it
+cannot translate (the break/gating control flows, e.g. the `pcomp-issues`
+family) is reported and stays hand-written. The eight `tutorial-unit2-demo2`
+projection cases are promoted.
