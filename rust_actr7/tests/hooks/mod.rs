@@ -40,12 +40,8 @@ pub enum Pred {
     Buffer(&'static str),
     /// `(eq (production-name (car (evt-params evt))) 'x)`.
     Production(&'static str),
-    /// `(member (production-name …) '(…))`.
-    ProductionIn(&'static [&'static str]),
     /// `(= (evt-mstime evt) n)`.
     MsEq(i64),
-    /// `(member (evt-mstime evt) '(…))`.
-    MsIn(&'static [i64]),
     /// `(< (evt-mstime evt) n)`.
     MsLt(i64),
     /// `(<= lo (evt-mstime evt) hi)`.
@@ -95,12 +91,7 @@ fn eval(p: &Pred, ev: &EventView, latch: bool) -> bool {
             .production
             .as_deref()
             .is_some_and(|x| x.eq_ignore_ascii_case(n)),
-        Pred::ProductionIn(ns) => ev
-            .production
-            .as_deref()
-            .is_some_and(|x| ns.iter().any(|n| x.eq_ignore_ascii_case(n))),
         Pred::MsEq(t) => ev.time_ms == *t,
-        Pred::MsIn(ts) => ts.contains(&ev.time_ms),
         Pred::MsLt(t) => ev.time_ms < *t,
         Pred::MsBetween(lo, hi) => *lo <= ev.time_ms && ev.time_ms <= *hi,
         Pred::Latch => latch,
