@@ -34,7 +34,7 @@ pub mod trace;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-pub use engine::{DeviceSetup, DeviceText, EngineError, EventHook, EventView, Verdict};
+pub use engine::{DeviceSetup, DeviceText, EngineError, EventHook, EventView, PreResult, Verdict};
 pub use model::{load_models, ChunkDesc, Model};
 
 use std::collections::HashMap;

@@ -4,28 +4,35 @@
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_ENCODE_LETTER_IMAGINAL_ACTIONS: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[hooks::Rule {
-        when: hooks::Pred::All(&[
-            hooks::Pred::Any(&[
-                hooks::Pred::All(&[
-                    hooks::Pred::Action("production-fired"),
-                    hooks::Pred::Production("encode-letter"),
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[hooks::Rule {
+            when: hooks::Pred::All(&[
+                hooks::Pred::Any(&[
+                    hooks::Pred::All(&[
+                        hooks::Pred::Action("production-fired"),
+                        hooks::Pred::Production("encode-letter"),
+                    ]),
+                    hooks::Pred::All(&[
+                        hooks::Pred::Action("module-request"),
+                        hooks::Pred::Buffer("imaginal"),
+                    ]),
+                    hooks::Pred::All(&[
+                        hooks::Pred::Action("clear-buffer"),
+                        hooks::Pred::Buffer("imaginal"),
+                    ]),
+                    hooks::Pred::Module("imaginal"),
                 ]),
-                hooks::Pred::All(&[
-                    hooks::Pred::Action("module-request"),
-                    hooks::Pred::Buffer("imaginal"),
-                ]),
-                hooks::Pred::All(&[
-                    hooks::Pred::Action("clear-buffer"),
-                    hooks::Pred::Buffer("imaginal"),
-                ]),
-                hooks::Pred::Module("imaginal"),
+                hooks::Pred::MsLt(450),
             ]),
-            hooks::Pred::MsLt(450),
-        ]),
-        keep: true,
-        set: None,
+            keep: true,
+            set: None,
+            trace: None,
+            stop_after: None,
+        }],
     }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: false,
     butlast: false,
     join: hooks::Join::NewlineDots,
@@ -43,43 +50,56 @@ fn hook_tutorial_unit2_demo2_encode_letter_imaginal_actions() {
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_ATTEND_LETTER_VISUAL_ACTIONS: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::MsBetween(100, 185),
-                hooks::Pred::Action("production-fired"),
-                hooks::Pred::Production("attend-letter"),
-            ]),
-            keep: true,
-            set: Some(true),
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::MsBetween(100, 185),
-                hooks::Pred::Action("module-request"),
-                hooks::Pred::Buffer("visual"),
-            ]),
-            keep: true,
-            set: None,
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::MsBetween(100, 185),
-                hooks::Pred::Action("clear-buffer"),
-                hooks::Pred::Buffer("visual"),
-            ]),
-            keep: true,
-            set: None,
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::MsBetween(100, 185),
-                hooks::Pred::Module("vision"),
-            ]),
-            keep: true,
-            set: None,
-        },
-    ],
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::MsBetween(100, 185),
+                    hooks::Pred::Action("production-fired"),
+                    hooks::Pred::Production("attend-letter"),
+                ]),
+                keep: true,
+                set: Some(true),
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::MsBetween(100, 185),
+                    hooks::Pred::Action("module-request"),
+                    hooks::Pred::Buffer("visual"),
+                ]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::MsBetween(100, 185),
+                    hooks::Pred::Action("clear-buffer"),
+                    hooks::Pred::Buffer("visual"),
+                ]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::MsBetween(100, 185),
+                    hooks::Pred::Module("vision"),
+                ]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -97,35 +117,47 @@ fn hook_tutorial_unit2_demo2_attend_letter_visual_actions() {
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_STRICT_HARVEST: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::Action("production-fired"),
-                hooks::Pred::Any(&[
-                    hooks::Pred::Production("attend-letter"),
-                    hooks::Pred::Production("encode-letter"),
-                    hooks::Pred::Production("respond"),
-                ]),
-            ]),
-            keep: true,
-            set: Some(true),
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::Action("clear-buffer"),
-                hooks::Pred::Any(&[
-                    hooks::Pred::All(&[
-                        hooks::Pred::MsEq(100),
-                        hooks::Pred::Buffer("visual-location"),
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::Action("production-fired"),
+                    hooks::Pred::Any(&[
+                        hooks::Pred::Production("attend-letter"),
+                        hooks::Pred::Production("encode-letter"),
+                        hooks::Pred::Production("respond"),
                     ]),
-                    hooks::Pred::All(&[hooks::Pred::MsEq(235), hooks::Pred::Buffer("visual")]),
-                    hooks::Pred::All(&[hooks::Pred::MsEq(485), hooks::Pred::Buffer("imaginal")]),
                 ]),
-            ]),
-            keep: true,
-            set: None,
-        },
-    ],
+                keep: true,
+                set: Some(true),
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::Action("clear-buffer"),
+                    hooks::Pred::Any(&[
+                        hooks::Pred::All(&[
+                            hooks::Pred::MsEq(100),
+                            hooks::Pred::Buffer("visual-location"),
+                        ]),
+                        hooks::Pred::All(&[hooks::Pred::MsEq(235), hooks::Pred::Buffer("visual")]),
+                        hooks::Pred::All(&[
+                            hooks::Pred::MsEq(485),
+                            hooks::Pred::Buffer("imaginal"),
+                        ]),
+                    ]),
+                ]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -143,11 +175,18 @@ fn hook_tutorial_unit2_demo2_strict_harvest() {
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_VISUAL_REENCODE_ACTIONS: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[hooks::Rule {
-        when: hooks::Pred::All(&[hooks::Pred::Module("vision"), hooks::Pred::MsEq(970)]),
-        keep: true,
-        set: None,
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[hooks::Rule {
+            when: hooks::Pred::All(&[hooks::Pred::Module("vision"), hooks::Pred::MsEq(970)]),
+            keep: true,
+            set: None,
+            trace: None,
+            stop_after: None,
+        }],
     }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -165,31 +204,42 @@ fn hook_tutorial_unit2_demo2_visual_reencode_actions() {
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_FIND_UNATTENDED_LETTER_ACTIONS: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::MsEq(50),
-                hooks::Pred::Action("production-fired"),
-                hooks::Pred::Production("find-unattended-letter"),
-            ]),
-            keep: true,
-            set: Some(true),
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::MsEq(50),
-                hooks::Pred::Latch,
-                hooks::Pred::Action("conflict-resolution"),
-            ]),
-            keep: false,
-            set: Some(false),
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[hooks::Pred::MsEq(50), hooks::Pred::Latch]),
-            keep: true,
-            set: None,
-        },
-    ],
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::MsEq(50),
+                    hooks::Pred::Action("production-fired"),
+                    hooks::Pred::Production("find-unattended-letter"),
+                ]),
+                keep: true,
+                set: Some(true),
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::MsEq(50),
+                    hooks::Pred::Latch,
+                    hooks::Pred::Action("conflict-resolution"),
+                ]),
+                keep: false,
+                set: Some(false),
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[hooks::Pred::MsEq(50), hooks::Pred::Latch]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -207,18 +257,25 @@ fn hook_tutorial_unit2_demo2_find_unattended_letter_actions() {
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_OTHER_VISUAL_ACTIONS: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[hooks::Rule {
-        when: hooks::Pred::All(&[
-            hooks::Pred::Module("vision"),
-            hooks::Pred::Any(&[
-                hooks::Pred::MsEq(0),
-                hooks::Pred::MsEq(885),
-                hooks::Pred::MsEq(970),
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[hooks::Rule {
+            when: hooks::Pred::All(&[
+                hooks::Pred::Module("vision"),
+                hooks::Pred::Any(&[
+                    hooks::Pred::MsEq(0),
+                    hooks::Pred::MsEq(885),
+                    hooks::Pred::MsEq(970),
+                ]),
             ]),
-        ]),
-        keep: true,
-        set: None,
+            keep: true,
+            set: None,
+            trace: None,
+            stop_after: None,
+        }],
     }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -236,42 +293,57 @@ fn hook_tutorial_unit2_demo2_other_visual_actions() {
 
 const HOOK_TUTORIAL_UNIT2_DEMO2_RESPOND_MANUAL_ACTIONS: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::Action("production-fired"),
-                hooks::Pred::Production("respond"),
-            ]),
-            keep: true,
-            set: Some(true),
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::Action("module-request"),
-                hooks::Pred::Buffer("manual"),
-            ]),
-            keep: true,
-            set: None,
-        },
-        hooks::Rule {
-            when: hooks::Pred::All(&[
-                hooks::Pred::Action("clear-buffer"),
-                hooks::Pred::Buffer("manual"),
-            ]),
-            keep: true,
-            set: None,
-        },
-        hooks::Rule {
-            when: hooks::Pred::Module("motor"),
-            keep: true,
-            set: None,
-        },
-        hooks::Rule {
-            when: hooks::Pred::Module("keyboard"),
-            keep: true,
-            set: None,
-        },
-    ],
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::Action("production-fired"),
+                    hooks::Pred::Production("respond"),
+                ]),
+                keep: true,
+                set: Some(true),
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::Action("module-request"),
+                    hooks::Pred::Buffer("manual"),
+                ]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::All(&[
+                    hooks::Pred::Action("clear-buffer"),
+                    hooks::Pred::Buffer("manual"),
+                ]),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::Module("motor"),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::Module("keyboard"),
+                keep: true,
+                set: None,
+                trace: None,
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -289,14 +361,21 @@ fn hook_tutorial_unit2_demo2_respond_manual_actions() {
 
 const HOOK_TUTORIAL_UNIT2CODE_DEMO2_MANUAL_ACTIONS_TRACE: hooks::HookIr = hooks::HookIr {
     driver: "demo2",
-    rules: &[hooks::Rule {
-        when: hooks::Pred::All(&[
-            hooks::Pred::MsBetween(485, 895),
-            hooks::Pred::Not(&hooks::Pred::Module("vision")),
-        ]),
-        keep: true,
-        set: None,
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[hooks::Rule {
+            when: hooks::Pred::All(&[
+                hooks::Pred::MsBetween(485, 895),
+                hooks::Pred::Not(&hooks::Pred::Module("vision")),
+            ]),
+            keep: true,
+            set: None,
+            trace: None,
+            stop_after: None,
+        }],
     }],
+    output: hooks::OutputMode::Project,
+    tail: &[],
     else_dots: false,
     butlast: true,
     join: hooks::Join::Newline,
@@ -307,6 +386,556 @@ fn hook_tutorial_unit2code_demo2_manual_actions_trace() {
     if let Err(e) = hooks::run_hook_case(
         "tutorial-unit2code-demo2-manual-actions-trace",
         &HOOK_TUTORIAL_UNIT2CODE_DEMO2_MANUAL_ACTIONS_TRACE,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_1: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(1),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_1() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-1",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_1,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_2: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(2),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_2() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-2",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_2,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_3: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(3),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_3() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_3,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_4: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(4),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_4() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-4",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_4,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_5: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(5),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_5() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-5",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_5,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_6: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(6),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_6() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-6",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_6,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_7: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(7),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_7() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-7",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_7,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_8: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(8),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_8() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-8",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_8,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_9: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(9),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_9() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-9",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_9,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_10: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(10),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_10() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-10",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_10,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_11: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(11),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    tail: &[hooks::Tail::RunNEvents(2)],
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_11() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-11",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_11,
     ) {
         panic!("{e}");
     }

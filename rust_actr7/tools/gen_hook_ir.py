@@ -299,20 +299,30 @@ def split_branch(branch):
     return clean, set_eff, keep
 
 
+def rule(when, *, keep=True, set_eff=None, trace=None, stop=None):
+    return {
+        "when": when,
+        "keep": keep,
+        "set": set_eff,
+        "trace": trace,
+        "stop": stop,
+    }
+
+
 def build_rules(leaf_exprs):
-    """Translate the flattened guard leaves into ordered rules."""
+    """Translate the flattened guard leaves into ordered Project rules."""
     or_leaf = next(
         (e for e in leaf_exprs
          if is_list(e) and head(e) == Sym("or") and has_latch_setf(e)),
         None,
     )
     if or_leaf is None:
-        return [("keep", tr_many(leaf_exprs), None, True)]
+        return [rule(tr_many(leaf_exprs))]
     common = [e for e in leaf_exprs if e is not or_leaf]
     rules = []
     for br in or_leaf[1:]:
         clean, set_eff, keep = split_branch(br)
-        rules.append(("keep" if keep else "stop", tr_many(common + clean), set_eff, keep))
+        rules.append(rule(tr_many(common + clean), keep=keep, set_eff=set_eff))
     return rules
 
 
@@ -358,33 +368,54 @@ def ident(name):
     return s
 
 
-def rust_rules(rules):
-    lines = []
-    for _, when, set_eff, keep in rules:
-        set_txt = (
-            "None"
-            if set_eff is None
-            else ("Some(true)" if set_eff else "Some(false)")
-        )
-        lines.append(
-            "        hooks::Rule {\n"
-            f"            when: {when},\n"
-            f"            keep: {'true' if keep else 'false'},\n"
-            f"            set: {set_txt},\n"
-            "        },"
-        )
-    return "\n".join(lines)
+def opt_bool(v):
+    return "None" if v is None else ("Some(true)" if v else "Some(false)")
+
+
+def opt_int(v):
+    return "None" if v is None else f"Some({v})"
+
+
+def rust_rule(r, indent):
+    return (
+        f"{indent}hooks::Rule {{\n"
+        f"{indent}    when: {r['when']},\n"
+        f"{indent}    keep: {'true' if r['keep'] else 'false'},\n"
+        f"{indent}    set: {opt_bool(r['set'])},\n"
+        f"{indent}    trace: {opt_bool(r['trace'])},\n"
+        f"{indent}    stop_after: {opt_int(r['stop'])},\n"
+        f"{indent}}},"
+    )
+
+
+def rust_phase(ph, indent):
+    rules = "\n".join(rust_rule(r, indent + "        ") for r in ph["rules"])
+    return (
+        f"{indent}hooks::Phase {{\n"
+        f"{indent}    on_enter_trace: {opt_bool(ph['on_enter_trace'])},\n"
+        f"{indent}    rules: &[\n{rules}\n{indent}    ],\n"
+        f"{indent}}},"
+    )
+
+
+def rust_tail(tails):
+    if not tails:
+        return "&[]"
+    parts = [f"hooks::Tail::RunNEvents({n})" for n in tails]
+    return "&[" + ", ".join(parts) + "]"
 
 
 def emit(name, driver, ir):
     ident_ = ident(name)
     const = "HOOK_" + ident_.upper()
-    rules = rust_rules(ir["rules"])
+    phases = "\n".join(rust_phase(p, "        ") for p in ir["phases"])
     return f"""const {const}: hooks::HookIr = hooks::HookIr {{
     driver: "{driver}",
-    rules: &[
-{rules}
+    phases: &[
+{phases}
     ],
+    output: hooks::OutputMode::{ir['output']},
+    tail: {rust_tail(ir['tail'])},
     else_dots: {'true' if ir['else_dots'] else 'false'},
     butlast: {'true' if ir['butlast'] else 'false'},
     join: hooks::Join::{ir['join']},
@@ -399,21 +430,103 @@ fn hook_{ident_}() {{
 """
 
 
+def find_break_count(filt):
+    """`(= (incf *count*) N)` in the filter."""
+    found = []
+
+    def walk(f):
+        if is_list(f):
+            if (
+                head(f) == Sym("=")
+                and len(f) == 3
+                and is_list(f[1])
+                and head(f[1]) == Sym("incf")
+                and isinstance(f[2], int)
+            ):
+                found.append(f[2])
+            for x in f[1:]:
+                walk(x)
+
+    walk(filt)
+    return found[0] if found else None
+
+
+def find_run_n_events(run_it):
+    found = []
+
+    def walk(f):
+        if is_list(f):
+            if head(f) == Sym("run-n-events") and len(f) == 2 and isinstance(f[1], int):
+                found.append(f[1])
+            for x in f[1:]:
+                walk(x)
+
+    walk(run_it)
+    return found[0] if found else None
+
+
+def convert_ctrl(forms, run_it):
+    """The `pcomp-issues` control shape: `:v nil` + break-at-count on
+    production-fired, then a second hook showing only production-fired for the
+    `run-n-events` resume. Segment output."""
+    filt = find_defun(forms, "filter")
+    filt2 = find_defun(forms, "filter2")
+    if not filt or not filt2:
+        raise Unsupported("no filter/filter2 pair")
+    n = find_break_count(filt)
+    if n is None:
+        raise Unsupported("no (= (incf …) N) break")
+    k = find_run_n_events(run_it)
+    if k is None:
+        raise Unsupported("no run-n-events")
+    return {
+        "phases": [
+            {
+                "on_enter_trace": None,
+                "rules": [
+                    rule("hooks::Pred::MsEq(0)", trace=False),
+                    rule('hooks::Pred::Action("production-fired")', stop=n),
+                ],
+            },
+            {
+                "on_enter_trace": True,
+                "rules": [
+                    rule(
+                        'hooks::Pred::Not(&hooks::Pred::Action("production-fired"))',
+                        trace=False,
+                    )
+                ],
+            },
+        ],
+        "output": "Segment",
+        "tail": [k],
+        "else_dots": False,
+        "butlast": False,
+        "join": "Newline",
+    }
+
+
 def convert(name, driver):
     src = (STUBS / f"{name}.lisp").read_text(encoding="utf-8", errors="replace")
     forms = parse(src)
-    filt = find_defun(forms, "filter")
-    if filt is None:
-        raise Unsupported("no (defun filter …)")
     run_it = find_defun(forms, "run-it")
     if run_it is None:
         raise Unsupported("no (defun run-it …)")
+    try:
+        return convert_ctrl(forms, run_it)
+    except Unsupported:
+        pass
+    filt = find_defun(forms, "filter")
+    if filt is None:
+        raise Unsupported("no (defun filter …)")
     guard_exprs, else_dots = collect(filt[3:])
     leaves = flatten_and(guard_exprs)
     rules = build_rules(leaves)
     join, butlast = join_and_butlast(run_it)
     return {
-        "rules": rules,
+        "phases": [{"on_enter_trace": None, "rules": rules}],
+        "output": "Project",
+        "tail": [],
         "else_dots": else_dots,
         "butlast": butlast,
         "join": join,

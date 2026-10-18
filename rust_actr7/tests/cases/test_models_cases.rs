@@ -435,17 +435,6 @@ spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v3_rewards, "tutorial-uni
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v3_utility_sgp, "tutorial-unit7modeling-pcomp-issues-v3-utility-sgp", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_compile_sgp, "tutorial-unit7modeling-pcomp-issues-v4-compile-sgp", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit7modeling_pcomp_issues_v4_one_trial, "tutorial-unit7modeling-pcomp-issues-v4-one-trial");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_1, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-1", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_10, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-10", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_11, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-11", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_2, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-2", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_3, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_4, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-4", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_5, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-5", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_6, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-6", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_7, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-7", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_8, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-8", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_9, "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-9", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_pct_successful_retrieval, "tutorial-unit7modeling-pcomp-issues-v4-pct-successful-retrieval", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_response_chunks, "tutorial-unit7modeling-pcomp-issues-v4-response-chunks", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v4_seed_sgp, "tutorial-unit7modeling-pcomp-issues-v4-seed-sgp", "tutorial-source scrape (not an engine trace)");

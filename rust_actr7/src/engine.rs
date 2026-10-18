@@ -85,15 +85,43 @@ pub struct EventView {
     pub shown: bool,
 }
 
+/// What a pre-hook returns: whether to withhold/stop, and an optional trace
+/// (`:v`) change (the stub filters call `(sgp :v nil)` / `(sgp :v t)` inside
+/// the hook).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PreResult {
+    pub verdict: Verdict,
+    /// `Some(b)` sets `:v` before the event executes; `None` leaves it.
+    pub trace: Option<bool>,
+}
+
+impl PreResult {
+    pub const CONTINUE: PreResult = PreResult {
+        verdict: Verdict::Continue,
+        trace: None,
+    };
+    pub const BREAK: PreResult = PreResult {
+        verdict: Verdict::Break,
+        trace: None,
+    };
+    /// Continue, setting `:v` to `t`.
+    pub fn trace(t: bool) -> PreResult {
+        PreResult {
+            verdict: Verdict::Continue,
+            trace: Some(t),
+        }
+    }
+}
+
 /// A two-phase hook, the Rust counterpart of ACT-R's
 /// `add-pre-event-hook`/`add-post-event-hook` pair (`scheduling.lisp:717`,
-/// `:775`). `pre` runs before the event executes and may [`Verdict::Break`];
-/// `post` runs after a shown event with the exact trace line the engine would
-/// have emitted (available even while `:v` is off, matching the pre-hook's
-/// `(format-event evt)`).
+/// `:775`). `pre` runs before the event executes and may [`Verdict::Break`] or
+/// toggle `:v`; `post` runs after a shown event with the exact trace line the
+/// engine would have emitted (available even while `:v` is off, matching the
+/// pre-hook's `(format-event evt)`).
 pub trait EventHook {
-    fn pre(&mut self, _ev: &EventView) -> Verdict {
-        Verdict::Continue
+    fn pre(&mut self, _ev: &EventView) -> PreResult {
+        PreResult::CONTINUE
     }
     fn post(&mut self, _line: &str, _ev: &EventView) {}
 }
@@ -4201,7 +4229,11 @@ impl Engine {
         let show = self.cfg.detail.shows(next.out);
         let hook_view = if self.event_hook.is_some() {
             let view = self.event_view(&next.event, next.out, show);
-            if self.event_hook.as_mut().unwrap().pre(&view) == Verdict::Break {
+            let r = self.event_hook.as_mut().unwrap().pre(&view);
+            if let Some(t) = r.trace {
+                self.trace_on = t;
+            }
+            if r.verdict == Verdict::Break {
                 self.queue.push(next);
                 return Ok(true);
             }
@@ -4293,7 +4325,11 @@ impl Engine {
             let show = self.cfg.detail.shows(next.out);
             let hook_view = if self.event_hook.is_some() {
                 let view = self.event_view(&next.event, next.out, show);
-                if self.event_hook.as_mut().unwrap().pre(&view) == Verdict::Break {
+                let r = self.event_hook.as_mut().unwrap().pre(&view);
+                if let Some(t) = r.trace {
+                    self.trace_on = t;
+                }
+                if r.verdict == Verdict::Break {
                     self.queue.push(next);
                     break;
                 }
@@ -4466,7 +4502,11 @@ impl Engine {
             let show = self.cfg.detail.shows(next.out);
             let hook_view = if self.event_hook.is_some() {
                 let view = self.event_view(&next.event, next.out, show);
-                if self.event_hook.as_mut().unwrap().pre(&view) == Verdict::Break {
+                let r = self.event_hook.as_mut().unwrap().pre(&view);
+                if let Some(t) = r.trace {
+                    self.trace_on = t;
+                }
+                if r.verdict == Verdict::Break {
                     // Withhold the event (it stays queued) and stop the run,
                     // like `run-one-event`'s `"break"` return.
                     self.queue.push(next);

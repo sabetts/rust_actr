@@ -12,3 +12,16 @@ tutorial-unit2-demo2-find-unattended-letter-actions	demo2
 tutorial-unit2-demo2-other-visual-actions	demo2
 tutorial-unit2-demo2-respond-manual-actions	demo2
 tutorial-unit2code-demo2-manual-actions-trace	demo2
+# Control family: break at the Nth production-fired, then resume. All reuse the
+# one-trial driver (same models/steps/device; the break stops it early).
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-1	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-2	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-4	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-5	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-6	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-7	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-8	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-9	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-10	tutorial-unit7modeling-pcomp-issues-v4-one-trial
+tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-11	tutorial-unit7modeling-pcomp-issues-v4-one-trial
