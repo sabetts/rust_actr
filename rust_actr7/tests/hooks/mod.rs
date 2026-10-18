@@ -22,9 +22,14 @@ use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
 
+use actr_engine::json::Json;
+use actr_engine::rpc::session::Session;
 use actr_engine::{run_model_steps_with_hook, EventHook, EventView, PreResult, Step, Verdict};
 
-use super::{actr_dir, first_diff, load_spec_device, normalize, read_named_spec, refs_dir};
+use super::{
+    actr_dir, apply_session_step, first_diff, load_spec_device, normalize, read_named_spec,
+    refs_dir, NoRemote, Spec,
+};
 
 // ------------------------------------------------------------------ IR
 
@@ -230,12 +235,6 @@ pub fn run_hook_case(case: &str, ir: &HookIr) -> Result<(), String> {
         return Err(format!("ACT-R checkout not found at {}", root.display()));
     }
     let spec = read_named_spec(ir.driver)?;
-    if spec.steps.iter().any(|s| matches!(s, Step::Command { .. })) {
-        return Err(format!(
-            "driver {} needs the session command layer (unsupported here)",
-            ir.driver
-        ));
-    }
     let device = load_spec_device(ir.driver)?;
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
 
@@ -244,15 +243,26 @@ pub fn run_hook_case(case: &str, ir: &HookIr) -> Result<(), String> {
         ir: *ir,
         state: state.clone(),
     };
-    let engine_out = run_model_steps_with_hook(
-        &root,
-        &spec.models,
-        seed,
-        &spec.steps,
-        &device,
-        Some(Box::new(hook)),
-    )
-    .map_err(|e| format!("engine error: {e}"))?;
+    // A driver with a command step (or a `:testing-function` reset hook) must
+    // run through the RPC session, which owns that dispatch.
+    let needs_session = spec.steps.iter().any(|s| match s {
+        Step::Command { .. } => true,
+        Step::Sgp(k, _) => k.eq_ignore_ascii_case(":STARTING-PARAMETERS"),
+        _ => false,
+    });
+    let engine_out = if needs_session {
+        run_session_hook(&root, &spec, &device, seed, Box::new(hook))?
+    } else {
+        run_model_steps_with_hook(
+            &root,
+            &spec.models,
+            seed,
+            &spec.steps,
+            &device,
+            Some(Box::new(hook)),
+        )
+        .map_err(|e| format!("engine error: {e}"))?
+    };
 
     let actual = match ir.output {
         OutputMode::Project => state.borrow().render(ir),
@@ -271,4 +281,37 @@ pub fn run_hook_case(case: &str, ir: &HookIr) -> Result<(), String> {
             first_diff(&expected, &actual)
         ))
     }
+}
+
+/// Drive a command-bearing driver through the RPC [`Session`], installing the
+/// hook on the engine before the steps run. Mirrors `run_spec_session` in
+/// `tests/test_models.rs`.
+fn run_session_hook(
+    root: &std::path::Path,
+    spec: &Spec,
+    device: &actr_engine::DeviceSetup,
+    seed: (u64, u64),
+    hook: Box<dyn EventHook>,
+) -> Result<String, String> {
+    let mut session = Session::new(root.to_path_buf(), seed);
+    let mut remote = NoRemote;
+    for m in &spec.models {
+        session
+            .evaluate(
+                "load-act-r-model",
+                None,
+                &[Json::Str(m.clone())],
+                &mut remote,
+            )
+            .map_err(|e| format!("load {m}: {e}"))?;
+    }
+    session.set_device(device.clone())?;
+    session
+        .engine_mut()
+        .ok_or("no model loaded")?
+        .set_event_hook(Some(hook));
+    for step in &spec.steps {
+        apply_session_step(&mut session, step, &mut remote)?;
+    }
+    Ok(session.take_trace_output())
 }

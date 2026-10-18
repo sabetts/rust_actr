@@ -423,73 +423,115 @@ def emit(name, driver, ir, ignore=None):
 """
 
 
+def find_first(f, pred):
+    """Depth-first: the first node (including `f`, and atoms) satisfying PRED."""
+    if pred(f):
+        return f
+    if is_list(f):
+        for x in f:
+            r = find_first(x, pred)
+            if r is not None:
+                return r
+    return None
+
+
+def mentions_break(f):
+    return find_first(f, lambda x: isinstance(x, LStr) and x == "break") is not None
+
+
 def find_break_count(filt):
     """`(= (incf *count*) N)` in the filter."""
-    found = []
+    m = find_first(
+        filt,
+        lambda f: is_list(f)
+        and head(f) == Sym("=")
+        and len(f) == 3
+        and is_list(f[1])
+        and head(f[1]) == Sym("incf")
+        and isinstance(f[2], int),
+    )
+    return m[2] if m else None
 
-    def walk(f):
-        if is_list(f):
-            if (
-                head(f) == Sym("=")
-                and len(f) == 3
-                and is_list(f[1])
-                and head(f[1]) == Sym("incf")
-                and isinstance(f[2], int)
-            ):
-                found.append(f[2])
-            for x in f[1:]:
-                walk(x)
 
-    walk(filt)
-    return found[0] if found else None
+def first_action_eq(f):
+    """The action name of the first `(eq (evt-action evt) 'X)`."""
+    m = find_first(
+        f,
+        lambda x: is_list(x)
+        and head(x) == Sym("eq")
+        and len(x) == 3
+        and (is_evt_accessor(x[1], "action") or is_evt_accessor(x[2], "action")),
+    )
+    if m is None:
+        return None
+    return sym_name(m[2] if is_evt_accessor(m[1], "action") else m[1])
+
+
+def first_production_eq(f):
+    """The production name of the first `(eq (production-name …) 'X)`."""
+    m = find_first(
+        f,
+        lambda x: is_list(x)
+        and head(x) == Sym("eq")
+        and len(x) == 3
+        and (is_production_name(x[1]) or is_production_name(x[2])),
+    )
+    if m is None:
+        return None
+    return sym_name(m[2] if is_production_name(m[1]) else m[1])
 
 
 def find_run_n_events(run_it):
-    found = []
-
-    def walk(f):
-        if is_list(f):
-            if head(f) == Sym("run-n-events") and len(f) == 2 and isinstance(f[1], int):
-                found.append(f[1])
-            for x in f[1:]:
-                walk(x)
-
-    walk(run_it)
-    return found[0] if found else None
+    m = find_first(
+        run_it,
+        lambda f: is_list(f)
+        and head(f) == Sym("run-n-events")
+        and len(f) == 2
+        and isinstance(f[1], int),
+    )
+    return m[1] if m else None
 
 
 def convert_ctrl(forms, run_it):
-    """The `pcomp-issues` control shape: `:v nil` + break-at-count on
-    production-fired, then a second hook showing only production-fired for the
-    `run-n-events` resume. Segment output."""
+    """The control shape: `:v nil` at the first event, break at the Nth (or
+    first) occurrence of an action, then a `run-n-events` resume. If the stub
+    has a `filter2`, its kept-action gates the resume's `:v`; otherwise the
+    resume shows everything. Segment output."""
     filt = find_defun(forms, "filter")
-    filt2 = find_defun(forms, "filter2")
-    if not filt or not filt2:
-        raise Unsupported("no filter/filter2 pair")
-    n = find_break_count(filt)
-    if n is None:
-        raise Unsupported("no (= (incf …) N) break")
-    k = find_run_n_events(run_it)
-    if k is None:
+    if not filt or not mentions_break(filt):
+        raise Unsupported("no filter with a break")
+    action = first_action_eq(filt)
+    if action is None:
+        raise Unsupported("no break action")
+    prod = first_production_eq(filt)
+    n = find_break_count(filt) or 1
+    if find_run_n_events(run_it) is None:
         raise Unsupported("no run-n-events")
+    stop_when = f'hooks::Pred::Action("{action}")'
+    if prod:
+        stop_when = (
+            f'hooks::Pred::All(&[hooks::Pred::Action("{action}"), '
+            f'hooks::Pred::Production("{prod}")])'
+        )
+    rules1 = []
+    filt2 = find_defun(forms, "filter2")
+    if filt2:
+        show = first_action_eq(filt2)
+        if show is None:
+            raise Unsupported("no filter2 action")
+        rules1 = [
+            rule(f'hooks::Pred::Not(&hooks::Pred::Action("{show}"))', trace=False)
+        ]
     return {
         "phases": [
             {
                 "on_enter_trace": None,
                 "rules": [
                     rule("hooks::Pred::MsEq(0)", trace=False),
-                    rule('hooks::Pred::Action("production-fired")', stop=n),
+                    rule(stop_when, stop=n),
                 ],
             },
-            {
-                "on_enter_trace": True,
-                "rules": [
-                    rule(
-                        'hooks::Pred::Not(&hooks::Pred::Action("production-fired"))',
-                        trace=False,
-                    )
-                ],
-            },
+            {"on_enter_trace": True, "rules": rules1},
         ],
         "output": "Segment",
         "else_dots": False,

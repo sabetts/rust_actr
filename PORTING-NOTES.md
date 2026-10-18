@@ -4551,3 +4551,14 @@ The promoted set: the eight `tutorial-unit2-demo2` projection cases and the
 `pcomp-issues` control cases that reproduce the ref. Those that expose an
 unrelated engine divergence (utility values / production-fired timing) are
 emitted `#[ignore = "engine divergence: …"]` so the gap stays visible.
+
+The `gen_hook_ir.py` control translation covers break-at-the-Nth of a named
+action (`(incf *count*)` or a bare `"break"`), an optional named production,
+and an optional `filter2` whose kept action gates the resume's `:v` (a missing
+`filter2` shows everything). `run_hook_case` drives a command-bearing or
+`:STARTING-PARAMETERS` driver through the RPC `Session` (`run_session_hook`),
+installing the hook on the engine before the steps. `EventView` maps
+`propagate-reward` to the `UTILITY` module. The remaining `#[ignore]`d hook
+cases are engine gaps: the base-level reference trace (`v1-*-act-trace`), the
+reward/utility trace (`bst-utility`), `!eval! set-flag` (`v8-eval-issue`), and
+`pcomp` v9/v10 production-fired timing.

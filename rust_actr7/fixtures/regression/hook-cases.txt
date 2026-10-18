@@ -21,7 +21,8 @@ tutorial-unit2-demo2-find-unattended-letter-actions	demo2
 tutorial-unit2-demo2-other-visual-actions	demo2
 tutorial-unit2-demo2-respond-manual-actions	demo2
 tutorial-unit2code-demo2-manual-actions-trace	demo2
-# Control family: break at the Nth production-fired, then resume (Segment).
+# Control family: `:v nil` at the first event, break at the Nth (or first)
+# occurrence of an action, then resume (Segment output).
 tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-1	tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-1
 tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-2	tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-2
 tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3	tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3
@@ -38,12 +39,23 @@ tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-3	tutorial-unit7modeling-pc
 tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-4	tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-4
 tutorial-unit7modeling-pcomp-issues-v5-production1	tutorial-unit7modeling-pcomp-issues-v5-production1
 tutorial-unit7modeling-pcomp-issues-v5-production3	tutorial-unit7modeling-pcomp-issues-v5-production3
+tutorial-unit8-simple-dynamic-cst-start	tutorial-unit8-simple-dynamic-cst-start
+tutorial-unit8-bst-decide-cst	tutorial-unit8-bst-decide-cst
+# Recovered drivers, but the case exposes an unrelated engine gap, so it stays
+# visible without failing the suite.
+tutorial-unit5modeling-v1-high-act-trace	tutorial-unit5modeling-v1-high-act-trace	engine divergence: base-level reference trace (pending)
+tutorial-unit5modeling-v1-medium-act-trace	tutorial-unit5modeling-v1-medium-act-trace	engine divergence: base-level reference trace (pending)
+tutorial-unit5modeling-v1-low-act-trace	tutorial-unit5modeling-v1-low-act-trace	engine divergence: base-level reference trace (pending)
+tutorial-unit6-bst-utility-trace	tutorial-unit6-bst-utility-trace	engine divergence: reward/utility trace (pending)
+tutorial-unit7modeling-pcomp-issues-v8-eval-issue	tutorial-unit7modeling-pcomp-issues-v8-eval-issue	engine gap: !eval! set-flag unsupported
+tutorial-unit7modeling-pcomp-issues-v9-non-win-composition	tutorial-unit7modeling-pcomp-issues-v9-non-win-composition	engine divergence: production-fired timing (pending)
+tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition	tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition	engine divergence: production-fired timing (pending)
+tutorial-unit7modeling-pcomp-issues-v10-non-win-composition	tutorial-unit7modeling-pcomp-issues-v10-non-win-composition	engine divergence: production-fired timing (pending)
 # Recovered drivers, but the case exposes an unrelated engine divergence
 # (utility values / production-fired timing), so it stays ignored.
 tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-2	tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-2	engine divergence: utility/selection timing (pending)
 tutorial-unit7modeling-pcomp-issues-v4-pct-successful-retrieval	tutorial-unit7modeling-pcomp-issues-v4-pct-successful-retrieval	engine divergence: utility/selection timing (pending)
 tutorial-unit7modeling-pcomp-issues-v5-production3-recreated	tutorial-unit7modeling-pcomp-issues-v5-production3-recreated	engine divergence: utility values (pending)
-tutorial-unit7modeling-pcomp-issues-v5-retrieval-time	tutorial-unit7modeling-pcomp-issues-v5-retrieval-time	engine divergence: utility values (pending)
 tutorial-unit7modeling-pcomp-issues-v5-recreate-encode	tutorial-unit7modeling-pcomp-issues-v5-recreate-encode	engine divergence: utility values (pending)
 tutorial-unit7modeling-pcomp-issues-v5-retrieved-a-win	tutorial-unit7modeling-pcomp-issues-v5-retrieved-a-win	engine divergence: production-fired timing (pending)
 tutorial-unit7modeling-pcomp-issues-v6-retrieved-a-win	tutorial-unit7modeling-pcomp-issues-v6-retrieved-a-win	engine divergence: production-fired timing (pending)

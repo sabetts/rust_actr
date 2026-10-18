@@ -323,9 +323,6 @@ spec_case_ignored!(tutorial_unit5modeling_simple_fact_chunks, "tutorial-unit5mod
 spec_case_ignored!(tutorial_unit5modeling_simple_value_chunks, "tutorial-unit5modeling-simple-value-chunks", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit5modeling_simple_value_type, "tutorial-unit5modeling-simple-value-type", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit5modeling_v1_add_simple_value_chunk_slot, "tutorial-unit5modeling-v1-add-simple-value-chunk-slot", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit5modeling_v1_high_act_trace, "tutorial-unit5modeling-v1-high-act-trace", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit5modeling_v1_low_act_trace, "tutorial-unit5modeling-v1-low-act-trace", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit5modeling_v1_medium_act_trace, "tutorial-unit5modeling-v1-medium-act-trace", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit5modeling_v1_p1_production, "tutorial-unit5modeling-v1-p1-production", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit5modeling_v1_run, "tutorial-unit5modeling-v1-run");
 spec_case_ignored!(tutorial_unit5modeling_v1_sdp, "tutorial-unit5modeling-v1-sdp", "pending: does not yet match ref");
@@ -382,7 +379,6 @@ spec_case_ignored!(tutorial_unit6_bst_rewards_model, "tutorial-unit6-bst-rewards
 spec_case_ignored!(tutorial_unit6_bst_spp_after_1_use, "tutorial-unit6-bst-spp-after-1-use", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit6_bst_spp_before, "tutorial-unit6-bst-spp-before", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(tutorial_unit6_bst_spp_model, "tutorial-unit6-bst-spp-model", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit6_bst_utility_trace, "tutorial-unit6-bst-utility-trace", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit6_bst_visual_isa_productions, "tutorial-unit6-bst-visual-isa-productions", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit6_choice_results, "tutorial-unit6-choice-results", "arbitrary-Lisp command stub (not replayable)");
 spec_case_ignored!(tutorial_unit6_chunk_type_hierarchy_examples, "tutorial-unit6-chunk-type-hierarchy-examples", "tutorial-source scrape (not an engine trace)");
@@ -417,9 +413,7 @@ spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_trial_chunk, "tutorial-un
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v1_initial_run, "tutorial-unit7modeling-pcomp-issues-v1-initial-run", "pending: does not yet match ref");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_attend_num_1_productions, "tutorial-unit7modeling-pcomp-issues-v10-attend-num-1-productions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_attend_num_2_productions, "tutorial-unit7modeling-pcomp-issues-v10-attend-num-2-productions", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_guess_other_composition, "tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_guess_other_production, "tutorial-unit7modeling-pcomp-issues-v10-guess-other-production", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_non_win_composition, "tutorial-unit7modeling-pcomp-issues-v10-non-win-composition", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_non_win_production, "tutorial-unit7modeling-pcomp-issues-v10-non-win-production", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_one_game_late_productions, "tutorial-unit7modeling-pcomp-issues-v10-one-game-late-productions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v10_one_game_result, "tutorial-unit7modeling-pcomp-issues-v10-one-game-result", "event-hook Lisp (not replayable)");
@@ -442,12 +436,11 @@ spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v5_initial_run, "tutorial
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v5_number_chunk_type, "tutorial-unit7modeling-pcomp-issues-v5-number-chunk-type", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v5_number_chunks, "tutorial-unit7modeling-pcomp-issues-v5-number-chunks", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v5_respond_production, "tutorial-unit7modeling-pcomp-issues-v5-respond-production", "tutorial-source scrape (not an engine trace)");
+spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v5_retrieval_time, "tutorial-unit7modeling-pcomp-issues-v5-retrieval-time", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v5_retrieved_a_win_and_non_win_productions, "tutorial-unit7modeling-pcomp-issues-v5-retrieved-a-win-and-non-win-productions", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v6_sgp, "tutorial-unit7modeling-pcomp-issues-v6-sgp", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v7_find_seed, "tutorial-unit7modeling-pcomp-issues-v7-find-seed", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v7_non_win_production, "tutorial-unit7modeling-pcomp-issues-v7-non-win-production", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v8_eval_issue, "tutorial-unit7modeling-pcomp-issues-v8-eval-issue", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v9_non_win_composition, "tutorial-unit7modeling-pcomp-issues-v9-non-win-composition", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit7modeling_pcomp_issues_v9_non_win_production, "tutorial-unit7modeling-pcomp-issues-v9-non-win-production", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit7modeling_ul_issues_first_run, "tutorial-unit7modeling-ul-issues-first-run");
 spec_case!(tutorial_unit7modeling_ul_issues_first_run_with_ult, "tutorial-unit7modeling-ul-issues-first-run-with-ult");
@@ -464,7 +457,6 @@ spec_case!(tutorial_unit7modeling_ul_issues_v2_first_run, "tutorial-unit7modelin
 spec_case!(tutorial_unit7modeling_ul_issues_v2_first_run_spp, "tutorial-unit7modeling-ul-issues-v2-first-run-spp");
 spec_case!(tutorial_unit7modeling_ul_issues_v2_long_run_spp, "tutorial-unit7modeling-ul-issues-v2-long-run-spp");
 spec_case_ignored!(tutorial_unit7modeling_ul_issues_v2_spp, "tutorial-unit7modeling-ul-issues-v2-spp", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit8_bst_decide_cst, "tutorial-unit8-bst-decide-cst", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit8_bst_decide_productions, "tutorial-unit8-bst-decide-productions", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit8_bst_experiment_data, "tutorial-unit8-bst-experiment-data", "arbitrary-Lisp command stub (not replayable)");
 spec_case_ignored!(tutorial_unit8_bst_imaginal_chunk, "tutorial-unit8-bst-imaginal-chunk", "event-hook Lisp (not replayable)");
@@ -502,7 +494,6 @@ spec_case_ignored!(tutorial_unit8_semantic_dynamic_goal_chunks, "tutorial-unit8-
 spec_case_ignored!(tutorial_unit8_semantic_dynamic_productions, "tutorial-unit8-semantic-dynamic-productions", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit8_semantic_dynamic_shark_chunks, "tutorial-unit8-semantic-dynamic-shark-chunks", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit8_simple_dynamic_chunk_types, "tutorial-unit8-simple-dynamic-chunk-types", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit8_simple_dynamic_cst_start, "tutorial-unit8-simple-dynamic-cst-start", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit8_simple_dynamic_extend_buffer_chunk, "tutorial-unit8-simple-dynamic-extend-buffer-chunk", "event-hook Lisp (not replayable)");
 spec_case!(tutorial_unit8_simple_dynamic_final_imaginal, "tutorial-unit8-simple-dynamic-final-imaginal");
 spec_case_ignored!(tutorial_unit8_simple_dynamic_initial_goal, "tutorial-unit8-simple-dynamic-initial-goal", "pending: does not yet match ref");

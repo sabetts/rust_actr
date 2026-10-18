@@ -3871,9 +3871,7 @@ impl Engine {
                 ),
                 Event::VisualClear => ("clear", "VISION".into(), Some("VISUAL".into()), None),
                 Event::StartTracking => ("start-tracking", "VISION".into(), None, None),
-                Event::PropagateReward { .. } => {
-                    ("propagate-reward", "PROCEDURAL".into(), None, None)
-                }
+                Event::PropagateReward { .. } => ("propagate-reward", "UTILITY".into(), None, None),
                 Event::PressKey { .. } => ("press-key", "MOTOR".into(), None, None),
                 Event::PreparationComplete { .. } => {
                     ("preparation-complete", "MOTOR".into(), None, None)
