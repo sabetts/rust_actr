@@ -2100,9 +2100,11 @@ pub struct Engine {
     out_lines: Vec<String>,
     /// Optional two-phase event hook (tests only; see [`EventHook`]).
     event_hook: Option<Box<dyn EventHook>>,
-    /// The trace line of the event currently executing, captured by `emit`
-    /// even when `:v` is off, for delivery to [`EventHook::post`].
-    current_render: Option<String>,
+    /// The trace line(s) the event currently executing emitted, captured by
+    /// `emit` even when `:v` is off, for delivery to [`EventHook::post`]. One
+    /// event can emit several lines (e.g. `encoding-complete` then
+    /// `No visual-object found`), so `post` is called per line.
+    current_lines: Vec<String>,
     /// Commands the model itself fired during a run (`output-key`, …), as
     /// `(name, model, key)`. ACT-R calls these *inside* the run, so their
     /// monitors see them; the RPC session dispatches them to the client's
@@ -2549,7 +2551,7 @@ impl Engine {
             run_events: 0,
             out_lines: Vec::new(),
             event_hook: None,
-            current_render: None,
+            current_lines: Vec::new(),
             fired_commands: Vec::new(),
             exec_prods: Vec::new(),
             disabled_prods: HashSet::new(),
@@ -3673,11 +3675,11 @@ impl Engine {
     }
 
     fn emit(&mut self, module: &str, details: String) {
-        // Capture the rendered line for `EventHook::post` before the `:v`
+        // Capture the rendered line(s) for `EventHook::post` before the `:v`
         // gate: a pre-hook may turn tracing off (`sgp :v nil`) yet still
         // project the line (ACT-R's pre-hook `(format-event evt)`).
-        if self.event_hook.is_some() && self.current_render.is_none() {
-            self.current_render = Some(format_line(
+        if self.event_hook.is_some() {
+            self.current_lines.push(format_line(
                 self.time_ms,
                 module,
                 &details,
@@ -3840,6 +3842,17 @@ impl Engine {
                 Event::VisualClear => ("clear", "VISION".into(), Some("VISUAL".into()), None),
                 Event::StartTracking => ("start-tracking", "VISION".into(), None, None),
                 Event::PropagateReward { .. } => ("propagate-reward", "PROCEDURAL".into(), None, None),
+                Event::PressKey { .. } => ("press-key", "MOTOR".into(), None, None),
+                Event::PreparationComplete { .. } => {
+                    ("preparation-complete", "MOTOR".into(), None, None)
+                }
+                Event::InitiationComplete { .. } => {
+                    ("initiation-complete", "MOTOR".into(), None, None)
+                }
+                Event::MotorNotify { .. } => ("", "MOTOR".into(), None, None),
+                Event::OutputKey { .. } => ("output-key", "KEYBOARD".into(), None, None),
+                Event::FinishMovement { .. } => ("finish-movement", "MOTOR".into(), None, None),
+                Event::ChangeState { module } => ("change-state", module.clone(), None, None),
                 _ => ("", String::new(), None, None),
             };
         EventView {
@@ -4194,11 +4207,13 @@ impl Engine {
         };
         let is_cr = matches!(next.event, Event::ConflictResolution);
         let maintenance = next.maintenance;
-        self.current_render = None;
+        self.current_lines.clear();
         self.exec(next.event, show)?;
-        if let Some(h) = self.event_hook.as_mut() {
-            if let Some(line) = self.current_render.take() {
-                h.post(&line, hook_view.as_ref().unwrap());
+        if self.event_hook.is_some() {
+            let lines = std::mem::take(&mut self.current_lines);
+            let h = self.event_hook.as_mut().unwrap();
+            for line in &lines {
+                h.post(line, hook_view.as_ref().unwrap());
             }
         }
         self.bh_record(bh_info);
@@ -4284,11 +4299,13 @@ impl Engine {
             };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
-            self.current_render = None;
+            self.current_lines.clear();
             self.exec(next.event, show)?;
-            if let Some(h) = self.event_hook.as_mut() {
-                if let Some(line) = self.current_render.take() {
-                    h.post(&line, hook_view.as_ref().unwrap());
+            if self.event_hook.is_some() {
+                let lines = std::mem::take(&mut self.current_lines);
+                let h = self.event_hook.as_mut().unwrap();
+                for line in &lines {
+                    h.post(line, hook_view.as_ref().unwrap());
                 }
             }
             self.bh_record(bh_info);
@@ -4457,11 +4474,13 @@ impl Engine {
             };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
-            self.current_render = None;
+            self.current_lines.clear();
             self.exec(next.event, show)?;
-            if let Some(h) = self.event_hook.as_mut() {
-                if let Some(line) = self.current_render.take() {
-                    h.post(&line, hook_view.as_ref().unwrap());
+            if self.event_hook.is_some() {
+                let lines = std::mem::take(&mut self.current_lines);
+                let h = self.event_hook.as_mut().unwrap();
+                for line in &lines {
+                    h.post(line, hook_view.as_ref().unwrap());
                 }
             }
             self.bh_record(bh_info);

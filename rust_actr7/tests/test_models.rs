@@ -29,6 +29,7 @@ use actr_engine::trace::Detail;
 use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
 
 mod common;
+mod hooks;
 use common::{actr_dir, crate_dir, first_diff};
 
 // ---------------------------------------------------------------- spec model
@@ -972,6 +973,7 @@ macro_rules! spec_case_ignored {
 }
 
 include!("cases/test_models_cases.rs");
+include!("cases/hook_cases.rs");
 
 /// Run one ACT-R regression case and compare with its upstream `.ref` under
 /// ACT-R's own comparator. `Err` carries the first divergence.
