@@ -1,0 +1,5 @@
+(RUN 1
+ (ADD-TEXT 0 "V" 125 150)
+ (CLEAR 885)
+ (INSTALL)
+)

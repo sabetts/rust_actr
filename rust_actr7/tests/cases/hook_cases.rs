@@ -32,7 +32,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_ENCODE_LETTER_IMAGINAL_ACTIONS: hooks::HookIr = 
         }],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: false,
     butlast: false,
     join: hooks::Join::NewlineDots,
@@ -99,7 +98,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_ATTEND_LETTER_VISUAL_ACTIONS: hooks::HookIr = ho
         ],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -157,7 +155,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_STRICT_HARVEST: hooks::HookIr = hooks::HookIr {
         ],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -186,7 +183,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_VISUAL_REENCODE_ACTIONS: hooks::HookIr = hooks::
         }],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -239,7 +235,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_FIND_UNATTENDED_LETTER_ACTIONS: hooks::HookIr = 
         ],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -275,7 +270,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_OTHER_VISUAL_ACTIONS: hooks::HookIr = hooks::Hoo
         }],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -343,7 +337,6 @@ const HOOK_TUTORIAL_UNIT2_DEMO2_RESPOND_MANUAL_ACTIONS: hooks::HookIr = hooks::H
         ],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: true,
     butlast: true,
     join: hooks::Join::Newline,
@@ -375,7 +368,6 @@ const HOOK_TUTORIAL_UNIT2CODE_DEMO2_MANUAL_ACTIONS_TRACE: hooks::HookIr = hooks:
         }],
     }],
     output: hooks::OutputMode::Project,
-    tail: &[],
     else_dots: false,
     butlast: true,
     join: hooks::Join::Newline,
@@ -392,7 +384,7 @@ fn hook_tutorial_unit2code_demo2_manual_actions_trace() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_1: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-1",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -425,7 +417,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_1: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -442,7 +433,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_1() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_2: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-2",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -475,7 +466,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_2: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -492,7 +482,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_2() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_3: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-3",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -525,7 +515,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_3: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -542,7 +531,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_3() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_4: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-4",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -575,7 +564,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_4: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -592,7 +580,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_4() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_5: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-5",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -625,7 +613,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_5: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -642,7 +629,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_5() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_6: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-6",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -675,7 +662,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_6: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -692,7 +678,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_6() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_7: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-7",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -725,7 +711,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_7: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -742,7 +727,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_7() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_8: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-8",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -775,7 +760,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_8: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -792,7 +776,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_8() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_9: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-9",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -825,7 +809,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_9: hooks::HookIr
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -842,7 +825,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_9() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_10: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-10",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -875,7 +858,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_10: hooks::HookI
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -892,7 +874,7 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_10() {
 }
 
 const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_11: hooks::HookIr = hooks::HookIr {
-    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial",
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-11",
     phases: &[
         hooks::Phase {
             on_enter_trace: None,
@@ -925,7 +907,6 @@ const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_11: hooks::HookI
         },
     ],
     output: hooks::OutputMode::Segment,
-    tail: &[hooks::Tail::RunNEvents(2)],
     else_dots: false,
     butlast: false,
     join: hooks::Join::Newline,
@@ -936,6 +917,603 @@ fn hook_tutorial_unit7modeling_pcomp_issues_v4_one_trial_pct_11() {
     if let Err(e) = hooks::run_hook_case(
         "tutorial-unit7modeling-pcomp-issues-v4-one-trial-pct-11",
         &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_ONE_TRIAL_PCT_11,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_1: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-1",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(12),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_two_trial_pct_1() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-1",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_1,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_3: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-3",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(21),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_two_trial_pct_3() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-3",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_3,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_4: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-4",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(20),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_two_trial_pct_4() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-4",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_4,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_PRODUCTION1: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v5-production1",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(6),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v5_production1() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v5-production1",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_PRODUCTION1,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_PRODUCTION3: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v5-production3",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(9),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit7modeling_pcomp_issues_v5_production3() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v5-production3",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_PRODUCTION3,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_2: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-2",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(18),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: utility/selection timing (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_two_trial_pct_2() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-2",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_TWO_TRIAL_PCT_2,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_PCT_SUCCESSFUL_RETRIEVAL: hooks::HookIr =
+    hooks::HookIr {
+        driver: "tutorial-unit7modeling-pcomp-issues-v4-pct-successful-retrieval",
+        phases: &[
+            hooks::Phase {
+                on_enter_trace: None,
+                rules: &[
+                    hooks::Rule {
+                        when: hooks::Pred::MsEq(0),
+                        keep: true,
+                        set: None,
+                        trace: Some(false),
+                        stop_after: None,
+                    },
+                    hooks::Rule {
+                        when: hooks::Pred::Action("production-fired"),
+                        keep: true,
+                        set: None,
+                        trace: None,
+                        stop_after: Some(52),
+                    },
+                ],
+            },
+            hooks::Phase {
+                on_enter_trace: Some(true),
+                rules: &[hooks::Rule {
+                    when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                }],
+            },
+        ],
+        output: hooks::OutputMode::Segment,
+        else_dots: false,
+        butlast: false,
+        join: hooks::Join::Newline,
+    };
+
+#[test]
+#[ignore = "engine divergence: utility/selection timing (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v4_pct_successful_retrieval() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v4-pct-successful-retrieval",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V4_PCT_SUCCESSFUL_RETRIEVAL,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_PRODUCTION3_RECREATED: hooks::HookIr =
+    hooks::HookIr {
+        driver: "tutorial-unit7modeling-pcomp-issues-v5-production3-recreated",
+        phases: &[
+            hooks::Phase {
+                on_enter_trace: None,
+                rules: &[
+                    hooks::Rule {
+                        when: hooks::Pred::MsEq(0),
+                        keep: true,
+                        set: None,
+                        trace: Some(false),
+                        stop_after: None,
+                    },
+                    hooks::Rule {
+                        when: hooks::Pred::Action("production-fired"),
+                        keep: true,
+                        set: None,
+                        trace: None,
+                        stop_after: Some(20),
+                    },
+                ],
+            },
+            hooks::Phase {
+                on_enter_trace: Some(true),
+                rules: &[hooks::Rule {
+                    when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                }],
+            },
+        ],
+        output: hooks::OutputMode::Segment,
+        else_dots: false,
+        butlast: false,
+        join: hooks::Join::Newline,
+    };
+
+#[test]
+#[ignore = "engine divergence: utility values (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v5_production3_recreated() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v5-production3-recreated",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_PRODUCTION3_RECREATED,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_RETRIEVAL_TIME: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v5-retrieval-time",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(40),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: utility values (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v5_retrieval_time() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v5-retrieval-time",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_RETRIEVAL_TIME,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_RECREATE_ENCODE: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v5-recreate-encode",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(39),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: utility values (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v5_recreate_encode() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v5-recreate-encode",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_RECREATE_ENCODE,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_RETRIEVED_A_WIN: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v5-retrieved-a-win",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(41),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: production-fired timing (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v5_retrieved_a_win() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v5-retrieved-a-win",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V5_RETRIEVED_A_WIN,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V6_RETRIEVED_A_WIN: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit7modeling-pcomp-issues-v6-retrieved-a-win",
+    phases: &[
+        hooks::Phase {
+            on_enter_trace: None,
+            rules: &[
+                hooks::Rule {
+                    when: hooks::Pred::MsEq(0),
+                    keep: true,
+                    set: None,
+                    trace: Some(false),
+                    stop_after: None,
+                },
+                hooks::Rule {
+                    when: hooks::Pred::Action("production-fired"),
+                    keep: true,
+                    set: None,
+                    trace: None,
+                    stop_after: Some(41),
+                },
+            ],
+        },
+        hooks::Phase {
+            on_enter_trace: Some(true),
+            rules: &[hooks::Rule {
+                when: hooks::Pred::Not(&hooks::Pred::Action("production-fired")),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            }],
+        },
+    ],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: production-fired timing (pending)"]
+fn hook_tutorial_unit7modeling_pcomp_issues_v6_retrieved_a_win() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit7modeling-pcomp-issues-v6-retrieved-a-win",
+        &HOOK_TUTORIAL_UNIT7MODELING_PCOMP_ISSUES_V6_RETRIEVED_A_WIN,
     ) {
         panic!("{e}");
     }

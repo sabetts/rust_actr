@@ -22,7 +22,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
 
-use actr_engine::trace::MODULE_WIDTH;
 use actr_engine::{run_model_steps_with_hook, EventHook, EventView, PreResult, Step, Verdict};
 
 use super::{actr_dir, first_diff, load_spec_device, normalize, read_named_spec, refs_dir};
@@ -95,22 +94,14 @@ pub struct Phase {
     pub rules: &'static [Rule],
 }
 
-/// An extra driver step appended after the driver spec's steps.
-#[derive(Debug, Clone, Copy)]
-pub enum Tail {
-    /// `(run-n-events n)` — the stub's post-break resume.
-    RunNEvents(u64),
-}
-
-/// A whole hook case: the driver `.spec`, the phases, the output mode, extra
-/// tail steps, and (for [`OutputMode::Project`]) the projection formatting.
+/// A whole hook case: the driver `.spec`, the phases, the output mode, and
+/// (for [`OutputMode::Project`]) the projection formatting.
 #[derive(Debug, Clone, Copy)]
 pub struct HookIr {
     /// Name of the `.spec` whose models/steps/seed/device drive the run.
     pub driver: &'static str,
     pub phases: &'static [Phase],
     pub output: OutputMode,
-    pub tail: &'static [Tail],
     /// Push `"..."` on the first non-kept event after a kept group, deduped.
     pub else_dots: bool,
     /// Drop the final collected item (`butlast`).
@@ -248,17 +239,6 @@ pub fn run_hook_case(case: &str, ir: &HookIr) -> Result<(), String> {
     let device = load_spec_device(ir.driver)?;
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
 
-    let mut steps = spec.steps.clone();
-    for t in ir.tail {
-        match t {
-            Tail::RunNEvents(n) => steps.push(Step::RunNEvents {
-                count: *n,
-                trace: true,
-                width: MODULE_WIDTH,
-            }),
-        }
-    }
-
     let state = Rc::new(RefCell::new(State::default()));
     let hook = IrHook {
         ir: *ir,
@@ -268,7 +248,7 @@ pub fn run_hook_case(case: &str, ir: &HookIr) -> Result<(), String> {
         &root,
         &spec.models,
         seed,
-        &steps,
+        &spec.steps,
         &device,
         Some(Box::new(hook)),
     )

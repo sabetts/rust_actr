@@ -4526,12 +4526,28 @@ line the event emitted. Two subtleties:
 filter's `evt-output` + `filter-test` pair — never re-derived test-side, so
 the projected set matches by construction.
 
-Test side (`tests/hooks/mod.rs`): the closed IR (`HookIr`/`Rule`/`Pred`) is
-executed by one `EventHook`; `run_hook_case` drives a case with an existing
-`.spec`'s models/steps/seed/device and compares the projection to the case's
-own `.ref`. `tools/gen_hook_ir.py` translates the Lisp patterns (the `evt-*`
-predicate grammar, the `push-last`/`model-output` shape, the `*…-started*`
-latch) into that IR for `fixtures/regression/hook-cases.txt`; anything it
-cannot translate (the break/gating control flows, e.g. the `pcomp-issues`
-family) is reported and stays hand-written. The eight `tutorial-unit2-demo2`
-projection cases are promoted.
+Test side (`tests/hooks/mod.rs`): the closed IR (`HookIr`/`Phase`/`Rule`/
+`Pred`) is executed by one `EventHook`; `run_hook_case` drives a case with an
+existing `.spec`'s models/steps/seed/device and compares the output to the
+case's own `.ref`. Two output modes: `Project` (the demo2 `format-event`
+list) and `Segment` (the engine's raw trace, gated by the hook's `:v` rules).
+`tools/gen_hook_ir.py` translates the Lisp patterns — the `evt-*` predicate
+grammar, the `push-last`/`model-output` shape, the `*…-started*` latch, and
+the `pcomp-issues` control shape (`fg nil` + break at the Nth
+`production-fired`, then a second hook showing only `production-fired` for the
+`run-n-events` resume) — into that IR for `fixtures/regression/hook-cases.txt`.
+
+**Driver recovery.** A hook stub's driver (the task its `run-it` calls) is not
+in any existing spec, and hook specs are otherwise written `:MODELS NIL`.
+`extract-specs.lisp` now executes a `:hook` stub with `add-pre/post-event-hook`
+and `delete-event-hook` neutralized (`extract-hook`): the task runs unfiltered
+and the recorder captures its reset/run/`run-n-events`/device steps, while the
+spec keeps `:SCOPE :HOOK` (the filter itself is not replayable in Lisp). So the
+control cases map `driver = self` in `hook-cases.txt`. Regen must be limited to
+the hook names (`SPEC_LIST`): the current token classifier would otherwise
+re-scope unrelated refs (e.g. `demo2` → `:ARBITRARY`).
+
+The promoted set: the eight `tutorial-unit2-demo2` projection cases and the
+`pcomp-issues` control cases that reproduce the ref. Those that expose an
+unrelated engine divergence (utility values / production-fired timing) are
+emitted `#[ignore = "engine divergence: …"]` so the gap stays visible.

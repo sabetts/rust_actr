@@ -1,0 +1,7 @@
+(RUN 1
+ (ADD-TEXT 0 "zinc" 150 150)
+ (ADD-TEXT 5000 "9" 150 150)
+ (CLEAR 0)
+ (CLEAR 5000)
+ (INSTALL)
+)

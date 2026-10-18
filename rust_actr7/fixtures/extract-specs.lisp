@@ -907,28 +907,64 @@ after an undefined-function error. Returns whether anything was loaded."
                 (error () nil)))))))
     any))
 
+(defun with-hooks-neutralized (thunk)
+  "Call THUNK with `add-pre/post-event-hook` / `delete-event-hook` stubbed to
+no-ops, so a hook stub's `run-it` records its *driver* (the task it calls)
+without the arbitrary-Lisp filter running. Used to recover drivers for the
+`:hook` scope; the filter's effect is reproduced test-side (see
+`tests/hooks/mod.rs`)."
+  (let ((pre (symbol-function 'add-pre-event-hook))
+        (post (symbol-function 'add-post-event-hook))
+        (del (symbol-function 'delete-event-hook)))
+    (unwind-protect
+         (progn
+           (setf (symbol-function 'add-pre-event-hook)
+                 (lambda (&rest args) (declare (ignore args)) nil)
+                 (symbol-function 'add-post-event-hook)
+                 (lambda (&rest args) (declare (ignore args)) nil)
+                 (symbol-function 'delete-event-hook)
+                 (lambda (&rest args) (declare (ignore args)) nil))
+           (funcall thunk))
+      (setf (symbol-function 'add-pre-event-hook) pre
+            (symbol-function 'add-post-event-hook) post
+            (symbol-function 'delete-event-hook) del))))
+
+(defun extract-hook (name lisp)
+  "Recover a hook stub's driver: run `run-it` with the event hooks neutralized
+so the task's reset/run/run-n-events steps and device script are recorded, but
+keep `:SCOPE :HOOK` (the filter is not replayable in Lisp)."
+  (let ((spec (handler-case
+                  (with-hooks-neutralized
+                    (lambda () (extract-one-attempt name lisp :hook)))
+                (error (e) (make-spec name :hook :error (princ-to-string e))))))
+    (setf (getf spec :scope) :hook
+          (getf spec :flags) '(:hook))
+    spec))
+
 (defun extract-one (name)
   "Return a spec plist for NAME, or a scope-error spec on failure."
   (fresh-state)
   (let ((lisp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*))
         (src (ignore-errors (slurp (merge-pathnames (concatenate 'string name ".lisp") *tm-dir*)))))
     (let ((static-scope (scope-of (or src ""))))
-      ;; Non-replayable stubs (hooks, source scrapes, arbitrary-Lisp
-      ;; experiments) are classified from source without executing. Genuine
-      ;; command stubs and device stubs ARE executed so their command steps,
-      ;; run steps and device script are captured (the ref is the oracle; the
-      ;; spec replays it).
-      (if (member static-scope '(:hook :scrape :arbitrary))
-          (make-spec name static-scope :flags (list static-scope))
-          (handler-case (extract-one-attempt name lisp static-scope)
-            (error (e)
-              ;; Retry once with the tutorial task file if `run-it` needed an
-              ;; undefined function the stub did not load.
-              (if (and (search "undefined" (string-downcase (princ-to-string e)))
-                       (tutorial-companions))
-                  (handler-case (extract-one-attempt name lisp static-scope)
-                    (error (e2) (make-spec name :error :error (princ-to-string e2))))
-                (make-spec name :error :error (princ-to-string e)))))))))
+      ;; Source scrapes and arbitrary-Lisp experiments are classified from
+      ;; source without executing. Hook stubs ARE executed, but with the event
+      ;; hooks neutralized, so their *driver* is captured. Genuine command
+      ;; stubs and device stubs are executed normally.
+      (cond
+        ((eq static-scope :hook) (extract-hook name lisp))
+        ((member static-scope '(:scrape :arbitrary))
+         (make-spec name static-scope :flags (list static-scope)))
+        (t
+         (handler-case (extract-one-attempt name lisp static-scope)
+           (error (e)
+             ;; Retry once with the tutorial task file if `run-it` needed an
+             ;; undefined function the stub did not load.
+             (if (and (search "undefined" (string-downcase (princ-to-string e)))
+                      (tutorial-companions))
+                 (handler-case (extract-one-attempt name lisp static-scope)
+                   (error (e2) (make-spec name :error :error (princ-to-string e2))))
+               (make-spec name :error :error (princ-to-string e))))))))))
 
 (defun write-spec (spec)
   (let ((path (merge-pathnames (concatenate 'string (getf spec :name) ".spec") *out-dir*)))
