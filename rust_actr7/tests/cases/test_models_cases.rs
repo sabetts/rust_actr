@@ -150,20 +150,13 @@ spec_case!(tutorial_unit1modeling_broken_addition_v9_goal_buffer, "tutorial-unit
 spec_case!(tutorial_unit1modeling_broken_addition_v9_run_low_detail, "tutorial-unit1modeling-broken-addition-v9-run-low-detail");
 spec_case_ignored!(tutorial_unit1modeling_warnings, "tutorial-unit1modeling-warnings", "command-layer output (in scope; pending promotion)");
 spec_case_ignored!(tutorial_unit2_demo2_attend_letter_production, "tutorial-unit2-demo2-attend-letter-production", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit2_demo2_attend_letter_visual_actions, "tutorial-unit2-demo2-attend-letter-visual-actions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_demo2_chunk_types, "tutorial-unit2-demo2-chunk-types", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit2_demo2_encode_letter_imaginal_actions, "tutorial-unit2-demo2-encode-letter-imaginal-actions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_demo2_encode_letter_production, "tutorial-unit2-demo2-encode-letter-production", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit2_demo2_find_unattended_letter_actions, "tutorial-unit2-demo2-find-unattended-letter-actions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_demo2_find_unattended_letter_production, "tutorial-unit2-demo2-find-unattended-letter-production", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit2_demo2_other_visual_actions, "tutorial-unit2-demo2-other-visual-actions", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit2_demo2_respond_manual_actions, "tutorial-unit2-demo2-respond-manual-actions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_demo2_respond_production, "tutorial-unit2-demo2-respond-production", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit2_demo2_sgp, "tutorial-unit2-demo2-sgp", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit2_demo2_strict_harvest, "tutorial-unit2-demo2-strict-harvest", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_demo2_visual_chunk, "tutorial-unit2-demo2-visual-chunk", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_demo2_visual_location_chunk, "tutorial-unit2-demo2-visual-location-chunk", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit2_demo2_visual_reencode_actions, "tutorial-unit2-demo2-visual-reencode-actions", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit2_unit2_array_chunk_type, "tutorial-unit2-unit2-array-chunk-type", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit2_unit2_fake_python_run, "tutorial-unit2-unit2-fake-python-run");
 spec_case_ignored!(tutorial_unit2_unit2_goal_chunk, "tutorial-unit2-unit2-goal-chunk", "tutorial-source scrape (not an engine trace)");
@@ -171,7 +164,6 @@ spec_case_ignored!(tutorial_unit2_unit2_read_letters_chunk_type, "tutorial-unit2
 spec_case!(tutorial_unit2_unit2_run, "tutorial-unit2-unit2-run");
 spec_case_ignored!(tutorial_unit2code_addition_buffer_chunk, "tutorial-unit2code-addition-buffer-chunk", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit2code_addition_buffer_status, "tutorial-unit2code-addition-buffer-status", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit2code_demo2_manual_actions_trace, "tutorial-unit2code-demo2-manual-actions-trace", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit3_sound_chunk_type, "tutorial-unit3-sound-chunk-type", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit3_sperling_attend_medium_production, "tutorial-unit3-sperling-attend-medium-production", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit3_sperling_detected_sound_production, "tutorial-unit3-sperling-detected-sound-production", "tutorial-source scrape (not an engine trace)");

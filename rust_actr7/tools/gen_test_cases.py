@@ -30,6 +30,7 @@ CRATE = HERE.parent
 REPO = CRATE.parent
 REFS_DIR = REPO / "actr7.x" / "test-models"
 SPECS_DIR = CRATE / "fixtures" / "regression" / "specs"
+HOOK_CASES = CRATE / "fixtures" / "regression" / "hook-cases.txt"
 OUT = CRATE / "tests" / "cases" / "test_models_cases.rs"
 
 SCOPE_REASON = {
@@ -74,6 +75,23 @@ def existing_runnable() -> set:
     return set(re.findall(r'spec_case!\(\s*\w+\s*,\s*"([^"]+)"', OUT.read_text()))
 
 
+def hook_owned() -> set:
+    """Names owned by the hook suite (tests/cases/hook_cases.rs).
+
+    Those cases have their own generated file; emitting them here too would be
+    a duplicate (or a stale `#[ignore]`). See fixtures/regression/hook-cases.txt.
+    """
+    if not HOOK_CASES.exists():
+        return set()
+    names = set()
+    for line in HOOK_CASES.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        names.add(line.split()[0])
+    return names
+
+
 def no_spec_reason(name: str) -> str:
     """Classify a ref that has no spec, by its stub source."""
     stub = REFS_DIR / f"{name}.lisp"
@@ -95,6 +113,7 @@ def main() -> int:
         return 1
 
     runnable_now = existing_runnable()
+    hook = hook_owned()
 
     spec_scope = {}
     for p in SPECS_DIR.glob("*.spec"):
@@ -119,6 +138,9 @@ def main() -> int:
             return 1
         seen[ident_name] = name
 
+        if name in hook:
+            # Owned by tests/cases/hook_cases.rs; not emitted here.
+            continue
         if name in runnable_now:
             lines.append(f'spec_case!({ident_name}, "{name}");')
             runnable += 1
