@@ -66,6 +66,8 @@ pub enum Pred {
     MsEq(i64),
     /// `(< (evt-mstime evt) n)`.
     MsLt(i64),
+    /// `(> (evt-mstime evt) n)`.
+    MsGt(i64),
     /// `(<= lo (evt-mstime evt) hi)`.
     MsBetween(i64, i64),
     /// The stub's `*…-trace-started*` / latch flag.
@@ -128,6 +130,7 @@ fn eval(p: &Pred, ev: &EventView, latch: bool) -> bool {
             .is_some_and(|x| x.eq_ignore_ascii_case(n)),
         Pred::MsEq(t) => ev.time_ms == *t,
         Pred::MsLt(t) => ev.time_ms < *t,
+        Pred::MsGt(t) => ev.time_ms > *t,
         Pred::MsBetween(lo, hi) => *lo <= ev.time_ms && ev.time_ms <= *hi,
         Pred::Latch => latch,
         Pred::All(ps) => ps.iter().all(|p| eval(p, ev, latch)),

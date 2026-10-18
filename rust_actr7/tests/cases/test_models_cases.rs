@@ -337,15 +337,12 @@ spec_case_ignored!(tutorial_unit5modeling_v2_sgp, "tutorial-unit5modeling-v2-sgp
 spec_case_ignored!(tutorial_unit5modeling_v2_show_queue, "tutorial-unit5modeling-v2-show-queue", "arbitrary-Lisp command stub (not replayable)");
 spec_case!(tutorial_unit5modeling_v3_first_run, "tutorial-unit5modeling-v3-first-run");
 spec_case_ignored!(tutorial_unit5modeling_v3_p2_production, "tutorial-unit5modeling-v3-p2-production", "tutorial-source scrape (not an engine trace)");
-spec_case_ignored!(tutorial_unit5modeling_v3_run_p2, "tutorial-unit5modeling-v3-run-p2", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit5modeling_v3_sgp, "tutorial-unit5modeling-v3-sgp", "tutorial-source scrape (not an engine trace)");
 spec_case_ignored!(tutorial_unit5modeling_v4_p2_production, "tutorial-unit5modeling-v4-p2-production", "tutorial-source scrape (not an engine trace)");
 spec_case!(tutorial_unit5modeling_v4_p3_run, "tutorial-unit5modeling-v4-p3-run");
 spec_case_ignored!(tutorial_unit5modeling_v4_p3_run_queue, "tutorial-unit5modeling-v4-p3-run-queue", "arbitrary-Lisp command stub (not replayable)");
 spec_case_ignored!(tutorial_unit5modeling_v4_run_p1_finsts, "tutorial-unit5modeling-v4-run-p1-finsts", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit5modeling_v4_run_p2, "tutorial-unit5modeling-v4-run-p2", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit5modeling_v4_run_p2_finsts, "tutorial-unit5modeling-v4-run-p2-finsts", "event-hook Lisp (not replayable)");
-spec_case_ignored!(tutorial_unit5modeling_v4_run_p3_act, "tutorial-unit5modeling-v4-run-p3-act", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit5modeling_v5_p3_run_f3_activation, "tutorial-unit5modeling-v5-p3-run-f3-activation", "pending: does not yet match ref");
 spec_case_ignored!(tutorial_unit5modeling_v5_p3_run_queue, "tutorial-unit5modeling-v5-p3-run-queue", "event-hook Lisp (not replayable)");
 spec_case_ignored!(tutorial_unit5modeling_v5_set_base_levels, "tutorial-unit5modeling-v5-set-base-levels", "tutorial-source scrape (not an engine trace)");

@@ -1268,6 +1268,119 @@ fn hook_tutorial_unit8_bst_decide_cst() {
     }
 }
 
+const HOOK_TUTORIAL_UNIT5MODELING_V4_RUN_P3_ACT: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit5modeling-v4-run-p3-act",
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::MsEq(0),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::MsGt(26590),
+                keep: true,
+                set: None,
+                trace: Some(true),
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+fn hook_tutorial_unit5modeling_v4_run_p3_act() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit5modeling-v4-run-p3-act",
+        &HOOK_TUTORIAL_UNIT5MODELING_V4_RUN_P3_ACT,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT5MODELING_V3_RUN_P2: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit5modeling-v3-run-p2",
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::MsEq(0),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::MsGt(12300),
+                keep: true,
+                set: None,
+                trace: Some(true),
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: base-level reference trace (pending)"]
+fn hook_tutorial_unit5modeling_v3_run_p2() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit5modeling-v3-run-p2",
+        &HOOK_TUTORIAL_UNIT5MODELING_V3_RUN_P2,
+    ) {
+        panic!("{e}");
+    }
+}
+
+const HOOK_TUTORIAL_UNIT5MODELING_V4_RUN_P2: hooks::HookIr = hooks::HookIr {
+    driver: "tutorial-unit5modeling-v4-run-p2",
+    phases: &[hooks::Phase {
+        on_enter_trace: None,
+        rules: &[
+            hooks::Rule {
+                when: hooks::Pred::MsEq(0),
+                keep: true,
+                set: None,
+                trace: Some(false),
+                stop_after: None,
+            },
+            hooks::Rule {
+                when: hooks::Pred::MsGt(12300),
+                keep: true,
+                set: None,
+                trace: Some(true),
+                stop_after: None,
+            },
+        ],
+    }],
+    output: hooks::OutputMode::Segment,
+    else_dots: false,
+    butlast: false,
+    join: hooks::Join::Newline,
+};
+
+#[test]
+#[ignore = "engine divergence: base-level reference trace (pending)"]
+fn hook_tutorial_unit5modeling_v4_run_p2() {
+    if let Err(e) = hooks::run_hook_case(
+        "tutorial-unit5modeling-v4-run-p2",
+        &HOOK_TUTORIAL_UNIT5MODELING_V4_RUN_P2,
+    ) {
+        panic!("{e}");
+    }
+}
+
 const HOOK_TUTORIAL_UNIT5MODELING_V1_HIGH_ACT_TRACE: hooks::HookIr = hooks::HookIr {
     driver: "tutorial-unit5modeling-v1-high-act-trace",
     phases: &[

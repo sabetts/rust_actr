@@ -42,7 +42,7 @@ replay it:
 | `MULTI` | repeated `run`/`goal-focus` | yes, unless it also needs `(reset)` or an unsupported model feature |
 | `COMMAND` | command-only dump (`pp`/`dm`/`sdm`/`buffer-chunk`/…) | yes, replayed through the command layer |
 | `DEVICE` | window/device scaffolding not in the spec | later |
-| `HOOK` | `add-pre/post-event-hook` arbitrary Lisp | projection + `pcomp` control filters run via the IR (`tests/hooks/`); scheduled-gating flows stay ignored |
+| `HOOK` | `add-pre/post-event-hook` arbitrary Lisp | projection, `pcomp` control, and trace-suppress/window filters run via the IR (`tests/hooks/`); scheduled-gating flows stay ignored |
 | `SCRAPE` | re-reads a tutorial source and echoes a fragment | no — stays ignored |
 | `ARBITRARY` | output computed in arbitrary Lisp (`format`, experiments) | no — stays ignored |
 | `DRIVER` / `ERROR` / `OTHER` | unsupported `run-it` op / extraction failed / no run | ignored |

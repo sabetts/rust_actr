@@ -4559,6 +4559,13 @@ and an optional `filter2` whose kept action gates the resume's `:v` (a missing
 `:STARTING-PARAMETERS` driver through the RPC `Session` (`run_session_hook`),
 installing the hook on the engine before the steps. `EventView` maps
 `propagate-reward` to the `UTILITY` module. The remaining `#[ignore]`d hook
-cases are engine gaps: the base-level reference trace (`v1-*-act-trace`), the
-reward/utility trace (`bst-utility`), `!eval! set-flag` (`v8-eval-issue`), and
-`pcomp` v9/v10 production-fired timing.
+cases are engine gaps: the base-level reference trace (`v1-*-act-trace`,
+`v3/v4-run-p2`), the reward/utility trace (`bst-utility`), `!eval! set-flag`
+(`v8-eval-issue`), and `pcomp` v9/v10 production-fired timing.
+
+A third shape — the trace-suppress/window filter, whose only effect is toggling
+`:v` (`(when GUARD … (sgp :v nil/t))`, GUARD a first-event flag, `zerop
+evt-time`, or `(> (evt-mstime evt) N)`) — is translated to per-event `:v`
+rules (`OutputMode::Segment`, compared against the engine's gated trace). A
+`(schedule-break T)` in such a filter has no IR representation yet, so those
+stubs stay unconverted.

@@ -540,6 +540,111 @@ def convert_ctrl(forms, run_it):
     }
 
 
+def filter_has_format_push(filt):
+    return find_first(filt, is_format_push) is not None
+
+
+def find_schedule_break(f):
+    m = find_first(
+        f, lambda x: is_list(x) and head(x) == Sym("schedule-break") and len(x) >= 2
+    )
+    if m is None or not isinstance(m[1], (int, float)):
+        return None
+    return m[1]
+
+
+# Symbols whose presence means the filter does more than silence the trace
+# (scheduled gating, projection, or a command) — not a suppress case.
+SUPPRESS_FORBIDDEN = {
+    "format-event",
+    "schedule-event",
+    "schedule-event-relative",
+    "schedule-event-after-module",
+    "sgp-fct",
+    "push-last",
+    "model-output",
+    "evt-action",
+    "evt-params",
+    "evt-module",
+    "production-name",
+}
+
+
+def symbol_atoms(f, out):
+    if isinstance(f, Sym):
+        out.add(str(f).lower())
+    elif is_list(f):
+        for x in f:
+            symbol_atoms(x, out)
+    return out
+
+
+def guard_to_pred(cond):
+    """A trace-gate guard (`when COND … (sgp :v X)`) -> a `Pred` literal."""
+    if isinstance(cond, Sym):
+        # A `*…disable-trace*` flag fires on the first event.
+        return "hooks::Pred::MsEq(0)"
+    h = head(cond) if is_list(cond) else None
+    if h == Sym("zerop"):
+        return "hooks::Pred::MsEq(0)"
+    if h == Sym(">"):
+        a, b = cond[1], cond[2]
+        if is_evt_accessor(a, "mstime"):
+            return f"hooks::Pred::MsGt({int(b)})"
+        if is_evt_accessor(a, "time"):
+            return f"hooks::Pred::MsGt({round(float(b) * 1000)})"
+    raise Unsupported(f"trace guard {cond!r}")
+
+
+def find_sgp_v(body):
+    """The `nil`/`t` of a `(sgp :v X)` in BODY, or None."""
+    m = find_first(
+        body,
+        lambda x: is_list(x)
+        and head(x) == Sym("sgp")
+        and len(x) >= 3
+        and x[1] == Sym(":v"),
+    )
+    if m is None:
+        return None
+    return m[2]
+
+
+def convert_trace(forms, run_it):
+    """The trace-suppress/window shape: the filter only toggles `:v`
+    (`(when GUARD … (sgp :v X))`), optionally with `(schedule-break T)`; the
+    driver's own command steps produce the compared output. Segment."""
+    filt = find_defun(forms, "filter")
+    if not filt:
+        raise Unsupported("no filter")
+    if (
+        mentions_break(filt)
+        or filter_has_format_push(filt)
+        or symbol_atoms(filt, set()) & SUPPRESS_FORBIDDEN
+    ):
+        raise Unsupported("not a pure trace filter")
+    rules = []
+    for form in filt[3:]:
+        if head(form) != Sym("when"):
+            continue
+        v = find_sgp_v(form[2:])
+        if v is None:
+            continue
+        rules.append(rule(guard_to_pred(form[1]), trace=(v != Sym("nil") and v != [])))
+    if not rules:
+        raise Unsupported("no (sgp :v …) toggle")
+    if find_schedule_break(filt) is not None:
+        # `(schedule-break T)` (a time-based stop) has no IR representation yet.
+        raise Unsupported("schedule-break not modelled")
+    return {
+        "phases": [{"on_enter_trace": None, "rules": rules}],
+        "output": "Segment",
+        "else_dots": False,
+        "butlast": False,
+        "join": "Newline",
+    }
+
+
 def convert(name, driver):
     src = (STUBS / f"{name}.lisp").read_text(encoding="utf-8", errors="replace")
     forms = parse(src)
@@ -548,6 +653,10 @@ def convert(name, driver):
         raise Unsupported("no (defun run-it …)")
     try:
         return convert_ctrl(forms, run_it)
+    except Unsupported:
+        pass
+    try:
+        return convert_trace(forms, run_it)
     except Unsupported:
         pass
     filt = find_defun(forms, "filter")
