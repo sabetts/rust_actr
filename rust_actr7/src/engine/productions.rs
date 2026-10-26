@@ -129,7 +129,7 @@ impl Engine {
                 // `print-instantiation` emits the definition one line at a
                 // time, so split the render.
                 lines.extend(
-                    render_production(prod, b, mism, &[])
+                    render_production(prod, b, mism, &[], &self.model.chunk_types)
                         .lines()
                         .map(str::to_string),
                 );

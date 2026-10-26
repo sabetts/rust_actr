@@ -2879,7 +2879,13 @@ impl Engine {
             for a in prod.rhs.iter_mut() {
                 if let RhsAction::Request {
                     buffer,
-                    spec: ChunkDesc::Spec { ctype, slots, .. },
+                    spec:
+                        ChunkDesc::Spec {
+                            ctype,
+                            slots,
+                            auto_cmd,
+                            ..
+                        },
                 } = a
                 {
                     if ctype.is_empty() {
@@ -2891,6 +2897,7 @@ impl Engine {
                         && !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case("CMD"))
                     {
                         slots.insert(0, ("CMD".to_string(), Pattern::Sym(ctype.to_uppercase())));
+                        *auto_cmd = true;
                     }
                     if let Some((_, defs)) =
                         types.iter().find(|(n, _)| n.eq_ignore_ascii_case(ctype))

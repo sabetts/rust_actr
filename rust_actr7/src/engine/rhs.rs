@@ -63,6 +63,7 @@ pub(super) fn new_chunk(desc: &ChunkDesc) -> Result<NewChunk, EngineError> {
             slots,
             neg,
             rels,
+            ..
         } => {
             let mut out = Vec::new();
             for (s, p) in slots {
@@ -285,6 +286,7 @@ impl Engine {
                 slots,
                 neg,
                 rels,
+                ..
             } => {
                 let mut out = Vec::new();
                 for (s, p) in slots {

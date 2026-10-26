@@ -1311,8 +1311,13 @@ impl Engine {
         let mut lines = Vec::new();
         for prod in &selected {
             let implicit = pp_implicit_queries(prod, &exempt);
-            let text =
-                super::compilation::render_production(prod, &Bindings::new(), &[], &implicit);
+            let text = super::compilation::render_production(
+                prod,
+                &Bindings::new(),
+                &[],
+                &implicit,
+                &self.model.chunk_types,
+            );
             for line in text.lines() {
                 lines.push(line.to_string());
             }
@@ -1364,7 +1369,13 @@ impl Engine {
             };
             self.out_lines.push(header);
             let b = hit.map(|(_, b, _)| b.clone()).unwrap_or_default();
-            let text = super::compilation::render_production(prod, &b, partials, &[]);
+            let text = super::compilation::render_production(
+                prod,
+                &b,
+                partials,
+                &[],
+                &self.model.chunk_types,
+            );
             for line in text.lines() {
                 self.out_lines.push(line.to_string());
             }
@@ -2625,6 +2636,7 @@ impl Engine {
             &Bindings::new(),
             &[],
             &pp_implicit_queries(prod, &exempt),
+            &self.model.chunk_types,
         ))
     }
 

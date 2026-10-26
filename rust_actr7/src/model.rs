@@ -102,12 +102,16 @@ pub enum ChunkDesc {
     Spec {
         ctype: String,
         slots: Vec<(String, Pattern)>,
+        /// Set when `expand_request_defaults` inserted the module `CMD`
+        /// default, so `pp` can print it after the explicit slots.
+        auto_cmd: bool,
         /// `- slot value` exclusions from a request spec (empty for
         /// construction contexts).
         neg: Vec<(String, Pattern)>,
         /// `> < >= <= slot value` numeric inequalities.
         rels: Vec<(String, Pattern, SlotOp)>,
     },
+
     /// A bare chunk name.
     Named(String),
 }
@@ -1802,6 +1806,7 @@ pub fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
                     return Ok(ChunkDesc::Spec {
                         ctype: head.to_string(),
                         slots,
+                        auto_cmd: false,
                         neg,
                         rels,
                     });
@@ -1828,6 +1833,7 @@ pub fn parse_chunk_desc(forms: &[Sexp]) -> Result<ChunkDesc, LoadError> {
     Ok(ChunkDesc::Spec {
         ctype,
         slots,
+        auto_cmd: false,
         neg,
         rels,
     })

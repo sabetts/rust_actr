@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "engine divergence: production text rendering (pending)"]
 fn tutorial_unit3modeling_v4_whynot() -> Result<(), String> {
     Case::new("tutorial-unit3modeling-v4-whynot")
         .models(&[

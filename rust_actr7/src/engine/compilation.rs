@@ -1,5 +1,6 @@
 //! Production compilation: composition, rendering, utility/activation helpers.
 use super::*;
+use crate::model::ChunkType;
 impl SlotVal {
     pub(super) fn render(&self) -> String {
         match self {
@@ -989,6 +990,7 @@ pub(super) fn render_production(
     b: &Bindings,
     partials: &[PpmMismatch],
     implicit: &[String],
+    types: &[ChunkType],
 ) -> String {
     let mut s = format!("(P {}\n", prod.name);
     for item in &prod.lhs {
@@ -1026,6 +1028,32 @@ pub(super) fn render_production(
                         }
                     } else {
                         s.push_str(&format!("    {:<2} {slot} {val}\n", slot_op_str(t.op)));
+                    }
+                }
+                // `production-statement-text` prints the condition's full
+                // chunk-type defaults too (`LINE T`, `TEXT T`), just as
+                // `pprint-chunks` does for chunks. Only `isa` conditions are
+                // expanded; request defaults are already instantiated.
+                if let Some(Pattern::Sym(isa)) =
+                    tests.iter().find(|t| t.slot == "ISA").map(|t| &t.value)
+                {
+                    let defaults: Vec<(String, Pattern)> = if let Some(ct) =
+                        types.iter().find(|ct| ct.name.eq_ignore_ascii_case(isa))
+                    {
+                        ct.defaults.clone()
+                    } else {
+                        // Core-module chunk types are not in `model.chunk_types`.
+                        match isa.to_uppercase().as_str() {
+                            "LINE" => vec![("LINE".into(), Pattern::Sym("T".into()))],
+                            "TEXT" => vec![("TEXT".into(), Pattern::Sym("T".into()))],
+                            _ => Vec::new(),
+                        }
+                    };
+                    for (slot, default) in &defaults {
+                        if tests.iter().any(|t| t.slot == *slot) {
+                            continue;
+                        }
+                        s.push_str(&format!("       {} {}\n", slot, show_pat(default, b)));
                     }
                 }
             }
@@ -1097,10 +1125,23 @@ pub(super) fn render_production(
             RhsAction::Request { buffer, spec } => match spec {
                 ChunkDesc::Named(n) => s.push_str(&format!("   +{buffer}> {n}\n")),
                 ChunkDesc::Spec {
-                    slots, neg, rels, ..
+                    slots,
+                    neg,
+                    rels,
+                    auto_cmd,
+                    ..
                 } => {
                     s.push_str(&format!("   +{buffer}>\n"));
-                    for (name, val) in slots {
+                    let ordered: Vec<&(String, Pattern)> = if *auto_cmd {
+                        slots
+                            .iter()
+                            .filter(|(name, _)| name != "CMD")
+                            .chain(slots.iter().filter(|(name, _)| name == "CMD"))
+                            .collect()
+                    } else {
+                        slots.iter().collect()
+                    };
+                    for (name, val) in ordered {
                         if name == "ISA" {
                             continue;
                         }

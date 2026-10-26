@@ -4747,3 +4747,18 @@ extension warning and extends the engine's possible slots. This promoted
 buffer-usage-warning`, `initial-load`, `extend-warning`, and
 `semantic-dynamic-extend-warning`, moving the corpus to **420 passed / 147
 ignored**.
+
+## 279. Production text shows chunk-type defaults and auto-`CMD` last (verified)
+
+`render_production` now expands an LHS `isa TYPE` into the type's default
+slots. Model-defined defaults come from `model.chunk_types`; the core module
+types use `builtin_type_defaults` (`TEXT`/`OVAL`/`LINE`). This restores
+`LINE T` in the BST `pp` refs and `TEXT T` in `whynot`.
+
+Request specs keep the compiler-inserted module `CMD` at the front for
+instantiation/composition, but `ChunkDesc::Spec` now records when that `CMD`
+was auto-added. `pp`/`whynot` render the explicit slots first and the auto
+`CMD` last, matching ACT-R's `process-slots-specs`; an explicit `cmd` keeps
+its source order. This promoted the two BST production dumps and
+`tutorial-unit3modeling-v4-whynot`, moving the corpus to **423 passed / 144
+ignored**.

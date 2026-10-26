@@ -122,6 +122,7 @@ fn harvest_rules() {
             spec: crate::model::ChunkDesc::Spec {
                 ctype: String::new(),
                 slots: vec![],
+                auto_cmd: false,
                 neg: vec![],
                 rels: vec![],
             },
@@ -336,7 +337,7 @@ fn render_production_instantiated() {
     let mut b = Bindings::new();
     b.insert("VAL".to_string(), Value::Sym("SMALL".to_string()));
     assert_eq!(
-            render_production(&prod, &b, &[], &[]),
+            render_production(&prod, &b, &[], &[], &[]),
             "(P SMALL\n   =GOAL>\n       VALUE SMALL\n       VALUE SMALL\n ==>\n   !OUTPUT! SMALL\n   -GOAL>\n)"
         );
 }
