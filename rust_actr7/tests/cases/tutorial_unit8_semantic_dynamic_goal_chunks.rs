@@ -1,8 +1,9 @@
 //! case: tutorial-unit8-semantic-dynamic-goal-chunks
 //! lisp: actr7.x/test-models/tutorial-unit8-semantic-dynamic-goal-chunks.lisp
+//! source: tutorial;unit8;semantic-dynamic-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit8_semantic_dynamic_goal_chunks,
     "tutorial-unit8-semantic-dynamic-goal-chunks",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit8;semantic-dynamic-model.lisp"],
 );

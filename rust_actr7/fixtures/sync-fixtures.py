@@ -2,15 +2,16 @@
 """Copy or verify the vendored ACT-R fixtures.
 
 The Rust integration tests own their oracles: `tests/cases/*.ref` and the
-model/task files listed in `fixtures/models/manifest.txt`. Both are copied
-verbatim from an ACT-R checkout so the crate can build and run without one.
+model/task/tutorial sources listed in `fixtures/models/manifest.txt`. Both are
+copied verbatim from an ACT-R checkout so the crate can build and run without
+one.
 
 Usage:
     python fixtures/sync-fixtures.py            # copy from $ACTR_DIR
     python fixtures/sync-fixtures.py --check    # fail if the copies differ
 
-`ACTR_DIR` defaults to `<crate>/../actr7.x`. Model paths in the manifest use
-ACT-R's logical `;` separator (e.g. `tutorial;unit1;count.lisp`).
+`ACTR_DIR` defaults to `<crate>/../actr7.x`. Paths in the manifest use ACT-R's
+logical `;` separator (e.g. `tutorial;unit1;count.lisp`).
 """
 
 import os

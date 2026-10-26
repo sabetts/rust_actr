@@ -38,6 +38,10 @@ Two static oracles, one `#[test]` per case and one Rust file per ACT-R ref:
   flat index; `case_files_cover_every_ref` keeps refs, files, and index in
   sync. Out-of-scope cases are `#[ignore = "reason"]`; that ignored set *is*
   the remaining work.
+- Source-echo cases use `source_case!` / `SourceCase` to verify that the
+  vendored tutorial sources still contain the upstream ref fragments. Four
+  refs that scrape `core-modules/audio.lisp`/`vision.lisp` stay ignored pending
+  engine-level chunk-type assertions.
 - `tests/extra_traces.rs` — project-authored scenarios, byte-exact.
 - `tests/errors.rs`, `tests/rpc_conformance.rs` — error paths and the RPC
   surface.
@@ -45,7 +49,7 @@ Two static oracles, one `#[test]` per case and one Rust file per ACT-R ref:
 `python tools/list-ignored.py` prints the current stub list; `--counts` groups
 by reason and `--reason TEXT` / `--case TEXT` filter it.
 
-Refs and model/task sources are vendored (`tests/cases/*.ref`,
+Refs and model/task/tutorial sources are vendored (`tests/cases/*.ref`,
 `fixtures/models/`), so the default `cargo test` needs no `actr7.x` checkout.
 Fixtures and comparison rules are documented in `rust_actr7/fixtures/README.md`
 and `rust_actr7/fixtures/regression/README.md`.

@@ -1,8 +1,9 @@
 //! case: tutorial-unit3-subitize-chunk-type
 //! lisp: actr7.x/test-models/tutorial-unit3-subitize-chunk-type.lisp
+//! source: tutorial;unit3;subitize-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit3_subitize_chunk_type,
     "tutorial-unit3-subitize-chunk-type",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit3;subitize-model.lisp"],
 );

@@ -1,11 +1,12 @@
 //! ACT-R `test-models` corpus: Rust engine vs the vendored `.ref` traces.
 //!
 //! One test per ref lives in `tests/cases/<ident>.rs`; this file is the
-//! shared harness ([`Case`], device/spec parsing, session routing) and the
-//! flat module index (`cases/mod.rs`). The refs and the model/task sources
-//! are vendored under `tests/cases/` and `fixtures/models/`, so the default
-//! test run needs neither an ACT-R checkout nor SBCL. `ACTR_DIR` is only
-//! used by the regeneration tools.
+//! shared harness ([`Case`] for engine drivers, [`SourceCase`] for source
+//! echoes, device/spec parsing, session routing) and the flat module index
+//! (`cases/mod.rs`). The refs and the model/task/tutorial sources are vendored
+//! under `tests/cases/` and `fixtures/models/`, so the default test run needs
+//! neither an ACT-R checkout nor SBCL. `ACTR_DIR` is only used by the
+//! regeneration tools.
 //!
 //! Comparison mirrors ACT-R's own `compare-test-model-files`
 //! (`actr7.x/test-models/model-tester.cl`): each line is right-trimmed and
@@ -13,8 +14,9 @@
 //! the refs were produced/validated against.
 //!
 //! The event-hook cases and data-heavy experiment drivers still reuse a
-//! recovered `.spec` (`fixtures/regression/specs/`); every other case owns
-//! its driver here.
+//! recovered `.spec` (`fixtures/regression/specs/`); every other engine case
+//! owns its driver here. Source-echo cases use `source_case!` and check the
+//! vendored source, not the engine.
 //! Promote a case by removing its `#[ignore]` in its own file.
 
 use std::collections::BTreeSet;
@@ -1001,6 +1003,175 @@ impl Case {
     }
 }
 
+/// A `SCRAPE` case: the upstream stub re-read a tutorial/source file and
+/// echoed a fragment. The Rust port has the same vendored sources, so the
+/// oracle is that the ref fragment is still present in them, in order.
+///
+/// This deliberately does not emulate Common Lisp's `read-line`/paren/format
+/// loops; only the four core-module refs need engine-level chunk-type checks.
+pub struct SourceCase {
+    name: String,
+    sources: Vec<String>,
+    allow_prefix: bool,
+}
+
+impl SourceCase {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            sources: Vec::new(),
+            allow_prefix: false,
+        }
+    }
+
+    pub fn sources(mut self, sources: &[&str]) -> Self {
+        self.sources = sources.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
+    /// The upstream stub truncated the final line (e.g. `(p read` for
+    /// `(p read-and-create`); accept a ref line that prefixes a source line.
+    pub fn allow_prefix(mut self) -> Self {
+        self.allow_prefix = true;
+        self
+    }
+
+    pub fn check(self) -> Result<(), String> {
+        if self.sources.is_empty() {
+            return Err(format!("{}: no source paths", self.name));
+        }
+        let ref_path = refs_dir().join(format!("{}.ref", self.name));
+        let expected = normalize(
+            &fs::read_to_string(&ref_path).map_err(|e| format!("{}: {e}", ref_path.display()))?,
+        );
+        let mut source = Vec::new();
+        for path in &self.sources {
+            source.extend(source_lines(path)?);
+        }
+        check_source_fragment(&self.name, &expected, &source, self.allow_prefix)
+    }
+}
+
+/// Read one vendored source file by its ACT-R logical path (`;` separated).
+pub fn source_lines(logical: &str) -> Result<Vec<String>, String> {
+    let path = models_dir().join(logical.replace(';', std::path::MAIN_SEPARATOR_STR));
+    let text = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    Ok(text.lines().map(str::to_owned).collect())
+}
+
+fn check_source_fragment(
+    name: &str,
+    expected: &[String],
+    source: &[String],
+    allow_prefix: bool,
+) -> Result<(), String> {
+    let mut at = 0usize;
+    let mut seen = false;
+    for (idx, want) in expected.iter().enumerate() {
+        if want.trim().is_empty() {
+            continue;
+        }
+        seen = true;
+        let found = source.iter().enumerate().skip(at).find(|(_, got)| {
+            let got = got.trim_end().to_lowercase();
+            got == *want || (allow_prefix && got.starts_with(want.as_str()))
+        });
+        let Some((i, _)) = found else {
+            return Err(format!(
+                "{name}: ref line {} not found in source after line {}: {:?}",
+                idx + 1,
+                at,
+                want
+            ));
+        };
+        at = i + 1;
+    }
+    if !seen {
+        return Err(format!("{name}: empty ref"));
+    }
+    Ok(())
+}
+
+/// Capture a balanced-parenthesis block starting at the first line containing
+/// `start`, truncating the final line when the upstream stub did.
+pub fn balanced_block(lines: &[String], start: &str) -> Result<Vec<String>, String> {
+    let needle = start.to_lowercase();
+    let start_idx = lines
+        .iter()
+        .position(|line| line.to_lowercase().contains(&needle))
+        .ok_or_else(|| format!("source does not contain {start:?}"))?;
+    let mut out = Vec::new();
+    let mut open = 0i32;
+    for line in &lines[start_idx..] {
+        out.push(line.clone());
+        open += line.matches('(').count() as i32;
+        open -= line.matches(')').count() as i32;
+        if open <= 0 {
+            if open < 0 {
+                let drop = (-open) as usize;
+                let last = out.last_mut().unwrap();
+                let keep = last.chars().count().saturating_sub(drop);
+                *last = last.chars().take(keep).collect();
+            }
+            return Ok(out);
+        }
+    }
+    Err(format!("unbalanced block starting at {start:?}"))
+}
+
+/// Recreate the upstream `format` column layouts used by the paired/triple
+/// production refs: each block is padded to the widest line, then separated by
+/// `gap` spaces.
+pub fn columns(lines: &[String], starts: &[&str], gap: usize) -> Result<Vec<String>, String> {
+    if starts.len() < 2 {
+        return Err("columns needs at least two blocks".to_string());
+    }
+    let mut blocks = Vec::new();
+    for start in starts {
+        blocks.push(balanced_block(lines, start)?);
+    }
+    let rows = blocks.iter().map(Vec::len).max().unwrap_or(0);
+    let width = blocks
+        .iter()
+        .flatten()
+        .map(|line| line.chars().count())
+        .max()
+        .unwrap_or(0);
+    let mut out = Vec::with_capacity(rows);
+    for row in 0..rows {
+        let mut line = String::new();
+        for (i, block) in blocks.iter().enumerate() {
+            let text = block.get(row).map(String::as_str).unwrap_or("");
+            if i + 1 == blocks.len() {
+                line.push_str(text);
+            } else {
+                line.push_str(&format!("{text:<width$}"));
+                line.push_str(&" ".repeat(gap));
+            }
+        }
+        out.push(line);
+    }
+    Ok(out)
+}
+
+/// Compare custom source-echo output with the case's `.ref`.
+pub fn check_echo(name: &str, actual: Vec<String>) -> Result<(), String> {
+    let ref_path = refs_dir().join(format!("{name}.ref"));
+    let expected = normalize(
+        &fs::read_to_string(&ref_path).map_err(|e| format!("{}: {e}", ref_path.display()))?,
+    );
+    let actual = normalize(&actual.join("\n"));
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name}: ref mismatch vs {}\n{}",
+            ref_path.display(),
+            first_diff(&expected, &actual)
+        ))
+    }
+}
+
 /// Parse one Lisp form. Used by generated drivers for `Sexp`-valued steps.
 pub fn sexp(src: &str) -> Sexp {
     let mut forms = parse_all(src).unwrap_or_else(|e| panic!("bad sexp {src:?}: {e}"));
@@ -1043,6 +1214,28 @@ macro_rules! ignored_case {
         #[ignore = $reason]
         fn $ident() {
             panic!("case {} is not implemented: {}", $name, $reason);
+        }
+    };
+}
+
+/// A source-echo case: assert the upstream ref fragment still exists in the
+/// vendored source, in order. See [`SourceCase`].
+macro_rules! source_case {
+    ($ident:ident, $name:literal, [$($src:literal),+ $(,)?] $(,)?) => {
+        #[test]
+        fn $ident() -> Result<(), String> {
+            crate::SourceCase::new($name)
+                .sources(&[$($src),+])
+                .check()
+        }
+    };
+    ($ident:ident, $name:literal, [$($src:literal),+ $(,)?], prefix $(,)?) => {
+        #[test]
+        fn $ident() -> Result<(), String> {
+            crate::SourceCase::new($name)
+                .sources(&[$($src),+])
+                .allow_prefix()
+                .check()
         }
     };
 }

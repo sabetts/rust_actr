@@ -1,8 +1,9 @@
 //! case: tutorial-unit7modeling-pcomp-issues-respond-production
 //! lisp: actr7.x/test-models/tutorial-unit7modeling-pcomp-issues-respond-production.lisp
+//! source: tutorial;unit7;production-compilation-issues-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit7modeling_pcomp_issues_respond_production,
     "tutorial-unit7modeling-pcomp-issues-respond-production",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit7;production-compilation-issues-model.lisp"],
 );

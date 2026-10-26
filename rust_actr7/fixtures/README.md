@@ -7,7 +7,7 @@ SBCL.
 
 ```
 fixtures/
-  models/          vendored model/task .lisp sources (manifest.txt);
+  models/          vendored model/task/tutorial sources (manifest.txt, 183);
                    mirrored from $ACTR_DIR by sync-fixtures.py
   devices/         hand-authored <name>.device.sexp sidecars (105)
   regression/      ACT-R's own test-models corpus (the authority)
@@ -53,6 +53,11 @@ thousands of runs) keep their normalized `.spec` as the driver instead; the
 event-hook cases reuse recovered driver specs. `extract-specs.lisp` +
 `regen-specs.sh` are only needed when those specs are regenerated. See
 `regression/README.md`.
+
+The 189 `SCRAPE` refs run through `SourceCase`, which checks that the ref
+fragment is still present in the vendored source (in order). The four refs that
+scrape `core-modules/audio.lisp`/`vision.lisp` stay ignored pending
+engine-level chunk-type assertions; no core-module Lisp is vendored.
 
 ### extra-traces/
 

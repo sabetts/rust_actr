@@ -1,8 +1,9 @@
 //! case: tutorial-unit4-paired-recall-production
 //! lisp: actr7.x/test-models/tutorial-unit4-paired-recall-production.lisp
+//! source: tutorial;unit4;paired-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit4_paired_recall_production,
     "tutorial-unit4-paired-recall-production",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit4;paired-model.lisp"],
 );

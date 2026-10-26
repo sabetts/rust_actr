@@ -1,8 +1,9 @@
 //! case: tutorial-unit5-fan-retrieve-productions
 //! lisp: actr7.x/test-models/tutorial-unit5-fan-retrieve-productions.lisp
+//! source: tutorial;unit5;fan-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit5_fan_retrieve_productions,
     "tutorial-unit5-fan-retrieve-productions",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit5;fan-model.lisp"],
 );

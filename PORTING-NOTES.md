@@ -571,7 +571,8 @@ which is what first revealed this.
 The refs are now vendored one per case in `rust_actr7/tests/cases/<name>.ref`;
 each `tests/cases/<name>.rs` owns its driver, and
 `fixtures/sync-fixtures.py --check` keeps the copies byte-identical to upstream
-while `actr7.x` is present. The layout is documented in
+while `actr7.x` is present. Source-echo refs are checked against the vendored
+sources by `SourceCase`. The layout is documented in
 `rust_actr7/fixtures/regression/README.md`.
 
 ## 60. Refs capture four channels, not just `:v` (verified)
@@ -582,9 +583,12 @@ and warnings. Only 219 of 563 refs have engine trace lines; the rest are
 `dm`/`sdp`/`spp`/`whynot`/parsed-source dumps or warnings. `:v` already
 defaults to **T**, and the `(:testing-function set-testing-traces)`
 `:starting-parameters` line is actually rejected ("must be a list that is
-valid for passing to sgp-fct") and never runs — traces reproduce anyway. A
-`run-it` that touches `*out-file*`, `with-open-file`, or `read-line` needs the
-harness and is not an engine test.
+valid for passing to sgp-fct") and never runs �?" traces reproduce anyway. A
+`run-it` that touches `*out-file*`, `with-open-file`, or `read-line` is a
+source-scrape case, not an engine test. 189 of them run through `SourceCase`
+against the vendored tutorial/model sources; the four that scrape
+`core-modules/audio.lisp`/`vision.lisp` stay ignored pending engine-level
+chunk-type assertions (no core-module Lisp is vendored).
 
 ## 61. `model-tester.cl` must be loaded by physical path in SBCL (verified)
 

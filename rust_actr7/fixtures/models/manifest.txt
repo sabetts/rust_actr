@@ -1,5 +1,6 @@
-# Vendored ACT-R model/task files used by the integration tests.
-# Logical ACT-R paths (';' separated); sync with fixtures/sync-fixtures.py.
+# Vendored ACT-R sources used by the integration tests (models, tasks, and
+# tutorial/source-echo inputs). Logical ACT-R paths (';' separated); sync with
+# fixtures/sync-fixtures.py.
 examples;multiple-models;unit-1-together-1-mp.lisp
 extras;act-touch;touch-demo-model.lisp
 extras;adaptive-noise;test-model.lisp
@@ -32,6 +33,7 @@ test-models;models;bind-test.lisp
 test-models;models;broken-addition-v10.lisp
 test-models;models;broken-addition-v11.lisp
 test-models;models;broken-addition-v12.lisp
+test-models;models;broken-addition-v2.lisp
 test-models;models;broken-addition-v3.lisp
 test-models;models;broken-addition-v4.lisp
 test-models;models;broken-addition-v5.lisp
@@ -79,6 +81,7 @@ test-models;models;production-compilation-issues-model-v3.lisp
 test-models;models;production-compilation-issues-model-v4.lisp
 test-models;models;production-compilation-issues-model-v5.lisp
 test-models;models;production-compilation-issues-model-v6.lisp
+test-models;models;production-compilation-issues-model-v7.lisp
 test-models;models;production-compilation-issues-model-v8.lisp
 test-models;models;production-compilation-issues-model-v9.lisp
 test-models;models;remote-bind-test.lisp
@@ -97,6 +100,7 @@ test-models;models;undefined-slots.lisp
 test-models;models;unit5-imaginal-mod-event.lisp
 test-models;models;unit5-imaginal-mod-request-event.lisp
 test-models;models;unit6-chunk-type-default-slots.lisp
+test-models;models;unit6-chunk-type-hierarchy.lisp
 test-models;models;unstuff-aural.lisp
 test-models;models;unstuff-visual.lisp
 test-models;models;utility-learning-issues-model-v1.lisp
@@ -135,16 +139,23 @@ tutorial;lisp;sperling.lisp
 tutorial;lisp;ul-issues.lisp
 tutorial;lisp;unit2.lisp
 tutorial;lisp;zbrodoff.lisp
+tutorial;python;fan_no_pm.py
+tutorial;python;pm_issues.py
+tutorial;python;sperling.py
 tutorial;unit1;addition.lisp
+tutorial;unit1;broken-addition.lisp
 tutorial;unit1;count.lisp
 tutorial;unit1;semantic.lisp
 tutorial;unit1;tutor-model-solution.lisp
+tutorial;unit1;tutor-model.lisp
 tutorial;unit2;demo2-model.lisp
 tutorial;unit2;unit2-assignment-model.lisp
 tutorial;unit3;perceptual-motor-issues-model.lisp
 tutorial;unit3;sperling-model.lisp
+tutorial;unit3;subitize-model.lisp
 tutorial;unit4;paired-model.lisp
 tutorial;unit4;zbrodoff-model.lisp
+tutorial;unit5;1hit-blackjack-model.lisp
 tutorial;unit5;declarative-issues.lisp
 tutorial;unit5;fan-model.lisp
 tutorial;unit5;fan-no-pm-model.lisp

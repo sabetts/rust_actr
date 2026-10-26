@@ -1,8 +1,9 @@
 //! case: tutorial-unit5code-sentence-function
 //! lisp: actr7.x/test-models/tutorial-unit5code-sentence-function.lisp
+//! source: tutorial;python;fan_no_pm.py
 
-ignored_case!(
+source_case!(
     tutorial_unit5code_sentence_function,
     "tutorial-unit5code-sentence-function",
-    "tutorial source echo; not an engine test"
+    ["tutorial;python;fan_no_pm.py"],
 );

@@ -1,8 +1,9 @@
 //! case: tutorial-unit3-sperling-spp-others
 //! lisp: actr7.x/test-models/tutorial-unit3-sperling-spp-others.lisp
+//! source: tutorial;unit3;sperling-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit3_sperling_spp_others,
     "tutorial-unit3-sperling-spp-others",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit3;sperling-model.lisp"],
 );

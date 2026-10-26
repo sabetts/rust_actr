@@ -1,8 +1,9 @@
 //! case: tutorial-unit1-addition-goal-chunk
 //! lisp: actr7.x/test-models/tutorial-unit1-addition-goal-chunk.lisp
+//! source: tutorial;unit1;addition.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit1_addition_goal_chunk,
     "tutorial-unit1-addition-goal-chunk",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit1;addition.lisp"],
 );

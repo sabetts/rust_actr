@@ -1,8 +1,9 @@
 //! case: tutorial-unit5-grouped-harvest-first-item-retrieval-request
 //! lisp: actr7.x/test-models/tutorial-unit5-grouped-harvest-first-item-retrieval-request.lisp
+//! source: tutorial;unit5;grouped-model.lisp
 
-ignored_case!(
+source_case!(
     tutorial_unit5_grouped_harvest_first_item_retrieval_request,
     "tutorial-unit5-grouped-harvest-first-item-retrieval-request",
-    "tutorial source echo; not an engine test"
+    ["tutorial;unit5;grouped-model.lisp"],
 );
