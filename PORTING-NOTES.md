@@ -4597,3 +4597,29 @@ This promoted the categorize object/attribute chunk dumps, sample goal chunks,
 initial imaginal chunks, and sample DM dumps. `goal-chunk-part2`, `model-fit`,
 and `sample-experiment` still need the task's experiment/trial driver rather
 than model-body support alone.
+
+## 271. `print-dm-finsts`, `mp-show-queue`, and audio-hook projection (verified)
+
+`print-dm-finsts` renders the declarative finst table after dropping entries
+older than `:declarative-finst-span` (`dm-commands.lisp:1022`). The column
+width is `max(11, longest name)`, matching the `~va`/`~v,1,0,'-a` format; the
+time is `ms/1000` at three decimals.
+
+`mp-show-queue` drains the heap into execution order, renders each event with
+`trace::format_line`, and restores the heap. ACT-R's `schedule-event-after-change`
+leaves an armed conflict-resolution in its waiting list, which
+`mp-scheduled-events` reports at the next event's time; the queue printer adds
+that synthetic `CONFLICT-RESOLUTION` line after the entries at the earliest
+pending time.
+
+`EventView` now identifies audio events (`new-sound`, aural-location updates,
+`audio-event-ended`, `audio-encoding-complete`) as `AUDIO` rather than leaving
+them module-less. The Sperling initial/remaining audio projections keep only
+the requested time-window audio/procedural lines. They ignore the engine's
+`buffer-read-action`/`query-buffer-action` events because ACT-R does not create
+those LHS trace events while `:v` is off; the remaining trace also omits the
+maintenance `audio-event-ended` line.
+
+This promoted the two `v4-*-finsts`, `v5-p3-run-queue`, `v6-p4-run-queue`,
+and two Sperling audio-trace cases, moving the corpus to **386 passed / 181
+ignored**.

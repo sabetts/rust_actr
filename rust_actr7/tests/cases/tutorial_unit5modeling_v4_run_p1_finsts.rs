@@ -28,7 +28,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "event-hook driver + command effects pending"]
 fn tutorial_unit5modeling_v4_run_p1_finsts() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit5modeling-v4-run-p1-finsts")
         .models(&["test-models;models;declarative-issues-v4.lisp"])

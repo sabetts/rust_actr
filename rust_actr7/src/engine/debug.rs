@@ -2537,6 +2537,130 @@ impl Engine {
         self.out_lines.truncate(mark);
         text
     }
+
+    pub fn print_dm_finsts(&mut self) {
+        self.finsts
+            .retain(|(_, t)| self.time_ms - *t <= self.cfg.finst_span_ms);
+        let width = self
+            .finsts
+            .iter()
+            .map(|(name, _)| name.len())
+            .max()
+            .unwrap_or(11)
+            .max(11);
+        self.out_lines.push(String::new());
+        self.out_lines
+            .push(format!("{:<width$}    Time Stamp", "Chunk name"));
+        self.out_lines.push("-".repeat(width + 14));
+        for (name, t) in &self.finsts {
+            self.out_lines
+                .push(format!("{:<width$}    {:>8.3}", name, *t as f64 / 1000.0));
+        }
+    }
+
+    pub fn print_queue(&mut self) {
+        let mut entries = Vec::new();
+        while let Some(q) = self.queue.pop() {
+            entries.push(q);
+        }
+        let mut lines = vec!["Events in the queue:".to_string()];
+        let next_cr = self
+            .cr_armed
+            .then(|| entries.iter().map(|q| q.time_ms).min())
+            .flatten();
+        let cr_after = next_cr.and_then(|time| {
+            entries
+                .iter()
+                .rposition(|q| q.time_ms == time)
+                .map(|i| i + 1)
+        });
+        for (i, q) in entries.iter().enumerate() {
+            if Some(i) == cr_after {
+                lines.push(format_line(
+                    next_cr.unwrap(),
+                    "PROCEDURAL",
+                    "CONFLICT-RESOLUTION",
+                    self.cfg.module_width,
+                ));
+            }
+            let (module, details) = self.queue_event(&q.event);
+            lines.push(format_line(
+                q.time_ms,
+                &module,
+                &details,
+                self.cfg.module_width,
+            ));
+        }
+        if cr_after == Some(entries.len()) {
+            if let Some(time) = next_cr {
+                lines.push(format_line(
+                    time,
+                    "PROCEDURAL",
+                    "CONFLICT-RESOLUTION",
+                    self.cfg.module_width,
+                ));
+            }
+        }
+        self.out_lines.extend(lines);
+        for q in entries {
+            self.queue.push(q);
+        }
+    }
+
+    fn queue_event(&self, event: &Event) -> (String, String) {
+        match event {
+            Event::SetBuffer { buffer, .. } => (
+                Self::module_of_buffer(buffer).to_string(),
+                format!("SET-BUFFER-CHUNK {buffer}"),
+            ),
+            Event::ClearBuffer { buffer, module } => {
+                (module.clone(), format!("CLEAR-BUFFER {buffer}"))
+            }
+            Event::ModBuffer { buffer, module, .. } => {
+                (module.clone(), format!("MOD-BUFFER-CHUNK {buffer}"))
+            }
+            Event::ModuleRequest { buffer, trace, .. } => (
+                "PROCEDURAL".to_string(),
+                if *trace {
+                    format!("MODULE-REQUEST {buffer}")
+                } else {
+                    String::new()
+                },
+            ),
+            Event::StartRetrieval { .. } => {
+                ("DECLARATIVE".to_string(), "start-retrieval".to_string())
+            }
+            Event::RetrievedChunk { name, .. } => {
+                ("DECLARATIVE".to_string(), format!("RETRIEVED-CHUNK {name}"))
+            }
+            Event::RetrievalFailure { .. } => {
+                ("DECLARATIVE".to_string(), "RETRIEVAL-FAILURE".to_string())
+            }
+            Event::StartBlending { .. } => ("BLENDING".to_string(), "start-blending".to_string()),
+            Event::BlendingComplete { .. } => {
+                ("BLENDING".to_string(), "BLENDING-COMPLETE".to_string())
+            }
+            Event::BlendingFailure => ("BLENDING".to_string(), "BLENDING-FAILURE".to_string()),
+            Event::ConflictResolution => {
+                ("PROCEDURAL".to_string(), "CONFLICT-RESOLUTION".to_string())
+            }
+            Event::ProductionSelected { prod, .. } => (
+                "PROCEDURAL".to_string(),
+                format!("PRODUCTION-SELECTED {}", self.model.productions[*prod].name),
+            ),
+            Event::ProductionFired { prod, .. } => (
+                "PROCEDURAL".to_string(),
+                format!("PRODUCTION-FIRED {}", self.model.productions[*prod].name),
+            ),
+            Event::Dummy => ("NONE".to_string(), String::new()),
+            Event::Emit { module, line } => (module.clone(), line.clone()),
+            Event::Command { name, .. } => ("NONE".to_string(), name.clone()),
+            _ => {
+                let view = self.event_view(event, Out::Low, true);
+                (view.module, view.action.to_uppercase())
+            }
+        }
+    }
 }
 
 /// `buffer-history` recording (`other-files/buffer-history.lisp`).

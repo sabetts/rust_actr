@@ -101,6 +101,7 @@ pub const BUILTINS: &[&str] = &[
     "sdm",
     "pprint-chunks",
     "pprint-chunks-fct",
+    "print-dm-finsts",
     // Environment viewers (`environment/environment-cmds.lisp` + the
     // `printed-*`/`all-productions`/`buffers`/`chunks` families).
     "act-r-version",
@@ -1998,8 +1999,16 @@ impl Session {
                 // `whynot-fct` returns the conflict set.
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
+            "print-dm-finsts" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.print_dm_finsts();
+                }
+                Ok(vec![Json::Null])
+            }
             "mp-show-queue" => {
-                // Deferred.
+                if let Some(eng) = &mut self.engine {
+                    eng.print_queue();
+                }
                 Ok(vec![Json::Null])
             }
             // The trace streams are written by the engine already; their

@@ -2,13 +2,41 @@
 //! ref:  tutorial-unit3-sperling-remaining-audio-trace.ref
 //! lisp: actr7.x/test-models/tutorial-unit3-sperling-remaining-audio-trace.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::hooks::{self, action, module};
+use actr_engine::{EventHook, EventView, Step};
+
+struct Filter {
+    out: Rc<RefCell<hooks::Projection>>,
+}
+
+impl EventHook for Filter {
+    fn post(&mut self, line: &str, ev: &EventView) {
+        if action(ev, "buffer-read-action")
+            || action(ev, "query-buffer-action")
+            || action(ev, "audio-event-ended")
+        {
+            return;
+        }
+        let keep = (285..=700).contains(&ev.time_ms)
+            && (module(ev, "AUDIO")
+                || line.to_uppercase().contains("AUDIO")
+                || (module(ev, "PROCEDURAL")
+                    && (action(ev, "production-selected") || action(ev, "production-fired"))));
+        if keep {
+            self.out.borrow_mut().push_line(line);
+        } else {
+            self.out.borrow_mut().push_ellipsis();
+        }
+    }
+}
 
 #[test]
-#[ignore = "event-hook system-parameter effects pending"]
 fn tutorial_unit3_sperling_remaining_audio_trace() -> Result<(), String> {
-    Case::new("tutorial-unit3-sperling-remaining-audio-trace")
+    let out = Rc::new(RefCell::new(hooks::Projection::default()));
+    hooks::HookCase::new("tutorial-unit3-sperling-remaining-audio-trace")
         .models(&["tutorial;lisp;sperling.lisp", "tutorial;unit3;sperling-model.lisp"])
         .seed((100, 0))
         .steps(vec![
@@ -20,8 +48,9 @@ fn tutorial_unit3_sperling_remaining_audio_trace() -> Result<(), String> {
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
             Step::ConsumeRng(23),
+            Step::SetDetail(crate::Detail::High),
             Step::Run { secs: 30.0, trace: true, width: 22 },
             Step::ModelOutput("".into()),
         ])
-        .check()
+        .check_projection(Filter { out: out.clone() }, out, "\n", false)
 }

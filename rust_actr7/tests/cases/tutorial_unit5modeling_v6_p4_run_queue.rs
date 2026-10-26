@@ -19,7 +19,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "event-hook driver + command effects pending"]
 fn tutorial_unit5modeling_v6_p4_run_queue() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit5modeling-v6-p4-run-queue")
         .models(&["test-models;models;declarative-issues-v6.lisp"])
@@ -33,6 +32,11 @@ fn tutorial_unit5modeling_v6_p4_run_queue() -> Result<(), String> {
                 secs: 30.0,
                 trace: false,
                 width: 22,
+            },
+            Step::ModelOutput("".into()),
+            Step::Command {
+                name: "mp-show-queue".into(),
+                args: Vec::new(),
             },
         ])
         .check_segment(Filter::default())

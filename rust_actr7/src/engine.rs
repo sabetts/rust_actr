@@ -3902,6 +3902,30 @@ impl Engine {
                 Event::OutputKey { .. } => ("output-key", "KEYBOARD".into(), None, None),
                 Event::FinishMovement { .. } => ("finish-movement", "MOTOR".into(), None, None),
                 Event::ChangeState { module } => ("change-state", module.clone(), None, None),
+                Event::NewSound { .. } | Event::ToneSound { .. } => (
+                    "new-sound",
+                    "AUDIO".into(),
+                    Some("AURAL-LOCATION".into()),
+                    None,
+                ),
+                Event::AuralLocation { .. } | Event::StuffSound { .. } => (
+                    "set-buffer-chunk",
+                    "AUDIO".into(),
+                    Some("AURAL-LOCATION".into()),
+                    None,
+                ),
+                Event::AudioEventEnded { .. } => (
+                    "audio-event-ended",
+                    "AUDIO".into(),
+                    Some("AURAL-LOCATION".into()),
+                    None,
+                ),
+                Event::AudioEncodingComplete { .. } => (
+                    "audio-encoding-complete",
+                    "AUDIO".into(),
+                    Some("AURAL".into()),
+                    None,
+                ),
                 _ => ("", String::new(), None, None),
             };
         EventView {
