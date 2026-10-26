@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit8_semantic_dynamic_extend_warning() -> Result<(), String> {
     Case::new("tutorial-unit8-semantic-dynamic-extend-warning")
         .models(&["tutorial;unit8;semantic-dynamic-model.lisp"])

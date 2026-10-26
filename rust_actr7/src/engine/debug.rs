@@ -25,6 +25,60 @@ fn pp_implicit_queries(prod: &crate::model::Production, exempt: &[String]) -> Ve
 }
 
 impl Engine {
+    /// Requests that lose their implicit `?buffer> state free` condition
+    /// because `:do-not-query` exempts the buffer. ACT-R's style pass sees no
+    /// query then, so the request is reported (`procedural.lisp:1425`). This
+    /// must run after reset re-applies `:starting-parameters`.
+    pub(super) fn implicit_query_style_warnings(&self) -> Vec<String> {
+        if !crate::model::style_warnings_enabled(&self.model) {
+            return Vec::new();
+        }
+        let mut out = Vec::new();
+        for p in &self.model.productions {
+            let queried: Vec<&str> = p
+                .lhs
+                .iter()
+                .filter_map(|item| match item {
+                    LhsItem::Query { buffer, .. } => Some(buffer.as_str()),
+                    _ => None,
+                })
+                .collect();
+            for action in &p.rhs {
+                let RhsAction::Request { buffer, .. } = action else {
+                    continue;
+                };
+                let safe = matches!(
+                    buffer.as_str(),
+                    "GOAL"
+                        | "RETRIEVAL"
+                        | "VISUAL"
+                        | "VISUAL-LOCATION"
+                        | "AURAL"
+                        | "AURAL-LOCATION"
+                        | "MANUAL"
+                        | "MANUAL-LEFT"
+                        | "MANUAL-RIGHT"
+                        | "VOCAL"
+                        | "SPEECH"
+                        | "TEMPORAL"
+                        | "MOTOR"
+                );
+                if !safe
+                    && self.cfg.do_not_query.iter().any(|b| b == buffer)
+                    && !queried.iter().any(|b| *b == buffer)
+                {
+                    out.push(format!(
+                        "Production {} makes a request to buffer {} without a query in the conditions.",
+                        p.name, buffer
+                    ));
+                }
+            }
+        }
+        out
+    }
+}
+
+impl Engine {
     /// `(buffer-chunk <name>...)`: append the command-layer buffer dump the
     /// task driver prints after a run (`framework/buffers.lisp:881` +
     /// `framework/chunks.lisp:736`). Only the fields the corpus exercises:
@@ -665,6 +719,8 @@ impl Engine {
                 }
             }
             ":ER" => self.cfg.er = truthy,
+            ":DO-NOT-QUERY" => apply_buffer_list(&mut self.cfg.do_not_query, val)?,
+            ":DO-NOT-HARVEST" => apply_buffer_list(&mut self.cfg.do_not_harvest, val)?,
             // `:hear-self` (`speech.lisp:210`): `t`/`nil`/`speak`/`subvocalize`.
             ":HEAR-SELF" => {
                 self.cfg.hear_self = match val {

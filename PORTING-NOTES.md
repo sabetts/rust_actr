@@ -4728,3 +4728,22 @@ need invalid/previously-undefined-slot warnings, and the report cases still
 need `sdp`/`whynot-dm` output. The BST `pp` cases remain blocked only on
 production default-slot rendering. The paired traces differ much earlier than
 their hook labels suggest, so they stay out of the current batch.
+
+## 278. Warning/style pass and runtime slot extension (verified)
+
+The model loader now builds ACT-R's style-check tables after parsing: it
+records chunk-type and already-created chunk slots, expands
+`declare-buffer-usage` declarations, and reports `isa` conditions with no
+tests plus GOAL/IMAGINAL condition slots that no production requests,
+modifies, or initializes. Request-without-query warnings are delayed until
+`reset` because they only appear when `:do-not-query` removes the implicit
+state-free query; `:DO-NOT-QUERY`/`:DO-NOT-HARVEST` are now runtime `sgp`
+parameters too.
+
+Previously undefined slots warn at production parse time using the loaded
+module/model slot universe. Runtime `add-dm` now emits the invalid-slot
+extension warning and extends the engine's possible slots. This promoted
+`safe-queries`, the three broken-addition warning refs, `onehit-declare-
+buffer-usage-warning`, `initial-load`, `extend-warning`, and
+`semantic-dynamic-extend-warning`, moving the corpus to **420 passed / 147
+ignored**.

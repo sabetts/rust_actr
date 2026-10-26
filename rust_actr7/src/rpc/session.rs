@@ -941,14 +941,37 @@ impl Session {
                 } else {
                     args.to_vec()
                 };
+                let mut extended = Vec::new();
+                let mut warnings = Vec::new();
                 if let Some(m) = self.defs.last_mut() {
                     for c in &chunks {
                         let Json::Arr(items) = c else { continue };
                         let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();
                         let sexp = Sexp::List(forms);
                         if is_dm {
-                            m.chunks
-                                .push(model::parse_dm_entry(&sexp).map_err(|e| e.to_string())?);
+                            let chunk = model::parse_dm_entry(&sexp).map_err(|e| e.to_string())?;
+                            // `chunks.lisp:1233`: a slot outside the type is
+                            // extended with a print-warning (not a model
+                            // warning), so it appears even when style warnings
+                            // are disabled.
+                            if let Some(ctype) = chunk.ctype.as_deref() {
+                                if let Some(ct) = m
+                                    .chunk_types
+                                    .iter()
+                                    .find(|ct| ct.name.eq_ignore_ascii_case(ctype))
+                                {
+                                    for (slot, _) in &chunk.slots {
+                                        if !ct.slots.iter().any(|s| s.eq_ignore_ascii_case(slot)) {
+                                            warnings.push(format!(
+                                                "Invalid slot {slot} specified when creating chunk {} with type {}.  Extending chunks with slot named {slot}.",
+                                                chunk.name, ct.name
+                                            ));
+                                            extended.push(slot.clone());
+                                        }
+                                    }
+                                }
+                            }
+                            m.chunks.push(chunk);
                         } else {
                             model::define_chunk_table_entry(&sexp, m).map_err(|e| e.to_string())?;
                         }
@@ -956,6 +979,14 @@ impl Session {
                     m.apply_chunk_defaults();
                 }
                 self.rebuild_engine_in_place()?;
+                if let Some(eng) = self.engine.as_mut() {
+                    for w in warnings {
+                        eng.emit_warning(&w);
+                    }
+                    for s in extended {
+                        eng.extend_possible_slots(&s);
+                    }
+                }
                 Ok(vec![Json::Null])
             }
             "chunk-type" => {

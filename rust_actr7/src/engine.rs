@@ -3106,6 +3106,9 @@ impl Engine {
         for w in self.model.reset_warnings.clone() {
             self.emit_warning(&w);
         }
+        for w in self.implicit_query_style_warnings() {
+            self.emit_warning(&w);
+        }
         self.dm = Vec::new();
         for c in &self.model.chunks {
             self.dm.push(chunk_inst(c)?);

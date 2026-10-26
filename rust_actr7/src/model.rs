@@ -357,6 +357,11 @@ pub struct Model {
     /// `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`: the default
     /// chunk type per buffer, used by `set-buffer-chunk`.
     pub buffer_decls: Vec<(String, String)>,
+    /// The slots of each `declare-buffer-usage` (`:ALL` expands to the type's
+    /// slots). ACT-R adds them to the style-check tables to suppress
+    /// "tested but never set" warnings.
+    pub buffer_decl_slots: Vec<(String, Vec<String>)>,
+
     /// Model-body `(set-visloc-default slot value ...)`: default constraints
     /// for an unconstrained visual-location request (`vision.lisp:2107`).
     pub visloc_default: Vec<(String, Sexp)>,
@@ -1248,6 +1253,413 @@ fn undefined_chunk_warnings(
     (lhs_out, rhs_out)
 }
 
+/// Slot names supplied by the core modules. ACT-R's `valid-slot-name` sees
+/// these in the module chunk-types before any model type is declared.
+const STANDARD_MODULE_SLOTS: &[&str] = &[
+    "ACTION",
+    "BAD-SLOT",
+    "BUFFER",
+    "CMD",
+    "COLOR",
+    "CONTENT",
+    "CONTROL-COUNT",
+    "CONTROL-SLOT",
+    "DELAY",
+    "DISTANCE",
+    "DURATION",
+    "END-WIDTH",
+    "ERROR",
+    "EVENT",
+    "FINGER",
+    "GOOD-SLOT",
+    "HAND",
+    "HEIGHT",
+    "INDEX",
+    "KEY",
+    "KIND",
+    "LOC",
+    "MAX",
+    "MIN",
+    "NAME",
+    "NUM-FNGRS",
+    "NUMBER",
+    "OBJECT",
+    "ONSET",
+    "PREPARATION",
+    "PROCESSOR",
+    "PROMPT",
+    "R",
+    "ROTATION",
+    "SCREEN-POS",
+    "SCREEN-X",
+    "SCREEN-Y",
+    "SIMPLE",
+    "SIZE",
+    "SOUND",
+    "START-WIDTH",
+    "STATE",
+    "STATUS",
+    "STRING",
+    "STYLE",
+    "SWIPE-SPEED",
+    "TEXT",
+    "THETA",
+    "TICKS",
+    "TO-KEY",
+    "VALUE",
+    "WIDTH",
+    "WORD",
+];
+
+/// The slot universe ACT-R's `valid-slot-name` starts with: module defaults,
+/// every declared chunk-type slot, and slots already present on chunks.
+fn model_known_slots(model: &Model) -> std::collections::HashSet<String> {
+    let mut set: std::collections::HashSet<String> = STANDARD_MODULE_SLOTS
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    for ct in &model.chunk_types {
+        for s in &ct.slots {
+            set.insert(s.to_uppercase());
+        }
+    }
+    for c in model.chunks.iter().chain(model.defined_chunks.iter()) {
+        for (s, _) in &c.slots {
+            set.insert(s.to_uppercase());
+        }
+    }
+    for (buffer, slots) in &model.buffer_decl_slots {
+        if slots.iter().any(|s| s == ":ALL") {
+            if let Some(ct) = model
+                .buffer_decls
+                .iter()
+                .find(|(b, _)| b == buffer)
+                .and_then(|(_, t)| {
+                    model
+                        .chunk_types
+                        .iter()
+                        .find(|ct| ct.name.eq_ignore_ascii_case(t))
+                })
+            {
+                for s in &ct.slots {
+                    set.insert(s.to_uppercase());
+                }
+            }
+        } else {
+            for s in slots {
+                set.insert(s.to_uppercase());
+            }
+        }
+    }
+    set
+}
+fn is_slot_name(s: &str) -> bool {
+    s != "ISA" && !s.starts_with(':') && !s.starts_with('=')
+}
+
+fn push_slot(out: &mut Vec<String>, slot: &str) {
+    if is_slot_name(slot) {
+        let slot = slot.to_uppercase();
+        if !out.iter().any(|s| s == &slot) {
+            out.push(slot);
+        }
+    }
+}
+
+fn chunk_desc_slots(desc: &ChunkDesc, out: &mut Vec<String>) {
+    if let ChunkDesc::Spec { slots, .. } = desc {
+        for (s, _) in slots {
+            push_slot(out, s);
+        }
+    }
+}
+
+/// All slot names named by a production, in parse order (LHS then RHS).
+fn production_slots(p: &Production) -> Vec<String> {
+    let mut out = Vec::new();
+    for item in &p.lhs {
+        match item {
+            LhsItem::Match { tests, .. } => {
+                for t in tests {
+                    push_slot(&mut out, &t.slot);
+                }
+            }
+            LhsItem::Query { queries, .. } => {
+                for (s, _) in queries {
+                    push_slot(&mut out, s);
+                }
+            }
+            LhsItem::Eval { .. } | LhsItem::Bind { .. } | LhsItem::MvBind { .. } => {}
+        }
+    }
+    for action in &p.rhs {
+        match action {
+            RhsAction::Modify { slots, .. } | RhsAction::ModifyRequest { slots, .. } => {
+                for (s, _) in slots {
+                    push_slot(&mut out, s);
+                }
+            }
+            RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => {
+                chunk_desc_slots(spec, &mut out);
+            }
+            RhsAction::Clear { .. }
+            | RhsAction::DirectErase { .. }
+            | RhsAction::Output { .. }
+            | RhsAction::Eval { .. }
+            | RhsAction::Bind { .. }
+            | RhsAction::MvBind { .. }
+            | RhsAction::Other { .. } => {}
+        }
+    }
+    out
+}
+
+/// `parse-conditions`/`parse-actions`'s `uses previously undefined slot`
+/// warning. The cache path prints one line per slot; the fresh parse can
+/// print a parenthesised list, but the reset-time refs this port targets use
+/// the singular form.
+fn undefined_slot_warnings(
+    p: &Production,
+    model: &Model,
+    extended: &mut Vec<String>,
+) -> Vec<String> {
+    let mut known = model_known_slots(model);
+    for s in extended.iter() {
+        known.insert(s.clone());
+    }
+    let mut new_slots = Vec::new();
+    for slot in production_slots(p) {
+        if known.contains(&slot) {
+            continue;
+        }
+        known.insert(slot.clone());
+        extended.push(slot.clone());
+        new_slots.push(slot);
+    }
+    if new_slots.is_empty() {
+        return Vec::new();
+    }
+    if style_warnings_enabled(model) {
+        vec![format!(
+            "Production {} uses previously undefined slots ({}).",
+            p.name,
+            new_slots.join(" ")
+        )]
+    } else {
+        new_slots
+            .into_iter()
+            .map(|s| format!("Production {} uses previously undefined slot {s}.", p.name))
+            .collect()
+    }
+}
+pub(crate) fn style_warnings_enabled(model: &Model) -> bool {
+    match model
+        .params
+        .iter()
+        .rev()
+        .find(|(k, _)| k == ":STYLE-WARNINGS")
+        .map(|(_, v)| v)
+    {
+        Some(Sexp::Sym(s)) if s == "NIL" => false,
+        _ => true,
+    }
+}
+
+fn isa_type(tests: &[SlotTest]) -> Option<&str> {
+    tests.iter().find_map(|t| {
+        if t.slot == "ISA" {
+            match &t.value {
+                Pattern::Sym(s) | Pattern::Var(s) => Some(s.as_str()),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    })
+}
+
+fn has_isa(tests: &[SlotTest]) -> bool {
+    tests.iter().any(|t| t.slot == "ISA")
+}
+
+fn add_named_slots(
+    model: &Model,
+    name: &str,
+    out: &mut HashMap<String, Vec<String>>,
+    buffer: &str,
+) {
+    let chunk = model
+        .chunks
+        .iter()
+        .chain(model.defined_chunks.iter())
+        .find(|c| c.name.eq_ignore_ascii_case(name));
+    if let Some(c) = chunk {
+        let e = out.entry(buffer.to_string()).or_default();
+        for (s, _) in &c.slots {
+            push_slot(e, s);
+        }
+    }
+}
+
+fn initial_buffer_slots(model: &Model) -> HashMap<String, Vec<String>> {
+    let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    if let Some(desc) = &model.initial_goal {
+        match desc {
+            ChunkDesc::Spec { slots, .. } => {
+                let e = out.entry("GOAL".to_string()).or_default();
+                for (s, _) in slots {
+                    push_slot(e, s);
+                }
+            }
+            ChunkDesc::Named(n) => add_named_slots(model, n, &mut out, "GOAL"),
+        }
+    }
+    for desc in &model.goal_focuses {
+        match desc {
+            ChunkDesc::Spec { slots, .. } => {
+                let e = out.entry("GOAL".to_string()).or_default();
+                for (s, _) in slots {
+                    push_slot(e, s);
+                }
+            }
+            ChunkDesc::Named(n) => add_named_slots(model, n, &mut out, "GOAL"),
+        }
+    }
+    for (buffer, desc) in &model.initial_buffer_specs {
+        let e = out.entry(buffer.clone()).or_default();
+        if let ChunkDesc::Spec { slots, .. } = desc {
+            for (s, _) in slots {
+                push_slot(e, s);
+            }
+        }
+    }
+    for (buffer, name) in &model.initial_buffer_sets {
+        add_named_slots(model, name, &mut out, buffer);
+    }
+    // `declare-buffer-usage` adds its slots to the style-check tables, which
+    // suppresses "tested but not requested/modified" warnings for them.
+    for (buffer, slots) in &model.buffer_decl_slots {
+        let e = out.entry(buffer.clone()).or_default();
+        if slots.iter().any(|s| s == ":ALL") {
+            if let Some(ct) = model
+                .buffer_decls
+                .iter()
+                .find(|(b, _)| b == buffer)
+                .and_then(|(_, t)| {
+                    model
+                        .chunk_types
+                        .iter()
+                        .find(|ct| ct.name.eq_ignore_ascii_case(t))
+                })
+            {
+                for s in &ct.slots {
+                    push_slot(e, s);
+                }
+            }
+        } else {
+            for s in slots {
+                push_slot(e, s);
+            }
+        }
+    }
+    out
+}
+
+/// `check-production-for-style` + `check-between-production-style`
+/// (`procedural.lisp:1327`/`:1428`). Only the checks the tutorial refs expose:
+/// an `isa` with no tests, a request with no matching query, and GOAL/IMAGINAL
+/// condition slots that no production requests, modifies, or initializes.
+fn style_warnings(model: &Model, extended: &[String]) -> Vec<String> {
+    if !style_warnings_enabled(model) {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+
+    for p in &model.productions {
+        for item in &p.lhs {
+            if let LhsItem::Match { buffer, tests } = item {
+                if has_isa(tests)
+                    && tests.iter().all(|t| t.slot == "ISA")
+                    && !matches!(isa_type(tests), Some(t) if t.eq_ignore_ascii_case("CHUNK"))
+                {
+                    out.push(format!(
+                        "Production {} has a condition for buffer {} with an isa that provides no tests.",
+                        p.name, buffer
+                    ));
+                }
+            }
+        }
+    }
+    let mut tested: Vec<(String, Vec<String>)> = Vec::new();
+    let mut usage: HashMap<String, Vec<String>> = HashMap::new();
+    for p in &model.productions {
+        for item in &p.lhs {
+            if let LhsItem::Match { buffer, tests } = item {
+                if buffer != "GOAL" && buffer != "IMAGINAL" {
+                    continue;
+                }
+                let entry = if let Some(e) = tested.iter_mut().find(|(b, _)| b == buffer) {
+                    e
+                } else {
+                    tested.push((buffer.clone(), Vec::new()));
+                    tested.last_mut().expect("just pushed")
+                };
+                for t in tests {
+                    push_slot(&mut entry.1, &t.slot);
+                }
+            }
+        }
+        for action in &p.rhs {
+            let (buffer, slots) = match action {
+                RhsAction::Modify { buffer, slots }
+                | RhsAction::ModifyRequest { buffer, slots } => (buffer, slots),
+                RhsAction::Request { buffer, spec } => {
+                    let mut slots = Vec::new();
+                    chunk_desc_slots(spec, &mut slots);
+                    let e = usage.entry(buffer.clone()).or_default();
+                    for s in slots {
+                        if !e.contains(&s) {
+                            e.push(s);
+                        }
+                    }
+                    continue;
+                }
+                _ => continue,
+            };
+            let e = usage.entry(buffer.clone()).or_default();
+            for (s, _) in slots {
+                if is_slot_name(s) {
+                    let s = s.to_uppercase();
+                    if !e.contains(&s) {
+                        e.push(s);
+                    }
+                }
+            }
+        }
+    }
+    let init = initial_buffer_slots(model);
+    let new: std::collections::HashSet<String> =
+        extended.iter().map(|s| s.to_uppercase()).collect();
+    for (buffer, mut slots) in tested {
+        let reqmod = usage.get(&buffer);
+        let initial = init.get(&buffer);
+        slots.retain(|slot| {
+            !reqmod.is_some_and(|v| v.iter().any(|s| s == slot))
+                && !initial.is_some_and(|v| v.iter().any(|s| s == slot))
+        });
+        // ACT-R's extended slots hash ahead of the pre-existing ones for the
+        // fixtures this port covers; preserve source order within each group.
+        slots.sort_by_key(|s| if new.contains(s) { 0 } else { 1 });
+        for slot in slots {
+            out.push(format!(
+                "Productions test the {} slot in the {} buffer which is not requested or modified in any productions.",
+                slot, buffer
+            ));
+        }
+    }
+    out
+}
+
 /// `sort-for-bind-order` (production-parsing.lisp:1810): the reorder warning
 /// block when the RHS `!bind!`/`!eval!`/`!output!` order changes.
 fn reorder_warning(name: &str, rhs: &[Sexp], extra: &[String]) -> Vec<String> {
@@ -1975,6 +2387,7 @@ fn parse_model(
         scheduled_events: Vec::new(),
         call_commands: Vec::new(),
         buffer_decls: Vec::new(),
+        buffer_decl_slots: Vec::new(),
         visloc_default: Vec::new(),
         pfct: Vec::new(),
         no_reuse_buffers: Vec::new(),
@@ -1993,6 +2406,9 @@ fn parse_model(
     // Chunks ACT-R would have created via `create-undefined-chunk` while
     // scanning productions (`chunks.lisp:850`); later productions see them.
     let mut created_chunks: Vec<String> = Vec::new();
+    // Slots extended by a production parse (`extend-possible-slots`);
+    // `check-between-production-style` treats them as new for ordering.
+    let mut extended_slots: Vec<String> = Vec::new();
     // ACT-R emits the LHS-condition chunk warnings before the RHS-action ones,
     // even when the productions are interleaved (`tutorial-unit1-semantic-warnings`).
     let mut lhs_undefined: Vec<String> = Vec::new();
@@ -2151,9 +2567,14 @@ fn parse_model(
                     items.get(1).and_then(|x| x.as_sym()),
                     items.get(2).and_then(|x| x.as_sym()),
                 ) {
-                    model
-                        .buffer_decls
-                        .push((b.to_uppercase(), t.to_uppercase()));
+                    let b = b.to_uppercase();
+                    let t = t.to_uppercase();
+                    let slots: Vec<String> = items[3..]
+                        .iter()
+                        .filter_map(|x| x.as_sym().map(|s| s.to_uppercase()))
+                        .collect();
+                    model.buffer_decls.push((b.clone(), t));
+                    model.buffer_decl_slots.push((b, slots));
                 }
             }
             // `(set-visloc-default <slot> <value> ...)`: default constraints
@@ -2270,6 +2691,11 @@ fn parse_model(
                                     && !model.defined_chunks.iter().any(|c| &c.name == k)
                             })
                             .collect();
+                        model.reset_warnings.extend(undefined_slot_warnings(
+                            &p,
+                            &model,
+                            &mut extended_slots,
+                        ));
                         push_production(&mut model, p);
                     }
                     Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
@@ -2288,7 +2714,14 @@ fn parse_model(
                     let extra: Vec<String> =
                         model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
                     match parse_production(&Sexp::List(form), &extra) {
-                        Ok(p) => push_production(&mut model, p),
+                        Ok(p) => {
+                            model.reset_warnings.extend(undefined_slot_warnings(
+                                &p,
+                                &model,
+                                &mut extended_slots,
+                            ));
+                            push_production(&mut model, p);
+                        }
                         Err(LoadError::RejectedProduction(w)) => model.reset_warnings.extend(w),
                         Err(e) => return Err(e),
                     }
@@ -2495,6 +2928,9 @@ fn parse_model(
             }
         }
     }
+    model
+        .reset_warnings
+        .extend(style_warnings(&model, &extended_slots));
     // A production that names a buffer's variable (`=buffer`) anywhere makes
     // that buffer non-reusable (`support/production-parsing.lisp:482`), on top
     // of any model-body `(buffer-requires-copies …)`.

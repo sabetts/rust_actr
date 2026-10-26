@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn safe_queries() -> Result<(), String> {
     Case::new("safe-queries")
         .models(&["test-models;models;safe-queries.lisp"])
