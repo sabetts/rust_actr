@@ -55,7 +55,9 @@ def cases() -> list[tuple[str, str, str, str]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--counts", action="store_true", help="group by reason and print counts")
+    ap.add_argument(
+        "--counts", action="store_true", help="group by reason and print counts (with total)"
+    )
     ap.add_argument("--reason", metavar="TEXT", help="only reasons containing TEXT")
     ap.add_argument("--case", metavar="TEXT", help="only case names or idents containing TEXT")
     ap.add_argument("--files", action="store_true", help="append the source file")
@@ -77,6 +79,7 @@ def main() -> int:
         counts = Counter(r[1] for r in rows)
         for reason, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0].lower())):
             print(f"{count:4}  {reason}")
+        print(f"{len(rows):4}  TOTAL")
     else:
         for name, reason, _ident, fname in rows:
             suffix = f"  ({fname})" if args.files else ""
