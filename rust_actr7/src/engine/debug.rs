@@ -174,9 +174,12 @@ impl Engine {
     pub fn print_sdm(&mut self, spec: &[String]) -> Vec<String> {
         let preds = parse_sdm_spec(spec);
         // A plain `(sdm isa pair)` spec is the corpus's "print everything"
-        // form; filtering applies only when a modifier (`-`/`+`) is present
-        // (`sdm '- addend1 1'`).
-        let filter = preds.iter().any(|(m, _, _)| m.is_some());
+        // form. Any other spec filters, with or without a `-`/`+` modifier.
+        let filter = !spec.is_empty()
+            && !(preds.len() == 1
+                && preds[0].0.is_none()
+                && preds[0].1 == "ISA"
+                && preds[0].2 == "PAIR");
         let mut names = Vec::new();
         // `dm-chunks` (`declarative-memory.lisp:912`, `add-chunk-into-dm`
         // 1918) is an alist keyed by the chunk's slot signature, and a new

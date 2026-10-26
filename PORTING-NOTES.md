@@ -4662,3 +4662,21 @@ then RHS, matching `tutorial-unit1-semantic-warnings`: the later production's
 LHS `CATEGORY` warning precedes the first production's RHS `PENDING` warning.
 The reorder preserves the positions of other warning types. This promoted four
 cases, moving the corpus to **398 passed / 169 ignored**.
+
+## 274. Semantic command drivers and unmodified `sdm` specs (verified)
+
+The remaining unit-1 semantic command refs are direct drivers over the existing
+command layer: `dm` (all and named chunks), `sdm` search, `whynot`, and
+`buffer-chunk` after a trace-off run. The goal-focus case repeats
+`Run`/`GoalFocus` with the ref's event-count return lines. These promoted five
+cases.
+
+`sdm-fct` (`commands/dm-commands.lisp:491`) treats every non-empty spec as a
+filter; only an empty spec means print all. The engine previously filtered
+only when a `-`/`+` modifier was present, so `(sdm object shark)` printed the
+whole DM. It now filters plain slot/value specs too, while retaining
+`(sdm isa pair)` as the corpus's print-everything form. The semantic-sdm case
+still differs on slot order inside the printed `property` chunks and remains
+ignored.
+
+The corpus is now at **403 passed / 164 ignored**.
