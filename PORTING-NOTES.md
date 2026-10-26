@@ -4639,3 +4639,26 @@ command layer after a trace-off run. `tutorial-unit6-bst-spp-before` also
 exercises `spp`; its parameter block now prints the production symbol
 uppercased (`FORCE-OVER`), as Lisp's `format` does. This promoted eight cases,
 moving the corpus to **394 passed / 173 ignored**.
+
+## 273. Protocol driver, runtime chunk defaults, and warning order (verified)
+
+`tutorial_unit2code_initial` is a Python protocol trace, not a Lisp model: the
+driver echoes the connection/load/run/reset prompts and return lists and uses
+the existing run/reset steps. It passes byte-for-byte, including the
+`[0.55, 77, None]` event counts.
+
+`define-chunks` applied no chunk-type defaults after model load. The final
+default pass is now shared as `Model::apply_chunk_defaults`, and the RPC
+definition path calls it after adding chunks; the bounded
+`define-chunks-fct`/`add-dm-fct` path applies the same defaults while building
+`Value` slots. This promotes `tutorial-unit6-chunks-with-default-slots`.
+
+`sgp` getters now print the `value (default ...) : documentation` line for
+`:trace-detail` and `:lf`, which is the form `tutorial-unit1code-sgp-result`
+records.
+
+`create-undefined-chunk` warnings are emitted LHS-first across the whole model,
+then RHS, matching `tutorial-unit1-semantic-warnings`: the later production's
+LHS `CATEGORY` warning precedes the first production's RHS `PENDING` warning.
+The reorder preserves the positions of other warning types. This promoted four
+cases, moving the corpus to **398 passed / 169 ignored**.

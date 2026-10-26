@@ -6,11 +6,16 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit1code_sgp_result() -> Result<(), String> {
     Case::new("tutorial-unit1code-sgp-result")
         .models(&["tutorial;unit1;tutor-model-solution.lisp"])
         .seed((100, 0))
-        .steps(vec![Step::ModelOutput("? (sgp :trace-detail :lf)".into())])
+        .steps(vec![
+            Step::ModelOutput("? (sgp :trace-detail :lf)".into()),
+            Step::Command {
+                name: "sgp".into(),
+                args: crate::sexps(r#"(:TRACE-DETAIL :LF)"#),
+            },
+        ])
         .check()
 }

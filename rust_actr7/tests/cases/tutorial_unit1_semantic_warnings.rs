@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit1_semantic_warnings() -> Result<(), String> {
     Case::new("tutorial-unit1-semantic-warnings")
         .models(&["tutorial;unit1;semantic.lisp"])

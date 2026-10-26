@@ -408,7 +408,7 @@ impl Engine {
     ) -> Result<Vec<String>, String> {
         let mut names = Vec::new();
         for def in defs {
-            let (name, ctype, slots, explicit) = match def {
+            let (name, ctype, mut slots, explicit) = match def {
                 Value::Sym(n) => (n.clone(), None, Vec::new(), true),
                 Value::List(items) => {
                     let first = items.first().and_then(|v| match v {
@@ -452,6 +452,21 @@ impl Engine {
                 }
                 other => return Err(format!("bad chunk definition {}", other.show())),
             };
+            if let Some(ct) = ctype.as_deref().and_then(|t| {
+                self.model
+                    .chunk_types
+                    .iter()
+                    .find(|ct| ct.name.eq_ignore_ascii_case(t))
+            }) {
+                for (slot, default) in &ct.defaults {
+                    if !slots.iter().any(|(s, _)| s == slot) {
+                        slots.push((
+                            slot.clone(),
+                            Value::from_pattern(default).map_err(|e| e.to_string())?,
+                        ));
+                    }
+                }
+            }
             let name = if explicit && !name.is_empty() {
                 name
             } else {

@@ -1031,6 +1031,24 @@ impl Engine {
             .collect()
     }
 
+    /// Print the `key value (default ...) : documentation` line ACT-R's
+    /// `sgp-fct` reports for a parameter getter. Only the parameters whose
+    /// descriptions are exercised by the corpus are listed.
+    pub fn print_sgp_get(&mut self, key: &str) {
+        let Some(value) = self.get_param(key) else {
+            return;
+        };
+        match key.to_uppercase().as_str() {
+            ":TRACE-DETAIL" => self.out_lines.push(format!(
+                ":TRACE-DETAIL {value} (default MEDIUM) : Determines which events show in the trace"
+            )),
+            ":LF" => self
+                .out_lines
+                .push(format!(":LF {value} (default 1.0) : Latency Factor")),
+            _ => {}
+        }
+    }
+
     pub fn get_param(&self, key: &str) -> Option<String> {
         let b = |x: bool| if x { "T" } else { "NIL" }.to_string();
         Some(match key.to_uppercase().as_str() {

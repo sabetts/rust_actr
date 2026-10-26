@@ -797,6 +797,15 @@ impl Session {
                                 .unwrap_or(Json::Null)
                         })
                         .collect();
+                    if name == "sgp" {
+                        if let Some(eng) = &mut self.engine {
+                            for a in args {
+                                if let Some(k) = a.as_str() {
+                                    eng.print_sgp_get(k);
+                                }
+                            }
+                        }
+                    }
                     Ok(out)
                 } else {
                     let mut i = 0;
@@ -944,6 +953,7 @@ impl Session {
                             model::define_chunk_table_entry(&sexp, m).map_err(|e| e.to_string())?;
                         }
                     }
+                    m.apply_chunk_defaults();
                 }
                 self.rebuild_engine_in_place()?;
                 Ok(vec![Json::Null])

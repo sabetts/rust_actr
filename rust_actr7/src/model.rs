@@ -402,6 +402,22 @@ pub struct Model {
 }
 
 impl Model {
+    /// Apply chunk-type default slot values to chunks that don't set them.
+    pub fn apply_chunk_defaults(&mut self) {
+        let types = self.chunk_types.clone();
+        for c in self.chunks.iter_mut().chain(self.defined_chunks.iter_mut()) {
+            if let Some(t) = &c.ctype {
+                if let Some(ct) = types.iter().find(|ct| &ct.name == t) {
+                    for (s, p) in &ct.defaults {
+                        if !c.slots.iter().any(|(k, _)| k == s) {
+                            c.slots.push((s.clone(), p.clone()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Re-parse the `p-fct` productions with `query` substituted for
     /// `,*query*` (ACT-R re-evaluates the model body on `reset`).
     pub fn reparse_pfct(&mut self, query: &str) {
@@ -1178,9 +1194,10 @@ fn undefined_chunk_warnings(
     rhs: &[Sexp],
     known: &mut Vec<String>,
     extra: &[String],
-) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut check = |v: &Sexp, known: &mut Vec<String>| {
+) -> (Vec<String>, Vec<String>) {
+    let mut lhs_out = Vec::new();
+    let mut rhs_out = Vec::new();
+    let check = |v: &Sexp, known: &mut Vec<String>, out: &mut Vec<String>| {
         if let Sexp::Sym(t) = v {
             if is_undefined_chunk_value(t, known) {
                 out.push(format!("Creating chunk {} with no slots", t));
@@ -1196,7 +1213,7 @@ fn undefined_chunk_warnings(
                 continue;
             }
             for v in slot_values(&seg[1..]) {
-                check(v, known);
+                check(v, known, &mut lhs_out);
             }
         }
     }
@@ -1208,16 +1225,16 @@ fn undefined_chunk_warnings(
             match op {
                 '=' | '@' => {
                     for v in slot_values(definition) {
-                        check(v, known);
+                        check(v, known, &mut rhs_out);
                     }
                 }
                 '+' | '*' => {
                     if definition.len() == 1 {
                         match &definition[0] {
-                            Sexp::Sym(v) => check(&Sexp::Sym(v.clone()), known),
+                            Sexp::Sym(v) => check(&Sexp::Sym(v.clone()), known, &mut rhs_out),
                             Sexp::List(l) => {
                                 if let Some(v) = l.first().and_then(|s| s.as_sym()) {
-                                    check(&Sexp::Sym(v.to_string()), known);
+                                    check(&Sexp::Sym(v.to_string()), known, &mut rhs_out);
                                 }
                             }
                             _ => {}
@@ -1228,7 +1245,7 @@ fn undefined_chunk_warnings(
             }
         }
     }
-    out
+    (lhs_out, rhs_out)
 }
 
 /// `sort-for-bind-order` (production-parsing.lisp:1810): the reorder warning
@@ -1976,6 +1993,10 @@ fn parse_model(
     // Chunks ACT-R would have created via `create-undefined-chunk` while
     // scanning productions (`chunks.lisp:850`); later productions see them.
     let mut created_chunks: Vec<String> = Vec::new();
+    // ACT-R emits the LHS-condition chunk warnings before the RHS-action ones,
+    // even when the productions are interleaved (`tutorial-unit1-semantic-warnings`).
+    let mut lhs_undefined: Vec<String> = Vec::new();
+    let mut rhs_undefined: Vec<String> = Vec::new();
     for f in forms {
         let items = match f {
             Sexp::List(items) => items,
@@ -2234,9 +2255,12 @@ fn parse_model(
                                 model
                                     .reset_warnings
                                     .extend(reorder_warning(&p.name, rhs, &extra));
-                                model
-                                    .reset_warnings
-                                    .extend(undefined_chunk_warnings(lhs, rhs, &mut known, &extra));
+                                let (lhs_warnings, rhs_warnings) =
+                                    undefined_chunk_warnings(lhs, rhs, &mut known, &extra);
+                                model.reset_warnings.extend(lhs_warnings.iter().cloned());
+                                model.reset_warnings.extend(rhs_warnings.iter().cloned());
+                                lhs_undefined.extend(lhs_warnings);
+                                rhs_undefined.extend(rhs_warnings);
                             }
                         }
                         created_chunks = known
@@ -2458,19 +2482,15 @@ fn parse_model(
             }
         }
     }
-    // Apply chunk-type default slot values to chunks that don't set them.
-    let types = model.chunk_types.clone();
-    for c in model
-        .chunks
-        .iter_mut()
-        .chain(model.defined_chunks.iter_mut())
-    {
-        if let Some(t) = &c.ctype {
-            if let Some(ct) = types.iter().find(|ct| &ct.name == t) {
-                for (s, p) in &ct.defaults {
-                    if !c.slots.iter().any(|(k, _)| k == s) {
-                        c.slots.push((s.clone(), p.clone()));
-                    }
+    model.apply_chunk_defaults();
+    if !lhs_undefined.is_empty() || !rhs_undefined.is_empty() {
+        let mut ordered = lhs_undefined;
+        ordered.extend(rhs_undefined);
+        let mut ordered = ordered.into_iter();
+        for warning in &mut model.reset_warnings {
+            if warning.starts_with("Creating chunk ") && warning.ends_with(" with no slots") {
+                if let Some(next) = ordered.next() {
+                    *warning = next;
                 }
             }
         }
