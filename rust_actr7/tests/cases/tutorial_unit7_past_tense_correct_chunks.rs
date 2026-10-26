@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit7_past_tense_correct_chunks() -> Result<(), String> {
     Case::new("tutorial-unit7-past-tense-correct-chunks")
         .models(&[
@@ -16,6 +15,12 @@ fn tutorial_unit7_past_tense_correct_chunks() -> Result<(), String> {
         .seed((100, 0))
         .steps(vec![
             Step::Sgp(":MODEL-WARNINGS".into(), crate::sexp(r#"NIL"#)),
+            Step::Command {
+                name: "define-chunks".into(),
+                args: crate::sexps(
+                    r#"((ISA PAST-TENSE VERB HAVE STEM HAD SUFFIX BLANK) (ISA PAST-TENSE VERB USE STEM USE SUFFIX ED))"#,
+                ),
+            },
             Step::Command {
                 name: "pprint-chunks".into(),
                 args: crate::sexps(r#"(PAST-TENSE0 PAST-TENSE1)"#),
