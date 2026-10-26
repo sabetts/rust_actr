@@ -20,7 +20,7 @@ use std::rc::Rc;
 
 use actr_engine::json::Json;
 use actr_engine::rpc::session::Session;
-use actr_engine::{run_model_steps_with_hook, EventHook, EventView, Step};
+use actr_engine::{run_model_steps_with_hook, EventHook, EventView, PreResult, Step};
 
 use super::{
     apply_session_step, first_diff, load_spec_device, models_dir, normalize, refs_dir, NoRemote,
@@ -46,6 +46,35 @@ pub fn production(ev: &EventView, name: &str) -> bool {
     ev.production
         .as_deref()
         .is_some_and(|p| p.eq_ignore_ascii_case(name))
+}
+
+/// The fan-sentence trace-window filter: suppress the trace until the second
+/// retrieval starts at 585 ms, then stop after the retrieval's
+/// conflict-resolution.
+#[derive(Default)]
+pub struct ActTraceWindow {
+    enabled: bool,
+    stop_after: bool,
+    conflicts: u32,
+}
+
+impl EventHook for ActTraceWindow {
+    fn pre(&mut self, ev: &EventView) -> PreResult {
+        if self.stop_after {
+            self.enabled = false;
+            self.stop_after = false;
+        }
+        if ev.time_ms >= 585 && action(ev, "start-retrieval") {
+            self.enabled = true;
+        }
+        if self.enabled && ev.time_ms > 585 && action(ev, "conflict-resolution") {
+            self.conflicts += 1;
+            if self.conflicts == 1 {
+                self.stop_after = true;
+            }
+        }
+        PreResult::trace(self.enabled)
+    }
 }
 
 // -------------------------------------------------------------- projection

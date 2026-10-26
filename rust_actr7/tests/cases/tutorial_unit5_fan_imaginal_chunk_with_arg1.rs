@@ -1,8 +1,34 @@
 //! case: tutorial-unit5-fan-imaginal-chunk-with-arg1
+//! ref:  tutorial-unit5-fan-imaginal-chunk-with-arg1.ref
 //! lisp: actr7.x/test-models/tutorial-unit5-fan-imaginal-chunk-with-arg1.lisp
 
-ignored_case!(
-    tutorial_unit5_fan_imaginal_chunk_with_arg1,
-    "tutorial-unit5-fan-imaginal-chunk-with-arg1",
-    "event-hook driver + buffer output pending"
-);
+use crate::hooks;
+use actr_engine::{EventHook, EventView, PreResult, Step};
+
+struct Filter;
+
+impl EventHook for Filter {
+    fn pre(&mut self, _ev: &EventView) -> PreResult {
+        PreResult::CONTINUE
+    }
+}
+
+#[test]
+#[ignore = "engine divergence: imaginal copy naming (pending)"]
+fn tutorial_unit5_fan_imaginal_chunk_with_arg1() -> Result<(), String> {
+    hooks::HookCase::new("tutorial-unit5-fan-imaginal-chunk-with-arg1")
+        .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])
+        .device("tutorial-unit5-fan-lawyer-store-trace")
+        .seed((100, 0))
+        .steps(vec![
+            Step::Reset,
+            Step::PDisable(vec!["RETRIEVE-FROM-LOCATION".into()]),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: false,
+                width: 22,
+            },
+            Step::BufferChunk(vec!["IMAGINAL".into()]),
+        ])
+        .check_segment(Filter)
+}
