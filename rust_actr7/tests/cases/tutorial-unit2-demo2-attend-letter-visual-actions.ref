@@ -1,0 +1,9 @@
+     0.100   PROCEDURAL             PRODUCTION-FIRED ATTEND-LETTER
+...
+     0.100   PROCEDURAL             MODULE-REQUEST VISUAL
+...
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.100   VISION                 Move-attention VISUAL-LOCATION0-1 NIL
+...
+     0.185   VISION                 Encoding-complete VISUAL-LOCATION0-1 NIL
+     0.185   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0

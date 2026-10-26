@@ -15,7 +15,7 @@ that arbitrary Lisp cannot be executed.
 | `rust_actr7/tests/` | integration suites (below) |
 | `rust_actr7/fixtures/` | test oracles + regen scripts — see `fixtures/README.md` |
 | `rust_actr7/web/` | browser (wasm) build — see `web/README.md` |
-| `actr7.x/` | upstream Lisp ACT-R sources (the oracle) |
+| `actr7.x/` | upstream Lisp ACT-R sources (reference/regen; tests use vendored copies) |
 | `contrib/` | local unpacked GUI crate sources (untracked, not part of the engine) |
 | `PORTING-NOTES.md` | non-obvious ACT-R/Lisp behaviors the port must match |
 
@@ -23,7 +23,7 @@ that arbitrary Lisp cannot be executed.
 
 ```sh
 cd rust_actr7
-cargo test                       # no SBCL needed; regen does
+cargo test                       # no SBCL or actr7.x checkout needed; regen does
 cargo run -- run <model.lisp>
 cargo run -- server              # RPC dispatcher
 cargo run --features env -- env  # native GUI
@@ -31,17 +31,21 @@ cargo run --features env -- env  # native GUI
 
 ## Tests
 
-Two static oracles, one `#[test]` per case:
+Two static oracles, one `#[test]` per case and one Rust file per ACT-R ref:
 
-- `tests/test_models.rs` — ACT-R's `test-models` corpus vs its `.ref` outputs.
-  Out-of-scope cases are `#[ignore = "reason"]`; that ignored set *is* the
-  remaining work.
+- `tests/cases/<name>.rs` — the driver for one `test-models` ref;
+  `tests/cases/<name>.ref` is the expected output. `tests/cases/mod.rs` is the
+  flat index; `case_files_cover_every_ref` keeps refs, files, and index in
+  sync. Out-of-scope cases are `#[ignore = "reason"]`; that ignored set *is*
+  the remaining work.
 - `tests/extra_traces.rs` — project-authored scenarios, byte-exact.
 - `tests/errors.rs`, `tests/rpc_conformance.rs` — error paths and the RPC
   surface.
 
-Fixtures and the comparison rules are documented in
-`rust_actr7/fixtures/README.md` and `rust_actr7/fixtures/regression/README.md`.
+Refs and model/task sources are vendored (`tests/cases/*.ref`,
+`fixtures/models/`), so the default `cargo test` needs no `actr7.x` checkout.
+Fixtures and comparison rules are documented in `rust_actr7/fixtures/README.md`
+and `rust_actr7/fixtures/regression/README.md`.
 
 ## Conventions
 

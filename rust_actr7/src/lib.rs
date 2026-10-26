@@ -123,7 +123,7 @@ pub fn run_from_source_with(
     engine::Engine::new_with_width(def.clone(), seed, run_time, device.clone(), module_width)?.run()
 }
 
-/// One driver step from a test spec (`fixtures/regression/specs/*.spec`).
+/// One driver step from a per-case test file (or a recovered driver spec).
 #[derive(Debug, Clone)]
 pub enum Step {
     /// `(run secs)` with the trace state and module width in effect.

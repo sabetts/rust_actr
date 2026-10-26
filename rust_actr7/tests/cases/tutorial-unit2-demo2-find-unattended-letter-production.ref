@@ -1,0 +1,10 @@
+(P find-unattended-letter
+   =goal>
+      ISA         read-letters
+      step        start
+ ==>
+   +visual-location>
+      :attended    nil
+   =goal>
+      step        find-location
+)

@@ -1,0 +1,13 @@
+  (p guess-other
+     =goal>
+       isa task
+       state guess-other
+     =retrieval>
+       isa response
+       key =key
+     ==>
+     +retrieval>
+       isa response
+      - key =key
+     =goal>
+       state respond)

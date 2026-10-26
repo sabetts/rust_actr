@@ -1,0 +1,18 @@
+     0.185   DECLARATIVE            start-retrieval
+No matching chunk found retrieval failure
+...
+    10.185   DECLARATIVE            start-retrieval
+Chunk IMAGINAL-CHUNK0-0 matches
+Computing activation for chunk IMAGINAL-CHUNK0-0
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (5.185)
+  creation time: 5.185 decay: 0.5  Optimized-learning: T
+base-level value: -0.11157179
+Total base-level: -0.11157179
+Adding transient noise -0.7636829
+Adding permanent noise 0.0
+Chunk IMAGINAL-CHUNK0-0 has an activation of: -0.8752547
+Chunk IMAGINAL-CHUNK0-0 has the current best activation -0.8752547
+Chunk IMAGINAL-CHUNK0-0 with activation -0.8752547 is the best
+...

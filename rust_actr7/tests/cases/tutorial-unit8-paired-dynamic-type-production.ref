@@ -1,0 +1,20 @@
+(p type
+   =goal>
+     isa      task
+     step     retrieving-operator
+   =imaginal>
+     =slot    =val
+   =retrieval>
+     isa      operator
+     action   type
+     required =slot
+     post     =state
+   ?manual>
+     state    free
+  ==>
+   +manual>
+     cmd      press-key
+     key      =val
+   =goal>
+     state    =state
+     step     ready)

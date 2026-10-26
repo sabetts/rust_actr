@@ -1,0 +1,2 @@
+(spp pick-another-strategy :reward 0)
+(spp read-done :reward 20)

@@ -1,0 +1,19 @@
+  (p respond
+     =goal>
+       isa task
+       state respond
+     =retrieval>
+       isa response
+       key =key
+     ?manual>
+       state free
+     =imaginal>
+       isa trial     
+     ==>
+     =imaginal>
+       response =retrieval
+     +manual>
+       cmd press-key
+       key =key
+     =goal>
+       state detect-feedback)

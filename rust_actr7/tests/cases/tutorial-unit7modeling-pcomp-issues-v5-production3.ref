@@ -1,0 +1,30 @@
+    10.732   PROCEDURAL             PRODUCTION-FIRED RESPOND
+Production Compilation process started for RESPOND
+  Production NO-PAST-TRIAL and RESPOND are being composed.
+  New production:
+
+(P PRODUCTION3
+  "NO-PAST-TRIAL & RESPOND - RESPONSE-2"
+   =GOAL>
+       STATE PROCESS-PAST-TRIAL
+   =IMAGINAL>
+   ?MANUAL>
+       STATE FREE
+   ?RETRIEVAL>
+       BUFFER FAILURE
+ ==>
+   =IMAGINAL>
+       RESPONSE "d"
+   =GOAL>
+       STATE DETECT-FEEDBACK
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY "d"
+)
+Parameters for production PRODUCTION3:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RESPOND.

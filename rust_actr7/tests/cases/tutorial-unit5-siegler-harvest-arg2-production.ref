@@ -1,0 +1,10 @@
+(p harvest-arg2
+   =retrieval>
+   =imaginal>
+     isa          plus-fact
+     addend2      nil
+   ?imaginal> 
+     state        free
+  ==>
+   *imaginal>
+     addend2      =retrieval)

@@ -1,0 +1,15 @@
+  (p retrieved-a-non-win
+     =goal>
+       isa task
+       state process-past-trial
+     =retrieval>
+       isa trial
+      - result win
+       response =response
+     ==>
+     !eval! ("set-flag")
+     +retrieval> 
+       isa response
+       key =response
+     =goal>
+       state guess-other)

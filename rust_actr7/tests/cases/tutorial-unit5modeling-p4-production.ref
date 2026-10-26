@@ -1,0 +1,12 @@
+  (p p4
+     =goal>
+       isa task-state
+       state r4
+     ?retrieval>
+       state free
+   ==>
+     =goal>
+       state r5
+     +retrieval>
+       isa simple-fact
+       attribute black)

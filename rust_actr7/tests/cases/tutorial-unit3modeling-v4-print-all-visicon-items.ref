@@ -1,0 +1,12 @@
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE  HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  -----  ------  ----------
+VISUAL-LOCATION0  NEW  (435 456 1080)  T     TEXT  BLACK  7      "l"    10      0.19999999  
+
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE   HEIGHT  SIZE        
+----------------  ---  --------------  ----  ----  -----  -----  ------  ------  ----------
+VISUAL-LOCATION1  NEW  (440 456 1080)  T     TEXT  BLACK  28     "next"  10      0.78999996  
+
+Name              Att  Loc             TEXT  KIND  COLOR  WIDTH  VALUE       HEIGHT  SIZE       
+----------------  ---  --------------  ----  ----  -----  -----  ----------  ------  ---------
+VISUAL-LOCATION1  NEW  (454 456 1080)  T     TEXT  BLACK  56     "previous"  10      1.5799999  
+

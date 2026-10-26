@@ -1,0 +1,19 @@
+(p retrieve-associate
+   =goal>
+     isa      task
+     step     retrieving-operator
+   =imaginal>
+     =target  =stimulus
+   =retrieval>
+     isa      operator
+     action   retrieve
+     required =target
+     label    =other
+     post     =state
+  ==>
+   +retrieval>
+     =target  =stimulus
+   =goal>
+     step     retrieving-result
+     context  =other
+     state    =state)

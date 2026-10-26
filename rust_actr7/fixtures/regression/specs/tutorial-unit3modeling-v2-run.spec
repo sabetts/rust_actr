@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit3modeling-v2-run" :REF "tutorial-unit3modeling-v2-run.ref" :MODELS ("tutorial;lisp;pm-issues.lisp" "tutorial;unit3;perceptual-motor-issues-model.lisp" "test-models;models;perceptual-motor-issues-model-v2.lisp") :SEED-SET T :RUNS ((10 (100 0) T 22)) :STEPS ((:RESET) (:RUN 10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

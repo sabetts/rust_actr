@@ -1,0 +1,15 @@
+(P encode-letter
+   =goal>
+      ISA         read-letters
+      step        attend
+   =visual>
+      value       =letter
+   ?imaginal>
+      state       free
+==>
+   =goal>
+      step        respond
+   +imaginal>
+      isa         array
+      letter      =letter
+)

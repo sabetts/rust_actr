@@ -1,0 +1,8 @@
+  (p small                 (p medium                (p large
+     =goal>                   =goal>                   =goal>
+       isa test                 isa test                 isa test
+       value small              value medium             value large
+       value =val               value =val               value =val
+     ==>                      ==>                      ==>
+     !output! =val            !output! =val            !output! =val
+     -goal>)                  -goal>)                  -goal>)

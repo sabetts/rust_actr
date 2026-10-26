@@ -1,1 +1,0 @@
-(:NAME "unit-1-together-1-mp" :REF "unit-1-together-1-mp.ref" :MODELS ("examples;multiple-models;unit-1-together-1-mp.lisp") :SEED-SET NIL :RUNS ((10 (100 0) NIL 22)) :STEPS ((:RUN 10 (100 0) NIL 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

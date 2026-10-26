@@ -1,0 +1,3 @@
+   (v1 isa simple-value result "true")
+   (v2 isa simple-value result "false")
+   (v3 isa simple-value result nil)

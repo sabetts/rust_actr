@@ -1,0 +1,4 @@
+(chunk-type letter name next previous)
+
+
+ (b isa letter name "b" next "c" previous "a")

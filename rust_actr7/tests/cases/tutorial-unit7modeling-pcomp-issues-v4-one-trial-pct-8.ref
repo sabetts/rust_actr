@@ -1,0 +1,4 @@
+    10.680   PROCEDURAL             PRODUCTION-FIRED NO-PAST-TRIAL
+Production Compilation process started for NO-PAST-TRIAL
+  Cannot compile RETRIEVE-PAST-TRIAL and NO-PAST-TRIAL because the time between them exceeds the threshold time.
+  Setting previous production to NO-PAST-TRIAL.

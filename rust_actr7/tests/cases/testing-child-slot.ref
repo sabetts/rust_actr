@@ -1,0 +1,449 @@
+#|Warning: Clearing the productions is not recommended |#
++++++++++++++++++++++++++
+GOAL: GOAL-CHUNK0 [PARENT]
+GOAL-CHUNK0
+
+
+Production SLOT1-EMPTY matches:
+(P SLOT1-EMPTY
+   =GOAL>
+       SLOT1 NIL
+ ==>
+)
+
+Production SLOT1-FILLED does NOT match.
+(P SLOT1-FILLED
+   =GOAL>
+       SLOT1 =VAL
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer does not have slot SLOT1.
+
+Production SLOT1-FILLED* does NOT match.
+(P SLOT1-FILLED*
+   =GOAL>
+       =SLOT =VAL
+   =IMAGINAL>
+       SLOT1 =SLOT
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer does not have a slot named SLOT1 (the value of the =SLOT variable).
++++++++++++++++++++++++++
+GOAL: GOAL-CHUNK0 [TARGET-NIL]
+GOAL-CHUNK0
+
+
+Production SLOT1-EMPTY matches:
+(P SLOT1-EMPTY
+   =GOAL>
+       SLOT1 NIL
+ ==>
+)
+
+Production SLOT1-FILLED does NOT match.
+(P SLOT1-FILLED
+   =GOAL>
+       SLOT1 =VAL
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer does not have slot SLOT1.
+
+Production SLOT1-FILLED* does NOT match.
+(P SLOT1-FILLED*
+   =GOAL>
+       =SLOT =VAL
+   =IMAGINAL>
+       SLOT1 =SLOT
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer does not have a slot named SLOT1 (the value of the =SLOT variable).
++++++++++++++++++++++++++
+GOAL: GOAL-CHUNK0 [TARGET-FULL]
+GOAL-CHUNK0
+   SLOT1  T
+
+
+Production SLOT1-EMPTY does NOT match.
+(P SLOT1-EMPTY
+   =GOAL>
+       SLOT1 NIL
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer has the slot SLOT1.
+
+Production SLOT1-FILLED matches:
+(P SLOT1-FILLED
+   =GOAL>
+       SLOT1 T
+ ==>
+)
+
+Production SLOT1-FILLED* matches:
+(P SLOT1-FILLED*
+   =GOAL>
+       SLOT1 T
+   =IMAGINAL>
+       SLOT1 SLOT1
+ ==>
+)
++++++++++++++++++++++++++
+GOAL: GOAL-CHUNK0 [OTHER]
+GOAL-CHUNK0
+   SLOT2  T
+
+
+Production SLOT1-EMPTY matches:
+(P SLOT1-EMPTY
+   =GOAL>
+       SLOT1 NIL
+ ==>
+)
+
+Production SLOT1-FILLED does NOT match.
+(P SLOT1-FILLED
+   =GOAL>
+       SLOT1 =VAL
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer does not have slot SLOT1.
+
+Production SLOT1-FILLED* does NOT match.
+(P SLOT1-FILLED*
+   =GOAL>
+       =SLOT =VAL
+   =IMAGINAL>
+       SLOT1 =SLOT
+ ==>
+)
+It fails because: 
+The chunk in the GOAL buffer does not have a slot named SLOT1 (the value of the =SLOT variable).
+#|Warning: Clearing the productions is not recommended |#
+(P RETRIEVE0
+   =GOAL>
+       COUNT 0
+ ==>
+   -GOAL>
+   +RETRIEVAL>
+       SLOT1 NIL
+)
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL TEST0 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED RETRIEVE0
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Chunk GOAL-CHUNK0-0 matches
+Chunk OTHER matches
+Chunk TARGET-NIL matches
+Chunk PARENT matches
+Chunk GOAL-CHUNK0-0 chosen among the chunks with activation 0.0
+     0.050   DECLARATIVE            RETRIEVED-CHUNK GOAL-CHUNK0-0
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL GOAL-CHUNK0-0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   ------                 Stopped because no events left to process
+(P RETRIEVE1
+   =GOAL>
+       COUNT 1
+ ==>
+   -GOAL>
+   +RETRIEVAL>
+       SLOT1 NIL
+)
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL TEST1 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED RETRIEVE1
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.100   DECLARATIVE            start-retrieval
+Chunk GOAL-CHUNK0-1 matches
+Chunk GOAL-CHUNK0-0 matches
+Chunk OTHER matches
+Chunk TARGET-NIL matches
+Chunk PARENT matches
+Chunk GOAL-CHUNK0-0 chosen among the chunks with activation 0.0
+     0.100   DECLARATIVE            RETRIEVED-CHUNK GOAL-CHUNK0-0
+     0.100   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL GOAL-CHUNK0-0
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process
+(P RETRIEVE2
+   =GOAL>
+       COUNT 2
+ ==>
+   -GOAL>
+   +RETRIEVAL>
+    -  SLOT1 NIL
+)
+     0.100   GOAL                   SET-BUFFER-CHUNK GOAL TEST2 NIL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED RETRIEVE2
+     0.150   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.150   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.150   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.150   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   ------                 Stopped because no events left to process
+(P RETRIEVE3
+   =GOAL>
+       COUNT 3
+ ==>
+   -GOAL>
+   +RETRIEVAL>
+    -  SLOT1 NIL
+)
+     0.150   GOAL                   SET-BUFFER-CHUNK GOAL TEST3 NIL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED RETRIEVE3
+     0.200   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.200   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.200   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.200   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.200   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   ------                 Stopped because no events left to process
+(P RETRIEVE4
+   =GOAL>
+       COUNT 4
+ ==>
+   -GOAL>
+   +RETRIEVAL>
+       SLOT1 T
+)
+     0.200   GOAL                   SET-BUFFER-CHUNK GOAL TEST4 NIL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED RETRIEVE4
+     0.250   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.250   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.250   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.250   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.250   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   ------                 Stopped because no events left to process
+(P RETRIEVE5
+   =GOAL>
+       COUNT 5
+ ==>
+   -GOAL>
+   +RETRIEVAL>
+       SLOT1 T
+)
+     0.250   GOAL                   SET-BUFFER-CHUNK GOAL TEST5 NIL
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED RETRIEVE5
+     0.300   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.300   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.300   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because no events left to process
+(P RETRIEVE6
+   =GOAL>
+       COUNT 6
+   =IMAGINAL>
+       SLOT1 =SLOT
+ ==>
+   -GOAL>
+   =IMAGINAL>
+   +RETRIEVAL>
+       =SLOT T
+)
+     0.300   GOAL                   SET-BUFFER-CHUNK GOAL TEST6 NIL
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED RETRIEVE6
+     0.350   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.350   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.350   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.350   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.350   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   ------                 Stopped because no events left to process
+(P RETRIEVE7
+   =GOAL>
+       COUNT 7
+   =IMAGINAL>
+       SLOT1 =SLOT
+ ==>
+   -GOAL>
+   =IMAGINAL>
+   +RETRIEVAL>
+       =SLOT T
+)
+     0.350   GOAL                   SET-BUFFER-CHUNK GOAL TEST7 NIL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   PROCEDURAL             PRODUCTION-FIRED RETRIEVE7
+     0.400   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.400   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.400   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.400   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.400   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   ------                 Stopped because no events left to process
+(P RETRIEVE8
+   =GOAL>
+       COUNT 8
+   =IMAGINAL>
+       SLOT1 =SLOT
+ ==>
+   -GOAL>
+   =IMAGINAL>
+   +RETRIEVAL>
+       =SLOT T
+)
+     0.400   GOAL                   SET-BUFFER-CHUNK GOAL TEST8 NIL
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             PRODUCTION-FIRED RETRIEVE8
+     0.450   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.450   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.450   DECLARATIVE            start-retrieval
+Chunk TARGET-FULL matches
+Chunk TARGET-FULL with activation 0.0 is the best
+     0.450   DECLARATIVE            RETRIEVED-CHUNK TARGET-FULL
+     0.450   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TARGET-FULL
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   ------                 Stopped because no events left to process
+#|Warning: Clearing the productions is not recommended |#
+#|Warning: Slot SLOT1 invalid for type OTHER but chunk-spec definition still created. |#
+#|Warning: Production IMAGINAL-BAD action has invalid slot SLOT1 for type OTHER. |#
+(P IMAGINAL0
+   =GOAL>
+       COUNT 0
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   -GOAL>
+   +IMAGINAL>
+       SLOT1 T
+)
+     0.450   GOAL                   SET-BUFFER-CHUNK GOAL TEST9 NIL
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             PRODUCTION-SELECTED IMAGINAL0
+     0.450   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.450   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     0.500   PROCEDURAL             PRODUCTION-FIRED IMAGINAL0
+     0.500   PROCEDURAL             MODULE-REQUEST IMAGINAL
+     0.500   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.500   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (SLOT1 T)
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   ------                 Stopped because no events left to process
+(P IMAGINAL1
+   =GOAL>
+       COUNT 1
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   -GOAL>
+   +IMAGINAL>
+       SLOT1 T
+)
+     0.700   GOAL                   SET-BUFFER-CHUNK GOAL TEST10 NIL
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             PRODUCTION-SELECTED IMAGINAL1
+     0.700   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.700   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     0.750   PROCEDURAL             PRODUCTION-FIRED IMAGINAL1
+     0.750   PROCEDURAL             MODULE-REQUEST IMAGINAL
+     0.750   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.750   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     0.950   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (SLOT1 T)
+     0.950   PROCEDURAL             CONFLICT-RESOLUTION
+     0.950   ------                 Stopped because no events left to process
+(P IMAGINAL2
+   =GOAL>
+       COUNT 2
+   =IMAGINAL>
+       SLOT1 =SLOT
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   -GOAL>
+   +IMAGINAL>
+       =SLOT T
+)
+     0.950   GOAL                   SET-BUFFER-CHUNK GOAL TEST11 NIL
+     0.950   PROCEDURAL             CONFLICT-RESOLUTION
+     0.950   PROCEDURAL             PRODUCTION-SELECTED IMAGINAL2
+     0.950   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.950   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.950   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     1.000   PROCEDURAL             PRODUCTION-FIRED IMAGINAL2
+     1.000   PROCEDURAL             MODULE-REQUEST IMAGINAL
+     1.000   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.000   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.200   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (SLOT1 T)
+     1.200   PROCEDURAL             CONFLICT-RESOLUTION
+     1.200   ------                 Stopped because no events left to process
+(P IMAGINAL3
+   =GOAL>
+       COUNT 3
+   =IMAGINAL>
+       SLOT1 =SLOT
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   -GOAL>
+   +IMAGINAL>
+       =SLOT T
+)
+     1.200   GOAL                   SET-BUFFER-CHUNK GOAL TEST12 NIL
+     1.200   PROCEDURAL             CONFLICT-RESOLUTION
+     1.200   PROCEDURAL             PRODUCTION-SELECTED IMAGINAL3
+     1.200   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     1.200   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     1.200   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     1.250   PROCEDURAL             PRODUCTION-FIRED IMAGINAL3
+     1.250   PROCEDURAL             MODULE-REQUEST IMAGINAL
+     1.250   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.250   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     1.250   PROCEDURAL             CONFLICT-RESOLUTION
+     1.450   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (SLOT1 T)
+     1.450   PROCEDURAL             CONFLICT-RESOLUTION
+     1.450   ------                 Stopped because no events left to process
+(P IMAGINAL4
+   =GOAL>
+       COUNT 4
+   =IMAGINAL>
+       SLOT1 =SLOT
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   -GOAL>
+   +IMAGINAL>
+       =SLOT T
+)
+     1.450   GOAL                   SET-BUFFER-CHUNK GOAL TEST13 NIL
+     1.450   PROCEDURAL             CONFLICT-RESOLUTION
+     1.450   PROCEDURAL             PRODUCTION-SELECTED IMAGINAL4
+     1.450   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     1.450   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     1.450   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     1.500   PROCEDURAL             PRODUCTION-FIRED IMAGINAL4
+     1.500   PROCEDURAL             MODULE-REQUEST IMAGINAL
+     1.500   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.500   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     1.500   PROCEDURAL             CONFLICT-RESOLUTION
+     1.700   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (SLOT1 T)
+     1.700   PROCEDURAL             CONFLICT-RESOLUTION
+     1.700   ------                 Stopped because no events left to process

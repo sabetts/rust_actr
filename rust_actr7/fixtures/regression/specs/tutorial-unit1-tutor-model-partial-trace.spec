@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit1-tutor-model-partial-trace" :REF "tutorial-unit1-tutor-model-partial-trace.ref" :MODELS ("tutorial;unit1;tutor-model-solution.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 11)) :STEPS ((:PDISABLE PROCESS-CARRY NO-CARRY ADD-TENS-DONE ADD-TENS-CARRY) (:RUN 10 (100 0) T 11)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS (:DRIVER) :ERROR NIL)

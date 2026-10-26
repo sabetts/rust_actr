@@ -1,0 +1,24 @@
+(defun fan-sentence (person location target term)
+  (reset)
+  
+  ; disable the production that isn't being used for retrieval
+  
+  (case term 
+    (person (pdisable retrieve-from-location))
+    (location (pdisable retrieve-from-person)))
+  
+  ; modify the chunk in the goal buffer to set the 
+  ; arg1 and arg2 slots to the probe items 
+  
+  (mod-focus-fct (list 'arg1 person 'arg2 location))
+  
+  ; run the model recording the time spent running
+  ; and get the value from the state slot of the goal buffer representing the
+  ; model's response to the task
+  
+  (let ((response-time (run 30.0))
+        (response (buffer-slot-value 'goal 'state)))
+      
+    (list response-time
+          (or (and target (string-equal response "k"))
+              (and (null target) (string-equal response "d"))))))

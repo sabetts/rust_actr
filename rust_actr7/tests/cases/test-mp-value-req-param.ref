@@ -1,0 +1,477 @@
+#|Warning: No production defined for (P8 =GOAL> ISA TEST SLOT 8 ==> =GOAL> SLOT 9 +RETRIEVAL> ISA TEST - :MP-VALUE NIL). |#
+#|Warning: Invalid buffer request (+RETRIEVAL> ISA TEST - :MP-VALUE NIL). |#
+#|Warning: Request parameters may not use a modifier other than =. |#
+#|Warning: --- end of warnings for undefined production P8 --- |#
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED P1
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED P1
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (SLOT 2)
+     0.050   DECLARATIVE            start-retrieval
+Chunk C does not match
+Chunk B does not match
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 0.0
+Chunk A has the current best activation 0.0
+Chunk A with activation 0.0 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   DECLARATIVE            RETRIEVED-CHUNK A
+     1.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL A
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   PROCEDURAL             PRODUCTION-SELECTED P2
+     1.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     1.050   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     1.100   PROCEDURAL             PRODUCTION-FIRED P2
+     1.100   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     1.100   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     1.100   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     1.100   DECLARATIVE            start-retrieval
+Chunk C does not match
+Chunk B does not match
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 0.0
+Chunk A has the current best activation 0.0
+Chunk A with activation 0.0 is the best
+     1.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   DECLARATIVE            RETRIEVED-CHUNK A
+     2.100   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL A
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   PROCEDURAL             PRODUCTION-SELECTED P3
+     2.100   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     2.100   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     2.150   PROCEDURAL             PRODUCTION-FIRED P3
+     2.150   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     2.150   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     2.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     2.150   DECLARATIVE            start-retrieval
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = C  Chunk's slot value: A
+  similarity: -0.1
+  effective similarity value is -0.3
+Total similarity score -0.3
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.3
+Chunk A has the current best activation -0.3
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = C  Chunk's slot value: B
+  similarity: -1.0
+  effective similarity value is -3.0
+Total similarity score -3.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: -3.0
+Computing activation for chunk C
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = C  Chunk's slot value: C
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk C has an activation of: 0.0
+Chunk C is now the current best with activation 0.0
+Chunk C with activation 0.0 is the best
+     2.150   PROCEDURAL             CONFLICT-RESOLUTION
+     3.150   DECLARATIVE            RETRIEVED-CHUNK C
+     3.150   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL C
+     3.150   PROCEDURAL             CONFLICT-RESOLUTION
+     3.150   PROCEDURAL             PRODUCTION-SELECTED P4
+     3.150   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     3.150   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     3.200   PROCEDURAL             PRODUCTION-FIRED P4
+     3.200   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     3.200   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     3.200   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.200   DECLARATIVE            start-retrieval
+Chunk C does not match
+Chunk B matches
+Chunk A does not match
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: 0.0
+Chunk B has the current best activation 0.0
+Chunk B with activation 0.0 is the best
+     3.200   PROCEDURAL             CONFLICT-RESOLUTION
+     4.200   DECLARATIVE            RETRIEVED-CHUNK B
+     4.200   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL B
+     4.200   PROCEDURAL             CONFLICT-RESOLUTION
+     4.200   PROCEDURAL             PRODUCTION-SELECTED P5
+     4.200   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     4.200   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     4.250   PROCEDURAL             PRODUCTION-FIRED P5
+     4.250   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     4.250   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     4.250   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     4.250   DECLARATIVE            start-retrieval
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: A
+  similarity: -0.5
+  effective similarity value is -1.0
+Total similarity score -1.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -1.0
+Chunk A has the current best activation -1.0
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: B
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: 0.0
+Chunk B is now the current best with activation 0.0
+Computing activation for chunk C
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: C
+  similarity: -1.0
+  effective similarity value is -2.0
+Total similarity score -2.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk C has an activation of: -2.0
+Chunk B with activation 0.0 is the best
+     4.250   PROCEDURAL             CONFLICT-RESOLUTION
+     5.250   DECLARATIVE            RETRIEVED-CHUNK B
+     5.250   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL B
+     5.250   PROCEDURAL             CONFLICT-RESOLUTION
+     5.250   PROCEDURAL             PRODUCTION-SELECTED P6
+     5.250   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     5.250   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     5.300   PROCEDURAL             PRODUCTION-FIRED P6
+     5.300   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     5.300   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     5.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     5.300   DECLARATIVE            start-retrieval
+#|Warning: Invalid retrieval request. |#
+#|Warning: :mp-value parameter's value can only be nil or a number. |#
+     5.300   PROCEDURAL             CONFLICT-RESOLUTION
+     5.300   PROCEDURAL             PRODUCTION-SELECTED P7
+     5.300   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     5.350   PROCEDURAL             PRODUCTION-FIRED P7
+     5.350   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     5.350   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     5.350   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     5.350   DECLARATIVE            start-retrieval
+#|Warning: Invalid retrieval request. |#
+#|Warning: :mp-value parameter used more than once. |#
+     5.350   PROCEDURAL             CONFLICT-RESOLUTION
+     5.350   ------                 Stopped because no events left to process
+#|Warning: No production defined for (P8 =GOAL> ISA TEST SLOT 8 ==> =GOAL> SLOT 9 +RETRIEVAL> ISA TEST - :MP-VALUE NIL). |#
+#|Warning: Invalid buffer request (+RETRIEVAL> ISA TEST - :MP-VALUE NIL). |#
+#|Warning: Request parameters may not use a modifier other than =. |#
+#|Warning: --- end of warnings for undefined production P8 --- |#
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED P1
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED P1
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (SLOT 2)
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = A  Chunk's slot value: A
+  similarity: -0.9
+  effective similarity value is -9.0
+Total similarity score -9.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -9.0
+Chunk A has the current best activation -9.0
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = A  Chunk's slot value: B
+  similarity: -0.5
+  effective similarity value is -5.0
+Total similarity score -5.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: -5.0
+Chunk B is now the current best with activation -5.0
+Computing activation for chunk C
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = A  Chunk's slot value: C
+  similarity: -0.1
+  effective similarity value is -1.0
+Total similarity score -1.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk C has an activation of: -1.0
+Chunk C is now the current best with activation -1.0
+Chunk C with activation -1.0 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.768   DECLARATIVE            RETRIEVED-CHUNK C
+     2.768   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL C
+     2.768   PROCEDURAL             CONFLICT-RESOLUTION
+     2.768   PROCEDURAL             PRODUCTION-SELECTED P2
+     2.768   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     2.768   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     2.818   PROCEDURAL             PRODUCTION-FIRED P2
+     2.818   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     2.818   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     2.818   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     2.818   DECLARATIVE            start-retrieval
+Chunk C does not match
+Chunk B does not match
+Chunk A matches
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: 0.0
+Chunk A has the current best activation 0.0
+Chunk A with activation 0.0 is the best
+     2.818   PROCEDURAL             CONFLICT-RESOLUTION
+     3.818   DECLARATIVE            RETRIEVED-CHUNK A
+     3.818   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL A
+     3.818   PROCEDURAL             CONFLICT-RESOLUTION
+     3.818   PROCEDURAL             PRODUCTION-SELECTED P3
+     3.818   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     3.818   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     3.868   PROCEDURAL             PRODUCTION-FIRED P3
+     3.868   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     3.868   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     3.868   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.868   DECLARATIVE            start-retrieval
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = C  Chunk's slot value: A
+  similarity: -0.1
+  effective similarity value is -0.3
+Total similarity score -0.3
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -0.3
+Chunk A has the current best activation -0.3
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = C  Chunk's slot value: B
+  similarity: -1.0
+  effective similarity value is -3.0
+Total similarity score -3.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: -3.0
+Computing activation for chunk C
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = C  Chunk's slot value: C
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk C has an activation of: 0.0
+Chunk C is now the current best with activation 0.0
+Chunk C with activation 0.0 is the best
+     3.868   PROCEDURAL             CONFLICT-RESOLUTION
+     4.868   DECLARATIVE            RETRIEVED-CHUNK C
+     4.868   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL C
+     4.868   PROCEDURAL             CONFLICT-RESOLUTION
+     4.868   PROCEDURAL             PRODUCTION-SELECTED P4
+     4.868   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     4.868   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     4.918   PROCEDURAL             PRODUCTION-FIRED P4
+     4.918   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     4.918   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     4.918   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     4.918   DECLARATIVE            start-retrieval
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: A
+  similarity: -0.5
+  effective similarity value is -5.0
+Total similarity score -5.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -5.0
+Chunk A has the current best activation -5.0
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: B
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: 0.0
+Chunk B is now the current best with activation 0.0
+Computing activation for chunk C
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: C
+  similarity: -1.0
+  effective similarity value is -10.0
+Total similarity score -10.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk C has an activation of: -10.0
+Chunk B with activation 0.0 is the best
+     4.918   PROCEDURAL             CONFLICT-RESOLUTION
+     5.918   DECLARATIVE            RETRIEVED-CHUNK B
+     5.918   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL B
+     5.918   PROCEDURAL             CONFLICT-RESOLUTION
+     5.918   PROCEDURAL             PRODUCTION-SELECTED P5
+     5.918   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     5.918   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     5.968   PROCEDURAL             PRODUCTION-FIRED P5
+     5.968   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     5.968   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     5.968   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     5.968   DECLARATIVE            start-retrieval
+Computing activation for chunk A
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: A
+  similarity: -0.5
+  effective similarity value is -1.0
+Total similarity score -1.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk A has an activation of: -1.0
+Chunk A has the current best activation -1.0
+Computing activation for chunk B
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: B
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk B has an activation of: 0.0
+Chunk B is now the current best with activation 0.0
+Computing activation for chunk C
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot SLOT
+  Requested: = B  Chunk's slot value: C
+  similarity: -1.0
+  effective similarity value is -2.0
+Total similarity score -2.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk C has an activation of: -2.0
+Chunk B with activation 0.0 is the best
+     5.968   PROCEDURAL             CONFLICT-RESOLUTION
+     6.968   DECLARATIVE            RETRIEVED-CHUNK B
+     6.968   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL B
+     6.968   PROCEDURAL             CONFLICT-RESOLUTION
+     6.968   PROCEDURAL             PRODUCTION-SELECTED P6
+     6.968   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     6.968   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     7.018   PROCEDURAL             PRODUCTION-FIRED P6
+     7.018   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     7.018   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     7.018   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     7.018   DECLARATIVE            start-retrieval
+#|Warning: Invalid retrieval request. |#
+#|Warning: :mp-value parameter's value can only be nil or a number. |#
+     7.018   PROCEDURAL             CONFLICT-RESOLUTION
+     7.018   PROCEDURAL             PRODUCTION-SELECTED P7
+     7.018   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     7.068   PROCEDURAL             PRODUCTION-FIRED P7
+     7.068   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     7.068   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     7.068   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     7.068   DECLARATIVE            start-retrieval
+#|Warning: Invalid retrieval request. |#
+#|Warning: :mp-value parameter used more than once. |#
+     7.068   PROCEDURAL             CONFLICT-RESOLUTION
+     7.068   ------                 Stopped because no events left to process

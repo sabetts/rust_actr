@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit5modeling-v5-p3-run-queue" :REF "tutorial-unit5modeling-v5-p3-run-queue.ref" :MODELS ("test-models;models;declarative-issues-v5.lisp") :SEED-SET T :RUNS ((28 (100 1) NIL 22)) :STEPS ((:SGP :V NIL) (:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 28 (100 1) NIL 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP ((:V NIL)) :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

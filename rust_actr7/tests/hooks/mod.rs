@@ -27,7 +27,7 @@ use actr_engine::rpc::session::Session;
 use actr_engine::{run_model_steps_with_hook, EventHook, EventView, PreResult, Step, Verdict};
 
 use super::{
-    actr_dir, apply_session_step, first_diff, load_spec_device, normalize, read_named_spec,
+    apply_session_step, first_diff, load_spec_device, models_dir, normalize, read_named_spec,
     refs_dir, NoRemote, Spec,
 };
 
@@ -233,7 +233,7 @@ impl EventHook for IrHook {
 /// the projection or the gated trace, and compare to `<case>.ref` under
 /// ACT-R's own comparator.
 pub fn run_hook_case(case: &str, ir: &HookIr) -> Result<(), String> {
-    let root = actr_dir();
+    let root = models_dir();
     if !root.is_dir() {
         return Err(format!("ACT-R checkout not found at {}", root.display()));
     }

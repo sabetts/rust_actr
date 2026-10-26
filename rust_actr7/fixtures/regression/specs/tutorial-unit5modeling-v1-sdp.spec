@@ -1,2 +1,0 @@
-(:NAME "tutorial-unit5modeling-v1-sdp" :REF "tutorial-unit5modeling-v1-sdp.ref" :MODELS ("test-models;models;declarative-issues-v1.lisp") :SEED-SET T :RUNS ((2 (100 1) NIL 22)) :STEPS ((:SGP :V NIL) (:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 2 (100 1) NIL 22) (:SGP :V T) (:MODEL-OUTPUT "? (sdp v1 v2 v3)
-") (:MODEL-OUTPUT ">>> actr.sdp('v1','v2','v3')") (:MODEL-OUTPUT "") (:COMMAND SDP (V1 V2 V3))) :GOAL-FOCUS 0 :RESETS 0 :SGP ((:V NIL) (:V T)) :SCOPE :PURE :FLAGS NIL :ERROR NIL)

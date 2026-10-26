@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit3-sperling-trial-trace" :REF "tutorial-unit3-sperling-trial-trace.ref" :MODELS ("tutorial;unit3;sperling-model.lisp") :SEED-SET T :RUNS ((30 (100 0) T 22)) :STEPS ((:RESET) (:RUN 30 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

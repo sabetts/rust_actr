@@ -1,0 +1,11 @@
+    22.384   PROCEDURAL             PRODUCTION-FIRED DETECT-FEEDBACK
+Production Compilation process started for DETECT-FEEDBACK
+  Production RESPOND and DETECT-FEEDBACK are being composed.
+  Recreating production PRODUCTION4
+Parameters for production PRODUCTION4:
+ :utility    NIL
+ :u   2.859
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to DETECT-FEEDBACK.

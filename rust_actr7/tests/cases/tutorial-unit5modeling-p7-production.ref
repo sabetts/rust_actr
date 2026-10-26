@@ -1,0 +1,11 @@
+  (p p7 
+     =goal>
+       isa task-state
+       state r7
+     =imaginal>
+     =retrieval>
+   ==>
+     =goal>
+       state r8
+     =imaginal>
+       goal =goal)

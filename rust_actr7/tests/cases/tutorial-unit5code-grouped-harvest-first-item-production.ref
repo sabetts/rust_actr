@@ -1,0 +1,17 @@
+(p harvest-first-item
+   =goal>
+      isa      recall-list
+      element  first
+      group    =group
+   =retrieval>
+      isa      item
+      name     =name
+  ==>
+   =goal>
+      element  second
+   +retrieval>
+      isa      item
+      group    =group
+      position second 
+      :recently-retrieved nil
+   !eval! ("grouped-response" =name))

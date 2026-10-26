@@ -1,0 +1,4 @@
+  (chunk-type task state)
+  (chunk-type number visual-rep)
+  (chunk-type response key (is-response t))
+  (chunk-type trial num1 num2 result response)

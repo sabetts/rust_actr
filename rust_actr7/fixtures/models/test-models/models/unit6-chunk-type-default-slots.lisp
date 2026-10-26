@@ -1,0 +1,8 @@
+(clear-all)
+(define-model isa-test
+    
+  (chunk-type a slot)
+  (chunk-type b (slot 1))
+  (chunk-type c slot (slot2 t))
+  
+  )

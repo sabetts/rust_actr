@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit1modeling-broken-addition-v6-run" :REF "tutorial-unit1modeling-broken-addition-v6-run.ref" :MODELS ("test-models;models;broken-addition-v6.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :STEPS ((:MODEL-OUTPUT "? (run 10)") (:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

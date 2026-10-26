@@ -1,0 +1,3 @@
+   (f1 isa simple-fact item sky attribute blue)
+   (f2 isa simple-fact item rose attribute red)
+   (f3 isa simple-fact item grass attribute green)

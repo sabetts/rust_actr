@@ -1,0 +1,19 @@
+(p read-probe
+    =goal>
+      isa      goal
+      step     attending-probe
+    =visual>
+      isa      visual-object
+      value    =val
+    ?imaginal>
+      state    free
+   ==>
+    +imaginal>
+      isa      pair
+      probe    =val
+    +retrieval>
+      isa      pair
+      probe    =val
+    =goal>
+      step     testing
+)

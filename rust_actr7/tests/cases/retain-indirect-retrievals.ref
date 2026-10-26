@@ -1,0 +1,520 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED A
+Production Compilation process started for A
+  Production A is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK G
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED B
+Production Compilation process started for B
+  No previous production to compose with.
+  Setting previous production to B.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED C
+Production Compilation process started for C
+  Production C is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.150   DECLARATIVE            start-retrieval
+     0.150   DECLARATIVE            RETRIEVED-CHUNK G
+     0.150   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED D
+Production Compilation process started for D
+  No previous production to compose with.
+  Setting previous production to D.
+     0.200   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.200   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED E
+Production Compilation process started for E
+  Production E is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.250   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.250   DECLARATIVE            start-retrieval
+     0.250   DECLARATIVE            RETRIEVED-CHUNK G
+     0.250   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED F
+Production Compilation process started for F
+  Production F is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   DECLARATIVE            start-retrieval
+     0.300   DECLARATIVE            RETRIEVED-CHUNK G
+     0.300   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED G
+Production Compilation process started for G
+  No previous production to compose with.
+  Setting previous production to G.
+     0.350   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   PROCEDURAL             PRODUCTION-FIRED H
+Production Compilation process started for H
+  Production H is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.400   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.400   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (VALUE G-1)
+     0.400   DECLARATIVE            start-retrieval
+     0.400   DECLARATIVE            RETRIEVED-CHUNK G
+     0.400   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             PRODUCTION-FIRED I
+Production Compilation process started for I
+  Production I is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.450   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.450   DECLARATIVE            start-retrieval
+     0.450   DECLARATIVE            RETRIEVED-CHUNK G
+     0.450   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             PRODUCTION-FIRED J
+Production Compilation process started for J
+  Production J is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.500   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.500   DECLARATIVE            start-retrieval
+     0.500   DECLARATIVE            RETRIEVED-CHUNK G
+     0.500   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED A
+Production Compilation process started for A
+  No previous production to compose with.
+  Setting previous production to A.
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK G
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED B
+Production Compilation process started for B
+  Production A and B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "A & B"
+   =GOAL>
+       COLOR RED
+       VALUE 1
+ ==>
+   =GOAL>
+       VALUE 3
+   +RETRIEVAL>
+       COLOR RED
+)
+Parameters for production PRODUCTION0:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to B.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED C
+Production Compilation process started for C
+  Production B and C are being composed.
+  New production:
+
+(P PRODUCTION1
+  "B & C"
+   =GOAL>
+       VALUE 2
+       COLOR RED
+ ==>
+   =GOAL>
+       VALUE 4
+   +RETRIEVAL>
+       COLOR RED
+)
+Parameters for production PRODUCTION1:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to C.
+     0.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.150   DECLARATIVE            start-retrieval
+     0.150   DECLARATIVE            RETRIEVED-CHUNK G
+     0.150   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED D
+Production Compilation process started for D
+  Production C and D are being composed.
+  New production:
+
+(P PRODUCTION2
+  "C & D - G"
+   =GOAL>
+       COLOR RED
+       VALUE 3
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       VALUE 5
+   +IMAGINAL>
+       VALUE G-1
+)
+Parameters for production PRODUCTION2:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to D.
+     0.200   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.200   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED E
+Production Compilation process started for E
+  Production D and E are being composed.
+  New production:
+
+(P PRODUCTION3
+  "D & E"
+   =GOAL>
+       VALUE 4
+       COLOR RED
+   =RETRIEVAL>
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       VALUE 6
+   +RETRIEVAL>
+       COLOR RED
+   +IMAGINAL>
+       VALUE =RETRIEVAL
+)
+Parameters for production PRODUCTION3:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to E.
+     0.250   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.250   DECLARATIVE            start-retrieval
+     0.250   DECLARATIVE            RETRIEVED-CHUNK G
+     0.250   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED F
+Production Compilation process started for F
+  Production E and F are being composed.
+  New production:
+
+(P PRODUCTION4
+  "E & F - G"
+   =GOAL>
+       VALUE 5
+       COLOR RED
+ ==>
+   =GOAL>
+       VALUE 7
+   +RETRIEVAL>
+       COLOR RED
+)
+Parameters for production PRODUCTION4:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to F.
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   DECLARATIVE            start-retrieval
+     0.300   DECLARATIVE            RETRIEVED-CHUNK G
+     0.300   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED G
+Production Compilation process started for G
+  Production F and G are being composed.
+  New production:
+
+(P PRODUCTION5
+  "F & G - G"
+   =GOAL>
+       COLOR RED
+       VALUE 6
+   =RETRIEVAL>
+ ==>
+   =GOAL>
+       VALUE 8
+)
+Parameters for production PRODUCTION5:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to G.
+     0.350   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   PROCEDURAL             PRODUCTION-FIRED H
+Production Compilation process started for H
+  Production G and H are being composed.
+  New production:
+
+(P PRODUCTION6
+  "G & H"
+   =GOAL>
+       VALUE 7
+       COLOR RED
+   =RETRIEVAL>
+ ==>
+   =GOAL>
+       VALUE 9
+   +RETRIEVAL>
+       COLOR RED
+)
+Parameters for production PRODUCTION6:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to H.
+     0.400   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.400   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (VALUE G-1)
+     0.400   DECLARATIVE            start-retrieval
+     0.400   DECLARATIVE            RETRIEVED-CHUNK G
+     0.400   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             PRODUCTION-FIRED I
+Production Compilation process started for I
+  Production I is not valid for compilation
+   because it has an indirect action using a variable bound with a !safe-bind!
+     0.450   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.450   DECLARATIVE            start-retrieval
+     0.450   DECLARATIVE            RETRIEVED-CHUNK G
+     0.450   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             PRODUCTION-FIRED J
+Production Compilation process started for J
+  No previous production to compose with.
+  Setting previous production to J.
+     0.500   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.500   DECLARATIVE            start-retrieval
+     0.500   DECLARATIVE            RETRIEVED-CHUNK G
+     0.500   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   ------                 Stopped because no events left to process
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED A
+Production Compilation process started for A
+  No previous production to compose with.
+  Setting previous production to A.
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK G
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED B
+Production Compilation process started for B
+  Production A and B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "A & B"
+   =GOAL>
+       COLOR =C
+       VALUE 1
+ ==>
+   =GOAL>
+       VALUE 3
+   +RETRIEVAL> =C
+)
+Parameters for production PRODUCTION0:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to B.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED C
+Production Compilation process started for C
+  Production B and C are being composed.
+  New production:
+
+(P PRODUCTION1
+  "B & C"
+   =GOAL>
+       VALUE 2
+       COLOR =C
+ ==>
+   =GOAL>
+       VALUE 4
+   +RETRIEVAL> =C
+)
+Parameters for production PRODUCTION1:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to C.
+     0.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.150   DECLARATIVE            start-retrieval
+     0.150   DECLARATIVE            RETRIEVED-CHUNK G
+     0.150   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED D
+Production Compilation process started for D
+  Production C and D are being composed.
+  New production:
+
+(P PRODUCTION2
+  "C & D - G"
+   =GOAL>
+       COLOR RED
+       VALUE 3
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       VALUE 5
+   +IMAGINAL>
+       VALUE G-1
+)
+Parameters for production PRODUCTION2:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to D.
+     0.200   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.200   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED E
+Production Compilation process started for E
+  Production D and E are being composed.
+  New production:
+
+(P PRODUCTION3
+  "D & E"
+   =GOAL>
+       VALUE 4
+       COLOR =C
+   =RETRIEVAL>
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       VALUE 6
+   +RETRIEVAL> =C
+   +IMAGINAL>
+       VALUE =RETRIEVAL
+)
+Parameters for production PRODUCTION3:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to E.
+     0.250   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.250   DECLARATIVE            start-retrieval
+     0.250   DECLARATIVE            RETRIEVED-CHUNK G
+     0.250   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED F
+Production Compilation process started for F
+  Production E and F are being composed.
+  New production:
+
+(P PRODUCTION4
+  "E & F - G"
+   =GOAL>
+       VALUE 5
+       COLOR RED
+ ==>
+   =GOAL>
+       VALUE 7
+   +RETRIEVAL> RED
+)
+Parameters for production PRODUCTION4:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to F.
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   DECLARATIVE            start-retrieval
+     0.300   DECLARATIVE            RETRIEVED-CHUNK G
+     0.300   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED G
+Production Compilation process started for G
+  Production F and G are being composed.
+  New production:
+
+(P PRODUCTION5
+  "F & G - G"
+   =GOAL>
+       COLOR RED
+       VALUE 6
+   =RETRIEVAL>
+ ==>
+   =GOAL>
+       VALUE 8
+)
+Parameters for production PRODUCTION5:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to G.
+     0.350   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   PROCEDURAL             PRODUCTION-FIRED H
+Production Compilation process started for H
+  Production G and H are being composed.
+  New production:
+
+(P PRODUCTION6
+  "G & H"
+   =GOAL>
+       VALUE 7
+       COLOR =C
+   =RETRIEVAL>
+ ==>
+   =GOAL>
+       VALUE 9
+   +RETRIEVAL> =C
+)
+Parameters for production PRODUCTION6:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to H.
+     0.400   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.400   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (VALUE G-1)
+     0.400   DECLARATIVE            start-retrieval
+     0.400   DECLARATIVE            RETRIEVED-CHUNK G
+     0.400   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             PRODUCTION-FIRED I
+Production Compilation process started for I
+  Production H and I are being composed.
+  New production:
+
+(P PRODUCTION7
+  "H & I"
+   !SAFE-BIND! =R (QUOTE RED)
+   =GOAL>
+       COLOR RED
+       VALUE 8
+ ==>
+   =GOAL>
+       VALUE 10
+   +RETRIEVAL> =R
+)
+Parameters for production PRODUCTION7:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to I.
+     0.450   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.450   DECLARATIVE            start-retrieval
+     0.450   DECLARATIVE            RETRIEVED-CHUNK G
+     0.450   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             PRODUCTION-FIRED J
+Production Compilation process started for J
+  Production I and J cannot be composed
+   because an indirect request with buffer RETRIEVAL uses a variable from a LHS !safe-bind!
+  Setting previous production to J.
+     0.500   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.500   DECLARATIVE            start-retrieval
+     0.500   DECLARATIVE            RETRIEVED-CHUNK G
+     0.500   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   ------                 Stopped because no events left to process

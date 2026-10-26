@@ -1,0 +1,97 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED A
+Production Compilation process started for A
+  Production A is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.050   GOAL                   MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK G
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED B
+Production Compilation process started for B
+  Production B is not valid for compilation
+   because it has an indirect action with the GOAL buffer
+     0.100   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   GOAL                   SET-BUFFER-CHUNK GOAL (COLOR RED VALUE 3)
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED A
+Production Compilation process started for A
+  Production A is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer
+     0.150   GOAL                   MOD-BUFFER-CHUNK GOAL
+     0.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.150   DECLARATIVE            start-retrieval
+     0.150   DECLARATIVE            RETRIEVED-CHUNK G
+     0.150   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED B
+Production Compilation process started for B
+  Production B is not valid for compilation
+   because it has an indirect action with the GOAL buffer
+     0.200   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.200   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.200   GOAL                   SET-BUFFER-CHUNK GOAL (COLOR RED VALUE 3)
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED A
+Production Compilation process started for A
+  No previous production to compose with.
+  Setting previous production to A.
+     0.050   GOAL                   MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK G
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL G
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED B
+Production Compilation process started for B
+  Production A and B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "A & B - G"
+   =GOAL>
+       VALUE 3
+ ==>
+   +GOAL>
+       VALUE 3
+       COLOR RED
+   *GOAL>
+       VALUE 2
+)
+Parameters for production PRODUCTION0:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to B.
+     0.100   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   GOAL                   SET-BUFFER-CHUNK GOAL (COLOR RED VALUE 3)
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED PRODUCTION0
+Production Compilation process started for PRODUCTION0
+  Buffer GOAL prevents composition of these productions
+   because both productions make requests
+  Production B and PRODUCTION0 cannot be composed.
+  Setting previous production to PRODUCTION0.
+     0.150   GOAL                   MOD-BUFFER-CHUNK GOAL
+     0.150   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.150   GOAL                   SET-BUFFER-CHUNK GOAL (VALUE 3 COLOR RED)
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED PRODUCTION0
+Production Compilation process started for PRODUCTION0
+  Buffer GOAL prevents composition of these productions
+   because both productions make requests
+  Production PRODUCTION0 and PRODUCTION0 cannot be composed.
+  Setting previous production to PRODUCTION0.
+     0.200   GOAL                   MOD-BUFFER-CHUNK GOAL
+     0.200   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.200   GOAL                   SET-BUFFER-CHUNK GOAL (VALUE 3 COLOR RED)
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   ------                 Stopped because time limit reached

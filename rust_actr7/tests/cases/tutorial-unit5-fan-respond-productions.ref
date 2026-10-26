@@ -1,0 +1,45 @@
+  (P yes
+     =imaginal>
+        ISA         comprehend-sentence
+        arg1        =person
+        arg2        =location
+     =retrieval>
+        ISA         comprehend-sentence
+        arg1        =person
+        arg2        =location
+     ?manual>   
+        state       free   
+     ==>
+     +manual>
+        cmd         press-key
+        key         "k")
+
+  (P mismatch-person
+     =imaginal>
+        ISA         comprehend-sentence
+        arg1        =person
+        arg2        =location
+     =retrieval>
+        ISA         comprehend-sentence
+      - arg1        =person
+     ?manual>   
+        state       free   
+     ==>
+     +manual>
+        ISA         press-key
+        key         "d")
+
+  (P mismatch-location
+     =imaginal>
+        ISA         comprehend-sentence
+        arg1        =person
+        arg2        =location
+     =retrieval>
+        ISA         comprehend-sentence
+      - arg2        =location
+     ?manual>   
+        state       free   
+     ==>
+     +manual>
+        cmd         press-key
+        key         "d")

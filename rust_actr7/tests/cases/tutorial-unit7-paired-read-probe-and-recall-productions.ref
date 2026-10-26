@@ -1,0 +1,20 @@
+(p read-probe                      (p recall
+    =goal>                             =goal>
+      isa      goal                      isa      goal 
+      step     attending-probe           step     testing
+    =visual>                           =retrieval>
+      isa      visual-object             isa      pair
+      value    =val                      answer   =ans
+    ?imaginal>                         ?manual>   
+      state    free                      state    free
+   ==>                                 ?visual>
+    +imaginal>                           state    free
+      isa      pair                   ==>
+      probe    =val                    +manual>              
+    +retrieval>                          cmd      press-key     
+      isa      pair                      key      =ans
+      probe    =val                    =goal>
+    =goal>                               step     read-study-item
+      step     testing                 +visual>
+)                                        cmd      clear
+                                   )

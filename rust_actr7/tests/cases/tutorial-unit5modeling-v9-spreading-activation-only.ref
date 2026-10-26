@@ -1,0 +1,70 @@
+Computing activation for chunk 1-1=0
+...
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.0 from source ADD level  0.33333334 times Sji 0.0
+    Spreading activation  0.0 from source TWO level  0.33333334 times Sji 0.0
+    Spreading activation  0.796854 from source ONE level  0.33333334 times Sji 2.390562
+Total spreading activation: 0.796854
+...
+Adding transient noise 0.36828277
+...
+Chunk 1-1=0 has an activation of: 0.20750335
+...
+Computing activation for chunk 2-1=1
+...
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.0 from source ADD level  0.33333334 times Sji 0.0
+    Spreading activation  0.73608017 from source TWO level  0.33333334 times Sji 2.2082405
+    Spreading activation  0.796854 from source ONE level  0.33333334 times Sji 2.390562
+Total spreading activation: 1.5329342
+...
+Adding transient noise -0.17789373
+...
+Chunk 2-1=1 has an activation of: 0.39740703
+...
+Computing activation for chunk 3-2=1
+...
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.0 from source ADD level  0.33333334 times Sji 0.0
+    Spreading activation  0.73608017 from source TWO level  0.33333334 times Sji 2.2082405
+    Spreading activation  0.56580496 from source ONE level  0.33333334 times Sji 1.6974149
+Total spreading activation: 1.3018851
+...
+Adding transient noise 0.33106902
+...
+Chunk 3-2=1 has an activation of: 0.67532074
+...
+Computing activation for chunk 1+1=2
+...
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.87123525 from source ADD level  0.33333334 times Sji 2.6137056
+    Spreading activation  0.73608017 from source TWO level  0.33333334 times Sji 2.2082405
+    Spreading activation  0.796854 from source ONE level  0.33333334 times Sji 2.390562
+Total spreading activation: 2.4041696
+...
+Adding transient noise -0.38912883
+...
+Chunk 1+1=2 has an activation of: 1.0574073
+...
+Computing activation for chunk 1+2=3
+...
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.87123525 from source ADD level  0.33333334 times Sji 2.6137056
+    Spreading activation  0.73608017 from source TWO level  0.33333334 times Sji 2.2082405
+    Spreading activation  0.56580496 from source ONE level  0.33333334 times Sji 1.6974149
+Total spreading activation: 2.1731205
+...
+Adding transient noise 0.0474016
+...
+Chunk 1+2=3 has an activation of: 1.2628886
+...

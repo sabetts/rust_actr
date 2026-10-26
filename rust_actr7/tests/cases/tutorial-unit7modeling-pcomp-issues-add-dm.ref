@@ -1,0 +1,4 @@
+  (add-dm (zero isa number visual-rep "0")
+          (one isa number visual-rep "1")
+          (two isa number visual-rep "2")
+          (three isa number visual-rep "3"))

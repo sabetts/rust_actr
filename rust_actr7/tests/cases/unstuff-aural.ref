@@ -1,0 +1,448 @@
+unstuff = NIL overwrite = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = T overwrite = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 1 overwrite = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 2.5 overwrite = T modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = NIL overwrite = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = T overwrite = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 1 overwrite = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 2.5 overwrite = NIL modify yes
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL FREE NIL
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED MODIFY-IT
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION AURAL-LOCATION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             PRODUCTION-FIRED MODIFY-IT
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = NIL overwrite = T modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT1 NIL
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT1
+     2.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT3 NIL
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.550   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT3
+     7.550   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.550   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = T overwrite = T modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT1 NIL
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT1
+     2.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     5.100   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     5.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT3 NIL
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.550   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT3
+     7.550   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.550   PROCEDURAL             CONFLICT-RESOLUTION
+    10.550   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+    10.550   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 1 overwrite = T modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT1 NIL
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT1
+     2.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     3.050   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     3.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT3 NIL
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.550   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT3
+     7.550   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.550   PROCEDURAL             CONFLICT-RESOLUTION
+     8.100   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     8.100   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 2.5 overwrite = T modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT1 NIL
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT1
+     2.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     4.550   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     4.550   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   AUDIO                  OVERWRITE-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT3 NIL
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.550   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT3
+     7.550   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.550   PROCEDURAL             CONFLICT-RESOLUTION
+     9.600   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     9.600   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = NIL overwrite = NIL modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = T overwrite = NIL modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     3.100   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     3.100   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+    10.100   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+    10.100   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 1 overwrite = NIL modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT1 NIL
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT1
+     2.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     3.050   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     3.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+     8.050   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     8.050   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached
+unstuff = 2.5 overwrite = NIL modify no
+     0.000   AUDIO                  new-sound
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT0 NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT0
+     0.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.000   ------                 Stopped because time limit reached
+     2.000   AUDIO                  new-sound
+     2.000   PROCEDURAL             CONFLICT-RESOLUTION
+     2.550   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     2.550   PROCEDURAL             CONFLICT-RESOLUTION
+     7.000   ------                 Stopped because time limit reached
+     7.000   AUDIO                  new-sound
+     7.000   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   AUDIO                  SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT2 NIL
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.050   ------                 Stopped because time limit reached
+     7.050   AUDIO                  new-sound
+     7.050   PROCEDURAL             CONFLICT-RESOLUTION
+     7.100   AUDIO                  AUDIO-EVENT-ENDED AUDIO-EVENT2
+     7.100   AUDIO                  MOD-BUFFER-CHUNK AURAL-LOCATION
+     7.100   PROCEDURAL             CONFLICT-RESOLUTION
+     9.550   AUDIO                  ERASE-BUFFER AURAL-LOCATION
+     9.550   PROCEDURAL             CONFLICT-RESOLUTION
+    12.000   ------                 Stopped because time limit reached

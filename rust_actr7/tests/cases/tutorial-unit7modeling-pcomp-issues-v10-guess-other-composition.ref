@@ -1,0 +1,27 @@
+    36.319   PROCEDURAL             PRODUCTION-FIRED GUESS-OTHER
+Production Compilation process started for GUESS-OTHER
+  Production RETRIEVED-A-NON-WIN and GUESS-OTHER are being composed.
+  New production:
+
+(P PRODUCTION22
+  "RETRIEVED-A-NON-WIN & GUESS-OTHER - RESPONSE-1"
+   !SAFE-EVAL! (NOT (EQUAL =RESULT (QUOTE WIN)))
+   =GOAL>
+       STATE PROCESS-PAST-TRIAL
+   =RETRIEVAL>
+       RESPONSE "s"
+       RESULT =RESULT
+ ==>
+   =GOAL>
+       STATE RESPOND
+   +RETRIEVAL>
+       IS-RESPONSE T
+    -  KEY "s"
+)
+Parameters for production PRODUCTION22:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to GUESS-OTHER.

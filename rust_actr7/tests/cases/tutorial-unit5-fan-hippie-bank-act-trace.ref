@@ -1,0 +1,49 @@
+     0.585   DECLARATIVE            start-retrieval
+Chunk P3 matches
+Chunk P2 matches
+Chunk P1 matches
+Computing activation for chunk P3
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK HIPPIE)
+    Spreading activation  0.25069386 from source BANK level  0.5 times Sji 0.5013877
+    Spreading activation  0.10685283 from source HIPPIE level  0.5 times Sji 0.21370566
+Total spreading activation: 0.3575467
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P3 has an activation of: 0.3575467
+Chunk P3 has the current best activation 0.3575467
+Computing activation for chunk P2
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK HIPPIE)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source HIPPIE level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P2 has an activation of: 0.10685283
+Computing activation for chunk P1
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK HIPPIE)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source HIPPIE level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P1 has an activation of: 0.10685283
+Chunk P3 with activation 0.3575467 is the best
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     1.026   DECLARATIVE            RETRIEVED-CHUNK P3
+     1.026   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL P3
+     1.026   PROCEDURAL             CONFLICT-RESOLUTION

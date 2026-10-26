@@ -1,0 +1,8 @@
+#|Warning: No production defined for (INITIALIZE-ADDITION =GOAL> ADD ARG1 =NUM1 ARG2 =NUM2 SUM NIL ==> =GOAL ISA ADD SUM =NUM1 COUNT ZERO +RETRIEVAL> ISA NUMBER NUMBER =NUM1). |#
+#|Warning: Invalid syntax in (=GOAL> ADD ARG1 =NUM1 ARG2 =NUM2 SUM NIL) condition. |#
+#|Warning: Cannot use nil as a slot name. |#
+#|Warning: --- end of warnings for undefined production INITIALIZE-ADDITION --- |#
+#|Warning: Production TERMINATE-ADDITION uses previously undefined slots (SUMM). |#
+#|Warning: Production INCREMENT-SUM already exists and it is being redefined. |#
+#|Warning: Productions test the SUMM slot in the GOAL buffer which is not requested or modified in any productions. |#
+#|Warning: Productions test the ARG2 slot in the GOAL buffer which is not requested or modified in any productions. |#

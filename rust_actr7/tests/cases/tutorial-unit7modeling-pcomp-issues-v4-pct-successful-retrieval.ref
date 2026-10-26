@@ -1,0 +1,4 @@
+    48.062   PROCEDURAL             PRODUCTION-FIRED RETRIEVED-A-WIN
+Production Compilation process started for RETRIEVED-A-WIN
+  Production RETRIEVED-A-WIN is not valid for compilation
+   because it has an indirect action with the RETRIEVAL buffer

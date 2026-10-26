@@ -1,0 +1,8 @@
+? (unit2-experiment)
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA READ-LETTERS STEP START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   ------                 Stopped because no events left to process
+NIL

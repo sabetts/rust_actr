@@ -1,1 +1,0 @@
-(:NAME "count-w-tree" :REF "count-w-tree.ref" :MODELS ("tutorial;unit1;count.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :STEPS ((:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 10 (100 0) T 22) (:COMMAND PRINT-CONFLICT-TREE)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

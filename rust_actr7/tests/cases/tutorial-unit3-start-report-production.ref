@@ -1,0 +1,12 @@
+(P start-report
+   =goal>
+     isa     read-letters
+     tone    =tone
+   ?visual>
+     state   free
+   ==>
+   +goal>
+     isa     report-row
+     row     =tone
+   +retrieval>
+     status  =tone)

@@ -1,0 +1,4 @@
+    36.267   PROCEDURAL             PRODUCTION-FIRED RETRIEVED-A-NON-WIN
+Production Compilation process started for RETRIEVED-A-NON-WIN
+  Production RETRIEVED-A-NON-WIN is not valid for compilation
+   because it has conditions with modifiers on slot tests

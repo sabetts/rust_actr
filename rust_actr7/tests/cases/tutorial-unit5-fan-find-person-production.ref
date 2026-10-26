@@ -1,0 +1,11 @@
+  (P find-person
+     ?visual-location>
+        buffer      unrequested
+     ?imaginal>
+        state       free
+     ==>
+     +imaginal>
+  
+     +visual-location>
+        ISA         visual-location
+        screen-x    lowest)

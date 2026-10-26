@@ -1,0 +1,20 @@
+
+Production RESPOND-PREVIOUS does NOT match.
+(P RESPOND-PREVIOUS
+   =IMAGINAL>
+       LETTER =LETTER
+   =VISUAL>
+       VALUE "previous"
+       TEXT T
+   ?MANUAL>
+       STATE FREE
+ ==>
+   =IMAGINAL>
+   +RETRIEVAL>
+       NEXT =LETTER
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY =LETTER
+)
+It fails because: 
+The VISUAL buffer is empty.

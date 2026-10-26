@@ -1,0 +1,21 @@
+
+(defun run-it ()
+  (reset)
+  (sgp-fct (list :v *out-file*))
+  (sgp :hear-self t)
+  (run 10)
+  (reset)
+  (sgp-fct (list :v *out-file*))
+  (sgp :hear-self nil)
+  (run 10)
+  (reset)
+  (sgp-fct (list :v *out-file*))
+  (sgp :hear-self speak)
+  (run 10)
+  (reset)
+  (sgp-fct (list :v *out-file*))
+  (sgp :hear-self subvocalize)
+  (run 10))
+  
+(load-act-r-model "ACT-R:test-models;models;hear-self.lisp")
+     

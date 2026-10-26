@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit8-categorize-attribute-result2" :REF "tutorial-unit8-categorize-attribute-result2.ref" :MODELS ("tutorial;lisp;categorize.lisp" "tutorial;unit8;categorize-model.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:COMMAND EXTEND-POSSIBLE-SLOTS S2) (:BUFFER-CHUNK IMAGINAL)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

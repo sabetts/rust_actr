@@ -1,1 +1,0 @@
-(:NAME "test-mp-value-req-param" :REF "test-mp-value-req-param.ref" :MODELS ("test-models;models;test-mp-value-req-param.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22) (30 (100 0) T 22)) :STEPS ((:RESET) (:SGP :MP NIL) (:RUN 10 (100 0) T 22) (:RESET) (:RUN 30 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 2 :SGP ((:MP NIL)) :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

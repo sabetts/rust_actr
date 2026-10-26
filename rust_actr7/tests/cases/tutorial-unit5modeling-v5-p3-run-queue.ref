@@ -1,0 +1,8 @@
+    26.591   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.591   DECLARATIVE            start-retrieval
+    26.591   PROCEDURAL             CONFLICT-RESOLUTION
+    28.000   ------                 Stopped because time limit reached
+
+Events in the queue:
+   596.830   DECLARATIVE            RETRIEVED-CHUNK F3
+   596.830   PROCEDURAL             CONFLICT-RESOLUTION

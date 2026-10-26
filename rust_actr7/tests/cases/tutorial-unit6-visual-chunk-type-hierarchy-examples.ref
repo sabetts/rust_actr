@@ -1,0 +1,3 @@
+  (chunk-type visual-object screen-pos value status color height width)
+  (chunk-type (text (:include visual-object)) (text t))
+  (chunk-type (line (:include visual-object)) (line t) end1-x end1-y end2-x end2-y)

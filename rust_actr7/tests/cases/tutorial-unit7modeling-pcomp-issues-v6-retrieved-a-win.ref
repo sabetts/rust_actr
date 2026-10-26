@@ -1,0 +1,27 @@
+    38.982   PROCEDURAL             PRODUCTION-FIRED RETRIEVED-A-WIN
+Production Compilation process started for RETRIEVED-A-WIN
+  Production RETRIEVE-PAST-TRIAL and RETRIEVED-A-WIN are being composed.
+  New production:
+
+(P PRODUCTION21
+  "RETRIEVE-PAST-TRIAL & RETRIEVED-A-WIN - IMAGINAL-CHUNK0-2"
+   =GOAL>
+       STATE RETRIEVE-PAST-TRIAL
+   =IMAGINAL>
+       NUM1 ONE
+       NUM2 THREE
+ ==>
+   =IMAGINAL>
+   =GOAL>
+       STATE RESPOND
+   +RETRIEVAL>
+       IS-RESPONSE T
+       KEY "s"
+)
+Parameters for production PRODUCTION21:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RETRIEVED-A-WIN.

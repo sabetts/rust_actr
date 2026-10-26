@@ -1,0 +1,10 @@
+  (p start
+     =imaginal>
+        ISA      count-from
+        start    =num1
+        count    nil
+   ==>
+     =imaginal>
+        ISA      count-from
+        count    =num1 
+  ) 

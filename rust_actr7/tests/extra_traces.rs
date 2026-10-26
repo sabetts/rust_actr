@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 use actr_engine::{run_model, DeviceSetup, DeviceText};
 
 mod common;
-use common::{actr_dir, crate_dir, first_diff, meta_value, normalize_eol, parse_seed_str};
+use common::{crate_dir, first_diff, meta_value, models_dir, normalize_eol, parse_seed_str};
 
 macro_rules! trace_case {
     ($ident:ident, $name:literal) => {
@@ -44,10 +44,10 @@ fn traces_dir() -> PathBuf {
 }
 
 fn run_case(name: &str) -> Result<(), String> {
-    let root = actr_dir();
+    let root = models_dir();
     if !root.is_dir() {
         return Err(format!(
-            "ACT-R checkout not found at {} (set ACTR_DIR)",
+            "vendored model fixtures not found at {}",
             root.display()
         ));
     }

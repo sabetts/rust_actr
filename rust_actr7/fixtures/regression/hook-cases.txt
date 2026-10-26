@@ -1,9 +1,7 @@
 # Event-hook (`.lisp` `add-pre/post-event-hook`) cases promoted via the IR in
-# tests/hooks/mod.rs, generated into tests/cases/hook_cases.rs by
-# tools/gen_hook_ir.py. Columns: <case-name> <driver-spec> [<ignore-reason>].
-#
-# A name here is owned by the hook suite: tools/gen_test_cases.py must not also
-# emit it (as runnable or ignored) into tests/cases/test_models_cases.rs.
+# tests/hooks/mod.rs, generated into tests/cases/<ident>.rs by
+# tools/gen_hook_ir.py (one file per case). Columns:
+# <case-name> <driver-spec> [<ignore-reason>].
 #
 # `driver` is the `.spec` whose models/steps/seed/device drive the run. The
 # control cases use their own recovered spec (the extractor records a hook

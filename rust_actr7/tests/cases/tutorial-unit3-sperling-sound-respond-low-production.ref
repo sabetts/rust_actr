@@ -1,0 +1,12 @@
+(p sound-respond-low
+   =goal>
+     isa      read-letters
+     tone     nil
+   =aural>
+     isa      sound
+     content  500
+==>
+   =goal>
+     tone     low
+     upper-y  500
+     lower-y  520)

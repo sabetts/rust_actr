@@ -1,0 +1,7 @@
+    27.481   PROCEDURAL             PRODUCTION-FIRED P8
+    27.481   PROCEDURAL             MODULE-REQUEST GOAL
+    27.481   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    27.481   PROCEDURAL             CLEAR-BUFFER GOAL
+    27.481   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+    27.481   PROCEDURAL             CONFLICT-RESOLUTION
+    27.481   ------                 Stopped because no events left to process

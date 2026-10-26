@@ -1,0 +1,16 @@
+(P do-report
+   =goal>
+     isa      report-row
+     row      =tone
+   =retrieval>
+     status   =tone
+     value    =val
+   ?manual>
+     state    free
+   ==>
+   +manual>              
+     cmd      press-key     
+     key      =val
+   +retrieval>
+     status   =tone
+     :recently-retrieved  nil)

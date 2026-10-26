@@ -1,0 +1,12 @@
+Parameters for production CHOOSE-A:
+ :utility -4.107
+ :u  -4.405
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+Parameters for production CHOOSE-B:
+ :utility -5.604
+ :u  -5.618
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL

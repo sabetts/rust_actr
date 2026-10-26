@@ -1,0 +1,16 @@
+(p calculate-difference
+   =goal>
+      isa      try-strategy
+      state    calculate-difference
+   =imaginal>
+      isa      encoding
+      length   =current-len
+   =visual>
+      isa      line
+      width    =goal-len
+  ==>
+   !bind! =val (abs (- =current-len =goal-len))
+   =imaginal>
+      length   =val
+   =goal>
+      state    consider-next)

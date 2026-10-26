@@ -1,1 +1,0 @@
-(:NAME "base-level-inhibition" :REF "base-level-inhibition.ref" :MODELS ("extras;base-level-inhibition;free-recall.lisp") :SEED-SET T :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :OTHER :FLAGS NIL :ERROR NIL)

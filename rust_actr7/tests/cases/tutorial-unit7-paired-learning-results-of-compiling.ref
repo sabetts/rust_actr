@@ -1,0 +1,32 @@
+     0.400   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-OPERATOR
+Production Compilation process started for RETRIEVE-OPERATOR
+  Production ENCODE-ARG1 and RETRIEVE-OPERATOR are being composed.
+  New production:
+
+(P PRODUCTION1
+  "ENCODE-ARG1 & RETRIEVE-OPERATOR"
+   =GOAL>
+       STEP ATTENDING
+       STATE =STATE
+   =IMAGINAL>
+       ARG1 FILL
+   =VISUAL>
+       TEXT T
+       VALUE =VAL
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       STEP RETRIEVING-OPERATOR
+   +RETRIEVAL>
+       PRE =STATE
+   *IMAGINAL>
+       ARG1 =VAL
+)
+Parameters for production PRODUCTION1:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RETRIEVE-OPERATOR.

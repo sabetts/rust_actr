@@ -1,0 +1,3008 @@
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     1.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     1.050   DECLARATIVE            start-retrieval
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.067   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     1.067   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     1.067   PROCEDURAL             CONFLICT-RESOLUTION
+     1.117   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     1.117   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     1.117   ------                 BREAK-EVENT Stopped by !stop!
+     1.117   PROCEDURAL             CONFLICT-RESOLUTION
+     2.117   ------                 Stopped because time limit reached
+     2.117   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     2.117   PROCEDURAL             CONFLICT-RESOLUTION
+     2.167   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     2.167   PROCEDURAL             CLEAR-BUFFER GOAL
+     2.167   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     2.167   DECLARATIVE            start-retrieval
+     2.167   PROCEDURAL             CONFLICT-RESOLUTION
+     2.252   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     2.252   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     2.252   PROCEDURAL             CONFLICT-RESOLUTION
+     2.302   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     2.302   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     2.302   ------                 BREAK-EVENT Stopped by !stop!
+     2.302   PROCEDURAL             CONFLICT-RESOLUTION
+     3.302   ------                 Stopped because time limit reached
+     3.302   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     3.302   PROCEDURAL             CONFLICT-RESOLUTION
+     3.352   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     3.352   PROCEDURAL             CLEAR-BUFFER GOAL
+     3.352   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.352   DECLARATIVE            start-retrieval
+     3.352   PROCEDURAL             CONFLICT-RESOLUTION
+     3.409   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     3.409   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     3.409   PROCEDURAL             CONFLICT-RESOLUTION
+     3.459   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     3.459   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.459   ------                 BREAK-EVENT Stopped by !stop!
+     3.459   PROCEDURAL             CONFLICT-RESOLUTION
+     4.459   ------                 Stopped because time limit reached
+     4.459   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     4.459   PROCEDURAL             CONFLICT-RESOLUTION
+     4.509   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     4.509   PROCEDURAL             CLEAR-BUFFER GOAL
+     4.509   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     4.509   DECLARATIVE            start-retrieval
+     4.509   PROCEDURAL             CONFLICT-RESOLUTION
+     4.581   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     4.581   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     4.581   PROCEDURAL             CONFLICT-RESOLUTION
+     4.631   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     4.631   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     4.631   ------                 BREAK-EVENT Stopped by !stop!
+     4.631   PROCEDURAL             CONFLICT-RESOLUTION
+     5.631   ------                 Stopped because time limit reached
+     5.631   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     5.631   PROCEDURAL             CONFLICT-RESOLUTION
+     5.681   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     5.681   PROCEDURAL             CLEAR-BUFFER GOAL
+     5.681   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     5.681   DECLARATIVE            start-retrieval
+     5.681   PROCEDURAL             CONFLICT-RESOLUTION
+     5.731   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     5.731   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     5.731   PROCEDURAL             CONFLICT-RESOLUTION
+     5.781   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     5.781   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     5.781   ------                 BREAK-EVENT Stopped by !stop!
+     5.781   PROCEDURAL             CONFLICT-RESOLUTION
+     6.781   ------                 Stopped because time limit reached
+     6.781   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     6.781   PROCEDURAL             CONFLICT-RESOLUTION
+     6.831   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     6.831   PROCEDURAL             CLEAR-BUFFER GOAL
+     6.831   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     6.831   DECLARATIVE            start-retrieval
+     6.831   PROCEDURAL             CONFLICT-RESOLUTION
+     6.856   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     6.856   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     6.856   PROCEDURAL             CONFLICT-RESOLUTION
+     6.906   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     6.906   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     6.906   ------                 BREAK-EVENT Stopped by !stop!
+     6.906   PROCEDURAL             CONFLICT-RESOLUTION
+     7.906   ------                 Stopped because time limit reached
+     7.906   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     7.906   PROCEDURAL             CONFLICT-RESOLUTION
+     7.956   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     7.956   PROCEDURAL             CLEAR-BUFFER GOAL
+     7.956   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     7.956   DECLARATIVE            start-retrieval
+     7.956   PROCEDURAL             CONFLICT-RESOLUTION
+     8.058   DECLARATIVE            RETRIEVED-CHUNK NINE
+     8.058   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+     8.058   PROCEDURAL             CONFLICT-RESOLUTION
+     8.108   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     8.108   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     8.108   ------                 BREAK-EVENT Stopped by !stop!
+     8.108   PROCEDURAL             CONFLICT-RESOLUTION
+     9.108   ------                 Stopped because time limit reached
+     9.108   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     9.108   PROCEDURAL             CONFLICT-RESOLUTION
+     9.158   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     9.158   PROCEDURAL             CLEAR-BUFFER GOAL
+     9.158   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     9.158   DECLARATIVE            start-retrieval
+     9.158   PROCEDURAL             CONFLICT-RESOLUTION
+     9.225   DECLARATIVE            RETRIEVED-CHUNK THREE
+     9.225   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+     9.225   PROCEDURAL             CONFLICT-RESOLUTION
+     9.275   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     9.275   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     9.275   ------                 BREAK-EVENT Stopped by !stop!
+     9.275   PROCEDURAL             CONFLICT-RESOLUTION
+    10.275   ------                 Stopped because time limit reached
+    10.275   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    10.275   PROCEDURAL             CONFLICT-RESOLUTION
+    10.325   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    10.325   PROCEDURAL             CLEAR-BUFFER GOAL
+    10.325   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.325   DECLARATIVE            start-retrieval
+    10.325   PROCEDURAL             CONFLICT-RESOLUTION
+    10.376   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    10.376   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    10.376   PROCEDURAL             CONFLICT-RESOLUTION
+    10.426   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    10.426   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.426   ------                 BREAK-EVENT Stopped by !stop!
+    10.426   PROCEDURAL             CONFLICT-RESOLUTION
+    11.426   ------                 Stopped because time limit reached
+    11.426   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    11.426   PROCEDURAL             CONFLICT-RESOLUTION
+    11.476   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    11.476   PROCEDURAL             CLEAR-BUFFER GOAL
+    11.476   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    11.476   DECLARATIVE            start-retrieval
+    11.476   PROCEDURAL             CONFLICT-RESOLUTION
+    11.520   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    11.520   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    11.520   PROCEDURAL             CONFLICT-RESOLUTION
+    11.570   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    11.570   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    11.570   ------                 BREAK-EVENT Stopped by !stop!
+    11.570   PROCEDURAL             CONFLICT-RESOLUTION
+    12.570   ------                 Stopped because time limit reached
+    12.570   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    12.570   PROCEDURAL             CONFLICT-RESOLUTION
+    12.620   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    12.620   PROCEDURAL             CLEAR-BUFFER GOAL
+    12.620   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    12.620   DECLARATIVE            start-retrieval
+    12.620   PROCEDURAL             CONFLICT-RESOLUTION
+    12.655   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    12.655   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    12.655   PROCEDURAL             CONFLICT-RESOLUTION
+    12.705   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    12.705   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    12.705   ------                 BREAK-EVENT Stopped by !stop!
+    12.705   PROCEDURAL             CONFLICT-RESOLUTION
+    13.705   ------                 Stopped because time limit reached
+    13.705   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    13.705   PROCEDURAL             CONFLICT-RESOLUTION
+    13.755   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    13.755   PROCEDURAL             CLEAR-BUFFER GOAL
+    13.755   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    13.755   DECLARATIVE            start-retrieval
+    13.755   PROCEDURAL             CONFLICT-RESOLUTION
+    13.784   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    13.784   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    13.784   PROCEDURAL             CONFLICT-RESOLUTION
+    13.834   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    13.834   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    13.834   ------                 BREAK-EVENT Stopped by !stop!
+    13.834   PROCEDURAL             CONFLICT-RESOLUTION
+    14.834   ------                 Stopped because time limit reached
+    14.834   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    14.834   PROCEDURAL             CONFLICT-RESOLUTION
+    14.884   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    14.884   PROCEDURAL             CLEAR-BUFFER GOAL
+    14.884   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    14.884   DECLARATIVE            start-retrieval
+    14.884   PROCEDURAL             CONFLICT-RESOLUTION
+    14.937   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    14.937   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    14.937   PROCEDURAL             CONFLICT-RESOLUTION
+    14.987   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    14.987   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    14.987   ------                 BREAK-EVENT Stopped by !stop!
+    14.987   PROCEDURAL             CONFLICT-RESOLUTION
+    15.987   ------                 Stopped because time limit reached
+    15.987   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    15.987   PROCEDURAL             CONFLICT-RESOLUTION
+    16.037   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    16.037   PROCEDURAL             CLEAR-BUFFER GOAL
+    16.037   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    16.037   DECLARATIVE            start-retrieval
+    16.037   PROCEDURAL             CONFLICT-RESOLUTION
+    16.078   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    16.078   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    16.078   PROCEDURAL             CONFLICT-RESOLUTION
+    16.128   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    16.128   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    16.128   ------                 BREAK-EVENT Stopped by !stop!
+    16.128   PROCEDURAL             CONFLICT-RESOLUTION
+    17.128   ------                 Stopped because time limit reached
+    17.128   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    17.128   PROCEDURAL             CONFLICT-RESOLUTION
+    17.178   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    17.178   PROCEDURAL             CLEAR-BUFFER GOAL
+    17.178   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    17.178   DECLARATIVE            start-retrieval
+    17.178   PROCEDURAL             CONFLICT-RESOLUTION
+    17.203   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    17.203   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    17.203   PROCEDURAL             CONFLICT-RESOLUTION
+    17.253   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    17.253   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    17.253   ------                 BREAK-EVENT Stopped by !stop!
+    17.253   PROCEDURAL             CONFLICT-RESOLUTION
+    18.253   ------                 Stopped because time limit reached
+    18.253   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    18.253   PROCEDURAL             CONFLICT-RESOLUTION
+    18.303   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    18.303   PROCEDURAL             CLEAR-BUFFER GOAL
+    18.303   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    18.303   DECLARATIVE            start-retrieval
+    18.303   PROCEDURAL             CONFLICT-RESOLUTION
+    18.335   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    18.335   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    18.335   PROCEDURAL             CONFLICT-RESOLUTION
+    18.385   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    18.385   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    18.385   ------                 BREAK-EVENT Stopped by !stop!
+    18.385   PROCEDURAL             CONFLICT-RESOLUTION
+    19.385   ------                 Stopped because time limit reached
+    19.385   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    19.385   PROCEDURAL             CONFLICT-RESOLUTION
+    19.435   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    19.435   PROCEDURAL             CLEAR-BUFFER GOAL
+    19.435   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    19.435   DECLARATIVE            start-retrieval
+    19.435   PROCEDURAL             CONFLICT-RESOLUTION
+    19.482   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    19.482   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    19.482   PROCEDURAL             CONFLICT-RESOLUTION
+    19.532   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    19.532   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    19.532   ------                 BREAK-EVENT Stopped by !stop!
+    19.532   PROCEDURAL             CONFLICT-RESOLUTION
+    20.532   ------                 Stopped because time limit reached
+    20.532   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    20.532   PROCEDURAL             CONFLICT-RESOLUTION
+    20.582   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    20.582   PROCEDURAL             CLEAR-BUFFER GOAL
+    20.582   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    20.582   DECLARATIVE            start-retrieval
+    20.582   PROCEDURAL             CONFLICT-RESOLUTION
+    20.649   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    20.649   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    20.649   PROCEDURAL             CONFLICT-RESOLUTION
+    20.699   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    20.699   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    20.699   ------                 BREAK-EVENT Stopped by !stop!
+    20.699   PROCEDURAL             CONFLICT-RESOLUTION
+    21.699   ------                 Stopped because time limit reached
+    21.699   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    21.699   PROCEDURAL             CONFLICT-RESOLUTION
+    21.749   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    21.749   PROCEDURAL             CLEAR-BUFFER GOAL
+    21.749   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    21.749   DECLARATIVE            start-retrieval
+    21.749   PROCEDURAL             CONFLICT-RESOLUTION
+    21.786   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    21.786   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    21.786   PROCEDURAL             CONFLICT-RESOLUTION
+    21.836   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    21.836   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    21.836   ------                 BREAK-EVENT Stopped by !stop!
+    21.836   PROCEDURAL             CONFLICT-RESOLUTION
+    22.836   ------                 Stopped because time limit reached
+    22.836   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    22.836   PROCEDURAL             CONFLICT-RESOLUTION
+    22.886   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    22.886   PROCEDURAL             CLEAR-BUFFER GOAL
+    22.886   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    22.886   DECLARATIVE            start-retrieval
+    22.886   PROCEDURAL             CONFLICT-RESOLUTION
+    22.925   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    22.925   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    22.925   PROCEDURAL             CONFLICT-RESOLUTION
+    22.975   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    22.975   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    22.975   ------                 BREAK-EVENT Stopped by !stop!
+    22.975   PROCEDURAL             CONFLICT-RESOLUTION
+    23.975   ------                 Stopped because time limit reached
+    23.975   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    23.975   PROCEDURAL             CONFLICT-RESOLUTION
+    24.025   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    24.025   PROCEDURAL             CLEAR-BUFFER GOAL
+    24.025   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    24.025   DECLARATIVE            start-retrieval
+    24.025   PROCEDURAL             CONFLICT-RESOLUTION
+    24.082   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    24.082   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    24.082   PROCEDURAL             CONFLICT-RESOLUTION
+    24.132   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    24.132   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    24.132   ------                 BREAK-EVENT Stopped by !stop!
+    24.132   PROCEDURAL             CONFLICT-RESOLUTION
+    25.132   ------                 Stopped because time limit reached
+    25.132   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    25.132   PROCEDURAL             CONFLICT-RESOLUTION
+    25.182   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    25.182   PROCEDURAL             CLEAR-BUFFER GOAL
+    25.182   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    25.182   DECLARATIVE            start-retrieval
+    25.182   PROCEDURAL             CONFLICT-RESOLUTION
+    25.245   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    25.245   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    25.245   PROCEDURAL             CONFLICT-RESOLUTION
+    25.295   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    25.295   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    25.295   ------                 BREAK-EVENT Stopped by !stop!
+    25.295   PROCEDURAL             CONFLICT-RESOLUTION
+    26.295   ------                 Stopped because time limit reached
+    26.295   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    26.295   PROCEDURAL             CONFLICT-RESOLUTION
+    26.345   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    26.345   PROCEDURAL             CLEAR-BUFFER GOAL
+    26.345   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.345   DECLARATIVE            start-retrieval
+    26.345   PROCEDURAL             CONFLICT-RESOLUTION
+    26.406   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    26.406   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    26.406   PROCEDURAL             CONFLICT-RESOLUTION
+    26.456   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    26.456   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.456   ------                 BREAK-EVENT Stopped by !stop!
+    26.456   PROCEDURAL             CONFLICT-RESOLUTION
+    27.456   ------                 Stopped because time limit reached
+    27.456   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    27.456   PROCEDURAL             CONFLICT-RESOLUTION
+    27.506   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    27.506   PROCEDURAL             CLEAR-BUFFER GOAL
+    27.506   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.506   DECLARATIVE            start-retrieval
+    27.506   PROCEDURAL             CONFLICT-RESOLUTION
+    27.564   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    27.564   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    27.564   PROCEDURAL             CONFLICT-RESOLUTION
+    27.614   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    27.614   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.614   ------                 BREAK-EVENT Stopped by !stop!
+    27.614   PROCEDURAL             CONFLICT-RESOLUTION
+    28.614   ------                 Stopped because time limit reached
+    28.614   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    28.614   PROCEDURAL             CONFLICT-RESOLUTION
+    28.664   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    28.664   PROCEDURAL             CLEAR-BUFFER GOAL
+    28.664   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    28.664   DECLARATIVE            start-retrieval
+    28.664   PROCEDURAL             CONFLICT-RESOLUTION
+    28.676   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    28.676   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    28.676   PROCEDURAL             CONFLICT-RESOLUTION
+    28.726   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    28.726   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    28.726   ------                 BREAK-EVENT Stopped by !stop!
+    28.726   PROCEDURAL             CONFLICT-RESOLUTION
+    29.726   ------                 Stopped because time limit reached
+    29.726   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    29.726   PROCEDURAL             CONFLICT-RESOLUTION
+    29.776   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    29.776   PROCEDURAL             CLEAR-BUFFER GOAL
+    29.776   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    29.776   DECLARATIVE            start-retrieval
+    29.776   PROCEDURAL             CONFLICT-RESOLUTION
+    29.820   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    29.820   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    29.820   PROCEDURAL             CONFLICT-RESOLUTION
+    29.870   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    29.870   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    29.870   ------                 BREAK-EVENT Stopped by !stop!
+    29.870   PROCEDURAL             CONFLICT-RESOLUTION
+    30.870   ------                 Stopped because time limit reached
+    30.870   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    30.870   PROCEDURAL             CONFLICT-RESOLUTION
+    30.920   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    30.920   PROCEDURAL             CLEAR-BUFFER GOAL
+    30.920   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    30.920   DECLARATIVE            start-retrieval
+    30.920   PROCEDURAL             CONFLICT-RESOLUTION
+    30.950   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    30.950   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    30.950   PROCEDURAL             CONFLICT-RESOLUTION
+    31.000   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    31.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    31.000   ------                 BREAK-EVENT Stopped by !stop!
+    31.000   PROCEDURAL             CONFLICT-RESOLUTION
+    32.000   ------                 Stopped because time limit reached
+    32.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    32.000   PROCEDURAL             CONFLICT-RESOLUTION
+    32.050   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    32.050   PROCEDURAL             CLEAR-BUFFER GOAL
+    32.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    32.050   DECLARATIVE            start-retrieval
+    32.050   PROCEDURAL             CONFLICT-RESOLUTION
+    32.075   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    32.075   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    32.075   PROCEDURAL             CONFLICT-RESOLUTION
+    32.125   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    32.125   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    32.125   ------                 BREAK-EVENT Stopped by !stop!
+    32.125   PROCEDURAL             CONFLICT-RESOLUTION
+    33.125   ------                 Stopped because time limit reached
+    33.125   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    33.125   PROCEDURAL             CONFLICT-RESOLUTION
+    33.175   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    33.175   PROCEDURAL             CLEAR-BUFFER GOAL
+    33.175   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    33.175   DECLARATIVE            start-retrieval
+    33.175   PROCEDURAL             CONFLICT-RESOLUTION
+    33.189   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    33.189   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    33.189   PROCEDURAL             CONFLICT-RESOLUTION
+    33.239   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    33.239   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    33.239   ------                 BREAK-EVENT Stopped by !stop!
+    33.239   PROCEDURAL             CONFLICT-RESOLUTION
+    34.239   ------                 Stopped because time limit reached
+    34.239   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    34.239   PROCEDURAL             CONFLICT-RESOLUTION
+    34.289   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    34.289   PROCEDURAL             CLEAR-BUFFER GOAL
+    34.289   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    34.289   DECLARATIVE            start-retrieval
+    34.289   PROCEDURAL             CONFLICT-RESOLUTION
+    34.323   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    34.323   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    34.323   PROCEDURAL             CONFLICT-RESOLUTION
+    34.373   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    34.373   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    34.373   ------                 BREAK-EVENT Stopped by !stop!
+    34.373   PROCEDURAL             CONFLICT-RESOLUTION
+    35.373   ------                 Stopped because time limit reached
+    35.373   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    35.373   PROCEDURAL             CONFLICT-RESOLUTION
+    35.423   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    35.423   PROCEDURAL             CLEAR-BUFFER GOAL
+    35.423   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    35.423   DECLARATIVE            start-retrieval
+    35.423   PROCEDURAL             CONFLICT-RESOLUTION
+    35.451   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    35.451   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    35.451   PROCEDURAL             CONFLICT-RESOLUTION
+    35.501   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    35.501   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    35.501   ------                 BREAK-EVENT Stopped by !stop!
+    35.501   PROCEDURAL             CONFLICT-RESOLUTION
+    36.501   ------                 Stopped because time limit reached
+    36.501   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    36.501   PROCEDURAL             CONFLICT-RESOLUTION
+    36.551   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    36.551   PROCEDURAL             CLEAR-BUFFER GOAL
+    36.551   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    36.551   DECLARATIVE            start-retrieval
+    36.551   PROCEDURAL             CONFLICT-RESOLUTION
+    36.579   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    36.579   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    36.579   PROCEDURAL             CONFLICT-RESOLUTION
+    36.629   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    36.629   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    36.629   ------                 BREAK-EVENT Stopped by !stop!
+    36.629   PROCEDURAL             CONFLICT-RESOLUTION
+    37.629   ------                 Stopped because time limit reached
+    37.629   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    37.629   PROCEDURAL             CONFLICT-RESOLUTION
+    37.679   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    37.679   PROCEDURAL             CLEAR-BUFFER GOAL
+    37.679   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    37.679   DECLARATIVE            start-retrieval
+    37.679   PROCEDURAL             CONFLICT-RESOLUTION
+    37.708   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    37.708   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    37.708   PROCEDURAL             CONFLICT-RESOLUTION
+    37.758   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    37.758   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    37.758   ------                 BREAK-EVENT Stopped by !stop!
+    37.758   PROCEDURAL             CONFLICT-RESOLUTION
+    38.758   ------                 Stopped because time limit reached
+    38.758   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    38.758   PROCEDURAL             CONFLICT-RESOLUTION
+    38.808   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    38.808   PROCEDURAL             CLEAR-BUFFER GOAL
+    38.808   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    38.808   DECLARATIVE            start-retrieval
+    38.808   PROCEDURAL             CONFLICT-RESOLUTION
+    38.833   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    38.833   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    38.833   PROCEDURAL             CONFLICT-RESOLUTION
+    38.883   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    38.883   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    38.883   ------                 BREAK-EVENT Stopped by !stop!
+    38.883   PROCEDURAL             CONFLICT-RESOLUTION
+    39.883   ------                 Stopped because time limit reached
+    39.883   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    39.883   PROCEDURAL             CONFLICT-RESOLUTION
+    39.933   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    39.933   PROCEDURAL             CLEAR-BUFFER GOAL
+    39.933   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    39.933   DECLARATIVE            start-retrieval
+    39.933   PROCEDURAL             CONFLICT-RESOLUTION
+    39.959   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    39.959   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    39.959   PROCEDURAL             CONFLICT-RESOLUTION
+    40.009   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    40.009   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    40.009   ------                 BREAK-EVENT Stopped by !stop!
+    40.009   PROCEDURAL             CONFLICT-RESOLUTION
+    41.009   ------                 Stopped because time limit reached
+    41.009   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    41.009   PROCEDURAL             CONFLICT-RESOLUTION
+    41.059   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    41.059   PROCEDURAL             CLEAR-BUFFER GOAL
+    41.059   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    41.059   DECLARATIVE            start-retrieval
+    41.059   PROCEDURAL             CONFLICT-RESOLUTION
+    41.078   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    41.078   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    41.078   PROCEDURAL             CONFLICT-RESOLUTION
+    41.128   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    41.128   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    41.128   ------                 BREAK-EVENT Stopped by !stop!
+    41.128   PROCEDURAL             CONFLICT-RESOLUTION
+    42.128   ------                 Stopped because time limit reached
+    42.128   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    42.128   PROCEDURAL             CONFLICT-RESOLUTION
+    42.178   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    42.178   PROCEDURAL             CLEAR-BUFFER GOAL
+    42.178   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    42.178   DECLARATIVE            start-retrieval
+    42.178   PROCEDURAL             CONFLICT-RESOLUTION
+    42.209   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    42.209   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    42.209   PROCEDURAL             CONFLICT-RESOLUTION
+    42.259   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    42.259   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    42.259   ------                 BREAK-EVENT Stopped by !stop!
+    42.259   PROCEDURAL             CONFLICT-RESOLUTION
+    43.259   ------                 Stopped because time limit reached
+    43.259   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    43.259   PROCEDURAL             CONFLICT-RESOLUTION
+    43.309   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    43.309   PROCEDURAL             CLEAR-BUFFER GOAL
+    43.309   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    43.309   DECLARATIVE            start-retrieval
+    43.309   PROCEDURAL             CONFLICT-RESOLUTION
+    43.336   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    43.336   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    43.336   PROCEDURAL             CONFLICT-RESOLUTION
+    43.386   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    43.386   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    43.386   ------                 BREAK-EVENT Stopped by !stop!
+    43.386   PROCEDURAL             CONFLICT-RESOLUTION
+    44.386   ------                 Stopped because time limit reached
+    44.386   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    44.386   PROCEDURAL             CONFLICT-RESOLUTION
+    44.436   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    44.436   PROCEDURAL             CLEAR-BUFFER GOAL
+    44.436   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    44.436   DECLARATIVE            start-retrieval
+    44.436   PROCEDURAL             CONFLICT-RESOLUTION
+    44.466   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    44.466   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    44.466   PROCEDURAL             CONFLICT-RESOLUTION
+    44.516   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    44.516   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    44.516   ------                 BREAK-EVENT Stopped by !stop!
+    44.516   PROCEDURAL             CONFLICT-RESOLUTION
+    45.516   ------                 Stopped because time limit reached
+    45.516   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    45.516   PROCEDURAL             CONFLICT-RESOLUTION
+    45.566   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    45.566   PROCEDURAL             CLEAR-BUFFER GOAL
+    45.566   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    45.566   DECLARATIVE            start-retrieval
+    45.566   PROCEDURAL             CONFLICT-RESOLUTION
+    45.583   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    45.583   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    45.583   PROCEDURAL             CONFLICT-RESOLUTION
+    45.633   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    45.633   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    45.633   ------                 BREAK-EVENT Stopped by !stop!
+    45.633   PROCEDURAL             CONFLICT-RESOLUTION
+    46.633   ------                 Stopped because time limit reached
+    46.633   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    46.633   PROCEDURAL             CONFLICT-RESOLUTION
+    46.683   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    46.683   PROCEDURAL             CLEAR-BUFFER GOAL
+    46.683   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    46.683   DECLARATIVE            start-retrieval
+    46.683   PROCEDURAL             CONFLICT-RESOLUTION
+    46.724   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    46.724   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    46.724   PROCEDURAL             CONFLICT-RESOLUTION
+    46.774   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    46.774   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    46.774   ------                 BREAK-EVENT Stopped by !stop!
+    46.774   PROCEDURAL             CONFLICT-RESOLUTION
+    47.774   ------                 Stopped because time limit reached
+    47.774   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    47.774   PROCEDURAL             CONFLICT-RESOLUTION
+    47.824   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    47.824   PROCEDURAL             CLEAR-BUFFER GOAL
+    47.824   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    47.824   DECLARATIVE            start-retrieval
+    47.824   PROCEDURAL             CONFLICT-RESOLUTION
+    47.847   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    47.847   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    47.847   PROCEDURAL             CONFLICT-RESOLUTION
+    47.897   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    47.897   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    47.897   ------                 BREAK-EVENT Stopped by !stop!
+    47.897   PROCEDURAL             CONFLICT-RESOLUTION
+    48.897   ------                 Stopped because time limit reached
+    48.897   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    48.897   PROCEDURAL             CONFLICT-RESOLUTION
+    48.947   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    48.947   PROCEDURAL             CLEAR-BUFFER GOAL
+    48.947   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    48.947   DECLARATIVE            start-retrieval
+    48.947   PROCEDURAL             CONFLICT-RESOLUTION
+    48.962   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    48.962   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    48.962   PROCEDURAL             CONFLICT-RESOLUTION
+    49.012   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    49.012   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    49.012   ------                 BREAK-EVENT Stopped by !stop!
+    49.012   PROCEDURAL             CONFLICT-RESOLUTION
+    50.012   ------                 Stopped because time limit reached
+    50.012   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    50.012   PROCEDURAL             CONFLICT-RESOLUTION
+    50.062   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    50.062   PROCEDURAL             CLEAR-BUFFER GOAL
+    50.062   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    50.062   DECLARATIVE            start-retrieval
+    50.062   PROCEDURAL             CONFLICT-RESOLUTION
+    50.106   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    50.106   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    50.106   PROCEDURAL             CONFLICT-RESOLUTION
+    50.156   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    50.156   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    50.156   ------                 BREAK-EVENT Stopped by !stop!
+    50.156   PROCEDURAL             CONFLICT-RESOLUTION
+    51.156   ------                 Stopped because time limit reached
+    51.156   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    51.156   PROCEDURAL             CONFLICT-RESOLUTION
+    51.206   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    51.206   PROCEDURAL             CLEAR-BUFFER GOAL
+    51.206   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    51.206   DECLARATIVE            start-retrieval
+    51.206   PROCEDURAL             CONFLICT-RESOLUTION
+    51.219   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    51.219   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    51.219   PROCEDURAL             CONFLICT-RESOLUTION
+    51.269   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    51.269   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    51.269   ------                 BREAK-EVENT Stopped by !stop!
+    51.269   PROCEDURAL             CONFLICT-RESOLUTION
+    52.269   ------                 Stopped because time limit reached
+    52.269   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    52.269   PROCEDURAL             CONFLICT-RESOLUTION
+    52.319   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    52.319   PROCEDURAL             CLEAR-BUFFER GOAL
+    52.319   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    52.319   DECLARATIVE            start-retrieval
+    52.319   PROCEDURAL             CONFLICT-RESOLUTION
+    52.353   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    52.353   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    52.353   PROCEDURAL             CONFLICT-RESOLUTION
+    52.403   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    52.403   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    52.403   ------                 BREAK-EVENT Stopped by !stop!
+    52.403   PROCEDURAL             CONFLICT-RESOLUTION
+    53.403   ------                 Stopped because time limit reached
+    53.403   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    53.403   PROCEDURAL             CONFLICT-RESOLUTION
+    53.453   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    53.453   PROCEDURAL             CLEAR-BUFFER GOAL
+    53.453   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    53.453   DECLARATIVE            start-retrieval
+    53.453   PROCEDURAL             CONFLICT-RESOLUTION
+    53.482   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    53.482   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    53.482   PROCEDURAL             CONFLICT-RESOLUTION
+    53.532   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    53.532   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    53.532   ------                 BREAK-EVENT Stopped by !stop!
+    53.532   PROCEDURAL             CONFLICT-RESOLUTION
+    54.532   ------                 Stopped because time limit reached
+    54.532   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    54.532   PROCEDURAL             CONFLICT-RESOLUTION
+    54.582   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    54.582   PROCEDURAL             CLEAR-BUFFER GOAL
+    54.582   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    54.582   DECLARATIVE            start-retrieval
+    54.582   PROCEDURAL             CONFLICT-RESOLUTION
+    54.605   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    54.605   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    54.605   PROCEDURAL             CONFLICT-RESOLUTION
+    54.655   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    54.655   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    54.655   ------                 BREAK-EVENT Stopped by !stop!
+    54.655   PROCEDURAL             CONFLICT-RESOLUTION
+    55.655   ------                 Stopped because time limit reached
+    55.655   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    55.655   PROCEDURAL             CONFLICT-RESOLUTION
+    55.705   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    55.705   PROCEDURAL             CLEAR-BUFFER GOAL
+    55.705   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    55.705   DECLARATIVE            start-retrieval
+    55.705   PROCEDURAL             CONFLICT-RESOLUTION
+    55.727   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    55.727   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    55.727   PROCEDURAL             CONFLICT-RESOLUTION
+    55.777   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    55.777   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    55.777   ------                 BREAK-EVENT Stopped by !stop!
+    55.777   PROCEDURAL             CONFLICT-RESOLUTION
+    56.777   ------                 Stopped because time limit reached
+    56.777   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    56.777   PROCEDURAL             CONFLICT-RESOLUTION
+    56.827   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    56.827   PROCEDURAL             CLEAR-BUFFER GOAL
+    56.827   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    56.827   DECLARATIVE            start-retrieval
+    56.827   PROCEDURAL             CONFLICT-RESOLUTION
+    56.846   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    56.846   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    56.846   PROCEDURAL             CONFLICT-RESOLUTION
+    56.896   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    56.896   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    56.896   ------                 BREAK-EVENT Stopped by !stop!
+    56.896   PROCEDURAL             CONFLICT-RESOLUTION
+    57.896   ------                 Stopped because time limit reached
+    57.896   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    57.896   PROCEDURAL             CONFLICT-RESOLUTION
+    57.946   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    57.946   PROCEDURAL             CLEAR-BUFFER GOAL
+    57.946   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    57.946   DECLARATIVE            start-retrieval
+    57.946   PROCEDURAL             CONFLICT-RESOLUTION
+    57.963   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    57.963   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    57.963   PROCEDURAL             CONFLICT-RESOLUTION
+    58.013   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    58.013   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    58.013   ------                 BREAK-EVENT Stopped by !stop!
+    58.013   PROCEDURAL             CONFLICT-RESOLUTION
+    59.013   ------                 Stopped because time limit reached
+    59.013   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    59.013   PROCEDURAL             CONFLICT-RESOLUTION
+    59.063   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    59.063   PROCEDURAL             CLEAR-BUFFER GOAL
+    59.063   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    59.063   DECLARATIVE            start-retrieval
+    59.063   PROCEDURAL             CONFLICT-RESOLUTION
+    59.085   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    59.085   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    59.085   PROCEDURAL             CONFLICT-RESOLUTION
+    59.135   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    59.135   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    59.135   ------                 BREAK-EVENT Stopped by !stop!
+    59.135   PROCEDURAL             CONFLICT-RESOLUTION
+    60.135   ------                 Stopped because time limit reached
+    60.135   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    60.135   PROCEDURAL             CONFLICT-RESOLUTION
+    60.185   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    60.185   PROCEDURAL             CLEAR-BUFFER GOAL
+    60.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    60.185   DECLARATIVE            start-retrieval
+    60.185   PROCEDURAL             CONFLICT-RESOLUTION
+    60.211   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    60.211   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    60.211   PROCEDURAL             CONFLICT-RESOLUTION
+    60.261   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    60.261   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    60.261   ------                 BREAK-EVENT Stopped by !stop!
+    60.261   PROCEDURAL             CONFLICT-RESOLUTION
+    61.261   ------                 Stopped because time limit reached
+    61.261   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    61.261   PROCEDURAL             CONFLICT-RESOLUTION
+    61.311   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    61.311   PROCEDURAL             CLEAR-BUFFER GOAL
+    61.311   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    61.311   DECLARATIVE            start-retrieval
+    61.311   PROCEDURAL             CONFLICT-RESOLUTION
+    61.329   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    61.329   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    61.329   PROCEDURAL             CONFLICT-RESOLUTION
+    61.379   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    61.379   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    61.379   ------                 BREAK-EVENT Stopped by !stop!
+    61.379   PROCEDURAL             CONFLICT-RESOLUTION
+    62.379   ------                 Stopped because time limit reached
+    62.379   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    62.379   PROCEDURAL             CONFLICT-RESOLUTION
+    62.429   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    62.429   PROCEDURAL             CLEAR-BUFFER GOAL
+    62.429   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    62.429   DECLARATIVE            start-retrieval
+    62.429   PROCEDURAL             CONFLICT-RESOLUTION
+    62.451   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    62.451   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    62.451   PROCEDURAL             CONFLICT-RESOLUTION
+    62.501   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    62.501   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    62.501   ------                 BREAK-EVENT Stopped by !stop!
+    62.501   PROCEDURAL             CONFLICT-RESOLUTION
+    63.501   ------                 Stopped because time limit reached
+    63.501   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    63.501   PROCEDURAL             CONFLICT-RESOLUTION
+    63.551   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    63.551   PROCEDURAL             CLEAR-BUFFER GOAL
+    63.551   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    63.551   DECLARATIVE            start-retrieval
+    63.551   PROCEDURAL             CONFLICT-RESOLUTION
+    63.569   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    63.569   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    63.569   PROCEDURAL             CONFLICT-RESOLUTION
+    63.619   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    63.619   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    63.619   ------                 BREAK-EVENT Stopped by !stop!
+    63.619   PROCEDURAL             CONFLICT-RESOLUTION
+    64.619   ------                 Stopped because time limit reached
+    64.619   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    64.619   PROCEDURAL             CONFLICT-RESOLUTION
+    64.669   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    64.669   PROCEDURAL             CLEAR-BUFFER GOAL
+    64.669   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    64.669   DECLARATIVE            start-retrieval
+    64.669   PROCEDURAL             CONFLICT-RESOLUTION
+    64.691   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    64.691   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    64.691   PROCEDURAL             CONFLICT-RESOLUTION
+    64.741   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    64.741   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    64.741   ------                 BREAK-EVENT Stopped by !stop!
+    64.741   PROCEDURAL             CONFLICT-RESOLUTION
+    65.741   ------                 Stopped because time limit reached
+    65.741   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    65.741   PROCEDURAL             CONFLICT-RESOLUTION
+    65.791   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    65.791   PROCEDURAL             CLEAR-BUFFER GOAL
+    65.791   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    65.791   DECLARATIVE            start-retrieval
+    65.791   PROCEDURAL             CONFLICT-RESOLUTION
+    65.817   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    65.817   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    65.817   PROCEDURAL             CONFLICT-RESOLUTION
+    65.867   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    65.867   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    65.867   ------                 BREAK-EVENT Stopped by !stop!
+    65.867   PROCEDURAL             CONFLICT-RESOLUTION
+    66.867   ------                 Stopped because time limit reached
+    66.867   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    66.867   PROCEDURAL             CONFLICT-RESOLUTION
+    66.917   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    66.917   PROCEDURAL             CLEAR-BUFFER GOAL
+    66.917   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    66.917   DECLARATIVE            start-retrieval
+    66.917   PROCEDURAL             CONFLICT-RESOLUTION
+    66.937   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    66.937   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    66.937   PROCEDURAL             CONFLICT-RESOLUTION
+    66.987   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    66.987   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    66.987   ------                 BREAK-EVENT Stopped by !stop!
+    66.987   PROCEDURAL             CONFLICT-RESOLUTION
+    67.987   ------                 Stopped because time limit reached
+    67.987   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    67.987   PROCEDURAL             CONFLICT-RESOLUTION
+    68.037   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    68.037   PROCEDURAL             CLEAR-BUFFER GOAL
+    68.037   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    68.037   DECLARATIVE            start-retrieval
+    68.037   PROCEDURAL             CONFLICT-RESOLUTION
+    68.047   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    68.047   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    68.047   PROCEDURAL             CONFLICT-RESOLUTION
+    68.097   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    68.097   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    68.097   ------                 BREAK-EVENT Stopped by !stop!
+    68.097   PROCEDURAL             CONFLICT-RESOLUTION
+    69.097   ------                 Stopped because time limit reached
+    69.097   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    69.097   PROCEDURAL             CONFLICT-RESOLUTION
+    69.147   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    69.147   PROCEDURAL             CLEAR-BUFFER GOAL
+    69.147   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    69.147   DECLARATIVE            start-retrieval
+    69.147   PROCEDURAL             CONFLICT-RESOLUTION
+    69.169   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    69.169   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    69.169   PROCEDURAL             CONFLICT-RESOLUTION
+    69.219   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    69.219   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    69.219   ------                 BREAK-EVENT Stopped by !stop!
+    69.219   PROCEDURAL             CONFLICT-RESOLUTION
+    70.219   ------                 Stopped because time limit reached
+    70.219   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    70.219   PROCEDURAL             CONFLICT-RESOLUTION
+    70.269   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    70.269   PROCEDURAL             CLEAR-BUFFER GOAL
+    70.269   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    70.269   DECLARATIVE            start-retrieval
+    70.269   PROCEDURAL             CONFLICT-RESOLUTION
+    70.282   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    70.282   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    70.282   PROCEDURAL             CONFLICT-RESOLUTION
+    70.332   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    70.332   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    70.332   ------                 BREAK-EVENT Stopped by !stop!
+    70.332   PROCEDURAL             CONFLICT-RESOLUTION
+    71.332   ------                 Stopped because time limit reached
+    71.332   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    71.332   PROCEDURAL             CONFLICT-RESOLUTION
+    71.382   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    71.382   PROCEDURAL             CLEAR-BUFFER GOAL
+    71.382   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    71.382   DECLARATIVE            start-retrieval
+    71.382   PROCEDURAL             CONFLICT-RESOLUTION
+    71.396   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    71.396   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    71.396   PROCEDURAL             CONFLICT-RESOLUTION
+    71.446   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    71.446   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    71.446   ------                 BREAK-EVENT Stopped by !stop!
+    71.446   PROCEDURAL             CONFLICT-RESOLUTION
+    72.446   ------                 Stopped because time limit reached
+    72.446   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    72.446   PROCEDURAL             CONFLICT-RESOLUTION
+    72.496   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    72.496   PROCEDURAL             CLEAR-BUFFER GOAL
+    72.496   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    72.496   DECLARATIVE            start-retrieval
+    72.496   PROCEDURAL             CONFLICT-RESOLUTION
+    72.509   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    72.509   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    72.509   PROCEDURAL             CONFLICT-RESOLUTION
+    72.559   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    72.559   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    72.559   ------                 BREAK-EVENT Stopped by !stop!
+    72.559   PROCEDURAL             CONFLICT-RESOLUTION
+    73.559   ------                 Stopped because time limit reached
+    73.559   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    73.559   PROCEDURAL             CONFLICT-RESOLUTION
+    73.609   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    73.609   PROCEDURAL             CLEAR-BUFFER GOAL
+    73.609   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    73.609   DECLARATIVE            start-retrieval
+    73.609   PROCEDURAL             CONFLICT-RESOLUTION
+    73.622   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    73.622   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    73.622   PROCEDURAL             CONFLICT-RESOLUTION
+    73.672   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    73.672   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    73.672   ------                 BREAK-EVENT Stopped by !stop!
+    73.672   PROCEDURAL             CONFLICT-RESOLUTION
+    74.672   ------                 Stopped because time limit reached
+    74.672   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    74.672   PROCEDURAL             CONFLICT-RESOLUTION
+    74.722   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    74.722   PROCEDURAL             CLEAR-BUFFER GOAL
+    74.722   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    74.722   DECLARATIVE            start-retrieval
+    74.722   PROCEDURAL             CONFLICT-RESOLUTION
+    74.742   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    74.742   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    74.742   PROCEDURAL             CONFLICT-RESOLUTION
+    74.792   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    74.792   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    74.792   ------                 BREAK-EVENT Stopped by !stop!
+    74.792   PROCEDURAL             CONFLICT-RESOLUTION
+    75.792   ------                 Stopped because time limit reached
+    75.792   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    75.792   PROCEDURAL             CONFLICT-RESOLUTION
+    75.842   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    75.842   PROCEDURAL             CLEAR-BUFFER GOAL
+    75.842   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    75.842   DECLARATIVE            start-retrieval
+    75.842   PROCEDURAL             CONFLICT-RESOLUTION
+    75.855   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    75.855   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    75.855   PROCEDURAL             CONFLICT-RESOLUTION
+    75.905   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    75.905   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    75.905   ------                 BREAK-EVENT Stopped by !stop!
+    75.905   PROCEDURAL             CONFLICT-RESOLUTION
+    76.905   ------                 Stopped because time limit reached
+    76.905   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    76.905   PROCEDURAL             CONFLICT-RESOLUTION
+    76.955   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    76.955   PROCEDURAL             CLEAR-BUFFER GOAL
+    76.955   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    76.955   DECLARATIVE            start-retrieval
+    76.955   PROCEDURAL             CONFLICT-RESOLUTION
+    76.982   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    76.982   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    76.982   PROCEDURAL             CONFLICT-RESOLUTION
+    77.032   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    77.032   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    77.032   ------                 BREAK-EVENT Stopped by !stop!
+    77.032   PROCEDURAL             CONFLICT-RESOLUTION
+    78.032   ------                 Stopped because time limit reached
+    78.032   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    78.032   PROCEDURAL             CONFLICT-RESOLUTION
+    78.082   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    78.082   PROCEDURAL             CLEAR-BUFFER GOAL
+    78.082   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    78.082   DECLARATIVE            start-retrieval
+    78.082   PROCEDURAL             CONFLICT-RESOLUTION
+    78.107   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    78.107   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    78.107   PROCEDURAL             CONFLICT-RESOLUTION
+    78.157   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    78.157   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    78.157   ------                 BREAK-EVENT Stopped by !stop!
+    78.157   PROCEDURAL             CONFLICT-RESOLUTION
+    79.157   ------                 Stopped because time limit reached
+    79.157   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    79.157   PROCEDURAL             CONFLICT-RESOLUTION
+    79.207   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    79.207   PROCEDURAL             CLEAR-BUFFER GOAL
+    79.207   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    79.207   DECLARATIVE            start-retrieval
+    79.207   PROCEDURAL             CONFLICT-RESOLUTION
+    79.226   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    79.226   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    79.226   PROCEDURAL             CONFLICT-RESOLUTION
+    79.276   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    79.276   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    79.276   ------                 BREAK-EVENT Stopped by !stop!
+    79.276   PROCEDURAL             CONFLICT-RESOLUTION
+    80.276   ------                 Stopped because time limit reached
+    80.276   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    80.276   PROCEDURAL             CONFLICT-RESOLUTION
+    80.326   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    80.326   PROCEDURAL             CLEAR-BUFFER GOAL
+    80.326   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    80.326   DECLARATIVE            start-retrieval
+    80.326   PROCEDURAL             CONFLICT-RESOLUTION
+    80.339   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    80.339   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    80.339   PROCEDURAL             CONFLICT-RESOLUTION
+    80.389   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    80.389   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    80.389   ------                 BREAK-EVENT Stopped by !stop!
+    80.389   PROCEDURAL             CONFLICT-RESOLUTION
+    81.389   ------                 Stopped because time limit reached
+    81.389   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    81.389   PROCEDURAL             CONFLICT-RESOLUTION
+    81.439   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    81.439   PROCEDURAL             CLEAR-BUFFER GOAL
+    81.439   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    81.439   DECLARATIVE            start-retrieval
+    81.439   PROCEDURAL             CONFLICT-RESOLUTION
+    81.455   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    81.455   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    81.455   PROCEDURAL             CONFLICT-RESOLUTION
+    81.505   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    81.505   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    81.505   ------                 BREAK-EVENT Stopped by !stop!
+    81.505   PROCEDURAL             CONFLICT-RESOLUTION
+    82.505   ------                 Stopped because time limit reached
+    82.505   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    82.505   PROCEDURAL             CONFLICT-RESOLUTION
+    82.555   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    82.555   PROCEDURAL             CLEAR-BUFFER GOAL
+    82.555   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    82.555   DECLARATIVE            start-retrieval
+    82.555   PROCEDURAL             CONFLICT-RESOLUTION
+    82.583   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    82.583   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    82.583   PROCEDURAL             CONFLICT-RESOLUTION
+    82.633   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    82.633   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    82.633   ------                 BREAK-EVENT Stopped by !stop!
+    82.633   PROCEDURAL             CONFLICT-RESOLUTION
+    83.633   ------                 Stopped because time limit reached
+    83.633   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    83.633   PROCEDURAL             CONFLICT-RESOLUTION
+    83.683   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    83.683   PROCEDURAL             CLEAR-BUFFER GOAL
+    83.683   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    83.683   DECLARATIVE            start-retrieval
+    83.683   PROCEDURAL             CONFLICT-RESOLUTION
+    83.700   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    83.700   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    83.700   PROCEDURAL             CONFLICT-RESOLUTION
+    83.750   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    83.750   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    83.750   ------                 BREAK-EVENT Stopped by !stop!
+    83.750   PROCEDURAL             CONFLICT-RESOLUTION
+    84.750   ------                 Stopped because time limit reached
+    84.750   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    84.750   PROCEDURAL             CONFLICT-RESOLUTION
+    84.800   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    84.800   PROCEDURAL             CLEAR-BUFFER GOAL
+    84.800   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    84.800   DECLARATIVE            start-retrieval
+    84.800   PROCEDURAL             CONFLICT-RESOLUTION
+    84.811   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    84.811   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    84.811   PROCEDURAL             CONFLICT-RESOLUTION
+    84.861   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    84.861   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    84.861   ------                 BREAK-EVENT Stopped by !stop!
+    84.861   PROCEDURAL             CONFLICT-RESOLUTION
+    85.861   ------                 Stopped because time limit reached
+    85.861   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    85.861   PROCEDURAL             CONFLICT-RESOLUTION
+    85.911   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    85.911   PROCEDURAL             CLEAR-BUFFER GOAL
+    85.911   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    85.911   DECLARATIVE            start-retrieval
+    85.911   PROCEDURAL             CONFLICT-RESOLUTION
+    85.931   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    85.931   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    85.931   PROCEDURAL             CONFLICT-RESOLUTION
+    85.981   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    85.981   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    85.981   ------                 BREAK-EVENT Stopped by !stop!
+    85.981   PROCEDURAL             CONFLICT-RESOLUTION
+    86.981   ------                 Stopped because time limit reached
+    86.981   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    86.981   PROCEDURAL             CONFLICT-RESOLUTION
+    87.031   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    87.031   PROCEDURAL             CLEAR-BUFFER GOAL
+    87.031   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    87.031   DECLARATIVE            start-retrieval
+    87.031   PROCEDURAL             CONFLICT-RESOLUTION
+    87.081   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    87.081   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    87.081   PROCEDURAL             CONFLICT-RESOLUTION
+    87.131   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    87.131   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    87.131   ------                 BREAK-EVENT Stopped by !stop!
+    87.131   PROCEDURAL             CONFLICT-RESOLUTION
+    88.131   ------                 Stopped because time limit reached
+    88.131   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    88.131   PROCEDURAL             CONFLICT-RESOLUTION
+    88.181   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    88.181   PROCEDURAL             CLEAR-BUFFER GOAL
+    88.181   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    88.181   DECLARATIVE            start-retrieval
+    88.181   PROCEDURAL             CONFLICT-RESOLUTION
+    88.196   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    88.196   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    88.196   PROCEDURAL             CONFLICT-RESOLUTION
+    88.246   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    88.246   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    88.246   ------                 BREAK-EVENT Stopped by !stop!
+    88.246   PROCEDURAL             CONFLICT-RESOLUTION
+    89.246   ------                 Stopped because time limit reached
+    89.246   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    89.246   PROCEDURAL             CONFLICT-RESOLUTION
+    89.296   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    89.296   PROCEDURAL             CLEAR-BUFFER GOAL
+    89.296   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    89.296   DECLARATIVE            start-retrieval
+    89.296   PROCEDURAL             CONFLICT-RESOLUTION
+    89.309   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    89.309   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    89.309   PROCEDURAL             CONFLICT-RESOLUTION
+    89.359   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    89.359   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    89.359   ------                 BREAK-EVENT Stopped by !stop!
+    89.359   PROCEDURAL             CONFLICT-RESOLUTION
+    90.359   ------                 Stopped because time limit reached
+    90.359   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    90.359   PROCEDURAL             CONFLICT-RESOLUTION
+    90.409   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    90.409   PROCEDURAL             CLEAR-BUFFER GOAL
+    90.409   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    90.409   DECLARATIVE            start-retrieval
+    90.409   PROCEDURAL             CONFLICT-RESOLUTION
+    90.430   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    90.430   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    90.430   PROCEDURAL             CONFLICT-RESOLUTION
+    90.480   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    90.480   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    90.480   ------                 BREAK-EVENT Stopped by !stop!
+    90.480   PROCEDURAL             CONFLICT-RESOLUTION
+    91.480   ------                 Stopped because time limit reached
+    91.480   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    91.480   PROCEDURAL             CONFLICT-RESOLUTION
+    91.530   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    91.530   PROCEDURAL             CLEAR-BUFFER GOAL
+    91.530   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    91.530   DECLARATIVE            start-retrieval
+    91.530   PROCEDURAL             CONFLICT-RESOLUTION
+    91.537   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    91.537   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    91.537   PROCEDURAL             CONFLICT-RESOLUTION
+    91.587   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    91.587   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    91.587   ------                 BREAK-EVENT Stopped by !stop!
+    91.587   PROCEDURAL             CONFLICT-RESOLUTION
+    92.587   ------                 Stopped because time limit reached
+    92.587   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    92.587   PROCEDURAL             CONFLICT-RESOLUTION
+    92.637   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    92.637   PROCEDURAL             CLEAR-BUFFER GOAL
+    92.637   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    92.637   DECLARATIVE            start-retrieval
+    92.637   PROCEDURAL             CONFLICT-RESOLUTION
+    92.649   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    92.649   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    92.649   PROCEDURAL             CONFLICT-RESOLUTION
+    92.699   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    92.699   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    92.699   ------                 BREAK-EVENT Stopped by !stop!
+    92.699   PROCEDURAL             CONFLICT-RESOLUTION
+    93.699   ------                 Stopped because time limit reached
+    93.699   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    93.699   PROCEDURAL             CONFLICT-RESOLUTION
+    93.749   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    93.749   PROCEDURAL             CLEAR-BUFFER GOAL
+    93.749   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    93.749   DECLARATIVE            start-retrieval
+    93.749   PROCEDURAL             CONFLICT-RESOLUTION
+    93.771   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    93.771   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    93.771   PROCEDURAL             CONFLICT-RESOLUTION
+    93.821   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    93.821   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    93.821   ------                 BREAK-EVENT Stopped by !stop!
+    93.821   PROCEDURAL             CONFLICT-RESOLUTION
+    94.821   ------                 Stopped because time limit reached
+    94.821   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    94.821   PROCEDURAL             CONFLICT-RESOLUTION
+    94.871   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    94.871   PROCEDURAL             CLEAR-BUFFER GOAL
+    94.871   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    94.871   DECLARATIVE            start-retrieval
+    94.871   PROCEDURAL             CONFLICT-RESOLUTION
+    94.885   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    94.885   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    94.885   PROCEDURAL             CONFLICT-RESOLUTION
+    94.935   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    94.935   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    94.935   ------                 BREAK-EVENT Stopped by !stop!
+    94.935   PROCEDURAL             CONFLICT-RESOLUTION
+    95.935   ------                 Stopped because time limit reached
+    95.935   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    95.935   PROCEDURAL             CONFLICT-RESOLUTION
+    95.985   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    95.985   PROCEDURAL             CLEAR-BUFFER GOAL
+    95.985   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    95.985   DECLARATIVE            start-retrieval
+    95.985   PROCEDURAL             CONFLICT-RESOLUTION
+    95.991   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    95.991   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    95.991   PROCEDURAL             CONFLICT-RESOLUTION
+    96.041   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    96.041   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    96.041   ------                 BREAK-EVENT Stopped by !stop!
+    96.041   PROCEDURAL             CONFLICT-RESOLUTION
+    97.041   ------                 Stopped because time limit reached
+    97.041   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    97.041   PROCEDURAL             CONFLICT-RESOLUTION
+    97.091   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    97.091   PROCEDURAL             CLEAR-BUFFER GOAL
+    97.091   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    97.091   DECLARATIVE            start-retrieval
+    97.091   PROCEDURAL             CONFLICT-RESOLUTION
+    97.111   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    97.111   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    97.111   PROCEDURAL             CONFLICT-RESOLUTION
+    97.161   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    97.161   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    97.161   ------                 BREAK-EVENT Stopped by !stop!
+    97.161   PROCEDURAL             CONFLICT-RESOLUTION
+    98.161   ------                 Stopped because time limit reached
+    98.161   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    98.161   PROCEDURAL             CONFLICT-RESOLUTION
+    98.211   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    98.211   PROCEDURAL             CLEAR-BUFFER GOAL
+    98.211   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    98.211   DECLARATIVE            start-retrieval
+    98.211   PROCEDURAL             CONFLICT-RESOLUTION
+    98.226   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    98.226   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    98.226   PROCEDURAL             CONFLICT-RESOLUTION
+    98.276   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    98.276   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    98.276   ------                 BREAK-EVENT Stopped by !stop!
+    98.276   PROCEDURAL             CONFLICT-RESOLUTION
+    99.276   ------                 Stopped because time limit reached
+    99.276   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    99.276   PROCEDURAL             CONFLICT-RESOLUTION
+    99.326   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    99.326   PROCEDURAL             CLEAR-BUFFER GOAL
+    99.326   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    99.326   DECLARATIVE            start-retrieval
+    99.326   PROCEDURAL             CONFLICT-RESOLUTION
+    99.333   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    99.333   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    99.333   PROCEDURAL             CONFLICT-RESOLUTION
+    99.383   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    99.383   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    99.383   ------                 BREAK-EVENT Stopped by !stop!
+    99.383   PROCEDURAL             CONFLICT-RESOLUTION
+   100.383   ------                 Stopped because time limit reached
+   100.383   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   100.383   PROCEDURAL             CONFLICT-RESOLUTION
+   100.433   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   100.433   PROCEDURAL             CLEAR-BUFFER GOAL
+   100.433   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   100.433   DECLARATIVE            start-retrieval
+   100.433   PROCEDURAL             CONFLICT-RESOLUTION
+   100.448   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   100.448   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   100.448   PROCEDURAL             CONFLICT-RESOLUTION
+   100.498   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   100.498   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   100.498   ------                 BREAK-EVENT Stopped by !stop!
+   100.498   PROCEDURAL             CONFLICT-RESOLUTION
+   101.498   ------                 Stopped because time limit reached
+   101.498   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   101.498   PROCEDURAL             CONFLICT-RESOLUTION
+   101.548   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   101.548   PROCEDURAL             CLEAR-BUFFER GOAL
+   101.548   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   101.548   DECLARATIVE            start-retrieval
+   101.548   PROCEDURAL             CONFLICT-RESOLUTION
+   101.575   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   101.575   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   101.575   PROCEDURAL             CONFLICT-RESOLUTION
+   101.625   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   101.625   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   101.625   ------                 BREAK-EVENT Stopped by !stop!
+   101.625   PROCEDURAL             CONFLICT-RESOLUTION
+   102.625   ------                 Stopped because time limit reached
+   102.625   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   102.625   PROCEDURAL             CONFLICT-RESOLUTION
+   102.675   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   102.675   PROCEDURAL             CLEAR-BUFFER GOAL
+   102.675   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   102.675   DECLARATIVE            start-retrieval
+   102.675   PROCEDURAL             CONFLICT-RESOLUTION
+   102.701   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   102.701   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   102.701   PROCEDURAL             CONFLICT-RESOLUTION
+   102.751   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   102.751   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   102.751   ------                 BREAK-EVENT Stopped by !stop!
+   102.751   PROCEDURAL             CONFLICT-RESOLUTION
+   103.751   ------                 Stopped because time limit reached
+   103.751   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   103.751   PROCEDURAL             CONFLICT-RESOLUTION
+   103.801   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   103.801   PROCEDURAL             CLEAR-BUFFER GOAL
+   103.801   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   103.801   DECLARATIVE            start-retrieval
+   103.801   PROCEDURAL             CONFLICT-RESOLUTION
+   103.814   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   103.814   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   103.814   PROCEDURAL             CONFLICT-RESOLUTION
+   103.864   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   103.864   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   103.864   ------                 BREAK-EVENT Stopped by !stop!
+   103.864   PROCEDURAL             CONFLICT-RESOLUTION
+   104.864   ------                 Stopped because time limit reached
+   104.864   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   104.864   PROCEDURAL             CONFLICT-RESOLUTION
+   104.914   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   104.914   PROCEDURAL             CLEAR-BUFFER GOAL
+   104.914   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   104.914   DECLARATIVE            start-retrieval
+   104.914   PROCEDURAL             CONFLICT-RESOLUTION
+   104.923   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   104.923   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   104.923   PROCEDURAL             CONFLICT-RESOLUTION
+   104.973   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   104.973   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   104.973   ------                 BREAK-EVENT Stopped by !stop!
+   104.973   PROCEDURAL             CONFLICT-RESOLUTION
+   105.973   ------                 Stopped because time limit reached
+   105.973   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   105.973   PROCEDURAL             CONFLICT-RESOLUTION
+   106.023   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   106.023   PROCEDURAL             CLEAR-BUFFER GOAL
+   106.023   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   106.023   DECLARATIVE            start-retrieval
+   106.023   PROCEDURAL             CONFLICT-RESOLUTION
+   106.034   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   106.034   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   106.034   PROCEDURAL             CONFLICT-RESOLUTION
+   106.084   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   106.084   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   106.084   ------                 BREAK-EVENT Stopped by !stop!
+   106.084   PROCEDURAL             CONFLICT-RESOLUTION
+   107.084   ------                 Stopped because time limit reached
+   107.084   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   107.084   PROCEDURAL             CONFLICT-RESOLUTION
+   107.134   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   107.134   PROCEDURAL             CLEAR-BUFFER GOAL
+   107.134   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   107.134   DECLARATIVE            start-retrieval
+   107.134   PROCEDURAL             CONFLICT-RESOLUTION
+   107.147   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   107.147   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   107.147   PROCEDURAL             CONFLICT-RESOLUTION
+   107.197   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   107.197   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   107.197   ------                 BREAK-EVENT Stopped by !stop!
+   107.197   PROCEDURAL             CONFLICT-RESOLUTION
+   108.197   ------                 Stopped because time limit reached
+   108.197   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   108.197   PROCEDURAL             CONFLICT-RESOLUTION
+   108.247   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   108.247   PROCEDURAL             CLEAR-BUFFER GOAL
+   108.247   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   108.247   DECLARATIVE            start-retrieval
+   108.247   PROCEDURAL             CONFLICT-RESOLUTION
+   108.271   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   108.271   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   108.271   PROCEDURAL             CONFLICT-RESOLUTION
+   108.321   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   108.321   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   108.321   ------                 BREAK-EVENT Stopped by !stop!
+   108.321   PROCEDURAL             CONFLICT-RESOLUTION
+   109.321   ------                 Stopped because time limit reached
+   109.321   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   109.321   PROCEDURAL             CONFLICT-RESOLUTION
+   109.371   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   109.371   PROCEDURAL             CLEAR-BUFFER GOAL
+   109.371   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   109.371   DECLARATIVE            start-retrieval
+   109.371   PROCEDURAL             CONFLICT-RESOLUTION
+   109.386   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   109.386   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   109.386   PROCEDURAL             CONFLICT-RESOLUTION
+   109.436   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   109.436   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   109.436   ------                 BREAK-EVENT Stopped by !stop!
+   109.436   PROCEDURAL             CONFLICT-RESOLUTION
+   110.436   ------                 Stopped because time limit reached
+   110.436   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   110.436   PROCEDURAL             CONFLICT-RESOLUTION
+   110.486   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   110.486   PROCEDURAL             CLEAR-BUFFER GOAL
+   110.486   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   110.486   DECLARATIVE            start-retrieval
+   110.486   PROCEDURAL             CONFLICT-RESOLUTION
+   110.490   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   110.490   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   110.490   PROCEDURAL             CONFLICT-RESOLUTION
+   110.540   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   110.540   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   110.540   ------                 BREAK-EVENT Stopped by !stop!
+   110.540   PROCEDURAL             CONFLICT-RESOLUTION
+   111.540   ------                 Stopped because time limit reached
+   111.540   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   111.540   PROCEDURAL             CONFLICT-RESOLUTION
+   111.590   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   111.590   PROCEDURAL             CLEAR-BUFFER GOAL
+   111.590   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   111.590   DECLARATIVE            start-retrieval
+   111.590   PROCEDURAL             CONFLICT-RESOLUTION
+   111.603   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   111.603   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   111.603   PROCEDURAL             CONFLICT-RESOLUTION
+   111.653   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   111.653   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   111.653   ------                 BREAK-EVENT Stopped by !stop!
+   111.653   PROCEDURAL             CONFLICT-RESOLUTION
+   112.653   ------                 Stopped because time limit reached
+   112.653   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   112.653   PROCEDURAL             CONFLICT-RESOLUTION
+   112.703   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   112.703   PROCEDURAL             CLEAR-BUFFER GOAL
+   112.703   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   112.703   DECLARATIVE            start-retrieval
+   112.703   PROCEDURAL             CONFLICT-RESOLUTION
+   112.724   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   112.724   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   112.724   PROCEDURAL             CONFLICT-RESOLUTION
+   112.774   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   112.774   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   112.774   ------                 BREAK-EVENT Stopped by !stop!
+   112.774   PROCEDURAL             CONFLICT-RESOLUTION
+   132.774   ------                 Stopped because time limit reached
+without: (0.97 0.01 0.01 0.01 0.0 0.0 0.0 0.0 0.0 0.0)
+
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
+     1.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.050   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     1.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     1.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     1.050   DECLARATIVE            start-retrieval
+     1.050   PROCEDURAL             CONFLICT-RESOLUTION
+     1.074   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     1.074   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     1.074   PROCEDURAL             CONFLICT-RESOLUTION
+     1.124   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     1.124   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     1.124   ------                 BREAK-EVENT Stopped by !stop!
+     1.124   PROCEDURAL             CONFLICT-RESOLUTION
+     2.124   ------                 Stopped because time limit reached
+     2.124   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     2.124   PROCEDURAL             CONFLICT-RESOLUTION
+     2.174   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     2.174   PROCEDURAL             CLEAR-BUFFER GOAL
+     2.174   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     2.174   DECLARATIVE            start-retrieval
+     2.174   PROCEDURAL             CONFLICT-RESOLUTION
+     2.305   DECLARATIVE            RETRIEVED-CHUNK NINE
+     2.305   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+     2.305   PROCEDURAL             CONFLICT-RESOLUTION
+     2.355   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     2.355   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     2.355   ------                 BREAK-EVENT Stopped by !stop!
+     2.355   PROCEDURAL             CONFLICT-RESOLUTION
+     3.355   ------                 Stopped because time limit reached
+     3.355   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     3.355   PROCEDURAL             CONFLICT-RESOLUTION
+     3.405   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     3.405   PROCEDURAL             CLEAR-BUFFER GOAL
+     3.405   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.405   DECLARATIVE            start-retrieval
+     3.405   PROCEDURAL             CONFLICT-RESOLUTION
+     3.499   DECLARATIVE            RETRIEVED-CHUNK ONE
+     3.499   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+     3.499   PROCEDURAL             CONFLICT-RESOLUTION
+     3.549   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     3.549   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.549   ------                 BREAK-EVENT Stopped by !stop!
+     3.549   PROCEDURAL             CONFLICT-RESOLUTION
+     4.549   ------                 Stopped because time limit reached
+     4.549   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     4.549   PROCEDURAL             CONFLICT-RESOLUTION
+     4.599   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     4.599   PROCEDURAL             CLEAR-BUFFER GOAL
+     4.599   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     4.599   DECLARATIVE            start-retrieval
+     4.599   PROCEDURAL             CONFLICT-RESOLUTION
+     4.744   DECLARATIVE            RETRIEVED-CHUNK THREE
+     4.744   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+     4.744   PROCEDURAL             CONFLICT-RESOLUTION
+     4.794   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     4.794   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     4.794   ------                 BREAK-EVENT Stopped by !stop!
+     4.794   PROCEDURAL             CONFLICT-RESOLUTION
+     5.794   ------                 Stopped because time limit reached
+     5.794   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     5.794   PROCEDURAL             CONFLICT-RESOLUTION
+     5.844   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     5.844   PROCEDURAL             CLEAR-BUFFER GOAL
+     5.844   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     5.844   DECLARATIVE            start-retrieval
+     5.844   PROCEDURAL             CONFLICT-RESOLUTION
+     5.973   DECLARATIVE            RETRIEVED-CHUNK FOUR
+     5.973   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+     5.973   PROCEDURAL             CONFLICT-RESOLUTION
+     6.023   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     6.023   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     6.023   ------                 BREAK-EVENT Stopped by !stop!
+     6.023   PROCEDURAL             CONFLICT-RESOLUTION
+     7.023   ------                 Stopped because time limit reached
+     7.023   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     7.023   PROCEDURAL             CONFLICT-RESOLUTION
+     7.073   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     7.073   PROCEDURAL             CLEAR-BUFFER GOAL
+     7.073   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     7.073   DECLARATIVE            start-retrieval
+     7.073   PROCEDURAL             CONFLICT-RESOLUTION
+     7.186   DECLARATIVE            RETRIEVED-CHUNK FIVE
+     7.186   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+     7.186   PROCEDURAL             CONFLICT-RESOLUTION
+     7.236   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     7.236   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     7.236   ------                 BREAK-EVENT Stopped by !stop!
+     7.236   PROCEDURAL             CONFLICT-RESOLUTION
+     8.236   ------                 Stopped because time limit reached
+     8.236   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     8.236   PROCEDURAL             CONFLICT-RESOLUTION
+     8.286   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     8.286   PROCEDURAL             CLEAR-BUFFER GOAL
+     8.286   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     8.286   DECLARATIVE            start-retrieval
+     8.286   PROCEDURAL             CONFLICT-RESOLUTION
+     8.433   DECLARATIVE            RETRIEVED-CHUNK NINE
+     8.433   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+     8.433   PROCEDURAL             CONFLICT-RESOLUTION
+     8.483   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     8.483   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     8.483   ------                 BREAK-EVENT Stopped by !stop!
+     8.483   PROCEDURAL             CONFLICT-RESOLUTION
+     9.483   ------                 Stopped because time limit reached
+     9.483   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     9.483   PROCEDURAL             CONFLICT-RESOLUTION
+     9.533   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     9.533   PROCEDURAL             CLEAR-BUFFER GOAL
+     9.533   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     9.533   DECLARATIVE            start-retrieval
+     9.533   PROCEDURAL             CONFLICT-RESOLUTION
+     9.632   DECLARATIVE            RETRIEVED-CHUNK TWO
+     9.632   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+     9.632   PROCEDURAL             CONFLICT-RESOLUTION
+     9.682   PROCEDURAL             PRODUCTION-FIRED HARVEST
+     9.682   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     9.682   ------                 BREAK-EVENT Stopped by !stop!
+     9.682   PROCEDURAL             CONFLICT-RESOLUTION
+    10.682   ------                 Stopped because time limit reached
+    10.682   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    10.682   PROCEDURAL             CONFLICT-RESOLUTION
+    10.732   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    10.732   PROCEDURAL             CLEAR-BUFFER GOAL
+    10.732   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.732   DECLARATIVE            start-retrieval
+    10.732   PROCEDURAL             CONFLICT-RESOLUTION
+    10.853   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    10.853   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    10.853   PROCEDURAL             CONFLICT-RESOLUTION
+    10.903   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    10.903   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.903   ------                 BREAK-EVENT Stopped by !stop!
+    10.903   PROCEDURAL             CONFLICT-RESOLUTION
+    11.903   ------                 Stopped because time limit reached
+    11.903   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    11.903   PROCEDURAL             CONFLICT-RESOLUTION
+    11.953   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    11.953   PROCEDURAL             CLEAR-BUFFER GOAL
+    11.953   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    11.953   DECLARATIVE            start-retrieval
+    11.953   PROCEDURAL             CONFLICT-RESOLUTION
+    12.084   DECLARATIVE            RETRIEVED-CHUNK SIX
+    12.084   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    12.084   PROCEDURAL             CONFLICT-RESOLUTION
+    12.134   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    12.134   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    12.134   ------                 BREAK-EVENT Stopped by !stop!
+    12.134   PROCEDURAL             CONFLICT-RESOLUTION
+    13.134   ------                 Stopped because time limit reached
+    13.134   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    13.134   PROCEDURAL             CONFLICT-RESOLUTION
+    13.184   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    13.184   PROCEDURAL             CLEAR-BUFFER GOAL
+    13.184   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    13.184   DECLARATIVE            start-retrieval
+    13.184   PROCEDURAL             CONFLICT-RESOLUTION
+    13.277   DECLARATIVE            RETRIEVED-CHUNK NINE
+    13.277   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    13.277   PROCEDURAL             CONFLICT-RESOLUTION
+    13.327   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    13.327   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    13.327   ------                 BREAK-EVENT Stopped by !stop!
+    13.327   PROCEDURAL             CONFLICT-RESOLUTION
+    14.327   ------                 Stopped because time limit reached
+    14.327   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    14.327   PROCEDURAL             CONFLICT-RESOLUTION
+    14.377   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    14.377   PROCEDURAL             CLEAR-BUFFER GOAL
+    14.377   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    14.377   DECLARATIVE            start-retrieval
+    14.377   PROCEDURAL             CONFLICT-RESOLUTION
+    14.517   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    14.517   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    14.517   PROCEDURAL             CONFLICT-RESOLUTION
+    14.567   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    14.567   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    14.567   ------                 BREAK-EVENT Stopped by !stop!
+    14.567   PROCEDURAL             CONFLICT-RESOLUTION
+    15.567   ------                 Stopped because time limit reached
+    15.567   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    15.567   PROCEDURAL             CONFLICT-RESOLUTION
+    15.617   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    15.617   PROCEDURAL             CLEAR-BUFFER GOAL
+    15.617   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    15.617   DECLARATIVE            start-retrieval
+    15.617   PROCEDURAL             CONFLICT-RESOLUTION
+    15.725   DECLARATIVE            RETRIEVED-CHUNK ONE
+    15.725   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    15.725   PROCEDURAL             CONFLICT-RESOLUTION
+    15.775   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    15.775   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    15.775   ------                 BREAK-EVENT Stopped by !stop!
+    15.775   PROCEDURAL             CONFLICT-RESOLUTION
+    16.775   ------                 Stopped because time limit reached
+    16.775   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    16.775   PROCEDURAL             CONFLICT-RESOLUTION
+    16.825   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    16.825   PROCEDURAL             CLEAR-BUFFER GOAL
+    16.825   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    16.825   DECLARATIVE            start-retrieval
+    16.825   PROCEDURAL             CONFLICT-RESOLUTION
+    16.933   DECLARATIVE            RETRIEVED-CHUNK TWO
+    16.933   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+    16.933   PROCEDURAL             CONFLICT-RESOLUTION
+    16.983   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    16.983   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    16.983   ------                 BREAK-EVENT Stopped by !stop!
+    16.983   PROCEDURAL             CONFLICT-RESOLUTION
+    17.983   ------                 Stopped because time limit reached
+    17.983   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    17.983   PROCEDURAL             CONFLICT-RESOLUTION
+    18.033   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    18.033   PROCEDURAL             CLEAR-BUFFER GOAL
+    18.033   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    18.033   DECLARATIVE            start-retrieval
+    18.033   PROCEDURAL             CONFLICT-RESOLUTION
+    18.181   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    18.181   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    18.181   PROCEDURAL             CONFLICT-RESOLUTION
+    18.231   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    18.231   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    18.231   ------                 BREAK-EVENT Stopped by !stop!
+    18.231   PROCEDURAL             CONFLICT-RESOLUTION
+    19.231   ------                 Stopped because time limit reached
+    19.231   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    19.231   PROCEDURAL             CONFLICT-RESOLUTION
+    19.281   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    19.281   PROCEDURAL             CLEAR-BUFFER GOAL
+    19.281   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    19.281   DECLARATIVE            start-retrieval
+    19.281   PROCEDURAL             CONFLICT-RESOLUTION
+    19.420   DECLARATIVE            RETRIEVED-CHUNK NINE
+    19.420   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    19.420   PROCEDURAL             CONFLICT-RESOLUTION
+    19.470   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    19.470   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    19.470   ------                 BREAK-EVENT Stopped by !stop!
+    19.470   PROCEDURAL             CONFLICT-RESOLUTION
+    20.470   ------                 Stopped because time limit reached
+    20.470   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    20.470   PROCEDURAL             CONFLICT-RESOLUTION
+    20.520   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    20.520   PROCEDURAL             CLEAR-BUFFER GOAL
+    20.520   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    20.520   DECLARATIVE            start-retrieval
+    20.520   PROCEDURAL             CONFLICT-RESOLUTION
+    20.710   DECLARATIVE            RETRIEVED-CHUNK THREE
+    20.710   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    20.710   PROCEDURAL             CONFLICT-RESOLUTION
+    20.760   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    20.760   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    20.760   ------                 BREAK-EVENT Stopped by !stop!
+    20.760   PROCEDURAL             CONFLICT-RESOLUTION
+    21.760   ------                 Stopped because time limit reached
+    21.760   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    21.760   PROCEDURAL             CONFLICT-RESOLUTION
+    21.810   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    21.810   PROCEDURAL             CLEAR-BUFFER GOAL
+    21.810   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    21.810   DECLARATIVE            start-retrieval
+    21.810   PROCEDURAL             CONFLICT-RESOLUTION
+    21.884   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    21.884   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    21.884   PROCEDURAL             CONFLICT-RESOLUTION
+    21.934   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    21.934   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    21.934   ------                 BREAK-EVENT Stopped by !stop!
+    21.934   PROCEDURAL             CONFLICT-RESOLUTION
+    22.934   ------                 Stopped because time limit reached
+    22.934   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    22.934   PROCEDURAL             CONFLICT-RESOLUTION
+    22.984   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    22.984   PROCEDURAL             CLEAR-BUFFER GOAL
+    22.984   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    22.984   DECLARATIVE            start-retrieval
+    22.984   PROCEDURAL             CONFLICT-RESOLUTION
+    23.108   DECLARATIVE            RETRIEVED-CHUNK SIX
+    23.108   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    23.108   PROCEDURAL             CONFLICT-RESOLUTION
+    23.158   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    23.158   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    23.158   ------                 BREAK-EVENT Stopped by !stop!
+    23.158   PROCEDURAL             CONFLICT-RESOLUTION
+    24.158   ------                 Stopped because time limit reached
+    24.158   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    24.158   PROCEDURAL             CONFLICT-RESOLUTION
+    24.208   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    24.208   PROCEDURAL             CLEAR-BUFFER GOAL
+    24.208   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    24.208   DECLARATIVE            start-retrieval
+    24.208   PROCEDURAL             CONFLICT-RESOLUTION
+    24.281   DECLARATIVE            RETRIEVED-CHUNK THREE
+    24.281   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    24.281   PROCEDURAL             CONFLICT-RESOLUTION
+    24.331   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    24.331   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    24.331   ------                 BREAK-EVENT Stopped by !stop!
+    24.331   PROCEDURAL             CONFLICT-RESOLUTION
+    25.331   ------                 Stopped because time limit reached
+    25.331   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    25.331   PROCEDURAL             CONFLICT-RESOLUTION
+    25.381   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    25.381   PROCEDURAL             CLEAR-BUFFER GOAL
+    25.381   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    25.381   DECLARATIVE            start-retrieval
+    25.381   PROCEDURAL             CONFLICT-RESOLUTION
+    25.499   DECLARATIVE            RETRIEVED-CHUNK SIX
+    25.499   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    25.499   PROCEDURAL             CONFLICT-RESOLUTION
+    25.549   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    25.549   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    25.549   ------                 BREAK-EVENT Stopped by !stop!
+    25.549   PROCEDURAL             CONFLICT-RESOLUTION
+    26.549   ------                 Stopped because time limit reached
+    26.549   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    26.549   PROCEDURAL             CONFLICT-RESOLUTION
+    26.599   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    26.599   PROCEDURAL             CLEAR-BUFFER GOAL
+    26.599   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.599   DECLARATIVE            start-retrieval
+    26.599   PROCEDURAL             CONFLICT-RESOLUTION
+    26.693   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    26.693   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    26.693   PROCEDURAL             CONFLICT-RESOLUTION
+    26.743   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    26.743   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.743   ------                 BREAK-EVENT Stopped by !stop!
+    26.743   PROCEDURAL             CONFLICT-RESOLUTION
+    27.743   ------                 Stopped because time limit reached
+    27.743   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    27.743   PROCEDURAL             CONFLICT-RESOLUTION
+    27.793   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    27.793   PROCEDURAL             CLEAR-BUFFER GOAL
+    27.793   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.793   DECLARATIVE            start-retrieval
+    27.793   PROCEDURAL             CONFLICT-RESOLUTION
+    27.904   DECLARATIVE            RETRIEVED-CHUNK ONE
+    27.904   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    27.904   PROCEDURAL             CONFLICT-RESOLUTION
+    27.954   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    27.954   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.954   ------                 BREAK-EVENT Stopped by !stop!
+    27.954   PROCEDURAL             CONFLICT-RESOLUTION
+    28.954   ------                 Stopped because time limit reached
+    28.954   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    28.954   PROCEDURAL             CONFLICT-RESOLUTION
+    29.004   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    29.004   PROCEDURAL             CLEAR-BUFFER GOAL
+    29.004   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    29.004   DECLARATIVE            start-retrieval
+    29.004   PROCEDURAL             CONFLICT-RESOLUTION
+    29.122   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    29.122   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    29.122   PROCEDURAL             CONFLICT-RESOLUTION
+    29.172   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    29.172   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    29.172   ------                 BREAK-EVENT Stopped by !stop!
+    29.172   PROCEDURAL             CONFLICT-RESOLUTION
+    30.172   ------                 Stopped because time limit reached
+    30.172   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    30.172   PROCEDURAL             CONFLICT-RESOLUTION
+    30.222   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    30.222   PROCEDURAL             CLEAR-BUFFER GOAL
+    30.222   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    30.222   DECLARATIVE            start-retrieval
+    30.222   PROCEDURAL             CONFLICT-RESOLUTION
+    30.288   DECLARATIVE            RETRIEVED-CHUNK NINE
+    30.288   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    30.288   PROCEDURAL             CONFLICT-RESOLUTION
+    30.338   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    30.338   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    30.338   ------                 BREAK-EVENT Stopped by !stop!
+    30.338   PROCEDURAL             CONFLICT-RESOLUTION
+    31.338   ------                 Stopped because time limit reached
+    31.338   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    31.338   PROCEDURAL             CONFLICT-RESOLUTION
+    31.388   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    31.388   PROCEDURAL             CLEAR-BUFFER GOAL
+    31.388   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    31.388   DECLARATIVE            start-retrieval
+    31.388   PROCEDURAL             CONFLICT-RESOLUTION
+    31.518   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    31.518   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    31.518   PROCEDURAL             CONFLICT-RESOLUTION
+    31.568   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    31.568   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    31.568   ------                 BREAK-EVENT Stopped by !stop!
+    31.568   PROCEDURAL             CONFLICT-RESOLUTION
+    32.568   ------                 Stopped because time limit reached
+    32.568   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    32.568   PROCEDURAL             CONFLICT-RESOLUTION
+    32.618   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    32.618   PROCEDURAL             CLEAR-BUFFER GOAL
+    32.618   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    32.618   DECLARATIVE            start-retrieval
+    32.618   PROCEDURAL             CONFLICT-RESOLUTION
+    32.694   DECLARATIVE            RETRIEVED-CHUNK THREE
+    32.694   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    32.694   PROCEDURAL             CONFLICT-RESOLUTION
+    32.744   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    32.744   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    32.744   ------                 BREAK-EVENT Stopped by !stop!
+    32.744   PROCEDURAL             CONFLICT-RESOLUTION
+    33.744   ------                 Stopped because time limit reached
+    33.744   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    33.744   PROCEDURAL             CONFLICT-RESOLUTION
+    33.794   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    33.794   PROCEDURAL             CLEAR-BUFFER GOAL
+    33.794   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    33.794   DECLARATIVE            start-retrieval
+    33.794   PROCEDURAL             CONFLICT-RESOLUTION
+    33.959   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    33.959   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    33.959   PROCEDURAL             CONFLICT-RESOLUTION
+    34.009   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    34.009   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    34.009   ------                 BREAK-EVENT Stopped by !stop!
+    34.009   PROCEDURAL             CONFLICT-RESOLUTION
+    35.009   ------                 Stopped because time limit reached
+    35.009   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    35.009   PROCEDURAL             CONFLICT-RESOLUTION
+    35.059   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    35.059   PROCEDURAL             CLEAR-BUFFER GOAL
+    35.059   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    35.059   DECLARATIVE            start-retrieval
+    35.059   PROCEDURAL             CONFLICT-RESOLUTION
+    35.164   DECLARATIVE            RETRIEVED-CHUNK ONE
+    35.164   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    35.164   PROCEDURAL             CONFLICT-RESOLUTION
+    35.214   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    35.214   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    35.214   ------                 BREAK-EVENT Stopped by !stop!
+    35.214   PROCEDURAL             CONFLICT-RESOLUTION
+    36.214   ------                 Stopped because time limit reached
+    36.214   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    36.214   PROCEDURAL             CONFLICT-RESOLUTION
+    36.264   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    36.264   PROCEDURAL             CLEAR-BUFFER GOAL
+    36.264   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    36.264   DECLARATIVE            start-retrieval
+    36.264   PROCEDURAL             CONFLICT-RESOLUTION
+    36.362   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    36.362   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    36.362   PROCEDURAL             CONFLICT-RESOLUTION
+    36.412   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    36.412   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    36.412   ------                 BREAK-EVENT Stopped by !stop!
+    36.412   PROCEDURAL             CONFLICT-RESOLUTION
+    37.412   ------                 Stopped because time limit reached
+    37.412   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    37.412   PROCEDURAL             CONFLICT-RESOLUTION
+    37.462   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    37.462   PROCEDURAL             CLEAR-BUFFER GOAL
+    37.462   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    37.462   DECLARATIVE            start-retrieval
+    37.462   PROCEDURAL             CONFLICT-RESOLUTION
+    37.562   DECLARATIVE            RETRIEVED-CHUNK NINE
+    37.562   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    37.562   PROCEDURAL             CONFLICT-RESOLUTION
+    37.612   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    37.612   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    37.612   ------                 BREAK-EVENT Stopped by !stop!
+    37.612   PROCEDURAL             CONFLICT-RESOLUTION
+    38.612   ------                 Stopped because time limit reached
+    38.612   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    38.612   PROCEDURAL             CONFLICT-RESOLUTION
+    38.662   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    38.662   PROCEDURAL             CLEAR-BUFFER GOAL
+    38.662   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    38.662   DECLARATIVE            start-retrieval
+    38.662   PROCEDURAL             CONFLICT-RESOLUTION
+    38.762   DECLARATIVE            RETRIEVED-CHUNK TWO
+    38.762   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+    38.762   PROCEDURAL             CONFLICT-RESOLUTION
+    38.812   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    38.812   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    38.812   ------                 BREAK-EVENT Stopped by !stop!
+    38.812   PROCEDURAL             CONFLICT-RESOLUTION
+    39.812   ------                 Stopped because time limit reached
+    39.812   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    39.812   PROCEDURAL             CONFLICT-RESOLUTION
+    39.862   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    39.862   PROCEDURAL             CLEAR-BUFFER GOAL
+    39.862   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    39.862   DECLARATIVE            start-retrieval
+    39.862   PROCEDURAL             CONFLICT-RESOLUTION
+    39.998   DECLARATIVE            RETRIEVED-CHUNK SIX
+    39.998   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    39.998   PROCEDURAL             CONFLICT-RESOLUTION
+    40.048   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    40.048   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    40.048   ------                 BREAK-EVENT Stopped by !stop!
+    40.048   PROCEDURAL             CONFLICT-RESOLUTION
+    41.048   ------                 Stopped because time limit reached
+    41.048   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    41.048   PROCEDURAL             CONFLICT-RESOLUTION
+    41.098   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    41.098   PROCEDURAL             CLEAR-BUFFER GOAL
+    41.098   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    41.098   DECLARATIVE            start-retrieval
+    41.098   PROCEDURAL             CONFLICT-RESOLUTION
+    41.184   DECLARATIVE            RETRIEVED-CHUNK NINE
+    41.184   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    41.184   PROCEDURAL             CONFLICT-RESOLUTION
+    41.234   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    41.234   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    41.234   ------                 BREAK-EVENT Stopped by !stop!
+    41.234   PROCEDURAL             CONFLICT-RESOLUTION
+    42.234   ------                 Stopped because time limit reached
+    42.234   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    42.234   PROCEDURAL             CONFLICT-RESOLUTION
+    42.284   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    42.284   PROCEDURAL             CLEAR-BUFFER GOAL
+    42.284   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    42.284   DECLARATIVE            start-retrieval
+    42.284   PROCEDURAL             CONFLICT-RESOLUTION
+    42.424   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    42.424   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    42.424   PROCEDURAL             CONFLICT-RESOLUTION
+    42.474   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    42.474   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    42.474   ------                 BREAK-EVENT Stopped by !stop!
+    42.474   PROCEDURAL             CONFLICT-RESOLUTION
+    43.474   ------                 Stopped because time limit reached
+    43.474   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    43.474   PROCEDURAL             CONFLICT-RESOLUTION
+    43.524   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    43.524   PROCEDURAL             CLEAR-BUFFER GOAL
+    43.524   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    43.524   DECLARATIVE            start-retrieval
+    43.524   PROCEDURAL             CONFLICT-RESOLUTION
+    43.621   DECLARATIVE            RETRIEVED-CHUNK THREE
+    43.621   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    43.621   PROCEDURAL             CONFLICT-RESOLUTION
+    43.671   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    43.671   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    43.671   ------                 BREAK-EVENT Stopped by !stop!
+    43.671   PROCEDURAL             CONFLICT-RESOLUTION
+    44.671   ------                 Stopped because time limit reached
+    44.671   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    44.671   PROCEDURAL             CONFLICT-RESOLUTION
+    44.721   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    44.721   PROCEDURAL             CLEAR-BUFFER GOAL
+    44.721   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    44.721   DECLARATIVE            start-retrieval
+    44.721   PROCEDURAL             CONFLICT-RESOLUTION
+    44.853   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    44.853   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    44.853   PROCEDURAL             CONFLICT-RESOLUTION
+    44.903   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    44.903   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    44.903   ------                 BREAK-EVENT Stopped by !stop!
+    44.903   PROCEDURAL             CONFLICT-RESOLUTION
+    45.903   ------                 Stopped because time limit reached
+    45.903   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    45.903   PROCEDURAL             CONFLICT-RESOLUTION
+    45.953   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    45.953   PROCEDURAL             CLEAR-BUFFER GOAL
+    45.953   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    45.953   DECLARATIVE            start-retrieval
+    45.953   PROCEDURAL             CONFLICT-RESOLUTION
+    46.105   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    46.105   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    46.105   PROCEDURAL             CONFLICT-RESOLUTION
+    46.155   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    46.155   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    46.155   ------                 BREAK-EVENT Stopped by !stop!
+    46.155   PROCEDURAL             CONFLICT-RESOLUTION
+    47.155   ------                 Stopped because time limit reached
+    47.155   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    47.155   PROCEDURAL             CONFLICT-RESOLUTION
+    47.205   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    47.205   PROCEDURAL             CLEAR-BUFFER GOAL
+    47.205   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    47.205   DECLARATIVE            start-retrieval
+    47.205   PROCEDURAL             CONFLICT-RESOLUTION
+    47.338   DECLARATIVE            RETRIEVED-CHUNK NINE
+    47.338   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    47.338   PROCEDURAL             CONFLICT-RESOLUTION
+    47.388   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    47.388   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    47.388   ------                 BREAK-EVENT Stopped by !stop!
+    47.388   PROCEDURAL             CONFLICT-RESOLUTION
+    48.388   ------                 Stopped because time limit reached
+    48.388   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    48.388   PROCEDURAL             CONFLICT-RESOLUTION
+    48.438   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    48.438   PROCEDURAL             CLEAR-BUFFER GOAL
+    48.438   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    48.438   DECLARATIVE            start-retrieval
+    48.438   PROCEDURAL             CONFLICT-RESOLUTION
+    48.571   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    48.571   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    48.571   PROCEDURAL             CONFLICT-RESOLUTION
+    48.621   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    48.621   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    48.621   ------                 BREAK-EVENT Stopped by !stop!
+    48.621   PROCEDURAL             CONFLICT-RESOLUTION
+    49.621   ------                 Stopped because time limit reached
+    49.621   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    49.621   PROCEDURAL             CONFLICT-RESOLUTION
+    49.671   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    49.671   PROCEDURAL             CLEAR-BUFFER GOAL
+    49.671   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    49.671   DECLARATIVE            start-retrieval
+    49.671   PROCEDURAL             CONFLICT-RESOLUTION
+    49.728   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    49.728   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    49.728   PROCEDURAL             CONFLICT-RESOLUTION
+    49.778   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    49.778   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    49.778   ------                 BREAK-EVENT Stopped by !stop!
+    49.778   PROCEDURAL             CONFLICT-RESOLUTION
+    50.778   ------                 Stopped because time limit reached
+    50.778   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    50.778   PROCEDURAL             CONFLICT-RESOLUTION
+    50.828   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    50.828   PROCEDURAL             CLEAR-BUFFER GOAL
+    50.828   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    50.828   DECLARATIVE            start-retrieval
+    50.828   PROCEDURAL             CONFLICT-RESOLUTION
+    50.906   DECLARATIVE            RETRIEVED-CHUNK SIX
+    50.906   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    50.906   PROCEDURAL             CONFLICT-RESOLUTION
+    50.956   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    50.956   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    50.956   ------                 BREAK-EVENT Stopped by !stop!
+    50.956   PROCEDURAL             CONFLICT-RESOLUTION
+    51.956   ------                 Stopped because time limit reached
+    51.956   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    51.956   PROCEDURAL             CONFLICT-RESOLUTION
+    52.006   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    52.006   PROCEDURAL             CLEAR-BUFFER GOAL
+    52.006   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    52.006   DECLARATIVE            start-retrieval
+    52.006   PROCEDURAL             CONFLICT-RESOLUTION
+    52.122   DECLARATIVE            RETRIEVED-CHUNK ONE
+    52.122   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    52.122   PROCEDURAL             CONFLICT-RESOLUTION
+    52.172   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    52.172   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    52.172   ------                 BREAK-EVENT Stopped by !stop!
+    52.172   PROCEDURAL             CONFLICT-RESOLUTION
+    53.172   ------                 Stopped because time limit reached
+    53.172   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    53.172   PROCEDURAL             CONFLICT-RESOLUTION
+    53.222   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    53.222   PROCEDURAL             CLEAR-BUFFER GOAL
+    53.222   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    53.222   DECLARATIVE            start-retrieval
+    53.222   PROCEDURAL             CONFLICT-RESOLUTION
+    53.314   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    53.314   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    53.314   PROCEDURAL             CONFLICT-RESOLUTION
+    53.364   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    53.364   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    53.364   ------                 BREAK-EVENT Stopped by !stop!
+    53.364   PROCEDURAL             CONFLICT-RESOLUTION
+    54.364   ------                 Stopped because time limit reached
+    54.364   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    54.364   PROCEDURAL             CONFLICT-RESOLUTION
+    54.414   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    54.414   PROCEDURAL             CLEAR-BUFFER GOAL
+    54.414   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    54.414   DECLARATIVE            start-retrieval
+    54.414   PROCEDURAL             CONFLICT-RESOLUTION
+    54.522   DECLARATIVE            RETRIEVED-CHUNK NINE
+    54.522   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    54.522   PROCEDURAL             CONFLICT-RESOLUTION
+    54.572   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    54.572   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    54.572   ------                 BREAK-EVENT Stopped by !stop!
+    54.572   PROCEDURAL             CONFLICT-RESOLUTION
+    55.572   ------                 Stopped because time limit reached
+    55.572   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    55.572   PROCEDURAL             CONFLICT-RESOLUTION
+    55.622   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    55.622   PROCEDURAL             CLEAR-BUFFER GOAL
+    55.622   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    55.622   DECLARATIVE            start-retrieval
+    55.622   PROCEDURAL             CONFLICT-RESOLUTION
+    55.706   DECLARATIVE            RETRIEVED-CHUNK TWO
+    55.706   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+    55.706   PROCEDURAL             CONFLICT-RESOLUTION
+    55.756   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    55.756   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    55.756   ------                 BREAK-EVENT Stopped by !stop!
+    55.756   PROCEDURAL             CONFLICT-RESOLUTION
+    56.756   ------                 Stopped because time limit reached
+    56.756   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    56.756   PROCEDURAL             CONFLICT-RESOLUTION
+    56.806   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    56.806   PROCEDURAL             CLEAR-BUFFER GOAL
+    56.806   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    56.806   DECLARATIVE            start-retrieval
+    56.806   PROCEDURAL             CONFLICT-RESOLUTION
+    56.948   DECLARATIVE            RETRIEVED-CHUNK THREE
+    56.948   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    56.948   PROCEDURAL             CONFLICT-RESOLUTION
+    56.998   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    56.998   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    56.998   ------                 BREAK-EVENT Stopped by !stop!
+    56.998   PROCEDURAL             CONFLICT-RESOLUTION
+    57.998   ------                 Stopped because time limit reached
+    57.998   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    57.998   PROCEDURAL             CONFLICT-RESOLUTION
+    58.048   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    58.048   PROCEDURAL             CLEAR-BUFFER GOAL
+    58.048   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    58.048   DECLARATIVE            start-retrieval
+    58.048   PROCEDURAL             CONFLICT-RESOLUTION
+    58.125   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    58.125   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    58.125   PROCEDURAL             CONFLICT-RESOLUTION
+    58.175   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    58.175   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    58.175   ------                 BREAK-EVENT Stopped by !stop!
+    58.175   PROCEDURAL             CONFLICT-RESOLUTION
+    59.175   ------                 Stopped because time limit reached
+    59.175   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    59.175   PROCEDURAL             CONFLICT-RESOLUTION
+    59.225   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    59.225   PROCEDURAL             CLEAR-BUFFER GOAL
+    59.225   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    59.225   DECLARATIVE            start-retrieval
+    59.225   PROCEDURAL             CONFLICT-RESOLUTION
+    59.371   DECLARATIVE            RETRIEVED-CHUNK NINE
+    59.371   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    59.371   PROCEDURAL             CONFLICT-RESOLUTION
+    59.421   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    59.421   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    59.421   ------                 BREAK-EVENT Stopped by !stop!
+    59.421   PROCEDURAL             CONFLICT-RESOLUTION
+    60.421   ------                 Stopped because time limit reached
+    60.421   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    60.421   PROCEDURAL             CONFLICT-RESOLUTION
+    60.471   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    60.471   PROCEDURAL             CLEAR-BUFFER GOAL
+    60.471   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    60.471   DECLARATIVE            start-retrieval
+    60.471   PROCEDURAL             CONFLICT-RESOLUTION
+    60.540   DECLARATIVE            RETRIEVED-CHUNK SIX
+    60.540   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    60.540   PROCEDURAL             CONFLICT-RESOLUTION
+    60.590   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    60.590   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    60.590   ------                 BREAK-EVENT Stopped by !stop!
+    60.590   PROCEDURAL             CONFLICT-RESOLUTION
+    61.590   ------                 Stopped because time limit reached
+    61.590   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    61.590   PROCEDURAL             CONFLICT-RESOLUTION
+    61.640   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    61.640   PROCEDURAL             CLEAR-BUFFER GOAL
+    61.640   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    61.640   DECLARATIVE            start-retrieval
+    61.640   PROCEDURAL             CONFLICT-RESOLUTION
+    61.674   DECLARATIVE            RETRIEVED-CHUNK NINE
+    61.674   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    61.674   PROCEDURAL             CONFLICT-RESOLUTION
+    61.724   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    61.724   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    61.724   ------                 BREAK-EVENT Stopped by !stop!
+    61.724   PROCEDURAL             CONFLICT-RESOLUTION
+    62.724   ------                 Stopped because time limit reached
+    62.724   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    62.724   PROCEDURAL             CONFLICT-RESOLUTION
+    62.774   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    62.774   PROCEDURAL             CLEAR-BUFFER GOAL
+    62.774   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    62.774   DECLARATIVE            start-retrieval
+    62.774   PROCEDURAL             CONFLICT-RESOLUTION
+    62.915   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    62.915   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    62.915   PROCEDURAL             CONFLICT-RESOLUTION
+    62.965   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    62.965   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    62.965   ------                 BREAK-EVENT Stopped by !stop!
+    62.965   PROCEDURAL             CONFLICT-RESOLUTION
+    63.965   ------                 Stopped because time limit reached
+    63.965   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    63.965   PROCEDURAL             CONFLICT-RESOLUTION
+    64.015   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    64.015   PROCEDURAL             CLEAR-BUFFER GOAL
+    64.015   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    64.015   DECLARATIVE            start-retrieval
+    64.015   PROCEDURAL             CONFLICT-RESOLUTION
+    64.071   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    64.071   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    64.071   PROCEDURAL             CONFLICT-RESOLUTION
+    64.121   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    64.121   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    64.121   ------                 BREAK-EVENT Stopped by !stop!
+    64.121   PROCEDURAL             CONFLICT-RESOLUTION
+    65.121   ------                 Stopped because time limit reached
+    65.121   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    65.121   PROCEDURAL             CONFLICT-RESOLUTION
+    65.171   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    65.171   PROCEDURAL             CLEAR-BUFFER GOAL
+    65.171   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    65.171   DECLARATIVE            start-retrieval
+    65.171   PROCEDURAL             CONFLICT-RESOLUTION
+    65.315   DECLARATIVE            RETRIEVED-CHUNK NINE
+    65.315   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    65.315   PROCEDURAL             CONFLICT-RESOLUTION
+    65.365   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    65.365   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    65.365   ------                 BREAK-EVENT Stopped by !stop!
+    65.365   PROCEDURAL             CONFLICT-RESOLUTION
+    66.365   ------                 Stopped because time limit reached
+    66.365   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    66.365   PROCEDURAL             CONFLICT-RESOLUTION
+    66.415   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    66.415   PROCEDURAL             CLEAR-BUFFER GOAL
+    66.415   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    66.415   DECLARATIVE            start-retrieval
+    66.415   PROCEDURAL             CONFLICT-RESOLUTION
+    66.544   DECLARATIVE            RETRIEVED-CHUNK SIX
+    66.544   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    66.544   PROCEDURAL             CONFLICT-RESOLUTION
+    66.594   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    66.594   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    66.594   ------                 BREAK-EVENT Stopped by !stop!
+    66.594   PROCEDURAL             CONFLICT-RESOLUTION
+    67.594   ------                 Stopped because time limit reached
+    67.594   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    67.594   PROCEDURAL             CONFLICT-RESOLUTION
+    67.644   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    67.644   PROCEDURAL             CLEAR-BUFFER GOAL
+    67.644   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    67.644   DECLARATIVE            start-retrieval
+    67.644   PROCEDURAL             CONFLICT-RESOLUTION
+    67.711   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    67.711   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    67.711   PROCEDURAL             CONFLICT-RESOLUTION
+    67.761   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    67.761   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    67.761   ------                 BREAK-EVENT Stopped by !stop!
+    67.761   PROCEDURAL             CONFLICT-RESOLUTION
+    68.761   ------                 Stopped because time limit reached
+    68.761   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    68.761   PROCEDURAL             CONFLICT-RESOLUTION
+    68.811   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    68.811   PROCEDURAL             CLEAR-BUFFER GOAL
+    68.811   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    68.811   DECLARATIVE            start-retrieval
+    68.811   PROCEDURAL             CONFLICT-RESOLUTION
+    68.887   DECLARATIVE            RETRIEVED-CHUNK TWO
+    68.887   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+    68.887   PROCEDURAL             CONFLICT-RESOLUTION
+    68.937   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    68.937   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    68.937   ------                 BREAK-EVENT Stopped by !stop!
+    68.937   PROCEDURAL             CONFLICT-RESOLUTION
+    69.937   ------                 Stopped because time limit reached
+    69.937   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    69.937   PROCEDURAL             CONFLICT-RESOLUTION
+    69.987   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    69.987   PROCEDURAL             CLEAR-BUFFER GOAL
+    69.987   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    69.987   DECLARATIVE            start-retrieval
+    69.987   PROCEDURAL             CONFLICT-RESOLUTION
+    70.105   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    70.105   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    70.105   PROCEDURAL             CONFLICT-RESOLUTION
+    70.155   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    70.155   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    70.155   ------                 BREAK-EVENT Stopped by !stop!
+    70.155   PROCEDURAL             CONFLICT-RESOLUTION
+    71.155   ------                 Stopped because time limit reached
+    71.155   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    71.155   PROCEDURAL             CONFLICT-RESOLUTION
+    71.205   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    71.205   PROCEDURAL             CLEAR-BUFFER GOAL
+    71.205   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    71.205   DECLARATIVE            start-retrieval
+    71.205   PROCEDURAL             CONFLICT-RESOLUTION
+    71.283   DECLARATIVE            RETRIEVED-CHUNK SIX
+    71.283   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    71.283   PROCEDURAL             CONFLICT-RESOLUTION
+    71.333   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    71.333   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    71.333   ------                 BREAK-EVENT Stopped by !stop!
+    71.333   PROCEDURAL             CONFLICT-RESOLUTION
+    72.333   ------                 Stopped because time limit reached
+    72.333   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    72.333   PROCEDURAL             CONFLICT-RESOLUTION
+    72.383   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    72.383   PROCEDURAL             CLEAR-BUFFER GOAL
+    72.383   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    72.383   DECLARATIVE            start-retrieval
+    72.383   PROCEDURAL             CONFLICT-RESOLUTION
+    72.450   DECLARATIVE            RETRIEVED-CHUNK NINE
+    72.450   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    72.450   PROCEDURAL             CONFLICT-RESOLUTION
+    72.500   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    72.500   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    72.500   ------                 BREAK-EVENT Stopped by !stop!
+    72.500   PROCEDURAL             CONFLICT-RESOLUTION
+    73.500   ------                 Stopped because time limit reached
+    73.500   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    73.500   PROCEDURAL             CONFLICT-RESOLUTION
+    73.550   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    73.550   PROCEDURAL             CLEAR-BUFFER GOAL
+    73.550   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    73.550   DECLARATIVE            start-retrieval
+    73.550   PROCEDURAL             CONFLICT-RESOLUTION
+    73.672   DECLARATIVE            RETRIEVED-CHUNK ONE
+    73.672   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    73.672   PROCEDURAL             CONFLICT-RESOLUTION
+    73.722   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    73.722   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    73.722   ------                 BREAK-EVENT Stopped by !stop!
+    73.722   PROCEDURAL             CONFLICT-RESOLUTION
+    74.722   ------                 Stopped because time limit reached
+    74.722   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    74.722   PROCEDURAL             CONFLICT-RESOLUTION
+    74.772   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    74.772   PROCEDURAL             CLEAR-BUFFER GOAL
+    74.772   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    74.772   DECLARATIVE            start-retrieval
+    74.772   PROCEDURAL             CONFLICT-RESOLUTION
+    74.909   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    74.909   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    74.909   PROCEDURAL             CONFLICT-RESOLUTION
+    74.959   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    74.959   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    74.959   ------                 BREAK-EVENT Stopped by !stop!
+    74.959   PROCEDURAL             CONFLICT-RESOLUTION
+    75.959   ------                 Stopped because time limit reached
+    75.959   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    75.959   PROCEDURAL             CONFLICT-RESOLUTION
+    76.009   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    76.009   PROCEDURAL             CLEAR-BUFFER GOAL
+    76.009   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    76.009   DECLARATIVE            start-retrieval
+    76.009   PROCEDURAL             CONFLICT-RESOLUTION
+    76.111   DECLARATIVE            RETRIEVED-CHUNK THREE
+    76.111   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    76.111   PROCEDURAL             CONFLICT-RESOLUTION
+    76.161   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    76.161   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    76.161   ------                 BREAK-EVENT Stopped by !stop!
+    76.161   PROCEDURAL             CONFLICT-RESOLUTION
+    77.161   ------                 Stopped because time limit reached
+    77.161   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    77.161   PROCEDURAL             CONFLICT-RESOLUTION
+    77.211   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    77.211   PROCEDURAL             CLEAR-BUFFER GOAL
+    77.211   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    77.211   DECLARATIVE            start-retrieval
+    77.211   PROCEDURAL             CONFLICT-RESOLUTION
+    77.266   DECLARATIVE            RETRIEVED-CHUNK SIX
+    77.266   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    77.266   PROCEDURAL             CONFLICT-RESOLUTION
+    77.316   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    77.316   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    77.316   ------                 BREAK-EVENT Stopped by !stop!
+    77.316   PROCEDURAL             CONFLICT-RESOLUTION
+    78.316   ------                 Stopped because time limit reached
+    78.316   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    78.316   PROCEDURAL             CONFLICT-RESOLUTION
+    78.366   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    78.366   PROCEDURAL             CLEAR-BUFFER GOAL
+    78.366   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    78.366   DECLARATIVE            start-retrieval
+    78.366   PROCEDURAL             CONFLICT-RESOLUTION
+    78.492   DECLARATIVE            RETRIEVED-CHUNK NINE
+    78.492   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    78.492   PROCEDURAL             CONFLICT-RESOLUTION
+    78.542   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    78.542   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    78.542   ------                 BREAK-EVENT Stopped by !stop!
+    78.542   PROCEDURAL             CONFLICT-RESOLUTION
+    79.542   ------                 Stopped because time limit reached
+    79.542   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    79.542   PROCEDURAL             CONFLICT-RESOLUTION
+    79.592   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    79.592   PROCEDURAL             CLEAR-BUFFER GOAL
+    79.592   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    79.592   DECLARATIVE            start-retrieval
+    79.592   PROCEDURAL             CONFLICT-RESOLUTION
+    79.727   DECLARATIVE            RETRIEVED-CHUNK TWO
+    79.727   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+    79.727   PROCEDURAL             CONFLICT-RESOLUTION
+    79.777   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    79.777   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    79.777   ------                 BREAK-EVENT Stopped by !stop!
+    79.777   PROCEDURAL             CONFLICT-RESOLUTION
+    80.777   ------                 Stopped because time limit reached
+    80.777   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    80.777   PROCEDURAL             CONFLICT-RESOLUTION
+    80.827   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    80.827   PROCEDURAL             CLEAR-BUFFER GOAL
+    80.827   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    80.827   DECLARATIVE            start-retrieval
+    80.827   PROCEDURAL             CONFLICT-RESOLUTION
+    80.900   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    80.900   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    80.900   PROCEDURAL             CONFLICT-RESOLUTION
+    80.950   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    80.950   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    80.950   ------                 BREAK-EVENT Stopped by !stop!
+    80.950   PROCEDURAL             CONFLICT-RESOLUTION
+    81.950   ------                 Stopped because time limit reached
+    81.950   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    81.950   PROCEDURAL             CONFLICT-RESOLUTION
+    82.000   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    82.000   PROCEDURAL             CLEAR-BUFFER GOAL
+    82.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    82.000   DECLARATIVE            start-retrieval
+    82.000   PROCEDURAL             CONFLICT-RESOLUTION
+    82.035   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    82.035   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    82.035   PROCEDURAL             CONFLICT-RESOLUTION
+    82.085   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    82.085   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    82.085   ------                 BREAK-EVENT Stopped by !stop!
+    82.085   PROCEDURAL             CONFLICT-RESOLUTION
+    83.085   ------                 Stopped because time limit reached
+    83.085   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    83.085   PROCEDURAL             CONFLICT-RESOLUTION
+    83.135   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    83.135   PROCEDURAL             CLEAR-BUFFER GOAL
+    83.135   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    83.135   DECLARATIVE            start-retrieval
+    83.135   PROCEDURAL             CONFLICT-RESOLUTION
+    83.252   DECLARATIVE            RETRIEVED-CHUNK ONE
+    83.252   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    83.252   PROCEDURAL             CONFLICT-RESOLUTION
+    83.302   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    83.302   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    83.302   ------                 BREAK-EVENT Stopped by !stop!
+    83.302   PROCEDURAL             CONFLICT-RESOLUTION
+    84.302   ------                 Stopped because time limit reached
+    84.302   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    84.302   PROCEDURAL             CONFLICT-RESOLUTION
+    84.352   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    84.352   PROCEDURAL             CLEAR-BUFFER GOAL
+    84.352   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    84.352   DECLARATIVE            start-retrieval
+    84.352   PROCEDURAL             CONFLICT-RESOLUTION
+    84.509   DECLARATIVE            RETRIEVED-CHUNK NINE
+    84.509   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    84.509   PROCEDURAL             CONFLICT-RESOLUTION
+    84.559   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    84.559   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    84.559   ------                 BREAK-EVENT Stopped by !stop!
+    84.559   PROCEDURAL             CONFLICT-RESOLUTION
+    85.559   ------                 Stopped because time limit reached
+    85.559   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    85.559   PROCEDURAL             CONFLICT-RESOLUTION
+    85.609   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    85.609   PROCEDURAL             CLEAR-BUFFER GOAL
+    85.609   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    85.609   DECLARATIVE            start-retrieval
+    85.609   PROCEDURAL             CONFLICT-RESOLUTION
+    85.735   DECLARATIVE            RETRIEVED-CHUNK SIX
+    85.735   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    85.735   PROCEDURAL             CONFLICT-RESOLUTION
+    85.785   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    85.785   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    85.785   ------                 BREAK-EVENT Stopped by !stop!
+    85.785   PROCEDURAL             CONFLICT-RESOLUTION
+    86.785   ------                 Stopped because time limit reached
+    86.785   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    86.785   PROCEDURAL             CONFLICT-RESOLUTION
+    86.835   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    86.835   PROCEDURAL             CLEAR-BUFFER GOAL
+    86.835   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    86.835   DECLARATIVE            start-retrieval
+    86.835   PROCEDURAL             CONFLICT-RESOLUTION
+    86.934   DECLARATIVE            RETRIEVED-CHUNK TWO
+    86.934   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+    86.934   PROCEDURAL             CONFLICT-RESOLUTION
+    86.984   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    86.984   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    86.984   ------                 BREAK-EVENT Stopped by !stop!
+    86.984   PROCEDURAL             CONFLICT-RESOLUTION
+    87.984   ------                 Stopped because time limit reached
+    87.984   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    87.984   PROCEDURAL             CONFLICT-RESOLUTION
+    88.034   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    88.034   PROCEDURAL             CLEAR-BUFFER GOAL
+    88.034   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    88.034   DECLARATIVE            start-retrieval
+    88.034   PROCEDURAL             CONFLICT-RESOLUTION
+    88.142   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    88.142   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    88.142   PROCEDURAL             CONFLICT-RESOLUTION
+    88.192   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    88.192   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    88.192   ------                 BREAK-EVENT Stopped by !stop!
+    88.192   PROCEDURAL             CONFLICT-RESOLUTION
+    89.192   ------                 Stopped because time limit reached
+    89.192   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    89.192   PROCEDURAL             CONFLICT-RESOLUTION
+    89.242   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    89.242   PROCEDURAL             CLEAR-BUFFER GOAL
+    89.242   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    89.242   DECLARATIVE            start-retrieval
+    89.242   PROCEDURAL             CONFLICT-RESOLUTION
+    89.376   DECLARATIVE            RETRIEVED-CHUNK ONE
+    89.376   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+    89.376   PROCEDURAL             CONFLICT-RESOLUTION
+    89.426   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    89.426   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    89.426   ------                 BREAK-EVENT Stopped by !stop!
+    89.426   PROCEDURAL             CONFLICT-RESOLUTION
+    90.426   ------                 Stopped because time limit reached
+    90.426   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    90.426   PROCEDURAL             CONFLICT-RESOLUTION
+    90.476   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    90.476   PROCEDURAL             CLEAR-BUFFER GOAL
+    90.476   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    90.476   DECLARATIVE            start-retrieval
+    90.476   PROCEDURAL             CONFLICT-RESOLUTION
+    90.589   DECLARATIVE            RETRIEVED-CHUNK NINE
+    90.589   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    90.589   PROCEDURAL             CONFLICT-RESOLUTION
+    90.639   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    90.639   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    90.639   ------                 BREAK-EVENT Stopped by !stop!
+    90.639   PROCEDURAL             CONFLICT-RESOLUTION
+    91.639   ------                 Stopped because time limit reached
+    91.639   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    91.639   PROCEDURAL             CONFLICT-RESOLUTION
+    91.689   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    91.689   PROCEDURAL             CLEAR-BUFFER GOAL
+    91.689   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    91.689   DECLARATIVE            start-retrieval
+    91.689   PROCEDURAL             CONFLICT-RESOLUTION
+    91.844   DECLARATIVE            RETRIEVED-CHUNK FOUR
+    91.844   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+    91.844   PROCEDURAL             CONFLICT-RESOLUTION
+    91.894   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    91.894   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    91.894   ------                 BREAK-EVENT Stopped by !stop!
+    91.894   PROCEDURAL             CONFLICT-RESOLUTION
+    92.894   ------                 Stopped because time limit reached
+    92.894   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    92.894   PROCEDURAL             CONFLICT-RESOLUTION
+    92.944   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    92.944   PROCEDURAL             CLEAR-BUFFER GOAL
+    92.944   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    92.944   DECLARATIVE            start-retrieval
+    92.944   PROCEDURAL             CONFLICT-RESOLUTION
+    93.067   DECLARATIVE            RETRIEVED-CHUNK SIX
+    93.067   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+    93.067   PROCEDURAL             CONFLICT-RESOLUTION
+    93.117   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    93.117   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    93.117   ------                 BREAK-EVENT Stopped by !stop!
+    93.117   PROCEDURAL             CONFLICT-RESOLUTION
+    94.117   ------                 Stopped because time limit reached
+    94.117   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    94.117   PROCEDURAL             CONFLICT-RESOLUTION
+    94.167   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    94.167   PROCEDURAL             CLEAR-BUFFER GOAL
+    94.167   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    94.167   DECLARATIVE            start-retrieval
+    94.167   PROCEDURAL             CONFLICT-RESOLUTION
+    94.253   DECLARATIVE            RETRIEVED-CHUNK THREE
+    94.253   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+    94.253   PROCEDURAL             CONFLICT-RESOLUTION
+    94.303   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    94.303   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    94.303   ------                 BREAK-EVENT Stopped by !stop!
+    94.303   PROCEDURAL             CONFLICT-RESOLUTION
+    95.303   ------                 Stopped because time limit reached
+    95.303   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    95.303   PROCEDURAL             CONFLICT-RESOLUTION
+    95.353   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    95.353   PROCEDURAL             CLEAR-BUFFER GOAL
+    95.353   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    95.353   DECLARATIVE            start-retrieval
+    95.353   PROCEDURAL             CONFLICT-RESOLUTION
+    95.453   DECLARATIVE            RETRIEVED-CHUNK NINE
+    95.453   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+    95.453   PROCEDURAL             CONFLICT-RESOLUTION
+    95.503   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    95.503   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    95.503   ------                 BREAK-EVENT Stopped by !stop!
+    95.503   PROCEDURAL             CONFLICT-RESOLUTION
+    96.503   ------                 Stopped because time limit reached
+    96.503   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    96.503   PROCEDURAL             CONFLICT-RESOLUTION
+    96.553   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    96.553   PROCEDURAL             CLEAR-BUFFER GOAL
+    96.553   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    96.553   DECLARATIVE            start-retrieval
+    96.553   PROCEDURAL             CONFLICT-RESOLUTION
+    96.687   DECLARATIVE            RETRIEVED-CHUNK ZERO
+    96.687   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+    96.687   PROCEDURAL             CONFLICT-RESOLUTION
+    96.737   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    96.737   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    96.737   ------                 BREAK-EVENT Stopped by !stop!
+    96.737   PROCEDURAL             CONFLICT-RESOLUTION
+    97.737   ------                 Stopped because time limit reached
+    97.737   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    97.737   PROCEDURAL             CONFLICT-RESOLUTION
+    97.787   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    97.787   PROCEDURAL             CLEAR-BUFFER GOAL
+    97.787   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    97.787   DECLARATIVE            start-retrieval
+    97.787   PROCEDURAL             CONFLICT-RESOLUTION
+    97.878   DECLARATIVE            RETRIEVED-CHUNK FIVE
+    97.878   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+    97.878   PROCEDURAL             CONFLICT-RESOLUTION
+    97.928   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    97.928   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    97.928   ------                 BREAK-EVENT Stopped by !stop!
+    97.928   PROCEDURAL             CONFLICT-RESOLUTION
+    98.928   ------                 Stopped because time limit reached
+    98.928   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+    98.928   PROCEDURAL             CONFLICT-RESOLUTION
+    98.978   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+    98.978   PROCEDURAL             CLEAR-BUFFER GOAL
+    98.978   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    98.978   DECLARATIVE            start-retrieval
+    98.978   PROCEDURAL             CONFLICT-RESOLUTION
+    99.103   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+    99.103   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+    99.103   PROCEDURAL             CONFLICT-RESOLUTION
+    99.153   PROCEDURAL             PRODUCTION-FIRED HARVEST
+    99.153   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    99.153   ------                 BREAK-EVENT Stopped by !stop!
+    99.153   PROCEDURAL             CONFLICT-RESOLUTION
+   100.153   ------                 Stopped because time limit reached
+   100.153   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   100.153   PROCEDURAL             CONFLICT-RESOLUTION
+   100.203   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   100.203   PROCEDURAL             CLEAR-BUFFER GOAL
+   100.203   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   100.203   DECLARATIVE            start-retrieval
+   100.203   PROCEDURAL             CONFLICT-RESOLUTION
+   100.275   DECLARATIVE            RETRIEVED-CHUNK SIX
+   100.275   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SIX
+   100.275   PROCEDURAL             CONFLICT-RESOLUTION
+   100.325   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   100.325   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   100.325   ------                 BREAK-EVENT Stopped by !stop!
+   100.325   PROCEDURAL             CONFLICT-RESOLUTION
+   101.325   ------                 Stopped because time limit reached
+   101.325   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   101.325   PROCEDURAL             CONFLICT-RESOLUTION
+   101.375   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   101.375   PROCEDURAL             CLEAR-BUFFER GOAL
+   101.375   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   101.375   DECLARATIVE            start-retrieval
+   101.375   PROCEDURAL             CONFLICT-RESOLUTION
+   101.452   DECLARATIVE            RETRIEVED-CHUNK ZERO
+   101.452   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+   101.452   PROCEDURAL             CONFLICT-RESOLUTION
+   101.502   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   101.502   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   101.502   ------                 BREAK-EVENT Stopped by !stop!
+   101.502   PROCEDURAL             CONFLICT-RESOLUTION
+   102.502   ------                 Stopped because time limit reached
+   102.502   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   102.502   PROCEDURAL             CONFLICT-RESOLUTION
+   102.552   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   102.552   PROCEDURAL             CLEAR-BUFFER GOAL
+   102.552   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   102.552   DECLARATIVE            start-retrieval
+   102.552   PROCEDURAL             CONFLICT-RESOLUTION
+   102.627   DECLARATIVE            RETRIEVED-CHUNK NINE
+   102.627   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+   102.627   PROCEDURAL             CONFLICT-RESOLUTION
+   102.677   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   102.677   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   102.677   ------                 BREAK-EVENT Stopped by !stop!
+   102.677   PROCEDURAL             CONFLICT-RESOLUTION
+   103.677   ------                 Stopped because time limit reached
+   103.677   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   103.677   PROCEDURAL             CONFLICT-RESOLUTION
+   103.727   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   103.727   PROCEDURAL             CLEAR-BUFFER GOAL
+   103.727   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   103.727   DECLARATIVE            start-retrieval
+   103.727   PROCEDURAL             CONFLICT-RESOLUTION
+   103.813   DECLARATIVE            RETRIEVED-CHUNK SEVEN
+   103.813   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL SEVEN
+   103.813   PROCEDURAL             CONFLICT-RESOLUTION
+   103.863   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   103.863   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   103.863   ------                 BREAK-EVENT Stopped by !stop!
+   103.863   PROCEDURAL             CONFLICT-RESOLUTION
+   104.863   ------                 Stopped because time limit reached
+   104.863   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   104.863   PROCEDURAL             CONFLICT-RESOLUTION
+   104.913   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   104.913   PROCEDURAL             CLEAR-BUFFER GOAL
+   104.913   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   104.913   DECLARATIVE            start-retrieval
+   104.913   PROCEDURAL             CONFLICT-RESOLUTION
+   105.007   DECLARATIVE            RETRIEVED-CHUNK TWO
+   105.007   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+   105.007   PROCEDURAL             CONFLICT-RESOLUTION
+   105.057   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   105.057   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   105.057   ------                 BREAK-EVENT Stopped by !stop!
+   105.057   PROCEDURAL             CONFLICT-RESOLUTION
+   106.057   ------                 Stopped because time limit reached
+   106.057   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   106.057   PROCEDURAL             CONFLICT-RESOLUTION
+   106.107   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   106.107   PROCEDURAL             CLEAR-BUFFER GOAL
+   106.107   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   106.107   DECLARATIVE            start-retrieval
+   106.107   PROCEDURAL             CONFLICT-RESOLUTION
+   106.207   DECLARATIVE            RETRIEVED-CHUNK ONE
+   106.207   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+   106.207   PROCEDURAL             CONFLICT-RESOLUTION
+   106.257   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   106.257   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   106.257   ------                 BREAK-EVENT Stopped by !stop!
+   106.257   PROCEDURAL             CONFLICT-RESOLUTION
+   107.257   ------                 Stopped because time limit reached
+   107.257   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   107.257   PROCEDURAL             CONFLICT-RESOLUTION
+   107.307   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   107.307   PROCEDURAL             CLEAR-BUFFER GOAL
+   107.307   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   107.307   DECLARATIVE            start-retrieval
+   107.307   PROCEDURAL             CONFLICT-RESOLUTION
+   107.349   DECLARATIVE            RETRIEVED-CHUNK THREE
+   107.349   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+   107.349   PROCEDURAL             CONFLICT-RESOLUTION
+   107.399   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   107.399   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   107.399   ------                 BREAK-EVENT Stopped by !stop!
+   107.399   PROCEDURAL             CONFLICT-RESOLUTION
+   108.399   ------                 Stopped because time limit reached
+   108.399   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   108.399   PROCEDURAL             CONFLICT-RESOLUTION
+   108.449   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   108.449   PROCEDURAL             CLEAR-BUFFER GOAL
+   108.449   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   108.449   DECLARATIVE            start-retrieval
+   108.449   PROCEDURAL             CONFLICT-RESOLUTION
+   108.590   DECLARATIVE            RETRIEVED-CHUNK TWO
+   108.590   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+   108.590   PROCEDURAL             CONFLICT-RESOLUTION
+   108.640   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   108.640   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   108.640   ------                 BREAK-EVENT Stopped by !stop!
+   108.640   PROCEDURAL             CONFLICT-RESOLUTION
+   109.640   ------                 Stopped because time limit reached
+   109.640   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   109.640   PROCEDURAL             CONFLICT-RESOLUTION
+   109.690   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   109.690   PROCEDURAL             CLEAR-BUFFER GOAL
+   109.690   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   109.690   DECLARATIVE            start-retrieval
+   109.690   PROCEDURAL             CONFLICT-RESOLUTION
+   109.771   DECLARATIVE            RETRIEVED-CHUNK NINE
+   109.771   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+   109.771   PROCEDURAL             CONFLICT-RESOLUTION
+   109.821   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   109.821   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   109.821   ------                 BREAK-EVENT Stopped by !stop!
+   109.821   PROCEDURAL             CONFLICT-RESOLUTION
+   110.821   ------                 Stopped because time limit reached
+   110.821   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   110.821   PROCEDURAL             CONFLICT-RESOLUTION
+   110.871   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   110.871   PROCEDURAL             CLEAR-BUFFER GOAL
+   110.871   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   110.871   DECLARATIVE            start-retrieval
+   110.871   PROCEDURAL             CONFLICT-RESOLUTION
+   111.019   DECLARATIVE            RETRIEVED-CHUNK ONE
+   111.019   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+   111.019   PROCEDURAL             CONFLICT-RESOLUTION
+   111.069   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   111.069   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   111.069   ------                 BREAK-EVENT Stopped by !stop!
+   111.069   PROCEDURAL             CONFLICT-RESOLUTION
+   112.069   ------                 Stopped because time limit reached
+   112.069   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   112.069   PROCEDURAL             CONFLICT-RESOLUTION
+   112.119   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   112.119   PROCEDURAL             CLEAR-BUFFER GOAL
+   112.119   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   112.119   DECLARATIVE            start-retrieval
+   112.119   PROCEDURAL             CONFLICT-RESOLUTION
+   112.234   DECLARATIVE            RETRIEVED-CHUNK NINE
+   112.234   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+   112.234   PROCEDURAL             CONFLICT-RESOLUTION
+   112.284   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   112.284   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   112.284   ------                 BREAK-EVENT Stopped by !stop!
+   112.284   PROCEDURAL             CONFLICT-RESOLUTION
+   113.284   ------                 Stopped because time limit reached
+   113.284   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   113.284   PROCEDURAL             CONFLICT-RESOLUTION
+   113.334   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   113.334   PROCEDURAL             CLEAR-BUFFER GOAL
+   113.334   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   113.334   DECLARATIVE            start-retrieval
+   113.334   PROCEDURAL             CONFLICT-RESOLUTION
+   113.513   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   113.513   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   113.513   PROCEDURAL             CONFLICT-RESOLUTION
+   113.563   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   113.563   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   113.563   ------                 BREAK-EVENT Stopped by !stop!
+   113.563   PROCEDURAL             CONFLICT-RESOLUTION
+   114.563   ------                 Stopped because time limit reached
+   114.563   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   114.563   PROCEDURAL             CONFLICT-RESOLUTION
+   114.613   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   114.613   PROCEDURAL             CLEAR-BUFFER GOAL
+   114.613   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   114.613   DECLARATIVE            start-retrieval
+   114.613   PROCEDURAL             CONFLICT-RESOLUTION
+   114.680   DECLARATIVE            RETRIEVED-CHUNK FOUR
+   114.680   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+   114.680   PROCEDURAL             CONFLICT-RESOLUTION
+   114.730   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   114.730   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   114.730   ------                 BREAK-EVENT Stopped by !stop!
+   114.730   PROCEDURAL             CONFLICT-RESOLUTION
+   115.730   ------                 Stopped because time limit reached
+   115.730   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   115.730   PROCEDURAL             CONFLICT-RESOLUTION
+   115.780   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   115.780   PROCEDURAL             CLEAR-BUFFER GOAL
+   115.780   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   115.780   DECLARATIVE            start-retrieval
+   115.780   PROCEDURAL             CONFLICT-RESOLUTION
+   115.840   DECLARATIVE            RETRIEVED-CHUNK NINE
+   115.840   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL NINE
+   115.840   PROCEDURAL             CONFLICT-RESOLUTION
+   115.890   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   115.890   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   115.890   ------                 BREAK-EVENT Stopped by !stop!
+   115.890   PROCEDURAL             CONFLICT-RESOLUTION
+   116.890   ------                 Stopped because time limit reached
+   116.890   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   116.890   PROCEDURAL             CONFLICT-RESOLUTION
+   116.940   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   116.940   PROCEDURAL             CLEAR-BUFFER GOAL
+   116.940   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   116.940   DECLARATIVE            start-retrieval
+   116.940   PROCEDURAL             CONFLICT-RESOLUTION
+   117.073   DECLARATIVE            RETRIEVED-CHUNK TWO
+   117.073   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+   117.073   PROCEDURAL             CONFLICT-RESOLUTION
+   117.123   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   117.123   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   117.123   ------                 BREAK-EVENT Stopped by !stop!
+   117.123   PROCEDURAL             CONFLICT-RESOLUTION
+   118.123   ------                 Stopped because time limit reached
+   118.123   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   118.123   PROCEDURAL             CONFLICT-RESOLUTION
+   118.173   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   118.173   PROCEDURAL             CLEAR-BUFFER GOAL
+   118.173   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   118.173   DECLARATIVE            start-retrieval
+   118.173   PROCEDURAL             CONFLICT-RESOLUTION
+   118.261   DECLARATIVE            RETRIEVED-CHUNK FIVE
+   118.261   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FIVE
+   118.261   PROCEDURAL             CONFLICT-RESOLUTION
+   118.311   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   118.311   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   118.311   ------                 BREAK-EVENT Stopped by !stop!
+   118.311   PROCEDURAL             CONFLICT-RESOLUTION
+   119.311   ------                 Stopped because time limit reached
+   119.311   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   119.311   PROCEDURAL             CONFLICT-RESOLUTION
+   119.361   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   119.361   PROCEDURAL             CLEAR-BUFFER GOAL
+   119.361   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   119.361   DECLARATIVE            start-retrieval
+   119.361   PROCEDURAL             CONFLICT-RESOLUTION
+   119.442   DECLARATIVE            RETRIEVED-CHUNK ZERO
+   119.442   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+   119.442   PROCEDURAL             CONFLICT-RESOLUTION
+   119.492   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   119.492   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   119.492   ------                 BREAK-EVENT Stopped by !stop!
+   119.492   PROCEDURAL             CONFLICT-RESOLUTION
+   120.492   ------                 Stopped because time limit reached
+   120.492   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+   120.492   PROCEDURAL             CONFLICT-RESOLUTION
+   120.542   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+   120.542   PROCEDURAL             CLEAR-BUFFER GOAL
+   120.542   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   120.542   DECLARATIVE            start-retrieval
+   120.542   PROCEDURAL             CONFLICT-RESOLUTION
+   120.661   DECLARATIVE            RETRIEVED-CHUNK ONE
+   120.661   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ONE
+   120.661   PROCEDURAL             CONFLICT-RESOLUTION
+   120.711   PROCEDURAL             PRODUCTION-FIRED HARVEST
+   120.711   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   120.711   ------                 BREAK-EVENT Stopped by !stop!
+   120.711   PROCEDURAL             CONFLICT-RESOLUTION
+   140.711   ------                 Stopped because time limit reached
+with: (0.21 0.12 0.11 0.11 0.1 0.1 0.09 0.09 0.07 0.0)
+

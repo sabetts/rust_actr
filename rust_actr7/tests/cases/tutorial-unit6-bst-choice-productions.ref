@@ -1,0 +1,68 @@
+(p decide-over
+   =goal>
+      isa       try-strategy
+      state     choose-strategy
+      strategy  nil
+   =imaginal>
+      isa       encoding
+      under     =under
+      over      =over
+   !eval! (< =over (- =under 25))
+  ==>
+   =imaginal>
+   =goal>
+      state     prepare-mouse
+      strategy  over
+   +visual-location>
+      isa       visual-location
+      kind      oval
+      value     "b")
+
+(p force-over
+   =goal>
+      isa       try-strategy
+      state     choose-strategy
+    - strategy  over
+  ==>
+   =goal>
+      state     prepare-mouse
+      strategy  over
+   +visual-location>
+      isa       visual-location
+      kind      oval
+      value     "b")
+
+(p decide-under
+   =goal>
+      isa       try-strategy
+      state     choose-strategy
+      strategy  nil
+   =imaginal>
+      isa       encoding
+      over      =over
+      under     =under
+   !eval! (< =under (- =over 25))
+  ==>
+   =imaginal>
+   =goal>
+      state     prepare-mouse
+      strategy  under
+   +visual-location>
+      isa       visual-location
+      kind      oval
+      value     "c")
+
+(p force-under
+   =goal>
+      isa       try-strategy
+      state     choose-strategy
+    - strategy  under
+  ==>
+   =goal>
+      state     prepare-mouse
+      strategy  under
+   +visual-location>
+      isa       visual-location
+      kind      oval
+      value     "c")
+

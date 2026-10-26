@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit5modeling-v9-spreading-activation-only" :REF "tutorial-unit5modeling-v9-spreading-activation-only.ref" :MODELS NIL :SEED-SET NIL :RUNS NIL :STEPS NIL :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :ARBITRARY :FLAGS (:ARBITRARY) :ERROR NIL)

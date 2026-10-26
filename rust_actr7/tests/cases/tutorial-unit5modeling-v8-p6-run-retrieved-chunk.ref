@@ -1,0 +1,11 @@
+    28.421   DECLARATIVE            RETRIEVED-CHUNK 1-1=0
+    28.421   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL 1-1=0
+    28.421   PROCEDURAL             CONFLICT-RESOLUTION
+    28.421   ------                 Stopped because time limit reached
+
+1-1=0
+   RESULT  ZERO
+   ARG1  ONE
+   ARG2  ONE
+   OPERATOR  SUBTRACT
+

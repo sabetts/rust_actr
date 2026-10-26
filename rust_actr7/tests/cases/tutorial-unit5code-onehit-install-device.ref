@@ -1,0 +1,1 @@
+  (install-device '("motor" "keyboard"))

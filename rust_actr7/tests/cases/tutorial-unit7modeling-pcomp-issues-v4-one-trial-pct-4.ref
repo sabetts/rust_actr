@@ -1,0 +1,6 @@
+     0.350   PROCEDURAL             PRODUCTION-FIRED FIND-NUM-2
+Production Compilation process started for FIND-NUM-2
+  Buffer VISUAL-LOCATION prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production ENCODE-NUM-1 and FIND-NUM-2 cannot be composed.
+  Setting previous production to FIND-NUM-2.

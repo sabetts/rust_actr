@@ -1,0 +1,12 @@
+  (P encode-person
+     =retrieval>
+   
+     =imaginal>
+        ISA         comprehend-sentence
+        arg1        nil
+     ==>
+     =imaginal>
+        arg1        =retrieval
+     +visual-location>
+        ISA         visual-location
+        screen-x    highest)

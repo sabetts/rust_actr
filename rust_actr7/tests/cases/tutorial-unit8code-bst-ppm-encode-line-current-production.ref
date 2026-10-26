@@ -1,0 +1,25 @@
+(p encode-line-current
+    =goal>
+      isa      try-strategy
+      state    attending
+    =imaginal>
+      isa      encoding
+      goal-loc =goal-loc
+    =visual>
+      isa      line
+      width    =current-len
+    ?visual>
+      state    free
+    ?imaginal-action> 
+      state    free   
+  ==>
+    =imaginal>
+      length     =current-len
+    +imaginal-action>
+      action     "bst-compute-difference"
+      simple     t
+    =goal>
+      state      consider-next
+    +visual>
+      cmd        move-attention
+      screen-pos =goal-loc)

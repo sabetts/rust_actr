@@ -1,0 +1,6 @@
+? (add-dm-fct (list (list 'foo 'size *number*)))
+(FOO)
+? (dm foo)
+FOO
+   SIZE  3
+

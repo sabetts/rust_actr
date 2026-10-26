@@ -11,7 +11,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ACTR_DIR="${ACTR_DIR:-$(cd "$HERE/../../actr7.x" && pwd)}"
 TM_DIR="$ACTR_DIR/test-models"
-OUT_DIR="${SPEC_OUTDIR:-${1:-$HERE/test-models/specs}}"
+OUT_DIR="${SPEC_OUTDIR:-${1:-$HERE/regression/specs}}"
 
 if [[ ! -d "$TM_DIR" ]]; then
   echo "test-models dir not found: $TM_DIR" >&2
@@ -24,10 +24,17 @@ export SPEC_ACTRDIR="$ACTR_DIR"
 mkdir -p "$OUT_DIR"
 
 if [[ -z "${SPEC_LIST:-}" ]]; then
-  # Trace refs only: those with a timestamped line, mirroring the classic
-  # ` 0.000   GOAL ...` trace shape.
   SPEC_LIST="$(mktemp "${TMPDIR:-/tmp/opencode}/spec-list.XXXXXX")"
-  ( cd "$TM_DIR" && grep -lE '^[[:space:]]*[0-9]+\.[0-9]{3}' *.ref | sed 's/\.ref$//' | sort ) > "$SPEC_LIST"
+  if compgen -G "$OUT_DIR/*.spec" > /dev/null; then
+    # Routine regen: refresh only the committed specs (hook drivers and
+    # data-heavy experiment drivers). All other cases own their driver in
+    # tests/cases/*.rs and do not need a spec.
+    ( cd "$OUT_DIR" && ls *.spec | sed 's/\.spec$//' | sort ) > "$SPEC_LIST"
+  else
+    # Fresh corpus: trace refs only, mirroring the classic
+    # ` 0.000   GOAL ...` trace shape.
+    ( cd "$TM_DIR" && grep -lE '^[[:space:]]*[0-9]+\.[0-9]{3}' *.ref | sed 's/\.ref$//' | sort ) > "$SPEC_LIST"
+  fi
   CLEANUP_LIST=1
 else
   CLEANUP_LIST=0

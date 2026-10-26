@@ -1,0 +1,17 @@
+>>> actr.sdm('-','addend1','1')
+FACT34
+   ADDEND1  3
+   ADDEND2  4
+   SUM  7
+
+FACT67
+   ADDEND1  6
+   ADDEND2  7
+   SUM  13
+
+FACT103
+   ADDEND1  10
+   ADDEND2  3
+   SUM  13
+
+['FACT34', 'FACT67', 'FACT103']

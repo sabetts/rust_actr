@@ -1,0 +1,14 @@
+  (chunk-type simple-fact item attribute)
+
+  (p p3
+     =goal>
+       isa task-state
+       state r3
+     =retrieval>
+       isa simple-value
+   ==>
+     =goal>
+       state r4
+     +retrieval>
+       isa simple-fact
+       attribute pink)

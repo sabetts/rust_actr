@@ -1,0 +1,61 @@
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+Trying production: START
+Trying production: FULL
+Fails because: 
+The BUFFER FULL query of the RETRIEVAL buffer failed.
+Trying production: FAILURE
+Fails because: 
+The BUFFER FAILURE query of the RETRIEVAL buffer failed.
+Production START matches
+     0.000   PROCEDURAL             PRODUCTION-SELECTED START
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION RETRIEVAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED START
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK CHUNK0
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL CHUNK0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+Trying production: START
+Fails because: 
+The BUFFER EMPTY query of the GOAL buffer failed.
+Trying production: FULL
+Trying production: FAILURE
+Fails because: 
+The BUFFER FAILURE query of the RETRIEVAL buffer failed.
+Production FULL matches
+     0.050   PROCEDURAL             PRODUCTION-SELECTED FULL
+     0.050   PROCEDURAL             QUERY-BUFFER-ACTION RETRIEVAL
+     0.100   PROCEDURAL             PRODUCTION-FIRED FULL
+     0.100   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.100   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.100   DECLARATIVE            start-retrieval
+     0.100   DECLARATIVE            RETRIEVAL-FAILURE
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+Trying production: START
+Fails because: 
+The BUFFER EMPTY query of the GOAL buffer failed.
+Trying production: FULL
+Fails because: 
+The BUFFER FULL query of the RETRIEVAL buffer failed.
+Trying production: FAILURE
+Production FAILURE matches
+     0.100   PROCEDURAL             PRODUCTION-SELECTED FAILURE
+     0.100   PROCEDURAL             QUERY-BUFFER-ACTION RETRIEVAL
+     0.150   PROCEDURAL             PRODUCTION-FIRED FAILURE
+     0.150   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+Trying production: START
+Fails because: 
+The BUFFER EMPTY query of the GOAL buffer failed.
+Trying production: FULL
+Fails because: 
+The BUFFER FULL query of the RETRIEVAL buffer failed.
+Trying production: FAILURE
+Fails because: 
+The BUFFER FAILURE query of the RETRIEVAL buffer failed.
+     0.150   ------                 Stopped because no events left to process

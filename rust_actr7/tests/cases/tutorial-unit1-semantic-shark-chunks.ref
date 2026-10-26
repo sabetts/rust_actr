@@ -1,0 +1,3 @@
+ (p1 ISA property object shark attribute dangerous value true)
+ (p2 ISA property object shark attribute locomotion value swimming)
+ (p3 ISA property object shark attribute category value fish)

@@ -1,0 +1,35 @@
+? (sdp v1 v2 v3)
+
+>>> actr.sdp('v1','v2','v3')
+
+Declarative parameters for chunk V1:
+ :Activation -2.875
+ :Permanent-Noise  0.000
+ :Base-Level -2.964
+ :Creation-Time -1500.000
+ :Reference-Count  1
+ :Source-Spread  0.000
+ :Sjis ((V1 2.0))
+ :Similarities ((V1 0.0))
+ :Last-Retrieval-Activation -3.142
+ :Last-Retrieval-Time  0.050
+Declarative parameters for chunk V2:
+ :Activation -2.888
+ :Permanent-Noise  0.000
+ :Base-Level -2.964
+ :Creation-Time -1500.000
+ :Reference-Count  1
+ :Source-Spread  0.000
+ :Sjis ((V2 2.0))
+ :Similarities ((V2 0.0))
+ :Last-Retrieval-Activation -2.725
+ :Last-Retrieval-Time  0.050
+Declarative parameters for chunk V3:
+ :Activation -2.990
+ :Permanent-Noise  0.000
+ :Base-Level -2.964
+ :Creation-Time -1500.000
+ :Reference-Count  1
+ :Source-Spread  0.000
+ :Sjis ((V3 2.0))
+ :Similarities ((V3 0.0))

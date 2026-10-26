@@ -1,0 +1,322 @@
+     0.000   VISION                 proc-display
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED START
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION GOAL
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     0.000   PROCEDURAL             QUERY-BUFFER-ACTION TRACKER
+     0.050   PROCEDURAL             PRODUCTION-FIRED START
+     0.050   PROCEDURAL             MODULE-REQUEST TRACKER
+Tracker TRACKER0 generating value for buffer GOAL slot VALUE with temperature 1.0:
+  Choices: 1.000 2.000 3.000
+  Probs:   0.333 0.333 0.333
+ Chosen result is 1.0
+     0.050   PROCEDURAL             MODULE-REQUEST IMAGINAL
+     0.050   PROCEDURAL             MODULE-REQUEST GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER TRACKER
+     0.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+     0.050   TRACKER                MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED GUESS
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.050   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+     0.100   PROCEDURAL             PRODUCTION-FIRED GUESS
+     0.100   PROCEDURAL             MODULE-REQUEST MANUAL
+     0.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.100   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.100   MOTOR                  PRESS-KEY KEY 1
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   MOTOR                  PREPARATION-COMPLETE 0.1
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   MOTOR                  INITIATION-COMPLETE 0.1
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+     0.500   VISION                 proc-display
+     0.500   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+     0.500   VISION                 visicon-update
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             PRODUCTION-SELECTED WRONG
+     0.500   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.500   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     0.550   PROCEDURAL             PRODUCTION-FIRED WRONG
+     0.550   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+     0.550   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     0.650   MOTOR                  FINISH-MOVEMENT 0.1
+     0.650   PROCEDURAL             CONFLICT-RESOLUTION
+     5.500   VISION                 proc-display
+     5.500   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+     5.500   VISION                 visicon-update
+     5.500   PROCEDURAL             CONFLICT-RESOLUTION
+     5.500   PROCEDURAL             PRODUCTION-SELECTED GUESS
+     5.500   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     5.500   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     5.500   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+     5.550   PROCEDURAL             PRODUCTION-FIRED GUESS
+     5.550   PROCEDURAL             MODULE-REQUEST MANUAL
+     5.550   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.550   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.550   MOTOR                  PRESS-KEY KEY 1
+     5.550   MOTOR                  PREPARATION-COMPLETE 5.55
+     5.550   PROCEDURAL             CONFLICT-RESOLUTION
+     5.600   MOTOR                  INITIATION-COMPLETE 5.55
+     5.600   PROCEDURAL             CONFLICT-RESOLUTION
+     5.700   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+     5.700   VISION                 proc-display
+     5.700   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+     5.700   VISION                 visicon-update
+     5.700   PROCEDURAL             CONFLICT-RESOLUTION
+     5.700   PROCEDURAL             PRODUCTION-SELECTED WRONG
+     5.700   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     5.700   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+     5.750   PROCEDURAL             PRODUCTION-FIRED WRONG
+     5.750   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+     5.750   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.750   PROCEDURAL             CONFLICT-RESOLUTION
+     5.850   MOTOR                  FINISH-MOVEMENT 5.55
+     5.850   PROCEDURAL             CONFLICT-RESOLUTION
+    10.700   VISION                 proc-display
+    10.700   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    10.700   VISION                 visicon-update
+    10.700   PROCEDURAL             CONFLICT-RESOLUTION
+    10.700   PROCEDURAL             PRODUCTION-SELECTED GUESS
+    10.700   PROCEDURAL             BUFFER-READ-ACTION GOAL
+    10.700   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    10.700   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+    10.750   PROCEDURAL             PRODUCTION-FIRED GUESS
+    10.750   PROCEDURAL             MODULE-REQUEST MANUAL
+    10.750   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.750   PROCEDURAL             CLEAR-BUFFER MANUAL
+    10.750   MOTOR                  PRESS-KEY KEY 1
+    10.750   MOTOR                  PREPARATION-COMPLETE 10.75
+    10.750   PROCEDURAL             CONFLICT-RESOLUTION
+    10.800   MOTOR                  INITIATION-COMPLETE 10.75
+    10.800   PROCEDURAL             CONFLICT-RESOLUTION
+    10.900   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+    10.900   VISION                 proc-display
+    10.900   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    10.900   VISION                 visicon-update
+    10.900   PROCEDURAL             CONFLICT-RESOLUTION
+    10.900   PROCEDURAL             PRODUCTION-SELECTED WRONG
+    10.900   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+    10.900   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    10.950   PROCEDURAL             PRODUCTION-FIRED WRONG
+    10.950   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+    10.950   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.950   PROCEDURAL             CONFLICT-RESOLUTION
+    11.050   MOTOR                  FINISH-MOVEMENT 10.75
+    11.050   PROCEDURAL             CONFLICT-RESOLUTION
+    15.900   VISION                 proc-display
+    15.900   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    15.900   VISION                 visicon-update
+    15.900   PROCEDURAL             CONFLICT-RESOLUTION
+    15.900   PROCEDURAL             PRODUCTION-SELECTED GUESS
+    15.900   PROCEDURAL             BUFFER-READ-ACTION GOAL
+    15.900   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    15.900   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+    15.950   PROCEDURAL             PRODUCTION-FIRED GUESS
+    15.950   PROCEDURAL             MODULE-REQUEST MANUAL
+    15.950   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    15.950   PROCEDURAL             CLEAR-BUFFER MANUAL
+    15.950   MOTOR                  PRESS-KEY KEY 1
+    15.950   MOTOR                  PREPARATION-COMPLETE 15.95
+    15.950   PROCEDURAL             CONFLICT-RESOLUTION
+    16.000   MOTOR                  INITIATION-COMPLETE 15.95
+    16.000   PROCEDURAL             CONFLICT-RESOLUTION
+    16.100   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+    16.100   VISION                 proc-display
+    16.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    16.100   VISION                 visicon-update
+    16.100   PROCEDURAL             CONFLICT-RESOLUTION
+    16.100   PROCEDURAL             PRODUCTION-SELECTED WRONG
+    16.100   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+    16.100   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    16.150   PROCEDURAL             PRODUCTION-FIRED WRONG
+    16.150   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+    16.150   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    16.150   PROCEDURAL             CONFLICT-RESOLUTION
+    16.250   MOTOR                  FINISH-MOVEMENT 15.95
+    16.250   PROCEDURAL             CONFLICT-RESOLUTION
+    21.100   VISION                 proc-display
+    21.100   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    21.100   VISION                 visicon-update
+    21.100   PROCEDURAL             CONFLICT-RESOLUTION
+    21.100   PROCEDURAL             PRODUCTION-SELECTED GUESS
+    21.100   PROCEDURAL             BUFFER-READ-ACTION GOAL
+    21.100   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    21.100   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+    21.150   PROCEDURAL             PRODUCTION-FIRED GUESS
+    21.150   PROCEDURAL             MODULE-REQUEST MANUAL
+    21.150   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    21.150   PROCEDURAL             CLEAR-BUFFER MANUAL
+    21.150   MOTOR                  PRESS-KEY KEY 1
+    21.150   MOTOR                  PREPARATION-COMPLETE 21.15
+    21.150   PROCEDURAL             CONFLICT-RESOLUTION
+    21.200   MOTOR                  INITIATION-COMPLETE 21.15
+    21.200   PROCEDURAL             CONFLICT-RESOLUTION
+    21.300   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+    21.300   VISION                 proc-display
+    21.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    21.300   VISION                 visicon-update
+    21.300   PROCEDURAL             CONFLICT-RESOLUTION
+    21.300   PROCEDURAL             PRODUCTION-SELECTED WRONG
+    21.300   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+    21.300   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    21.350   PROCEDURAL             PRODUCTION-FIRED WRONG
+    21.350   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+    21.350   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    21.350   PROCEDURAL             CONFLICT-RESOLUTION
+    21.450   MOTOR                  FINISH-MOVEMENT 21.15
+    21.450   PROCEDURAL             CONFLICT-RESOLUTION
+    26.300   VISION                 proc-display
+    26.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    26.300   VISION                 visicon-update
+    26.300   PROCEDURAL             CONFLICT-RESOLUTION
+    26.300   PROCEDURAL             PRODUCTION-SELECTED GUESS
+    26.300   PROCEDURAL             BUFFER-READ-ACTION GOAL
+    26.300   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    26.300   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+    26.350   PROCEDURAL             PRODUCTION-FIRED GUESS
+    26.350   PROCEDURAL             MODULE-REQUEST MANUAL
+    26.350   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    26.350   PROCEDURAL             CLEAR-BUFFER MANUAL
+    26.350   MOTOR                  PRESS-KEY KEY 1
+    26.350   MOTOR                  PREPARATION-COMPLETE 26.35
+    26.350   PROCEDURAL             CONFLICT-RESOLUTION
+    26.400   MOTOR                  INITIATION-COMPLETE 26.35
+    26.400   PROCEDURAL             CONFLICT-RESOLUTION
+    26.500   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+    26.500   VISION                 proc-display
+    26.500   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    26.500   VISION                 visicon-update
+    26.500   PROCEDURAL             CONFLICT-RESOLUTION
+    26.500   PROCEDURAL             PRODUCTION-SELECTED WRONG
+    26.500   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+    26.500   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    26.550   PROCEDURAL             PRODUCTION-FIRED WRONG
+    26.550   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+    26.550   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    26.550   PROCEDURAL             CONFLICT-RESOLUTION
+    26.650   MOTOR                  FINISH-MOVEMENT 26.35
+    26.650   PROCEDURAL             CONFLICT-RESOLUTION
+    31.500   VISION                 proc-display
+    31.500   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    31.500   VISION                 visicon-update
+    31.500   PROCEDURAL             CONFLICT-RESOLUTION
+    31.500   PROCEDURAL             PRODUCTION-SELECTED GUESS
+    31.500   PROCEDURAL             BUFFER-READ-ACTION GOAL
+    31.500   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    31.500   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+    31.550   PROCEDURAL             PRODUCTION-FIRED GUESS
+    31.550   PROCEDURAL             MODULE-REQUEST MANUAL
+    31.550   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    31.550   PROCEDURAL             CLEAR-BUFFER MANUAL
+    31.550   MOTOR                  PRESS-KEY KEY 1
+    31.550   MOTOR                  PREPARATION-COMPLETE 31.55
+    31.550   PROCEDURAL             CONFLICT-RESOLUTION
+    31.600   MOTOR                  INITIATION-COMPLETE 31.55
+    31.600   PROCEDURAL             CONFLICT-RESOLUTION
+    31.700   KEYBOARD               output-key SIMPLE-TRACKER-TEST 1
+    31.700   VISION                 proc-display
+    31.700   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    31.700   VISION                 visicon-update
+    31.700   PROCEDURAL             CONFLICT-RESOLUTION
+    31.700   PROCEDURAL             PRODUCTION-SELECTED WRONG
+    31.700   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+    31.700   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    31.750   PROCEDURAL             PRODUCTION-FIRED WRONG
+    31.750   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current BAD value
+ Updating event occurred in the BAD slot of the IMAGINAL buffer
+  updating with value 1.0
+    31.750   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    31.750   PROCEDURAL             CONFLICT-RESOLUTION
+    31.850   MOTOR                  FINISH-MOVEMENT 31.55
+    31.850   PROCEDURAL             CONFLICT-RESOLUTION
+    31.946   TRACKER                update-tracker TRACKER0 VALUE
+Tracker TRACKER0 for VALUE slot updating the equation
+  new equation is -0.6383563 + 0.5319536x + -0.10638899x^2
+Tracker TRACKER0 generating value for buffer GOAL slot VALUE with temperature 0.8494733:
+  Choices: 1.000 2.000 3.000
+  Probs:   0.280 0.360 0.360
+ Chosen result is 2.0
+    31.946   TRACKER                MOD-BUFFER-CHUNK GOAL
+    31.946   PROCEDURAL             CONFLICT-RESOLUTION
+    36.700   VISION                 proc-display
+    36.700   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    36.700   VISION                 visicon-update
+    36.700   PROCEDURAL             CONFLICT-RESOLUTION
+    36.700   PROCEDURAL             PRODUCTION-SELECTED GUESS
+    36.700   PROCEDURAL             BUFFER-READ-ACTION GOAL
+    36.700   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    36.700   PROCEDURAL             QUERY-BUFFER-ACTION MANUAL
+    36.750   PROCEDURAL             PRODUCTION-FIRED GUESS
+    36.750   PROCEDURAL             MODULE-REQUEST MANUAL
+    36.750   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    36.750   PROCEDURAL             CLEAR-BUFFER MANUAL
+    36.750   MOTOR                  PRESS-KEY KEY 2
+    36.750   PROCEDURAL             CONFLICT-RESOLUTION
+    36.900   MOTOR                  PREPARATION-COMPLETE 36.75
+    36.900   PROCEDURAL             CONFLICT-RESOLUTION
+    36.950   MOTOR                  INITIATION-COMPLETE 36.75
+    36.950   PROCEDURAL             CONFLICT-RESOLUTION
+    37.050   KEYBOARD               output-key SIMPLE-TRACKER-TEST 2
+    37.050   VISION                 proc-display
+    37.050   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION CHUNK0 NIL
+    37.050   VISION                 visicon-update
+    37.050   PROCEDURAL             CONFLICT-RESOLUTION
+    37.050   PROCEDURAL             PRODUCTION-SELECTED CORRECT
+    37.050   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+    37.050   PROCEDURAL             BUFFER-READ-ACTION VISUAL-LOCATION
+    37.100   PROCEDURAL             PRODUCTION-FIRED CORRECT
+    37.100   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+Tracker TRACKER0 for VALUE updating the current GOOD value
+ Updating event occurred in the GOOD slot of the IMAGINAL buffer
+  updating with value 1.0
+    37.100   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    37.100   PROCEDURAL             CONFLICT-RESOLUTION
+    37.200   MOTOR                  FINISH-MOVEMENT 36.75
+    37.200   PROCEDURAL             CONFLICT-RESOLUTION
+    38.955   TRACKER                update-tracker TRACKER0 VALUE
+Tracker TRACKER0 for VALUE slot updating the equation
+  new equation is -1.0129573 + 1.0314226x + -0.2312571x^2
+Tracker TRACKER0 generating value for buffer GOAL slot VALUE with temperature 0.8222745:
+  Choices: 1.000 2.000 3.000
+  Probs:   0.263 0.396 0.341
+ Chosen result is 2.0
+    38.955   TRACKER                MOD-BUFFER-CHUNK GOAL
+    38.955   PROCEDURAL             CONFLICT-RESOLUTION
+    39.955   TRACKER                update-tracker TRACKER0 VALUE
+Tracker TRACKER0 for VALUE slot updating the equation
+  new equation is -0.97136295 + 0.97596157x + -0.21739036x^2
+Tracker TRACKER0 generating value for buffer GOAL slot VALUE with temperature 0.81853527:
+  Choices: 1.000 2.000 3.000
+  Probs:   0.264 0.393 0.343
+ Chosen result is 1.0
+    39.955   TRACKER                MOD-BUFFER-CHUNK GOAL
+    39.955   PROCEDURAL             CONFLICT-RESOLUTION
+    40.000   ------                 Stopped because time limit reached

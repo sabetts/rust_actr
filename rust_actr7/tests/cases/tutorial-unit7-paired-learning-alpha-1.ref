@@ -1,0 +1,33 @@
+    25.435   PROCEDURAL             PRODUCTION-FIRED PRODUCTION7
+Production Compilation process started for PRODUCTION7
+  Production ENCODE-ARG2 and PRODUCTION7 are being composed.
+  New production:
+
+(P PRODUCTION28
+  "ENCODE-ARG2 & PRODUCTION7"
+   =GOAL>
+       STEP ATTENDING
+       STATE NEW-TRIAL
+   =IMAGINAL>
+       ARG2 FILL
+   =VISUAL>
+       TEXT T
+       VALUE =VAL
+   ?IMAGINAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       STEP RETRIEVING-OPERATOR
+   +GOAL>
+       STATE START
+       STEP READY
+   *IMAGINAL>
+       ARG2 =VAL
+)
+Parameters for production PRODUCTION28:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward 20.000
+ :fixed-utility    NIL
+  Setting previous production to PRODUCTION7.

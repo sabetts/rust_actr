@@ -1,0 +1,4 @@
+  (add-dm (zero isa number visual-rep "0" representation zero)
+          (one isa number visual-rep "1" representation one)
+          (two isa number visual-rep "2" representation two)
+          (three isa number visual-rep "3" representation three))

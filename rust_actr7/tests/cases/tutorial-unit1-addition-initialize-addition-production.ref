@@ -1,0 +1,15 @@
+(P initialize-addition
+   =goal>
+      ISA         add
+      arg1        =num1
+      arg2        =num2
+      sum         nil
+  ==>
+   =goal>
+      ISA         add
+      sum         =num1
+      count       zero
+   +retrieval>
+      ISA         number
+      number      =num1
+)

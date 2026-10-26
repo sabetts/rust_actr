@@ -568,6 +568,12 @@ every line "differs"; mirror the comparator
 retired) was byte-identical to `test-models/count.ref` after stripping CR,
 which is what first revealed this.
 
+The refs are now vendored one per case in `rust_actr7/tests/cases/<name>.ref`;
+each `tests/cases/<name>.rs` owns its driver, and
+`tools/sync_fixtures.py --check` keeps the copies byte-identical to upstream
+while `actr7.x` is present. The layout is documented in
+`rust_actr7/fixtures/regression/README.md`.
+
 ## 60. Refs capture four channels, not just `:v` (verified)
 
 `run-actr-test` monitors `model-trace`/`command-trace`/`warning-trace`/
@@ -1160,7 +1166,7 @@ schedules an `EncodingComplete` for the last `move-attention` location
 85 ms later.  Because that object is gone, `encoding_complete` now emits
 `No visual-object found` (leaving `VISUAL` empty) instead of erroring.
 The device text (`V` at 125,150) and the flag live in
-`fixtures/regression/specs/demo2.device.sexp`, loaded by the test harness.
+`fixtures/devices/demo2.device.sexp`, loaded by the test harness.
 Motor timing for `press-key V` required adding the QWERTY letter geometry
 from `other-files/keyboard.lisp` (`V` = left index, r 1.0, θ 1.57).
 

@@ -1,0 +1,2 @@
+   (g1 isa task-state state r8)
+   (old-context isa context val1 one val2 two val3 add goal g1)

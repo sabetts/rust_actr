@@ -1,22 +1,21 @@
-//! ACT-R `test-models` corpus: Rust engine vs the checked-in `.ref` traces.
+//! ACT-R `test-models` corpus: Rust engine vs the vendored `.ref` traces.
 //!
-//! `fixtures/regen-specs.sh` runs the Lisp stubs under instrumentation and
-//! writes `fixtures/regression/specs/*.spec` describing
-//! each test's model chain, resolved seed, and ordered driver steps. This
-//! harness consumes those specs plus `actr7.x/test-models/*.ref`, so
-//! `cargo test` never needs SBCL.
+//! One test per ref lives in `tests/cases/<ident>.rs`; this file is the
+//! shared harness ([`Case`], device/spec parsing, session routing) and the
+//! flat module index (`cases/mod.rs`). The refs and the model/task sources
+//! are vendored under `tests/cases/` and `fixtures/models/`, so the default
+//! test run needs neither an ACT-R checkout nor SBCL. `ACTR_DIR` is only
+//! used by the regeneration tools.
 //!
 //! Comparison mirrors ACT-R's own `compare-test-model-files`
 //! (`actr7.x/test-models/model-tester.cl`): each line is right-trimmed and
 //! compared case-insensitively (`string-equal`), line by line. That is what
 //! the refs were produced/validated against.
 //!
-//! `PURE`/`MULTI` trace specs the scripted engine can drive (repeated `run`,
-//! `goal-focus`, `:v`/`:trace-detail`/`:seed`) are runnable; the rest are
-//! emitted as `#[ignore = "reason"]` so the coverage gap stays visible and
-//! only shrinks. Cases live in `tests/cases/test_models_cases.rs` (generated
-//! once by `tools/gen_test_cases.py`): a passing case is a plain `#[test]`,
-//! an out-of-scope case is ignored. Promote a case by removing its `#[ignore]`.
+//! The event-hook cases and data-heavy experiment drivers still reuse a
+//! recovered `.spec` (`fixtures/regression/specs/`); every other case owns
+//! its driver here.
+//! Promote a case by removing its `#[ignore]` in its own file.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -30,7 +29,7 @@ use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
 
 mod common;
 mod hooks;
-use common::{actr_dir, crate_dir, first_diff};
+use common::{crate_dir, first_diff, models_dir};
 
 // ---------------------------------------------------------------- spec model
 
@@ -43,9 +42,13 @@ struct Spec {
     /// engine seeds once; later changes are explicit `Step::Seed`s).
     run_seeds: Vec<(u64, u64)>,
     steps: Vec<Step>,
-    /// Set when a step uses an op the scripted engine does not support.
+    /// Set when a step uses an op the scripted engine does not support
+    /// (unused by the hook drivers; kept for the spec reader).
+    #[allow(dead_code)]
     steps_unsupported: Option<String>,
+    #[allow(dead_code)]
     scope: String,
+    #[allow(dead_code)]
     error: Option<String>,
 }
 
@@ -56,8 +59,14 @@ fn specs_dir() -> PathBuf {
         .join("specs")
 }
 
+/// Vendored expected outputs, one per case, next to its Rust test file.
 fn refs_dir() -> PathBuf {
-    actr_dir().join("test-models")
+    crate_dir().join("tests").join("cases")
+}
+
+/// Hand-authored device sidecars (`<name>.device.sexp`).
+fn devices_dir() -> PathBuf {
+    crate_dir().join("fixtures").join("devices")
 }
 
 // ---------------------------------------------------------------- parsing
@@ -477,92 +486,12 @@ fn normalize(s: &str) -> Vec<String> {
         .collect()
 }
 
-/// True when the spec's files define more than one *distinct* model (a
-/// multi-model trace has an extra model-name column the single-model
-/// formatter lacks). Same-name `define-model` redefinitions are one model:
-/// the last definition wins (`run_model_steps`), as in ACT-R.
-fn is_multi_model(spec: &Spec) -> bool {
-    let mut names = BTreeSet::new();
-    for m in &spec.models {
-        let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
-        let path = actr_dir().join(rel);
-        if !actr_engine::file_defines_model(&path) {
-            continue;
-        }
-        if let Ok(src) = fs::read_to_string(&path) {
-            if let Ok(forms) = parse_all(&src) {
-                for f in &forms {
-                    if let Sexp::List(v) = f {
-                        match v.first().and_then(|s| s.as_sym()) {
-                            // `(clear-all)` drops every model, so a later
-                            // `define-model` starts a fresh (single) set —
-                            // `paired-learning` clears the `paired` model
-                            // loaded by its task file.
-                            Some("CLEAR-ALL") | Some("CLEAR-ALL-FCT") => names.clear(),
-                            Some("DEFINE-MODEL") | Some("DEFINE-MODEL-FCT") => {
-                                if let Some(n) = v.get(1).and_then(as_str) {
-                                    names.insert(n.to_uppercase());
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-        }
-    }
-    names.len() > 1
-}
-
-/// Why a spec is not runnable in the current engine (None = runnable).
-fn ignore_reason(spec: &Spec) -> Option<String> {
-    if let Some(e) = &spec.error {
-        return Some(format!(
-            "extraction error: {}",
-            e.lines().next().unwrap_or("")
-        ));
-    }
-    match spec.scope.as_str() {
-        // Trace specs and replayable command specs both run.
-        "PURE" | "MULTI" | "COMMAND" => {}
-        "DEVICE" => return Some("device/test scaffolding not in spec yet".into()),
-        "HOOK" => return Some("event-hook Lisp (not replayable)".into()),
-        "SCRAPE" => return Some("tutorial-source scrape (not an engine trace)".into()),
-        "ARBITRARY" => return Some("arbitrary-Lisp command stub (not replayable)".into()),
-        "DRIVER" => return Some("unsupported run-it driver op (pdisable/...)".into()),
-        "OTHER" => return Some("no run recorded".into()),
-        other => return Some(format!("scope {other}")),
-    }
-    if spec.models.is_empty() {
-        return Some("no model files".into());
-    }
-    if is_multi_model(spec) {
-        return Some("multi-model trace (model column)".into());
-    }
-    if let Some(u) = &spec.steps_unsupported {
-        return Some(format!("unsupported step: {u}"));
-    }
-    // A command-only spec (`:COMMAND`) legitimately has no run; every other
-    // runnable scope needs one.
-    if spec.scope != "COMMAND"
-        && !spec.steps.iter().any(|s| {
-            matches!(
-                s,
-                Step::Run { .. } | Step::RunFullTime { .. } | Step::ZzDriver | Step::AlDriver
-            )
-        })
-    {
-        return Some("no run step".into());
-    }
-    None
-}
-
-/// Per-spec device sidecar `<name>.device.sexp` in the specs dir, mirroring
+/// Per-case device sidecar `<name>.device.sexp` in `fixtures/devices/`, mirroring
 /// the task file's post-reset `add-text-to-exp-window` / `clear-exp-window`
 /// calls (same form as `tests/extra_traces.rs`): `((ADD-TEXT ms "text" x y) ...)`,
 /// plus optional `(CLEAR ms)`, `(END ms)`, `(REWARD ms v)`, `(SIMILARITY a b v)`.
 fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
-    let path = specs_dir().join(format!("{name}.device.sexp"));
+    let path = devices_dir().join(format!("{name}.device.sexp"));
     if !path.is_file() {
         return Ok(DeviceSetup::default());
     }
@@ -945,73 +874,268 @@ fn apply_session_step(
 
 // ---------------------------------------------------------------- harness
 
-/// Emit a `#[test]` per case from the static list in
-/// `tests/cases/test_models_cases.rs`.
-macro_rules! spec_case {
-    ($ident:ident, $name:literal) => {
-        #[test]
-        fn $ident() {
-            if let Err(e) = run_case($name) {
-                panic!("{e}");
-            }
-        }
-    };
+/// One per-case driver: models/seed/steps + the expected `.ref`.
+///
+/// Generated case files build this, then call [`Case::check`]. The driver is
+/// the authority; only hook drivers and data-heavy experiments read a `.spec`.
+pub struct Case {
+    name: String,
+    ref_name: String,
+    models: Vec<String>,
+    seed: (u64, u64),
+    steps: Vec<Step>,
 }
 
-/// An out-of-scope case, `#[ignore]`d with the reason it cannot run yet.
-/// `--ignored` runs it anyway, to see whether it has become runnable.
-macro_rules! spec_case_ignored {
+impl Case {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            ref_name: format!("{name}.ref"),
+            models: Vec::new(),
+            seed: (100, 0),
+            steps: Vec::new(),
+        }
+    }
+
+    /// A case whose driver is still a recovered `.spec`: data-heavy
+    /// experiment drivers (tens of thousands of runs).
+    pub fn from_spec(name: &str) -> Self {
+        let spec = read_named_spec(name).unwrap_or_else(|e| panic!("reading spec for {name}: {e}"));
+        Self {
+            name: spec.name,
+            ref_name: spec.ref_name,
+            models: spec.models,
+            seed: spec.run_seeds.first().copied().unwrap_or((100, 0)),
+            steps: spec.steps,
+        }
+    }
+
+    pub fn ref_name(mut self, ref_name: &str) -> Self {
+        self.ref_name = ref_name.to_string();
+        self
+    }
+
+    pub fn steps(mut self, steps: Vec<Step>) -> Self {
+        self.steps = steps;
+        self
+    }
+
+    pub fn model(mut self, model: &str) -> Self {
+        self.models.push(model.to_string());
+        self
+    }
+
+    pub fn models(mut self, models: &[&str]) -> Self {
+        self.models = models.iter().map(|m| m.to_string()).collect();
+        self
+    }
+
+    pub fn seed(mut self, seed: (u64, u64)) -> Self {
+        self.seed = seed;
+        self
+    }
+
+    pub fn step(mut self, step: Step) -> Self {
+        self.steps.push(step);
+        self
+    }
+
+    /// Sugar for the common single-model `(run secs)` step.
+    pub fn run(self, secs: f64) -> Self {
+        self.step(Step::Run {
+            secs,
+            trace: true,
+            width: 22,
+        })
+    }
+
+    fn to_spec(&self) -> Spec {
+        Spec {
+            name: self.name.clone(),
+            ref_name: self.ref_name.clone(),
+            models: self.models.clone(),
+            run_seeds: vec![self.seed],
+            steps: self.steps.clone(),
+            steps_unsupported: None,
+            scope: "MULTI".to_string(),
+            error: None,
+        }
+    }
+
+    fn trace(&self) -> Result<Vec<String>, String> {
+        let root = models_dir();
+        if !root.is_dir() {
+            return Err(format!(
+                "vendored model fixtures not found at {}",
+                root.display()
+            ));
+        }
+        run_spec(&root, &self.to_spec())
+    }
+
+    /// Run the driver and compare with the case's `.ref` under ACT-R's own
+    /// comparator (`compare-test-model-files`). `Err` carries the first
+    /// divergence.
+    pub fn check(self) -> Result<(), String> {
+        let ref_path = refs_dir().join(&self.ref_name);
+        let expected = normalize(
+            &fs::read_to_string(&ref_path).map_err(|e| format!("{}: {e}", ref_path.display()))?,
+        );
+        let actual = self.trace()?;
+        if actual == expected {
+            Ok(())
+        } else {
+            Err(format!(
+                "{}: ref mismatch vs {}\n{}",
+                self.name,
+                ref_path.display(),
+                first_diff(&expected, &actual)
+            ))
+        }
+    }
+
+    /// Dev aid: run the driver and return the formatted trace.
+    #[allow(dead_code)]
+    pub fn run_only(self) -> Result<String, String> {
+        Ok(self.trace()?.join("\n"))
+    }
+}
+
+/// Parse one Lisp form. Used by generated drivers for `Sexp`-valued steps.
+pub fn sexp(src: &str) -> Sexp {
+    let mut forms = parse_all(src).unwrap_or_else(|e| panic!("bad sexp {src:?}: {e}"));
+    assert_eq!(forms.len(), 1, "expected one form in {src:?}");
+    forms.remove(0)
+}
+
+/// Parse a Lisp argument list; `NIL`/empty is the empty list.
+pub fn sexps(src: &str) -> Vec<Sexp> {
+    let s = src.trim();
+    if s.is_empty() || s.eq_ignore_ascii_case("nil") {
+        return Vec::new();
+    }
+    let forms = parse_all(s).unwrap_or_else(|e| panic!("bad sexp list {src:?}: {e}"));
+    if forms.len() == 1 {
+        match forms.into_iter().next().unwrap() {
+            Sexp::List(items) => items,
+            other => vec![other],
+        }
+    } else {
+        forms
+    }
+}
+
+/// Parse a goal-focus chunk description.
+pub fn chunk_desc(src: &str) -> ChunkDesc {
+    match sexp(src) {
+        Sexp::List(items) => actr_engine::model::parse_chunk_desc(&items)
+            .unwrap_or_else(|e| panic!("bad chunk desc {src:?}: {e}")),
+        Sexp::Sym(name) | Sexp::Str(name) => ChunkDesc::Named(name),
+        other => panic!("bad chunk desc {other:?}"),
+    }
+}
+
+/// A case that exists in the upstream corpus but has no Rust driver yet.
+/// The body panics so `--ignored` reports the gap instead of silently passing.
+macro_rules! ignored_case {
     ($ident:ident, $name:literal, $reason:literal) => {
         #[test]
         #[ignore = $reason]
         fn $ident() {
-            if let Err(e) = run_case($name) {
-                panic!("{e}");
-            }
+            panic!("case {} is not implemented: {}", $name, $reason);
         }
     };
 }
 
-include!("cases/test_models_cases.rs");
-include!("cases/hook_cases.rs");
+mod cases;
 
-/// Run one ACT-R regression case and compare with its upstream `.ref` under
-/// ACT-R's own comparator. `Err` carries the first divergence.
-fn run_case(name: &str) -> Result<(), String> {
-    let root = actr_dir();
-    if !root.is_dir() {
-        return Err(format!(
-            "ACT-R checkout not found at {} (set ACTR_DIR)",
-            root.display()
-        ));
+/// The per-case files and `cases/mod.rs` are hand-maintained; this catches a
+/// forgotten `mod` line (which would otherwise silently skip a test).
+#[test]
+fn case_files_cover_every_ref() -> Result<(), String> {
+    let dir = refs_dir();
+    let mut refs = BTreeSet::new();
+    for entry in fs::read_dir(&dir).map_err(|e| format!("{}: {e}", dir.display()))? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path.extension().and_then(|x| x.to_str()) == Some("ref") {
+            refs.insert(path.file_stem().unwrap().to_string_lossy().into_owned());
+        }
     }
-    let spec = read_named_spec(name)?;
-    if let Some(reason) = ignore_reason(&spec) {
-        return Err(format!("not runnable: {reason}"));
+
+    let mut files = BTreeSet::new();
+    let mut cases = BTreeSet::new();
+    let mut case_refs = BTreeSet::new();
+    for entry in fs::read_dir(&dir).map_err(|e| format!("{}: {e}", dir.display()))? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path.extension().and_then(|x| x.to_str()) != Some("rs") {
+            continue;
+        }
+        let stem = path.file_stem().unwrap().to_string_lossy().into_owned();
+        if stem == "mod" {
+            continue;
+        }
+        files.insert(stem);
+        let src = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let mut case = None;
+        let mut ref_name = None;
+        for line in src.lines().take(8) {
+            let line = line.trim();
+            if let Some(v) = line.strip_prefix("//! case:") {
+                case = Some(v.trim().to_string());
+            }
+            if let Some(v) = line.strip_prefix("//! ref:") {
+                ref_name = Some(v.trim().to_string());
+            }
+        }
+        let case = case.ok_or_else(|| format!("{}: missing `//! case:`", path.display()))?;
+        if !cases.insert(case.clone()) {
+            return Err(format!("duplicate case header: {case}"));
+        }
+        let ref_name = ref_name.unwrap_or_else(|| format!("{case}.ref"));
+        let ref_stem = ref_name.strip_suffix(".ref").unwrap_or(&ref_name);
+        case_refs.insert(ref_stem.to_string());
     }
-    let ref_path = refs_dir().join(&spec.ref_name);
-    let expected = normalize(
-        &fs::read_to_string(&ref_path).map_err(|e| format!("{}: {e}", ref_path.display()))?,
-    );
-    let actual = run_spec(&root, &spec)?;
-    if actual == expected {
+
+    let index = fs::read_to_string(dir.join("mod.rs"))
+        .map_err(|e| format!("{}: {e}", dir.join("mod.rs").display()))?;
+    let mods: BTreeSet<String> = index
+        .lines()
+        .filter_map(|l| {
+            l.trim()
+                .strip_prefix("mod ")?
+                .strip_suffix(';')
+                .map(str::to_string)
+        })
+        .collect();
+
+    let mut problems = Vec::new();
+    for r in refs.difference(&case_refs) {
+        problems.push(format!("ref has no case file: {r}"));
+    }
+    for r in case_refs.difference(&refs) {
+        problems.push(format!("case file names a missing ref: {r}"));
+    }
+    for f in files.difference(&mods) {
+        problems.push(format!("case file not declared in cases/mod.rs: {f}.rs"));
+    }
+    for m in mods.difference(&files) {
+        problems.push(format!("cases/mod.rs names a missing file: {m}.rs"));
+    }
+    if problems.is_empty() {
         Ok(())
     } else {
-        Err(format!(
-            "{name}: ref mismatch vs {}\n{}",
-            ref_path.display(),
-            first_diff(&expected, &actual)
-        ))
+        Err(problems.join("\n"))
     }
 }
 
-/// Dev aid: dump the formatted trace of one spec (no `.ref` comparison).
+/// Dev aid: dump the formatted trace of one recovered hook driver spec
+/// (no `.ref` comparison).
 /// `cargo test --test test_models dump_spec -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn dump_spec() {
-    let name = std::env::var("DUMP_SPEC").unwrap_or_else(|_| "zz-extended-motor-actions".into());
-    let root = actr_dir();
+    let name = std::env::var("DUMP_SPEC").unwrap_or_else(|_| "demo2".into());
+    let root = models_dir();
     let spec = read_named_spec(&name).unwrap();
     let actual = run_spec(&root, &spec).unwrap();
     for (i, l) in actual.iter().enumerate() {

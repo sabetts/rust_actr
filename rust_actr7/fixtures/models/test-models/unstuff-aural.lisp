@@ -1,0 +1,22 @@
+(defun run-it ()
+  (dolist (mod '(t nil))
+    (dolist (over '(t nil))
+      (dolist (unstuff '(nil t 1 2.5))
+        (run-test unstuff over mod)))))
+
+(defun run-test (unstuff overwrite mod)
+  (reset)
+  (when mod
+    (goal-focus free))
+  (sgp-fct (list :unstuff-aural-location unstuff :overstuff-aural-location overwrite))
+  (new-tone-sound 100 .1)
+  (model-output "unstuff = ~s overwrite = ~s modify ~:[no~;yes~]" unstuff overwrite mod)
+  (run-until-time 2)
+  (new-tone-sound 100 .1)
+  (run-until-time 7)
+  (new-tone-sound 100 .1)
+  (run .05)
+  (new-tone-sound 200 .5)
+  (run-until-time 12))
+    
+(load-act-r-model "ACT-R:test-models;models;unstuff-aural.lisp")

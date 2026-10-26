@@ -1,0 +1,20 @@
+     0.000   NONE                   utility-learning-issues-choose
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED CHOOSE-A
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     5.000   NONE                   utility-learning-issues-show-result A
+     5.000   PROCEDURAL             CONFLICT-RESOLUTION
+     5.050   PROCEDURAL             PRODUCTION-FIRED RESPONSE-MATCHES
+     5.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     5.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     5.050   UTILITY                PROPAGATE-REWARD 6
+ Utility updates with Reward = 6.0   alpha = 0.2
+  Updating utility of production CHOOSE-A
+   U(n-1) = 0.0   R(n) = 0.9499998 [6.0 - 5.05 seconds since selection]
+   U(n) = 0.18999997
+  Updating utility of production RESPONSE-MATCHES
+   U(n-1) = 0.0   R(n) = 5.95 [6.0 - 0.05 seconds since selection]
+   U(n) = 1.1899999
+     5.050   PROCEDURAL             CONFLICT-RESOLUTION
+     5.050   ------                 Stopped because time limit reached

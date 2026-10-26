@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit5modeling-v8-chunk-1-plus-2" :REF "tutorial-unit5modeling-v8-chunk-1-plus-2.ref" :MODELS ("test-models;models;declarative-issues-v8.lisp") :SEED-SET T :RUNS NIL :STEPS ((:COMMAND PPRINT-CHUNKS (1+2=3))) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

@@ -1,1 +1,0 @@
-(:NAME "simple-dynamic-model" :REF "simple-dynamic-model.ref" :MODELS ("tutorial;unit8;simple-dynamic-model.lisp") :SEED-SET NIL :RUNS ((10 (100 0) T 22)) :STEPS ((:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 10 (100 0) T 22) (:BUFFER-CHUNK IMAGINAL)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :PURE :FLAGS NIL :ERROR NIL)

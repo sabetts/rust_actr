@@ -1,0 +1,6 @@
+  (op1 isa operator pre start action read arg1 create post stimulus-read)
+  (op2 isa operator pre stimulus-read action associate arg1 filled arg2 fill post recalled)
+  (op3 isa operator pre recalled action test-arg2 arg1 respond arg2 wait)
+  (op4 isa operator pre respond action type arg2 response post wait)
+  (op5 isa operator pre wait action read arg2 fill post new-trial)
+  (op6 isa operator pre new-trial action complete-task post start)

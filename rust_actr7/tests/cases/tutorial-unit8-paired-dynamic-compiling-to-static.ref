@@ -1,0 +1,27 @@
+     0.600   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-ASSOCIATE
+Production Compilation process started for RETRIEVE-ASSOCIATE
+  Production RETRIEVE-OPERATOR and RETRIEVE-ASSOCIATE are being composed.
+  New production:
+
+(P PRODUCTION2
+  "RETRIEVE-OPERATOR & RETRIEVE-ASSOCIATE - OP2"
+   =GOAL>
+       STATE STIMULUS-READ
+       STEP READY
+   =IMAGINAL>
+       WORD =STIMULUS
+ ==>
+   =GOAL>
+       CONTEXT NUMBER
+       STATE RECALLED
+       STEP RETRIEVING-RESULT
+   +RETRIEVAL>
+       WORD =STIMULUS
+)
+Parameters for production PRODUCTION2:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RETRIEVE-ASSOCIATE.

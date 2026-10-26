@@ -1,3 +1,0 @@
-(:NAME "audio-updates" :REF "audio-updates.ref" :MODELS ("test-models;models;audio-updates.lisp") :SEED-SET NIL :RUNS ((1 (100 0) T 22) (1 (100 0) T 22) (10 (100 0) T 22) (10 (100 0) T 22) (1 (100 0) T 22) (1 (100 0) T 22) (10 (100 0) T 22) (10 (100 0) T 22)) :STEPS ((:RESET) (:MODEL-OUTPUT "
-Times are in seconds") (:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 1 (100 0) T 22) (:RUN 1 (100 0) T 22) (:RUN 10 (100 0) T 22) (:RUN 10 (100 0) T 22) (:RESET) (:MODEL-OUTPUT "
-Times are in milliseconds") (:RUN 1 (100 0) T 22) (:RUN 1 (100 0) T 22) (:RUN 10 (100 0) T 22) (:RUN 10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 2 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

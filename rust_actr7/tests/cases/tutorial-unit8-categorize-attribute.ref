@@ -1,0 +1,9 @@
+? (categorize-attribute size -.9)
+>>> categorize.attribute('size',-.9)
+
+GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   NAME  SIZE
+   STATE  ADD-ATTRIBUTE
+   VALUE  -0.9
+

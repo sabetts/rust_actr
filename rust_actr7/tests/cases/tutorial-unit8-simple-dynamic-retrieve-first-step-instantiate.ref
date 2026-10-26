@@ -1,0 +1,17 @@
+(P RETRIEVE-FIRST-STEP
+   =GOAL>
+       CONTEXT DESTINATION
+       DATA 10
+   =IMAGINAL>
+       DATA1 10
+   =RETRIEVAL>
+       DESTINATION DATA2
+       STEP FIRST
+ ==>
+   =GOAL>
+       DATA 11
+   =IMAGINAL>
+       DATA2 10
+   +RETRIEVAL>
+       STEP SECOND
+)

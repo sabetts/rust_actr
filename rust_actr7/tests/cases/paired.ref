@@ -1,0 +1,540 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STEP START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+     0.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.185   DECLARATIVE            start-retrieval
+No matching chunk found retrieval failure
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "zinc")
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     3.141   DECLARATIVE            RETRIEVAL-FAILURE
+     3.141   PROCEDURAL             CONFLICT-RESOLUTION
+     3.191   PROCEDURAL             PRODUCTION-FIRED CANNOT-RECALL
+     3.191   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.191   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.191   VISION                 CLEAR
+     3.191   PROCEDURAL             CONFLICT-RESOLUTION
+     3.241   PROCEDURAL             CONFLICT-RESOLUTION
+     5.000   ------                 Stopped because time limit reached
+     5.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     5.000   VISION                 visicon-update
+     5.000   PROCEDURAL             CONFLICT-RESOLUTION
+     5.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+     5.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.050   PROCEDURAL             CONFLICT-RESOLUTION
+     5.135   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     5.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     5.135   PROCEDURAL             CONFLICT-RESOLUTION
+     5.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+     5.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     5.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.185   VISION                 CLEAR
+     5.185   PROCEDURAL             CONFLICT-RESOLUTION
+     5.235   PROCEDURAL             CONFLICT-RESOLUTION
+    10.000   ------                 Stopped because time limit reached
+    10.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+    10.000   VISION                 visicon-update
+    10.000   PROCEDURAL             CONFLICT-RESOLUTION
+    10.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+    10.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.050   PROCEDURAL             CONFLICT-RESOLUTION
+    10.135   VISION                 Encoding-complete VISUAL-LOCATION2-0 NIL
+    10.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT2
+    10.135   PROCEDURAL             CONFLICT-RESOLUTION
+    10.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+    10.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    10.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.185   DECLARATIVE            start-retrieval
+Chunk IMAGINAL-CHUNK0-0 matches
+Computing activation for chunk IMAGINAL-CHUNK0-0
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (5.185)
+  creation time: 5.185 decay: 0.5  Optimized-learning: T
+base-level value: -0.11157179
+Total base-level: -0.11157179
+Adding transient noise -0.7636829
+Adding permanent noise 0.0
+Chunk IMAGINAL-CHUNK0-0 has an activation of: -0.8752547
+Chunk IMAGINAL-CHUNK0-0 has the current best activation -0.8752547
+Chunk IMAGINAL-CHUNK0-0 with activation -0.8752547 is the best
+    10.185   PROCEDURAL             CONFLICT-RESOLUTION
+    10.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "zinc")
+    10.385   PROCEDURAL             CONFLICT-RESOLUTION
+    11.145   DECLARATIVE            RETRIEVED-CHUNK IMAGINAL-CHUNK0-0
+    11.145   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL IMAGINAL-CHUNK0-0
+    11.145   PROCEDURAL             CONFLICT-RESOLUTION
+    11.195   PROCEDURAL             PRODUCTION-FIRED RECALL
+    11.195   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    11.195   PROCEDURAL             CLEAR-BUFFER MANUAL
+    11.195   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.195   MOTOR                  PRESS-KEY KEY 9
+    11.195   VISION                 CLEAR
+    11.195   PROCEDURAL             CONFLICT-RESOLUTION
+    11.245   PROCEDURAL             CONFLICT-RESOLUTION
+    11.445   PROCEDURAL             CONFLICT-RESOLUTION
+    11.495   PROCEDURAL             CONFLICT-RESOLUTION
+    11.595   PROCEDURAL             CONFLICT-RESOLUTION
+    11.745   PROCEDURAL             CONFLICT-RESOLUTION
+    15.000   ------                 Stopped because time limit reached
+    15.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+    15.000   VISION                 visicon-update
+    15.000   PROCEDURAL             CONFLICT-RESOLUTION
+    15.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+    15.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    15.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    15.050   PROCEDURAL             CONFLICT-RESOLUTION
+    15.135   VISION                 Encoding-complete VISUAL-LOCATION3-0 NIL
+    15.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT3
+    15.135   PROCEDURAL             CONFLICT-RESOLUTION
+    15.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+    15.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    15.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    15.185   VISION                 CLEAR
+    15.185   PROCEDURAL             CONFLICT-RESOLUTION
+    15.235   PROCEDURAL             CONFLICT-RESOLUTION
+    20.000   ------                 Stopped because time limit reached
+IMAGINAL-CHUNK0-0
+   PROBE  "zinc"
+   ANSWER  "9"
+
+VISUAL-CHUNK0-0
+   SCREEN-POS  VISUAL-LOCATION0-0
+   VALUE  "zinc"
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  28
+   TEXT  T
+
+VISUAL-CHUNK0-1
+   SCREEN-POS  VISUAL-LOCATION1-0
+   VALUE  "9"
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   TEXT  T
+
+VISUAL-LOCATION0-0
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  28
+   SCREEN-X  465
+   SCREEN-Y  456
+   DISTANCE  1080
+   SIZE  0.78999996
+
+VISUAL-LOCATION1-0
+   KIND  TEXT
+   VALUE  TEXT
+   COLOR  BLACK
+   HEIGHT  10
+   WIDTH  7
+   SCREEN-X  455
+   SCREEN-Y  456
+   DISTANCE  1080
+   SIZE  0.19999999
+
+START
+
+ATTENDING-TARGET
+
+ATTENDING-PROBE
+
+TESTING
+
+READ-STUDY-ITEM
+
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STEP START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+Production Compilation process started for ATTEND-PROBE
+  No previous production to compose with.
+  Setting previous production to ATTEND-PROBE.
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+Production Compilation process started for READ-PROBE
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production ATTEND-PROBE and READ-PROBE cannot be composed.
+  Setting previous production to READ-PROBE.
+     0.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.185   DECLARATIVE            start-retrieval
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "zinc")
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     3.141   DECLARATIVE            RETRIEVAL-FAILURE
+     3.141   PROCEDURAL             CONFLICT-RESOLUTION
+     3.191   PROCEDURAL             PRODUCTION-FIRED CANNOT-RECALL
+Production Compilation process started for CANNOT-RECALL
+  Cannot compile READ-PROBE and CANNOT-RECALL because the time between them exceeds the threshold time.
+  Setting previous production to CANNOT-RECALL.
+     3.191   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.191   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.191   VISION                 CLEAR
+     3.191   PROCEDURAL             CONFLICT-RESOLUTION
+     3.241   PROCEDURAL             CONFLICT-RESOLUTION
+     5.000   ------                 Stopped because time limit reached
+     5.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     5.000   VISION                 visicon-update
+     5.000   PROCEDURAL             CONFLICT-RESOLUTION
+     5.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+Production Compilation process started for DETECT-STUDY-ITEM
+  Buffer VISUAL prevents composition of these productions
+   because both productions make a request.
+  Production CANNOT-RECALL and DETECT-STUDY-ITEM cannot be composed.
+  Setting previous production to DETECT-STUDY-ITEM.
+     5.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.050   PROCEDURAL             CONFLICT-RESOLUTION
+     5.135   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     5.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     5.135   PROCEDURAL             CONFLICT-RESOLUTION
+     5.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+Production Compilation process started for ASSOCIATE
+  Buffer IMAGINAL prevents composition of these productions
+   because the buffer is explicitly cleared in the second production.
+  Production DETECT-STUDY-ITEM and ASSOCIATE cannot be composed.
+  Setting previous production to ASSOCIATE.
+     5.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     5.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.185   VISION                 CLEAR
+     5.185   PROCEDURAL             CONFLICT-RESOLUTION
+     5.235   PROCEDURAL             CONFLICT-RESOLUTION
+    10.000   ------                 Stopped because time limit reached
+    10.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+    10.000   VISION                 visicon-update
+    10.000   PROCEDURAL             CONFLICT-RESOLUTION
+    10.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+Production Compilation process started for ATTEND-PROBE
+  Cannot compile ASSOCIATE and ATTEND-PROBE because the time between them exceeds the threshold time.
+  Setting previous production to ATTEND-PROBE.
+    10.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.050   PROCEDURAL             CONFLICT-RESOLUTION
+    10.135   VISION                 Encoding-complete VISUAL-LOCATION2-0 NIL
+    10.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT2
+    10.135   PROCEDURAL             CONFLICT-RESOLUTION
+    10.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+Production Compilation process started for READ-PROBE
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production ATTEND-PROBE and READ-PROBE cannot be composed.
+  Setting previous production to READ-PROBE.
+    10.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    10.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.185   DECLARATIVE            start-retrieval
+    10.185   PROCEDURAL             CONFLICT-RESOLUTION
+    10.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "zinc")
+    10.385   PROCEDURAL             CONFLICT-RESOLUTION
+    11.145   DECLARATIVE            RETRIEVED-CHUNK IMAGINAL-CHUNK0-0
+    11.145   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL IMAGINAL-CHUNK0-0
+    11.145   PROCEDURAL             CONFLICT-RESOLUTION
+    11.195   PROCEDURAL             PRODUCTION-FIRED RECALL
+Production Compilation process started for RECALL
+  Production READ-PROBE and RECALL are being composed.
+  New production:
+
+(P PRODUCTION0
+  "READ-PROBE & RECALL - IMAGINAL-CHUNK0-0"
+   =GOAL>
+       STEP ATTENDING-PROBE
+   =VISUAL>
+       VALUE "zinc"
+   ?IMAGINAL>
+       STATE FREE
+   ?MANUAL>
+       STATE FREE
+   ?VISUAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       STEP READ-STUDY-ITEM
+   +VISUAL>
+       CMD CLEAR
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY "9"
+   +IMAGINAL>
+       PROBE "zinc"
+)
+Parameters for production PRODUCTION0:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+  Setting previous production to RECALL.
+    11.195   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    11.195   PROCEDURAL             CLEAR-BUFFER MANUAL
+    11.195   PROCEDURAL             CLEAR-BUFFER VISUAL
+    11.195   MOTOR                  PRESS-KEY KEY 9
+    11.195   VISION                 CLEAR
+    11.195   PROCEDURAL             CONFLICT-RESOLUTION
+    11.245   PROCEDURAL             CONFLICT-RESOLUTION
+    11.445   PROCEDURAL             CONFLICT-RESOLUTION
+    11.495   PROCEDURAL             CONFLICT-RESOLUTION
+    11.595   PROCEDURAL             CONFLICT-RESOLUTION
+    11.745   PROCEDURAL             CONFLICT-RESOLUTION
+    15.000   ------                 Stopped because time limit reached
+    15.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+    15.000   VISION                 visicon-update
+    15.000   PROCEDURAL             CONFLICT-RESOLUTION
+    15.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+Production Compilation process started for DETECT-STUDY-ITEM
+  Cannot compile RECALL and DETECT-STUDY-ITEM because the time between them exceeds the threshold time.
+  Setting previous production to DETECT-STUDY-ITEM.
+    15.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    15.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    15.050   PROCEDURAL             CONFLICT-RESOLUTION
+    15.135   VISION                 Encoding-complete VISUAL-LOCATION3-0 NIL
+    15.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT3
+    15.135   PROCEDURAL             CONFLICT-RESOLUTION
+    15.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+Production Compilation process started for ASSOCIATE
+  Buffer IMAGINAL prevents composition of these productions
+   because the buffer is explicitly cleared in the second production.
+  Production DETECT-STUDY-ITEM and ASSOCIATE cannot be composed.
+  Setting previous production to ASSOCIATE.
+    15.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    15.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    15.185   VISION                 CLEAR
+    15.185   PROCEDURAL             CONFLICT-RESOLUTION
+    15.235   PROCEDURAL             CONFLICT-RESOLUTION
+    20.000   ------                 Stopped because time limit reached
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STEP START) NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.000   VISION                 visicon-update
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     0.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.135   VISION                 Encoding-complete VISUAL-LOCATION0-0 NIL
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.135   PROCEDURAL             CONFLICT-RESOLUTION
+     0.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+     0.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+     0.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.185   DECLARATIVE            start-retrieval
+     0.185   PROCEDURAL             CONFLICT-RESOLUTION
+     0.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "xray")
+     0.385   PROCEDURAL             CONFLICT-RESOLUTION
+     3.141   DECLARATIVE            RETRIEVAL-FAILURE
+     3.141   PROCEDURAL             CONFLICT-RESOLUTION
+     3.191   PROCEDURAL             PRODUCTION-FIRED CANNOT-RECALL
+     3.191   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     3.191   PROCEDURAL             CLEAR-BUFFER VISUAL
+     3.191   VISION                 CLEAR
+     3.191   PROCEDURAL             CONFLICT-RESOLUTION
+     3.241   PROCEDURAL             CONFLICT-RESOLUTION
+     5.000   ------                 Stopped because time limit reached
+     5.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     5.000   VISION                 visicon-update
+     5.000   PROCEDURAL             CONFLICT-RESOLUTION
+     5.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+     5.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+     5.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.050   PROCEDURAL             CONFLICT-RESOLUTION
+     5.135   VISION                 Encoding-complete VISUAL-LOCATION1-0 NIL
+     5.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     5.135   PROCEDURAL             CONFLICT-RESOLUTION
+     5.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+     5.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     5.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+     5.185   VISION                 CLEAR
+     5.185   PROCEDURAL             CONFLICT-RESOLUTION
+     5.235   PROCEDURAL             CONFLICT-RESOLUTION
+    10.000   ------                 Stopped because time limit reached
+    10.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+    10.000   VISION                 visicon-update
+    10.000   PROCEDURAL             CONFLICT-RESOLUTION
+    10.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+    10.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    10.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.050   PROCEDURAL             CONFLICT-RESOLUTION
+    10.135   VISION                 Encoding-complete VISUAL-LOCATION2-0 NIL
+    10.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT2
+    10.135   PROCEDURAL             CONFLICT-RESOLUTION
+    10.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+    10.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    10.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    10.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    10.185   DECLARATIVE            start-retrieval
+    10.185   PROCEDURAL             CONFLICT-RESOLUTION
+    10.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "zinc")
+    10.385   PROCEDURAL             CONFLICT-RESOLUTION
+    13.141   DECLARATIVE            RETRIEVAL-FAILURE
+    13.141   PROCEDURAL             CONFLICT-RESOLUTION
+    13.191   PROCEDURAL             PRODUCTION-FIRED CANNOT-RECALL
+    13.191   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    13.191   PROCEDURAL             CLEAR-BUFFER VISUAL
+    13.191   VISION                 CLEAR
+    13.191   PROCEDURAL             CONFLICT-RESOLUTION
+    13.241   PROCEDURAL             CONFLICT-RESOLUTION
+    15.000   ------                 Stopped because time limit reached
+    15.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION3 NIL
+    15.000   VISION                 visicon-update
+    15.000   PROCEDURAL             CONFLICT-RESOLUTION
+    15.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+    15.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    15.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    15.050   PROCEDURAL             CONFLICT-RESOLUTION
+    15.135   VISION                 Encoding-complete VISUAL-LOCATION3-0 NIL
+    15.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT3
+    15.135   PROCEDURAL             CONFLICT-RESOLUTION
+    15.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+    15.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    15.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    15.185   VISION                 CLEAR
+    15.185   PROCEDURAL             CONFLICT-RESOLUTION
+    15.235   PROCEDURAL             CONFLICT-RESOLUTION
+    20.000   ------                 Stopped because time limit reached
+    20.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION4 NIL
+    20.000   VISION                 visicon-update
+    20.000   PROCEDURAL             CONFLICT-RESOLUTION
+    20.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+    20.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    20.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    20.050   PROCEDURAL             CONFLICT-RESOLUTION
+    20.135   VISION                 Encoding-complete VISUAL-LOCATION4-0 NIL
+    20.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT4
+    20.135   PROCEDURAL             CONFLICT-RESOLUTION
+    20.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+    20.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    20.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    20.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    20.185   DECLARATIVE            start-retrieval
+    20.185   PROCEDURAL             CONFLICT-RESOLUTION
+    20.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "zinc")
+    20.385   PROCEDURAL             CONFLICT-RESOLUTION
+    20.578   DECLARATIVE            RETRIEVED-CHUNK IMAGINAL-CHUNK0-1
+    20.578   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL IMAGINAL-CHUNK0-1
+    20.578   PROCEDURAL             CONFLICT-RESOLUTION
+    20.628   PROCEDURAL             PRODUCTION-FIRED RECALL
+    20.628   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    20.628   PROCEDURAL             CLEAR-BUFFER MANUAL
+    20.628   PROCEDURAL             CLEAR-BUFFER VISUAL
+    20.628   MOTOR                  PRESS-KEY KEY 9
+    20.628   VISION                 CLEAR
+    20.628   PROCEDURAL             CONFLICT-RESOLUTION
+    20.678   PROCEDURAL             CONFLICT-RESOLUTION
+    20.878   PROCEDURAL             CONFLICT-RESOLUTION
+    20.928   PROCEDURAL             CONFLICT-RESOLUTION
+    21.028   PROCEDURAL             CONFLICT-RESOLUTION
+    21.178   PROCEDURAL             CONFLICT-RESOLUTION
+    25.000   ------                 Stopped because time limit reached
+    25.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION5 NIL
+    25.000   VISION                 visicon-update
+    25.000   PROCEDURAL             CONFLICT-RESOLUTION
+    25.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+    25.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    25.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    25.050   PROCEDURAL             CONFLICT-RESOLUTION
+    25.135   VISION                 Encoding-complete VISUAL-LOCATION5-0 NIL
+    25.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT5
+    25.135   PROCEDURAL             CONFLICT-RESOLUTION
+    25.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+    25.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    25.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    25.185   VISION                 CLEAR
+    25.185   PROCEDURAL             CONFLICT-RESOLUTION
+    25.235   PROCEDURAL             CONFLICT-RESOLUTION
+    30.000   ------                 Stopped because time limit reached
+    30.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION6 NIL
+    30.000   VISION                 visicon-update
+    30.000   PROCEDURAL             CONFLICT-RESOLUTION
+    30.050   PROCEDURAL             PRODUCTION-FIRED ATTEND-PROBE
+    30.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    30.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    30.050   PROCEDURAL             CONFLICT-RESOLUTION
+    30.135   VISION                 Encoding-complete VISUAL-LOCATION6-0 NIL
+    30.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT6
+    30.135   PROCEDURAL             CONFLICT-RESOLUTION
+    30.185   PROCEDURAL             PRODUCTION-FIRED READ-PROBE
+    30.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    30.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    30.185   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    30.185   DECLARATIVE            start-retrieval
+    30.185   PROCEDURAL             CONFLICT-RESOLUTION
+    30.385   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (PROBE "xray")
+    30.385   PROCEDURAL             CONFLICT-RESOLUTION
+    31.101   DECLARATIVE            RETRIEVED-CHUNK IMAGINAL-CHUNK0-0
+    31.101   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL IMAGINAL-CHUNK0-0
+    31.101   PROCEDURAL             CONFLICT-RESOLUTION
+    31.151   PROCEDURAL             PRODUCTION-FIRED RECALL
+    31.151   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    31.151   PROCEDURAL             CLEAR-BUFFER MANUAL
+    31.151   PROCEDURAL             CLEAR-BUFFER VISUAL
+    31.151   MOTOR                  PRESS-KEY KEY 8
+    31.151   VISION                 CLEAR
+    31.151   PROCEDURAL             CONFLICT-RESOLUTION
+    31.201   PROCEDURAL             CONFLICT-RESOLUTION
+    31.301   PROCEDURAL             CONFLICT-RESOLUTION
+    31.351   PROCEDURAL             CONFLICT-RESOLUTION
+    31.451   PROCEDURAL             CONFLICT-RESOLUTION
+    31.601   PROCEDURAL             CONFLICT-RESOLUTION
+    35.000   ------                 Stopped because time limit reached
+    35.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION7 NIL
+    35.000   VISION                 visicon-update
+    35.000   PROCEDURAL             CONFLICT-RESOLUTION
+    35.050   PROCEDURAL             PRODUCTION-FIRED DETECT-STUDY-ITEM
+    35.050   PROCEDURAL             CLEAR-BUFFER VISUAL-LOCATION
+    35.050   PROCEDURAL             CLEAR-BUFFER VISUAL
+    35.050   PROCEDURAL             CONFLICT-RESOLUTION
+    35.135   VISION                 Encoding-complete VISUAL-LOCATION7-0 NIL
+    35.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT7
+    35.135   PROCEDURAL             CONFLICT-RESOLUTION
+    35.185   PROCEDURAL             PRODUCTION-FIRED ASSOCIATE
+    35.185   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    35.185   PROCEDURAL             CLEAR-BUFFER VISUAL
+    35.185   VISION                 CLEAR
+    35.185   PROCEDURAL             CONFLICT-RESOLUTION
+    35.235   PROCEDURAL             CONFLICT-RESOLUTION
+    40.000   ------                 Stopped because time limit reached
+             time             GOAL         IMAGINAL           MANUAL        RETRIEVAL           VISUAL  VISUAL-LOCATION
+            1.000            0.004            0.000            0.000            0.000            0.000            0.000
+            3.000            0.121            0.020            0.000            0.083            0.010            0.000
+            5.000            0.211            0.042            0.000            0.405            0.019            0.000
+            7.000            0.153            0.033            0.000            0.573            0.027            0.000
+            9.000            0.069            0.016            0.000            0.405            0.040            0.000
+           11.000            0.016            0.005            0.000            0.181            0.034            0.000
+           13.000           -0.009            0.018            0.000            0.121            0.027            0.000
+           15.000           -0.018            0.038            0.000            0.375            0.024            0.000
+           17.000           -0.018            0.029            0.000            0.521            0.025            0.000
+           19.000           -0.013            0.013            0.000            0.356            0.036            0.000
+           21.000           -0.008            0.003            0.000            0.146            0.030            0.000
+           23.000           -0.004            0.017            0.028            0.052            0.027            0.000
+           25.000           -0.002            0.038            0.105            0.040            0.030            0.000
+           27.000           -0.001            0.029            0.104            0.009            0.024            0.000
+           29.000           -0.000            0.013            0.057           -0.019            0.031            0.000
+           31.000           -0.000            0.003            0.020           -0.027            0.026            0.000
+           33.000           -0.000            0.017            0.010            0.040            0.023            0.000
+           35.000           -0.000            0.038            0.066            0.164            0.028            0.000
+           37.000           -0.000            0.029            0.081            0.151            0.025            0.000
+           39.000           -0.000            0.013            0.048            0.078            0.032            0.000
+

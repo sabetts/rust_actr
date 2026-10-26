@@ -1,0 +1,6 @@
+    11.212   PROCEDURAL             PRODUCTION-FIRED ENCODE-FEEDBACK-LOSE
+Production Compilation process started for ENCODE-FEEDBACK-LOSE
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production DETECT-FEEDBACK and ENCODE-FEEDBACK-LOSE cannot be composed.
+  Setting previous production to ENCODE-FEEDBACK-LOSE.

@@ -1,0 +1,39 @@
+   260.635   PROCEDURAL             PRODUCTION-FIRED PRODUCTION100
+Production Compilation process started for PRODUCTION100
+  Production PRODUCTION38 and PRODUCTION100 are being composed.
+  New production:
+
+(P PRODUCTION145
+  "PRODUCTION38 & PRODUCTION100 - IMAGINAL-CHUNK0-0"
+   =GOAL>
+       STATE STIMULUS-READ
+       STEP ATTENDING
+   =IMAGINAL>
+       ARG1 FILL
+   =VISUAL>
+       TEXT T
+       VALUE "zinc"
+   ?IMAGINAL>
+       STATE FREE
+   ?MANUAL>
+       STATE FREE
+ ==>
+   =GOAL>
+       STATE WAIT
+       STEP RETRIEVING-OPERATOR
+   +RETRIEVAL>
+       PRE WAIT
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY "9"
+   *IMAGINAL>
+       ARG1 "zinc"
+       ARG2 "9"
+)
+Parameters for production PRODUCTION145:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to PRODUCTION100.

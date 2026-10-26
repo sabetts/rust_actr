@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit1modeling-broken-addition-v3-whynot" :REF "tutorial-unit1modeling-broken-addition-v3-whynot.ref" :MODELS ("test-models;models;broken-addition-v3.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:MODEL-OUTPUT "? (whynot initialize-addition)") (:COMMAND WHYNOT (INITIALIZE-ADDITION))) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

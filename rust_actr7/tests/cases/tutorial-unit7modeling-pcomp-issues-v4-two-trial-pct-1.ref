@@ -1,0 +1,39 @@
+    11.457   PROCEDURAL             PRODUCTION-FIRED DETECT-TRIAL-START
+Production Compilation process started for DETECT-TRIAL-START
+  Production ENCODE-FEEDBACK-LOSE and DETECT-TRIAL-START are being composed.
+  New production:
+
+(P PRODUCTION5
+  "ENCODE-FEEDBACK-LOSE & DETECT-TRIAL-START"
+   =GOAL>
+       STATE ENCODE-FEEDBACK
+   =IMAGINAL>
+   =VISUAL-LOCATION>
+   =VISUAL>
+       VALUE "lose"
+   ?IMAGINAL>
+       STATE FREE
+   ?MANUAL>
+       STATE FREE
+   ?VISUAL>
+       STATE FREE
+ ==>
+   =IMAGINAL>
+       RESULT LOSE
+   +VISUAL>
+       CMD MOVE-ATTENTION
+       SCREEN-POS =VISUAL-LOCATION
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY SPACE
+   +IMAGINAL>
+   +GOAL>
+       STATE ATTEND-NUM-1
+)
+Parameters for production PRODUCTION5:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward 12.000
+ :fixed-utility    NIL
+  Setting previous production to DETECT-TRIAL-START.

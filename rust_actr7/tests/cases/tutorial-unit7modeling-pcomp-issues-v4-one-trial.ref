@@ -1,0 +1,197 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL TASK0 NIL
+     0.000   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED DETECT-TRIAL-START
+Production Compilation process started for DETECT-TRIAL-START
+  No previous production to compose with.
+  Setting previous production to DETECT-TRIAL-START.
+     0.135   VISION                 SET-BUFFER-CHUNK VISUAL TEXT0
+     0.185   PROCEDURAL             PRODUCTION-FIRED ATTEND-NUM-1
+Production Compilation process started for ATTEND-NUM-1
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production DETECT-TRIAL-START and ATTEND-NUM-1 cannot be composed.
+  Setting previous production to ATTEND-NUM-1.
+     0.187   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+     0.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
+     0.300   PROCEDURAL             PRODUCTION-FIRED ENCODE-NUM-1
+Production Compilation process started for ENCODE-NUM-1
+  Production ATTEND-NUM-1 and ENCODE-NUM-1 are being composed.
+  New production:
+
+(P PRODUCTION0
+  "ATTEND-NUM-1 & ENCODE-NUM-1 - THREE"
+   =GOAL>
+       STATE ATTEND-NUM-1
+   =IMAGINAL>
+   =VISUAL>
+       VALUE "3"
+ ==>
+   =IMAGINAL>
+       NUM1 THREE-0
+   =GOAL>
+       STATE FIND-NUM-2
+   +VISUAL-LOCATION>
+       :ATTENDED NIL
+    >  SCREEN-X CURRENT
+)
+Parameters for production PRODUCTION0:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to ENCODE-NUM-1.
+     0.300   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
+     0.350   PROCEDURAL             PRODUCTION-FIRED FIND-NUM-2
+Production Compilation process started for FIND-NUM-2
+  Buffer VISUAL-LOCATION prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production ENCODE-NUM-1 and FIND-NUM-2 cannot be composed.
+  Setting previous production to FIND-NUM-2.
+     0.435   VISION                 SET-BUFFER-CHUNK VISUAL TEXT1
+     0.485   PROCEDURAL             PRODUCTION-FIRED ATTEND-NUM-2
+Production Compilation process started for ATTEND-NUM-2
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production FIND-NUM-2 and ATTEND-NUM-2 cannot be composed.
+  Setting previous production to ATTEND-NUM-2.
+     0.487   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL ZERO
+     0.537   PROCEDURAL             PRODUCTION-FIRED ENCODE-NUM-2
+Production Compilation process started for ENCODE-NUM-2
+  Production ATTEND-NUM-2 and ENCODE-NUM-2 are being composed.
+  New production:
+
+(P PRODUCTION1
+  "ATTEND-NUM-2 & ENCODE-NUM-2 - ZERO"
+   =GOAL>
+       STATE ATTEND-NUM-2
+   =IMAGINAL>
+   =VISUAL>
+       VALUE "0"
+ ==>
+   =IMAGINAL>
+       NUM2 ZERO-0
+   =GOAL>
+       STATE RETRIEVE-PAST-TRIAL
+)
+Parameters for production PRODUCTION1:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to ENCODE-NUM-2.
+     0.587   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-PAST-TRIAL
+Production Compilation process started for RETRIEVE-PAST-TRIAL
+  Production ENCODE-NUM-2 and RETRIEVE-PAST-TRIAL are being composed.
+  New production:
+
+(P PRODUCTION2
+  "ENCODE-NUM-2 & RETRIEVE-PAST-TRIAL"
+   =GOAL>
+       STATE ENCODE-NUM-2
+   =IMAGINAL>
+       NUM1 =N1
+   =RETRIEVAL>
+ ==>
+   =IMAGINAL>
+       NUM2 =RETRIEVAL
+   =GOAL>
+       STATE PROCESS-PAST-TRIAL
+   +RETRIEVAL>
+       NUM1 =N1
+       NUM2 =RETRIEVAL
+       RESULT WIN
+)
+Parameters for production PRODUCTION2:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RETRIEVE-PAST-TRIAL.
+    10.630   DECLARATIVE            RETRIEVAL-FAILURE
+    10.680   PROCEDURAL             PRODUCTION-FIRED NO-PAST-TRIAL
+Production Compilation process started for NO-PAST-TRIAL
+  Cannot compile RETRIEVE-PAST-TRIAL and NO-PAST-TRIAL because the time between them exceeds the threshold time.
+  Setting previous production to NO-PAST-TRIAL.
+    10.682   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL RESPONSE-2
+    10.732   PROCEDURAL             PRODUCTION-FIRED RESPOND
+Production Compilation process started for RESPOND
+  Production NO-PAST-TRIAL and RESPOND are being composed.
+  New production:
+
+(P PRODUCTION3
+  "NO-PAST-TRIAL & RESPOND - RESPONSE-2"
+   =GOAL>
+       STATE PROCESS-PAST-TRIAL
+   =IMAGINAL>
+   ?MANUAL>
+       STATE FREE
+   ?RETRIEVAL>
+       BUFFER FAILURE
+ ==>
+   =IMAGINAL>
+       RESPONSE RESPONSE-2-0
+   =GOAL>
+       STATE DETECT-FEEDBACK
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY "d"
+)
+Parameters for production PRODUCTION3:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to RESPOND.
+    10.732   MOTOR                  PRESS-KEY KEY d
+    10.942   VISION                 SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION2 NIL
+    11.077   PROCEDURAL             PRODUCTION-FIRED DETECT-FEEDBACK
+Production Compilation process started for DETECT-FEEDBACK
+  Production RESPOND and DETECT-FEEDBACK are being composed.
+  New production:
+
+(P PRODUCTION4
+  "RESPOND & DETECT-FEEDBACK"
+   =GOAL>
+       STATE RESPOND
+   =IMAGINAL>
+   =RETRIEVAL>
+       IS-RESPONSE T
+       KEY =KEY
+   =VISUAL-LOCATION>
+   ?MANUAL>
+       STATE FREE
+   ?VISUAL>
+       STATE FREE
+ ==>
+   =IMAGINAL>
+       RESPONSE =RETRIEVAL
+   =GOAL>
+       STATE ENCODE-FEEDBACK
+   +VISUAL>
+       CMD MOVE-ATTENTION
+       SCREEN-POS =VISUAL-LOCATION
+   +MANUAL>
+       CMD PRESS-KEY
+       KEY =KEY
+)
+Parameters for production PRODUCTION4:
+ :utility    NIL
+ :u   0.000
+ :at  0.050
+ :reward    NIL
+ :fixed-utility    NIL
+  Setting previous production to DETECT-FEEDBACK.
+    11.162   VISION                 SET-BUFFER-CHUNK VISUAL TEXT2
+    11.212   PROCEDURAL             PRODUCTION-FIRED ENCODE-FEEDBACK-LOSE
+Production Compilation process started for ENCODE-FEEDBACK-LOSE
+  Buffer VISUAL prevents composition of these productions
+   because the first production makes a request and the second production harvests the chunk.
+  Production DETECT-FEEDBACK and ENCODE-FEEDBACK-LOSE cannot be composed.
+  Setting previous production to ENCODE-FEEDBACK-LOSE.
+    11.212   MOTOR                  PRESS-KEY KEY SPACE
+    11.212   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHUNK)
+    11.412   ------                 Stopped because no events left to process

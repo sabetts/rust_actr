@@ -1,0 +1,153 @@
+    26.905   PROCEDURAL             PRODUCTION-FIRED P5
+    26.905   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+    26.905   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    26.905   DECLARATIVE            start-retrieval
+Computing activation for chunk 1-1=0
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9530089
+Total base-level: -0.9530089
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: ZERO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.36828277
+Adding permanent noise 0.0
+Chunk 1-1=0 has an activation of: -0.5847261
+Chunk 1-1=0 has the current best activation -0.5847261
+Computing activation for chunk 2-1=1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9530089
+Total base-level: -0.9530089
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.17789373
+Adding permanent noise 0.0
+Chunk 2-1=1 has an activation of: -1.1309026
+Computing activation for chunk 3-2=1
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9530089
+Total base-level: -0.9530089
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: THREE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.33106902
+Adding permanent noise 0.0
+Chunk 3-2=1 has an activation of: -0.6219399
+Computing activation for chunk 1+1=2
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9530089
+Total base-level: -0.9530089
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.38912883
+Adding permanent noise 0.0
+Chunk 1+1=2 has an activation of: -1.3421377
+Computing activation for chunk 1+2=3
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.9530089
+Total base-level: -0.9530089
+Computing activation spreading from buffers
+Total spreading activation: 0.0
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: THREE
+  similarity: -1.0
+  negation test with similarity not ms has no effect
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0474016
+Adding permanent noise 0.0
+Chunk 1+2=3 has an activation of: -0.9056073
+Chunk 1-1=0 with activation -0.5847261 is the best
+    26.905   PROCEDURAL             CONFLICT-RESOLUTION
+    26.950   ------                 Stopped because time limit reached

@@ -1,0 +1,2 @@
+(sgp :seed (123456 0))
+(sgp :v t :show-focus t :trace-detail high)

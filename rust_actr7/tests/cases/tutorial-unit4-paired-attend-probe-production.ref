@@ -1,0 +1,14 @@
+(p attend-probe
+    =goal>
+      isa      goal
+      step     start
+    =visual-location>
+    ?visual>
+     state     free
+   ==>
+    +visual>               
+      cmd      move-attention
+      screen-pos =visual-location
+    =goal>
+      step     attending-probe
+)

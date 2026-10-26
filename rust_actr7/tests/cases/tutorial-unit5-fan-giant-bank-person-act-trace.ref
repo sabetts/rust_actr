@@ -1,0 +1,51 @@
+     0.585   DECLARATIVE            start-retrieval
+Chunk P10 matches
+Chunk P9 matches
+Chunk P8 matches
+Computing activation for chunk P10
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK GIANT)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source GIANT level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P10 has an activation of: 0.10685283
+Chunk P10 has the current best activation 0.10685283
+Computing activation for chunk P9
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK GIANT)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source GIANT level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P9 has an activation of: 0.10685283
+Chunk P9 matches the current best activation 0.10685283
+Computing activation for chunk P8
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (BANK GIANT)
+    Spreading activation  0.0 from source BANK level  0.5 times Sji 0.0
+    Spreading activation  0.10685283 from source GIANT level  0.5 times Sji 0.21370566
+Total spreading activation: 0.10685283
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk P8 has an activation of: 0.10685283
+Chunk P8 matches the current best activation 0.10685283
+Chunk P10 chosen among the chunks with activation 0.10685283
+     0.585   PROCEDURAL             CONFLICT-RESOLUTION
+     1.151   DECLARATIVE            RETRIEVED-CHUNK P10
+     1.151   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL P10
+     1.151   PROCEDURAL             CONFLICT-RESOLUTION

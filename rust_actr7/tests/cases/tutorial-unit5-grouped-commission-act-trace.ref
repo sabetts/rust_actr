@@ -1,0 +1,36 @@
+Computing activation for chunk ITEM5
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot GROUP
+  Requested: = GROUP2  Chunk's slot value: GROUP2
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot POSITION
+  Requested: = SECOND  Chunk's slot value: SECOND
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise -0.59634924
+Adding permanent noise 0.0
+Chunk ITEM5 has an activation of: -0.59634924
+
+Computing activation for chunk ITEM6
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot GROUP
+  Requested: = GROUP2  Chunk's slot value: GROUP2
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot POSITION
+  Requested: = SECOND  Chunk's slot value: THIRD
+  similarity: -0.5
+  effective similarity value is -0.5
+Total similarity score -0.5
+Adding transient noise 0.11740411
+Adding permanent noise 0.0
+Chunk ITEM6 has an activation of: -0.3825959
+

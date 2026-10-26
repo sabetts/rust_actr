@@ -1,0 +1,23 @@
+(p encode-under
+   =goal>
+      isa        try-strategy
+      state      encode-under
+   =imaginal>
+      isa        encoding
+      b-loc      =b
+      length     =goal-len
+   =visual>
+      isa        line
+      width      =c-len
+   ?visual>
+      state      free
+  ==>
+   !bind! =val   (- =goal-len =c-len)
+
+   =imaginal>
+      under      =val
+   =goal>
+      state      encode-over
+   +visual>
+      isa        move-attention
+      screen-pos =b)

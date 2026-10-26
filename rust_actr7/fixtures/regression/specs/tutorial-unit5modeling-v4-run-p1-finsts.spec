@@ -1,2 +1,0 @@
-(:NAME "tutorial-unit5modeling-v4-run-p1-finsts" :REF "tutorial-unit5modeling-v4-run-p1-finsts.ref" :MODELS ("test-models;models;declarative-issues-v4.lisp") :SEED-SET T :RUNS ((12.26 (100 1) T 22)) :STEPS ((:SGP :ACT NIL :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 12.26 (100 1) T 22) (:MODEL-OUTPUT "
-? (print-dm-finsts)") (:COMMAND PRINT-DM-FINSTS)) :GOAL-FOCUS 0 :RESETS 0 :SGP NIL :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

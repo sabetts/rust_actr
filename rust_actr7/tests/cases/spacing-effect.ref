@@ -1,0 +1,155 @@
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+   126.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+base-level hook returns: -0.8560219
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -0.8560219
+   252.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+base-level hook returns: -0.43415272
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -0.43415272
+  4844.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+base-level hook returns: -0.9314301
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -0.9314301
+  5877.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+base-level hook returns: -0.61873615
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -0.61873615
+(0.26249582 0.31757548 0.2691922 0.177)
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+  5877.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+base-level hook returns: -0.61873615
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -0.61873615
+(0.26249582 0.31757548 0.2691922 0.177)
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+  5877.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 4 references (4844.000 252.000 126.000 0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: NIL
+base-level value: -2.649625
+Total base-level: -2.649625
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -2.649625
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+  5877.000   ------                 Stopped because time limit reached
+Computing activation for chunk G
+Computing base-level
+base-level hook returns: -2.649625
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk G has an activation of: -2.649625
+(0.5 0.5 0.5 0.5)
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED P1
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (VALUE 1)
+     0.050   DECLARATIVE            start-retrieval
+     0.050   DECLARATIVE            RETRIEVED-CHUNK A
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL A
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED P2
+     0.100   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (VALUE GREEN)
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+   126.000   PROCEDURAL             PRODUCTION-FIRED P3
+   126.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   126.000   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+   126.000   PROCEDURAL             CONFLICT-RESOLUTION
+   136.000   PROCEDURAL             PRODUCTION-FIRED P4
+   136.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   136.000   DECLARATIVE            start-retrieval
+   136.000   DECLARATIVE            RETRIEVED-CHUNK A
+   136.000   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL A
+   136.000   PROCEDURAL             CONFLICT-RESOLUTION
+   136.050   PROCEDURAL             PRODUCTION-FIRED P5
+   136.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+   136.050   PROCEDURAL             CONFLICT-RESOLUTION
+   136.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (VALUE GREEN)
+   136.250   PROCEDURAL             CONFLICT-RESOLUTION
+   252.000   PROCEDURAL             PRODUCTION-FIRED P6
+   252.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+   252.000   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+   252.000   PROCEDURAL             CONFLICT-RESOLUTION
+  1252.000   PROCEDURAL             PRODUCTION-FIRED P7
+  1252.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+  1252.000   DECLARATIVE            start-retrieval
+  1252.000   DECLARATIVE            RETRIEVED-CHUNK A
+  1252.000   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL A
+  1252.000   PROCEDURAL             CONFLICT-RESOLUTION
+  1252.050   PROCEDURAL             PRODUCTION-FIRED P8
+  1252.050   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+  1252.050   PROCEDURAL             CONFLICT-RESOLUTION
+  1252.250   IMAGINAL               SET-BUFFER-CHUNK IMAGINAL (VALUE GREEN)
+  1252.250   PROCEDURAL             CONFLICT-RESOLUTION
+  4844.000   PROCEDURAL             PRODUCTION-FIRED P9
+  4844.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+  4844.000   PROCEDURAL             CLEAR-BUFFER IMAGINAL
+  4844.000   PROCEDURAL             CONFLICT-RESOLUTION
+  5344.000   PROCEDURAL             PRODUCTION-FIRED P10
+  5344.000   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+  5344.000   DECLARATIVE            start-retrieval
+  5344.000   DECLARATIVE            RETRIEVED-CHUNK C
+  5344.000   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL C
+  5344.000   PROCEDURAL             CONFLICT-RESOLUTION
+  5344.050   PROCEDURAL             PRODUCTION-FIRED P11
+  5344.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+  5344.050   PROCEDURAL             CONFLICT-RESOLUTION
+  5877.000   ------                 Stopped because time limit reached
+Declarative parameters for chunk D:
+ :Activation -1.536
+ :Permanent-Noise  0.000
+ :Base-Level -1.536
+ :Creation-Time 0.000
+ :Reference-List (0.000)
+ :Similarities ((D 0.0))
+Declarative parameters for chunk B:
+ :Activation -0.619
+ :Permanent-Noise  0.000
+ :Base-Level -0.619
+ :Creation-Time 0.000
+ :Reference-List (4844.000 252.000 126.000 0.000)
+ :Similarities ((B 0.0))
+Declarative parameters for chunk C:
+ :Activation -0.778
+ :Permanent-Noise  0.000
+ :Base-Level -0.778
+ :Creation-Time 0.000
+ :Reference-List (5344.050 0.000)
+ :Similarities ((C 0.0))
+ :Last-Retrieval-Activation -1.519
+ :Last-Retrieval-Time 5344.000
+Declarative parameters for chunk A:
+ :Activation -0.619
+ :Permanent-Noise  0.000
+ :Base-Level -0.619
+ :Creation-Time 0.000
+ :Reference-List (4844.000 252.000 126.000 0.000)
+ :Similarities ((A 0.0))
+ :Last-Retrieval-Activation -10.543
+ :Last-Retrieval-Time 5344.000
+chunk a: (0.26249582 0.31757548 0.2691922 0.177)
+chunk b: (0.26249582 0.31757548 0.2691922 0.177)
+chunk c: (0.22449267 0.177)
+chunk d: (0.177)
+

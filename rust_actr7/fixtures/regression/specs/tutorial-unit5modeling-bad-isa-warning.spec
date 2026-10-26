@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit5modeling-bad-isa-warning" :REF "tutorial-unit5modeling-bad-isa-warning.ref" :MODELS ("tutorial;unit5;declarative-issues.lisp") :SEED-SET T :RUNS NIL :STEPS ((:SGP :MODEL-WARNINGS T) (:COMMAND EXTEND-POSSIBLE-SLOTS ARG1 NIL)) :GOAL-FOCUS 0 :RESETS 0 :SGP ((:MODEL-WARNINGS T)) :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

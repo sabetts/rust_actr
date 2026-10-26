@@ -1,0 +1,1 @@
+  (declare-buffer-usage goal game-state :all)

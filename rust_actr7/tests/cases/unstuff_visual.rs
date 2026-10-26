@@ -1,0 +1,413 @@
+//! case: unstuff-visual
+//! ref:  unstuff-visual.ref
+//! lisp: actr7.x/test-models/unstuff-visual.lisp
+
+use crate::Case;
+use actr_engine::Step;
+
+#[test]
+#[ignore = "pending: does not yet match ref"]
+fn unstuff_visual() -> Result<(), String> {
+    Case::new("unstuff-visual")
+        .models(&["test-models;models;unstuff-visual.lisp"])
+        .seed((100, 0))
+        .steps(vec![
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = NIL over = T modify yes".into()),
+            Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = T over = T modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.25"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = 0.25 over = T modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.35"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = 0.35 over = T modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = NIL over = NIL modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = T over = NIL modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.25"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = 0.25 over = NIL modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::GoalFocus(crate::chunk_desc(r#"FREE"#)),
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.35"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = 0.35 over = NIL modify yes".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = NIL over = T modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = T over = T modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.25"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = 0.25 over = T modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.35"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::ModelOutput("unstuff = 0.35 over = T modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = NIL over = NIL modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"T"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = T over = NIL modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.25"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = 0.25 over = NIL modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+            Step::Reset,
+            Step::Sgp(":UNSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"0.35"#)),
+            Step::Sgp(":OVERSTUFF-VISUAL-LOCATION".into(), crate::sexp(r#"NIL"#)),
+            Step::ModelOutput("unstuff = 0.35 over = NIL modify no".into()),
+            Step::RunUntilTime {
+                time: 0.3,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.0,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 1.05,
+                trace: true,
+                width: 22,
+            },
+            Step::RunUntilTime {
+                time: 2.0,
+                trace: true,
+                width: 22,
+            },
+        ])
+        .check()
+}

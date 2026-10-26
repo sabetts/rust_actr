@@ -1,0 +1,8 @@
+? (defvar *number* 3)
+*NUMBER*
+? (add-dm (foo size *number*))
+(FOO)
+? (dm foo)
+FOO
+   SIZE  *NUMBER*
+

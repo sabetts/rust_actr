@@ -1,0 +1,11 @@
+(p find-prompt
+   =visual-location>
+   ?visual>
+     state       free
+   ?imaginal>
+     buffer      full
+ ==>
+   +visual>
+     cmd         move-attention
+     screen-pos  =visual-location
+)

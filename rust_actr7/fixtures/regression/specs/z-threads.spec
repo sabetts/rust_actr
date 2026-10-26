@@ -1,1 +1,0 @@
-(:NAME "z-threads" :REF "z-threads.ref" :MODELS ("extras;threads;sample.lisp") :SEED-SET T :RUNS ((2.0 (100 0) T 22)) :STEPS ((:RESET) (:RUN 2.0 (100 0) T 22) (:BUFFER-CHUNK GOAL)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

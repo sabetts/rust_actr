@@ -1,0 +1,8 @@
+  (P retrieve-meaning
+     =visual>
+        ISA         visual-object
+        value       =word
+     ==>
+     +retrieval>
+        ISA         meaning
+        word        =word)

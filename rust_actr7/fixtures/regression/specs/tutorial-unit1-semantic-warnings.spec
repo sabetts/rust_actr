@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit1-semantic-warnings" :REF "tutorial-unit1-semantic-warnings.ref" :MODELS ("tutorial;unit1;semantic.lisp") :SEED-SET NIL :RUNS NIL :STEPS ((:RESET)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :COMMAND :FLAGS NIL :ERROR NIL)

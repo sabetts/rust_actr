@@ -1,0 +1,17 @@
+(P increment-sum
+   =goal>
+      ISA         add
+      sum         =sum
+      count       =count
+    - arg2        =count
+   =retrieval>
+      ISA         number
+      next        =newsum
+  ==>
+   =goal>
+      ISA         add
+      sum         =newsum
+   +retrieval>
+      ISA         number
+      number      =count
+)

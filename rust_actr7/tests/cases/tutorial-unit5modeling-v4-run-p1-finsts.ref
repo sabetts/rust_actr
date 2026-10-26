@@ -1,0 +1,10 @@
+    12.259   DECLARATIVE            RETRIEVED-CHUNK V2
+    12.259   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL V2
+    12.259   PROCEDURAL             CONFLICT-RESOLUTION
+    12.260   ------                 Stopped because time limit reached
+
+? (print-dm-finsts)
+
+Chunk name     Time Stamp
+-------------------------
+V2               12.259

@@ -2,14 +2,16 @@
 //!
 //! Two oracles live under `tests/`:
 //!
-//! * `test_models.rs` — ACT-R's own regression corpus. Ground truth is the
-//!   upstream `actr7.x/test-models/*.ref`, compared the way ACT-R's
-//!   `compare-test-model-files` does (right-trim, case-insensitive).
+//! * `test_models.rs` — ACT-R's regression corpus. Ground truth is the
+//!   vendored `tests/cases/*.ref` (copied from `actr7.x/test-models`),
+//!   compared the way ACT-R's `compare-test-model-files` does (right-trim,
+//!   case-insensitive).
 //! * `extra_traces.rs` — project-authored scenarios with no upstream `.ref`.
 //!   Ground truth is `fixtures/extra-traces/*.trace`, compared byte-exact
 //!   (CRLF normalized to LF only).
 //!
-//! Only genuinely shared code lives here; each suite keeps its own parsing.
+//! Model/task sources are vendored under [`models_dir`], so the default
+//! `cargo test` needs neither an ACT-R checkout nor SBCL.
 
 use std::path::PathBuf;
 
@@ -18,8 +20,15 @@ pub fn crate_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// The `actr7.x` checkout. `ACTR_DIR` overrides the default
-/// (`<crate>/../actr7.x`).
+/// The vendored model/task sources used by the default test run.
+pub fn models_dir() -> PathBuf {
+    crate_dir().join("fixtures").join("models")
+}
+
+/// The `actr7.x` checkout, used only by regeneration/dev tools. `ACTR_DIR`
+/// overrides the default (`<crate>/../actr7.x`); the default test run uses
+/// [`models_dir`] instead.
+#[allow(dead_code)]
 pub fn actr_dir() -> PathBuf {
     std::env::var("ACTR_DIR")
         .map(PathBuf::from)

@@ -1,0 +1,5 @@
+  (chunk-type simple-value result simple-value-chunk)
+
+   (v1 isa simple-value result "true" simple-value-chunk t)
+   (v2 isa simple-value result "false" simple-value-chunk t)
+   (v3 isa simple-value result nil simple-value-chunk t)

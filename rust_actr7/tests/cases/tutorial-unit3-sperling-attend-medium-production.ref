@@ -1,0 +1,18 @@
+(p attend-medium
+   =goal>
+     isa        read-letters
+     step       attending
+   =visual-location>
+     isa        visual-location
+   > screen-y   450
+   < screen-y   470
+   
+   ?visual>
+     state      free
+==>
+   =goal>
+     location   medium
+     step       encode
+   +visual>
+     cmd        move-attention
+     screen-pos =visual-location)

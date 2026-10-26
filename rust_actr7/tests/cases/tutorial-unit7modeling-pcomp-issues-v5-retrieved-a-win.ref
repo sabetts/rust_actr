@@ -1,0 +1,4 @@
+    38.982   PROCEDURAL             PRODUCTION-FIRED RETRIEVED-A-WIN
+Production Compilation process started for RETRIEVED-A-WIN
+  Cannot compile RETRIEVE-PAST-TRIAL and RETRIEVED-A-WIN because the time between them exceeds the threshold time.
+  Setting previous production to RETRIEVED-A-WIN.

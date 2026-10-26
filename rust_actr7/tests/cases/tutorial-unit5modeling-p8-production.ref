@@ -1,0 +1,7 @@
+  (p p8 
+     =goal>
+       isa task-state
+       state r8
+   ==>
+     +goal>
+     -imaginal>)

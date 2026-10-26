@@ -1,0 +1,19 @@
+  (p p5
+     =goal>
+       isa task-state
+       state r5
+     ?imaginal>
+       state free
+     =retrieval>
+   ==>
+     =goal>
+       state r6
+     +imaginal>
+       isa context 
+       val1 one
+       val2 two
+     +retrieval>
+       isa math-fact
+       - arg1 nil
+       - arg2 nil
+       - result nil)

@@ -1,0 +1,11 @@
+  (P attend-visual-location
+     =visual-location>
+   
+     ?visual-location>
+        buffer      requested
+     ?visual>
+        state       free
+     ==>
+     +visual>
+        cmd         move-attention
+        screen-pos  =visual-location)

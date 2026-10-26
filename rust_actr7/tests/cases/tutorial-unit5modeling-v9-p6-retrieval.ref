@@ -1,0 +1,8 @@
+    27.155   PROCEDURAL             PRODUCTION-FIRED P6
+    27.155   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+    27.155   DECLARATIVE            start-retrieval
+    27.155   PROCEDURAL             CONFLICT-RESOLUTION
+    27.381   DECLARATIVE            RETRIEVED-CHUNK 1+2=3
+    27.381   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL 1+2=3
+    27.381   PROCEDURAL             CONFLICT-RESOLUTION
+    27.381   ------                 Stopped because time limit reached

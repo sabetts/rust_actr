@@ -1,0 +1,11 @@
+(p retrieve-operator
+   =goal>           
+     isa    task
+     state  =state
+     step   ready
+  ==>
+   +retrieval>
+     isa    operator
+     pre    =state
+   =goal>
+     step   retrieving-operator)

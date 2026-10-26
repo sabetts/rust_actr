@@ -1,0 +1,31 @@
+Computing activation for chunk 1+2=3
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: -0.95763344
+Total base-level: -0.95763344
+Computing activation spreading from buffers
+  Spreading 1.0 from buffer IMAGINAL chunk IMAGINAL-CHUNK0
+    sources of activation are: (ADD TWO ONE)
+    Spreading activation  0.20456855 from source ADD level  0.33333334 times Sji 0.61370564
+    Spreading activation  0.069413505 from source TWO level  0.33333334 times Sji 0.20824051
+    Spreading activation  0.0 from source ONE level  0.33333334 times Sji 0.0
+Total spreading activation: 0.27398205
+Computing partial matching component
+  comparing slot ARG1
+  Requested: - NIL  Chunk's slot value: ONE
+  similarity: -1.0
+  effective similarity value is 0.0
+  comparing slot ARG2
+  Requested: - NIL  Chunk's slot value: TWO
+  similarity: -1.0
+  effective similarity value is 0.0
+  comparing slot RESULT
+  Requested: - NIL  Chunk's slot value: THREE
+  similarity: -1.0
+  effective similarity value is 0.0
+Total similarity score 0.0
+Adding transient noise 0.0474016
+Adding permanent noise 0.0
+Chunk 1+2=3 has an activation of: -0.6362498
