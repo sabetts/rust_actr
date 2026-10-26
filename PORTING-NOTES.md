@@ -4700,3 +4700,17 @@ This promoted `tutorial-unit1-count-first-retrieval-chunk`,
 `tutorial-unit1modeling-broken-addition-v8-buffer-chunk`, and
 `tutorial_unit1code_semantic_buffers`, moving the corpus to **406 passed / 161
 ignored**.
+
+## 276. Queue-text and `add-dm` command drivers (verified)
+
+`tutorial-unit5modeling-v2-show-queue` and `v4-p3-run-queue` only needed the
+already-implemented `mp-show-queue` path: load `declarative-issues-v2`/`v4`,
+run 10/30 seconds with the trace off, then print the queue. The v2 ref leaves a
+retrieved `V2` queued at 15.312; v4 leaves a retrieval failure at 17647.763.
+
+`apply-chunk-spec` keeps the symbol `*NUMBER*` literal in `add-dm` (the macro
+quotes its arguments), while `add-dm-fct` receives the already-evaluated value
+`3`. Both command drivers now match. The two BST `pp` dumps remain ignored:
+their production text includes the chunk-type default `LINE T`, which the
+production parser does not add to an `isa line` condition. This promoted four
+cases, moving the corpus to **410 passed / 157 ignored**.
