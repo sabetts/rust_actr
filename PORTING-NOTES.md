@@ -4714,3 +4714,17 @@ quotes its arguments), while `add-dm-fct` receives the already-evaluated value
 their production text includes the chunk-type default `LINE T`, which the
 production parser does not add to an `isa line` condition. This promoted four
 cases, moving the corpus to **410 passed / 157 ignored**.
+
+## 277. Ignored-case triage (verified)
+
+The two dynamic-goal dumps no longer diverge: `simple-dynamic-initial-goal`
+reads the goal after two events, and `simple-ppm-model-goal` reads it after the
+same two-event warm-up. Their ignore reasons were stale. This moved the corpus
+to **412 passed / 155 ignored**.
+
+The same pass reclassified the remaining warning/command cases: `safe-queries`
+needs request-without-query warnings, `bad-isa-warning` and the extend cases
+need invalid/previously-undefined-slot warnings, and the report cases still
+need `sdp`/`whynot-dm` output. The BST `pp` cases remain blocked only on
+production default-slot rendering. The paired traces differ much earlier than
+their hook labels suggest, so they stay out of the current batch.

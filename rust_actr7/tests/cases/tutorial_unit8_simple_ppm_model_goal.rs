@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
 fn tutorial_unit8_simple_ppm_model_goal() -> Result<(), String> {
     Case::new("tutorial-unit8-simple-ppm-model-goal")
         .models(&["tutorial;unit8;simple-ppm-model.lisp"])
