@@ -42,6 +42,9 @@ Two static oracles, one `#[test]` per case and one Rust file per ACT-R ref:
 - `tests/errors.rs`, `tests/rpc_conformance.rs` — error paths and the RPC
   surface.
 
+`python tools/list-ignored.py` prints the current stub list; `--counts` groups
+by reason and `--reason TEXT` / `--case TEXT` filter it.
+
 Refs and model/task sources are vendored (`tests/cases/*.ref`,
 `fixtures/models/`), so the default `cargo test` needs no `actr7.x` checkout.
 Fixtures and comparison rules are documented in `rust_actr7/fixtures/README.md`
