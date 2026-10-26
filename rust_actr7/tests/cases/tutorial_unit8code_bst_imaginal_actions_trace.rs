@@ -6,7 +6,7 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "event-hook Lisp (pending filter parsing capabilities)"]
+#[ignore = "event-hook system-parameter effects pending"]
 fn tutorial_unit8code_bst_imaginal_actions_trace() -> Result<(), String> {
     Case::new("tutorial-unit8code-bst-imaginal-actions-trace")
         .models(&[

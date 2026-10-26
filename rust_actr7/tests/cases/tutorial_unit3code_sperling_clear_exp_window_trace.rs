@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit3code_sperling_clear_exp_window_trace,
     "tutorial-unit3code-sperling-clear-exp-window-trace",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

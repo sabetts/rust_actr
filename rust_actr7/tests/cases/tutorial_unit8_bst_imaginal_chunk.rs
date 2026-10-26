@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit8_bst_imaginal_chunk,
     "tutorial-unit8-bst-imaginal-chunk",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + buffer output pending"
 );

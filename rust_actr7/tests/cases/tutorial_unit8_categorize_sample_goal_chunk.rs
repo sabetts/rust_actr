@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit8_categorize_sample_goal_chunk,
     "tutorial-unit8-categorize-sample-goal-chunk",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

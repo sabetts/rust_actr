@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit3modeling_imaginal_chunk,
     "tutorial-unit3modeling-imaginal-chunk",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + scheduling pending"
 );

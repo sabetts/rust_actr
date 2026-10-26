@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit7modeling_pcomp_issues_v10_production29,
     "tutorial-unit7modeling-pcomp-issues-v10-production29",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

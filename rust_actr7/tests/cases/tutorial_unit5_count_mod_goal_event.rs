@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit5_count_mod_goal_event,
     "tutorial-unit5-count-mod-goal-event",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

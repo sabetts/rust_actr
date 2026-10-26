@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit3modeling_v4_print_all_visicon_items,
     "tutorial-unit3modeling-v4-print-all-visicon-items",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + scheduling pending"
 );

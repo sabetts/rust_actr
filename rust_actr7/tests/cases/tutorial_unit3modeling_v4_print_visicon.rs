@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit3modeling_v4_print_visicon,
     "tutorial-unit3modeling-v4-print-visicon",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

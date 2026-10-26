@@ -6,7 +6,7 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "event-hook Lisp (pending filter parsing capabilities)"]
+#[ignore = "event-hook conversion pending"]
 fn tutorial_unit8_simple_dynamic_extend_buffer_chunk() -> Result<(), String> {
     Case::new("tutorial-unit8-simple-dynamic-extend-buffer-chunk")
         .models(&["tutorial;unit8;simple-dynamic-model.lisp"])

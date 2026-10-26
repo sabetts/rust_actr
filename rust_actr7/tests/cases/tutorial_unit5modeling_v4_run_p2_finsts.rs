@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit5modeling_v4_run_p2_finsts,
     "tutorial-unit5modeling-v4-run-p2-finsts",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

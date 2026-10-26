@@ -6,7 +6,7 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "event-hook Lisp (pending filter parsing capabilities)"]
+#[ignore = "event-hook system-parameter effects pending"]
 fn tutorial_unit8_paired_dynamic_compiling_to_dynamic() -> Result<(), String> {
     Case::new("tutorial-unit8-paired-dynamic-compiling-to-dynamic")
         .models(&[

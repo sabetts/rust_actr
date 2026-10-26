@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit7_past_tense_buffer_starts,
     "tutorial-unit7-past-tense-buffer-starts",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + scheduling/buffer output pending"
 );

@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit7_paired_composed_production,
     "tutorial-unit7-paired-composed-production",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + system-parameter effects pending"
 );

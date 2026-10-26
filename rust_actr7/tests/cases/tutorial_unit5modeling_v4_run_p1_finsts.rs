@@ -6,7 +6,7 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "event-hook Lisp (pending filter parsing capabilities)"]
+#[ignore = "event-hook conversion pending"]
 fn tutorial_unit5modeling_v4_run_p1_finsts() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v4-run-p1-finsts")
         .models(&["test-models;models;declarative-issues-v4.lisp"])

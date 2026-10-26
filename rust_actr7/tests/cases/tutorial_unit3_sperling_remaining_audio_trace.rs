@@ -6,7 +6,7 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "event-hook Lisp (pending filter parsing capabilities)"]
+#[ignore = "event-hook system-parameter effects pending"]
 fn tutorial_unit3_sperling_remaining_audio_trace() -> Result<(), String> {
     Case::new("tutorial-unit3-sperling-remaining-audio-trace")
         .models(&["tutorial;lisp;sperling.lisp", "tutorial;unit3;sperling-model.lisp"])

@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit5_grouped_omission_act_trace,
     "tutorial-unit5-grouped-omission-act-trace",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + command effects pending"
 );

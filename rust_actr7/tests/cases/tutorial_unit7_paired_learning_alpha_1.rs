@@ -6,7 +6,7 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "event-hook Lisp (pending filter parsing capabilities)"]
+#[ignore = "event-hook system-parameter effects pending"]
 fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
     Case::new("tutorial-unit7-paired-learning-alpha-1")
         .models(&[

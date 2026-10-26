@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit5_fan_output_data,
     "tutorial-unit5-fan-output-data",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

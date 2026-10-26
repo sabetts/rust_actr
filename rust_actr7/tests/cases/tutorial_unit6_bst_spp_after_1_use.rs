@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit6_bst_spp_after_1_use,
     "tutorial-unit6-bst-spp-after-1-use",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

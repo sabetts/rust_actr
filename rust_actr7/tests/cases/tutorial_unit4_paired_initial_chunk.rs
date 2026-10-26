@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit4_paired_initial_chunk,
     "tutorial-unit4-paired-initial-chunk",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );

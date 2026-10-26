@@ -4563,3 +4563,9 @@ The 16 ignored hook cases expose engine gaps: the base-level reference trace
 (`v1-*-act-trace`, `v3/v4-run-p2`), the reward/utility trace (`bst-utility`),
 `!eval! set-flag` (`v8-eval-issue`), and `pcomp` v9/v10 production-fired
 timing (plus the related utility/selection cases).
+
+The 67 unconverted `:HOOK` refs are reclassified by their next blocker:
+driver recovery, hook-side system-parameter/production effects, buffer
+effects/output, command effects, or hook-side scheduling. The old
+"pending filter parsing capabilities" reason is obsolete now that filters are
+direct Rust.

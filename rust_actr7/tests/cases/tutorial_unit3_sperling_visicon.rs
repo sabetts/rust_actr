@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit3_sperling_visicon,
     "tutorial-unit3-sperling-visicon",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver + scheduling pending"
 );

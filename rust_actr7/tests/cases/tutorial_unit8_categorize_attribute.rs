@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit8_categorize_attribute,
     "tutorial-unit8-categorize-attribute",
-    "event-hook Lisp (pending filter parsing capabilities)"
+    "event-hook driver recovery pending"
 );
