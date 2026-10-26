@@ -4623,3 +4623,19 @@ maintenance `audio-event-ended` line.
 This promoted the two `v4-*-finsts`, `v5-p3-run-queue`, `v6-p4-run-queue`,
 and two Sperling audio-trace cases, moving the corpus to **386 passed / 181
 ignored**.
+
+## 272. Python command-driver cases and `spp` production casing (verified)
+
+Five `tutorial_unit2code_*` refs are generated from Python stubs, not Lisp
+`run-it` bodies. Their drivers were transcribed into the Rust steps: the
+`>>> actr.*` prompts and Python return lists are raw `model-output` lines, while
+the bodies call `buffer-status`, `buffer-chunk`/`Step::BufferChunk`, `dm`, and
+`sdm`. The `sdm` call goes through `Step::Sdm` because the Python call passes
+the numeric value as a JSON integer, which the command argument string filter
+would drop.
+
+The two Lisp addition cases (`buffer-chunk`, `buffer-status`) use the same
+command layer after a trace-off run. `tutorial-unit6-bst-spp-before` also
+exercises `spp`; its parameter block now prints the production symbol
+uppercased (`FORCE-OVER`), as Lisp's `format` does. This promoted eight cases,
+moving the corpus to **394 passed / 173 ignored**.

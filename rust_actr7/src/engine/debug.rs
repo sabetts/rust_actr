@@ -753,8 +753,10 @@ impl Engine {
     ) {
         // `command-output` writes to the command stream independently of the
         // model trace (`:v`), so this is not gated on `trace_on`.
-        self.out_lines
-            .push(format!("Parameters for production {name}:"));
+        self.out_lines.push(format!(
+            "Parameters for production {}:",
+            name.to_uppercase()
+        ));
         if self.cfg.esc {
             match utility {
                 Some(v) => self.out_lines.push(format!(" :utility {v:6.3}")),

@@ -1,8 +1,22 @@
 //! case: tutorial_unit2code_buffer_status
-//! lisp: (no stub)
+//! ref:  tutorial_unit2code_buffer_status.ref
+//! lisp: actr7.x/test-models/tutorial_unit2code_buffer_status.py
 
-ignored_case!(
-    tutorial_unit2code_buffer_status,
-    "tutorial_unit2code_buffer_status",
-    "command-layer output (needs a driver spec)"
-);
+use crate::Case;
+use actr_engine::Step;
+
+#[test]
+fn tutorial_unit2code_buffer_status() -> Result<(), String> {
+    Case::new("tutorial_unit2code_buffer_status")
+        .models(&["tutorial;unit1;addition.lisp"])
+        .seed((100, 0))
+        .steps(vec![
+            Step::ModelOutput(">>> actr.buffer_status('goal','visual')".into()),
+            Step::Command {
+                name: "buffer-status".into(),
+                args: crate::sexps(r#"(GOAL VISUAL)"#),
+            },
+            Step::ModelOutput("['GOAL', 'VISUAL']".into()),
+        ])
+        .check()
+}
