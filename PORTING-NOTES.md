@@ -585,8 +585,10 @@ defaults to **T**, and the `(:testing-function set-testing-traces)`
 `:starting-parameters` line is actually rejected ("must be a list that is
 valid for passing to sgp-fct") and never runs �?" traces reproduce anyway. A
 `run-it` that touches `*out-file*`, `with-open-file`, or `read-line` is a
-source-scrape case, not an engine test. 189 of them run through `SourceCase`
-against the vendored tutorial/model sources; the four that scrape
+source-scrape case, not an engine test. 189 replay against the vendored
+tutorial/model sources: five use the engine's Lisp reader to reproduce the
+original `(read f)` selection, 173 use `SourceCase` line presence/order, and
+11 are custom line/format transforms. The four that scrape
 `core-modules/audio.lisp`/`vision.lisp` stay ignored pending engine-level
 chunk-type assertions (no core-module Lisp is vendored).
 

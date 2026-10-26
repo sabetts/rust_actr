@@ -38,10 +38,11 @@ Two static oracles, one `#[test]` per case and one Rust file per ACT-R ref:
   flat index; `case_files_cover_every_ref` keeps refs, files, and index in
   sync. Out-of-scope cases are `#[ignore = "reason"]`; that ignored set *is*
   the remaining work.
-- Source-echo cases use `source_case!` / `SourceCase` to verify that the
-  vendored tutorial sources still contain the upstream ref fragments. Four
-  refs that scrape `core-modules/audio.lisp`/`vision.lisp` stay ignored pending
-  engine-level chunk-type assertions.
+- Source-echo cases verify the vendored tutorial sources: five replay the
+  original `(read f)` logic with the engine's Lisp reader, 173 use
+  `source_case!` / `SourceCase` line presence, and 11 use small custom
+  transforms. Four refs that scrape `core-modules/audio.lisp`/`vision.lisp`
+  stay ignored pending engine-level chunk-type assertions.
 - `tests/extra_traces.rs` — project-authored scenarios, byte-exact.
 - `tests/errors.rs`, `tests/rpc_conformance.rs` — error paths and the RPC
   surface.

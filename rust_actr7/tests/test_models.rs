@@ -15,8 +15,9 @@
 //!
 //! The event-hook cases and data-heavy experiment drivers still reuse a
 //! recovered `.spec` (`fixtures/regression/specs/`); every other engine case
-//! owns its driver here. Source-echo cases use `source_case!` and check the
-//! vendored source, not the engine.
+//! owns its driver here. Source-echo cases use `source_case!`, the engine's
+//! Lisp reader, or a small transform and check the vendored source, not the
+//! engine.
 //! Promote a case by removing its `#[ignore]` in its own file.
 
 use std::collections::BTreeSet;
@@ -1008,7 +1009,9 @@ impl Case {
 /// oracle is that the ref fragment is still present in them, in order.
 ///
 /// This deliberately does not emulate Common Lisp's `read-line`/paren/format
-/// loops; only the four core-module refs need engine-level chunk-type checks.
+/// loops. The five refs whose upstream stubs used `(read f)` instead replay
+/// through [`define_model_forms`]/[`echo_forms`]; only the four core-module
+/// refs need engine-level chunk-type checks.
 pub struct SourceCase {
     name: String,
     sources: Vec<String>,
@@ -1053,10 +1056,71 @@ impl SourceCase {
 }
 
 /// Read one vendored source file by its ACT-R logical path (`;` separated).
-pub fn source_lines(logical: &str) -> Result<Vec<String>, String> {
+pub fn source_text(logical: &str) -> Result<String, String> {
     let path = models_dir().join(logical.replace(';', std::path::MAIN_SEPARATOR_STR));
-    let text = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-    Ok(text.lines().map(str::to_owned).collect())
+    fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// Read a vendored source as lines.
+pub fn source_lines(logical: &str) -> Result<Vec<String>, String> {
+    Ok(source_text(logical)?.lines().map(str::to_owned).collect())
+}
+
+/// Parse a source with the engine's Lisp reader and return the children of
+/// its first `(define-model ...)` form.
+pub fn define_model_forms(logical: &str) -> Result<Vec<Sexp>, String> {
+    let src = source_text(logical)?;
+    let forms = parse_all(&src).map_err(|e| format!("{logical}: {e}"))?;
+    for form in forms {
+        if let Sexp::List(items) = form {
+            if items.first().and_then(Sexp::as_sym) == Some("DEFINE-MODEL") {
+                return Ok(items);
+            }
+        }
+    }
+    Err(format!("{logical}: no define-model form"))
+}
+
+/// Render a form like Lisp's `~(~s~)`: single spaces, lowercased symbols.
+pub fn sexp_show(form: &Sexp) -> String {
+    match form {
+        Sexp::Sym(s) => s.to_lowercase(),
+        Sexp::Int(i) => i.to_string(),
+        Sexp::Float(x) => x.to_string(),
+        Sexp::Str(s) => format!(
+            "\"{}\"",
+            s.replace('\\', "\\\\").replace('"', "\\\"").to_lowercase()
+        ),
+        Sexp::List(items) => format!(
+            "({})",
+            items.iter().map(sexp_show).collect::<Vec<_>>().join(" ")
+        ),
+    }
+}
+
+/// Select child forms of `(define-model ...)` by head symbol and optional
+/// second element, then render them with [`sexp_show`].
+pub fn echo_forms(logical: &str, head: &str, name: Option<&str>) -> Result<Vec<String>, String> {
+    let head = head.to_uppercase();
+    let name = name.map(str::to_uppercase);
+    let forms = define_model_forms(logical)?;
+    Ok(forms
+        .iter()
+        .filter_map(|form| {
+            let Sexp::List(items) = form else {
+                return None;
+            };
+            if items.first().and_then(Sexp::as_sym) != Some(head.as_str()) {
+                return None;
+            }
+            if let Some(name) = &name {
+                if items.get(1).and_then(Sexp::as_sym) != Some(name.as_str()) {
+                    return None;
+                }
+            }
+            Some(sexp_show(form))
+        })
+        .collect())
 }
 
 fn check_source_fragment(

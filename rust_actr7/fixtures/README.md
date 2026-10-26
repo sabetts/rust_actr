@@ -54,10 +54,11 @@ event-hook cases reuse recovered driver specs. `extract-specs.lisp` +
 `regen-specs.sh` are only needed when those specs are regenerated. See
 `regression/README.md`.
 
-The 189 `SCRAPE` refs run through `SourceCase`, which checks that the ref
-fragment is still present in the vendored source (in order). The four refs that
-scrape `core-modules/audio.lisp`/`vision.lisp` stay ignored pending
-engine-level chunk-type assertions; no core-module Lisp is vendored.
+The 189 `SCRAPE` refs are replayed against the vendored sources: five use the
+engine's Lisp reader to reproduce the original `(read f)` selection, 173 use
+`SourceCase` line presence/order checks, and 11 are small custom transforms.
+The four refs that scrape `core-modules/audio.lisp`/`vision.lisp` stay ignored
+pending engine-level chunk-type assertions; no core-module Lisp is vendored.
 
 ### extra-traces/
 
