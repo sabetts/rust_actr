@@ -229,6 +229,40 @@ pub fn parse_commands(src: &str) -> HashMap<String, String> {
     map
 }
 
+/// Collect task-file `defparameter`/`defvar` literals for the bounded
+/// evaluator. Values are stored with a leading `QUOTE` unwrapped; complex
+/// initializer expressions are ignored.
+pub fn parse_task_globals(src: &str) -> HashMap<String, Sexp> {
+    let mut map = HashMap::new();
+    let Ok(forms) = parse_all(src) else {
+        return map;
+    };
+    for f in forms {
+        let Sexp::List(items) = &f else {
+            continue;
+        };
+        if !matches!(
+            items.first().and_then(|s| s.as_sym()),
+            Some("DEFPARAMETER" | "DEFVAR" | "DEFCONSTANT")
+        ) {
+            continue;
+        }
+        let Some(name) = items.get(1).and_then(|s| s.as_sym()) else {
+            continue;
+        };
+        let raw = items
+            .get(2)
+            .cloned()
+            .unwrap_or(Sexp::Sym("NIL".to_string()));
+        let value = match &raw {
+            Sexp::List(v) if v.len() == 2 && v[0].as_sym() == Some("QUOTE") => v[1].clone(),
+            _ => raw,
+        };
+        map.insert(name.to_uppercase(), value);
+    }
+    map
+}
+
 /// A task-file `defun` captured for the bounded evaluator (simple pure
 /// helpers like `(defun single-bind (val) (1+ val))`).
 #[derive(Debug, Clone, PartialEq)]
@@ -317,6 +351,9 @@ pub struct Model {
     /// Model-body `(schedule-event <secs> "command" :params (...) ...)`:
     /// scheduled relative to model time 0 on each reset.
     pub scheduled_events: Vec<(i64, String, Vec<Sexp>)>,
+    /// Model-body `(call-act-r-command "name" args...)`: run the registered
+    /// task command at load and on every reset.
+    pub call_commands: Vec<(String, Vec<Sexp>)>,
     /// `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`: the default
     /// chunk type per buffer, used by `set-buffer-chunk`.
     pub buffer_decls: Vec<(String, String)>,
@@ -338,6 +375,8 @@ pub struct Model {
     /// contents applied silently on every reset (the model body is
     /// re-evaluated). `(buffer, chunk-name)`.
     pub initial_buffer_sets: Vec<(String, String)>,
+    /// Model-body `(set-buffer-chunk '<buffer> '(slot value ...))`.
+    pub initial_buffer_specs: Vec<(String, ChunkDesc)>,
     /// Model-body `(start-hand-at-mouse)` / `(start-hand-at-keypad)`: the
     /// right hand starts on the mouse/keypad device instead of the keyboard
     /// home row (`other-files/mouse.lisp:554`, `keyboard.lisp:766`).
@@ -369,11 +408,7 @@ impl Model {
         for raw in &self.pfct {
             let mut list = raw.clone();
             for e in list.iter_mut() {
-                if let Sexp::Sym(s) = e {
-                    if s.trim_start_matches(',').eq_ignore_ascii_case("*QUERY*") {
-                        *e = Sexp::Sym(query.to_uppercase());
-                    }
-                }
+                replace_query(e, query);
             }
             let mut form = vec![Sexp::Sym("P".to_string())];
             form.extend(list);
@@ -398,6 +433,31 @@ impl Model {
     /// `simple-value`) precedes `arg1`/`arg2`. Keyed upper-case.
     pub fn slot_index(&self) -> HashMap<String, usize> {
         let mut map: HashMap<String, usize> = HashMap::new();
+        // `create-model-default-chunk-types` (`model.lisp:753`) runs before the
+        // model body: CHUNK, CONSTANT-CHUNKS (name), CLEAR (clear), and
+        // QUERY-SLOTS (state buffer error) claim the first slot indices.
+        // The vision module's visual-location slots follow in its own
+        // definition order (SIZE last), before the model's chunk types.
+        for s in [
+            "NAME",
+            "CLEAR",
+            "STATE",
+            "BUFFER",
+            "ERROR",
+            "SCREEN-POS",
+            "KIND",
+            "VALUE",
+            "COLOR",
+            "HEIGHT",
+            "WIDTH",
+            "SCREEN-X",
+            "SCREEN-Y",
+            "DISTANCE",
+            "SIZE",
+        ] {
+            let n = map.len();
+            map.entry(s.to_string()).or_insert(n);
+        }
         for ct in &self.chunk_types {
             for s in &ct.slots {
                 let n = map.len();
@@ -1796,18 +1856,47 @@ fn substitute_commas(list: &[Sexp], defs: &std::collections::HashMap<String, Sex
 
 fn subst_commas(e: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Sexp {
     match e {
-        Sexp::Sym(s) if s.starts_with(',') => {
-            let name = s.trim_start_matches(',').to_uppercase();
-            match defs.get(&name) {
-                Some(Sexp::List(v)) if v.first().and_then(|x| x.as_sym()) == Some("QUOTE") => {
-                    v.get(1).cloned().unwrap_or(Sexp::Sym("NIL".to_string()))
-                }
-                Some(v) => v.clone(),
-                None => Sexp::Sym("NIL".to_string()),
-            }
+        Sexp::Sym(s) if s.starts_with(',') => resolve_def(s.trim_start_matches(','), defs),
+        Sexp::List(v)
+            if v.len() == 2 && v[0].as_sym() == Some("UNQUOTE") && v[1].as_sym().is_some() =>
+        {
+            resolve_def(v[1].as_sym().unwrap(), defs)
         }
         Sexp::List(v) => Sexp::List(v.iter().map(|x| subst_commas(x, defs)).collect()),
         other => other.clone(),
+    }
+}
+
+fn resolve_def(name: &str, defs: &std::collections::HashMap<String, Sexp>) -> Sexp {
+    match defs.get(&name.to_uppercase()) {
+        Some(Sexp::List(v)) if v.first().and_then(|x| x.as_sym()) == Some("QUOTE") => {
+            v.get(1).cloned().unwrap_or(Sexp::Sym("NIL".to_string()))
+        }
+        Some(v) => v.clone(),
+        None => Sexp::Sym("NIL".to_string()),
+    }
+}
+
+fn replace_query(e: &mut Sexp, query: &str) {
+    match e {
+        Sexp::Sym(s) if s.trim_start_matches(',').eq_ignore_ascii_case("*QUERY*") => {
+            *e = Sexp::Sym(query.to_uppercase());
+        }
+        Sexp::List(v) => {
+            if v.len() == 2
+                && v[0].as_sym() == Some("UNQUOTE")
+                && v[1]
+                    .as_sym()
+                    .is_some_and(|s| s.eq_ignore_ascii_case("*QUERY*"))
+            {
+                *e = Sexp::Sym(query.to_uppercase());
+            } else {
+                for x in v {
+                    replace_query(x, query);
+                }
+            }
+        }
+        _ => {}
     }
 }
 
@@ -1823,6 +1912,19 @@ fn subst_bare(e: &Sexp, defs: &std::collections::HashMap<String, Sexp>) -> Sexp 
             None => e.clone(),
         },
         other => other.clone(),
+    }
+}
+
+fn p_fct_body(e: Option<&Sexp>) -> Option<&Vec<Sexp>> {
+    match e {
+        Some(Sexp::List(list)) if list.first().and_then(|x| x.as_sym()) == Some("QUASIQUOTE") => {
+            match list.get(1) {
+                Some(Sexp::List(body)) => Some(body),
+                _ => None,
+            }
+        }
+        Some(Sexp::List(list)) => Some(list),
+        _ => None,
     }
 }
 
@@ -1854,12 +1956,14 @@ fn parse_model(
         goal_focuses: Vec::new(),
         productions: Vec::new(),
         scheduled_events: Vec::new(),
+        call_commands: Vec::new(),
         buffer_decls: Vec::new(),
         visloc_default: Vec::new(),
         pfct: Vec::new(),
         no_reuse_buffers: Vec::new(),
         disabled_prods: Vec::new(),
         initial_buffer_sets: Vec::new(),
+        initial_buffer_specs: Vec::new(),
         hand_start: None,
         audloc_default: Vec::new(),
         set_param_values: Vec::new(),
@@ -2095,6 +2199,18 @@ fn parse_model(
                     .scheduled_events
                     .push(((at * 1000.0).round() as i64, command, params));
             }
+            "CALL-ACT-R-COMMAND" => {
+                let command = items
+                    .get(1)
+                    .and_then(|x| match x {
+                        Sexp::Str(s) | Sexp::Sym(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .ok_or_else(|| {
+                        LoadError::Structural("call-act-r-command needs a command name".into())
+                    })?;
+                model.call_commands.push((command, items[2..].to_vec()));
+            }
             "P" => {
                 let extra: Vec<String> =
                     model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
@@ -2139,7 +2255,8 @@ fn parse_model(
             // `(p-fct \`(name ... ,*var* ...))`: a backquoted production with
             // model-file `defparameter` substitutions.
             "P-FCT" => {
-                if let Some(Sexp::List(list)) = items.get(2) {
+                let raw = p_fct_body(items.get(1)).or_else(|| p_fct_body(items.get(2)));
+                if let Some(list) = raw {
                     model.pfct.push(list.clone());
                     let sub = substitute_commas(list, defs);
                     let mut form = vec![Sexp::Sym("P".to_string())];
@@ -2248,8 +2365,28 @@ fn parse_model(
                         _ => None,
                     }
                 };
-                if let (Some(b), Some(c)) = (sym(items.get(1)), sym(items.get(2))) {
-                    model.initial_buffer_sets.push((b.to_uppercase(), c));
+                if let Some(b) = sym(items.get(1)) {
+                    if let Some(c) = sym(items.get(2)) {
+                        model.initial_buffer_sets.push((b.to_uppercase(), c));
+                    } else {
+                        let spec = match items.get(2) {
+                            Some(Sexp::List(q))
+                                if q.len() == 2 && q[0].as_sym() == Some("QUOTE") =>
+                            {
+                                match &q[1] {
+                                    Sexp::List(v) => Some(v.as_slice()),
+                                    _ => None,
+                                }
+                            }
+                            Some(Sexp::List(v)) => Some(v.as_slice()),
+                            _ => None,
+                        };
+                        if let Some(spec) = spec {
+                            if let Ok(desc) = parse_chunk_desc(spec) {
+                                model.initial_buffer_specs.push((b.to_uppercase(), desc));
+                            }
+                        }
+                    }
                 }
             }
             // `(start-hand-at-mouse)` / `(start-hand-at-keypad)`: place the
@@ -2617,6 +2754,63 @@ mod tests {
             }
             got => panic!("{got:?}"),
         }
+    }
+
+    #[test]
+    fn p_fct_quasiquote_loads() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("actr7.x")
+            .join("extras")
+            .join("extended-motor-actions")
+            .join("test-model.lisp");
+        let m = load_models(&path).unwrap().into_iter().next().unwrap();
+        assert!(
+            m.productions
+                .iter()
+                .any(|p| p.name == "TEST1-SECOND-PRESS-SAME"),
+            "{:?}",
+            m.productions
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn model_body_command_and_task_globals() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("actr7.x");
+        let model_path = root
+            .join("tutorial")
+            .join("unit8")
+            .join("categorize-model.lisp");
+        let model = load_models(&model_path)
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap();
+        assert_eq!(model.call_commands.len(), 1);
+        assert_eq!(model.call_commands[0].0, "create-example-memories");
+        assert!(model
+            .initial_buffer_specs
+            .iter()
+            .any(|(buffer, _)| buffer == "IMAGINAL"));
+
+        let task =
+            std::fs::read_to_string(root.join("tutorial").join("lisp").join("categorize.lisp"))
+                .unwrap();
+        let globals = parse_task_globals(&task);
+        assert_eq!(
+            globals.get("*SLOTS*"),
+            Some(&Sexp::List(vec![
+                Sexp::Sym("EH".into()),
+                Sexp::Sym("ES".into()),
+                Sexp::Sym("NL".into()),
+                Sexp::Sym("MH".into()),
+            ]))
+        );
     }
 
     #[test]

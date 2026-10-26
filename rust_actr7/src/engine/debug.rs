@@ -453,6 +453,14 @@ impl Engine {
         self.user_fns = fns;
     }
 
+    /// Install task-file globals for the bounded evaluator.
+    pub fn set_user_vars(&mut self, vars: HashMap<String, crate::sexpr::Sexp>) {
+        self.user_vars = vars
+            .into_iter()
+            .filter_map(|(k, v)| Value::from_sexp(&v).ok().map(|v| (k.to_uppercase(), v)))
+            .collect();
+    }
+
     /// Override the trace module-column width (`max-module-name-length`).
     pub fn set_module_width(&mut self, width: usize) {
         self.cfg.module_width = width;
@@ -923,6 +931,35 @@ impl Engine {
         b.chunk = Some(inst);
         b.failed = false;
         b.modified = false;
+        self.changed();
+        Ok(())
+    }
+
+    /// `extend-possible-slots <slot>`: make a slot name usable on any chunk.
+    pub fn extend_possible_slots(&mut self, slot: &str) {
+        self.valid_slots.insert(slot.to_uppercase());
+    }
+
+    /// `mod-buffer-chunk <buffer> (slot value ...)`: modify the chunk already
+    /// in a buffer (the RPC form of the task command).
+    pub fn mod_buffer_chunk_rpc(
+        &mut self,
+        buffer: &str,
+        mods: &[(String, Sexp)],
+    ) -> Result<(), EngineError> {
+        let bname = buffer.to_uppercase();
+        let Some(chunk) = self.buffers.get_mut(&bname).and_then(|b| b.chunk.as_mut()) else {
+            return Err(bad(format!("mod-buffer-chunk with empty {bname}")));
+        };
+        for (name, value) in mods {
+            let value = Value::from_sexp(value)?;
+            let name = name.to_uppercase();
+            match chunk.slots.iter_mut().find(|(k, _)| k == &name) {
+                Some((_, old)) => *old = value,
+                None => chunk.slots.push((name, value)),
+            }
+        }
+        self.buffer_mut(&bname).modified = true;
         self.changed();
         Ok(())
     }

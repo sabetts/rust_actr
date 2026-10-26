@@ -26,7 +26,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine gap: call-act-r-command unsupported"]
 fn tutorial_unit8_categorize_attribute() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit8-categorize-attribute")
         .models(&[
@@ -36,7 +35,7 @@ fn tutorial_unit8_categorize_attribute() -> Result<(), String> {
         .seed((100, 0))
         .steps(vec![
             Step::GoalFocus(crate::chunk_desc(
-                "(state add-attribute name size value -0.9)",
+                "(name size state add-attribute value -0.9)",
             )),
             Step::Run {
                 secs: 20.0,

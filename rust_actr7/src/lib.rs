@@ -251,6 +251,7 @@ pub fn run_model_steps_with_hook(
 ) -> Result<String, EngineError> {
     let mut defs = Vec::new();
     let mut user_fns: HashMap<String, model::UserDefun> = HashMap::new();
+    let mut user_vars = HashMap::new();
     let mut commands: HashMap<String, String> = HashMap::new();
     for m in models {
         let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
@@ -266,6 +267,7 @@ pub fn run_model_steps_with_hook(
             // `defun`s and `add-act-r-command` registrations.
             if let Ok(src) = std::fs::read_to_string(&path) {
                 user_fns.extend(model::parse_defuns(&src));
+                user_vars.extend(model::parse_task_globals(&src));
                 commands.extend(model::parse_commands(&src));
             }
         }
@@ -274,6 +276,7 @@ pub fn run_model_steps_with_hook(
         if let Some(task) = companion_task_file(&path) {
             if let Ok(src) = std::fs::read_to_string(&task) {
                 user_fns.extend(model::parse_defuns(&src));
+                user_vars.extend(model::parse_task_globals(&src));
                 commands.extend(model::parse_commands(&src));
             }
         }
@@ -290,6 +293,8 @@ pub fn run_model_steps_with_hook(
     let mut eng = engine::Engine::new(def.clone(), seed, 0.0, device.clone())?;
     eng.set_event_hook(hook);
     eng.set_user_fns(user_fns);
+    eng.set_user_vars(user_vars);
+    eng.apply_model_commands()?;
     for step in steps {
         match step {
             Step::Run { secs, trace, width } => {

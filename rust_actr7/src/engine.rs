@@ -2487,6 +2487,8 @@ pub struct Engine {
     trace_on: bool,
     /// Task-file `defun`s available to `!eval!`/`!bind!`.
     user_fns: HashMap<String, crate::model::UserDefun>,
+    /// Task-file `defparameter`/`defvar` values (upper-cased names).
+    user_vars: HashMap<String, Value>,
 }
 
 /// Buffers whose `+buffer>` requests name a module command (`+visual>`,
@@ -2831,6 +2833,7 @@ impl Engine {
             tracker_target: "2".to_string(),
             trace_on: true,
             user_fns: HashMap::new(),
+            user_vars: HashMap::new(),
         };
         // `process-slots-specs` (`chunk-spec.lisp:597`): a request
         // `+buffer> isa TYPE` carries the chunk-type's default slots (e.g.
@@ -3170,6 +3173,9 @@ impl Engine {
             };
             dm_len
         ];
+        // Model-body `(call-act-r-command ...)`: re-run task commands after
+        // the DM/chunk tables are rebuilt, as ACT-R re-evaluates the body.
+        self.apply_model_commands()?;
         // Model-body `set-all-base-levels`: fixed history for every DM chunk
         // (`commands/dm-commands.lisp:600`); a later named `set-base-levels`
         // overrides.
@@ -3453,6 +3459,19 @@ impl Engine {
         // buffer contents, applied on every reset.
         for (buffer, chunk_name) in self.model.initial_buffer_sets.clone() {
             let inst = self.instantiate(&buffer, NewChunk::Named(chunk_name))?;
+            let b = self.buffer_mut(&buffer);
+            b.chunk = Some(inst);
+            b.failed = false;
+            b.modified = false;
+        }
+        for (buffer, desc) in self.model.initial_buffer_specs.clone() {
+            let nc = new_chunk(&desc)?;
+            let mut inst = self.instantiate(&buffer, nc)?;
+            if inst.name.is_none() {
+                let name = format!("{buffer}-CHUNK0");
+                self.named.insert(name.clone(), inst.clone());
+                inst.name = Some(name);
+            }
             let b = self.buffer_mut(&buffer);
             b.chunk = Some(inst);
             b.failed = false;

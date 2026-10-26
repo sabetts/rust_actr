@@ -4541,8 +4541,8 @@ the projected set matches by construction.
 Test side (`tests/hooks/mod.rs`): each case now owns its inline driver and a
 direct `EventHook`. `HookCase::check_segment` compares the engine's raw trace;
 `HookCase::check_projection` compares the lines a hook collected in a
-`Projection`. The 43 cases are eight projection and 35 segment tests; 16 stay
-`#[ignore = "..."]` for the engine gaps listed below. There is no hook IR, no
+`Projection`. The 43 cases are eight projection and 35 segment tests; the
+remaining ignored ones name the engine gaps listed below. There is no hook IR, no
 generator, no hook-case manifest, and no hook `.spec`; only data-heavy
 experiments keep specs.
 
@@ -4559,7 +4559,7 @@ or `:STARTING-PARAMETERS` still runs through the RPC `Session`
 to recover a driver for offline inspection. No recovered hook driver is
 committed as a `.spec`; each case carries the driver directly in Rust.
 
-The 16 ignored hook cases expose engine gaps: the base-level reference trace
+The ignored hook cases expose engine gaps: the base-level reference trace
 (`v1-*-act-trace`, `v3/v4-run-p2`), the reward/utility trace (`bst-utility`),
 `!eval! set-flag` (`v8-eval-issue`), and `pcomp` v9/v10 production-fired
 timing (plus the related utility/selection cases).
@@ -4569,3 +4569,31 @@ driver recovery, hook-side system-parameter/production effects, buffer
 effects/output, command effects, or hook-side scheduling. The old
 "pending filter parsing capabilities" reason is obsolete now that filters are
 direct Rust.
+
+## 270. Model-body commands, task globals, and quasiquote (verified)
+
+ACT-R evaluates the model body on load and again on every reset
+(`framework/model.lisp:983`). The port now models the forms needed by the
+categorize task:
+
+* The reader retains quasiquote/unquote/unquote-splicing forms. `p-fct`
+  unwraps its quasiquote and substitutes `(UNQUOTE *QUERY*)` on reset.
+* Task-file `defparameter`/`defvar` literals are installed as engine
+  `user_vars`; the bounded evaluator resolves them in `dolist`, `mapcan`,
+  `setf`/`setq`, and `incf`.
+* `m_eval` handles `dolist`, `mapcan`, `extend-possible-slots`,
+  `define-chunks-fct`, and `add-dm-fct`. Runtime DM additions update the
+  history and spreading-fan tables.
+* `Model.call_commands` stores `(call-act-r-command ...)` forms;
+  `Engine::apply_model_commands` runs them after the task functions and globals
+  are installed and again during reset. Command failures are warnings, matching
+  `handle-evaluate-results`.
+* Model-body `(set-buffer-chunk '<buffer> '(slot value ...))` specs are stored
+  separately from named-chunk initial buffers.
+* `slot_index` starts with ACT-R's default/query and visual-location slots, so
+  chunk printing orders `NAME`/`STATE`, and visual `SIZE` correctly.
+
+This promoted the categorize object/attribute chunk dumps, sample goal chunks,
+initial imaginal chunks, and sample DM dumps. `goal-chunk-part2`, `model-fit`,
+and `sample-experiment` still need the task's experiment/trial driver rather
+than model-body support alone.

@@ -134,6 +134,10 @@ impl Parser {
     }
 
     fn parse_expr(&mut self) -> Result<Sexp, ParseError> {
+        self.parse_expr_in(false)
+    }
+
+    fn parse_expr_in(&mut self, quasiquote: bool) -> Result<Sexp, ParseError> {
         self.skip_trivia()?;
         match self.peek() {
             None => self.err("unexpected end of input"),
@@ -148,7 +152,7 @@ impl Parser {
                             self.bump();
                             return Ok(Sexp::List(items));
                         }
-                        Some(_) => items.push(self.parse_expr()?),
+                        Some(_) => items.push(self.parse_expr_in(quasiquote)?),
                     }
                 }
             }
@@ -156,8 +160,27 @@ impl Parser {
             Some('"') => self.parse_string(),
             Some('\'') => {
                 self.bump();
-                let q = self.parse_expr()?;
+                let q = self.parse_expr_in(quasiquote)?;
                 Ok(Sexp::List(vec![Sexp::Sym("QUOTE".into()), q]))
+            }
+            Some('`') => {
+                self.bump();
+                let q = self.parse_expr_in(true)?;
+                Ok(Sexp::List(vec![Sexp::Sym("QUASIQUOTE".into()), q]))
+            }
+            Some(',') if quasiquote => {
+                self.bump();
+                let splicing = self.peek() == Some('@');
+                if splicing {
+                    self.bump();
+                }
+                let q = self.parse_expr_in(false)?;
+                let tag = if splicing {
+                    "UNQUOTE-SPLICING"
+                } else {
+                    "UNQUOTE"
+                };
+                Ok(Sexp::List(vec![Sexp::Sym(tag.into()), q]))
             }
             Some(_) => self.parse_atom(),
         }
@@ -280,6 +303,40 @@ mod tests {
         assert_eq!(one("-"), Sexp::Sym("-".into()));
         assert_eq!(one("=num1"), Sexp::Sym("=NUM1".into()));
         assert_eq!(one("nil"), Sexp::Sym("NIL".into()));
+    }
+
+    #[test]
+    fn quasiquote_and_unquote() {
+        assert_eq!(
+            one("`((,x isa chunk))"),
+            Sexp::List(vec![
+                Sexp::Sym("QUASIQUOTE".into()),
+                Sexp::List(vec![Sexp::List(vec![
+                    Sexp::List(vec![Sexp::Sym("UNQUOTE".into()), Sexp::Sym("X".into())]),
+                    Sexp::Sym("ISA".into()),
+                    Sexp::Sym("CHUNK".into()),
+                ])]),
+            ])
+        );
+        assert_eq!(
+            one("`(isa example ,@(mapcan 'list *slots* x))"),
+            Sexp::List(vec![
+                Sexp::Sym("QUASIQUOTE".into()),
+                Sexp::List(vec![
+                    Sexp::Sym("ISA".into()),
+                    Sexp::Sym("EXAMPLE".into()),
+                    Sexp::List(vec![
+                        Sexp::Sym("UNQUOTE-SPLICING".into()),
+                        Sexp::List(vec![
+                            Sexp::Sym("MAPCAN".into()),
+                            Sexp::List(vec![Sexp::Sym("QUOTE".into()), Sexp::Sym("LIST".into())]),
+                            Sexp::Sym("*SLOTS*".into()),
+                            Sexp::Sym("X".into()),
+                        ]),
+                    ]),
+                ]),
+            ])
+        );
     }
 
     #[test]

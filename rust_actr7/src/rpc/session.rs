@@ -83,6 +83,8 @@ pub const BUILTINS: &[&str] = &[
     "buffer-slot-value",
     "clear-buffer",
     "set-buffer-chunk",
+    "mod-buffer-chunk",
+    "extend-possible-slots",
     "schedule-event-relative",
     "schedule-event-now",
     "schedule-event",
@@ -217,6 +219,7 @@ pub struct Session {
     model_files: Vec<String>,
     defs: Vec<Model>,
     user_fns: std::collections::HashMap<String, UserDefun>,
+    user_vars: std::collections::HashMap<String, Sexp>,
     commands: BTreeMap<String, Command>,
     engine: Option<Engine>,
     current_model: Option<String>,
@@ -281,6 +284,7 @@ impl Session {
             model_files: Vec::new(),
             defs: Vec::new(),
             user_fns: Default::default(),
+            user_vars: Default::default(),
             commands,
             engine: None,
             current_model: None,
@@ -1026,6 +1030,41 @@ impl Session {
                                 .map_err(|e| e.to_string())?;
                         }
                         _ => {}
+                    }
+                }
+                Ok(vec![Json::Null])
+            }
+            "mod-buffer-chunk" => {
+                let buffer = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("mod-buffer-chunk needs a buffer")?;
+                let items: Vec<Json> = match args.get(1) {
+                    Some(Json::Arr(a)) => a.clone(),
+                    Some(_) => args[1..].to_vec(),
+                    None => Vec::new(),
+                };
+                let mut mods = Vec::new();
+                for pair in items.chunks(2) {
+                    let name = pair.first().map(json_to_text).unwrap_or_default();
+                    let value = pair
+                        .get(1)
+                        .map(json_to_sexp)
+                        .unwrap_or(Sexp::Sym("NIL".into()));
+                    mods.push((name.to_uppercase(), value));
+                }
+                if let Some(eng) = &mut self.engine {
+                    eng.mod_buffer_chunk_rpc(buffer, &mods)
+                        .map_err(|e| e.to_string())?;
+                }
+                Ok(vec![Json::Null])
+            }
+            "extend-possible-slots" => {
+                for arg in args {
+                    if let Some(slot) = arg.as_str() {
+                        if let Some(eng) = &mut self.engine {
+                            eng.extend_possible_slots(slot);
+                        }
                     }
                 }
                 Ok(vec![Json::Null])
@@ -2071,6 +2110,7 @@ impl Session {
         }
         if let Ok(src) = std::fs::read_to_string(&path) {
             self.user_fns.extend(model::parse_defuns(&src));
+            self.user_vars.extend(model::parse_task_globals(&src));
             for (cmd, fname) in model::parse_commands(&src) {
                 if let Some(def) = self.user_fns.get(&fname).cloned() {
                     self.user_fns.insert(cmd, def);
@@ -2281,6 +2321,8 @@ impl Session {
         let mut eng =
             Engine::new(def, self.seed, 0.0, self.device.clone()).map_err(|e| e.to_string())?;
         eng.set_user_fns(self.user_fns.clone());
+        eng.set_user_vars(self.user_vars.clone());
+        eng.apply_model_commands().map_err(|e| e.to_string())?;
         self.engine = Some(eng);
         self.trace_pos = 0;
         // `set-system-parameter-value` settings are global in ACT-R and

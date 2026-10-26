@@ -41,8 +41,11 @@ impl Engine {
             return Err(format!("unbound variable {s}"));
         }
         // A bare symbol bound as a task-file `defun` parameter; otherwise
-        // it is literal data (e.g. a quoted symbol argument).
+        // a task-file global, else literal data (e.g. a quoted symbol).
         if let Some(v) = b.get(s) {
+            return Ok(v.clone());
+        }
+        if let Some(v) = self.user_vars.get(&s.to_uppercase()) {
             return Ok(v.clone());
         }
         Ok(Value::Sym(s.to_string()))

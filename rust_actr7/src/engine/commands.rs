@@ -6,6 +6,33 @@ impl Engine {
     /// Run a scheduled task command: bind its `:params` to the `defun`'s
     /// parameters and execute the body (side-effecting forms handled by
     /// [`Engine::m_eval`]).
+    /// Run the model-body `call-act-r-command` forms. ACT-R re-evaluates the
+    /// model body on load and on every reset; command errors are warnings,
+    /// not model-load failures (`handle-evaluate-results`).
+    pub fn apply_model_commands(&mut self) -> Result<(), EngineError> {
+        let commands = self.model.call_commands.clone();
+        for (name, args) in commands {
+            if self.user_fns.is_empty() {
+                continue;
+            }
+            let mut values = Vec::new();
+            let empty = Bindings::new();
+            for arg in &args {
+                values.push(self.m_eval(arg, &empty).map_err(bad)?);
+            }
+            if !self.user_fns.contains_key(&name.to_uppercase()) {
+                self.emit_warning(&format!(
+                    "No command named {name} for model-body call-act-r-command."
+                ));
+                continue;
+            }
+            if let Err(e) = self.run_command(&name, values) {
+                self.emit_warning(&format!("Error executing command {name}: {e}"));
+            }
+        }
+        Ok(())
+    }
+
     pub(super) fn run_command(
         &mut self,
         name: &str,
@@ -83,13 +110,131 @@ impl Engine {
                         self.set_buffer_chunk_cmd(&buffer, &chunk)?;
                         return Ok(Value::Nil);
                     }
+                    "QUASIQUOTE" => {
+                        let body = items.get(1).ok_or("quasiquote needs a body")?;
+                        return self.eval_quasi(body, b);
+                    }
+                    "DOLIST" => {
+                        let spec = match items.get(1) {
+                            Some(Sexp::List(v)) => v,
+                            _ => return Err("dolist needs a binding list".to_string()),
+                        };
+                        let var = spec
+                            .first()
+                            .and_then(|x| x.as_sym())
+                            .ok_or_else(|| "dolist needs a variable".to_string())?;
+                        let list_expr = spec.get(1).ok_or("dolist needs a list")?;
+                        let list = self.m_eval(list_expr, b)?;
+                        let values = match list {
+                            Value::List(v) => v,
+                            Value::Nil => Vec::new(),
+                            other => {
+                                return Err(format!("dolist list is {}", other.show()));
+                            }
+                        };
+                        for value in values {
+                            let mut local = b.clone();
+                            local.insert(var.to_uppercase(), value);
+                            for form in &items[2..] {
+                                self.m_eval(form, &local)?;
+                            }
+                        }
+                        return match spec.get(2) {
+                            Some(result) => self.m_eval(result, b),
+                            None => Ok(Value::Nil),
+                        };
+                    }
+                    "MAPCAN" => {
+                        let func =
+                            self.m_eval(items.get(1).ok_or("mapcan needs a function")?, b)?;
+                        let mut lists = Vec::new();
+                        for form in &items[2..] {
+                            match self.m_eval(form, b)? {
+                                Value::List(v) => lists.push(v),
+                                Value::Nil => lists.push(Vec::new()),
+                                other => return Err(format!("mapcan list is {}", other.show())),
+                            }
+                        }
+                        let n = lists.iter().map(Vec::len).min().unwrap_or(0);
+                        let mut out = Vec::new();
+                        for i in 0..n {
+                            let args: Vec<Value> = lists.iter().map(|l| l[i].clone()).collect();
+                            let value = match &func {
+                                Value::Sym(name) if name.eq_ignore_ascii_case("LIST") => {
+                                    Value::List(args)
+                                }
+                                Value::Sym(name) => self
+                                    .call_user_fn(name, &args)
+                                    .ok_or_else(|| format!("mapcan unknown function {name}"))?,
+                                other => {
+                                    return Err(format!("mapcan function {}", other.show()));
+                                }
+                            };
+                            match value {
+                                Value::List(v) => out.extend(v),
+                                Value::Nil => {}
+                                other => out.push(other),
+                            }
+                        }
+                        return Ok(Value::List(out));
+                    }
+                    "EXTEND-POSSIBLE-SLOTS" => {
+                        let value = self
+                            .m_eval(items.get(1).ok_or("extend-possible-slots needs a slot")?, b)?;
+                        let name = match value {
+                            Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                            other => {
+                                return Err(format!("extend-possible-slots slot {}", other.show()));
+                            }
+                        };
+                        self.valid_slots.insert(name.clone());
+                        return Ok(Value::Sym(name));
+                    }
+                    "DEFINE-CHUNKS-FCT" | "ADD-DM-FCT" => {
+                        let defs =
+                            self.m_eval(items.get(1).ok_or("chunk definition list expected")?, b)?;
+                        let defs = match defs {
+                            Value::List(v) => v,
+                            Value::Nil => Vec::new(),
+                            other => return Err(format!("chunk definitions {}", other.show())),
+                        };
+                        let add_dm = h.eq_ignore_ascii_case("ADD-DM-FCT");
+                        let names = self.define_chunks_values(&defs, add_dm)?;
+                        return Ok(Value::List(names.into_iter().map(Value::Sym).collect()));
+                    }
+                    "SETF" | "SETQ" => {
+                        let mut i = 1;
+                        while i + 1 < items.len() {
+                            let name = items[i]
+                                .as_sym()
+                                .ok_or_else(|| "setf needs a variable".to_string())?;
+                            let value = self.m_eval(&items[i + 1], b)?;
+                            self.user_vars.insert(name.to_uppercase(), value);
+                            i += 2;
+                        }
+                        return Ok(Value::Nil);
+                    }
+                    "INCF" => {
+                        let name = items
+                            .get(1)
+                            .and_then(|x| x.as_sym())
+                            .ok_or_else(|| "incf needs a variable".to_string())?;
+                        let Some(old) = self.user_vars.get(&name.to_uppercase()).cloned() else {
+                            return Ok(Value::Nil);
+                        };
+                        let value = match old {
+                            Value::Int(i) => Value::Int(i + 1),
+                            Value::Num(x) => Value::Num(x + 1.0),
+                            _ => return Ok(Value::Nil),
+                        };
+                        self.user_vars.insert(name.to_uppercase(), value.clone());
+                        return Ok(value);
+                    }
                     // The task's `move-it` is scheduled by the model's
                     // `!eval! (schedule-event-relative … 'move-it)`. Its
                     // effect on the window is replayed from the captured
-                    // device op (`MODIFY-TEXT`), so the body is a no-op here
-                    // (the arguments reference task globals the engine does
-                    // not model).
-                    "INCF" | "MODIFY-TEXT-FOR-EXP-WINDOW" => {
+                    // device op (`MODIFY-TEXT`), so the body is a no-op here.
+                    "MODIFY-TEXT-FOR-EXP-WINDOW" => {
                         return Ok(Value::Nil);
                     }
                     // `(buffer-chunk <buffer> …)`: a model-body call prints
@@ -204,6 +349,159 @@ impl Engine {
             }
         }
         self.eval_expr(e, b)
+    }
+
+    fn eval_quasi(&mut self, e: &Sexp, b: &Bindings) -> Result<Value, String> {
+        if let Sexp::List(items) = e {
+            if items.first().and_then(|x| x.as_sym()) == Some("UNQUOTE") {
+                return self.m_eval(items.get(1).ok_or("unquote needs a body")?, b);
+            }
+            let mut out = Vec::new();
+            for item in items {
+                if let Sexp::List(parts) = item {
+                    if parts.first().and_then(|x| x.as_sym()) == Some("UNQUOTE-SPLICING") {
+                        let value =
+                            self.m_eval(parts.get(1).ok_or("unquote-splicing needs a body")?, b)?;
+                        match value {
+                            Value::List(v) => out.extend(v),
+                            Value::Nil => {}
+                            other => {
+                                return Err(format!("unquote-splicing produced {}", other.show()));
+                            }
+                        }
+                        continue;
+                    }
+                }
+                out.push(self.eval_quasi(item, b)?);
+            }
+            return Ok(Value::List(out));
+        }
+        Ok(Value::from_sexp(e).map_err(|e| e.to_string())?)
+    }
+
+    fn new_name(&mut self, prefix: &str) -> String {
+        let key = prefix.to_uppercase();
+        let n = *self.name_count.entry(key.clone()).or_insert(0);
+        self.name_count.insert(key.clone(), n + 1);
+        format!("{key}{n}")
+    }
+
+    fn chunk_pair(&self, items: &[Value]) -> Result<Vec<(String, Value)>, String> {
+        if items.len() % 2 != 0 {
+            return Err("chunk definition needs slot/value pairs".to_string());
+        }
+        let mut slots = Vec::new();
+        for pair in items.chunks(2) {
+            let name = match &pair[0] {
+                Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                other => return Err(format!("chunk slot name {}", other.show())),
+            };
+            slots.push((name, pair.get(1).cloned().unwrap_or(Value::Nil)));
+        }
+        Ok(slots)
+    }
+
+    fn define_chunks_values(
+        &mut self,
+        defs: &[Value],
+        add_dm: bool,
+    ) -> Result<Vec<String>, String> {
+        let mut names = Vec::new();
+        for def in defs {
+            let (name, ctype, slots, explicit) = match def {
+                Value::Sym(n) => (n.clone(), None, Vec::new(), true),
+                Value::List(items) => {
+                    let first = items.first().and_then(|v| match v {
+                        Value::Sym(s) | Value::Str(s) => Some(s.clone()),
+                        _ => None,
+                    });
+                    if first.as_deref() == Some("ISA") {
+                        let ctype = items
+                            .get(1)
+                            .and_then(|v| match v {
+                                Value::Sym(s) | Value::Str(s) => Some(s.to_uppercase()),
+                                _ => None,
+                            })
+                            .ok_or_else(|| "chunk definition needs a type".to_string())?;
+                        (
+                            String::new(),
+                            Some(ctype),
+                            self.chunk_pair(&items[2..])?,
+                            false,
+                        )
+                    } else if items.get(1).and_then(|v| match v {
+                        Value::Sym(s) | Value::Str(s) => Some(s.eq_ignore_ascii_case("ISA")),
+                        _ => None,
+                    }) == Some(true)
+                    {
+                        let name =
+                            first.ok_or_else(|| "chunk definition needs a name".to_string())?;
+                        let ctype = items
+                            .get(2)
+                            .and_then(|v| match v {
+                                Value::Sym(s) | Value::Str(s) => Some(s.to_uppercase()),
+                                _ => None,
+                            })
+                            .ok_or_else(|| "chunk definition needs a type".to_string())?;
+                        (name, Some(ctype), self.chunk_pair(&items[3..])?, true)
+                    } else if let Some(name) = first {
+                        (name, None, self.chunk_pair(&items[1..])?, true)
+                    } else {
+                        return Err(format!("bad chunk definition {}", def.show()));
+                    }
+                }
+                other => return Err(format!("bad chunk definition {}", other.show())),
+            };
+            let name = if explicit && !name.is_empty() {
+                name
+            } else {
+                self.new_name(ctype.as_deref().unwrap_or("CHUNK"))
+            };
+            let inst = ChunkInst {
+                name: Some(name.clone()),
+                ctype: ctype.unwrap_or_default(),
+                slots,
+                bare: false,
+            };
+            if add_dm {
+                self.add_runtime_dm(inst);
+            } else {
+                self.named.insert(name.clone(), inst);
+                self.chunk_names.insert(name.clone());
+            }
+            names.push(name);
+        }
+        Ok(names)
+    }
+
+    fn add_runtime_dm(&mut self, inst: ChunkInst) {
+        let name = inst.name.clone().unwrap_or_default();
+        if self
+            .dm
+            .iter()
+            .any(|c| c.name.as_deref() == Some(name.as_str()))
+        {
+            return;
+        }
+        self.chunk_names.insert(name.clone());
+        self.dm.push(inst);
+        self.hist.push(History {
+            creation_ms: self.time_ms,
+            refs: vec![self.time_ms],
+            count: 1,
+            fixed_base: None,
+        });
+        *self.fan_out.entry(name.clone()).or_insert(0) += 1;
+        let mut counts: HashMap<String, u32> = HashMap::new();
+        let slots = self.dm.last().map(|c| c.slots.clone()).unwrap_or_default();
+        for (_, value) in &slots {
+            if let Some(source) = self.chunk_name_of(value) {
+                *self.fan_out.entry(source.clone()).or_insert(0) += 1;
+                *counts.entry(source).or_insert(0) += 1;
+            }
+        }
+        *counts.entry(name.clone()).or_insert(0) += 1;
+        self.fan_in.insert(name, counts);
     }
 
     /// `imaginal-action` request (`imaginal.lisp:343`): a production's

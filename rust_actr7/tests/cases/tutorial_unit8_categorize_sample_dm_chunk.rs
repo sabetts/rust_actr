@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit8_categorize_sample_dm_chunk() -> Result<(), String> {
     Case::new("tutorial-unit8-categorize-sample-dm-chunk")
         .models(&[

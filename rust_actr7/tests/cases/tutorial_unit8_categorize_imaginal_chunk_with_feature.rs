@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit8_categorize_imaginal_chunk_with_feature() -> Result<(), String> {
     Case::new("tutorial-unit8-categorize-imaginal-chunk-with-feature")
         .models(&[
@@ -14,6 +13,12 @@ fn tutorial_unit8_categorize_imaginal_chunk_with_feature() -> Result<(), String>
             "tutorial;unit8;categorize-model.lisp",
         ])
         .seed((100, 0))
-        .steps(vec![Step::BufferChunk(vec!["IMAGINAL".into()])])
+        .steps(vec![
+            Step::Command {
+                name: "mod-buffer-chunk".into(),
+                args: crate::sexps(r#"(IMAGINAL (EH LARGE))"#),
+            },
+            Step::BufferChunk(vec!["IMAGINAL".into()]),
+        ])
         .check()
 }
