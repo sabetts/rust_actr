@@ -10,9 +10,9 @@ default `cargo test` never needs the checkout or SBCL:
 | model/task sources | `fixtures/models/` (see `models/manifest.txt`) | 173 |
 | device sidecars | `fixtures/devices/*.device.sexp` | 105 |
 
-`tools/sync_fixtures.py` copies/verifies the refs and model sources against
+`../sync-fixtures.py` copies/verifies the refs and model sources against
 `$ACTR_DIR` (default `<repo>/actr7.x`). While the checkout exists, CI can run
-`python tools/sync_fixtures.py --check`.
+`python ../sync-fixtures.py --check`.
 
 ## One test per ref
 
@@ -100,15 +100,16 @@ fake pass.
 ## Regenerate
 
 ```sh
-../regen-specs.sh                  # rewrites specs from actr7.x/test-models/
-../../tools/sync_fixtures.py       # refresh refs + models from $ACTR_DIR
-../../tools/sync_fixtures.py --check
+../regen-specs.sh          # rewrites specs from actr7.x/test-models/
+../sync-fixtures.py        # refresh refs + models from $ACTR_DIR
+../sync-fixtures.py --check
 ```
 
-All three require SBCL/the checkout only when regenerating; `cargo test`
-itself is self-contained. `regen-specs.sh` refreshes only the specs already
-committed (hook drivers + data-heavy experiments); pass `SPEC_LIST` to import
-a different set from upstream. Seeds that do not match a literal
+The regen step needs the checkout and SBCL; the sync steps need only the
+checkout. `cargo test` itself is self-contained. `regen-specs.sh` refreshes
+only the specs already committed (hook drivers + data-heavy experiments);
+pass `SPEC_LIST` to import a different set from upstream. Seeds that do not
+match a literal
 `(sgp :seed V ...)` in the sources are canonicalized to `(100 0)` so specs are
 stable across regens.
 

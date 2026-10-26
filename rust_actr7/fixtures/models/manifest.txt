@@ -1,5 +1,5 @@
 # Vendored ACT-R model/task files used by the integration tests.
-# Logical ACT-R paths (';' separated); sync with tools/sync_fixtures.py.
+# Logical ACT-R paths (';' separated); sync with fixtures/sync-fixtures.py.
 examples;multiple-models;unit-1-together-1-mp.lisp
 extras;act-touch;touch-demo-model.lisp
 extras;adaptive-noise;test-model.lisp

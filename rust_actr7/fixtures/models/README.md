@@ -12,8 +12,8 @@ this tree.
 Refresh (requires `ACTR_DIR`, default `<repo>/actr7.x`):
 
 ```sh
-python ../tools/sync_fixtures.py
-python ../tools/sync_fixtures.py --check
+python ../sync-fixtures.py
+python ../sync-fixtures.py --check
 ```
 
 Do not hand-edit these files. They carry their upstream copyright/license

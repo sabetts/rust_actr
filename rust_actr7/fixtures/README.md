@@ -8,7 +8,7 @@ SBCL.
 ```
 fixtures/
   models/          vendored model/task .lisp sources (manifest.txt);
-                   mirrored from $ACTR_DIR by tools/sync_fixtures.py
+                   mirrored from $ACTR_DIR by sync-fixtures.py
   devices/         hand-authored <name>.device.sexp sidecars (105)
   regression/      ACT-R's own test-models corpus (the authority)
     specs/         only specs still read at test time: hook drivers +
@@ -18,6 +18,7 @@ fixtures/
   units/           module latency / base-level tables (unit tests)
   errors/          err-*.lisp fixtures for the error-path tests
   manifest.lisp    model list for the extra traces (regen input)
+  sync-fixtures.py refresh tests/cases/*.ref + models/ from $ACTR_DIR
   regen.sh         regenerate extra-traces/ (needs sbcl)
   regen-specs.sh   regenerate regression/specs/ (needs sbcl)
   run-traces.lisp  extra-trace SBCL driver
@@ -27,7 +28,7 @@ fixtures/
 ```
 
 The refs themselves live beside their tests: `tests/cases/<name>.ref`, one
-per case (563). `tools/sync_fixtures.py` copies/checks both the refs and
+per case (563). `sync-fixtures.py` copies/checks both the refs and
 `fixtures/models/` against `$ACTR_DIR` (default `<crate>/../actr7.x`).
 
 ## Two oracles
@@ -71,18 +72,18 @@ regenerate them.
 ## Regenerate
 
 ```sh
-../tools/sync_fixtures.py  # refresh tests/cases/*.ref + fixtures/models/
-../tools/sync_fixtures.py --check
+./sync-fixtures.py         # refresh ../tests/cases/*.ref + models/
+./sync-fixtures.py --check
 ./regen.sh                 # extra-traces/ from manifest.lisp
 ./regen.sh /tmp/g2         # elsewhere; diff -r proves determinism
 ./regen-specs.sh           # regression/specs/ (hook drivers / experiments)
 ./units/regen-units.sh     # units/tables/
 ```
 
-All of these require SBCL (`sbcl --version` >= 2.4 tested) and an `actr7.x`
-checkout (`ACTR_DIR`, default `<crate>/../actr7.x`) only when regenerating.
-`regen-specs.sh` refreshes only the committed specs; pass `SPEC_LIST` to
-import a new set from upstream.
+The regen scripts require an `actr7.x` checkout (`ACTR_DIR`, default
+`<crate>/../actr7.x`) and SBCL (`sbcl --version` >= 2.4 tested);
+`sync-fixtures.py` needs only the checkout. `regen-specs.sh` refreshes only the
+committed specs; pass `SPEC_LIST` to import a new set from upstream.
 
 ## Why this is trustworthy
 
@@ -91,6 +92,6 @@ import a new set from upstream.
 - Seeds are explicit per model. Without them the RNG is time-seeded
   (`actr7.x/framework/random.lisp`) and runs differ.
 - The vendored copies are byte-identical to upstream while `actr7.x` exists;
-  `sync_fixtures.py --check` enforces it.
+  `sync-fixtures.py --check` enforces it.
 - Lisp-side quirks that affect these fixtures are logged in
   `../../PORTING-NOTES.md`.

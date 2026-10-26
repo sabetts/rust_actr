@@ -570,7 +570,7 @@ which is what first revealed this.
 
 The refs are now vendored one per case in `rust_actr7/tests/cases/<name>.ref`;
 each `tests/cases/<name>.rs` owns its driver, and
-`tools/sync_fixtures.py --check` keeps the copies byte-identical to upstream
+`fixtures/sync-fixtures.py --check` keeps the copies byte-identical to upstream
 while `actr7.x` is present. The layout is documented in
 `rust_actr7/fixtures/regression/README.md`.
 

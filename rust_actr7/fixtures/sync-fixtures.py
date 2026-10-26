@@ -6,8 +6,8 @@ model/task files listed in `fixtures/models/manifest.txt`. Both are copied
 verbatim from an ACT-R checkout so the crate can build and run without one.
 
 Usage:
-    python tools/sync_fixtures.py            # copy from $ACTR_DIR
-    python tools/sync_fixtures.py --check    # fail if the copies differ
+    python fixtures/sync-fixtures.py            # copy from $ACTR_DIR
+    python fixtures/sync-fixtures.py --check    # fail if the copies differ
 
 `ACTR_DIR` defaults to `<crate>/../actr7.x`. Model paths in the manifest use
 ACT-R's logical `;` separator (e.g. `tutorial;unit1;count.lisp`).
