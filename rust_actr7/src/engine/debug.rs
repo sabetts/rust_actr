@@ -1106,6 +1106,19 @@ impl Engine {
                 row("last-command", "NONE");
                 row("scene-change", "NIL");
                 row("scene-change-value", "NIL");
+            } else if bname == "MANUAL" {
+                // `motor-status` (`motor.lisp`): the manual module's
+                // preparation/processor/execution state.
+                let prep = self.man_prep_busy;
+                let proc = self.man_proc[0] || self.man_proc[1];
+                let exec = self.man_exec_busy || self.man_exec[0] || self.man_exec[1];
+                row("preparation free", t(!prep));
+                row("preparation busy", t(prep));
+                row("processor free", t(!proc));
+                row("processor busy", t(proc));
+                row("execution free", t(!exec));
+                row("execution busy", t(exec));
+                row("last-command", "NONE");
             }
             self.out_lines.extend(lines);
             names.push(bname);

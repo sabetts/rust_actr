@@ -189,7 +189,7 @@ The 189 source-echo refs run through `SourceCase`; the four that read
 `core-modules/audio.lisp`/`vision.lisp` stay ignored until they are replaced by
 engine-level chunk-type assertions. The `ARBITRARY` (experiment/`format`) refs
 stay ignored too. The converted `HOOK` cases run directly through
-`tests/hooks/`; the 16 that remain ignored there expose measured engine gaps.
+`tests/hooks/`; the converted `HOOK` cases that remain ignored expose measured engine gaps.
 The remaining not-yet-converted `:HOOK` refs carry a reason naming their next blocker:
 driver recovery, hook-side system-parameter/production effects, buffer
 effects/output, command effects, or hook-side scheduling. Everything else that
