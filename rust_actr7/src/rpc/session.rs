@@ -1306,15 +1306,48 @@ impl Session {
             // Each returns the printed chunk names; the reply wraps the single
             // return value in a list (`actr.py:88` returns `results[1:]`).
             "buffer-chunk" => {
-                let names: Vec<String> = args
+                let mut names: Vec<String> = args
                     .iter()
                     .filter_map(|a| a.as_str().map(str::to_string))
                     .collect();
+                let all = names.is_empty();
+                if all {
+                    names = self
+                        .engine
+                        .as_ref()
+                        .map(|e| e.buffer_names())
+                        .unwrap_or_default();
+                    // `model-buffers` does not include the extended-motor
+                    // per-hand buffers in the plain `(buffer-chunk)` report.
+                    names.retain(|n| !matches!(n.as_str(), "MANUAL-LEFT" | "MANUAL-RIGHT"));
+                }
                 let out = self
                     .engine
                     .as_mut()
-                    .map(|e| e.print_buffer_chunk(&names))
+                    .map(|e| {
+                        if all {
+                            e.print_buffer_headers(&names)
+                        } else {
+                            e.print_buffer_chunk(&names)
+                        }
+                    })
                     .unwrap_or_default();
+                if all {
+                    // `(buffer-chunk)` returns `((buffer chunk) ...)`, omitting
+                    // the chunk name when the buffer is empty.
+                    let list: Vec<Json> = names
+                        .iter()
+                        .zip(out)
+                        .map(|(buffer, chunk)| {
+                            let mut pair = vec![Json::Str(buffer.clone())];
+                            if !chunk.is_empty() {
+                                pair.push(Json::Str(chunk));
+                            }
+                            Json::Arr(pair)
+                        })
+                        .collect();
+                    return Ok(vec![Json::Arr(list)]);
+                }
                 // An empty buffer prints/returns `nil`.
                 let list: Vec<Json> = out
                     .into_iter()

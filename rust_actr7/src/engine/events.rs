@@ -728,9 +728,18 @@ impl Engine {
                     let ctx = self.al_last_contexts.clone();
                     self.al_update(&name, &ctx);
                 }
-                // `set-buffer-chunk` copies the retrieved chunk (`buffer-copy`),
-                // so the buffer holds `G-k` while the trace shows the source.
-                let copy = self.copy_chunk(&name);
+                // `set-buffer-chunk` copies the retrieved chunk (`buffer-copy`).
+                // A reusable RETRIEVAL buffer names it `RETRIEVAL-CHUNK{n}`;
+                // a production that mentions `=RETRIEVAL` turns reuse off
+                // (`buffer-requires-copies`), so it gets the generic copy name
+                // `{SOURCE}-{k}` instead.
+                let copy = if self.model.no_reuse_buffers.iter().any(|b| b == "RETRIEVAL") {
+                    self.copy_chunk(&name)
+                } else {
+                    let copy = self.reuse_buffer_name("RETRIEVAL");
+                    self.copy_chunk_as(&name, &copy);
+                    copy
+                };
                 self.now(
                     Prio::Max,
                     Out::Low,

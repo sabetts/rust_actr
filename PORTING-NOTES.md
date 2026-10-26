@@ -4680,3 +4680,23 @@ still differs on slot order inside the printed `property` chunks and remains
 ignored.
 
 The corpus is now at **403 passed / 164 ignored**.
+
+## 275. Retrieval-buffer copies and all-buffer `buffer-chunk` (verified)
+
+`set-buffer-chunk` on a reusable buffer names its chunk once as
+`{BUFFER}-CHUNK{n}` (`act-r-buffer-reuse-chunk`, `buffers.lisp:1351`). A
+production that mentions `=RETRIEVAL` turns reuse off via
+`buffer-requires-copies`, so retrieval chunks use the generic `{SOURCE}-{k}`
+copy name instead. The engine now applies that split: count models get
+`RETRIEVAL-CHUNK0 [TWO]`, pcomp/fan models keep `THREE-0`, `LAWYER-0`, and the
+like. `buffer-chunk` headers read the copy source from `copy_source` as well as
+the visual map.
+
+`(buffer-chunk)` with no names lists every standard model buffer, prints only
+the `BUFFER: CHUNK ` headers (not the chunk slot lines), returns `(buffer
+chunk)` pairs with the chunk omitted when empty, and excludes the extended
+motor hand buffers. `PRODUCTION` is now present as an empty standard buffer.
+This promoted `tutorial-unit1-count-first-retrieval-chunk`,
+`tutorial-unit1modeling-broken-addition-v8-buffer-chunk`, and
+`tutorial_unit1code_semantic_buffers`, moving the corpus to **406 passed / 161
+ignored**.

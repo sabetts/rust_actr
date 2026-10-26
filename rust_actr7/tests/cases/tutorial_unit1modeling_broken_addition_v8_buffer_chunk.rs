@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
 fn tutorial_unit1modeling_broken_addition_v8_buffer_chunk() -> Result<(), String> {
     Case::new("tutorial-unit1modeling-broken-addition-v8-buffer-chunk")
         .models(&["test-models;models;broken-addition-v8.lisp"])

@@ -3232,6 +3232,7 @@ impl Engine {
             "MANUAL",
             "MANUAL-LEFT",
             "MANUAL-RIGHT",
+            "PRODUCTION",
             "TEMPORAL",
             "VOCAL",
             "AURAL",

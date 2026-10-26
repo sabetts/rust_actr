@@ -47,7 +47,11 @@ impl Engine {
                 cname.clone()
             };
             let mut header = format!("{bname}: {shown} ");
-            if let Some(src) = self.vl_copied_from.get(&cname) {
+            if let Some(src) = self
+                .copy_source
+                .get(&cname)
+                .or_else(|| self.vl_copied_from.get(&cname))
+            {
                 // `~@[[~s]~]` (`chunk-copied-from-fct`): the source chunk.
                 header.push_str(&format!("[{src}]"));
             }
@@ -68,6 +72,37 @@ impl Engine {
             if let Some(c) = &chunk {
                 self.push_chunk(c);
             }
+        }
+        names
+    }
+
+    /// `(buffer-chunk)` with no buffer names: print only each buffer's
+    /// `NAME: CHUNK ` header (the ref does not include the chunk slot lines).
+    pub fn print_buffer_headers(&mut self, buffers: &[String]) -> Vec<String> {
+        let mut names = Vec::new();
+        for name in buffers {
+            let bname = name.to_uppercase();
+            let cname = self
+                .buffers
+                .get(&bname)
+                .and_then(|b| b.chunk.as_ref())
+                .and_then(|c| c.name.clone())
+                .unwrap_or_default();
+            let shown = if cname.is_empty() {
+                "NIL".to_string()
+            } else {
+                cname.clone()
+            };
+            let mut header = format!("{bname}: {shown} ");
+            if let Some(src) = self
+                .copy_source
+                .get(&cname)
+                .or_else(|| self.vl_copied_from.get(&cname))
+            {
+                header.push_str(&format!("[{src}]"));
+            }
+            self.out_lines.push(header);
+            names.push(cname);
         }
         names
     }

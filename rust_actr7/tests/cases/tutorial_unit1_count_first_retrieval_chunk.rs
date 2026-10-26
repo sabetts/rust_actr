@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
 fn tutorial_unit1_count_first_retrieval_chunk() -> Result<(), String> {
     Case::new("tutorial-unit1-count-first-retrieval-chunk")
         .models(&["tutorial;unit1;count.lisp"])

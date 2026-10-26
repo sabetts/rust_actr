@@ -106,7 +106,15 @@ impl Engine {
         let n = *self.copy_count.entry(name.to_string()).or_insert(0);
         self.copy_count.insert(name.to_string(), n + 1);
         let copy = format!("{name}-{n}");
-        self.copy_source.insert(copy.clone(), name.to_string());
+        self.copy_chunk_as(name, &copy);
+        copy
+    }
+
+    /// Store `copy` as a copy of `name`, recording the source link and copying
+    /// the fan-out/copy fan bookkeeping. The caller chooses the name, which
+    /// lets the reusable-buffer path use `{BUFFER}-CHUNK{n}`.
+    pub(super) fn copy_chunk_as(&mut self, name: &str, copy: &str) {
+        self.copy_source.insert(copy.to_string(), name.to_string());
         if let Some(src) = self
             .dm
             .iter()
@@ -123,14 +131,27 @@ impl Engine {
             })
         {
             let mut inst = src;
-            inst.name = Some(copy.clone());
-            self.named.insert(copy.clone(), inst);
+            inst.name = Some(copy.to_string());
+            self.named.insert(copy.to_string(), inst);
         }
-        self.chunk_names.insert(copy.clone());
+        self.chunk_names.insert(copy.to_string());
         let fo = self.fan_out.get(name).copied().unwrap_or(0);
-        self.c_fan_out.insert(copy.clone(), fo);
-        self.fan_out.entry(copy.clone()).or_insert(0);
-        copy
+        self.c_fan_out.insert(copy.to_string(), fo);
+        self.fan_out.entry(copy.to_string()).or_insert(0);
+    }
+
+    /// `act-r-buffer-reuse-chunk` (`framework/buffers.lisp:1351`): a reusable
+    /// buffer's chunk name, created once and reused for later sets.
+    pub(super) fn reuse_buffer_name(&mut self, buffer: &str) -> String {
+        if let Some(name) = self.buffer_reuse.get(buffer) {
+            return name.clone();
+        }
+        let base = format!("{buffer}-CHUNK");
+        let n = *self.name_count.entry(base.clone()).or_insert(0);
+        self.name_count.insert(base.clone(), n + 1);
+        let name = format!("{base}{n}");
+        self.buffer_reuse.insert(buffer.to_string(), name.clone());
+        name
     }
 
     /// RHS value substitution. When `copy` is set (goal/imaginal specs),
