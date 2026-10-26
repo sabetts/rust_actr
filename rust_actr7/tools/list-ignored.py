@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""List ignored integration-test stubs and their reasons.
+"""List ignored integration-test cases and their reasons.
 
-Each `tests/cases/<ident>.rs` stub calls `ignored_case!`, usually spanning
-several lines. This prints one `case | reason` line per stub.
+Covers both `ignored_case!` stubs and per-driver `#[ignore = "..."]`
+annotations in `tests/cases/*.rs`. This prints one `case | reason` line per
+ignored case. The dev-only `dump_spec` test in `test_models.rs` is not a case
+and is not included.
 
 Usage:
     python tools/list-ignored.py
@@ -19,24 +21,34 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CASES = HERE.parent / "tests" / "cases"
-PATTERN = re.compile(
+CASE = re.compile(r'^//! case:\s*(\S+)', re.MULTILINE)
+IGNORED_CASE = re.compile(
     r'ignored_case!\(\s*(\w+),\s*"([^"]*)",\s*"([^"]*)"\s*\);',
     re.DOTALL,
 )
+DIRECT_IGNORE = re.compile(r'#\[ignore(?:\s*=\s*"((?:[^"\\]|\\.)*)")?\]')
 
 
-def stubs() -> list[tuple[str, str, str, str]]:
+def cases() -> list[tuple[str, str, str, str]]:
     rows: list[tuple[str, str, str, str]] = []
     for path in sorted(CASES.glob("*.rs")):
         text = path.read_text(encoding="utf-8")
+        header = CASE.search(text)
+        name = header.group(1) if header else path.stem
+
         raw = text.count("ignored_case!")
-        found = PATTERN.findall(text)
+        found = IGNORED_CASE.findall(text)
         if raw != len(found):
             raise SystemExit(
                 f"{path.name}: parsed {len(found)} of {raw} ignored_case! calls"
             )
-        for ident, name, reason in found:
-            rows.append((name, reason, ident, path.name))
+        for ident, case_name, reason in found:
+            rows.append((case_name, reason, ident, path.name))
+
+        for match in DIRECT_IGNORE.finditer(text):
+            reason = match.group(1) if match.group(1) is not None else "(no reason)"
+            rows.append((name, reason, path.stem, path.name))
+
     rows.sort(key=lambda r: (r[0].lower(), r[3]))
     return rows
 
@@ -49,7 +61,7 @@ def main() -> int:
     ap.add_argument("--files", action="store_true", help="append the source file")
     args = ap.parse_args()
 
-    rows = stubs()
+    rows = cases()
     if args.reason:
         needle = args.reason.lower()
         rows = [r for r in rows if needle in r[1].lower()]
