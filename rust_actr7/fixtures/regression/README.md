@@ -190,7 +190,7 @@ The 189 source-echo refs run through `SourceCase`; the four that read
 engine-level chunk-type assertions. The `ARBITRARY` (experiment/`format`) refs
 stay ignored too. The converted `HOOK` cases run directly through
 `tests/hooks/`; the 16 that remain ignored there expose measured engine gaps.
-The 67 not-yet-converted `:HOOK` refs carry a reason naming their next blocker:
+The remaining not-yet-converted `:HOOK` refs carry a reason naming their next blocker:
 driver recovery, hook-side system-parameter/production effects, buffer
 effects/output, command effects, or hook-side scheduling. Everything else that
 is ignored is either an in-scope command-layer oracle or a measured

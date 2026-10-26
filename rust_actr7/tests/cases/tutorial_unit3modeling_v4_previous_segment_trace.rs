@@ -2,13 +2,28 @@
 //! ref:  tutorial-unit3modeling-v4-previous-segment-trace.ref
 //! lisp: actr7.x/test-models/tutorial-unit3modeling-v4-previous-segment-trace.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::hooks::{self, action};
+use actr_engine::{EventHook, EventView, Step};
+
+struct Filter {
+    out: Rc<RefCell<hooks::Projection>>,
+}
+
+impl EventHook for Filter {
+    fn post(&mut self, line: &str, ev: &EventView) {
+        let keep = ev.time_ms >= 2285
+            && (ev.time_ms < 2420 || (ev.time_ms == 2420 && action(ev, "production-fired")));
+        self.out.borrow_mut().record(line, keep, false);
+    }
+}
 
 #[test]
-#[ignore = "event-hook conversion pending"]
 fn tutorial_unit3modeling_v4_previous_segment_trace() -> Result<(), String> {
-    Case::new("tutorial-unit3modeling-v4-previous-segment-trace")
+    let out = Rc::new(RefCell::new(hooks::Projection::default()));
+    hooks::HookCase::new("tutorial-unit3modeling-v4-previous-segment-trace")
         .models(&["tutorial;lisp;pm-issues.lisp", "tutorial;unit3;perceptual-motor-issues-model.lisp", "test-models;models;perceptual-motor-issues-model-v4.lisp"])
         .seed((100, 0))
         .steps(vec![
@@ -22,5 +37,5 @@ fn tutorial_unit3modeling_v4_previous_segment_trace() -> Result<(), String> {
             Step::Run { secs: 10.0, trace: true, width: 22 },
             Step::ModelOutput("".into()),
         ])
-        .check()
+        .check_projection(Filter { out: out.clone() }, out, "\n", false)
 }

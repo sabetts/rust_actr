@@ -2,13 +2,28 @@
 //! ref:  tutorial-unit5-count-mod-request-goal-event.ref
 //! lisp: actr7.x/test-models/tutorial-unit5-count-mod-request-goal-event.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::hooks::{self, action};
+use actr_engine::{EventHook, EventView, Step};
+
+struct Filter {
+    out: Rc<RefCell<hooks::Projection>>,
+}
+
+impl EventHook for Filter {
+    fn post(&mut self, line: &str, ev: &EventView) {
+        let keep = action(ev, "mod-buffer-chunk") || action(ev, "module-request");
+        self.out.borrow_mut().record(line, keep, false);
+    }
+}
 
 #[test]
-#[ignore = "event-hook conversion pending"]
+#[ignore = "event-hook driver + production redefinition pending"]
 fn tutorial_unit5_count_mod_request_goal_event() -> Result<(), String> {
-    Case::new("tutorial-unit5-count-mod-request-goal-event")
+    let out = Rc::new(RefCell::new(hooks::Projection::default()));
+    hooks::HookCase::new("tutorial-unit5-count-mod-request-goal-event")
         .models(&["tutorial;unit1;count.lisp"])
         .seed((100, 0))
         .steps(vec![
@@ -18,10 +33,10 @@ fn tutorial_unit5_count_mod_request_goal_event() -> Result<(), String> {
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
             Step::Run {
                 secs: 0.05,
-                trace: false,
+                trace: true,
                 width: 22,
             },
             Step::ModelOutput("".into()),
         ])
-        .check()
+        .check_projection(Filter { out: out.clone() }, out, "\n", false)
 }

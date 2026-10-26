@@ -2,13 +2,31 @@
 //! ref:  tutorial-unit3-sperling-first-production.ref
 //! lisp: actr7.x/test-models/tutorial-unit3-sperling-first-production.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::hooks::{self, action};
+use actr_engine::{EventHook, EventView, Step};
+
+struct Filter {
+    out: Rc<RefCell<hooks::Projection>>,
+    started: bool,
+}
+
+impl EventHook for Filter {
+    fn post(&mut self, line: &str, ev: &EventView) {
+        let keep = !self.started && action(ev, "production-fired");
+        if keep {
+            self.started = true;
+        }
+        self.out.borrow_mut().record(line, keep, false);
+    }
+}
 
 #[test]
-#[ignore = "event-hook conversion pending"]
 fn tutorial_unit3_sperling_first_production() -> Result<(), String> {
-    Case::new("tutorial-unit3-sperling-first-production")
+    let out = Rc::new(RefCell::new(hooks::Projection::default()));
+    hooks::HookCase::new("tutorial-unit3-sperling-first-production")
         .models(&["tutorial;lisp;sperling.lisp", "tutorial;unit3;sperling-model.lisp"])
         .seed((100, 0))
         .steps(vec![
@@ -23,5 +41,5 @@ fn tutorial_unit3_sperling_first_production() -> Result<(), String> {
             Step::Run { secs: 30.0, trace: true, width: 22 },
             Step::ModelOutput("".into()),
         ])
-        .check()
+        .check_projection(Filter { out: out.clone(), started: false }, out, "\n", false)
 }

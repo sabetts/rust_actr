@@ -2,13 +2,35 @@
 //! ref:  tutorial-unit5modeling-v4-run-p1-finsts.ref
 //! lisp: actr7.x/test-models/tutorial-unit5modeling-v4-run-p1-finsts.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use crate::hooks::{self, action};
+use actr_engine::{EventHook, EventView, PreResult, Step, Verdict};
+
+#[derive(Default)]
+struct Filter {
+    started: bool,
+}
+
+impl EventHook for Filter {
+    fn pre(&mut self, ev: &EventView) -> PreResult {
+        let mut trace = None;
+        if !self.started {
+            self.started = true;
+            trace = Some(false);
+        }
+        if ev.time_ms == 12259 && action(ev, "retrieved-chunk") {
+            trace = Some(true);
+        }
+        PreResult {
+            verdict: Verdict::Continue,
+            trace,
+        }
+    }
+}
 
 #[test]
-#[ignore = "event-hook conversion pending"]
+#[ignore = "event-hook driver + command effects pending"]
 fn tutorial_unit5modeling_v4_run_p1_finsts() -> Result<(), String> {
-    Case::new("tutorial-unit5modeling-v4-run-p1-finsts")
+    hooks::HookCase::new("tutorial-unit5modeling-v4-run-p1-finsts")
         .models(&["test-models;models;declarative-issues-v4.lisp"])
         .seed((100, 1))
         .steps(vec![
@@ -27,5 +49,5 @@ fn tutorial_unit5modeling_v4_run_p1_finsts() -> Result<(), String> {
                 args: crate::sexps(r#"()"#),
             },
         ])
-        .check()
+        .check_segment(Filter::default())
 }

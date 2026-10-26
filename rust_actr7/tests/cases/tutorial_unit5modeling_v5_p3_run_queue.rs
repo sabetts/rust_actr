@@ -2,13 +2,26 @@
 //! ref:  tutorial-unit5modeling-v5-p3-run-queue.ref
 //! lisp: actr7.x/test-models/tutorial-unit5modeling-v5-p3-run-queue.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use crate::hooks::{self, action};
+use actr_engine::{EventHook, EventView, PreResult, Step, Verdict};
+
+#[derive(Default)]
+struct Filter;
+
+impl EventHook for Filter {
+    fn pre(&mut self, ev: &EventView) -> PreResult {
+        let trace = (ev.time_ms > 26590 && action(ev, "clear-buffer")).then_some(true);
+        PreResult {
+            verdict: Verdict::Continue,
+            trace,
+        }
+    }
+}
 
 #[test]
-#[ignore = "event-hook conversion pending"]
+#[ignore = "event-hook driver + command effects pending"]
 fn tutorial_unit5modeling_v5_p3_run_queue() -> Result<(), String> {
-    Case::new("tutorial-unit5modeling-v5-p3-run-queue")
+    hooks::HookCase::new("tutorial-unit5modeling-v5-p3-run-queue")
         .models(&["test-models;models;declarative-issues-v5.lisp"])
         .seed((100, 1))
         .steps(vec![
@@ -22,5 +35,5 @@ fn tutorial_unit5modeling_v5_p3_run_queue() -> Result<(), String> {
                 width: 22,
             },
         ])
-        .check()
+        .check_segment(Filter::default())
 }

@@ -2,13 +2,47 @@
 //! ref:  tutorial-unit3-sperling-do-report-trace.ref
 //! lisp: actr7.x/test-models/tutorial-unit3-sperling-do-report-trace.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::hooks::{self, action, production};
+use actr_engine::{EventHook, EventView, Step};
+
+#[derive(Clone, Copy, PartialEq)]
+enum Phase {
+    Idle,
+    Collect,
+    Done,
+}
+
+struct Filter {
+    out: Rc<RefCell<hooks::Projection>>,
+    phase: Phase,
+}
+
+impl EventHook for Filter {
+    fn post(&mut self, line: &str, ev: &EventView) {
+        let collect = self.phase == Phase::Collect
+            || (self.phase == Phase::Idle
+                && action(ev, "production-fired")
+                && production(ev, "do-report"));
+        if collect {
+            self.out.borrow_mut().push_line(line);
+            if self.phase == Phase::Idle {
+                self.phase = Phase::Collect;
+            } else if self.phase == Phase::Collect && action(ev, "production-fired") {
+                self.phase = Phase::Done;
+            }
+        } else {
+            self.out.borrow_mut().push_ellipsis();
+        }
+    }
+}
 
 #[test]
-#[ignore = "event-hook conversion pending"]
 fn tutorial_unit3_sperling_do_report_trace() -> Result<(), String> {
-    Case::new("tutorial-unit3-sperling-do-report-trace")
+    let out = Rc::new(RefCell::new(hooks::Projection::default()));
+    hooks::HookCase::new("tutorial-unit3-sperling-do-report-trace")
         .models(&["tutorial;lisp;sperling.lisp", "tutorial;unit3;sperling-model.lisp"])
         .seed((100, 0))
         .steps(vec![
@@ -23,5 +57,5 @@ fn tutorial_unit3_sperling_do_report_trace() -> Result<(), String> {
             Step::Run { secs: 30.0, trace: true, width: 22 },
             Step::ModelOutput("".into()),
         ])
-        .check()
+        .check_projection(Filter { out: out.clone(), phase: Phase::Idle }, out, "\n", false)
 }

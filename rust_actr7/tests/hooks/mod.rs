@@ -63,10 +63,23 @@ pub struct Projection {
 impl Projection {
     pub fn record(&mut self, line: &str, keep: bool, else_dots: bool) {
         if keep {
-            self.lines.push(line.to_string());
-            self.started = true;
-            self.last_dot = false;
+            self.push_line(line);
         } else if else_dots && self.started && !self.last_dot {
+            self.push_ellipsis();
+        }
+    }
+
+    /// Append an already-selected `format-event` line. Used by filters whose
+    /// keep/dot state machine is not the simple `record` shape.
+    pub fn push_line(&mut self, line: &str) {
+        self.lines.push(line.to_string());
+        self.started = true;
+        self.last_dot = false;
+    }
+
+    /// Append `"..."` unless the previous line already is one.
+    pub fn push_ellipsis(&mut self) {
+        if !self.last_dot {
             self.lines.push("...".to_string());
             self.last_dot = true;
         }
