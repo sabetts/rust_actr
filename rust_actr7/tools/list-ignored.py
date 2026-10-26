@@ -3,8 +3,7 @@
 
 Covers both `ignored_case!` stubs and per-driver `#[ignore = "..."]`
 annotations in `tests/cases/*.rs`. This prints one `case | reason` line per
-ignored case. The dev-only `dump_spec` test in `test_models.rs` is not a case
-and is not included.
+ignored case.
 
 Usage:
     python tools/list-ignored.py

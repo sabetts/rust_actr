@@ -13,11 +13,11 @@
 //! compared case-insensitively (`string-equal`), line by line. That is what
 //! the refs were produced/validated against.
 //!
-//! The event-hook cases and data-heavy experiment drivers still reuse a
-//! recovered `.spec` (`fixtures/regression/specs/`); every other engine case
-//! owns its driver here. Source-echo cases use `source_case!`, the engine's
-//! Lisp reader, or a small transform and check the vendored source, not the
-//! engine.
+//! The data-heavy experiment drivers still reuse a recovered `.spec`
+//! (`fixtures/regression/specs/`); every other engine case, including the
+//! event-hook cases, owns its driver here. Source-echo cases use
+//! `source_case!`, the engine's Lisp reader, or a small transform and check
+//! the vendored source, not the engine.
 //! Promote a case by removing its `#[ignore]` in its own file.
 
 use std::collections::BTreeSet;
@@ -46,7 +46,7 @@ struct Spec {
     run_seeds: Vec<(u64, u64)>,
     steps: Vec<Step>,
     /// Set when a step uses an op the scripted engine does not support
-    /// (unused by the hook drivers; kept for the spec reader).
+    /// (unused at run time; kept for the spec reader).
     #[allow(dead_code)]
     steps_unsupported: Option<String>,
     #[allow(dead_code)]
@@ -880,7 +880,7 @@ fn apply_session_step(
 /// One per-case driver: models/seed/steps + the expected `.ref`.
 ///
 /// Generated case files build this, then call [`Case::check`]. The driver is
-/// the authority; only hook drivers and data-heavy experiments read a `.spec`.
+/// the authority; only data-heavy experiments read a `.spec`.
 pub struct Case {
     name: String,
     ref_name: String,
@@ -1382,21 +1382,6 @@ fn case_files_cover_every_ref() -> Result<(), String> {
         Ok(())
     } else {
         Err(problems.join("\n"))
-    }
-}
-
-/// Dev aid: dump the formatted trace of one recovered hook driver spec
-/// (no `.ref` comparison).
-/// `cargo test --test test_models dump_spec -- --ignored --nocapture`
-#[test]
-#[ignore]
-fn dump_spec() {
-    let name = std::env::var("DUMP_SPEC").unwrap_or_else(|_| "demo2".into());
-    let root = models_dir();
-    let spec = read_named_spec(&name).unwrap();
-    let actual = run_spec(&root, &spec).unwrap();
-    for (i, l) in actual.iter().enumerate() {
-        println!("{:>4}: {}", i + 1, l);
     }
 }
 

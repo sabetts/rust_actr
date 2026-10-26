@@ -4510,7 +4510,7 @@ This is the sole raw-EOL-sensitive comparison in the suite: the units tables
 parse through the sexpr reader (treats `\r` as whitespace) and the device
 sidecars split on whitespace, so both are already EOL-tolerant.
 
-## 269. Event hooks: two-phase engine API + a closed projection IR
+## 269. Event hooks: two-phase engine API + direct Rust cases
 
 The `:SCOPE :HOOK` regression refs drive the model through an
 `add-pre/post-event-hook` filter written in arbitrary Lisp, which the engine
@@ -4538,46 +4538,28 @@ line the event emitted. Two subtleties:
 filter's `evt-output` + `filter-test` pair — never re-derived test-side, so
 the projected set matches by construction.
 
-Test side (`tests/hooks/mod.rs`): the closed IR (`HookIr`/`Phase`/`Rule`/
-`Pred`) is executed by one `EventHook`; `run_hook_case` drives a case with an
-existing `.spec`'s models/steps/seed/device and compares the output to the
-case's own `.ref`. Two output modes: `Project` (the demo2 `format-event`
-list) and `Segment` (the engine's raw trace, gated by the hook's `:v` rules).
-`tools/gen_hook_ir.py` translates the Lisp patterns — the `evt-*` predicate
-grammar, the `push-last`/`model-output` shape, the `*…-started*` latch, and
-the `pcomp-issues` control shape (`fg nil` + break at the Nth
-`production-fired`, then a second hook showing only `production-fired` for the
-`run-n-events` resume) — into that IR for `fixtures/regression/hook-cases.txt`.
+Test side (`tests/hooks/mod.rs`): each case now owns its inline driver and a
+direct `EventHook`. `HookCase::check_segment` compares the engine's raw trace;
+`HookCase::check_projection` compares the lines a hook collected in a
+`Projection`. The 43 cases are eight projection and 35 segment tests; 16 stay
+`#[ignore = "..."]` for the engine gaps listed below. There is no hook IR, no
+generator, no hook-case manifest, and no hook `.spec`; only data-heavy
+experiments keep specs.
 
-**Driver recovery.** A hook stub's driver (the task its `run-it` calls) is not
-in any existing spec, and hook specs are otherwise written `:MODELS NIL`.
-`extract-specs.lisp` now executes a `:hook` stub with `add-pre/post-event-hook`
-and `delete-event-hook` neutralized (`extract-hook`): the task runs unfiltered
-and the recorder captures its reset/run/`run-n-events`/device steps, while the
-spec keeps `:SCOPE :HOOK` (the filter itself is not replayable in Lisp). So the
-control cases map `driver = self` in `hook-cases.txt`. Regen must be limited to
-the hook names (`SPEC_LIST`): the current token classifier would otherwise
-re-scope unrelated refs (e.g. `demo2` → `:ARBITRARY`).
+The projection cases write their `format-event`/`model-output` filter as a
+plain `post` method (including the `find-unattended-letter` latch and the
+`else_dots`/`butlast`/separator shapes). The segment cases write their `:v`
+window or break-at-the-Nth behavior as a plain `pre` method, including the
+optional `filter2` suppression after the resume. A driver with a command step
+or `:STARTING-PARAMETERS` still runs through the RPC `Session`
+(`run_session_hook`), installing the hook before the steps.
 
-The promoted set: the eight `tutorial-unit2-demo2` projection cases and the
-`pcomp-issues` control cases that reproduce the ref. Those that expose an
-unrelated engine divergence (utility values / production-fired timing) are
-emitted `#[ignore = "engine divergence: …"]` so the gap stays visible.
+**Driver recovery.** `extract-specs.lisp` still executes a `:hook` stub with
+`add-pre/post-event-hook` and `delete-event-hook` neutralized (`extract-hook`)
+to recover a driver for offline inspection. No recovered hook driver is
+committed as a `.spec`; each case carries the driver directly in Rust.
 
-The `gen_hook_ir.py` control translation covers break-at-the-Nth of a named
-action (`(incf *count*)` or a bare `"break"`), an optional named production,
-and an optional `filter2` whose kept action gates the resume's `:v` (a missing
-`filter2` shows everything). `run_hook_case` drives a command-bearing or
-`:STARTING-PARAMETERS` driver through the RPC `Session` (`run_session_hook`),
-installing the hook on the engine before the steps. `EventView` maps
-`propagate-reward` to the `UTILITY` module. The remaining `#[ignore]`d hook
-cases are engine gaps: the base-level reference trace (`v1-*-act-trace`,
-`v3/v4-run-p2`), the reward/utility trace (`bst-utility`), `!eval! set-flag`
-(`v8-eval-issue`), and `pcomp` v9/v10 production-fired timing.
-
-A third shape — the trace-suppress/window filter, whose only effect is toggling
-`:v` (`(when GUARD … (sgp :v nil/t))`, GUARD a first-event flag, `zerop
-evt-time`, or `(> (evt-mstime evt) N)`) — is translated to per-event `:v`
-rules (`OutputMode::Segment`, compared against the engine's gated trace). A
-`(schedule-break T)` in such a filter has no IR representation yet, so those
-stubs stay unconverted.
+The 16 ignored hook cases expose engine gaps: the base-level reference trace
+(`v1-*-act-trace`, `v3/v4-run-p2`), the reward/utility trace (`bst-utility`),
+`!eval! set-flag` (`v8-eval-issue`), and `pcomp` v9/v10 production-fired
+timing (plus the related utility/selection cases).

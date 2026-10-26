@@ -1,1 +1,0 @@
-(:NAME "demo2" :REF "demo2.ref" :MODELS ("tutorial;lisp;demo2.lisp" "tutorial;unit2;demo2-model.lisp") :SEED-SET T :RUNS ((10 (100 0) T 22)) :STEPS ((:RESET) (:RUN 10 (100 0) T 22)) :GOAL-FOCUS 0 :RESETS 1 :SGP NIL :SCOPE :MULTI :FLAGS NIL :ERROR NIL)

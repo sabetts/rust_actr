@@ -11,8 +11,7 @@ fixtures/
                    mirrored from $ACTR_DIR by sync-fixtures.py
   devices/         hand-authored <name>.device.sexp sidecars (105)
   regression/      ACT-R's own test-models corpus (the authority)
-    specs/         only specs still read at test time: hook drivers +
-                   data-heavy experiment drivers
+    specs/         only specs still read at test time: data-heavy experiments
     README.md
   extra-traces/    project-authored scenarios not covered upstream
   units/           module latency / base-level tables (unit tests)
@@ -49,10 +48,10 @@ ACT-R ships no single test suite; `actr7.x/test-models/` is its regression
 corpus of `.lisp` driver stubs and `.ref` reference outputs. Each ref has one
 Rust file (`tests/cases/<ident>.rs`) whose `Case` builder owns the model
 chain, seed, and ordered steps. A handful of data-heavy experiments (tens of
-thousands of runs) keep their normalized `.spec` as the driver instead; the
-event-hook cases reuse recovered driver specs. `extract-specs.lisp` +
-`regen-specs.sh` are only needed when those specs are regenerated. See
-`regression/README.md`.
+thousands of runs) keep their normalized `.spec` as the driver instead; all
+other cases, including the event-hook cases, own their driver in Rust.
+`extract-specs.lisp` + `regen-specs.sh` are only needed when those specs are
+regenerated. See `regression/README.md`.
 
 The 189 `SCRAPE` refs are replayed against the vendored sources: five use the
 engine's Lisp reader to reproduce the original `(read f)` selection, 173 use
@@ -82,7 +81,7 @@ regenerate them.
 ./sync-fixtures.py --check
 ./regen.sh                 # extra-traces/ from manifest.lisp
 ./regen.sh /tmp/g2         # elsewhere; diff -r proves determinism
-./regen-specs.sh           # regression/specs/ (hook drivers / experiments)
+./regen-specs.sh           # regression/specs/ (data-heavy experiments)
 ./units/regen-units.sh     # units/tables/
 ```
 

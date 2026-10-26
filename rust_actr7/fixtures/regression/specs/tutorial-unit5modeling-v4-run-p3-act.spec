@@ -1,1 +1,0 @@
-(:NAME "tutorial-unit5modeling-v4-run-p3-act" :REF "tutorial-unit5modeling-v4-run-p3-act.ref" :MODELS ("test-models;models;declarative-issues-v4.lisp") :SEED-SET T :RUNS ((26.591 (100 1) T 22)) :STEPS ((:SGP :ACT MEDIUM) (:SGP :ACT T :EPL NIL :PCT NIL :ALPHA 0.2) (:RUN 26.591 (100 1) T 22)) :GOAL-FOCUS 0 :RESETS 0 :SGP ((:ACT MEDIUM)) :SCOPE :HOOK :FLAGS (:HOOK) :ERROR NIL)

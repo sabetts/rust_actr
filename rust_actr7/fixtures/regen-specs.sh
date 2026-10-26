@@ -26,9 +26,9 @@ mkdir -p "$OUT_DIR"
 if [[ -z "${SPEC_LIST:-}" ]]; then
   SPEC_LIST="$(mktemp "${TMPDIR:-/tmp/opencode}/spec-list.XXXXXX")"
   if compgen -G "$OUT_DIR/*.spec" > /dev/null; then
-    # Routine regen: refresh only the committed specs (hook drivers and
-    # data-heavy experiment drivers). All other cases own their driver in
-    # tests/cases/*.rs and do not need a spec.
+    # Routine regen: refresh only the committed specs (data-heavy experiment
+    # drivers). All other cases own their driver in tests/cases/*.rs and do
+    # not need a spec.
     ( cd "$OUT_DIR" && ls *.spec | sed 's/\.spec$//' | sort ) > "$SPEC_LIST"
   else
     # Fresh corpus: trace refs only, mirroring the classic

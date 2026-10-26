@@ -911,8 +911,8 @@ after an undefined-function error. Returns whether anything was loaded."
   "Call THUNK with `add-pre/post-event-hook` / `delete-event-hook` stubbed to
 no-ops, so a hook stub's `run-it` records its *driver* (the task it calls)
 without the arbitrary-Lisp filter running. Used to recover drivers for the
-`:hook` scope; the filter's effect is reproduced test-side (see
-`tests/hooks/mod.rs`)."
+`:hook` scope; the filter's effect is reproduced by the direct Rust hook
+test for each case."
   (let ((pre (symbol-function 'add-pre-event-hook))
         (post (symbol-function 'add-post-event-hook))
         (del (symbol-function 'delete-event-hook)))
