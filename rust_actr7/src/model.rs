@@ -1456,6 +1456,80 @@ fn undefined_slot_warnings(
             .collect()
     }
 }
+/// ACT-R's type-specific slot validation for a runtime production
+/// (`define-chunk-spec-fct` + `parse-conditions`/`parse-actions`). Returns the
+/// chunk-spec definition warnings first, then the production-level warnings.
+pub fn production_type_warnings(p: &Production, model: &Model) -> (Vec<String>, Vec<String>) {
+    let mut spec_warnings = Vec::new();
+    let mut prod_warnings = Vec::new();
+    let type_slots = |name: &str| -> Option<Vec<String>> {
+        model
+            .chunk_types
+            .iter()
+            .find(|t| t.name.eq_ignore_ascii_case(name))
+            .map(|t| t.slots.iter().map(|s| s.to_uppercase()).collect())
+    };
+    for item in &p.lhs {
+        let LhsItem::Match { tests, .. } = item else {
+            continue;
+        };
+        let Some(ctype) = isa_type(tests) else {
+            continue;
+        };
+        let Some(slots) = type_slots(ctype) else {
+            continue;
+        };
+        for test in tests {
+            if test.slot == "ISA" || slots.iter().any(|s| s == &test.slot) {
+                continue;
+            }
+            spec_warnings.push(format!(
+                "Slot {} invalid for type {} but chunk-spec definition still created.",
+                test.slot,
+                ctype.to_uppercase()
+            ));
+            prod_warnings.push(format!(
+                "Production {} tests invalid slot {} for type {}.",
+                p.name,
+                test.slot,
+                ctype.to_uppercase()
+            ));
+        }
+    }
+    for action in &p.rhs {
+        let spec = match action {
+            RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => spec,
+            _ => continue,
+        };
+        let ChunkDesc::Spec {
+            ctype, slots, neg, ..
+        } = spec
+        else {
+            continue;
+        };
+        let Some(type_slots) = type_slots(ctype) else {
+            continue;
+        };
+        for (slot, _) in slots.iter().chain(neg.iter()) {
+            if slot == "ISA" || type_slots.iter().any(|s| s == slot) {
+                continue;
+            }
+            spec_warnings.push(format!(
+                "Slot {} invalid for type {} but chunk-spec definition still created.",
+                slot,
+                ctype.to_uppercase()
+            ));
+            prod_warnings.push(format!(
+                "Production {} action has invalid slot {} for type {}.",
+                p.name,
+                slot,
+                ctype.to_uppercase()
+            ));
+        }
+    }
+    (spec_warnings, prod_warnings)
+}
+
 pub(crate) fn style_warnings_enabled(model: &Model) -> bool {
     match model
         .params

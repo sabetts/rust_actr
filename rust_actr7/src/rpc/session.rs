@@ -159,6 +159,7 @@ pub const BUILTINS: &[&str] = &[
     "sdp",
     "no-output",
     "pp",
+    "p",
     // Device / vision / motor.
     "add-visicon-features",
     "modify-visicon-features",
@@ -1768,6 +1769,32 @@ impl Session {
                     } else {
                         eng.penable(&names);
                     }
+                }
+                Ok(vec![Json::Null])
+            }
+            "p" => {
+                // Runtime production definition used by test drivers:
+                // `(p name ... ==> ...)`. The flat argument list is rejoined
+                // into the Lisp form and parsed by the engine.
+                fn text(a: &Json) -> String {
+                    match a {
+                        Json::Null => "NIL".to_string(),
+                        Json::Bool(true) => "T".to_string(),
+                        Json::Bool(false) => "NIL".to_string(),
+                        Json::Int(i) => i.to_string(),
+                        Json::Float(x) => format!("{x}"),
+                        Json::Str(s) => s.clone(),
+                        Json::Arr(items) => {
+                            format!("({})", items.iter().map(text).collect::<Vec<_>>().join(" "))
+                        }
+                        Json::Obj(_) => "NIL".to_string(),
+                    }
+                }
+                let body: Vec<String> = args.iter().map(text).collect();
+                if let Some(eng) = &mut self.engine {
+                    let text = format!("(p {})", body.join(" "));
+                    eng.define_production_text(&text)
+                        .map_err(|e| e.to_string())?;
                 }
                 Ok(vec![Json::Null])
             }

@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "command-layer output (pending promotion)"]
 fn tutorial_unit5modeling_bad_isa_warning() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-bad-isa-warning")
         .models(&["tutorial;unit5;declarative-issues.lisp"])
@@ -14,8 +13,8 @@ fn tutorial_unit5modeling_bad_isa_warning() -> Result<(), String> {
         .steps(vec![
             Step::Sgp(":MODEL-WARNINGS".into(), crate::sexp(r#"T"#)),
             Step::Command {
-                name: "extend-possible-slots".into(),
-                args: crate::sexps(r#"(ARG1 NIL)"#),
+                name: "p".into(),
+                args: crate::sexps(r#"P1 ==> +RETRIEVAL> ISA SIMPLE-VALUE ARG1 NIL"#),
             },
         ])
         .check()

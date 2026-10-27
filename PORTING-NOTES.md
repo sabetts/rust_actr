@@ -4807,3 +4807,12 @@ request slots in source order; replaying the negatives first matches the
 `tutorial-unit5modeling-v1-medium-act-trace` and
 `tutorial-unit5modeling-v1-high-act-trace`, moving the corpus to **431
 passed / 136 ignored**.
+
+## 284. Runtime production typed-slot warnings (verified)
+
+Added a runtime `p` command used by test drivers: it rejoins the flat RPC
+arguments into a production form, parses it, emits the chunk-spec definition
+warning and production-level warning for slots invalid for the request's
+`isa` type, then replaces any same-named production. This promoted
+`tutorial-unit5modeling-bad-isa-warning`, moving the corpus to **432 passed
+/ 135 ignored**.

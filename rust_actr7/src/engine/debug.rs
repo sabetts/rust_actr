@@ -457,9 +457,26 @@ impl Engine {
     }
 
     /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
-    /// stub's "Installing a default touch device…" banner.
+    /// stub's "Installing a default touch device�?�" banner.
     pub fn emit_warning(&mut self, msg: &str) {
         self.out_lines.push(format!("#|Warning: {msg} |#"));
+    }
+
+    /// Runtime `(p name ...)`: parse a production and emit ACT-R's typed-slot
+    /// warnings. The test-model drivers use this to exercise runtime
+    /// production definition without a full command-layer macro expander.
+    pub fn define_production_text(&mut self, text: &str) -> Result<(), EngineError> {
+        let p = crate::model::parse_production_text(text)
+            .map_err(|e| EngineError::Model(e.to_string()))?;
+        let (spec_warnings, prod_warnings) =
+            crate::model::production_type_warnings(&p, &self.model);
+        for w in spec_warnings.iter().chain(prod_warnings.iter()) {
+            self.emit_warning(w);
+        }
+        self.model.productions.retain(|q| q.name != p.name);
+        self.model.productions.push(p);
+        self.changed();
+        Ok(())
     }
 
     /// `(mod-focus slot value ...)`: schedule a goal modification at the
