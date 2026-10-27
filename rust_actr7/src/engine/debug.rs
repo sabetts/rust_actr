@@ -475,6 +475,17 @@ impl Engine {
         }
         self.model.productions.retain(|q| q.name != p.name);
         self.model.productions.push(p);
+        self.exec_prods = self
+            .model
+            .productions
+            .iter()
+            .enumerate()
+            .map(|(index, prod)| ExecProd {
+                index,
+                implicit_clears: implicit_clears(prod, &self.cfg.do_not_harvest, self.cfg.threads),
+                implicit_queries: implicit_queries(prod, &self.cfg.do_not_query),
+            })
+            .collect();
         self.changed();
         Ok(())
     }

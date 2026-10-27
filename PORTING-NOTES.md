@@ -4816,3 +4816,12 @@ warning and production-level warning for slots invalid for the request's
 `isa` type, then replaces any same-named production. This promoted
 `tutorial-unit5modeling-bad-isa-warning`, moving the corpus to **432 passed
 / 135 ignored**.
+
+## 285. Runtime `p` refreshes the executable production table
+
+`define_production_text` now rebuilds `exec_prods` after replacing a
+production. A runtime `p` can therefore supersede a model-body production for
+the next conflict resolution instead of leaving a stale executable entry.
+`tutorial-unit5-count-mod-request-goal-event` keeps the redefining `p` driver
+but remains ignored: matching its `module-mod-request` projection conflicts
+with `indirect-action-compilation`'s current ref.

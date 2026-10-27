@@ -31,6 +31,10 @@ fn tutorial_unit5_count_mod_request_goal_event() -> Result<(), String> {
             Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
+            Step::Command {
+                name: "p".into(),
+                args: crate::sexps(r#"START =GOAL> START =N COUNT NIL ==> *GOAL> COUNT =N"#),
+            },
             Step::Run {
                 secs: 0.05,
                 trace: true,
