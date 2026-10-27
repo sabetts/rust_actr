@@ -4913,3 +4913,16 @@ the `output-key` time and the probe still in the imaginal buffer, and
 (corpus **445 passed / 122 ignored**). The main, `no-bll`, and `with-rt`
 variants remain ignored: their summaries match to within a few milliseconds
 but the per-subject key timings are not yet exact.
+
+## 295. Triage of remaining arbitrary-Lisp stubs
+
+Retagged the 19 `arbitrary-Lisp command stub` cases and the three
+command-layer one-hit duplicates by dependency. Thirteen are recoverable from
+available sources: four base Zbrodoff cases, three one-hit cases (plus the
+three command-layer duplicates), both BST experiment summaries, the Siegler
+original-data formatter, the thorough production driver, the syllable-count
+speech extension, and the v9 activation trace. Six remain blocked because they
+load solution files from `examples/act-r-solutions.zip`, which is password
+protected: three Zbrodoff solution variants, the choice results, and both
+categorize experiments. The password is not in the repo or history (only the
+`7z a -p"XXX"` build placeholder exists), so those need an upstream copy.

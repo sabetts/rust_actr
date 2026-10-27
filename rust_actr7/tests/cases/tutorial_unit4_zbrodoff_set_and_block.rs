@@ -5,7 +5,10 @@
 use crate::Case;
 
 #[test]
-#[ignore = "arbitrary-Lisp command stub (pending translation to rust)"]
+// Full reason: task and base model sources are available; this needs a Rust
+// port of zbrodoff.lisp's trial loop, output-key callback, and summary
+// formatting.
+#[ignore = "pending: Zbrodoff task-driver port (sources available)"]
 fn tutorial_unit4_zbrodoff_set_and_block() -> Result<(), String> {
     Case::new("tutorial-unit4-zbrodoff-set-and-block")
         .seed((100, 0))
