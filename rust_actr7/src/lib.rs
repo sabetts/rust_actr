@@ -145,6 +145,16 @@ pub enum OnehitMode {
     Hands { hands: u32 },
     /// `(onehit-learning <games>)`: 20 blocks of 5 hands per game.
     Learning { games: u32 },
+    /// Python tutorial `onehit.blocks`: reset first, Python-style list output.
+    PythonBlocks {
+        seed: (u64, u64),
+        blocks: u32,
+        hands: u32,
+    },
+    /// Python tutorial `onehit.hands`: reset first, per-hand print and list.
+    PythonHands { seed: (u64, u64), hands: u32 },
+    /// Python test-model's reseeded `onehit.learning`.
+    PythonLearning { first_seed: u64, games: u32 },
 }
 
 /// One driver step from a per-case test file (or a recovered driver spec).

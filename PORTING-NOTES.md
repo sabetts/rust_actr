@@ -4962,3 +4962,12 @@ It recovers `tutorial-unit5-onehit-lisp-blocks`, `...-hands`, and
 single-float percentages. The evaluator also gained `max`/`min`, needed by the
 task's `1hit-bj-number-sims` similarity hook. Corpus:
 **453 passed / 114 ignored**.
+
+## 299. Python one-hit command refs
+
+Added the Python-tutorial entry points to `Step::Onehit`: `blocks` and
+`hands` use their test-model starting seeds (`(3 0)` and `(1 0)`), while the
+Python learning wrapper reseeds from 101 for its 50 games. They retain the
+Python list/`print` formatting, including per-hand card lines and Python float
+reprs, recovering the three command-layer one-hit cases. Corpus:
+**456 passed / 111 ignored**.

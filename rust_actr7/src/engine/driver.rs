@@ -1316,7 +1316,7 @@ impl Engine {
             OnehitMode::Blocks { blocks, hands } => {
                 let mut all = Vec::new();
                 for _ in 0..blocks {
-                    all.push(self.onehit_hands(hands)?);
+                    all.push(self.onehit_hands(hands, false)?);
                 }
                 let shown: Vec<String> = all.iter().map(Self::onehit_score_list).collect();
                 self.out_lines.push(format!(
@@ -1325,7 +1325,7 @@ impl Engine {
                 ));
             }
             OnehitMode::Hands { hands } => {
-                let scores = self.onehit_hands(hands)?;
+                let scores = self.onehit_hands(hands, false)?;
                 self.out_lines.push(format!(
                     "? (onehit-hands {hands})\n{}",
                     Self::onehit_score_list(&scores)
@@ -1338,7 +1338,7 @@ impl Engine {
                     self.set_seed((101 + i as u64 + 1, 0));
                     self.set_trace(false);
                     for block in &mut data {
-                        let scores = self.onehit_hands(5)?;
+                        let scores = self.onehit_hands(5, false)?;
                         for (total, value) in block.iter_mut().zip(scores) {
                             *total += value;
                         }
@@ -1367,15 +1367,96 @@ impl Engine {
                     list(&percentages)
                 ));
             }
+            OnehitMode::PythonBlocks {
+                seed,
+                blocks,
+                hands,
+            } => {
+                self.reset()?;
+                self.set_seed(seed);
+                self.set_trace(false);
+                let all = self.onehit_blocks(blocks, hands, false)?;
+                let shown: Vec<String> = all.iter().map(Self::onehit_python_score_list).collect();
+                self.out_lines.push(format!(
+                    ">>> onehit.blocks({blocks},{hands})\n[{}]",
+                    shown.join(", ")
+                ));
+            }
+            OnehitMode::PythonHands { seed, hands } => {
+                self.reset()?;
+                self.set_seed(seed);
+                self.set_trace(false);
+                self.out_lines
+                    .push(format!(">>> onehit.hands({hands},True)"));
+                let scores = self.onehit_hands(hands, true)?;
+                self.out_lines.push(Self::onehit_python_score_list(&scores));
+            }
+            OnehitMode::PythonLearning { first_seed, games } => {
+                let mut data = vec![[0u32; 4]; 20];
+                for i in 0..games {
+                    self.reset()?;
+                    self.set_seed((first_seed + i as u64, 0));
+                    self.set_trace(false);
+                    for block in &mut data {
+                        let scores = self.onehit_hands(5, false)?;
+                        for (total, value) in block.iter_mut().zip(scores) {
+                            *total += value;
+                        }
+                    }
+                }
+                let n = games as f64;
+                let percentages: Vec<f64> =
+                    data.iter().map(|block| block[0] as f64 / n / 5.0).collect();
+                let averages: Vec<f64> = percentages
+                    .chunks(5)
+                    .map(|chunk| chunk.iter().sum::<f64>() / 5.0)
+                    .collect();
+                self.out_lines.push(format!(
+                    ">>> onehit.learning({games})\n[{}, {}]",
+                    Self::onehit_python_float_list(&averages),
+                    Self::onehit_python_float_list(&percentages)
+                ));
+            }
         }
         Ok(())
+    }
+
+    fn onehit_python_score_list(scores: &[u32; 4]) -> String {
+        format!(
+            "[{}, {}, {}, {}]",
+            scores[0], scores[1], scores[2], scores[3]
+        )
+    }
+
+    fn onehit_python_float_list(values: &[f64]) -> String {
+        format!(
+            "[{}]",
+            values
+                .iter()
+                .map(|v| format!("{v}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    fn onehit_blocks(
+        &mut self,
+        blocks: u32,
+        hands: u32,
+        print_game: bool,
+    ) -> Result<Vec<[u32; 4]>, EngineError> {
+        let mut all = Vec::new();
+        for _ in 0..blocks {
+            all.push(self.onehit_hands(hands, print_game)?);
+        }
+        Ok(all)
     }
 
     fn onehit_score_list(scores: &[u32; 4]) -> String {
         format!("({} {} {} {})", scores[0], scores[1], scores[2], scores[3])
     }
 
-    fn onehit_hands(&mut self, hands: u32) -> Result<[u32; 4], EngineError> {
+    fn onehit_hands(&mut self, hands: u32, print_game: bool) -> Result<[u32; 4], EngineError> {
         let mut scores = [0u32; 4];
         for _ in 0..hands {
             let mut mcards = vec![self.onehit_deal(), self.onehit_deal(), self.onehit_deal()];
@@ -1393,6 +1474,21 @@ impl Engine {
             let mtot = Self::onehit_score(&mcards);
             let otot = Self::onehit_score(&ocards);
             self.onehit_show_results(&mcards, &ocards, &mres, &ores)?;
+            if print_game {
+                let cards = |cards: &[i64]| {
+                    cards
+                        .iter()
+                        .map(|card| format!("{card:>2} "))
+                        .collect::<String>()
+                };
+                self.out_lines.push(format!(
+                    "Model: {} -> {:>2} ({mres:<4})   Opponent: {}-> {:>2} ({ores:<4})",
+                    cards(&mcards),
+                    mtot,
+                    cards(&ocards),
+                    otot
+                ));
+            }
             if mres == "win" {
                 scores[0] += 1;
             }
