@@ -4882,3 +4882,9 @@ request's compiler-inserted `CMD` while keeping explicit/module `CMD` lines.
 Promoted `tutorial-unit8-simple-dynamic-retrieve-first-step-buffers`,
 `...second-step-buffer`, and `...first-step-instantiate`: corpus
 **441 passed / 126 ignored**.
+
+## 291. Dynamic retrieve second-step buffer dump
+
+Recovered the remaining `simple-dynamic-retrieve-second-step-buffers` driver
+with the same quiet `pbreak retrieve-second-step` boundary. Corpus:
+**442 passed / 125 ignored**.
