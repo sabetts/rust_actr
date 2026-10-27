@@ -2658,6 +2658,8 @@ impl Engine {
         let hist_request = self
             .record_retrieval_history
             .then(|| render_request_spec(&spec));
+        let request_lines = pprint_request_lines(&spec);
+        let mut non_matches: Vec<String> = Vec::new();
         // `(dm index, activation, base-level)` for each candidate.
         let mut acts: Vec<(usize, f32, f32)> = Vec::new();
         let mut best_a: Option<f32> = None;
@@ -2675,6 +2677,7 @@ impl Engine {
             let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
                 && req_empty.iter().all(|s| c.get(s) == Value::Nil);
             if !sig_ok {
+                non_matches.push(cname);
                 continue;
             }
             // `:recently-retrieved nil` excludes chunks retrieved within the
@@ -2714,6 +2717,7 @@ impl Engine {
                     if self.act_high() {
                         self.out(format!("Chunk {cname} does not match"));
                     }
+                    non_matches.push(cname);
                     continue;
                 }
                 if self.act_medium() {
@@ -2884,6 +2888,7 @@ impl Engine {
                 self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
             }
             a += noise;
+            self.hist[idx].last_retrieval = Some((self.time_ms, a));
             acts.push((idx, a, base));
             if self.act_low() {
                 self.out(format!("Chunk {cname} has an activation of: {}", lisp_f(a)));
@@ -2925,6 +2930,10 @@ impl Engine {
         // (`declarative-memory.lisp:1488` vs `:1515`), so the tie set's size has
         // to survive the selection below.
         let ntied = tied.len();
+        let tied_names: Vec<String> = tied
+            .iter()
+            .map(|c| c.name.clone().unwrap_or_default())
+            .collect();
         let best = match ntied {
             0 => None,
             1 => Some(tied.into_iter().next().unwrap()),
@@ -2946,6 +2955,23 @@ impl Engine {
         };
         let act = best_a.unwrap_or(0.0);
         let below = self.cfg.esc && act < rt;
+        let matches: Vec<String> = candidates
+            .iter()
+            .map(|i| self.dm[*i].name.clone().unwrap_or_default())
+            .collect();
+        let activations: HashMap<String, f32> = acts
+            .iter()
+            .map(|(i, a, _)| (self.dm[*i].name.clone().unwrap_or_default(), *a))
+            .collect();
+        self.last_request = Some(LastRequest {
+            time_ms: self.time_ms,
+            request_lines: request_lines.clone(),
+            matches,
+            non_matches: non_matches.clone(),
+            best: tied_names,
+            activations,
+            rt,
+        });
         if let Some(request) = hist_request {
             let failure = |name: &str| RetrievalChunk {
                 failure: true,
@@ -3057,6 +3083,41 @@ impl Engine {
         }
         Ok(())
     }
+}
+
+/// `pprint-chunk-spec` (`framework/chunk-spec.lisp:1164`): command-output
+/// lines for the request's slot tests. The type is not printed.
+pub(super) fn pprint_request_lines(spec: &NewChunk) -> Vec<String> {
+    let NewChunk::Spec {
+        slots, neg, rels, ..
+    } = spec
+    else {
+        return Vec::new();
+    };
+    let mut lines = Vec::new();
+    for (s, v) in neg {
+        if !s.starts_with(':') {
+            lines.push(format!(" -  {s} {}", v.show()));
+        }
+    }
+    for (s, v) in slots {
+        if !s.starts_with(':') {
+            lines.push(format!("    {s} {}", v.show()));
+        }
+    }
+    for (s, v, op) in rels {
+        if !s.starts_with(':') {
+            let op = match op {
+                crate::model::SlotOp::Gt => ">",
+                crate::model::SlotOp::Lt => "<",
+                crate::model::SlotOp::Ge => ">=",
+                crate::model::SlotOp::Le => "<=",
+                _ => "=",
+            };
+            lines.push(format!(" {op} {s} {}", v.show()));
+        }
+    }
+    lines
 }
 
 /// `printed-chunk-spec`: the retrieval request as written -- `isa TYPE` then

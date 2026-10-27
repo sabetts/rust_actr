@@ -130,6 +130,7 @@ pub const BUILTINS: &[&str] = &[
     "modules-parameters",
     "printed-parameter-details",
     "whynot",
+    "whynot-dm",
     "mp-show-queue",
     "chunk-p",
     "chunk-copied-from",
@@ -782,6 +783,23 @@ impl Session {
             // per-production/sub-symbolic forms; production params are
             // returned as NIL for now.
             "sgp" | "sdp" => {
+                // `sdp <chunk…>` prints each chunk's declarative parameter
+                // block. Keyword-only `sdp` remains the parameter getter.
+                if name == "sdp"
+                    && (args.is_empty()
+                        || args
+                            .iter()
+                            .any(|a| !a.as_str().map(|s| s.starts_with(':')).unwrap_or(false)))
+                {
+                    let names: Vec<String> = args
+                        .iter()
+                        .filter_map(|a| a.as_str().map(str::to_string))
+                        .collect();
+                    if let Some(eng) = &mut self.engine {
+                        eng.print_sdp_chunks(&names);
+                    }
+                    return Ok(vec![Json::Null]);
+                }
                 let all_keys = !args.is_empty()
                     && args
                         .iter()
@@ -2099,6 +2117,16 @@ impl Session {
                     .unwrap_or_default();
                 // `whynot-fct` returns the conflict set.
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
+            }
+            "whynot-dm" => {
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                if let Some(eng) = &mut self.engine {
+                    eng.print_whynot_dm(&names);
+                }
+                Ok(vec![Json::Null])
             }
             "print-dm-finsts" => {
                 if let Some(eng) = &mut self.engine {

@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: `whynot-dm`.
-// The ref dumps each candidate's activation block and match/failure reason;
-// the engine only has production-level `whynot`.
-#[ignore = "missing-command: whynot-dm"]
 fn tutorial_unit5modeling_v1_whynot_dm() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v1-whynot-dm")
         .models(&["test-models;models;declarative-issues-v1.lisp"])

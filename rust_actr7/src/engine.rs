@@ -655,6 +655,19 @@ pub struct RetrievalRecord {
     pub chunks: Vec<RetrievalChunk>,
 }
 
+/// Snapshot of the most recent retrieval request, for `whynot-dm`
+/// (`commands/dm-commands.lisp:1383`).
+#[derive(Debug, Clone)]
+struct LastRequest {
+    time_ms: i64,
+    request_lines: Vec<String>,
+    matches: Vec<String>,
+    non_matches: Vec<String>,
+    best: Vec<String>,
+    activations: HashMap<String, f32>,
+    rt: f32,
+}
+
 /// A candidate in a [`RetrievalRecord`]. A `:retrieval-failure` sentinel is a
 /// chunk with `failure` set and empty text/params/trace.
 #[derive(Debug, Clone)]
@@ -1510,6 +1523,10 @@ struct History {
     /// (`set-bl` else-branch, dm-commands.lisp:623). Used verbatim as the
     /// base level; `None` falls back to `:blc`.
     fixed_base: Option<f32>,
+    /// `chunk-retrieval-activation` / `chunk-retrieval-time`
+    /// (`declarative-memory.lisp:1376`): set for every candidate in the last
+    /// retrieval request, not only the winner.
+    last_retrieval: Option<(i64, f32)>,
 }
 
 impl Buffer {
@@ -2157,6 +2174,9 @@ pub struct Engine {
     /// `retrieval-history` records, in request order (`record-history
     /// "retrieval-history"`); cleared on reset.
     retrieval_history: Vec<RetrievalRecord>,
+    /// Last retrieval request, retained even when retrieval-history is off
+    /// (`dm-last-request`, used by `whynot-dm`).
+    last_request: Option<LastRequest>,
     /// Whether `retrieval-history` recording is enabled (`record-history`).
     record_retrieval_history: bool,
     /// `buffer-history` state (`record-history "buffer-history"`).
@@ -2619,6 +2639,7 @@ impl Engine {
             disabled_prods: HashSet::new(),
             last_conflict_set: Vec::new(),
             retrieval_history: Vec::new(),
+            last_request: None,
             record_retrieval_history: false,
             buffer_history: BufferHistory {
                 last_time: -1,
@@ -3171,6 +3192,7 @@ impl Engine {
         // The retrieval-history module clears on reset
         // (`reset-dm-history-module`).
         self.retrieval_history.clear();
+        self.last_request = None;
         // `reset-buffer-history-module`: clear the data and disable recording.
         self.buffer_history = BufferHistory {
             last_time: -1,
@@ -3228,6 +3250,7 @@ impl Engine {
                 refs: vec![0],
                 count: 1,
                 fixed_base: None,
+                last_retrieval: None,
             };
             dm_len
         ];
@@ -4166,6 +4189,7 @@ impl Engine {
                     refs: vec![now],
                     count: 1,
                     fixed_base: None,
+                    last_retrieval: None,
                 });
                 // New DM chunk: update spreading fans like
                 // `add-chunk-into-dm` (self fan-out plus each chunk-valued

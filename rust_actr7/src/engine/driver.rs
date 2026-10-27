@@ -462,6 +462,7 @@ impl Engine {
             refs: vec![0],
             count: 1,
             fixed_base: None,
+            last_retrieval: None,
         });
         self.named.insert(name.clone(), inst);
         self.chunk_names.insert(name.clone());

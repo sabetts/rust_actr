@@ -1,5 +1,6 @@
 //! Trace/debug output, parameter setters, visicon and buffer dumps.
 use super::compilation::bold_values;
+use super::dm::bl_equation;
 use super::*;
 
 /// The implicit queries `pp` prints for a production: one `?buffer> state
@@ -352,6 +353,230 @@ impl Engine {
             names.push(self.push_chunk(&c));
         }
         names
+    }
+
+    /// `sdp` with chunk names (`commands/dm-commands.lisp:667`). Prints the
+    /// full declarative parameter block for each named DM chunk.
+    pub fn print_sdp_chunks(&mut self, names: &[String]) -> Vec<String> {
+        let idxs: Vec<usize> = if names.is_empty() {
+            self.dm_alist_order()
+        } else {
+            names
+                .iter()
+                .filter_map(|n| {
+                    let up = n.to_uppercase();
+                    self.dm
+                        .iter()
+                        .position(|c| c.name.as_deref() == Some(up.as_str()))
+                })
+                .collect()
+        };
+        for idx in idxs {
+            self.push_sdp_chunk(idx);
+        }
+        names.to_vec()
+    }
+
+    /// `whynot-dm` (`commands/dm-commands.lisp:1383`): report the last
+    /// retrieval request, then each named chunk's declarative parameters and
+    /// why it was or was not retrieved.
+    pub fn print_whynot_dm(&mut self, names: &[String]) {
+        let Some(last) = self.last_request.clone() else {
+            self.out_lines
+                .push("No retrieval request has been made.".to_string());
+            return;
+        };
+        self.out_lines.push(format!(
+            "Retrieval request made at time {}:",
+            fmt_secs(last.time_ms)
+        ));
+        self.out_lines.extend(last.request_lines);
+        let wanted: Vec<String> = if names.is_empty() {
+            self.dm_alist_order()
+                .into_iter()
+                .filter_map(|i| self.dm[i].name.clone())
+                .collect()
+        } else {
+            names.iter().map(|n| n.to_uppercase()).collect()
+        };
+        for name in wanted {
+            self.out_lines.push(String::new());
+            let Some(idx) = self
+                .dm
+                .iter()
+                .position(|c| c.name.as_deref() == Some(name.as_str()))
+            else {
+                self.out_lines.push(format!(
+                    "Chunk {name} is not in the model's declarative memory."
+                ));
+                continue;
+            };
+            let c = self.dm[idx].clone();
+            self.push_chunk(&c);
+            self.push_sdp_chunk(idx);
+            self.out_lines.push(String::new());
+            if last.matches.iter().any(|m| m == &name) {
+                self.out_lines.push(format!("{name} matched the request"));
+                if self.cfg.esc {
+                    let activation = last.activations.get(&name).copied().unwrap_or(0.0);
+                    if activation >= last.rt {
+                        if last.best.iter().any(|b| b == &name) {
+                            self.out_lines
+                                .push(format!("{name} was the chunk chosen to be retrieved"));
+                        } else {
+                            self.out_lines
+                                .push(format!("{name} did not have the highest activation"));
+                        }
+                    } else {
+                        self.out_lines.push(format!(
+                            "{name} was below the retrieval threshold {}",
+                            lisp_f(last.rt)
+                        ));
+                    }
+                } else if last.best.iter().any(|b| b == &name) {
+                    self.out_lines
+                        .push(format!("{name} was the chunk chosen to be retrieved"));
+                } else {
+                    self.out_lines.push(format!(
+                        "{name} was not chosen as the chunk to be retrieved"
+                    ));
+                }
+            } else if last.non_matches.iter().any(|m| m == &name) {
+                self.out_lines
+                    .push(format!("{name} did not match the request"));
+            } else {
+                self.out_lines.push(format!("{name} was not considered."));
+            }
+        }
+    }
+
+    /// The activation/base/spread triple for `sdp`'s `isa chunk` request.
+    /// `compute-activation` draws one activation-noise sample and uses no
+    /// partial matching because the request has no slot tests.
+    fn sdp_activation(&mut self, idx: usize) -> (f32, f32, f32) {
+        let (refs, creation, count, fixed_base) = {
+            let h = &self.hist[idx];
+            (h.refs.clone(), h.creation_ms, h.count, h.fixed_base)
+        };
+        let base = match self.cfg.bll {
+            Some(bll) if count > 0 => {
+                self.cfg.blc
+                    + bl_equation(
+                        self.time_ms,
+                        &refs,
+                        count as f32,
+                        creation,
+                        bll,
+                        &self.cfg.ol,
+                        self.cfg.act_scale,
+                    )
+            }
+            Some(_) => -999999.0,
+            None => fixed_base.unwrap_or(self.cfg.blc),
+        };
+        let name = self.dm[idx].name.clone().unwrap_or_default();
+        let old_act = self.cfg.act;
+        self.cfg.act = None;
+        let spread = if name.is_empty() {
+            0.0
+        } else {
+            self.spreading_activation(&name, self.cfg.mas)
+        };
+        self.cfg.act = old_act;
+        let noise = match self.cfg.ans {
+            Some(s) => self.rng.borrow_mut().noise(s),
+            None => 0.0,
+        };
+        (base, spread, base + spread + noise)
+    }
+
+    fn sdp_sjis(&mut self, idx: usize) -> Vec<(String, f32)> {
+        let c = self.dm[idx].clone();
+        let name = c.name.clone().unwrap_or_default();
+        let mas = self.cfg.mas.unwrap_or(0.0);
+        let mut names = vec![name.clone()];
+        for (_, v) in &c.slots {
+            if let Some(j) = self.chunk_name_of(v) {
+                if !names.contains(&j) {
+                    names.push(j);
+                }
+            }
+        }
+        names
+            .into_iter()
+            .map(|j| {
+                let sji = self.compute_sji(&j, &name, mas);
+                (j, sji)
+            })
+            .collect()
+    }
+
+    fn sdp_similarities(&self, name: &str) -> Vec<(String, f32)> {
+        let mut sims: Vec<(String, f32)> = self
+            .sims
+            .iter()
+            .filter(|((a, _), _)| a == name)
+            .map(|((_, b), v)| (b.clone(), *v))
+            .collect();
+        sims.sort_by(|a, b| a.0.cmp(&b.0));
+        if !sims.iter().any(|(n, _)| n == name) {
+            sims.push((name.to_string(), self.cfg.ms));
+        }
+        sims
+    }
+
+    fn push_sdp_chunk(&mut self, idx: usize) {
+        let name = self.dm[idx].name.clone().unwrap_or_default();
+        let (base, spread, activation) = self.sdp_activation(idx);
+        self.out_lines
+            .push(format!("Declarative parameters for chunk {name}:"));
+        if !self.cfg.esc {
+            return;
+        }
+        self.out_lines
+            .push(format!(" :Activation {activation:>6.3}"));
+        self.out_lines.push(" :Permanent-Noise  0.000".to_string());
+        self.out_lines.push(format!(" :Base-Level {base:>6.3}"));
+        if self.cfg.bll.is_some() {
+            let h = self.hist[idx].clone();
+            self.out_lines
+                .push(format!(" :Creation-Time {}", fmt_secs(h.creation_ms)));
+            if !matches!(self.cfg.ol, Ol::Off) {
+                self.out_lines
+                    .push(format!(" :Reference-Count  {}", h.count));
+            }
+            if !matches!(self.cfg.ol, Ol::On) {
+                let refs: Vec<String> = h.refs.iter().map(|r| fmt_secs(*r)).collect();
+                self.out_lines
+                    .push(format!(" :Reference-List ({})", refs.join(" ")));
+            }
+        }
+        if self.cfg.mas.is_some() {
+            self.out_lines
+                .push(format!(" :Source-Spread {spread:>6.3}"));
+            let sjis = self.sdp_sjis(idx);
+            let body = sjis
+                .iter()
+                .map(|(n, v)| format!("({n} {})", lisp_f(*v)))
+                .collect::<Vec<_>>()
+                .join(" ");
+            self.out_lines.push(format!(" :Sjis ({body})"));
+        }
+        if self.cfg.mp.is_some() {
+            let sims = self.sdp_similarities(&name);
+            let body = sims
+                .iter()
+                .map(|(n, v)| format!("({n} {})", lisp_f(*v)))
+                .collect::<Vec<_>>()
+                .join(" ");
+            self.out_lines.push(format!(" :Similarities ({body})"));
+        }
+        if let Some((time, activation)) = self.hist[idx].last_retrieval {
+            self.out_lines
+                .push(format!(" :Last-Retrieval-Activation {activation:>6.3}"));
+            self.out_lines
+                .push(format!(" :Last-Retrieval-Time  {}", fmt_secs(time)));
+        }
     }
 
     /// Set the buffers the BOLD predictor traces (`record-history`'s names).

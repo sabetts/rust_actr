@@ -5021,3 +5021,18 @@ The missing debug printers are the clearest quick wins: they account for nine
 cases and are independent of model timing. Run
 `python rust_actr7/tools/list-ignored.py --counts` to see the new reason
 distribution; the generic reason count is zero.
+
+## 303. Declarative introspection: sdp and whynot-dm
+
+Added the chunk-name form of `sdp` and the `whynot-dm` command. Retrieval now
+retains a `LastRequest` snapshot (time, printed request slots, matches,
+non-matches, best set, activations, threshold), and each candidate stores its
+`last_retrieval` activation/time as ACT-R does. `sdp <chunk...>` recomputes the
+`isa chunk` activation (base + spreading + one noise draw, no partial matching)
+and prints the full block: activation, permanent noise, base level, creation
+time/reference history, source spread, Sjis, similarities, and last-retrieval
+fields. `whynot-dm` reuses that block and explains each named chunk's match,
+best-set, and threshold outcome.
+
+Recovered `tutorial-unit5modeling-v1-sdp`, `...-v10-sdp`, and
+`...-v1-whynot-dm`. Corpus: **461 passed / 106 ignored**.

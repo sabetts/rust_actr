@@ -505,6 +505,7 @@ impl Engine {
             refs: vec![self.time_ms],
             count: 1,
             fixed_base: None,
+            last_retrieval: None,
         });
         *self.fan_out.entry(name.clone()).or_insert(0) += 1;
         let mut counts: HashMap<String, u32> = HashMap::new();
