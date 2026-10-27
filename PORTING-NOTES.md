@@ -4984,3 +4984,10 @@ emits the original correlation/table/utility format. Recovered
 The unit 8 PPM variant remains ignored: the same driver always selects the
 over strategy there, so its `bst-compute-difference` imaginal action and PPM
 similarities still need investigation.
+
+## 301. Syllable-count extension test
+
+Recovered `test-syllable-count` with a model-free translation of the
+extension's lookup rules: explicit articulation times, table counts, the
+char-per-syllable fallback, and split-vocal-string spacing. Corpus:
+**458 passed / 109 ignored**.
