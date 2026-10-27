@@ -136,6 +136,15 @@ pub enum ZbrodoffMode {
     StartingResults,
 }
 
+/// Building-sticks experiment variants.
+#[derive(Debug, Clone, Copy)]
+pub enum BstMode {
+    /// Unit 6 model: four strategy-choice utilities.
+    Experiment,
+    /// Unit 8 PPM model: two strategy-choice utilities.
+    Ppm,
+}
+
 /// One-hit blackjack task entry points.
 #[derive(Debug, Clone, Copy)]
 pub enum OnehitMode {
@@ -249,6 +258,8 @@ pub enum Step {
     Zbrodoff(ZbrodoffMode),
     /// One-hit blackjack task driver.
     Onehit(OnehitMode),
+    /// Building-sticks experiment driver.
+    Bst(BstMode),
     /// Start collecting the per-run response times/answers for
     /// `fan-no-pm`'s `fan-experiment`.
     FanCollect,
@@ -443,6 +454,7 @@ pub fn run_model_steps_with_hook(
             Step::AlDriver => eng.al_driver()?,
             Step::Zbrodoff(mode) => eng.zbrodoff_driver(*mode)?,
             Step::Onehit(mode) => eng.onehit_driver(*mode)?,
+            Step::Bst(mode) => eng.bst_driver(*mode)?,
             Step::FanCollect => eng.fan_collect_start(),
             Step::FanSummary => eng.fan_no_pm_summary(),
             Step::PairedCollect => eng.paired_collect_start(),

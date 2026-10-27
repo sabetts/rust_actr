@@ -894,6 +894,11 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .onehit_driver(*mode)
             .map_err(|e| e.to_string())?,
+        Step::Bst(mode) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .bst_driver(*mode)
+            .map_err(|e| e.to_string())?,
         Step::FanCollect => session
             .engine_mut()
             .ok_or_else(no_model)?

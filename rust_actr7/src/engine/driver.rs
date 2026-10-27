@@ -3,8 +3,9 @@ use super::compilation::{show_pat, slot_disp};
 use super::dm::{al_history, al_needed_refs, bl_equation, exp_coerced, log_coerced};
 use super::rhs::new_chunk;
 use super::*;
+use crate::json::Json;
 use crate::sexpr::Sexp;
-use crate::{OnehitMode, ZbrodoffMode};
+use crate::{BstMode, OnehitMode, ZbrodoffMode};
 
 #[derive(Clone)]
 struct ZbrodoffTrial {
@@ -1650,6 +1651,212 @@ impl Engine {
         let slots = self.onehit_game_slots("results", mcards, ocards, Some(mres), Some(ores));
         self.onehit_set_goal(&slots)?;
         self.run_full_time(10.0)
+    }
+
+    /// Building-sticks experiment (`bst.lisp` / `bst-ppm.lisp`): 100 model
+    /// runs over the 15 experimental stick triples.
+    pub fn bst_driver(&mut self, mode: BstMode) -> Result<(), EngineError> {
+        const STIMS: [(i64, i64, i64, i64); 15] = [
+            (15, 250, 55, 125),
+            (10, 155, 22, 101),
+            (14, 200, 37, 112),
+            (22, 200, 32, 114),
+            (10, 243, 37, 159),
+            (22, 175, 40, 73),
+            (15, 250, 49, 137),
+            (10, 179, 32, 105),
+            (20, 213, 42, 104),
+            (14, 237, 51, 116),
+            (12, 149, 30, 72),
+            (14, 237, 51, 121),
+            (22, 200, 32, 114),
+            (14, 200, 37, 112),
+            (15, 250, 55, 125),
+        ];
+        const DATA: [f64; 15] = [
+            20.0, 67.0, 20.0, 47.0, 87.0, 20.0, 80.0, 93.0, 83.0, 13.0, 29.0, 27.0, 80.0, 73.0,
+            53.0,
+        ];
+        let names: &[&str] = match mode {
+            BstMode::Experiment => &["DECIDE-OVER", "DECIDE-UNDER", "FORCE-OVER", "FORCE-UNDER"],
+            BstMode::Ppm => &["DECIDE-OVER", "DECIDE-UNDER"],
+        };
+        let runs = 100u32;
+        let mut counts = [0u32; 15];
+        let mut utilities = vec![0.0f64; names.len()];
+        for run in 0..runs {
+            self.reset()?;
+            self.set_seed((101 + run as u64, 0));
+            self.set_trace(false);
+            for (i, &(a, b, c, goal)) in STIMS.iter().enumerate() {
+                let choice = self.bst_trial(a, b, c, goal)?;
+                if choice.as_deref() == Some("over") {
+                    counts[i] += 1;
+                }
+            }
+            for (total, name) in utilities.iter_mut().zip(names) {
+                *total += self.bst_utility(name);
+            }
+        }
+        let n = runs as f64;
+        let percentages: Vec<f64> = counts.iter().map(|v| *v as f64 * 100.0 / n).collect();
+        let mut sum_r = 0.0;
+        let mut sum_d = 0.0;
+        let mut sum_r2 = 0.0;
+        let mut sum_d2 = 0.0;
+        let mut sum_rd = 0.0;
+        for (predicted, actual) in percentages.iter().zip(DATA.iter()) {
+            sum_r += predicted;
+            sum_d += actual;
+            sum_r2 += predicted * predicted;
+            sum_d2 += actual * actual;
+            sum_rd += predicted * actual;
+        }
+        let m = DATA.len() as f64;
+        let avg_r = sum_r / m;
+        let avg_d = sum_d / m;
+        let corr = (sum_rd / m - avg_r * avg_d)
+            / ((sum_r2 / m - avg_r * avg_r).sqrt() * (sum_d2 / m - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / m).sqrt();
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines.push(String::new());
+        let header: String = (1..=15).map(|i| format!("{i:<6}")).collect();
+        self.out_lines.push(format!("Trial {header}"));
+        let values: String = percentages.iter().map(|v| format!("{v:6.1}")).collect();
+        self.out_lines.push(format!("  {values}"));
+        self.out_lines.push(String::new());
+        for (name, total) in names.iter().zip(utilities) {
+            self.out_lines
+                .push(format!("{name:<12}: {:6.4}", total / n));
+        }
+        Ok(())
+    }
+
+    fn bst_utility(&self, name: &str) -> f64 {
+        match self.prod_param(name, ":U") {
+            Some(Sexp::Float(x)) => x,
+            Some(Sexp::Int(i)) => i as f64,
+            _ => 0.0,
+        }
+    }
+
+    fn bst_trial(
+        &mut self,
+        a: i64,
+        b: i64,
+        c: i64,
+        target: i64,
+    ) -> Result<Option<String>, EngineError> {
+        self.open_window(300, 300);
+        let button = |text: &str, y: i64, width: i64, action: Option<(String, Vec<Json>)>| {
+            (text.to_string(), y, width, action)
+        };
+        for (text, y, width, action) in [
+            button(
+                "A",
+                23,
+                40,
+                Some((
+                    "bst-button-pressed".into(),
+                    vec![Json::Int(a), Json::Str("under".into())],
+                )),
+            ),
+            button(
+                "B",
+                48,
+                40,
+                Some((
+                    "bst-button-pressed".into(),
+                    vec![Json::Int(b), Json::Str("over".into())],
+                )),
+            ),
+            button(
+                "C",
+                73,
+                40,
+                Some((
+                    "bst-button-pressed".into(),
+                    vec![Json::Int(c), Json::Str("under".into())],
+                )),
+            ),
+            button(
+                "Reset",
+                123,
+                65,
+                Some(("bst-reset-button-pressed".into(), Vec::new())),
+            ),
+        ] {
+            self.add_window_button(&text, 5, y, width, 24, "gray", action);
+        }
+        self.add_window_line((75, 35), (75 + a, 35), "black");
+        self.add_window_line((75, 60), (75 + b, 60), "black");
+        self.add_window_line((75, 85), (75 + c, 85), "black");
+        self.add_window_line((75, 110), (75 + target, 110), "green");
+        self.zz_start_hand_at_mouse();
+        self.last_output_key = None;
+        let mut current = 0i64;
+        let mut done = false;
+        let mut choice = None;
+        let mut current_line = None;
+        let start = self.time_ms;
+        let limit = start + 60_000;
+        while self.time_ms < limit {
+            if !self.step_once()? {
+                break;
+            }
+            for (cmd, args) in self.take_pending_device_actions() {
+                if cmd == "bst-button-pressed" {
+                    let len = match args.first() {
+                        Some(Json::Int(i)) => *i,
+                        _ => continue,
+                    };
+                    let dir = match args.get(1) {
+                        Some(Json::Str(s)) => s.clone(),
+                        _ => continue,
+                    };
+                    if choice.is_none() {
+                        choice = Some(dir);
+                    }
+                    if !done {
+                        if current > target {
+                            current -= len;
+                        } else {
+                            current += len;
+                        }
+                        self.bst_update_line(target, current, &mut current_line, &mut done);
+                    }
+                } else if cmd == "bst-reset-button-pressed" && !done {
+                    current = 0;
+                    self.bst_update_line(target, current, &mut current_line, &mut done);
+                }
+            }
+        }
+        Ok(choice)
+    }
+
+    fn bst_update_line(
+        &mut self,
+        target: i64,
+        current: i64,
+        current_line: &mut Option<String>,
+        done: &mut bool,
+    ) {
+        if current == target {
+            *done = true;
+            if let Some(key) = current_line {
+                self.modify_window_line(key, (75, 135), (75 + target, 135), None);
+            }
+            self.add_window_text("Done", 180, 200, 75, 20, 12);
+        } else if current == 0 {
+            if let Some(key) = current_line.take() {
+                self.remove_window_items(&[key]);
+            }
+        } else if let Some(key) = current_line {
+            self.modify_window_line(key, (75, 135), (75 + current, 135), None);
+        } else {
+            *current_line = Some(self.add_window_line((75, 135), (75 + current, 135), "blue"));
+        }
     }
 
     /// Start `fan-no-pm`'s `fan-experiment` result recording. The task's

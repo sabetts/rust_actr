@@ -4971,3 +4971,16 @@ Python learning wrapper reseeds from 101 for its 50 games. They retain the
 Python list/`print` formatting, including per-hand card lines and Python float
 reprs, recovering the three command-layer one-hit cases. Corpus:
 **456 passed / 111 ignored**.
+
+## 300. Unit 6 building-sticks experiment
+
+Added `Step::Bst` with a live building-sticks window: buttons and stick lines,
+the model's mouse clicks and reset actions, the current-line redraw, and the
+`done` prompt. The unit 6 driver runs the 15 experimental stimuli for 100
+reseeded runs, accumulates over-strategy choices and production utilities, and
+emits the original correlation/table/utility format. Recovered
+`tutorial-unit6-bst-experiment-data` (corpus **457 passed / 110 ignored**).
+
+The unit 8 PPM variant remains ignored: the same driver always selects the
+over strategy there, so its `bst-compute-difference` imaginal action and PPM
+similarities still need investigation.
