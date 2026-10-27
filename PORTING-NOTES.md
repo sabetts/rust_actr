@@ -5113,3 +5113,12 @@ remains ignored because applying the runtime flag changes the v10 refs'
 activation/naming, which conflict.
 
 Corpus: **470 passed / 97 ignored**.
+
+## 309. Pcomp utility divergence is cached utility noise, not `:u`
+
+The pcomp recreated-compiled-production refs print the correct base `:u`
+(e.g. 1.999 or 2.857), but the adjacent cached `:utility` differs
+(1.315 vs 1.901, 2.376 vs -2.139). The update formula itself is correct; the
+difference is the conflict-resolution utility-noise draw/cache for the
+recreated production. The pcomp selection/timing cluster needs an RNG/draw
+order audit before its utility refs can be promoted.
