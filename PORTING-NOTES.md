@@ -4845,3 +4845,21 @@ active trace flag, and reset temporarily evaluates warnings under the model
 body's `:v` before restoring the driver's trace state. This keeps engine-path
 cases such as `associative-learning` on their existing trace contract while
 suppressing model load/reset warnings for silent models.
+
+## 288. Copied chunk values compare by source; Siegler digits
+
+Chunk-valued slots held a buffer copy name (`ONE-0`) while the DM chunk used
+the source name (`ONE`). Exact retrieval used raw `Value` equality and partial
+matching's similarity used it too, so copied values never matched their source
+and explicit `set-similarities` entries were missed. `value_eq` now follows
+`copy_source` as well as `chunk_alias`, and retrieval/similarity use it
+consistently. This is what lets the Siegler model retrieve its `F` facts from
+copied imaginal addends and apply the number similarities.
+
+Added a scripted `SieglerDriver` (digit sounds, per-trial seeds, response
+matrix, correlation/RMSD) and flattened nested matrices in the
+`correlation`/`mean-deviation` commands. Promoted
+`tutorial-unit5code-siegler-experiment-esc-nil`, moving the corpus to **437
+passed / 130 ignored**. The other Siegler experiment refs remain ignored: the
+response distributions are close but not yet exact (e.g. 1+1 expects
+`.07/.80/.12`, the driver currently produces `.15/.77/.06`).

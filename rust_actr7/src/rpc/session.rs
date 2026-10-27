@@ -3014,13 +3014,27 @@ fn flat_slots(j: &Json) -> Vec<(String, Sexp)> {
     out
 }
 
-/// Coerce a JSON list (or scalar) into `f64`s for the stats commands.
+/// Coerce a JSON list (or scalar) into `f64`s for the stats commands. Nested
+/// matrices (the Siegler response tables) flatten row-major, matching
+/// `numbers-list` (`act-gui-interface.lisp`).
 fn num_list(j: Option<&Json>) -> Vec<f64> {
-    match j {
-        Some(Json::Arr(a)) => a.iter().filter_map(|x| x.as_f64()).collect(),
-        Some(other) => other.as_f64().map(|v| vec![v]).unwrap_or_default(),
-        None => Vec::new(),
+    fn collect(j: &Json, out: &mut Vec<f64>) {
+        match j {
+            Json::Arr(a) => {
+                for x in a {
+                    collect(x, out);
+                }
+            }
+            Json::Int(i) => out.push(*i as f64),
+            Json::Float(x) => out.push(*x),
+            _ => {}
+        }
     }
+    let mut out = Vec::new();
+    if let Some(j) = j {
+        collect(j, &mut out);
+    }
+    out
 }
 
 /// `correlation` (`commands/misc-cmds.lisp`): Pearson's r over two lists.

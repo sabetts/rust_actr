@@ -2298,26 +2298,27 @@ impl Engine {
             }
         }
         let a_name = match a {
-            Value::Sym(s) => Some(s.as_str()),
+            Value::Sym(s) => Some(self.resolve_alias(s)),
             _ => None,
         };
         let b_name = match b {
-            Value::Sym(s) => Some(s.as_str()),
+            Value::Sym(s) => Some(self.resolve_alias(s)),
             _ => None,
         };
         // Explicit similarities are keyed by the (symbol) values, not by DM
         // membership: ACT-R registers slot values as undefined chunks, so
-        // `set-similarities (pink red -.4)` applies to plain symbols.
+        // `set-similarities (pink red -.4)` applies to plain symbols. Buffer
+        // copies (`ONE-0`) compare as their source chunk (`ONE`).
         if let (Some(x), Some(y)) = (a_name, b_name) {
             if let Some(v) = self
                 .sims
-                .get(&(x.to_string(), y.to_string()))
-                .or_else(|| self.sims.get(&(y.to_string(), x.to_string())))
+                .get(&(x.clone(), y.clone()))
+                .or_else(|| self.sims.get(&(y, x)))
             {
                 return *v;
             }
         }
-        if a == b {
+        if self.value_eq(a, b) {
             self.cfg.ms
         } else {
             self.cfg.md
@@ -2659,7 +2660,7 @@ impl Engine {
                     if s.starts_with(':') {
                         continue;
                     }
-                    if c.get(s) != *v {
+                    if !self.value_eq(&c.get(s), v) {
                         matched = false;
                         break;
                     }
@@ -2669,7 +2670,7 @@ impl Engine {
                         if s.starts_with(':') {
                             continue;
                         }
-                        if c.get(s) == *v {
+                        if self.value_eq(&c.get(s), v) {
                             matched = false;
                             break;
                         }

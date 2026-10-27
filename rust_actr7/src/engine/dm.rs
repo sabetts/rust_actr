@@ -766,6 +766,13 @@ impl Engine {
     pub(super) fn resolve_alias(&self, n: &str) -> String {
         let mut cur = n.to_string();
         for _ in 0..8 {
+            match self.copy_source.get(&cur) {
+                Some(next) if *next != cur => {
+                    cur = next.clone();
+                    continue;
+                }
+                _ => {}
+            }
             match self.chunk_alias.get(&cur) {
                 Some(next) if *next != cur => cur = next.clone(),
                 _ => break,

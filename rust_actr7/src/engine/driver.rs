@@ -1045,6 +1045,146 @@ impl Engine {
         }
     }
 
+    /// `siegler-experiment` (`tutorial/lisp/siegler.lisp`): run the fixed
+    /// addition questions, collect the model's spoken answers, and print the
+    /// response matrix plus correlation/RMSD against the experiment data.
+    #[allow(clippy::too_many_arguments)]
+    pub fn siegler_driver(
+        &mut self,
+        first_seed: u64,
+        sets: u32,
+        rt: Option<f32>,
+        mp: Option<f32>,
+        ans: Option<f32>,
+        esc: Option<bool>,
+        fact_base: Option<f32>,
+        all_base: Option<f32>,
+    ) -> Result<(), EngineError> {
+        const PAIRS: [(i64, i64); 6] = [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)];
+        const WORDS: [&str; 9] = [
+            "ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT",
+        ];
+        let mut counts = [[0u32; 10]; 6];
+        let mut seed = first_seed;
+        for _ in 0..sets {
+            for (row, &(a, b)) in PAIRS.iter().enumerate() {
+                self.reset()?;
+                self.set_seed((seed, 0));
+                seed += 1;
+                if let Some(v) = rt {
+                    self.apply_sgp(":RT", &Sexp::Float(v as f64))?;
+                }
+                if let Some(v) = mp {
+                    self.apply_sgp(":MP", &Sexp::Float(v as f64))?;
+                }
+                if let Some(v) = ans {
+                    self.apply_sgp(":ANS", &Sexp::Float(v as f64))?;
+                }
+                if let Some(v) = esc {
+                    self.apply_sgp(":ESC", &Sexp::Sym(if v { "T" } else { "NIL" }.to_string()))?;
+                }
+                if let Some(level) = all_base {
+                    self.siegler_set_all_base(level);
+                }
+                if let Some(level) = fact_base {
+                    self.siegler_set_fact_base(level);
+                }
+                self.trace_on = false;
+                self.new_digit_sound(a, self.time_ms);
+                self.new_digit_sound(b, self.time_ms + 750);
+                self.run_secs(30.0)?;
+                let response = self
+                    .last_speech
+                    .as_ref()
+                    .map(|(_, text)| text.to_ascii_uppercase());
+                let col = response
+                    .as_deref()
+                    .and_then(|r| WORDS.iter().position(|w| *w == r))
+                    .unwrap_or(9);
+                counts[row][col] += 1;
+            }
+        }
+        let n = sets as f64;
+        let mut results = [[0.0f64; 10]; 6];
+        for (row, out) in results.iter_mut().enumerate() {
+            for (col, slot) in out.iter_mut().enumerate() {
+                *slot = counts[row][col] as f64 / n;
+            }
+        }
+        self.siegler_results(&results);
+        Ok(())
+    }
+
+    fn siegler_set_all_base(&mut self, level: f32) {
+        let n = level.max(0.0).round() as usize;
+        for h in &mut self.hist {
+            h.creation_ms = 0;
+            h.count = n;
+            h.fixed_base = Some(level);
+            h.refs.clear();
+        }
+    }
+
+    fn siegler_set_fact_base(&mut self, level: f32) {
+        let n = level.max(0.0).round() as usize;
+        for name in [
+            "F00", "F01", "F02", "F03", "F04", "F10", "F11", "F12", "F13", "F20", "F21", "F22",
+            "F30", "F31", "F40",
+        ] {
+            if let Some(i) = self.dm.iter().position(|c| c.name.as_deref() == Some(name)) {
+                self.hist[i].creation_ms = 0;
+                self.hist[i].count = n;
+                self.hist[i].fixed_base = Some(level);
+                self.hist[i].refs.clear();
+            }
+        }
+    }
+
+    fn siegler_results(&mut self, results: &[[f64; 10]; 6]) {
+        let data = [
+            [0.0, 0.05, 0.86, 0.0, 0.02, 0.0, 0.02, 0.0, 0.0, 0.06],
+            [0.0, 0.04, 0.07, 0.75, 0.04, 0.0, 0.02, 0.0, 0.0, 0.09],
+            [0.0, 0.02, 0.0, 0.10, 0.75, 0.05, 0.01, 0.03, 0.0, 0.06],
+            [0.02, 0.0, 0.04, 0.05, 0.80, 0.04, 0.0, 0.05, 0.0, 0.0],
+            [0.0, 0.0, 0.07, 0.09, 0.25, 0.45, 0.08, 0.01, 0.01, 0.06],
+            [0.04, 0.0, 0.0, 0.05, 0.21, 0.09, 0.48, 0.0, 0.02, 0.11],
+        ];
+        let mut sum_r = 0.0;
+        let mut sum_d = 0.0;
+        let mut sum_r2 = 0.0;
+        let mut sum_d2 = 0.0;
+        let mut sum_rd = 0.0;
+        let mut count = 0.0;
+        for (r, d) in results.iter().zip(data.iter()) {
+            for (a, b) in r.iter().zip(d.iter()) {
+                sum_r += *a;
+                sum_d += *b;
+                sum_r2 += *a * *a;
+                sum_d2 += *b * *b;
+                sum_rd += *a * *b;
+                count += 1.0;
+            }
+        }
+        let avg_r = sum_r / count;
+        let avg_d = sum_d / count;
+        let corr = (sum_rd / count - avg_r * avg_d)
+            / ((sum_r2 / count - avg_r * avg_r).sqrt() * (sum_d2 / count - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / count).sqrt();
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines
+            .push("       0     1     2     3     4     5     6     7     8   Other".to_string());
+        for (i, q) in ["1+1", "1+2", "1+3", "2+2", "2+3", "3+3"]
+            .iter()
+            .enumerate()
+        {
+            let mut line = (*q).to_string();
+            for v in results[i] {
+                line.push_str(&format!("{v:6.2}"));
+            }
+            self.out_lines.push(line);
+        }
+    }
     /// `(goal-focus-fct (car (define-chunks-fct '(...))))`: define a named
     /// chunk (`{CTYPE}{n}`) and focus it.
     pub(super) fn zz_goal_focus(

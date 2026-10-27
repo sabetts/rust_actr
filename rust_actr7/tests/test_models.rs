@@ -880,6 +880,29 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .al_driver()
             .map_err(|e| e.to_string())?,
+        Step::SieglerDriver {
+            first_seed,
+            sets,
+            rt,
+            mp,
+            ans,
+            esc,
+            fact_base,
+            all_base,
+        } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .siegler_driver(
+                *first_seed,
+                *sets,
+                *rt,
+                *mp,
+                *ans,
+                *esc,
+                *fact_base,
+                *all_base,
+            )
+            .map_err(|e| e.to_string())?,
         Step::ModifyVisicon { at_ms, name, x, y } => session
             .engine_mut()
             .ok_or_else(no_model)?

@@ -2302,6 +2302,8 @@ pub struct Engine {
     sounds: Vec<Sound>,
     /// Audio module: next `TONE{n}` index (`new-name-fct "TONE"`).
     tone_seq: u64,
+    /// Audio module: next `DIGIT{n}` index (`new-name-fct "DIGIT"`).
+    digit_seq: u64,
     /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
     name_count: HashMap<String, u64>,
     /// A reusable buffer's chunk name (`act-r-buffer-reuse-chunk`,
@@ -2738,6 +2740,7 @@ impl Engine {
             aural_loc_evt: None,
             sounds: Vec::new(),
             tone_seq: 0,
+            digit_seq: 0,
             name_count: HashMap::new(),
             buffer_reuse: HashMap::new(),
             vl_copies: HashMap::new(),
@@ -3306,6 +3309,7 @@ impl Engine {
         // setup, creating the event and scheduling its onset (`new-sound`).
         self.sounds.clear();
         self.tone_seq = 0;
+        self.digit_seq = 0;
         let run = self.device_run;
         for s in self
             .device_sounds

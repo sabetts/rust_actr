@@ -33,6 +33,30 @@ impl Engine {
         self.sounds.len() - 1
     }
 
+    /// `new-digit-sound` (`audio.lisp:760`): a `DIGIT` sound whose `content`
+    /// is the digit itself. The audio module's defaults are 600 ms duration,
+    /// 300 ms detect delay, and 500 ms recode delay (`audio.lisp:540`).
+    pub(super) fn new_digit_sound(&mut self, digit: i64, onset: i64) {
+        let n = self.digit_seq;
+        self.digit_seq += 1;
+        let en = self.audio_events;
+        self.audio_events += 1;
+        self.sounds.push(Sound {
+            sname: format!("DIGIT{n}"),
+            ename: format!("AUDIO-EVENT{en}"),
+            kind: "DIGIT".to_string(),
+            content: digit,
+            onset,
+            offset: onset + 600,
+            duration: 600,
+            delay: 300,
+            recode: 500,
+            pitch: "NIL".to_string(),
+        });
+        let idx = self.sounds.len() - 1;
+        self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+    }
+
     /// Device request routing for the visual buffer: only
     /// move-attention (plus finst assignment later).
     pub(super) fn visual_request(&mut self, spec: NewChunk) -> Result<(), EngineError> {

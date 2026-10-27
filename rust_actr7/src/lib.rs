@@ -208,6 +208,19 @@ pub enum Step {
     ZzDriver,
     /// `associative-learning` task driver (`run-it`/`approach-1-results`).
     AlDriver,
+    /// `siegler-experiment` task driver: fixed per-trial seeds, digit sounds,
+    /// and the response matrix/statistics table. `fact_base` applies the
+    /// `f00`..`f40` base levels; `all_base` applies `set-all-base-levels`.
+    SieglerDriver {
+        first_seed: u64,
+        sets: u32,
+        rt: Option<f32>,
+        mp: Option<f32>,
+        ans: Option<f32>,
+        esc: Option<bool>,
+        fact_base: Option<f32>,
+        all_base: Option<f32>,
+    },
     /// `(modify-visicon-features ...)` at an absolute time.
     ModifyVisicon {
         at_ms: i64,
@@ -376,6 +389,25 @@ pub fn run_model_steps_with_hook(
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
+            Step::SieglerDriver {
+                first_seed,
+                sets,
+                rt,
+                mp,
+                ans,
+                esc,
+                fact_base,
+                all_base,
+            } => eng.siegler_driver(
+                *first_seed,
+                *sets,
+                *rt,
+                *mp,
+                *ans,
+                *esc,
+                *fact_base,
+                *all_base,
+            )?,
             Step::ModifyVisicon { at_ms, name, x, y } => {
                 eng.schedule_modify_visicon(*at_ms, name, *x, *y)
             }
