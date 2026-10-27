@@ -5122,3 +5122,16 @@ The pcomp recreated-compiled-production refs print the correct base `:u`
 difference is the conflict-resolution utility-noise draw/cache for the
 recreated production. The pcomp selection/timing cluster needs an RNG/draw
 order audit before its utility refs can be promoted.
+
+## 310. Fan experiment output driver
+
+Added the 36-run device sidecar for `tutorial-unit5-fan-output-data` (the
+perceptual/motor fan trials without the earlier probe sections) and a driver
+using `FanCollect`/`FanExperimentSummary`. Recovered the case.
+
+The BST imaginal-action trace driver is now implemented with the break at
+`ENCODE-LINE-CURRENT` and a 15-event projection, but the engine emits
+`CLEAR-BUFFER IMAGINAL-ACTION` before `MODULE-REQUEST IMAGINAL-ACTION`; it
+remains ignored on that event-order divergence.
+
+Corpus: **471 passed / 96 ignored**.
