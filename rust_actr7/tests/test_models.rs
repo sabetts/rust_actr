@@ -884,6 +884,11 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .al_driver()
             .map_err(|e| e.to_string())?,
+        Step::Zbrodoff(mode) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .zbrodoff_driver(*mode)
+            .map_err(|e| e.to_string())?,
         Step::FanCollect => session
             .engine_mut()
             .ok_or_else(no_model)?
@@ -926,6 +931,25 @@ fn apply_session_step(
             .schedule_modify_visicon(*at_ms, name, *x, *y),
     }
     Ok(())
+}
+
+/// Compare already-built output lines with a case's `.ref`. Used by pure
+/// data/format drivers that do not need an engine instance.
+pub fn check_output(name: &str, actual: &[String]) -> Result<(), String> {
+    let ref_path = refs_dir().join(format!("{name}.ref"));
+    let expected = normalize(
+        &fs::read_to_string(&ref_path).map_err(|e| format!("{}: {e}", ref_path.display()))?,
+    );
+    let actual = normalize(&actual.join("\n"));
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name}: ref mismatch vs {}\n{}",
+            ref_path.display(),
+            first_diff(&expected, &actual)
+        ))
+    }
 }
 
 // ---------------------------------------------------------------- harness

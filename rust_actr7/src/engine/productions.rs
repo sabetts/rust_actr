@@ -299,6 +299,39 @@ impl Engine {
                 return Ok(None);
             }
         }
+        // Negative slot tests may name a variable bound by a later buffer
+        // (`- target =let` before `=imaginal> result =let`). Re-check them
+        // once all positive conditions have supplied the bindings.
+        for item in &prod.lhs {
+            let LhsItem::Match { buffer, tests } = item else {
+                continue;
+            };
+            if buffer == "GOAL" && self.cfg.threads {
+                continue;
+            }
+            let Some(chunk) = self
+                .buffers
+                .get(buffer)
+                .and_then(|buffer| buffer.chunk.as_ref())
+            else {
+                continue;
+            };
+            for test in tests {
+                if test.op != SlotOp::Neg {
+                    continue;
+                }
+                let Pattern::Var(var) = &test.value else {
+                    continue;
+                };
+                let Some(prev) = b.get(var) else {
+                    continue;
+                };
+                let slot = self.resolve_slot_name(&test.slot, &b);
+                if self.value_eq(prev, &chunk.get(&slot)) {
+                    return Ok(None);
+                }
+            }
+        }
         for buffer in implicit_queries {
             if !self.query_free(buffer)? {
                 return Ok(None);
@@ -595,6 +628,7 @@ impl Engine {
     pub(super) fn query_prep_free(&self, buffer: &str) -> Result<bool, EngineError> {
         match buffer {
             "MANUAL" => Ok(!self.man_prep_busy),
+            "VOCAL" => Ok(!self.vocal_prep_busy),
             _ => self.query_free(buffer),
         }
     }

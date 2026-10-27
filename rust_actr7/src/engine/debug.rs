@@ -2102,6 +2102,10 @@ impl Engine {
     pub fn clear_window(&mut self) {
         self.window_items.clear();
         self.window_actions.clear();
+        // `process-display` runs `check-finsts` before `:delete-all`
+        // (`vision.lisp:1796` / `:1656`): an expired finst must not transfer
+        // to the rebuilt display.
+        self.check_visual_finsts();
         // `process-display`'s `:delete-all` collects attended features into
         // `transfer-finsts` (`vision.lisp:1656`), so a rebuilt display can
         // re-attach their finst (`transfer-finst`, `vision.lisp:2306`).

@@ -1,8 +1,25 @@
-//! Task drivers (output, goal-focus, zz/al drivers).
+//! Task drivers (output, goal-focus, zz/al/zbrodoff drivers).
 use super::compilation::{show_pat, slot_disp};
 use super::dm::{al_history, al_needed_refs, bl_equation, exp_coerced, log_coerced};
 use super::rhs::new_chunk;
 use super::*;
+use crate::ZbrodoffMode;
+
+#[derive(Clone)]
+struct ZbrodoffTrial {
+    block: usize,
+    addend: usize,
+    text: String,
+    answer: String,
+}
+
+struct ZbrodoffAnalysis {
+    blocks: usize,
+    rts: Vec<f64>,
+    counts: Vec<u32>,
+    totals: [u32; 3],
+}
+
 impl Engine {
     /// All trace emitted so far, newline-terminated (empty if none).
     pub fn output(&self) -> String {
@@ -1042,6 +1059,249 @@ impl Engine {
                 .collect();
             self.out_lines
                 .push(format!("     {}    {}", i + 1, vals.join("      ")));
+        }
+    }
+
+    /// `zbrodoff` task driver (`tutorial/lisp/zbrodoff.lisp`): present each
+    /// alpha-arithmetic trial in a live window, run until the model's key
+    /// press, and aggregate correct RTs by block and addend.
+    pub fn zbrodoff_driver(&mut self, mode: ZbrodoffMode) -> Result<(), EngineError> {
+        match mode {
+            ZbrodoffMode::Compare => {
+                self.out_lines.push("? (zbrodoff-compare 10)".to_string());
+                self.out_lines.push(String::new());
+                self.out_lines.push(">>> zbrodoff.compare(10)".to_string());
+                self.out_lines.push(String::new());
+                self.zbrodoff_reset(100)?;
+                let analysis = self.zbrodoff_collect(&Self::zbrodoff_experiment_blocks())?;
+                self.zbrodoff_print_statistics(&analysis);
+                self.out_lines.push(String::new());
+                self.zbrodoff_print_table(&analysis);
+            }
+            ZbrodoffMode::Experiment => {
+                self.out_lines.push("? (zbrodoff-experiment)".to_string());
+                self.out_lines.push(String::new());
+                self.out_lines.push(">>> zbrodoff.experiment()".to_string());
+                self.out_lines.push(String::new());
+                self.out_lines.push(String::new());
+                self.zbrodoff_reset(100)?;
+                let analysis = self.zbrodoff_collect(&Self::zbrodoff_experiment_blocks())?;
+                self.zbrodoff_print_table(&analysis);
+            }
+            ZbrodoffMode::SetAndBlock => {
+                self.zbrodoff_reset(100)?;
+                self.out_lines.push("? (zbrodoff-set)".to_string());
+                self.out_lines.push(String::new());
+                let set = self.zbrodoff_collect(&[1])?;
+                self.zbrodoff_print_table(&set);
+                self.out_lines.push(String::new());
+                self.out_lines.push(">>> zbrodoff.block()".to_string());
+                self.out_lines.push(String::new());
+                let block = self.zbrodoff_collect(&[1; 8])?;
+                self.zbrodoff_print_table(&block);
+            }
+            ZbrodoffMode::StartingResults => {
+                self.zbrodoff_reset(201)?;
+                let analysis = self.zbrodoff_collect(&Self::zbrodoff_experiment_blocks())?;
+                self.zbrodoff_print_statistics(&analysis);
+                self.out_lines.push(String::new());
+                self.zbrodoff_print_table(&analysis);
+            }
+        }
+        Ok(())
+    }
+
+    fn zbrodoff_experiment_blocks() -> Vec<usize> {
+        (1..=3)
+            .flat_map(|block| std::iter::repeat(block).take(8))
+            .collect()
+    }
+
+    fn zbrodoff_reset(&mut self, seed: u64) -> Result<(), EngineError> {
+        self.reset()?;
+        self.set_seed((seed, 0));
+        self.set_trace(false);
+        self.last_output_key = None;
+        Ok(())
+    }
+
+    fn zbrodoff_collect(
+        &mut self,
+        block_numbers: &[usize],
+    ) -> Result<ZbrodoffAnalysis, EngineError> {
+        let trials = self.zbrodoff_make_trials(block_numbers);
+        let results = self.zbrodoff_run_trials(&trials)?;
+        Ok(Self::zbrodoff_analyze(&results))
+    }
+
+    fn zbrodoff_make_trials(&mut self, block_numbers: &[usize]) -> Vec<ZbrodoffTrial> {
+        const DATA: [(&str, &str, &str, &str); 24] = [
+            ("a", "2", "c", "k"),
+            ("d", "2", "f", "k"),
+            ("b", "3", "e", "k"),
+            ("e", "3", "h", "k"),
+            ("c", "4", "g", "k"),
+            ("f", "4", "j", "k"),
+            ("a", "2", "d", "d"),
+            ("d", "2", "g", "d"),
+            ("b", "3", "f", "d"),
+            ("e", "3", "i", "d"),
+            ("c", "4", "h", "d"),
+            ("f", "4", "k", "d"),
+            ("a", "2", "c", "k"),
+            ("d", "2", "f", "k"),
+            ("b", "3", "e", "k"),
+            ("e", "3", "h", "k"),
+            ("c", "4", "g", "k"),
+            ("f", "4", "j", "k"),
+            ("a", "2", "d", "d"),
+            ("d", "2", "g", "d"),
+            ("b", "3", "f", "d"),
+            ("e", "3", "i", "d"),
+            ("c", "4", "h", "d"),
+            ("f", "4", "k", "d"),
+        ];
+        let mut trials = Vec::new();
+        for &block in block_numbers {
+            let set: Vec<ZbrodoffTrial> = DATA
+                .iter()
+                .map(|(a, b, c, answer)| ZbrodoffTrial {
+                    block,
+                    addend: b.parse().unwrap(),
+                    text: format!("{a} + {b} = {c}"),
+                    answer: answer.to_string(),
+                })
+                .collect();
+            trials.extend(self.rng.borrow_mut().permute_list(set));
+        }
+        trials
+    }
+
+    fn zbrodoff_run_trials(
+        &mut self,
+        trials: &[ZbrodoffTrial],
+    ) -> Result<Vec<(usize, usize, bool, f64)>, EngineError> {
+        self.open_window(300, 300);
+        self.pending_finst_transfers.clear();
+        let mut results = Vec::with_capacity(trials.len());
+        for (i, trial) in trials.iter().enumerate() {
+            if i > 0 {
+                self.clear_window();
+                // This task replaces the entire display between trials; a
+                // reused first-letter position must be treated as new.
+                self.pending_finst_transfers.clear();
+            }
+            self.last_output_key = None;
+            self.add_window_text(&trial.text, 100, 150, 75, 20, 12);
+            let start = self.time_ms;
+            let limit = start + 10_000;
+            let mut pressed = None;
+            while self.time_ms < limit {
+                if !self.step_once()? {
+                    break;
+                }
+                if let Some(key) = self.last_output_key.take() {
+                    pressed = Some(key);
+                    break;
+                }
+            }
+            let Some((key, time)) = pressed else {
+                return Err(unimpl(format!(
+                    "zbrodoff trial {} ({}) produced no output-key",
+                    i + 1,
+                    trial.text
+                )));
+            };
+            let correct = key.eq_ignore_ascii_case(&trial.answer);
+            results.push((
+                trial.block,
+                trial.addend,
+                correct,
+                (time - start) as f64 / 1000.0,
+            ));
+        }
+        Ok(results)
+    }
+
+    fn zbrodoff_analyze(results: &[(usize, usize, bool, f64)]) -> ZbrodoffAnalysis {
+        let blocks = results.iter().map(|r| r.0).max().unwrap_or(1);
+        // ACT-R's trial times are single-floats (`1000.0` in the task source),
+        // and the summary format is sensitive to the final half-way value.
+        let mut sums = vec![[0.0f32; 3]; blocks];
+        let mut counts = vec![[0u32; 3]; blocks];
+        let mut all = vec![[0u32; 3]; blocks];
+        for &(block, addend, correct, rt) in results {
+            let (b, a) = (block - 1, addend - 2);
+            all[b][a] += 1;
+            if correct {
+                sums[b][a] += rt as f32;
+                counts[b][a] += 1;
+            }
+        }
+        let mut rts = Vec::with_capacity(blocks * 3);
+        let mut out_counts = Vec::with_capacity(blocks * 3);
+        let mut totals = [0u32; 3];
+        for b in 0..blocks {
+            for a in 0..3 {
+                let n = counts[b][a];
+                rts.push(if n > 0 {
+                    (sums[b][a] / n as f32) as f64
+                } else {
+                    0.0
+                });
+                out_counts.push(n);
+                totals[a] += all[b][a];
+            }
+        }
+        for total in &mut totals {
+            *total /= blocks as u32;
+        }
+        ZbrodoffAnalysis {
+            blocks,
+            rts,
+            counts: out_counts,
+            totals,
+        }
+    }
+
+    fn zbrodoff_print_statistics(&mut self, analysis: &ZbrodoffAnalysis) {
+        const DATA: [f64; 9] = [1.84, 2.46, 2.82, 1.21, 1.45, 1.42, 1.14, 1.21, 1.17];
+        let n = DATA.len() as f64;
+        let sum_r: f64 = analysis.rts.iter().sum();
+        let sum_d: f64 = DATA.iter().sum();
+        let sum_r2: f64 = analysis.rts.iter().map(|x| x * x).sum();
+        let sum_d2: f64 = DATA.iter().map(|x| x * x).sum();
+        let sum_rd: f64 = analysis
+            .rts
+            .iter()
+            .zip(DATA.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+        let avg_r = sum_r / n;
+        let avg_d = sum_d / n;
+        let corr = (sum_rd / n - avg_r * avg_d)
+            / ((sum_r2 / n - avg_r * avg_r).sqrt() * (sum_d2 / n - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / n).sqrt();
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+    }
+
+    fn zbrodoff_print_table(&mut self, analysis: &ZbrodoffAnalysis) {
+        let mut header = String::from("        ");
+        for (i, addend) in ["2", "3", "4"].iter().enumerate() {
+            header.push_str(&format!(" {addend:>6} ({:>2})", analysis.totals[i]));
+        }
+        self.out_lines.push(header);
+        for block in 0..analysis.blocks {
+            let mut line = format!("Block {:>2}", block + 1);
+            for addend in 0..3 {
+                let i = block * 3 + addend;
+                line.push_str(&format!(
+                    " {:>6.3} ({:>2})",
+                    analysis.rts[i], analysis.counts[i]
+                ));
+            }
+            self.out_lines.push(line);
         }
     }
 

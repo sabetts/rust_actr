@@ -827,6 +827,12 @@ impl Engine {
             Pattern::Nil => *got == Value::Nil,
             Pattern::Var(v) => match b.get(v) {
                 Some(prev) => self.value_eq(prev, got),
+                // A negative test must not bind its variable: the variable is
+                // bound by the corresponding positive condition, which may be
+                // matched after this buffer (`- target =let` before
+                // `=imaginal> result =let`). Leave it unbound for that
+                // condition rather than binding it to this slot's value.
+                None if negated => return Ok(true),
                 None => {
                     // A LHS `slot =var` requires the slot to be filled
                     // (`add-slot-spec-to-chunk-spec` sets the signature's

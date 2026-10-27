@@ -123,6 +123,19 @@ pub fn run_from_source_with(
     engine::Engine::new_with_width(def.clone(), seed, run_time, device.clone(), module_width)?.run()
 }
 
+/// Zbrodoff experiment entry points from the tutorial task file.
+#[derive(Debug, Clone, Copy)]
+pub enum ZbrodoffMode {
+    /// `(zbrodoff-compare 1)`, with the task's "compare 10" label.
+    Compare,
+    /// `(zbrodoff-experiment)`: three blocks and the results table.
+    Experiment,
+    /// `(zbrodoff-set)` followed by `(zbrodoff-block)` on the same model.
+    SetAndBlock,
+    /// The `*starting-seed*` variant of `zbrodoff-compare`.
+    StartingResults,
+}
+
 /// One driver step from a per-case test file (or a recovered driver spec).
 #[derive(Debug, Clone)]
 pub enum Step {
@@ -211,6 +224,8 @@ pub enum Step {
     ZzDriver,
     /// `associative-learning` task driver (`run-it`/`approach-1-results`).
     AlDriver,
+    /// Zbrodoff alpha-arithmetic experiment driver.
+    Zbrodoff(ZbrodoffMode),
     /// Start collecting the per-run response times/answers for
     /// `fan-no-pm`'s `fan-experiment`.
     FanCollect,
@@ -403,6 +418,7 @@ pub fn run_model_steps_with_hook(
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
+            Step::Zbrodoff(mode) => eng.zbrodoff_driver(*mode)?,
             Step::FanCollect => eng.fan_collect_start(),
             Step::FanSummary => eng.fan_no_pm_summary(),
             Step::PairedCollect => eng.paired_collect_start(),

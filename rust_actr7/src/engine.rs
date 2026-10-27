@@ -2300,6 +2300,13 @@ pub struct Engine {
     goal_set: Vec<ChunkInst>,
     /// Speech module: the vocal buffer is busy speaking/subvocalizing.
     vocal_busy: bool,
+    /// Speech module: preparation is still running (`?vocal> preparation`).
+    /// This clears at `SpeechPrep`, even while articulation keeps the buffer
+    /// itself busy.
+    vocal_prep_busy: bool,
+    /// End of the latest queued/active utterance. An earlier utterance's
+    /// `VocalFree` must not clear the busy flag for a later one.
+    vocal_end_ms: i64,
     /// Audio module: sounds emitted so far (`AUDIO-EVENT{n}`).
     audio_events: u64,
     /// The `AUDIO-EVENT{n}` currently in the `AURAL-LOCATION` buffer, if any
@@ -2759,6 +2766,8 @@ impl Engine {
             finsts: Vec::new(),
             goal_set: Vec::new(),
             vocal_busy: false,
+            vocal_prep_busy: false,
+            vocal_end_ms: 0,
             audio_events: 0,
             aural_loc_evt: None,
             sounds: Vec::new(),
@@ -3332,6 +3341,8 @@ impl Engine {
         self.finsts.clear();
         self.goal_set.clear();
         self.vocal_busy = false;
+        self.vocal_prep_busy = false;
+        self.vocal_end_ms = 0;
         self.audio_events = 0;
         self.aural_loc_evt = None;
         // Scripted tones: the task calls `new-tone-sound` during per-run

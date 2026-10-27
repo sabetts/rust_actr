@@ -723,8 +723,9 @@ impl Engine {
             None
         };
         if let (Some(style), Some(t)) = (style, text) {
-            // The speech action is scheduled at default priority so the
-            // request's implicit clear-buffer precedes it.
+            // Preparation can begin while the previous utterance is still
+            // executing; `SpeechPrep` queues the execution behind
+            // `vocal_end_ms`.
             self.now(Prio::Num(0), Out::Medium, Event::Speak { style, text: t });
         }
         Ok(())

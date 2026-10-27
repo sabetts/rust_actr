@@ -129,12 +129,16 @@ impl Engine {
                 self.changed();
             }
             Event::VocalFree => {
-                self.vocal_busy = false;
+                if self.time_ms >= self.vocal_end_ms {
+                    self.vocal_busy = false;
+                    self.vocal_end_ms = 0;
+                }
                 self.changed();
             }
             Event::Speak { style, text } => {
                 self.emit("SPEECH", format!("{} TEXT {text}", style.trace()));
                 self.vocal_busy = true;
+                self.vocal_prep_busy = true;
                 // `compute-prep-time` (`general-pm.lisp:670`): a fresh module
                 // or a different style name preps all `num-to-prepare`
                 // features (3, `speech.lisp:278`); the same style preps only
@@ -155,6 +159,10 @@ impl Engine {
                 );
             }
             Event::SpeechPrep { style, text } => {
+                // `perform-movement`: preparation is complete, but articulation
+                // keeps the vocal buffer busy (`?vocal> preparation` vs
+                // `?vocal> state`).
+                self.vocal_prep_busy = false;
                 // `perform-movement`: initiation-complete at init-time, then
                 // finish at exec + articulation (`speech.lisp:281`/`285`).
                 // The hear-self sound onset equals the exec time.
@@ -162,26 +170,31 @@ impl Engine {
                 let art = (150.0f32)
                     .max(150.0 * text.chars().count() as f32 / 3.0)
                     .round() as i64;
-                let finish = init + art;
+                // `maybe-execute-movement`: execution waits until the current
+                // utterance finishes, while preparation has already run.
+                let exec_start = self.time_ms.max(self.vocal_end_ms);
+                let init_at = exec_start + init;
+                let finish_at = init_at + art;
+                self.vocal_end_ms = self.vocal_end_ms.max(finish_at);
                 // `queue-output-events` (`speech.lisp:294`/`:314`) creates the
-                // sound — when `:hear-self` admits this style — *before*
+                // sound -- when `:hear-self` admits this style -- *before*
                 // scheduling the device notification, so `new-sound` precedes
                 // the `SPEAK <text>` line at the same instant.
                 if self.cfg.hear_self.hears(style) {
                     let evt = self.audio_events;
                     self.audio_events += 1;
                     self.push(
-                        self.time_ms + init,
+                        init_at,
                         Prio::Num(0),
                         Out::Medium,
                         Event::NewSound {
                             evt,
-                            offset: self.time_ms + init + art,
+                            offset: finish_at,
                         },
                     );
                 }
                 self.push(
-                    self.time_ms + init,
+                    init_at,
                     Prio::Num(0),
                     Out::Always,
                     Event::SpeechInit {
@@ -189,12 +202,7 @@ impl Engine {
                         text: text.clone(),
                     },
                 );
-                self.push(
-                    self.time_ms + finish,
-                    Prio::Num(0),
-                    Out::Never,
-                    Event::VocalFree,
-                );
+                self.push(finish_at, Prio::Num(0), Out::Never, Event::VocalFree);
             }
             Event::SpeechInit { style, text } => {
                 // `notify-speech-device` (`speech.lisp:267`): with no speech

@@ -4926,3 +4926,28 @@ load solution files from `examples/act-r-solutions.zip`, which is password
 protected: three Zbrodoff solution variants, the choice results, and both
 categorize experiments. The password is not in the repo or history (only the
 `7z a -p"XXX"` build placeholder exists), so those need an upstream copy.
+
+## 296. Siegler original-data formatter
+
+Recovered `tutorial-unit5-siegler-original-data` with a model-free driver: the
+case only echoes `display-results` over the fixed `*siegler-data*` table, so
+the Rust test formats the same matrix without constructing an engine. Corpus:
+**446 passed / 121 ignored**.
+
+## 297. Zbrodoff experiment driver
+
+Added `Step::Zbrodoff` with compare, experiment, set-and-block, and
+starting-results modes. The driver replays `zbrodoff.lisp`'s randomized sets in
+a live window, runs event-by-event until each `output-key`, records correct RTs
+by block/addend, and emits the original correlation/mean-deviation and table
+format. Recovered `tutorial-unit4-zbrodoff-compare`, `...-experiment`,
+`...-set-and-block`, and `...-starting-results`.
+
+This also fixed four engine details the model exposes:
+`current` values in visual-location requests, negated request slots, negative
+LHS variables bound by a later condition, and finst expiry across rebuilt
+displays. Speech preparation and execution are now separate: preparation can
+overlap a prior utterance, while the next execution waits for it to finish;
+`?vocal> preparation` no longer waits for articulation, and overlapping
+`VocalFree` events cannot clear a newer utterance. Corpus:
+**450 passed / 117 ignored**.

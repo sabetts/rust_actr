@@ -3,14 +3,16 @@
 //! lisp: actr7.x/test-models/tutorial-unit4-zbrodoff-starting-results.lisp
 
 use crate::Case;
+use actr_engine::{Step, ZbrodoffMode};
 
 #[test]
-// Full reason: task and base model sources are available; this needs a Rust
-// port of zbrodoff.lisp's trial loop, output-key callback, and summary
-// formatting.
-#[ignore = "pending: Zbrodoff task-driver port (sources available)"]
 fn tutorial_unit4_zbrodoff_starting_results() -> Result<(), String> {
     Case::new("tutorial-unit4-zbrodoff-starting-results")
+        .models(&[
+            "tutorial;lisp;zbrodoff.lisp",
+            "tutorial;unit4;zbrodoff-model.lisp",
+        ])
         .seed((100, 0))
+        .steps(vec![Step::Zbrodoff(ZbrodoffMode::StartingResults)])
         .check()
 }

@@ -233,6 +233,21 @@ impl Engine {
         Err(bad(format!("screen-pos {loc} is not a visual location")))
     }
 
+    /// The current marker's value for a visual-location slot. `current` in a
+    /// visual-location request means the last attended location
+    /// (`find-current-locs-with-spec`, `vision.lisp:2076`).
+    fn current_loc_slot(&self, slot: &str) -> Option<Value> {
+        let idx = self
+            .last_attention
+            .as_ref()
+            .and_then(|loc| self.resolve_loc(loc).ok())?;
+        self.features[idx]
+            .loc_slots()
+            .into_iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(slot))
+            .map(|(_, value)| value)
+    }
+
     /// proc-display: move due device texts into the visicon, stuff the
     /// visual-location buffer if empty, and note the update.
     // ------------------------------------------------------------------
@@ -770,8 +785,11 @@ impl Engine {
             .is_none();
         // A rebuilt display re-attaches the finsts of the features that were
         // attended when it was cleared (`transfer-finst`, `vision.lisp:2306`),
-        // before the auto-stuff searches it.
+        // before the auto-stuff searches it. `process-display` then runs
+        // `check-finsts` again, so a transfer older than the finst span does
+        // not keep the rebuilt feature marked attended.
         self.apply_finst_transfers();
+        self.check_visual_finsts();
         if empty && self.tracked.is_none() {
             if let Some(feat) = self.newest_feature() {
                 let base = feat.name.clone();
@@ -1243,10 +1261,37 @@ impl Engine {
     /// Find-location: newest-tstamp candidates, random among them,
     /// construct a fresh (dedup-named) location chunk into the buffer.
     pub(super) fn find_location(&mut self, spec: NewChunk) -> Result<(), EngineError> {
-        let (want, rels) = match &spec {
-            NewChunk::Spec { slots, rels, .. } => (slots.clone(), rels.clone()),
+        let (want, rels, neg) = match &spec {
+            NewChunk::Spec {
+                slots, rels, neg, ..
+            } => (slots.clone(), rels.clone(), neg.clone()),
             _ => return Err(unimpl("non-spec visual-location request")),
         };
+        // `find-current-locs-with-spec` (`vision.lisp:2088`) remaps every
+        // `current` value to the current marker's slot before matching; a
+        // slot missing from the marker drops the test entirely.
+        let mut remapped_want: Vec<(String, Value)> = Vec::new();
+        for (s, v) in want {
+            if matches!(&v, Value::Sym(x) if x.eq_ignore_ascii_case("CURRENT")) {
+                if let Some(value) = self.current_loc_slot(s.trim_start_matches(':')) {
+                    remapped_want.push((s, value));
+                }
+            } else {
+                remapped_want.push((s, v));
+            }
+        }
+        let want = remapped_want;
+        let mut remapped_rels: Vec<(String, Value, SlotOp)> = Vec::new();
+        for (s, v, op) in rels {
+            if matches!(&v, Value::Sym(x) if x.eq_ignore_ascii_case("CURRENT")) {
+                if let Some(value) = self.current_loc_slot(s.trim_start_matches(':')) {
+                    remapped_rels.push((s, value, op));
+                }
+            } else {
+                remapped_rels.push((s, v, op));
+            }
+        }
+        let rels = remapped_rels;
         // `find-current-locs-with-spec` (`vision.lisp:2088`): a `slot lowest` /
         // `slot highest` value is pulled out of the match set and applied as a
         // post-filter (the candidate(s) with the min/max numeric value of that
@@ -1263,7 +1308,10 @@ impl Engine {
         }
         let mut cands: Vec<Feature> = Vec::new();
         for f in &self.features {
-            if loc_matches(f, &plain, self.time_ms, self.cfg.onset_span_ms)?
+            let rejected =
+                !neg.is_empty() && loc_matches(f, &neg, self.time_ms, self.cfg.onset_span_ms)?;
+            if !rejected
+                && loc_matches(f, &plain, self.time_ms, self.cfg.onset_span_ms)?
                 && loc_rel_matches(f, &rels)
             {
                 cands.push(f.clone());
