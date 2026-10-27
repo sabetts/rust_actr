@@ -136,6 +136,17 @@ pub enum ZbrodoffMode {
     StartingResults,
 }
 
+/// One-hit blackjack task entry points.
+#[derive(Debug, Clone, Copy)]
+pub enum OnehitMode {
+    /// `(onehit-blocks <blocks> <hands>)`.
+    Blocks { blocks: u32, hands: u32 },
+    /// `(onehit-hands <hands>)`.
+    Hands { hands: u32 },
+    /// `(onehit-learning <games>)`: 20 blocks of 5 hands per game.
+    Learning { games: u32 },
+}
+
 /// One driver step from a per-case test file (or a recovered driver spec).
 #[derive(Debug, Clone)]
 pub enum Step {
@@ -226,6 +237,8 @@ pub enum Step {
     AlDriver,
     /// Zbrodoff alpha-arithmetic experiment driver.
     Zbrodoff(ZbrodoffMode),
+    /// One-hit blackjack task driver.
+    Onehit(OnehitMode),
     /// Start collecting the per-run response times/answers for
     /// `fan-no-pm`'s `fan-experiment`.
     FanCollect,
@@ -419,6 +432,7 @@ pub fn run_model_steps_with_hook(
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
             Step::Zbrodoff(mode) => eng.zbrodoff_driver(*mode)?,
+            Step::Onehit(mode) => eng.onehit_driver(*mode)?,
             Step::FanCollect => eng.fan_collect_start(),
             Step::FanSummary => eng.fan_no_pm_summary(),
             Step::PairedCollect => eng.paired_collect_start(),

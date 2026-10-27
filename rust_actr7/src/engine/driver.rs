@@ -3,7 +3,8 @@ use super::compilation::{show_pat, slot_disp};
 use super::dm::{al_history, al_needed_refs, bl_equation, exp_coerced, log_coerced};
 use super::rhs::new_chunk;
 use super::*;
-use crate::ZbrodoffMode;
+use crate::sexpr::Sexp;
+use crate::{OnehitMode, ZbrodoffMode};
 
 #[derive(Clone)]
 struct ZbrodoffTrial {
@@ -1303,6 +1304,256 @@ impl Engine {
             }
             self.out_lines.push(line);
         }
+    }
+
+    /// `onehit.lisp` task driver: regular deck, fixed-threshold opponent, and
+    /// the model's key choice for each hand. The model observes the result
+    /// before the next deal.
+    pub fn onehit_driver(&mut self, mode: OnehitMode) -> Result<(), EngineError> {
+        self.set_trace(false);
+        self.set_seed((1, 0));
+        match mode {
+            OnehitMode::Blocks { blocks, hands } => {
+                let mut all = Vec::new();
+                for _ in 0..blocks {
+                    all.push(self.onehit_hands(hands)?);
+                }
+                let shown: Vec<String> = all.iter().map(Self::onehit_score_list).collect();
+                self.out_lines.push(format!(
+                    "? (onehit-blocks {blocks} {hands})\n({})",
+                    shown.join(" ")
+                ));
+            }
+            OnehitMode::Hands { hands } => {
+                let scores = self.onehit_hands(hands)?;
+                self.out_lines.push(format!(
+                    "? (onehit-hands {hands})\n{}",
+                    Self::onehit_score_list(&scores)
+                ));
+            }
+            OnehitMode::Learning { games } => {
+                let mut data = vec![[0u32; 4]; 20];
+                for i in 0..games {
+                    self.reset()?;
+                    self.set_seed((101 + i as u64 + 1, 0));
+                    self.set_trace(false);
+                    for block in &mut data {
+                        let scores = self.onehit_hands(5)?;
+                        for (total, value) in block.iter_mut().zip(scores) {
+                            *total += value;
+                        }
+                    }
+                }
+                let n = games as f32;
+                let percentages: Vec<f32> =
+                    data.iter().map(|block| block[0] as f32 / n / 5.0).collect();
+                let averages: Vec<f32> = percentages
+                    .chunks(5)
+                    .map(|chunk| chunk.iter().sum::<f32>() / 5.0)
+                    .collect();
+                let list = |values: &[f32]| {
+                    format!(
+                        "({})",
+                        values
+                            .iter()
+                            .map(|v| super::lisp_s_f32(*v))
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    )
+                };
+                self.out_lines.push(format!(
+                    "? (onehit-learning {games})\n({} {})",
+                    list(&averages),
+                    list(&percentages)
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn onehit_score_list(scores: &[u32; 4]) -> String {
+        format!("({} {} {} {})", scores[0], scores[1], scores[2], scores[3])
+    }
+
+    fn onehit_hands(&mut self, hands: u32) -> Result<[u32; 4], EngineError> {
+        let mut scores = [0u32; 4];
+        for _ in 0..hands {
+            let mut mcards = vec![self.onehit_deal(), self.onehit_deal(), self.onehit_deal()];
+            let mut ocards = vec![self.onehit_deal(), self.onehit_deal(), self.onehit_deal()];
+            let mchoice = self.onehit_show_cards(&mcards[..2], ocards[0])?;
+            let och = Self::onehit_score(&ocards[..2]) < 15;
+            if mchoice != "h" {
+                mcards.truncate(2);
+            }
+            if !och {
+                ocards.truncate(2);
+            }
+            let mres = Self::onehit_outcome(&mcards, &ocards);
+            let ores = Self::onehit_outcome(&ocards, &mcards);
+            let mtot = Self::onehit_score(&mcards);
+            let otot = Self::onehit_score(&ocards);
+            self.onehit_show_results(&mcards, &ocards, &mres, &ores)?;
+            if mres == "win" {
+                scores[0] += 1;
+            }
+            if ores == "win" {
+                scores[1] += 1;
+            }
+            if mres == "bust" && ores == "bust" {
+                scores[2] += 1;
+            }
+            if mtot == otot && mres != "bust" && ores != "bust" {
+                scores[3] += 1;
+            }
+        }
+        Ok(scores)
+    }
+
+    fn onehit_deal(&mut self) -> i64 {
+        (self.rng.borrow_mut().random_int(13) as i64 + 1).min(10)
+    }
+
+    fn onehit_score(cards: &[i64]) -> i64 {
+        let mut total: i64 = cards.iter().sum();
+        for _ in 0..cards.iter().filter(|c| **c == 1).count() {
+            if total + 10 <= 21 {
+                total += 10;
+            }
+        }
+        total
+    }
+
+    fn onehit_outcome(own: &[i64], other: &[i64]) -> &'static str {
+        let o = Self::onehit_score(own);
+        let t = Self::onehit_score(other);
+        if o > 21 {
+            "bust"
+        } else if t > 21 || o > t {
+            "win"
+        } else {
+            "lose"
+        }
+    }
+
+    fn onehit_game_slots(
+        &self,
+        state: &str,
+        mcards: &[i64],
+        ocards: &[i64],
+        mres: Option<&str>,
+        ores: Option<&str>,
+    ) -> Vec<(String, Sexp)> {
+        let card = |c: Option<&i64>| match c {
+            Some(v) => Sexp::Int(*v),
+            None => Sexp::Sym("NIL".into()),
+        };
+        let mstart = Self::onehit_score(&mcards[..mcards.len().min(2)]);
+        let ostart = Self::onehit_score(&ocards[..ocards.len().min(1)]);
+        vec![
+            ("MC1".into(), card(mcards.first())),
+            ("MC2".into(), card(mcards.get(1))),
+            ("MC3".into(), card(mcards.get(2))),
+            ("MSTART".into(), Sexp::Int(mstart)),
+            (
+                "MTOT".into(),
+                if mres.is_some() {
+                    Sexp::Int(Self::onehit_score(mcards))
+                } else {
+                    Sexp::Sym("NIL".into())
+                },
+            ),
+            (
+                "MRESULT".into(),
+                mres.map(|s| Sexp::Sym(s.to_uppercase()))
+                    .unwrap_or(Sexp::Sym("NIL".into())),
+            ),
+            ("OC1".into(), card(ocards.first())),
+            ("OC2".into(), card(ocards.get(1))),
+            ("OC3".into(), card(ocards.get(2))),
+            ("OSTART".into(), Sexp::Int(ostart)),
+            (
+                "OTOT".into(),
+                if ores.is_some() {
+                    Sexp::Int(Self::onehit_score(ocards))
+                } else {
+                    Sexp::Sym("NIL".into())
+                },
+            ),
+            (
+                "ORESULT".into(),
+                ores.map(|s| Sexp::Sym(s.to_uppercase()))
+                    .unwrap_or(Sexp::Sym("NIL".into())),
+            ),
+            ("STATE".into(), Sexp::Sym(state.to_uppercase())),
+        ]
+    }
+
+    fn onehit_set_goal(&mut self, slots: &[(String, Sexp)]) -> Result<(), EngineError> {
+        if self
+            .buffers
+            .get("GOAL")
+            .and_then(|b| b.chunk.as_ref())
+            .is_some()
+        {
+            self.mod_focus(slots);
+        } else {
+            let slots = slots
+                .iter()
+                .map(|(name, value)| {
+                    let value = match value {
+                        Sexp::Int(i) => crate::model::Pattern::Int(*i),
+                        Sexp::Float(x) => crate::model::Pattern::Num(*x),
+                        Sexp::Str(s) => crate::model::Pattern::Str(s.clone()),
+                        Sexp::Sym(s) => crate::model::Pattern::Sym(s.clone()),
+                        Sexp::List(_) => crate::model::Pattern::Nil,
+                    };
+                    (name.clone(), value)
+                })
+                .collect();
+            self.goal_focus(&ChunkDesc::Spec {
+                ctype: "GAME-STATE".into(),
+                slots,
+                auto_cmd: false,
+                neg: Vec::new(),
+                rels: Vec::new(),
+            })?;
+        }
+        Ok(())
+    }
+
+    fn onehit_show_cards(&mut self, mcards: &[i64], ocard: i64) -> Result<String, EngineError> {
+        let slots = self.onehit_game_slots("start", mcards, &[ocard], None, None);
+        self.onehit_set_goal(&slots)?;
+        self.last_output_key = None;
+        let start = self.time_ms;
+        let limit = start + 10_000;
+        let mut key = None;
+        while self.time_ms < limit {
+            if !self.step_once()? {
+                break;
+            }
+            if let Some((k, _)) = self.last_output_key.take() {
+                key = Some(k);
+                break;
+            }
+        }
+        let key = key.ok_or_else(|| unimpl("onehit show-model-cards produced no output-key"))?;
+        if self.time_ms < limit {
+            self.run_until(limit as f64 / 1000.0)?;
+        }
+        Ok(key)
+    }
+
+    fn onehit_show_results(
+        &mut self,
+        mcards: &[i64],
+        ocards: &[i64],
+        mres: &str,
+        ores: &str,
+    ) -> Result<(), EngineError> {
+        let slots = self.onehit_game_slots("results", mcards, ocards, Some(mres), Some(ores));
+        self.onehit_set_goal(&slots)?;
+        self.run_full_time(10.0)
     }
 
     /// Start `fan-no-pm`'s `fan-experiment` result recording. The task's

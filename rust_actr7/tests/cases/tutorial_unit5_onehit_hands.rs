@@ -1,10 +1,11 @@
 //! case: tutorial_unit5_onehit_hands
 //! lisp: (no stub)
 
-// Full reason: this exercises the one-hit blackjack task through the command
-// layer; it needs the same game driver as the tutorial-unit5-onehit-lisp-* cases.
+// Full reason: the shared one-hit blackjack driver now exists, but this
+// command-layer ref also prints each hand and uses a different seed contract
+// that has not yet been identified.
 ignored_case!(
     tutorial_unit5_onehit_hands,
     "tutorial_unit5_onehit_hands",
-    "pending: one-hit blackjack driver (sources available)"
+    "pending: Python-style one-hit output contract"
 );

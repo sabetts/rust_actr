@@ -4951,3 +4951,14 @@ overlap a prior utterance, while the next execution waits for it to finish;
 `?vocal> preparation` no longer waits for articulation, and overlapping
 `VocalFree` events cannot clear a newer utterance. Corpus:
 **450 passed / 117 ignored**.
+
+## 298. One-hit blackjack task driver
+
+Added `Step::Onehit` for the tutorial one-hit blackjack task. The driver runs
+the regular-deck/fixed-threshold game against the model, records `output-key`
+responses, scores the four outcome counters, and formats the Lisp result lists.
+It recovers `tutorial-unit5-onehit-lisp-blocks`, `...-hands`, and
+`...-learning`; the latter runs 50 games of 20×5 hands and reproduces the
+single-float percentages. The evaluator also gained `max`/`min`, needed by the
+task's `1hit-bj-number-sims` similarity hook. Corpus:
+**453 passed / 114 ignored**.

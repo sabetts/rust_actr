@@ -190,6 +190,15 @@ impl Engine {
             "1+" => Ok(self.num_value(self.eval_num(args, b)? + 1.0)),
             "1-" => Ok(self.num_value(self.eval_num(args, b)? - 1.0)),
             "ABS" => Ok(self.num_value(self.eval_num(args, b)?.abs())),
+            "MAX" | "MIN" => {
+                let nums = self.eval_nums(args, b)?;
+                let first = *nums.first().ok_or("max/min needs arguments")?;
+                Ok(self.num_value(if head.eq_ignore_ascii_case("MAX") {
+                    nums.into_iter().fold(first, f64::max)
+                } else {
+                    nums.into_iter().fold(first, f64::min)
+                }))
+            }
             ">" | "<" | ">=" | "<=" | "=" | "/=" => {
                 let nums = self.eval_nums(args, b)?;
                 if nums.len() < 2 {
