@@ -133,6 +133,7 @@ pub const BUILTINS: &[&str] = &[
     "printed-parameter-details",
     "whynot",
     "whynot-dm",
+    "print-conflict-tree",
     "simulate-retrieval-request",
     "mp-show-queue",
     "chunk-p",
@@ -2128,6 +2129,12 @@ impl Session {
                     .collect();
                 if let Some(eng) = &mut self.engine {
                     eng.print_whynot_dm(&names);
+                }
+                Ok(vec![Json::Null])
+            }
+            "print-conflict-tree" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.print_conflict_tree();
                 }
                 Ok(vec![Json::Null])
             }

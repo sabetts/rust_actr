@@ -5054,3 +5054,13 @@ Recovered `tutorial-unit5modeling-v1-simulated-retrieval`,
 `...-v5-p3-run-f3-activation`, `...-v8-p6-compare-traces`, and `fan-saved-act`
 (whose two runs need `:SACT t` re-applied after reset). Corpus:
 **465 passed / 102 ignored**.
+
+## 305. Conflict-tree printer
+
+Added `print-conflict-tree`. It groups productions by their constant LHS
+tests, recursively splits on the first discriminating test, and prints the
+same root/test-slot/leaf format as `commands/conflict-tree.lisp`
+(`---->[root ...]`, `-N- T/NIL ->[...]`). Recovered `count-w-tree`. The
+printer is intentionally simpler than the upstream information-gain builder;
+it is sufficient for COUNT, while `fan-w-tree` remains blocked on its fan
+experiment driver/summary. Corpus: **466 passed / 101 ignored**.

@@ -585,6 +585,100 @@ impl Engine {
         }
     }
 
+    /// `print-conflict-tree` (`commands/conflict-tree.lisp:222`): print the
+    /// decision tree over the model's constant LHS tests. The upstream builder
+    /// chooses splits by information gain; this tree uses the first condition
+    /// that separates the current production classes, which is sufficient for
+    /// the COUNT corpus and keeps the command available for larger models.
+    pub fn print_conflict_tree(&mut self) {
+        let mut classes: Vec<CtClass> = Vec::new();
+        for prod in &self.model.productions {
+            let mut conds = Vec::new();
+            for item in &prod.lhs {
+                match item {
+                    LhsItem::Match { buffer, tests } => {
+                        for t in tests {
+                            if t.slot.eq_ignore_ascii_case("ISA")
+                                || matches!(t.value, crate::model::Pattern::Var(_))
+                            {
+                                continue;
+                            }
+                            let cond = CtCond {
+                                kind: CtKind::TestSlot,
+                                buffer: buffer.to_uppercase(),
+                                slot: t.slot.to_uppercase(),
+                                test: "SAFE-CHUNK-SLOT-EQUAL".to_string(),
+                                value: pattern_show(&t.value),
+                            };
+                            if !conds.iter().any(|c: &CtCond| c.key() == cond.key()) {
+                                conds.push(cond);
+                            }
+                        }
+                    }
+                    LhsItem::Query { buffer, queries } => {
+                        for (slot, value) in queries {
+                            let cond = CtCond {
+                                kind: CtKind::Query,
+                                buffer: buffer.to_uppercase(),
+                                slot: slot.to_uppercase(),
+                                test: String::new(),
+                                value: pattern_show(value),
+                            };
+                            if !conds.iter().any(|c: &CtCond| c.key() == cond.key()) {
+                                conds.push(cond);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            conds.sort_by_key(CtCond::key);
+            if let Some(c) = classes.iter_mut().find(|c| c.conds == conds) {
+                c.names.push(prod.name.clone());
+            } else {
+                classes.push(CtClass {
+                    names: vec![prod.name.clone()],
+                    conds,
+                });
+            }
+        }
+        let all: Vec<String> = self
+            .model
+            .productions
+            .iter()
+            .map(|p| p.name.clone())
+            .collect();
+        let node = build_ct_node(&classes);
+        self.out_lines
+            .push(format!("---->[root ({})]", all.join(" ")));
+        if let Some(n) = node {
+            self.push_ct_node(&n, true, 2);
+        }
+    }
+
+    fn push_ct_node(&mut self, node: &CtNode, branch: bool, depth: usize) {
+        let indent = " ".repeat(depth);
+        let branch = if branch { "T" } else { "NIL" };
+        match node {
+            CtNode::Leaf(names) => {
+                self.out_lines.push(format!(
+                    "{indent}-{}- {branch} ->[leaf ({})]",
+                    depth / 2,
+                    names.join(" ")
+                ));
+            }
+            CtNode::Test { cond, yes, no } => {
+                self.out_lines.push(format!(
+                    "{indent}-{}- {branch} ->[{}]",
+                    depth / 2,
+                    cond.display()
+                ));
+                self.push_ct_node(yes, true, depth + 2);
+                self.push_ct_node(no, false, depth + 2);
+            }
+        }
+    }
+
     /// `whynot-dm` (`commands/dm-commands.lisp:1383`): report the last
     /// retrieval request, then each named chunk's declarative parameters and
     /// why it was or was not retrieved.
@@ -3945,8 +4039,106 @@ fn render_slots_spec(slots: &[(String, Value)]) -> String {
         .join("\n")
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CtKind {
+    TestSlot,
+    Query,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct CtCond {
+    kind: CtKind,
+    buffer: String,
+    slot: String,
+    test: String,
+    value: String,
+}
+
+impl CtCond {
+    fn key(&self) -> String {
+        format!(
+            "{:?}|{}|{}|{}|{}",
+            self.kind as u8, self.buffer, self.slot, self.test, self.value
+        )
+    }
+
+    fn display(&self) -> String {
+        match self.kind {
+            CtKind::TestSlot => format!(
+                "TEST-SLOT {} {} {} {}",
+                self.buffer, self.slot, self.test, self.value
+            ),
+            CtKind::Query => format!("QUERY {} {} {}", self.buffer, self.slot, self.value),
+        }
+    }
+}
+
+struct CtClass {
+    names: Vec<String>,
+    conds: Vec<CtCond>,
+}
+
+enum CtNode {
+    Leaf(Vec<String>),
+    Test {
+        cond: CtCond,
+        yes: Box<CtNode>,
+        no: Box<CtNode>,
+    },
+}
+
+fn build_ct_node(classes: &[CtClass]) -> Option<CtNode> {
+    if classes.is_empty() {
+        return None;
+    }
+    if classes.len() == 1 {
+        return Some(CtNode::Leaf(classes[0].names.clone()));
+    }
+    let mut candidates: Vec<CtCond> = Vec::new();
+    for c in classes {
+        for cond in &c.conds {
+            if !candidates.iter().any(|x| x.key() == cond.key()) {
+                candidates.push(cond.clone());
+            }
+        }
+    }
+    for cond in candidates {
+        let yes: Vec<CtClass> = classes
+            .iter()
+            .filter(|c| c.conds.iter().any(|x| x.key() == cond.key()))
+            .map(|c| CtClass {
+                names: c.names.clone(),
+                conds: c.conds.clone(),
+            })
+            .collect();
+        let no: Vec<CtClass> = classes
+            .iter()
+            .filter(|c| !c.conds.iter().any(|x| x.key() == cond.key()))
+            .map(|c| CtClass {
+                names: c.names.clone(),
+                conds: c.conds.clone(),
+            })
+            .collect();
+        if yes.is_empty() || no.is_empty() {
+            continue;
+        }
+        let yes = build_ct_node(&yes)?;
+        let no = build_ct_node(&no)?;
+        return Some(CtNode::Test {
+            cond,
+            yes: Box::new(yes),
+            no: Box::new(no),
+        });
+    }
+    let mut names = Vec::new();
+    for c in classes {
+        names.extend(c.names.clone());
+    }
+    Some(CtNode::Leaf(names))
+}
+
 /// A chunk-type default value as Lisp `~S` would print it
-/// (`(chunk-type … (slot default))`).
+/// (`(chunk-type �?� (slot default))`).
 fn pattern_show(p: &crate::model::Pattern) -> String {
     use crate::model::Pattern;
     match p {
