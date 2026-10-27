@@ -2413,6 +2413,9 @@ pub struct Engine {
     zz_breaks: Vec<String>,
     /// Set when the current run hit one of the `zz_breaks` productions.
     zz_break_hit: bool,
+    /// Suppress the instantiation print for the current `pbreak` (the task
+    /// wrapped its run in `no-output`).
+    zz_break_quiet: bool,
     /// `associative-learning` driver: permuted people/places and the
     /// `create-stims` lists (`al-fan-study.lisp:245`).
     al_people: Vec<String>,
@@ -2799,6 +2802,7 @@ impl Engine {
             zz_prepared: None,
             zz_breaks: Vec::new(),
             zz_break_hit: false,
+            zz_break_quiet: false,
             al_people: Vec::new(),
             al_places: Vec::new(),
             al_sentences: Vec::new(),
@@ -3363,6 +3367,7 @@ impl Engine {
         self.zz_prepared = None;
         self.zz_breaks.clear();
         self.zz_break_hit = false;
+        self.zz_break_quiet = false;
         // `primary-al-reset` (`associative-learning.lisp:364`).
         self.al_chunks.clear();
         self.al_total_count = 0;

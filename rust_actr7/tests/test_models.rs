@@ -838,6 +838,10 @@ fn apply_session_step(
         Step::Reset => session.reset_model()?,
         Step::PDisable(names) => session.engine_mut().ok_or_else(no_model)?.pdisable(names),
         Step::PEnable(names) => session.engine_mut().ok_or_else(no_model)?.penable(names),
+        Step::PBreak(names) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .pbreak_quiet(names),
         Step::BufferChunk(buffers) => {
             session
                 .engine_mut()

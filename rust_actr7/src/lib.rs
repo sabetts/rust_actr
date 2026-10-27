@@ -187,6 +187,9 @@ pub enum Step {
     PDisable(Vec<String>),
     /// `(penable <name>...)`: re-enable the named productions.
     PEnable(Vec<String>),
+    /// `(pbreak <name>...)` without printing the instantiation (the task
+    /// wraps the run in `no-output`).
+    PBreak(Vec<String>),
     /// `(buffer-chunk <name>...)`: the task driver's final buffer dump.
     BufferChunk(Vec<String>),
     /// `(printed-buffer-chunk <name>...)`: the task driver's returned
@@ -373,6 +376,7 @@ pub fn run_model_steps_with_hook(
             Step::Reset => eng.reset()?,
             Step::PDisable(names) => eng.pdisable(names),
             Step::PEnable(names) => eng.penable(names),
+            Step::PBreak(names) => eng.pbreak_quiet(names),
             Step::BufferChunk(buffers) => {
                 eng.print_buffer_chunk(buffers);
             }

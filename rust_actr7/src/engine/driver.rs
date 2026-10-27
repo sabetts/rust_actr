@@ -1,5 +1,5 @@
 //! Task drivers (output, goal-focus, zz/al drivers).
-use super::compilation::show_pat;
+use super::compilation::{show_pat, slot_disp};
 use super::dm::{al_history, al_needed_refs, bl_equation, exp_coerced, log_coerced};
 use super::rhs::new_chunk;
 use super::*;
@@ -1565,7 +1565,7 @@ impl Engine {
                         }
                         lines.push(format!(
                             "       {} {}",
-                            t.slot,
+                            slot_disp(&t.slot, bindings),
                             show_pat(&t.value, bindings)
                         ));
                     }
@@ -1573,7 +1573,11 @@ impl Engine {
                 LhsItem::Query { buffer, queries } => {
                     lines.push(format!("   ?{buffer}>"));
                     for (slot, val) in queries {
-                        lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                        lines.push(format!(
+                            "       {} {}",
+                            slot_disp(slot, bindings),
+                            show_pat(val, bindings)
+                        ));
                     }
                 }
                 _ => {}
@@ -1586,22 +1590,33 @@ impl Engine {
                     lines.push(format!("   +{buffer}>"));
                     if let ChunkDesc::Spec { ctype, slots, .. } = spec {
                         // `production-statement-text` (`procedural.lisp:2555`)
-                        // prints the spec's slots, then the request type as
-                        // `CMD`.
+                        // prints the spec's slots, then an explicit request
+                        // type as `CMD`; the compiler's auto-added `CMD` is not
+                        // part of the source instantiation.
                         for (slot, val) in
                             slots.iter().filter(|(s, _)| !s.eq_ignore_ascii_case("CMD"))
                         {
-                            lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                            lines.push(format!(
+                                "       {} {}",
+                                slot_disp(slot, bindings),
+                                show_pat(val, bindings)
+                            ));
                         }
-                        for (slot, val) in
-                            slots.iter().filter(|(s, _)| s.eq_ignore_ascii_case("CMD"))
-                        {
-                            lines.push(format!("       {slot} {}", show_pat(val, bindings)));
-                        }
-                        if !ctype.is_empty()
-                            && !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case("CMD"))
-                        {
-                            lines.push(format!("       CMD {ctype}"));
+                        if !buffer.eq_ignore_ascii_case("RETRIEVAL") {
+                            for (slot, val) in
+                                slots.iter().filter(|(s, _)| s.eq_ignore_ascii_case("CMD"))
+                            {
+                                lines.push(format!(
+                                    "       {} {}",
+                                    slot_disp(slot, bindings),
+                                    show_pat(val, bindings)
+                                ));
+                            }
+                            if !ctype.is_empty()
+                                && !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case("CMD"))
+                            {
+                                lines.push(format!("       CMD {ctype}"));
+                            }
                         }
                     }
                 }
@@ -1609,7 +1624,11 @@ impl Engine {
                 RhsAction::Modify { buffer, slots } => {
                     lines.push(format!("   ={buffer}>"));
                     for (slot, val) in slots {
-                        lines.push(format!("       {slot} {}", show_pat(val, bindings)));
+                        lines.push(format!(
+                            "       {} {}",
+                            slot_disp(slot, bindings),
+                            show_pat(val, bindings)
+                        ));
                     }
                 }
                 _ => {}

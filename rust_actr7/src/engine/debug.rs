@@ -1903,12 +1903,19 @@ impl Engine {
 
     /// `(pbreak <name>...)`: halt before firing the named production.
     pub fn pbreak(&mut self, names: &[String]) {
+        self.zz_break_quiet = false;
         for n in names {
             let n = n.to_uppercase();
             if !self.zz_breaks.contains(&n) {
                 self.zz_breaks.push(n);
             }
         }
+    }
+
+    /// Quiet `pbreak` (the task wraps the run in `no-output`).
+    pub fn pbreak_quiet(&mut self, names: &[String]) {
+        self.pbreak(names);
+        self.zz_break_quiet = true;
     }
 
     /// `(punbreak <name>...)`.

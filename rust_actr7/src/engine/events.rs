@@ -813,7 +813,9 @@ impl Engine {
                 // `pbreak` (`procedural.lisp:2318`): print the instantiation,
                 // emit a break event, and halt the run before the reads.
                 if self.zz_breaks.iter().any(|b| b == &name) {
-                    self.zz_print_instantiation(prod, &bindings);
+                    if !self.zz_break_quiet {
+                        self.zz_print_instantiation(prod, &bindings);
+                    }
                     self.emit("------", format!("BREAK-EVENT PRODUCTION {name}"));
                     self.zz_break_hit = true;
                 }

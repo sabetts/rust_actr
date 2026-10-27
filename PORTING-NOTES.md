@@ -4871,3 +4871,14 @@ Recovered `tutorial-unit6-bst-spp-after-1-use` by replaying the first two
 same `(1 1)` seed per reset, then issuing the production-parameter dump. The
 case now checks the learned utilities after one `bst-test` pass. Corpus:
 **438 passed / 129 ignored**.
+
+## 290. Dynamic-retrieve breakpoints and instantiation printing
+
+The three `simple-dynamic-retrieve` cases were missing the task's `pbreak`.
+Added a quiet `PBreak` step for drivers that wrap the run in `no-output`, and
+made `pbreak` print dynamic LHS slot names through their bindings
+(`=slot` -> `DESTINATION`). Instantiation output now omits the retrieval
+request's compiler-inserted `CMD` while keeping explicit/module `CMD` lines.
+Promoted `tutorial-unit8-simple-dynamic-retrieve-first-step-buffers`,
+`...second-step-buffer`, and `...first-step-instantiate`: corpus
+**441 passed / 126 ignored**.

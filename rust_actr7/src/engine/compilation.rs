@@ -934,7 +934,7 @@ pub(super) fn show_pat(p: &Pattern, b: &Bindings) -> String {
 
 /// A dynamic LHS slot (`=context =x`) shows its bound slot name; a plain slot
 /// is shown verbatim.
-fn slot_disp(slot: &str, b: &Bindings) -> String {
+pub(super) fn slot_disp(slot: &str, b: &Bindings) -> String {
     match slot.strip_prefix('=') {
         Some(var) => b
             .get(var)

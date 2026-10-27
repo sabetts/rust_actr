@@ -6,17 +6,13 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
 fn tutorial_unit8_simple_dynamic_retrieve_first_step_buffers() -> Result<(), String> {
     Case::new("tutorial-unit8-simple-dynamic-retrieve-first-step-buffers")
         .models(&["tutorial;unit8;simple-dynamic-model.lisp"])
         .seed((100, 0))
         .steps(vec![
             Step::Reset,
-            Step::Command {
-                name: "all-productions".into(),
-                args: crate::sexps(r#"()"#),
-            },
+            Step::PBreak(vec!["RETRIEVE-FIRST-STEP".into()]),
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
