@@ -4835,3 +4835,13 @@ an ACT-R checkout. Promoted `tutorial-unit3-visual-chunk-type`,
 `tutorial-unit3-visual-location-chunk-type`, and
 `tutorial-unit6-visual-chunk-type-hierarchy-examples`, moving the corpus to
 **436 passed / 131 ignored**.
+
+## 287. Reset warnings honour the model body's `:v`
+
+Reset warnings were emitted through an ungated `emit_warning`, so every reset
+of a `(sgp :v nil)` model flooded the trace (the Siegler corpus produced 1202
+warning lines instead of its 9 result lines). `emit_warning` now respects the
+active trace flag, and reset temporarily evaluates warnings under the model
+body's `:v` before restoring the driver's trace state. This keeps engine-path
+cases such as `associative-learning` on their existing trace contract while
+suppressing model load/reset warnings for silent models.

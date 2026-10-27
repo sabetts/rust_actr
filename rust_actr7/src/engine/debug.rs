@@ -459,7 +459,9 @@ impl Engine {
     /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
     /// stub's "Installing a default touch device�?�" banner.
     pub fn emit_warning(&mut self, msg: &str) {
-        self.out_lines.push(format!("#|Warning: {msg} |#"));
+        if self.trace_on {
+            self.out_lines.push(format!("#|Warning: {msg} |#"));
+        }
     }
 
     /// Runtime `(p name ...)`: parse a production and emit ACT-R's typed-slot

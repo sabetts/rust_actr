@@ -3110,12 +3110,19 @@ impl Engine {
         self.trace_on = true;
         // ACT-R re-evaluates the model body on reset, so the validator's
         // rejection warnings reappear here (the load-time ones are dropped).
+        // Warnings honour the model body's `:v`, as `model-warning` does, but
+        // the driver trace is restored afterwards so engine-path tests keep
+        // their established trace contract.
+        let warning_trace = sgp_tri_state(&self.model.params, ":V");
+        let restore_trace = self.trace_on;
+        self.trace_on = warning_trace;
         for w in self.model.reset_warnings.clone() {
             self.emit_warning(&w);
         }
         for w in self.implicit_query_style_warnings() {
             self.emit_warning(&w);
         }
+        self.trace_on = restore_trace;
         self.dm = Vec::new();
         for c in &self.model.chunks {
             self.dm.push(chunk_inst(c)?);
