@@ -4825,3 +4825,13 @@ the next conflict resolution instead of leaving a stale executable entry.
 `tutorial-unit5-count-mod-request-goal-event` keeps the redefining `p` driver
 but remains ignored: matching its `module-mod-request` projection conflicts
 with `indirect-action-compilation`'s current ref.
+
+## 286. Core-module chunk-type refs vendored
+
+Vendored `core-modules/vision.lisp` and `core-modules/audio.lisp` under
+`fixtures/models` so the four core-module source-echo cases can run without
+an ACT-R checkout. Promoted `tutorial-unit3-visual-chunk-type`,
+`tutorial-unit3-sound-chunk-type`,
+`tutorial-unit3-visual-location-chunk-type`, and
+`tutorial-unit6-visual-chunk-type-hierarchy-examples`, moving the corpus to
+**436 passed / 131 ignored**.
