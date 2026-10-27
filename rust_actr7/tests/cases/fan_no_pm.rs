@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
 fn fan_no_pm() -> Result<(), String> {
     Case::new("fan-no-pm")
         .models(&[
@@ -109,6 +108,7 @@ fn fan_no_pm() -> Result<(), String> {
                 ":STARTING-PARAMETERS".into(),
                 crate::sexp(r#"(:SEED (1 0) :TESTING-FUNCTION SET-TESTING-TRACES)"#),
             ),
+            Step::FanCollect,
             Step::Reset,
             Step::PDisable(vec!["RETRIEVE-FROM-LOCATION".into()]),
             Step::ModFocus(vec![
@@ -509,6 +509,7 @@ fn fan_no_pm() -> Result<(), String> {
                 trace: true,
                 width: 22,
             },
+            Step::FanSummary,
         ])
         .check()
 }

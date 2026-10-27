@@ -211,6 +211,16 @@ pub enum Step {
     ZzDriver,
     /// `associative-learning` task driver (`run-it`/`approach-1-results`).
     AlDriver,
+    /// Start collecting the per-run response times/answers for
+    /// `fan-no-pm`'s `fan-experiment`.
+    FanCollect,
+    /// Print `fan-no-pm`'s `output-person-location` table from the runs
+    /// collected since [`Step::FanCollect`].
+    FanSummary,
+    /// Start collecting paired-associate prompt trials from the spec runs.
+    PairedCollect,
+    /// Print the paired-associate latency/accuracy summary.
+    PairedSummary,
     /// `siegler-experiment` task driver: fixed per-trial seeds, digit sounds,
     /// and the response matrix/statistics table. `fact_base` applies the
     /// `f00`..`f40` base levels; `all_base` applies `set-all-base-levels`.
@@ -393,6 +403,10 @@ pub fn run_model_steps_with_hook(
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
+            Step::FanCollect => eng.fan_collect_start(),
+            Step::FanSummary => eng.fan_no_pm_summary(),
+            Step::PairedCollect => eng.paired_collect_start(),
+            Step::PairedSummary => eng.paired_summary(),
             Step::SieglerDriver {
                 first_seed,
                 sets,

@@ -1045,6 +1045,191 @@ impl Engine {
         }
     }
 
+    /// Start `fan-no-pm`'s `fan-experiment` result recording. The task's
+    /// `fan-sentence` reads `(run 30)` and the goal's `state` after each run;
+    /// the spec harness replays those runs, so collection happens in
+    /// [`Engine::run_secs`].
+    pub fn fan_collect_start(&mut self) {
+        self.fan_runs.clear();
+        self.fan_collect = true;
+    }
+
+    /// Stop collecting and emit `fan-no-pm`'s `output-person-location`
+    /// (`tutorial/lisp/fan-no-pm.lisp:96`). The first 18 runs are the person
+    /// block and the next 18 the location block; `fan-experiment` averages
+    /// them pairwise.
+    pub fn fan_no_pm_summary(&mut self) {
+        self.fan_collect = false;
+        const DATA: [f64; 18] = [
+            1.11, 1.17, 1.22, 1.17, 1.20, 1.22, 1.15, 1.23, 1.36, 1.20, 1.22, 1.26, 1.25, 1.36,
+            1.29, 1.26, 1.47, 1.47,
+        ];
+        let runs = self.fan_runs.clone();
+        if runs.len() < 36 {
+            return;
+        }
+        let d: Vec<(f64, bool)> = (0..18)
+            .map(|i| {
+                let a = runs[i];
+                let b = runs[i + 18];
+                ((a.0 + b.0) / 2.0, a.1 && b.1)
+            })
+            .collect();
+        let predicted: Vec<f64> = d.iter().map(|x| x.0).collect();
+        let n = DATA.len() as f64;
+        let sum_r: f64 = predicted.iter().sum();
+        let sum_d: f64 = DATA.iter().sum();
+        let sum_r2: f64 = predicted.iter().map(|x| x * x).sum();
+        let sum_d2: f64 = DATA.iter().map(|x| x * x).sum();
+        let sum_rd: f64 = predicted.iter().zip(DATA.iter()).map(|(a, b)| a * b).sum();
+        let avg_r = sum_r / n;
+        let avg_d = sum_d / n;
+        let corr = (sum_rd / n - avg_r * avg_d)
+            / ((sum_r2 / n - avg_r * avg_r).sqrt() * (sum_d2 / n - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / n).sqrt();
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines.push(String::new());
+        self.out_lines.push("TARGETS:".to_string());
+        self.out_lines
+            .push("                         Person fan".to_string());
+        self.out_lines
+            .push("  Location      1             2             3".to_string());
+        self.out_lines.push("    fan".to_string());
+        for i in 0..3 {
+            self.fan_row(i, &d);
+        }
+        self.out_lines.push(String::new());
+        self.out_lines.push("FOILS:".to_string());
+        for i in 3..6 {
+            self.fan_row(i, &d);
+        }
+    }
+
+    fn fan_row(&mut self, row: usize, d: &[(f64, bool)]) {
+        // Rows 0..3 are targets (the task expects `"k"`); rows 3..6 are
+        // foils, where the recorded answer is correct only when it is not
+        // `"k"`.
+        let target = row < 3;
+        let cells: Vec<String> = (0..3)
+            .map(|j| {
+                let (rt, answered_yes) = d[j + row * 3];
+                let correct = if target { answered_yes } else { !answered_yes };
+                let mark = if correct { "T" } else { "NIL" };
+                format!("{rt:.3} ({mark:<3})")
+            })
+            .collect();
+        let mut line = format!("     {}    ", row % 3 + 1);
+        for cell in &cells {
+            line.push_str("   ");
+            line.push_str(cell);
+        }
+        self.out_lines.push(line);
+    }
+
+    pub fn paired_collect_start(&mut self) {
+        self.paired_runs.clear();
+        self.last_output_key = None;
+        self.paired_collect = true;
+    }
+
+    /// `output-data`/`print-results` from `tutorial/lisp/paired.lisp:167`:
+    /// average the per-block accuracy and correct-response latency over the
+    /// experiment runs and compare with the original paired-associate data.
+    pub fn paired_summary(&mut self) {
+        self.paired_collect = false;
+        const PAIRS: [(&str, &str); 20] = [
+            ("bank", "0"),
+            ("card", "1"),
+            ("dart", "2"),
+            ("face", "3"),
+            ("game", "4"),
+            ("hand", "5"),
+            ("jack", "6"),
+            ("king", "7"),
+            ("lamb", "8"),
+            ("mask", "9"),
+            ("neck", "0"),
+            ("pipe", "1"),
+            ("quip", "2"),
+            ("rope", "3"),
+            ("sock", "4"),
+            ("tent", "5"),
+            ("vent", "6"),
+            ("wall", "7"),
+            ("xray", "8"),
+            ("zinc", "9"),
+        ];
+        const DATA_LATENCY: [f64; 8] = [0.0, 2.158, 1.967, 1.762, 1.680, 1.552, 1.467, 1.402];
+        const DATA_ACCURACY: [f64; 8] = [0.0, 0.526, 0.667, 0.798, 0.887, 0.924, 0.958, 0.954];
+        let runs = self.paired_runs.clone();
+        const PER_SUBJECT: usize = 160;
+        let subjects = runs.len() / PER_SUBJECT;
+        if subjects == 0 {
+            return;
+        }
+        let mut accuracy = [0.0f64; 8];
+        let mut latency = [0.0f64; 8];
+        for s in 0..subjects {
+            for block in 0..8 {
+                let mut score = 0.0f64;
+                let mut time = 0.0f64;
+                for trial in 0..20 {
+                    let run = &runs[s * PER_SUBJECT + block * 20 + trial];
+                    let Some((_, answer)) = PAIRS
+                        .iter()
+                        .find(|(probe, _)| probe.eq_ignore_ascii_case(&run.probe))
+                    else {
+                        continue;
+                    };
+                    let Some((key, key_ms)) = &run.key else {
+                        continue;
+                    };
+                    if key.eq_ignore_ascii_case(answer) {
+                        score += 1.0;
+                        time += (*key_ms - run.start_ms) as f64 / 1000.0;
+                    }
+                }
+                accuracy[block] += score / 20.0;
+                if score > 0.0 {
+                    latency[block] += time / score;
+                }
+            }
+        }
+        let n = subjects as f64;
+        let predicted_latency: Vec<f64> = latency.iter().map(|x| x / n).collect();
+        let predicted_accuracy: Vec<f64> = accuracy.iter().map(|x| x / n).collect();
+        self.out_lines.push(String::new());
+        self.print_paired_results("Latency", &predicted_latency, &DATA_LATENCY);
+        self.out_lines.push(String::new());
+        self.print_paired_results("Accuracy", &predicted_accuracy, &DATA_ACCURACY);
+    }
+
+    fn print_paired_results(&mut self, label: &str, predicted: &[f64], data: &[f64]) {
+        let n = predicted.len() as f64;
+        let sum_r: f64 = predicted.iter().sum();
+        let sum_d: f64 = data.iter().sum();
+        let sum_r2: f64 = predicted.iter().map(|x| x * x).sum();
+        let sum_d2: f64 = data.iter().map(|x| x * x).sum();
+        let sum_rd: f64 = predicted.iter().zip(data.iter()).map(|(a, b)| a * b).sum();
+        let avg_r = sum_r / n;
+        let avg_d = sum_d / n;
+        let denom = (sum_r2 / n - avg_r * avg_r).sqrt() * (sum_d2 / n - avg_d * avg_d).sqrt();
+        let corr = if denom == 0.0 {
+            0.0
+        } else {
+            (sum_rd / n - avg_r * avg_d) / denom
+        };
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / n).sqrt();
+        self.out_lines.push(format!("{label}:"));
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines
+            .push("Trial    1       2       3       4       5       6       7       8".to_string());
+        let vals: Vec<String> = predicted.iter().map(|x| format!("{x:.3}")).collect();
+        self.out_lines.push(format!("        {}", vals.join("   ")));
+    }
+
     /// `siegler-experiment` (`tutorial/lisp/siegler.lisp`): run the fixed
     /// addition questions, collect the model's spoken answers, and print the
     /// response matrix plus correlation/RMSD against the experiment data.

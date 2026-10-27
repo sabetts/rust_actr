@@ -2101,6 +2101,13 @@ impl Clone for ExecProd {
     }
 }
 
+#[derive(Clone)]
+struct PairedRun {
+    start_ms: i64,
+    key: Option<(String, i64)>,
+    probe: String,
+}
+
 pub struct Engine {
     model: Model,
     cfg: Config,
@@ -2461,6 +2468,19 @@ pub struct Engine {
     /// Last speech movement's `(style-name, text)`, for `compute-prep-time`'s
     /// `feat-differences` (`general-pm.lisp:670`).
     last_speech: Option<(SpeechStyle, String)>,
+    /// `fan-no-pm`'s `fan-experiment` per-run results: elapsed seconds and
+    /// whether the goal's `state` slot ended as `"k"`.
+    fan_runs: Vec<(f64, bool)>,
+    /// Collect a result at the end of each `run` (the fan task's
+    /// `fan-sentence` records the value returned by `(run 30)`).
+    fan_collect: bool,
+    /// Paired-associate experiment prompt trials collected from the spec
+    /// runs: run start, output key (name, model time), and the probe still in
+    /// the imaginal buffer when the run stopped.
+    paired_runs: Vec<PairedRun>,
+    paired_collect: bool,
+    /// Last `output-key` event in the current run.
+    last_output_key: Option<(String, i64)>,
     /// act-touch: which hands are on the touch device (left=0, right=1).
     touch_hands: [bool; 2],
     /// act-touch: finger positions `[hand][finger] = (x, y, z)`, z=1 up.
@@ -2828,6 +2848,11 @@ impl Engine {
             prev_prod_ms: 0,
             last_press: None,
             last_speech: None,
+            fan_runs: Vec::new(),
+            fan_collect: false,
+            paired_runs: Vec::new(),
+            paired_collect: false,
+            last_output_key: None,
             touch_hands: [false, false],
             touch_fingers: [[(0, 0, 1); 5]; 2],
             touch_last: None,
@@ -4343,7 +4368,35 @@ impl Engine {
     }
 
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
-        self.zz_run_step_mode(secs, false).map(|_| ())
+        let start = self.time_ms;
+        if self.paired_collect {
+            self.last_output_key = None;
+        }
+        self.zz_run_step_mode(secs, false)?;
+        if self.fan_collect {
+            let elapsed = (self.time_ms - start) as f64 / 1000.0;
+            let answered = matches!(
+                self.buffer_slot_value("GOAL", "STATE").as_deref(),
+                Some("'k'")
+            );
+            self.fan_runs.push((elapsed, answered));
+        }
+        self.finish_paired_run(start);
+        Ok(())
+    }
+
+    fn finish_paired_run(&mut self, start_ms: i64) {
+        if !self.paired_collect {
+            return;
+        }
+        let Some(probe) = self.buffer_slot_value("IMAGINAL", "PROBE") else {
+            return;
+        };
+        self.paired_runs.push(PairedRun {
+            start_ms,
+            key: self.last_output_key.clone(),
+            probe: probe.trim_matches('\'').to_string(),
+        });
     }
 
     /// `run-full-time` (`framework/scheduling.lisp:986`): run for `secs` of
@@ -4351,9 +4404,15 @@ impl Engine {
     /// dummy event at the end (priority `:min`, `:output nil`). An empty
     /// queue therefore stops with "time limit reached", not "no events left".
     pub fn run_full_time(&mut self, secs: f64) -> Result<(), EngineError> {
+        let start = self.time_ms;
+        if self.paired_collect {
+            self.last_output_key = None;
+        }
         let end = self.time_ms + (secs * 1000.0).round() as i64;
         self.push_m(end, Prio::Min, Out::Never, true, Event::Dummy);
-        self.zz_run_step_mode(secs, true).map(|_| ())
+        self.zz_run_step_mode(secs, true)?;
+        self.finish_paired_run(start);
+        Ok(())
     }
 
     /// `run-until-time` (`framework/scheduling.lisp:1030`): run to an absolute
@@ -4362,20 +4421,28 @@ impl Engine {
     /// while the hidden dummy event at the end keeps the terminator "time
     /// limit reached" rather than "no events left".
     pub fn run_until(&mut self, time: f64) -> Result<(), EngineError> {
+        let start = self.time_ms;
+        if self.paired_collect {
+            self.last_output_key = None;
+        }
         let end_ms = (time * 1000.0).round() as i64;
         let secs = (end_ms - self.time_ms) as f64 / 1000.0;
         if secs > 0.0 {
             self.push_m(end_ms, Prio::Min, Out::Never, true, Event::Dummy);
-            self.zz_run_step_mode(secs, false).map(|_| ())
-        } else {
-            Ok(())
+            self.zz_run_step_mode(secs, false)?;
         }
+        self.finish_paired_run(start);
+        Ok(())
     }
 
     /// `run-n-events` (`framework/scheduling.lisp:1081`): process `count`
     /// events, then stop ("event limit reached"); an exhausted queue stops
     /// with "no events to process".
     pub fn run_n_events(&mut self, count: u64) -> Result<(), EngineError> {
+        let start = self.time_ms;
+        if self.paired_collect {
+            self.last_output_key = None;
+        }
         let mut n = 0u64;
         self.p_hist_run_start();
         loop {
@@ -4440,6 +4507,7 @@ impl Engine {
             }
         }
         self.p_hist_run_stop();
+        self.finish_paired_run(start);
         Ok(())
     }
 

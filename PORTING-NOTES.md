@@ -4895,3 +4895,21 @@ Recovered `tutorial-unit8-bst-imaginal-chunk` by replaying the same
 `(15 250 55 125)` device window and breaking quietly at
 `DECIDE-OVER`/`DECIDE-UNDER`, then dumping the imaginal buffer before the
 chosen production's RHS runs. Corpus: **443 passed / 124 ignored**.
+
+## 293. Fan-task experiment summary
+
+Added `FanCollect`/`FanSummary` steps that record each `(run 30)`'s elapsed
+time and goal `state`, then emit `fan-experiment`'s averaged TARGETS/FOILS
+table. `fan-no-pm` now runs all 36 experiment trials and prints the original
+18-condition correlation/mean deviation without replaying the task in Lisp.
+Corpus: **444 passed / 123 ignored**.
+
+## 294. Paired-associate experiment summary
+
+Added paired-run collection around a recovered spec: each prompt run records
+the `output-key` time and the probe still in the imaginal buffer, and
+`PairedSummary` aggregates the 8 blocks × 20 trials and emits `Latency:` /
+`Accuracy:` tables. This recovers `tutorial-unit4-paired-experiment-only-bll`
+(corpus **445 passed / 122 ignored**). The main, `no-bll`, and `with-rt`
+variants remain ignored: their summaries match to within a few milliseconds
+but the per-subject key timings are not yet exact.

@@ -884,6 +884,19 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .al_driver()
             .map_err(|e| e.to_string())?,
+        Step::FanCollect => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .fan_collect_start(),
+        Step::FanSummary => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .fan_no_pm_summary(),
+        Step::PairedCollect => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .paired_collect_start(),
+        Step::PairedSummary => session.engine_mut().ok_or_else(no_model)?.paired_summary(),
         Step::SieglerDriver {
             first_seed,
             sets,
@@ -960,6 +973,14 @@ impl Case {
 
     pub fn steps(mut self, steps: Vec<Step>) -> Self {
         self.steps = steps;
+        self
+    }
+
+    /// Wrap a recovered experiment spec with the paired-associate collector
+    /// and its final `output-data` summary.
+    pub fn paired_summary(mut self) -> Self {
+        self.steps.insert(0, Step::PairedCollect);
+        self.steps.push(Step::PairedSummary);
         self
     }
 

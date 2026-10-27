@@ -6,7 +6,8 @@
 use crate::Case;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
 fn tutorial_unit4_paired_experiment_only_bll() -> Result<(), String> {
-    Case::from_spec("tutorial-unit4-paired-experiment-only-bll").check()
+    Case::from_spec("tutorial-unit4-paired-experiment-only-bll")
+        .paired_summary()
+        .check()
 }

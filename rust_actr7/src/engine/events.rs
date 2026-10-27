@@ -2056,6 +2056,7 @@ impl Engine {
                 let _ = req_ms;
             }
             Event::OutputKey { key } => {
+                self.last_output_key = Some((key.to_lowercase(), self.time_ms));
                 self.fired_commands.push((
                     "output-key".to_string(),
                     self.model.name.clone(),
