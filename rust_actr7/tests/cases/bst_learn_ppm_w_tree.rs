@@ -6,7 +6,11 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: exact BST PPM trial summary plus conflict tree.
+// PPM reaches the imaginal action, but copy naming and the `length` read in
+// `encode-line-current` still diverge (#266-267); the 15-trial experiment
+// summary and `print-conflict-tree` output are also missing.
+#[ignore = "numerical: BST PPM learning summary"]
 fn bst_learn_ppm_w_tree() -> Result<(), String> {
     Case::new("bst-learn-ppm-w-tree")
         .models(&["tutorial;lisp;bst-ppm.lisp", "tutorial;unit8;bst-ppm-model.lisp"])

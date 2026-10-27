@@ -6,7 +6,10 @@
 use crate::Case;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: exact per-subject key timings.
+// The paired summary matches within a few milliseconds; the remaining diff
+// is in individual latency rows, not the aggregate shape (#294).
+#[ignore = "numerical: paired-summary timing"]
 fn tutorial_unit7_paired_learning_results_no_compiling() -> Result<(), String> {
     Case::from_spec("tutorial-unit7-paired-learning-results-no-compiling").check()
 }

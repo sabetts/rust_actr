@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: a Zbrodoff trial driver.
+// The ref needs `zbrodoff-problem "a" "2" "c" t` to build the imaginal RESULT
+// chunk; this case only runs the model and dumps an empty `sdm`.
+#[ignore = "driver-summary: Zbrodoff trial setup"]
 fn tutorial_unit4_zbrodoff_correct_chunk() -> Result<(), String> {
     Case::new("tutorial-unit4-zbrodoff-correct-chunk")
         .models(&[

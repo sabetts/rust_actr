@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `print-conflict-tree`.
+// The command has no engine implementation. This case also needs the fan
+// experiment summary (CORRELATION/TARGETS/FOILS), like `fan`.
+#[ignore = "missing-command: print-conflict-tree"]
 fn fan_w_tree() -> Result<(), String> {
     Case::new("fan-w-tree")
         .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])

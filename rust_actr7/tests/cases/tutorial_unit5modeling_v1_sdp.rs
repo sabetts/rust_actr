@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: the chunk-name form of `sdp` (e.g. `sdp v1 v2 v3`).
+// The session `sdp` path only handles `:keyword` getters, so the ref's
+// activation/Sji/similarity block is never produced.
+#[ignore = "missing-command: chunk sdp"]
 fn tutorial_unit5modeling_v1_sdp() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v1-sdp")
         .models(&["test-models;models;declarative-issues-v1.lisp"])

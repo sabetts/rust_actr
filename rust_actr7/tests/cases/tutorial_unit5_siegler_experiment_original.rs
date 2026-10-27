@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: exact Siegler response distribution.
+// The summary structure matches, but the response cells are close rather
+// than exact (#281).
+#[ignore = "numerical: Siegler response distribution"]
 fn tutorial_unit5_siegler_experiment_original() -> Result<(), String> {
     Case::new("tutorial-unit5-siegler-experiment-original")
         .models(&[

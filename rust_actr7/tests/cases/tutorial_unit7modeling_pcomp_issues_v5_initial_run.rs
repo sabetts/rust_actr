@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `pcomp-issues-experiment` averages.
+// The driver runs 10 seeded trials but has no collector/summary for the ref's
+// average score and response-time rows.
+#[ignore = "driver-summary: pcomp experiment"]
 fn tutorial_unit7modeling_pcomp_issues_v5_initial_run() -> Result<(), String> {
     Case::new("tutorial-unit7modeling-pcomp-issues-v5-initial-run")
         .models(&[

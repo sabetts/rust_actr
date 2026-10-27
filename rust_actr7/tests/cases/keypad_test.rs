@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: keypad punch event trace.
+// The ref walks the keypad through repeated presses; motor preparation and
+// key-event timing still differ.
+#[ignore = "engine-divergence: motor keypad trace"]
 fn keypad_test() -> Result<(), String> {
     Case::new("keypad-test")
         .models(&["test-models;models;keypad-test.lisp"])

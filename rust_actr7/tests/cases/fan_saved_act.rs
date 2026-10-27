@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `print-chunk-activation-trace` / `print-activation-trace`.
+// The ref dumps P13, P1, and the 585 ms activation trace, but the engine has
+// no command implementation for either printer.
+#[ignore = "missing-command: chunk activation trace"]
 fn fan_saved_act() -> Result<(), String> {
     Case::new("fan-saved-act")
         .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])

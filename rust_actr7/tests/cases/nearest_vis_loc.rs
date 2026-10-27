@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `:nearest` visual-location selection.
+// The ref compares the chosen location and visicon across five reset/run
+// cycles; nearest selection/visicon output still differs.
+#[ignore = "engine-divergence: nearest visual-location"]
 fn nearest_vis_loc() -> Result<(), String> {
     Case::new("nearest-vis-loc")
         .models(&["test-models;models;nearest-vis-loc.lisp"])

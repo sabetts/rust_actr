@@ -6,7 +6,9 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `print-chunk-activation-trace 1+2=3 27155 T`.
+// The ref is the activation breakdown; the command is not implemented.
+#[ignore = "missing-command: chunk activation trace"]
 fn tutorial_unit5modeling_v8_p6_compare_traces() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v8-p6-compare-traces")
         .models(&["test-models;models;declarative-issues-v8.lisp"])

@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: imaginal-action request semantics.
+// The action buffer and evaluator exist (#266-267), but the ref's returned
+// chunk, nil/error case, and action timing still diverge.
+#[ignore = "engine-divergence: imaginal-action buffer"]
 fn imaginal_action() -> Result<(), String> {
     Case::new("imaginal-action")
         .models(&["test-models;models;imaginal-action.lisp"])

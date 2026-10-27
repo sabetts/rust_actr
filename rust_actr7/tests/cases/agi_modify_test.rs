@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: exact add/modify-visicon trace.
+// The ref checks visual-location renaming and slot updates across three
+// `print-visicon` / `pprint-chunks` passes.
+#[ignore = "engine-divergence: visicon modify trace"]
 fn agi_modify_test() -> Result<(), String> {
     Case::new("agi-modify-test")
         .models(&["test-models;models;agi-modify-test.lisp"])

@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: base-level activation trace under repeated runs.
+// The ref compares :ol NIL/T/1/3 histories across eight seeded full-time
+// runs; the activation/history rows still differ.
+#[ignore = "engine-divergence: base-level activation trace"]
 fn base_level_safety_check() -> Result<(), String> {
     Case::new("base-level-safety-check")
         .models(&["test-models;models;base-level-safety-check.lisp"])

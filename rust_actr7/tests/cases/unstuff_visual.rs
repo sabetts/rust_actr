@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `:unstuff-visual-location` threshold trace.
+// The ref exercises nil/t/0.25/0.35 with and without overstuffing across 64
+// short runs; the stuffing timing/selection still diverges.
+#[ignore = "engine-divergence: visual-location stuffing"]
 fn unstuff_visual() -> Result<(), String> {
     Case::new("unstuff-visual")
         .models(&["test-models;models;unstuff-visual.lisp"])

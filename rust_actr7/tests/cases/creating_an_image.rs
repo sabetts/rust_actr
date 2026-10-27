@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: image window items and click actions.
+// The task builds image VDIs and registers click callbacks; the ref's
+// visicon/click trace is not reproduced yet.
+#[ignore = "engine-divergence: image window/visicon"]
 fn creating_an_image() -> Result<(), String> {
     Case::new("creating-an-image")
         .models(&["test-models;models;creating-an-image.lisp"])

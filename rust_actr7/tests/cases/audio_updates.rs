@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: replaying `new-tone-sound` objects outside a run.
+// The notification is replayed, but the sound object and its subsequent
+// onset/stuff events are not (#204).
+#[ignore = "missing-feature: audio sound-object replay"]
 fn audio_updates() -> Result<(), String> {
     Case::new("audio-updates")
         .models(&["test-models;models;audio-updates.lisp"])

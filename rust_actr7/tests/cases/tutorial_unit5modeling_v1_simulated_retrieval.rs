@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `simulate-retrieval-request`.
+// The task prints the simulated activation comparison, but the command has no
+// engine implementation.
+#[ignore = "missing-command: simulate-retrieval-request"]
 fn tutorial_unit5modeling_v1_simulated_retrieval() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v1-simulated-retrieval")
         .models(&["test-models;models;declarative-issues-v1.lisp"])

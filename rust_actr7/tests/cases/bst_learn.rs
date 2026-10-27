@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `bst-experiment` 15-trial summary.
+// The low-level runs exist, but there is no BST learning collection that
+// emits the correlation, trial row, and final utilities.
+#[ignore = "driver-summary: BST learning experiment"]
 fn bst_learn() -> Result<(), String> {
     Case::new("bst-learn")
         .models(&["tutorial;lisp;bst.lisp", "tutorial;unit6;bst-model.lisp"])

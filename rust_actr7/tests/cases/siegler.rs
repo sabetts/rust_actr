@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `siegler-experiment` 2-set summary.
+// The steps replay 12 runs but do not use SieglerDriver, so the ref's
+// correlation/response matrix is never emitted; tone replay is also missing.
+#[ignore = "driver-summary: Siegler experiment"]
 fn siegler() -> Result<(), String> {
     Case::new("siegler")
         .models(&[

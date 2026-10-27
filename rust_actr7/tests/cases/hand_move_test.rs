@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: hand move/key-event trace.
+// The ref records cursor movement and handler output for a manual move; the
+// engine's motor event sequence still differs.
+#[ignore = "engine-divergence: motor move trace"]
 fn hand_move_test() -> Result<(), String> {
     Case::new("hand-move-test")
         .models(&["test-models;models;hand-move-test.lisp"])

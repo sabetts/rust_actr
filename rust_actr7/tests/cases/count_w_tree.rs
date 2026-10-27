@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `print-conflict-tree`.
+// The ref ends with the conflict tree from the completed COUNT run; the
+// command has no engine implementation.
+#[ignore = "missing-command: print-conflict-tree"]
 fn count_w_tree() -> Result<(), String> {
     Case::new("count-w-tree")
         .models(&["tutorial;unit1;count.lisp"])

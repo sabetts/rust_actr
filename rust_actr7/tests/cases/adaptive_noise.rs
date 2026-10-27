@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: `:BL-HOOK` / `:NOISE-HOOK`.
+// The results depend on the model's adaptive-noise base-level and
+// only-permanent-noise callbacks, which the engine does not evaluate.
+#[ignore = "missing-feature: adaptive-noise hooks"]
 fn adaptive_noise() -> Result<(), String> {
     Case::new("adaptive-noise")
         .models(&["extras;adaptive-noise;test-model.lisp"])

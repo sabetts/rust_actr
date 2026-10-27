@@ -6,7 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: does not yet match ref"]
+// BLOCKED ON: merge/naming of the goal copy.
+// The ref prints G1 and CHUNK0 with the post-merge references; the engine's
+// DM merge/rename order still differs (#206).
+#[ignore = "engine-divergence: DM merge naming"]
 fn tutorial_unit5modeling_v9_p7_8_run_g1_chunks() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v9-p7-8-run-g1-chunks")
         .models(&["test-models;models;declarative-issues-v9.lisp"])

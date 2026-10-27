@@ -4991,3 +4991,33 @@ Recovered `test-syllable-count` with a model-free translation of the
 extension's lookup rules: explicit articulation times, table counts, the
 char-per-syllable fallback, and split-vocal-string spacing. Corpus:
 **458 passed / 109 ignored**.
+
+## 302. Triage of the remaining generic ignore labels
+
+The 46 cases whose reason was only `pending: does not yet match ref` now carry
+specific reasons and a `BLOCKED ON:` comment in their source. No test behavior
+changed. The 46 fall into these buckets:
+
+| Bucket | Count | Representative missing piece |
+|---|---:|---|
+| Missing activation-trace command | 3 | `print-chunk-activation-trace` / `print-activation-trace` |
+| Missing `print-conflict-tree` | 2 | conflict-tree printer |
+| Missing chunk `sdp` | 2 | `sdp v1 v2 v3` form; only `:keyword` getters exist |
+| Missing `whynot-dm` | 1 | declarative candidate report |
+| Missing `simulate-retrieval-request` | 1 | simulated activation comparison |
+| Incomplete experiment driver | 8 | fan, BST learning, Siegler, Zbrodoff, four pcomp averages |
+| BST PPM / imaginal action | 2 | PPM trial summary plus copy/length gaps (#266-267) |
+| DM merge/naming | 2 | `G1`/`CHUNK0` merge references and `sdm` grouping (#206) |
+| Visicon / imaginal semantics | 6 | image window, nearest LAD, Sperling, stuffing, action buffer |
+| Motor trace | 2 | hand move and keypad event timing |
+| Audio sound-object replay | 1 | `new-tone-sound` object plus onset events (#204) |
+| Adaptive-noise/PPM hooks | 2 | `:BL-HOOK`/`:NOISE-HOOK`, `:PPM-HOOK` |
+| Multi-model trace columns | 1 | model-name column and interleaved meta-process (#66) |
+| Production compilation | 2 | dynamic compiled-production trace/result (#154) |
+| Numerical summary mismatch | 10 | six Siegler experiments, Sperling experiment, three paired summaries |
+| Base-level activation trace | 1 | repeated seeded `:ol` histories |
+
+The missing debug printers are the clearest quick wins: they account for nine
+cases and are independent of model timing. Run
+`python rust_actr7/tools/list-ignored.py --counts` to see the new reason
+distribution; the generic reason count is zero.
