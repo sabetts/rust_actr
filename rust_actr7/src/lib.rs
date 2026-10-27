@@ -169,6 +169,9 @@ pub enum Step {
     /// `(sdm <spec>...)`: print the declarative-memory chunks matching the
     /// task's spec (`commands/dm-commands.lisp:491`).
     Sdm(Vec<String>),
+    /// `(no-output (sdm <spec>...))` followed by `(model-output "~s" names)`:
+    /// suppress the chunk dump but print the returned name list.
+    SdmNames(Vec<String>),
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -186,6 +189,9 @@ pub enum Step {
     PEnable(Vec<String>),
     /// `(buffer-chunk <name>...)`: the task driver's final buffer dump.
     BufferChunk(Vec<String>),
+    /// `(printed-buffer-chunk <name>...)`: the task driver's returned
+    /// multi-buffer dump (chunk lines have no blank between buffers).
+    PrintedBufferChunk(Vec<String>),
     /// Schedule a no-op event at absolute model time (real-time slack hook).
     DummyEvent(i64),
     /// Emit a raw task warning line.
@@ -341,6 +347,12 @@ pub fn run_model_steps_with_hook(
             Step::Sdm(spec) => {
                 eng.print_sdm(spec);
             }
+            Step::SdmNames(spec) => {
+                let mark = eng.out_len();
+                let names = eng.print_sdm(spec);
+                eng.truncate_out(mark);
+                eng.model_output(&format!("({})", names.join(" ")));
+            }
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),
@@ -350,6 +362,9 @@ pub fn run_model_steps_with_hook(
             Step::PEnable(names) => eng.penable(names),
             Step::BufferChunk(buffers) => {
                 eng.print_buffer_chunk(buffers);
+            }
+            Step::PrintedBufferChunk(buffers) => {
+                eng.print_printed_buffer_chunk(buffers);
             }
             Step::DummyEvent(at_ms) => eng.schedule_dummy(*at_ms),
             Step::EmitWarning(msg) => eng.emit_warning(msg),

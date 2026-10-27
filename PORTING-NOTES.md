@@ -4771,3 +4771,16 @@ chunks. The Rust driver now issues the equivalent `define-chunks` spec for
 `HAVE`/`HAD`/`BLANK` and `USE`/`USE`/`ED`, then prints the auto-named
 `PAST-TENSE0`/`PAST-TENSE1`. This promoted one case, moving the corpus to
 **424 passed / 143 ignored**.
+
+## 281. SDM grouping and printed buffer dumps (verified)
+
+`sdm` now groups every DM chunk by its slot signature, not just chunks added
+at runtime. A new signature moves its group to the front, so model `add-dm`
+groups print newest-first like ACT-R's `dm-chunks` alist. This promoted
+`tutorial-unit1code-semantic-sdm2` (using the new test-only `SdmNames` step,
+which runs `no-output` over `sdm` and prints the returned names).
+
+`PrintedBufferChunk` models `printed-buffer-chunk`: consecutive buffers print
+without an internal blank line, with one blank line closing the returned
+string. This promoted `tutorial-unit7-past-tense-buffer-starts`, moving the
+corpus to **426 passed / 141 ignored**.

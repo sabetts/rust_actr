@@ -130,6 +130,56 @@ impl Engine {
         names
     }
 
+    /// `printed-buffer-chunk` (`framework/buffers.lisp:915`): the same
+    /// header/chunk text as [`Self::print_buffer_chunk`], but consecutive
+    /// buffers have no blank line between them; one blank line closes the
+    /// returned string.
+    pub fn print_printed_buffer_chunk(&mut self, buffers: &[String]) -> Vec<String> {
+        let mut names = Vec::new();
+        for (i, name) in buffers.iter().enumerate() {
+            let bname = name.to_uppercase();
+            let chunk = self.buffers.get(&bname).and_then(|b| b.chunk.clone());
+            let cname = chunk
+                .as_ref()
+                .and_then(|c| c.name.clone())
+                .unwrap_or_default();
+            let shown = if cname.is_empty() {
+                "NIL".to_string()
+            } else {
+                cname.clone()
+            };
+            let mut header = format!("{bname}: {shown} ");
+            if let Some(src) = self
+                .copy_source
+                .get(&cname)
+                .or_else(|| self.vl_copied_from.get(&cname))
+            {
+                header.push_str(&format!("[{src}]"));
+            }
+            if self.cfg.threads && bname == "GOAL" {
+                let mut set: Vec<String> = self
+                    .goal_set
+                    .iter()
+                    .filter_map(|c| c.name.clone())
+                    .collect();
+                set.reverse();
+                header.push_str(&format!(" {{{}}}", set.join(" ")));
+            }
+            self.out_lines.push(header);
+            names.push(cname.clone());
+            if let Some(c) = &chunk {
+                self.push_chunk(c);
+                if i + 1 < buffers.len() {
+                    self.out_lines.pop();
+                }
+            }
+        }
+        if self.out_lines.last().is_some_and(|s| !s.is_empty()) {
+            self.out_lines.push(String::new());
+        }
+        names
+    }
+
     /// `(buffer-chunk)` with no buffer names: print only each buffer's
     /// `NAME: CHUNK ` header (the ref does not include the chunk slot lines).
     pub fn print_buffer_headers(&mut self, buffers: &[String]) -> Vec<String> {
@@ -271,44 +321,30 @@ impl Engine {
                 && preds[0].2 == "PAIR");
         let mut names = Vec::new();
         // `dm-chunks` (`declarative-memory.lisp:912`, `add-chunk-into-dm`
-        // 1918) is an alist keyed by the chunk's slot signature, and a new
-        // set is pushed to the *front* (1931), so `sdm` prints the merged
-        // sets newest-first, with each set's chunks in insertion order,
-        // followed by the model's `add-dm` chunks.
-        let n_model = self.model.chunks.len().min(self.dm.len());
+        // 1918) is an alist keyed by the chunk's slot signature. A chunk with
+        // an existing signature joins that group; a new signature pushes a
+        // group to the *front* (1931). `sdm` therefore prints groups
+        // newest-first, each group in insertion order. This applies to the
+        // model's `add-dm` chunks as well: `semantic`'s `property` group is
+        // newer than the bare-word group and prints first.
         let key = |c: &ChunkInst| {
-            let mut names: Vec<String> = c.slots.iter().map(|(k, _)| k.clone()).collect();
-            names.sort();
-            (c.ctype.clone(), names)
+            let mut slots: Vec<String> = c.slots.iter().map(|(k, _)| k.clone()).collect();
+            slots.sort();
+            (c.ctype.clone(), slots)
         };
         let mut groups: Vec<Vec<usize>> = Vec::new();
-        // A run-time chunk whose slot signature matches a model chunk joins
-        // that model chunk's `dm-chunks` group (the alist is keyed by
-        // signature), so it prints next to it rather than in the run-time
-        // block — `tutorial-unit5modeling-v9-p7-8-run`'s `IMAGINAL-CHUNK0-0`
-        // follows `OLD-CONTEXT`.
-        let mut attached: Vec<Vec<usize>> = vec![Vec::new(); n_model];
-        for i in n_model..self.dm.len() {
+        let mut signatures: Vec<(String, Vec<String>)> = Vec::new();
+        for i in 0..self.dm.len() {
             let ki = key(&self.dm[i]);
-            if let Some(j) = (0..n_model).find(|j| key(&self.dm[*j]) == ki) {
-                attached[j].push(i);
-                continue;
-            }
-            let found = groups.iter().position(|grp| key(&self.dm[grp[0]]) == ki);
-            match found {
+            match signatures.iter().position(|k| *k == ki) {
                 Some(g) => groups[g].push(i),
-                None => groups.push(vec![i]),
+                None => {
+                    signatures.insert(0, ki);
+                    groups.insert(0, vec![i]);
+                }
             }
         }
-        let mut prints: Vec<usize> = Vec::new();
-        for grp in groups.iter().rev() {
-            prints.extend(grp.iter().copied());
-        }
-        for i in 0..n_model {
-            prints.push(i);
-            prints.extend(attached[i].iter().copied());
-        }
-        for i in prints {
+        for i in groups.into_iter().flatten() {
             let c = self.dm[i].clone();
             if filter && !sdm_match(&c, &preds) {
                 continue;

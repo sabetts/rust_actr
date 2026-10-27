@@ -802,6 +802,13 @@ fn apply_session_step(
         Step::Sdm(spec) => {
             session.engine_mut().ok_or_else(no_model)?.print_sdm(spec);
         }
+        Step::SdmNames(spec) => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            let mark = eng.out_len();
+            let names = eng.print_sdm(spec);
+            eng.truncate_out(mark);
+            eng.model_output(&format!("({})", names.join(" ")));
+        }
         Step::RecordHistory(buffers) => session
             .engine_mut()
             .ok_or_else(no_model)?
@@ -836,6 +843,12 @@ fn apply_session_step(
                 .engine_mut()
                 .ok_or_else(no_model)?
                 .print_buffer_chunk(buffers);
+        }
+        Step::PrintedBufferChunk(buffers) => {
+            session
+                .engine_mut()
+                .ok_or_else(no_model)?
+                .print_printed_buffer_chunk(buffers);
         }
         Step::DummyEvent(at_ms) => session
             .engine_mut()
