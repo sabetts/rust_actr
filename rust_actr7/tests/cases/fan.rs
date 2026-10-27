@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: `fan-experiment` collection/summary.
-// The steps replay all trials, but nothing emits CORRELATION/TARGETS/FOILS;
-// the `:testing-function` reset hooks are also part of the ref.
-#[ignore = "driver-summary: fan experiment"]
 fn fan() -> Result<(), String> {
     Case::new("fan")
         .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])
@@ -93,6 +89,7 @@ fn fan() -> Result<(), String> {
                 ":STARTING-PARAMETERS".into(),
                 crate::sexp(r#"(:SEED (1 0) :TESTING-FUNCTION SET-TESTING-TRACES)"#),
             ),
+            Step::FanCollect,
             Step::Reset,
             Step::PDisable(vec!["RETRIEVE-FROM-LOCATION".into()]),
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
@@ -349,6 +346,7 @@ fn fan() -> Result<(), String> {
                 trace: true,
                 width: 22,
             },
+            Step::FanExperimentSummary,
         ])
         .check()
 }

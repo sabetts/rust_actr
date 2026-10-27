@@ -6,10 +6,9 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: the fan experiment driver/summary.
-// `print-conflict-tree` is now available, but this case still replays the fan
-// trials without FanCollect/FanSummary (CORRELATION/TARGETS/FOILS), like `fan`.
-#[ignore = "driver-summary: fan experiment (conflict tree available)"]
+// BLOCKED ON: conflict-tree split shape. The fan experiment summary now
+// matches, but the tree's incremental ARG2/ARG1 branches still differ.
+#[ignore = "engine divergence: conflict-tree split shape"]
 fn fan_w_tree() -> Result<(), String> {
     Case::new("fan-w-tree")
         .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])
@@ -97,6 +96,7 @@ fn fan_w_tree() -> Result<(), String> {
                 ":STARTING-PARAMETERS".into(),
                 crate::sexp(r#"(:SEED (1 0) :TESTING-FUNCTION SET-TESTING-TRACES)"#),
             ),
+            Step::FanCollect,
             Step::Reset,
             Step::PDisable(vec!["RETRIEVE-FROM-LOCATION".into()]),
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
@@ -353,6 +353,7 @@ fn fan_w_tree() -> Result<(), String> {
                 trace: true,
                 width: 22,
             },
+            Step::FanExperimentSummary,
         ])
         .check()
 }

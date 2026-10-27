@@ -4442,16 +4442,25 @@ impl Engine {
 
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
         let start = self.time_ms;
-        if self.paired_collect {
+        if self.paired_collect || self.fan_collect {
             self.last_output_key = None;
         }
         self.zz_run_step_mode(secs, false)?;
         if self.fan_collect {
-            let elapsed = (self.time_ms - start) as f64 / 1000.0;
+            // `fan-sentence` returns the time of the key press, not the time
+            // the run stopped (the full fan task uses the manual module).
+            let elapsed = self
+                .last_output_key
+                .as_ref()
+                .map(|(_, ms)| (ms - start) as f64 / 1000.0)
+                .unwrap_or((self.time_ms - start) as f64 / 1000.0);
             let answered = matches!(
                 self.buffer_slot_value("GOAL", "STATE").as_deref(),
                 Some("'k'")
-            );
+            ) || self
+                .last_output_key
+                .as_ref()
+                .is_some_and(|(key, _)| key.eq_ignore_ascii_case("k"));
             self.fan_runs.push((elapsed, answered));
         }
         self.finish_paired_run(start);

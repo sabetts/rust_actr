@@ -651,20 +651,6 @@ impl Engine {
                             }
                         }
                     }
-                    LhsItem::Query { buffer, queries } => {
-                        for (slot, value) in queries {
-                            let cond = CtCond {
-                                kind: CtKind::Query,
-                                buffer: buffer.to_uppercase(),
-                                slot: slot.to_uppercase(),
-                                test: String::new(),
-                                value: pattern_show(value),
-                            };
-                            if !conds.iter().any(|c: &CtCond| c.key() == cond.key()) {
-                                conds.push(cond);
-                            }
-                        }
-                    }
                     _ => {}
                 }
             }
@@ -4090,7 +4076,6 @@ fn render_slots_spec(slots: &[(String, Value)]) -> String {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CtKind {
     TestSlot,
-    Query,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -4116,7 +4101,6 @@ impl CtCond {
                 "TEST-SLOT {} {} {} {}",
                 self.buffer, self.slot, self.test, self.value
             ),
-            CtKind::Query => format!("QUERY {} {} {}", self.buffer, self.slot, self.value),
         }
     }
 }
@@ -4150,7 +4134,10 @@ fn build_ct_node(classes: &[CtClass]) -> Option<CtNode> {
             }
         }
     }
-    for cond in candidates {
+    // The Lisp builder's condition vector ends up in reverse production
+    // order for equal-information-gain ties; fan-w-tree's ARG2/ARG1 split is
+    // the corpus oracle for that tie.
+    for cond in candidates.into_iter().rev() {
         let yes: Vec<CtClass> = classes
             .iter()
             .filter(|c| c.conds.iter().any(|x| x.key() == cond.key()))

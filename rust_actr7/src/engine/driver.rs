@@ -1678,17 +1678,20 @@ impl Engine {
             20.0, 67.0, 20.0, 47.0, 87.0, 20.0, 80.0, 93.0, 83.0, 13.0, 29.0, 27.0, 80.0, 73.0,
             53.0,
         ];
+        let learn = matches!(mode, BstMode::Learn);
         let names: &[&str] = match mode {
-            BstMode::Experiment => &["DECIDE-OVER", "DECIDE-UNDER", "FORCE-OVER", "FORCE-UNDER"],
+            BstMode::Experiment | BstMode::Learn => {
+                &["DECIDE-OVER", "DECIDE-UNDER", "FORCE-OVER", "FORCE-UNDER"]
+            }
             BstMode::Ppm => &["DECIDE-OVER", "DECIDE-UNDER"],
         };
-        let runs = 100u32;
+        let runs = if learn { 1 } else { 100 };
         let mut counts = [0u32; 15];
         let mut utilities = vec![0.0f64; names.len()];
         for run in 0..runs {
             self.reset()?;
-            self.set_seed((101 + run as u64, 0));
-            self.set_trace(false);
+            self.set_seed(if learn { (1, 0) } else { (101 + run as u64, 0) });
+            self.set_trace(learn);
             for (i, &(a, b, c, goal)) in STIMS.iter().enumerate() {
                 let choice = self.bst_trial(a, b, c, goal)?;
                 if choice.as_deref() == Some("over") {
@@ -1874,6 +1877,17 @@ impl Engine {
     /// block and the next 18 the location block; `fan-experiment` averages
     /// them pairwise.
     pub fn fan_no_pm_summary(&mut self) {
+        self.fan_summary(true);
+    }
+
+    /// `fan-experiment`'s summary for the perceptual/motor variant. It uses
+    /// the same 18 pairs, but ACT-R prints `TARGETS:` immediately after the
+    /// deviation line (no blank line).
+    pub fn fan_experiment_summary(&mut self) {
+        self.fan_summary(false);
+    }
+
+    fn fan_summary(&mut self, blank_after_deviation: bool) {
         self.fan_collect = false;
         const DATA: [f64; 18] = [
             1.11, 1.17, 1.22, 1.17, 1.20, 1.22, 1.15, 1.23, 1.36, 1.20, 1.22, 1.26, 1.25, 1.36,
@@ -1904,7 +1918,9 @@ impl Engine {
         let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / n).sqrt();
         self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
         self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
-        self.out_lines.push(String::new());
+        if blank_after_deviation {
+            self.out_lines.push(String::new());
+        }
         self.out_lines.push("TARGETS:".to_string());
         self.out_lines
             .push("                         Person fan".to_string());
@@ -2554,6 +2570,19 @@ impl Engine {
     /// production with its matched bindings, as a `pbreak` prints it.
     pub(super) fn zz_print_instantiation(&mut self, prod: usize, bindings: &Bindings) {
         let p = self.model.productions[prod].clone();
+        // `bind-buffer` (`procedural.lisp:534`): an unbound `=buffer`
+        // reference in the instantiation resolves to the chunk currently in
+        // that buffer (`=retrieval` -> the retrieval chunk's copy name).
+        let mut bindings = bindings.clone();
+        for item in &p.lhs {
+            if let LhsItem::Match { buffer, .. } = item {
+                if !bindings.contains_key(buffer) {
+                    if let Some(name) = self.buffer_read(buffer) {
+                        bindings.insert(buffer.clone(), Value::Sym(name));
+                    }
+                }
+            }
+        }
         let mut lines = vec![format!("(P {}", p.name)];
         for item in &p.lhs {
             match item {
@@ -2565,8 +2594,8 @@ impl Engine {
                         }
                         lines.push(format!(
                             "       {} {}",
-                            slot_disp(&t.slot, bindings),
-                            show_pat(&t.value, bindings)
+                            slot_disp(&t.slot, &bindings),
+                            show_pat(&t.value, &bindings)
                         ));
                     }
                 }
@@ -2575,8 +2604,8 @@ impl Engine {
                     for (slot, val) in queries {
                         lines.push(format!(
                             "       {} {}",
-                            slot_disp(slot, bindings),
-                            show_pat(val, bindings)
+                            slot_disp(slot, &bindings),
+                            show_pat(val, &bindings)
                         ));
                     }
                 }
@@ -2588,7 +2617,7 @@ impl Engine {
             match item {
                 RhsAction::Request { buffer, spec } => {
                     lines.push(format!("   +{buffer}>"));
-                    if let ChunkDesc::Spec { ctype, slots, .. } = spec {
+                    if let ChunkDesc::Spec { slots, .. } = spec {
                         // `production-statement-text` (`procedural.lisp:2555`)
                         // prints the spec's slots, then an explicit request
                         // type as `CMD`; the compiler's auto-added `CMD` is not
@@ -2598,8 +2627,8 @@ impl Engine {
                         {
                             lines.push(format!(
                                 "       {} {}",
-                                slot_disp(slot, bindings),
-                                show_pat(val, bindings)
+                                slot_disp(slot, &bindings),
+                                show_pat(val, &bindings)
                             ));
                         }
                         if !buffer.eq_ignore_ascii_case("RETRIEVAL") {
@@ -2608,14 +2637,9 @@ impl Engine {
                             {
                                 lines.push(format!(
                                     "       {} {}",
-                                    slot_disp(slot, bindings),
-                                    show_pat(val, bindings)
+                                    slot_disp(slot, &bindings),
+                                    show_pat(val, &bindings)
                                 ));
-                            }
-                            if !ctype.is_empty()
-                                && !slots.iter().any(|(s, _)| s.eq_ignore_ascii_case("CMD"))
-                            {
-                                lines.push(format!("       CMD {ctype}"));
                             }
                         }
                     }
@@ -2626,8 +2650,8 @@ impl Engine {
                     for (slot, val) in slots {
                         lines.push(format!(
                             "       {} {}",
-                            slot_disp(slot, bindings),
-                            show_pat(val, bindings)
+                            slot_disp(slot, &bindings),
+                            show_pat(val, &bindings)
                         ));
                     }
                 }

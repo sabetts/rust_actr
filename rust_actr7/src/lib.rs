@@ -143,6 +143,8 @@ pub enum BstMode {
     Experiment,
     /// Unit 8 PPM model: two strategy-choice utilities.
     Ppm,
+    /// Tutorial `bst-experiment 1`: one traced run and the hover summary.
+    Learn,
 }
 
 /// One-hit blackjack task entry points.
@@ -271,6 +273,8 @@ pub enum Step {
     /// Print `fan-no-pm`'s `output-person-location` table from the runs
     /// collected since [`Step::FanCollect`].
     FanSummary,
+    /// Print the perceptual/motor `fan-experiment` table.
+    FanExperimentSummary,
     /// Start collecting paired-associate prompt trials from the spec runs.
     PairedCollect,
     /// Print the paired-associate latency/accuracy summary.
@@ -466,6 +470,7 @@ pub fn run_model_steps_with_hook(
             Step::Bst(mode) => eng.bst_driver(*mode)?,
             Step::FanCollect => eng.fan_collect_start(),
             Step::FanSummary => eng.fan_no_pm_summary(),
+            Step::FanExperimentSummary => eng.fan_experiment_summary(),
             Step::PairedCollect => eng.paired_collect_start(),
             Step::PairedSummary => eng.paired_summary(),
             Step::SieglerDriver {

@@ -3,40 +3,21 @@
 //! lisp: actr7.x/test-models/bst-learn.lisp
 
 use crate::Case;
-use actr_engine::Step;
+use actr_engine::{BstMode, Step};
 
 #[test]
-// BLOCKED ON: `bst-experiment` 15-trial summary.
-// The low-level runs exist, but there is no BST learning collection that
-// emits the correlation, trial row, and final utilities.
-#[ignore = "driver-summary: BST learning experiment"]
+// BLOCKED ON: BST window/visicon trace lifecycle. The one-run summary path
+// exists, but the live window's visual-location numbering and visicon updates
+// differ from the 15-trial ref.
+#[ignore = "engine divergence: BST trace/window lifecycle"]
 fn bst_learn() -> Result<(), String> {
     Case::new("bst-learn")
         .models(&["tutorial;lisp;bst.lisp", "tutorial;unit6;bst-model.lisp"])
         .seed((1, 0))
         .steps(vec![
-            Step::Sgp(":STARTING-PARAMETERS".into(), crate::sexp(r#"(:SEED (1 0))"#)),
-            Step::Reset,
-            Step::Command { name: "chunk-type".into(), args: crate::sexps(r#"((CURSOR (:INCLUDE VISUAL-OBJECT)) (CURSOR T) SCREEN-POS VALUE STATUS COLOR HEIGHT WIDTH)"#) },
-            Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
-            Step::Run { secs: 60.0, trace: true, width: 22 },
+            Step::Sgp(":MODEL-WARNINGS".into(), crate::sexp("NIL")),
+            Step::Sgp(":V".into(), crate::sexp("T")),
+            Step::Bst(BstMode::Learn),
         ])
         .check()
 }

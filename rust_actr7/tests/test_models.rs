@@ -915,6 +915,10 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .fan_no_pm_summary(),
+        Step::FanExperimentSummary => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .fan_experiment_summary(),
         Step::PairedCollect => session
             .engine_mut()
             .ok_or_else(no_model)?

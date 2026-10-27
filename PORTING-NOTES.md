@@ -5083,3 +5083,17 @@ Also added task-command registration (`add-act-r-command`) plus the
 four-line invalid-compilation trace, but remains ignored on a pre-existing
 pcomp trial-timing divergence (37.244 vs 36.267). Corpus: **468 passed /
 99 ignored**.
+
+## 307. Full fan experiment summary
+
+`Step::FanExperimentSummary` now emits the perceptual/motor `fan-experiment`
+table without the blank line that `fan-no-pm` prints. Fan collection uses the
+manual `output-key` timestamp (the task returns the key-press time, not the
+end-of-run time), and `break-fan-run` installs the ENCODE-PERSON breakpoint
+with the testing traces. Recovered `fan`. Conflict-tree tie handling now
+matches the first ARG2 split, but `fan-w-tree`'s deeper incremental branches
+still differ, so it remains ignored.
+
+Added a one-run `BstMode::Learn` path for `bst-learn`, but its 15-trial live
+window still diverges on visual-location numbering/visicon updates; it remains
+ignored. Corpus: **469 passed / 98 ignored**.

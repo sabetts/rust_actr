@@ -2454,6 +2454,16 @@ impl Session {
                 let _ = eng.apply_sgp(":act", &Sexp::Sym("T".into()));
             }
         }
+        // `break-fan-run` (`test-models/fan.lisp:4`): testing traces plus a
+        // breakpoint on ENCODE-PERSON, which prints the instantiation and stops
+        // the run so the caller can dump the retrieval buffer.
+        if name.eq_ignore_ascii_case("break-fan-run") {
+            if let Some(eng) = &mut self.engine {
+                let _ = eng.apply_sgp(":v", &Sexp::Sym("T".into()));
+                let _ = eng.apply_sgp(":cmdt", &Sexp::Sym("T".into()));
+                eng.pbreak(&["ENCODE-PERSON".to_string()]);
+            }
+        }
     }
 
     /// `schedule-event[-relative|-now]`: `(time, action, options)` (or
