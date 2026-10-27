@@ -1,0 +1,13 @@
+(RUN 1
+ (ADD-TEXT 5780 "Done" 180 200)
+ (ADD-BUTTON 0 "A" 5 23 40 24 "gray" "(\"bst-button-pressed\" 15 \"under\")")
+ (ADD-BUTTON 0 "B" 5 48 40 24 "gray" "(\"bst-button-pressed\" 250 \"over\")")
+ (ADD-BUTTON 0 "C" 5 73 40 24 "gray" "(\"bst-button-pressed\" 55 \"under\")")
+ (ADD-BUTTON 0 "Reset" 5 123 65 24 "gray" "\"bst-reset-button-pressed\"")
+ (ADD-LINE 0 75 35 90 35 "black")
+ (ADD-LINE 0 75 60 325 60 "black")
+ (ADD-LINE 0 75 85 130 85 "black")
+ (ADD-LINE 0 75 110 200 110 "green")
+ (ADD-LINE 2093 75 135 325 135 "blue")
+ (INSTALL)
+)

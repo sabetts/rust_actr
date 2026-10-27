@@ -4888,3 +4888,10 @@ Promoted `tutorial-unit8-simple-dynamic-retrieve-first-step-buffers`,
 Recovered the remaining `simple-dynamic-retrieve-second-step-buffers` driver
 with the same quiet `pbreak retrieve-second-step` boundary. Corpus:
 **442 passed / 125 ignored**.
+
+## 292. BST imaginal chunk at the strategy decision
+
+Recovered `tutorial-unit8-bst-imaginal-chunk` by replaying the same
+`(15 250 55 125)` device window and breaking quietly at
+`DECIDE-OVER`/`DECIDE-UNDER`, then dumping the imaginal buffer before the
+chosen production's RHS runs. Corpus: **443 passed / 124 ignored**.
