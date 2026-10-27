@@ -6,7 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-#[ignore = "pending: sdm slot order"]
 fn tutorial_unit1code_semantic_sdm() -> Result<(), String> {
     Case::new("tutorial-unit1code-semantic-sdm")
         .models(&["tutorial;unit1;semantic.lisp"])

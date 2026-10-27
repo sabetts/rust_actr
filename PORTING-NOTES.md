@@ -5064,3 +5064,22 @@ same root/test-slot/leaf format as `commands/conflict-tree.lisp`
 printer is intentionally simpler than the upstream information-gain builder;
 it is sufficient for COUNT, while `fan-w-tree` remains blocked on its fan
 experiment driver/summary. Corpus: **466 passed / 101 ignored**.
+
+## 306. Activation-trace driver and full module slot index
+
+Added `Step::SdmActivationTraces`: it runs the `sdm` spec without printing the
+chunk dump, then replays each returned chunk's saved `:sact` detail at the
+request time, collapsing unmatched detail lines the way the v9 task does.
+Recovered `tutorial-unit5modeling-v9-spreading-activation-only`.
+
+`Model::slot_index` now pre-seeds the complete standard-module slot order
+(audio, motor, speech, visual, retrieval, and utility slots) before the model
+body's chunk types. The semantic model's `property` slots therefore print
+`OBJECT VALUE ATTRIBUTE`, matching ACT-R's shared slot index rather than the
+type declaration order. Recovered `tutorial-unit1code-semantic-sdm`.
+
+Also added task-command registration (`add-act-r-command`) plus the
+`!eval!` compiler-invalidity check. `v8-eval-issue` now reaches the ref's
+four-line invalid-compilation trace, but remains ignored on a pre-existing
+pcomp trial-timing divergence (37.244 vs 36.267). Corpus: **468 passed /
+99 ignored**.

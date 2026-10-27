@@ -2568,6 +2568,10 @@ pub struct Engine {
     trace_on: bool,
     /// Task-file `defun`s available to `!eval!`/`!bind!`.
     user_fns: HashMap<String, crate::model::UserDefun>,
+    /// Registered task commands whose side effects are outside the model
+    /// trace (`add-act-r-command`), so `!eval! ("cmd")` can run them as a
+    /// no-op.
+    task_commands: HashSet<String>,
     /// Task-file `defparameter`/`defvar` values (upper-cased names).
     user_vars: HashMap<String, Value>,
 }
@@ -2926,6 +2930,7 @@ impl Engine {
             tracker_target: "2".to_string(),
             trace_on: true,
             user_fns: HashMap::new(),
+            task_commands: HashSet::new(),
             user_vars: HashMap::new(),
         };
         // `process-slots-specs` (`chunk-spec.lisp:597`): a request

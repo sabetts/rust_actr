@@ -62,6 +62,8 @@ pub const BUILTINS: &[&str] = &[
     "reload",
     "load-act-r-model",
     "load-act-r-code",
+    "add-act-r-command",
+    "remove-act-r-command",
     "goal-focus",
     "mod-focus",
     "set-parameter-value",
@@ -698,6 +700,20 @@ impl Session {
                     .and_then(|a| a.as_str())
                     .ok_or("load-act-r-model requires a path")?;
                 self.load(logical)?;
+                Ok(vec![Json::Bool(true)])
+            }
+            "add-act-r-command" | "remove-act-r-command" => {
+                let task_name = args.first().map(json_to_sexp).and_then(|s| match s {
+                    Sexp::Sym(n) | Sexp::Str(n) => Some(n),
+                    _ => None,
+                });
+                if let (Some(task_name), Some(eng)) = (task_name, &mut self.engine) {
+                    if name == "add-act-r-command" {
+                        eng.register_task_command(&task_name);
+                    } else {
+                        eng.remove_task_command(&task_name);
+                    }
+                }
                 Ok(vec![Json::Bool(true)])
             }
             "reset" => {

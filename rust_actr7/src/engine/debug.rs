@@ -528,24 +528,60 @@ impl Engine {
     /// `print-chunk-activation-trace` (`dm-commands.lisp:1200`): replay the
     /// saved `:sact` detail for one chunk at a request time.
     pub fn print_chunk_activation_trace(&mut self, name: &str, time_ms: i64) {
+        let text = self.chunk_activation_trace_text(name, time_ms);
+        self.out_lines.extend(text.lines().map(str::to_string));
+    }
+
+    /// The string returned by `printed-chunk-activation-trace`
+    /// (`dm-commands.lisp:1335`), which the training task filters by line.
+    fn chunk_activation_trace_text(&self, name: &str, time_ms: i64) -> String {
         let name = name.to_uppercase();
-        let Some(trace) = self.sact_traces.get(&time_ms).cloned() else {
-            self.out_lines.push(format!(
-                "No activation trace information available for time {}",
+        let Some(trace) = self.sact_traces.get(&time_ms) else {
+            return format!(
+                "#|Warning: No activation trace information available for time {} |#",
                 fmt_secs(time_ms)
-            ));
-            return;
+            );
         };
         if trace.no_matches.iter().any(|n| n == &name) {
-            self.out_lines
-                .push(format!("Chunk {name} did not match the request."));
-            return;
+            return format!("Chunk {name} did not match the request.\n");
         }
         if let Some((_, detail)) = trace.chunks.iter().find(|(n, _)| n == &name) {
-            self.out_lines.extend(detail.lines().map(str::to_string));
-        } else {
-            self.out_lines
-                .push(format!("Chunk {name} was not considered."));
+            return detail.clone();
+        }
+        format!("Chunk {name} was not considered.\n")
+    }
+
+    /// The task-side loop in
+    /// `tutorial-unit5modeling-v9-spreading-activation-only.lisp`: get the
+    /// chunks returned by `sdm`, then print each chunk's saved activation
+    /// trace, collapsing unmatched detail lines to a single `...`.
+    pub fn print_sdm_activation_traces(&mut self, spec: &[String], time_ms: i64) {
+        let mark = self.out_len();
+        let names = self.print_sdm(spec);
+        self.truncate_out(mark);
+        for name in names {
+            let text = self.chunk_activation_trace_text(&name, time_ms);
+            let mut dots = false;
+            for line in text.lines() {
+                let lower = line.to_ascii_lowercase();
+                let keep = line.contains("Computing activation")
+                    || lower.contains("spreading")
+                    || lower.contains("sources")
+                    || lower.contains("transient")
+                    || lower.contains("has an activation");
+                if keep {
+                    dots = false;
+                    self.out_lines.push(line.to_string());
+                } else if !dots {
+                    dots = true;
+                    self.out_lines.push("...".to_string());
+                }
+            }
+            // The task splits the returned string on its trailing newline, so
+            // the final empty segment becomes another `...`.
+            if !dots {
+                self.out_lines.push("...".to_string());
+            }
         }
     }
 
@@ -1134,6 +1170,18 @@ impl Engine {
     /// Install task-file `defun`s for the bounded `!eval!`/`!bind!` evaluator.
     pub fn set_user_fns(&mut self, fns: HashMap<String, crate::model::UserDefun>) {
         self.user_fns = fns;
+    }
+
+    /// Register a task command (`add-act-r-command`). Its side effects are
+    /// outside the model trace, so the bounded `!eval!` evaluator can treat it
+    /// as a successful no-op.
+    pub fn register_task_command(&mut self, name: &str) {
+        self.task_commands.insert(name.to_uppercase());
+    }
+
+    /// Remove a task command (`remove-act-r-command`).
+    pub fn remove_task_command(&mut self, name: &str) {
+        self.task_commands.remove(&name.to_uppercase());
     }
 
     /// Install task-file globals for the bounded evaluator.

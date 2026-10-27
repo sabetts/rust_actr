@@ -215,6 +215,11 @@ pub enum Step {
     /// `(no-output (sdm <spec>...))` followed by `(model-output "~s" names)`:
     /// suppress the chunk dump but print the returned name list.
     SdmNames(Vec<String>),
+    /// For every chunk returned by `sdm`, print the saved activation trace at
+    /// `time_ms`, filtered the way the v9 spreading-activation task does.
+    SdmActivationTraces { spec: Vec<String>, time_ms: i64 },
+    /// Register a task command (`add-act-r-command`) for `!eval!`.
+    RegisterTaskCommand(String),
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -428,6 +433,10 @@ pub fn run_model_steps_with_hook(
                 eng.truncate_out(mark);
                 eng.model_output(&format!("({})", names.join(" ")));
             }
+            Step::SdmActivationTraces { spec, time_ms } => {
+                eng.print_sdm_activation_traces(spec, *time_ms);
+            }
+            Step::RegisterTaskCommand(name) => eng.register_task_command(name),
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),

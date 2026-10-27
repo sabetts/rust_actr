@@ -809,6 +809,14 @@ fn apply_session_step(
             eng.truncate_out(mark);
             eng.model_output(&format!("({})", names.join(" ")));
         }
+        Step::SdmActivationTraces { spec, time_ms } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .print_sdm_activation_traces(spec, *time_ms),
+        Step::RegisterTaskCommand(name) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .register_task_command(name),
         Step::RecordHistory(buffers) => session
             .engine_mut()
             .ok_or_else(no_model)?

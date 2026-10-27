@@ -993,6 +993,11 @@ impl Engine {
     /// `None` means valid. With `:cia` off, any indirect action invalidates.
     pub(super) fn invalid_compilation_reason(&self, idx: usize) -> Option<String> {
         let prod = &self.model.productions[idx];
+        if prod.lhs.iter().any(|x| matches!(x, LhsItem::Eval { .. }))
+            || prod.rhs.iter().any(|x| matches!(x, RhsAction::Eval { .. }))
+        {
+            return Some("it contains one or more !eval! operators".to_string());
+        }
         if let Some(buf) = indirect_action_buffer_name(prod) {
             if !self.cfg.cia {
                 return Some(format!("it has an indirect action with the {buf} buffer"));

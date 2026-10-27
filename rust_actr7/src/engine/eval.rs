@@ -332,9 +332,11 @@ impl Engine {
         _b: &Bindings,
     ) -> Result<Value, String> {
         // A registered task command (`add-act-r-command`): its side effects
-        // (e.g. recording a response in the task's own variable) are not
-        // part of the trace, so a no-op matches.
-        if self.user_fns.contains_key(&name.to_uppercase()) {
+        // (e.g. recording a response in the task's own variable) are not part
+        // of the trace, so a no-op matches.
+        if self.task_commands.contains(&name.to_uppercase())
+            || self.user_fns.contains_key(&name.to_uppercase())
+        {
             return Ok(Value::Nil);
         }
         Err(format!("unsupported eval command \"{name}\""))
