@@ -46,7 +46,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine divergence: base-level reference trace (pending)"]
 fn hook_tutorial_unit5modeling_v1_low_act_trace() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit5modeling-v1-low-act-trace")
         .models(&["test-models;models;declarative-issues-v1.lisp"])
@@ -62,7 +61,6 @@ fn hook_tutorial_unit5modeling_v1_low_act_trace() -> Result<(), String> {
                 width: 22,
             },
             Step::Sgp(":ACT".into(), crate::sexp("LOW")),
-            Step::Sgp(":ACT".into(), crate::sexp("T")),
             Step::Sgp(":EPL".into(), crate::sexp("NIL")),
             Step::Sgp(":PCT".into(), crate::sexp("NIL")),
             Step::Sgp(":ALPHA".into(), crate::sexp("0.2")),

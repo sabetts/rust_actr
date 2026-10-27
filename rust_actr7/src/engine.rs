@@ -3199,7 +3199,7 @@ impl Engine {
                 self.hist[i].count = n;
                 self.hist[i].fixed_base = Some(level);
                 self.hist[i].refs = match &self.cfg.ol {
-                    Ol::On => vec![creation_ms; n],
+                    Ol::On => Vec::new(),
                     Ol::Off => even_references(creation_ms, 0, n),
                     Ol::Num(ol) => even_references(creation_ms, 0, (*ol as usize).min(n)),
                 };
@@ -3220,7 +3220,7 @@ impl Engine {
                 self.hist[i].count = n;
                 self.hist[i].fixed_base = Some(*level);
                 self.hist[i].refs = match &self.cfg.ol {
-                    Ol::On => vec![creation_ms; n],
+                    Ol::On => Vec::new(),
                     Ol::Off => even_references(creation_ms, 0, n),
                     Ol::Num(ol) => even_references(creation_ms, 0, (*ol as usize).min(n)),
                 };

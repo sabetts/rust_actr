@@ -4784,3 +4784,16 @@ which runs `no-output` over `sdm` and prints the returned names).
 without an internal blank line, with one blank line closing the returned
 string. This promoted `tutorial-unit7-past-tense-buffer-starts`, moving the
 corpus to **426 passed / 141 ignored**.
+
+## 282. Base-level history under optimized learning (verified)
+
+`:ol t` does not populate chunk reference lists; `set-base-levels` now stores
+an empty list while keeping the reference count and creation time, matching
+`adapt-references` (`dm-commands.lisp:649`). This restored the empty `(...)`
+in the base-level trace and promoted `tutorial-unit5modeling-v3-run-p2` and
+`tutorial-unit5modeling-v4-run-p2`.
+
+The low-activation case's driver had an extra `:ACT T` that upgraded the
+requested `:ACT LOW` back to medium detail; dropping it promoted
+`tutorial-unit5modeling-v1-low-act-trace`. Corpus: **429 passed / 138
+ignored**.

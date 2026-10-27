@@ -24,7 +24,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine divergence: base-level reference trace (pending)"]
 fn hook_tutorial_unit5modeling_v4_run_p2() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit5modeling-v4-run-p2")
         .models(&["test-models;models;declarative-issues-v4.lisp"])
