@@ -371,6 +371,9 @@ struct Config {
     threads: bool,
     /// Activation trace (`:act`); see [`Act`].
     act: Option<Act>,
+    /// Saved activation trace (`:sact`): when non-nil, each retrieval keeps a
+    /// per-time copy of the activation narration for the two trace printers.
+    sact: Option<Act>,
     /// Conflict-resolution trace (`:crt`).
     crt: bool,
     /// Conflict-set trace (`:cst`): print each matching production's
@@ -655,6 +658,16 @@ pub struct RetrievalRecord {
     pub chunks: Vec<RetrievalChunk>,
 }
 
+/// One `:sact` retrieval snapshot, keyed by request time.
+#[derive(Debug, Clone, Default)]
+struct SactTrace {
+    matches: Vec<String>,
+    no_matches: Vec<String>,
+    /// `(chunk name, activation narration)` in activation order.
+    chunks: Vec<(String, String)>,
+    result: Option<String>,
+}
+
 /// Snapshot of the most recent retrieval request, for `whynot-dm`
 /// (`commands/dm-commands.lisp:1383`).
 #[derive(Debug, Clone)]
@@ -662,7 +675,6 @@ struct LastRequest {
     time_ms: i64,
     request_lines: Vec<String>,
     matches: Vec<String>,
-    non_matches: Vec<String>,
     best: Vec<String>,
     activations: HashMap<String, f32>,
     rt: f32,
@@ -1330,6 +1342,18 @@ impl Config {
                     got => return Err(bad(format!("bad :act {got}"))),
                 }),
                 Some((_, got)) => return Err(bad(format!("bad :act {got:?}"))),
+            },
+            sact: match m.params.iter().find(|(k, _)| k == ":SACT") {
+                None => None,
+                Some((_, Sexp::Sym(s))) if s == "NIL" => None,
+                Some((_, Sexp::Sym(s))) => Some(match s.as_str() {
+                    "T" => Act::T,
+                    "HIGH" => Act::High,
+                    "MEDIUM" => Act::Medium,
+                    "LOW" => Act::Low,
+                    got => return Err(bad(format!("bad :sact {got}"))),
+                }),
+                Some((_, got)) => return Err(bad(format!("bad :sact {got:?}"))),
             },
             crt: sgp_bool(&m.params, ":CRT"),
             cst: sgp_bool(&m.params, ":CST"),
@@ -2177,6 +2201,11 @@ pub struct Engine {
     /// Last retrieval request, retained even when retrieval-history is off
     /// (`dm-last-request`, used by `whynot-dm`).
     last_request: Option<LastRequest>,
+    /// Saved activation traces (`:sact`), keyed by request time in ms.
+    sact_traces: HashMap<i64, SactTrace>,
+    /// Suppress narration that belongs only to the live `:act` trace while
+    /// capturing the saved `:sact` details (the negation note).
+    sact_capture: bool,
     /// Whether `retrieval-history` recording is enabled (`record-history`).
     record_retrieval_history: bool,
     /// `buffer-history` state (`record-history "buffer-history"`).
@@ -2640,6 +2669,8 @@ impl Engine {
             last_conflict_set: Vec::new(),
             retrieval_history: Vec::new(),
             last_request: None,
+            sact_traces: HashMap::new(),
+            sact_capture: false,
             record_retrieval_history: false,
             buffer_history: BufferHistory {
                 last_time: -1,
@@ -3193,6 +3224,8 @@ impl Engine {
         // (`reset-dm-history-module`).
         self.retrieval_history.clear();
         self.last_request = None;
+        self.sact_traces.clear();
+        self.sact_capture = false;
         // `reset-buffer-history-module`: clear the data and disable recording.
         self.buffer_history = BufferHistory {
             last_time: -1,

@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: `simulate-retrieval-request`.
-// The task prints the simulated activation comparison, but the command has no
-// engine implementation.
-#[ignore = "missing-command: simulate-retrieval-request"]
 fn tutorial_unit5modeling_v1_simulated_retrieval() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v1-simulated-retrieval")
         .models(&["test-models;models;declarative-issues-v1.lisp"])
@@ -26,6 +22,10 @@ fn tutorial_unit5modeling_v1_simulated_retrieval() -> Result<(), String> {
             },
             Step::Sgp(":RT".into(), crate::sexp(r#"-10"#)),
             Step::Seed((100, 3)),
+            Step::Command {
+                name: "simulate-retrieval-request".into(),
+                args: crate::sexps(r#"- RESULT NIL SIMPLE-VALUE-CHUNK T"#),
+            },
         ])
         .check()
 }

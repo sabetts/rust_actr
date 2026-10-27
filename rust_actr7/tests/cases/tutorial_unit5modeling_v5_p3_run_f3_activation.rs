@@ -6,9 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: `print-chunk-activation-trace F3 26591 T`.
-// The ref is the activation breakdown; the command is not implemented.
-#[ignore = "missing-command: chunk activation trace"]
 fn tutorial_unit5modeling_v5_p3_run_f3_activation() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v5-p3-run-f3-activation")
         .models(&["test-models;models;declarative-issues-v5.lisp"])

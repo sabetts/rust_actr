@@ -102,6 +102,8 @@ pub const BUILTINS: &[&str] = &[
     "pprint-chunks",
     "pprint-chunks-fct",
     "print-dm-finsts",
+    "print-activation-trace",
+    "print-chunk-activation-trace",
     // Environment viewers (`environment/environment-cmds.lisp` + the
     // `printed-*`/`all-productions`/`buffers`/`chunks` families).
     "act-r-version",
@@ -131,6 +133,7 @@ pub const BUILTINS: &[&str] = &[
     "printed-parameter-details",
     "whynot",
     "whynot-dm",
+    "simulate-retrieval-request",
     "mp-show-queue",
     "chunk-p",
     "chunk-copied-from",
@@ -2125,6 +2128,44 @@ impl Session {
                     .collect();
                 if let Some(eng) = &mut self.engine {
                     eng.print_whynot_dm(&names);
+                }
+                Ok(vec![Json::Null])
+            }
+            "simulate-retrieval-request" => {
+                let forms: Vec<Sexp> = args.iter().map(json_to_sexp).collect();
+                let desc = crate::model::parse_chunk_desc(&forms).map_err(|e| e.to_string())?;
+                if let Some(eng) = &mut self.engine {
+                    eng.simulate_retrieval(&desc).map_err(|e| e.to_string())?;
+                }
+                Ok(vec![Json::Null])
+            }
+            "print-chunk-activation-trace" => {
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("missing chunk name")?;
+                let raw = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let in_ms = !matches!(args.get(2), Some(Json::Bool(false)) | Some(Json::Null));
+                let time = if in_ms {
+                    raw as i64
+                } else {
+                    (raw * 1000.0).round() as i64
+                };
+                if let Some(eng) = &mut self.engine {
+                    eng.print_chunk_activation_trace(name, time);
+                }
+                Ok(vec![Json::Null])
+            }
+            "print-activation-trace" => {
+                let raw = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let in_ms = !matches!(args.get(1), Some(Json::Bool(false)) | Some(Json::Null));
+                let time = if in_ms {
+                    raw as i64
+                } else {
+                    (raw * 1000.0).round() as i64
+                };
+                if let Some(eng) = &mut self.engine {
+                    eng.print_activation_trace(time);
                 }
                 Ok(vec![Json::Null])
             }

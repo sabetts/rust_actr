@@ -2677,7 +2677,6 @@ impl Engine {
             let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
                 && req_empty.iter().all(|s| c.get(s) == Value::Nil);
             if !sig_ok {
-                non_matches.push(cname);
                 continue;
             }
             // `:recently-retrieved nil` excludes chunks retrieved within the
@@ -2734,9 +2733,19 @@ impl Engine {
         } else {
             candidates.clone()
         };
+        let sact = self.cfg.sact.is_some();
+        self.sact_capture = sact;
+        let mut sact_chunks: Vec<(String, String)> = Vec::new();
         for idx in act_order {
             let c = self.dm[idx].clone();
             let cname = c.name.clone().unwrap_or_default();
+            let sact_mark = sact.then(|| self.out_len());
+            let sact_trace = self.trace_on;
+            let sact_act = self.cfg.act;
+            if sact {
+                self.trace_on = true;
+                self.cfg.act = Some(Act::T);
+            }
             if self.act_medium() {
                 self.out(format!("Computing activation for chunk {cname}"));
                 self.out("Computing base-level".to_string());
@@ -2842,7 +2851,7 @@ impl Engine {
                     let simd = if sim == self.cfg.ms {
                         mp * self.cfg.md
                     } else {
-                        if show {
+                        if show && !self.sact_capture {
                             self.out(
                                 "  negation test with similarity not ms has no effect".to_string(),
                             );
@@ -2893,6 +2902,13 @@ impl Engine {
             if self.act_low() {
                 self.out(format!("Chunk {cname} has an activation of: {}", lisp_f(a)));
             }
+            if let Some(mark) = sact_mark {
+                let detail = self.out_since(mark).join("\n");
+                self.truncate_out(mark);
+                sact_chunks.push((cname.clone(), detail));
+                self.trace_on = sact_trace;
+                self.cfg.act = sact_act;
+            }
             match best_a {
                 None => {
                     if self.act_medium() {
@@ -2926,6 +2942,7 @@ impl Engine {
                 _ => {}
             }
         }
+        self.sact_capture = false;
         // A unique best and a tie-break narrate differently
         // (`declarative-memory.lisp:1488` vs `:1515`), so the tie set's size has
         // to survive the selection below.
@@ -2966,12 +2983,39 @@ impl Engine {
         self.last_request = Some(LastRequest {
             time_ms: self.time_ms,
             request_lines: request_lines.clone(),
-            matches,
-            non_matches: non_matches.clone(),
+            matches: matches.clone(),
             best: tied_names,
             activations,
             rt,
         });
+        if sact {
+            let result = match &best {
+                None => "No matching chunk found retrieval failure".to_string(),
+                Some(_) if below => {
+                    format!("No chunk above the retrieval threshold: {}", lisp_f(rt))
+                }
+                Some(w) if ntied > 1 => {
+                    let wname = w.name.clone().unwrap_or_default();
+                    format!(
+                        "Chunk {wname} chosen among the chunks with activation {}",
+                        lisp_f(act)
+                    )
+                }
+                Some(w) => {
+                    let wname = w.name.clone().unwrap_or_default();
+                    format!("Chunk {wname} with activation {} is the best", lisp_f(act))
+                }
+            };
+            self.sact_traces.insert(
+                self.time_ms,
+                SactTrace {
+                    matches: matches.clone(),
+                    no_matches: non_matches.clone(),
+                    chunks: sact_chunks,
+                    result: Some(result),
+                },
+            );
+        }
         if let Some(request) = hist_request {
             let failure = |name: &str| RetrievalChunk {
                 failure: true,

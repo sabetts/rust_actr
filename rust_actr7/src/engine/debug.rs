@@ -377,6 +377,214 @@ impl Engine {
         names.to_vec()
     }
 
+    /// `simulate-retrieval-request` (`commands/dm-commands.lisp:1484`):
+    /// report the activation a request would produce without scheduling a
+    /// retrieval. The RNG is restored afterwards.
+    pub fn simulate_retrieval(
+        &mut self,
+        desc: &crate::model::ChunkDesc,
+    ) -> Result<(), EngineError> {
+        let spec = super::rhs::new_chunk(desc)?;
+        let NewChunk::Spec {
+            slots, neg, rels, ..
+        } = &spec
+        else {
+            return Ok(());
+        };
+        if !self.cfg.esc {
+            return Ok(());
+        }
+        let req_filled: Vec<&str> = slots
+            .iter()
+            .filter(|(s, v)| !s.starts_with(':') && *v != Value::Nil)
+            .map(|(s, _)| s.as_str())
+            .chain(
+                neg.iter()
+                    .filter(|(s, v)| !s.starts_with(':') && *v == Value::Nil)
+                    .map(|(s, _)| s.as_str()),
+            )
+            .collect();
+        let req_empty: Vec<&str> = slots
+            .iter()
+            .filter(|(s, v)| !s.starts_with(':') && *v == Value::Nil)
+            .map(|(s, _)| s.as_str())
+            .collect();
+        let saved = self.rng.borrow().clone();
+        let mut best: Option<(String, f32)> = None;
+        let mut tied: Vec<(String, f32)> = Vec::new();
+        for idx in 0..self.dm.len() {
+            let c = self.dm[idx].clone();
+            let cname = c.name.clone().unwrap_or_default();
+            if !req_filled.iter().all(|s| c.get(s) != Value::Nil)
+                || !req_empty.iter().all(|s| c.get(s) == Value::Nil)
+            {
+                continue;
+            }
+            let a = self.simulate_activation(idx, slots, neg, rels, self.cfg.mp);
+            if best.as_ref().is_none_or(|(_, b)| a > *b) {
+                if best.is_some() {
+                    tied.clear();
+                }
+                self.out_lines.push(format!(
+                    "Chunk {cname} has the current best activation {}",
+                    lisp_f(a)
+                ));
+                best = Some((cname.clone(), a));
+                tied.push((cname, a));
+            } else if best.as_ref().is_some_and(|(_, b)| a == *b) {
+                self.out_lines.push(format!(
+                    "Chunk {cname} matches the current best activation {}",
+                    lisp_f(a)
+                ));
+                tied.push((cname, a));
+            } else {
+                self.out_lines
+                    .push(format!("Chunk {cname} has activation {}", lisp_f(a)));
+            }
+        }
+        if let Some((name, activation)) = best {
+            if tied.len() > 1 {
+                self.out_lines.push(format!(
+                    "Chunk {name} chosen among the chunks with activation {}",
+                    lisp_f(activation)
+                ));
+            } else {
+                self.out_lines.push(format!(
+                    "Chunk {name} with activation {} is the best",
+                    lisp_f(activation)
+                ));
+            }
+        } else {
+            self.out_lines
+                .push("No matching chunk found retrieval failure".to_string());
+        }
+        *self.rng.borrow_mut() = saved;
+        Ok(())
+    }
+
+    fn simulate_activation(
+        &mut self,
+        idx: usize,
+        slots: &[(String, Value)],
+        neg: &[(String, Value)],
+        _rels: &[(String, Value, crate::model::SlotOp)],
+        mp: Option<f32>,
+    ) -> f32 {
+        let (refs, creation, count, fixed_base) = {
+            let h = &self.hist[idx];
+            (h.refs.clone(), h.creation_ms, h.count, h.fixed_base)
+        };
+        let base = match self.cfg.bll {
+            Some(bll) if count > 0 => {
+                self.cfg.blc
+                    + bl_equation(
+                        self.time_ms,
+                        &refs,
+                        count as f32,
+                        creation,
+                        bll,
+                        &self.cfg.ol,
+                        self.cfg.act_scale,
+                    )
+            }
+            Some(_) => -999999.0,
+            None => fixed_base.unwrap_or(self.cfg.blc),
+        };
+        let name = self.dm[idx].name.clone().unwrap_or_default();
+        let old_act = self.cfg.act;
+        self.cfg.act = None;
+        let spread = if name.is_empty() {
+            0.0
+        } else {
+            self.spreading_activation(&name, self.cfg.mas)
+        };
+        self.cfg.act = old_act;
+        let mut a = base + spread;
+        if let Some(mp) = mp {
+            for (s, v) in neg {
+                if s.starts_with(':') {
+                    continue;
+                }
+                let sim = self.similarity(v, &self.dm[idx].get(s));
+                if sim == self.cfg.ms {
+                    a += mp * self.cfg.md;
+                }
+            }
+            for (s, v) in slots {
+                if s.starts_with(':') || *v == Value::Nil {
+                    continue;
+                }
+                let sim = self.similarity(v, &self.dm[idx].get(s));
+                a += mp * sim;
+            }
+        }
+        let noise = match self.cfg.ans {
+            Some(s) => self.rng.borrow_mut().noise(s),
+            None => 0.0,
+        };
+        a + noise
+    }
+
+    /// `print-chunk-activation-trace` (`dm-commands.lisp:1200`): replay the
+    /// saved `:sact` detail for one chunk at a request time.
+    pub fn print_chunk_activation_trace(&mut self, name: &str, time_ms: i64) {
+        let name = name.to_uppercase();
+        let Some(trace) = self.sact_traces.get(&time_ms).cloned() else {
+            self.out_lines.push(format!(
+                "No activation trace information available for time {}",
+                fmt_secs(time_ms)
+            ));
+            return;
+        };
+        if trace.no_matches.iter().any(|n| n == &name) {
+            self.out_lines
+                .push(format!("Chunk {name} did not match the request."));
+            return;
+        }
+        if let Some((_, detail)) = trace.chunks.iter().find(|(n, _)| n == &name) {
+            self.out_lines.extend(detail.lines().map(str::to_string));
+        } else {
+            self.out_lines
+                .push(format!("Chunk {name} was not considered."));
+        }
+    }
+
+    /// `print-activation-trace` (`dm-commands.lisp:1042`): replay the saved
+    /// `:sact` match lists and activation details for a request time.
+    pub fn print_activation_trace(&mut self, time_ms: i64) {
+        let Some(trace) = self.sact_traces.get(&time_ms).cloned() else {
+            self.out_lines.push(format!(
+                "No activation trace information available for time {}",
+                fmt_secs(time_ms)
+            ));
+            return;
+        };
+        // The Lisp `dm-chunks` set does not expose the engine's transient
+        // visual/imaginal buffer copies. Keep the saved no-match list to the
+        // model's declarative chunks, as the reference traces do.
+        let model_chunks: HashSet<String> = self
+            .model
+            .chunks
+            .iter()
+            .chain(self.model.defined_chunks.iter())
+            .map(|c| c.name.clone())
+            .collect();
+        for name in &trace.matches {
+            self.out_lines.push(format!("Chunk {name} matches"));
+        }
+        for name in &trace.no_matches {
+            if model_chunks.contains(name) {
+                self.out_lines.push(format!("Chunk {name} does not match"));
+            }
+        }
+        for (_, detail) in &trace.chunks {
+            self.out_lines.extend(detail.lines().map(str::to_string));
+        }
+        if let Some(result) = trace.result {
+            self.out_lines.push(result);
+        }
+    }
+
     /// `whynot-dm` (`commands/dm-commands.lisp:1383`): report the last
     /// retrieval request, then each named chunk's declarative parameters and
     /// why it was or was not retrieved.
@@ -441,11 +649,9 @@ impl Engine {
                         "{name} was not chosen as the chunk to be retrieved"
                     ));
                 }
-            } else if last.non_matches.iter().any(|m| m == &name) {
+            } else {
                 self.out_lines
                     .push(format!("{name} did not match the request"));
-            } else {
-                self.out_lines.push(format!("{name} was not considered."));
             }
         }
     }
@@ -1034,6 +1240,19 @@ impl Engine {
                         _ => return Err(bad(format!("bad :act {s}"))),
                     }),
                     _ => return Err(bad(format!("bad :act {val:?}"))),
+                };
+            }
+            ":SACT" => {
+                self.cfg.sact = match val {
+                    Sexp::Sym(s) if s == "NIL" => None,
+                    Sexp::Sym(s) => Some(match s.as_str() {
+                        "T" => Act::T,
+                        "HIGH" => Act::High,
+                        "MEDIUM" => Act::Medium,
+                        "LOW" => Act::Low,
+                        _ => return Err(bad(format!("bad :sact {s}"))),
+                    }),
+                    _ => return Err(bad(format!("bad :sact {val:?}"))),
                 };
             }
             // `:nsji` (`declarative-memory.lisp:2261`): `t`/`warn`/`nil`.

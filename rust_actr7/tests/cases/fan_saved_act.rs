@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: `print-chunk-activation-trace` / `print-activation-trace`.
-// The ref dumps P13, P1, and the 585 ms activation trace, but the engine has
-// no command implementation for either printer.
-#[ignore = "missing-command: chunk activation trace"]
 fn fan_saved_act() -> Result<(), String> {
     Case::new("fan-saved-act")
         .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])
@@ -18,6 +14,7 @@ fn fan_saved_act() -> Result<(), String> {
             Step::Reset,
             Step::PDisable(vec!["RETRIEVE-FROM-LOCATION".into()]),
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
+            Step::Sgp(":SACT".into(), crate::sexp(r#"T"#)),
             Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
@@ -36,6 +33,7 @@ fn fan_saved_act() -> Result<(), String> {
             },
             Step::Reset,
             Step::PDisable(vec!["RETRIEVE-FROM-LOCATION".into()]),
+            Step::Sgp(":SACT".into(), crate::sexp(r#"T"#)),
             Step::Run {
                 secs: 30.0,
                 trace: true,

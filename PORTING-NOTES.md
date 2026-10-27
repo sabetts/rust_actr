@@ -5036,3 +5036,21 @@ best-set, and threshold outcome.
 
 Recovered `tutorial-unit5modeling-v1-sdp`, `...-v10-sdp`, and
 `...-v1-whynot-dm`. Corpus: **461 passed / 106 ignored**.
+
+## 304. Simulated retrieval and saved activation traces
+
+Added `simulate-retrieval-request` for request specs: it scores the same
+candidate set, draws activation noise in request order, restores the RNG, and
+prints the Lisp "current best"/"has activation"/"is the best" lines.
+
+Added `:SACT` state and a per-request-time trace table. During retrieval the
+activation narration is captured without leaking into the model trace; the
+capture suppresses the live-`:act`-only negation note. `print-activation-trace`
+replays matches, no-matches, saved details, and the retrieval result;
+`print-chunk-activation-trace` replays one chunk's details or explains that it
+did not match/was not considered.
+
+Recovered `tutorial-unit5modeling-v1-simulated-retrieval`,
+`...-v5-p3-run-f3-activation`, `...-v8-p6-compare-traces`, and `fan-saved-act`
+(whose two runs need `:SACT t` re-applied after reset). Corpus:
+**465 passed / 102 ignored**.
