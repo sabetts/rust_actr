@@ -1,0 +1,45 @@
+;; The `bst` task's window, replayed from the ref. `build-display` draws the
+;; four sticks, the goal stick, and the four buttons; `update-current-line`
+;; (the `bst-button-pressed` action) then redraws the "current" stick at
+;; y=135 after every click: `add-line-to-exp-window` the first time, then
+;; `modify-line-for-exp-window` (or `remove-items-from-exp-window` on a
+;; reset), and on the done click a modify to the target plus the "Done" text.
+;; Button params are (A B C goal): run 1/3 = (15 200 41 103), run 2/4 =
+;; (10 200 29 132). All lines start at (75,135); a line of length L ends at
+;; (75+L,135), so the geometry follows from the click sequence.
+(RUN 1
+ (ADD-TEXT 10753 "Done" 180 200)
+ (ADD-BUTTON 0 "A" 5 23 40 24 "gray" "(\"bst-button-pressed\" 15 \"under\")")
+ (ADD-BUTTON 0 "B" 5 48 40 24 "gray" "(\"bst-button-pressed\" 200 \"over\")")
+ (ADD-BUTTON 0 "C" 5 73 40 24 "gray" "(\"bst-button-pressed\" 41 \"under\")")
+ (ADD-BUTTON 0 "Reset" 5 123 65 24 "gray" "\"bst-reset-button-pressed\"")
+ (ADD-LINE 0 75 35 90 35 "black")
+ (ADD-LINE 0 75 60 275 60 "black")
+ (ADD-LINE 0 75 85 116 85 "black")
+ (ADD-LINE 0 75 110 178 110 "green")
+ (ADD-LINE 2136 75 135 116 135 "blue")
+ (MODIFY-LINE 2941 75 135 116 135 75 135 157 135)
+ (MODIFY-LINE 4468 75 135 157 135 75 135 172 135)
+ (REMOVE-LINE 6080 75 135 172 135)
+ (ADD-LINE 7066 75 135 275 135 "blue")
+ (MODIFY-LINE 8421 75 135 275 135 75 135 234 135)
+ (MODIFY-LINE 9226 75 135 234 135 75 135 193 135)
+ (MODIFY-LINE 10753 75 135 193 135 75 135 178 135)
+ (INSTALL)
+)
+(RUN 2
+ (ADD-TEXT 5780 "Done" 180 200)
+ (ADD-BUTTON 0 "A" 5 23 40 24 "gray" "(\"bst-button-pressed\" 10 \"under\")")
+ (ADD-BUTTON 0 "B" 5 48 40 24 "gray" "(\"bst-button-pressed\" 200 \"over\")")
+ (ADD-BUTTON 0 "C" 5 73 40 24 "gray" "(\"bst-button-pressed\" 29 \"under\")")
+ (ADD-BUTTON 0 "Reset" 5 123 65 24 "gray" "\"bst-reset-button-pressed\"")
+ (ADD-LINE 0 75 35 85 35 "black")
+ (ADD-LINE 0 75 60 275 60 "black")
+ (ADD-LINE 0 75 85 104 85 "black")
+ (ADD-LINE 0 75 110 207 110 "green")
+ (ADD-LINE 2093 75 135 275 135 "blue")
+ (MODIFY-LINE 3448 75 135 275 135 75 135 246 135)
+ (MODIFY-LINE 4253 75 135 246 135 75 135 217 135)
+ (MODIFY-LINE 5780 75 135 217 135 75 135 207 135)
+ (INSTALL)
+)

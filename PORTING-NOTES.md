@@ -4863,3 +4863,11 @@ matrix, correlation/RMSD) and flattened nested matrices in the
 passed / 130 ignored**. The other Siegler experiment refs remain ignored: the
 response distributions are close but not yet exact (e.g. 1+1 expects
 `.07/.80/.12`, the driver currently produces `.15/.77/.06`).
+
+## 289. BST `spp` after one use
+
+Recovered `tutorial-unit6-bst-spp-after-1-use` by replaying the first two
+`bst-nolearn` device runs (`(15 200 41 103)` and `(10 200 29 132)`) with the
+same `(1 1)` seed per reset, then issuing the production-parameter dump. The
+case now checks the learned utilities after one `bst-test` pass. Corpus:
+**438 passed / 129 ignored**.
