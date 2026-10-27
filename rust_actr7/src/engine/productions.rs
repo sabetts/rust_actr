@@ -2781,6 +2781,41 @@ impl Engine {
                     self.out("Computing partial matching component".to_string());
                 }
                 let mut total = 0.0f32;
+                for (s, v) in &want_neg {
+                    // `partial-matching` (`declarative-memory.lisp:2583`) walks
+                    // every slot spec in request order. Negatives and positives
+                    // are stored separately here, so replay the negative tests
+                    // first for the requests whose source order starts with `-`.
+                    if s.starts_with(':') {
+                        continue;
+                    }
+                    let cv = c.get(s);
+                    let sim = self.similarity(v, &cv);
+                    if show {
+                        self.out(format!("  comparing slot {s}"));
+                        self.out(format!(
+                            "  Requested: - {}  Chunk's slot value: {}",
+                            v.show(),
+                            cv.show()
+                        ));
+                        self.out(format!("  similarity: {}", lisp_f(sim)));
+                    }
+                    let simd = if sim == self.cfg.ms {
+                        mp * self.cfg.md
+                    } else {
+                        if show {
+                            self.out(
+                                "  negation test with similarity not ms has no effect".to_string(),
+                            );
+                        }
+                        0.0
+                    };
+                    if show {
+                        self.out(format!("  effective similarity value is {}", lisp_f(simd)));
+                    }
+                    total += simd;
+                    a += simd;
+                }
                 for (s, v) in &want_slots {
                     if s.starts_with(':') || *v == Value::Nil {
                         continue;
@@ -2796,47 +2831,6 @@ impl Engine {
                             cv.show()
                         ));
                         self.out(format!("  similarity: {}", lisp_f(sim)));
-                        self.out(format!("  effective similarity value is {}", lisp_f(simd)));
-                    }
-                    total += simd;
-                    a += simd;
-                }
-                for (s, v) in &want_neg {
-                    // `partial-matching` (`declarative-memory.lisp:2583`) walks
-                    // every `=`/`-` slot spec and skips only request parameters
-                    // (keywords) and variables — a **nil** request value is not
-                    // skipped, so `+retrieval> isa math-fact - arg1 nil …`
-                    // narrates each slot. The score is unaffected: a nil request
-                    // against a non-nil slot value has `sim = md ≠ ms`, which
-                    // contributes 0.
-                    if s.starts_with(':') {
-                        continue;
-                    }
-                    let cv = c.get(s);
-                    let sim = self.similarity(v, &cv);
-                    if show {
-                        self.out(format!("  comparing slot {s}"));
-                        self.out(format!(
-                            "  Requested: - {}  Chunk's slot value: {}",
-                            v.show(),
-                            cv.show()
-                        ));
-                        self.out(format!("  similarity: {}", lisp_f(sim)));
-                    }
-                    // The "no effect" note is emitted inside the `sim ≠ ms`
-                    // branch, and `effective similarity value is` follows
-                    // unconditionally (`declarative-memory.lisp:2599-2607`).
-                    let simd = if sim == self.cfg.ms {
-                        mp * self.cfg.md
-                    } else {
-                        if show {
-                            self.out(
-                                "  negation test with similarity not ms has no effect".to_string(),
-                            );
-                        }
-                        0.0
-                    };
-                    if show {
                         self.out(format!("  effective similarity value is {}", lisp_f(simd)));
                     }
                     total += simd;

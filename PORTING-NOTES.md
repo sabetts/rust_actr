@@ -4797,3 +4797,13 @@ The low-activation case's driver had an extra `:ACT T` that upgraded the
 requested `:ACT LOW` back to medium detail; dropping it promoted
 `tutorial-unit5modeling-v1-low-act-trace`. Corpus: **429 passed / 138
 ignored**.
+
+## 283. Partial-matching negative-slot trace order (verified)
+
+Request specs keep their `=` and `-` slots in separate vectors, so the trace
+replayed every positive comparison before the negative ones. ACT-R walks the
+request slots in source order; replaying the negatives first matches the
+`result`-then-`simple-value-chunk` requests. This promoted
+`tutorial-unit5modeling-v1-medium-act-trace` and
+`tutorial-unit5modeling-v1-high-act-trace`, moving the corpus to **431
+passed / 136 ignored**.
