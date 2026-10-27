@@ -217,7 +217,20 @@ impl Engine {
     /// `command-output`'s newline). Returns the chunk's name.
     pub(super) fn push_chunk(&mut self, c: &ChunkInst) -> String {
         let name = c.name.clone().unwrap_or_default();
-        self.out_lines.push(name.clone());
+        self.push_chunk_named(c, &name);
+        name
+    }
+
+    /// `pprint-a-chunk` when the requested name is an alias for a DM chunk:
+    /// print the requested name followed by the chunk's canonical name in
+    /// parentheses (`CHUNK0 (G1)`).
+    fn push_chunk_named(&mut self, c: &ChunkInst, display: &str) {
+        let name = c.name.clone().unwrap_or_default();
+        if display.eq_ignore_ascii_case(&name) {
+            self.out_lines.push(name);
+        } else {
+            self.out_lines.push(format!("{display} ({name})"));
+        }
         // `pprint-a-chunk` (`framework/chunks.lisp:674`) sorts the chunk's set
         // slots by `act-r-slot-index` and skips unset slots. That index is
         // model-wide (`chunk-type-fct`, `chunk-types.lisp:434`), not the
@@ -239,7 +252,6 @@ impl Engine {
             self.out_lines.push(format!("   {k}  {}", v.show()));
         }
         self.out_lines.push(String::new());
-        name
     }
 
     /// `(chunk-type)` with no name (`print-all-chunk-types`,
@@ -292,18 +304,35 @@ impl Engine {
 
     /// `pprint-chunks {names}` (`framework/chunks.lisp:736`).
     pub fn print_pprint_chunks(&mut self, names: &[String]) -> Vec<String> {
-        let chunks: Vec<ChunkInst> = names
+        let chunks: Vec<(ChunkInst, String)> = names
             .iter()
             .filter_map(|n| {
                 let up = n.to_uppercase();
-                self.dm
+                if let Some(c) = self
+                    .dm
                     .iter()
                     .find(|c| c.name.as_deref() == Some(up.as_str()))
                     .or_else(|| self.named.get(&up))
                     .cloned()
+                {
+                    return Some((c, up));
+                }
+                let target = self.resolve_alias(&up);
+                if target != up {
+                    if let Some(c) = self.find_chunk(&target).cloned() {
+                        return Some((c, up));
+                    }
+                }
+                None
             })
             .collect();
-        chunks.iter().map(|c| self.push_chunk(c)).collect()
+        chunks
+            .iter()
+            .map(|(c, display)| {
+                self.push_chunk_named(c, display);
+                display.clone()
+            })
+            .collect()
     }
 
     /// `(sdm <spec>...)`: print the declarative-memory chunks matching the

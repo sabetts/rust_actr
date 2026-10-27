@@ -6,10 +6,10 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: merged chunks in `sdm`.
-// The ref expects OLD-CONTEXT/IMAGINAL-CHUNK0-0 ordering and GOAL CHUNK0;
-// engine grouping and chunk-reference rewrite still differ (#206).
-#[ignore = "engine-divergence: DM merge naming"]
+// BLOCKED ON: runtime `:ncnar nil` vs the v10 refs. The alias-aware
+// `pprint-chunks` path is implemented, but applying `:ncnar` at runtime changes
+// declarative-issues-v10 activation/naming; the two conflict.
+#[ignore = "engine divergence: runtime ncnar vs v10"]
 fn tutorial_unit5modeling_v9_p7_8_run_ncnar_nil() -> Result<(), String> {
     Case::new("tutorial-unit5modeling-v9-p7-8-run-ncnar-nil")
         .models(&["test-models;models;declarative-issues-v9.lisp"])

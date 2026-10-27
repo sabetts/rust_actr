@@ -5097,3 +5097,19 @@ still differ, so it remains ignored.
 Added a one-run `BstMode::Learn` path for `bst-learn`, but its 15-trial live
 window still diverges on visual-location numbering/visicon updates; it remains
 ignored. Corpus: **469 passed / 98 ignored**.
+
+## 308. Paired timing diagnosis and alias printing
+
+The paired experiment summaries are structurally correct but every block's
+latency is 4-5 ms high. A uniform -4 ms adjustment leaves the second and
+eighth blocks one millisecond off, so the divergence is in the per-key motor /
+device timestamp, not the summary formatter; no offset hack was applied.
+
+Added alias-aware `pprint-chunks`: when a requested name resolves through a
+merge/copy alias, the canonical chunk is printed with the requested name and
+its source in parentheses (`CHUNK0 (G1)`). Recovered
+`tutorial-unit5modeling-v9-p7-8-run-g1-chunks`. The `:ncnar nil` companion
+remains ignored because applying the runtime flag changes the v10 refs'
+activation/naming, which conflict.
+
+Corpus: **470 passed / 97 ignored**.
