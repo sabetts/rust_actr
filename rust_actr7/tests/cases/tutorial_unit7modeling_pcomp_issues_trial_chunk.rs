@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: the compiled trial's retrieval result.
-// The ref has an imaginal chunk with RESULT WIN and RESPONSE-1; the engine
-// has previously retrieved the number chunk instead (#154).
-#[ignore = "engine-divergence: pcomp retrieval result"]
 fn tutorial_unit7modeling_pcomp_issues_trial_chunk() -> Result<(), String> {
     Case::new("tutorial-unit7modeling-pcomp-issues-trial-chunk")
         .models(&[
