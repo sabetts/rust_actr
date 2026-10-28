@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **497 passed / 70 ignored / 0 failed**
+- Full suite: **503 passed / 64 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -68,30 +68,25 @@ Recovered deterministic engine/API cases:
 
 Goal: finish the remaining ignored pcomp cases.
 
-Remaining groups:
+Driver work is complete. Remaining cases are engine divergences:
 
-1. **Remaining event-hook/game drivers** (6):
-   `v10-one-game-result`, `v10-one-game-result-unused`,
-   `v11-test-runs`, `v12-50-runs`, `v13-50-runs`, `v7-find-seed`.
-   The `.tmp/specs-full/*.spec` files have `:STEPS NIL`, so recover the
-   drivers from the upstream test model's `run-it`, its hook, and the ref.
-   Completed in the previous pass: `v10-attend-num-1/2-productions`,
-   `v10-one-game-late-productions`, `v10-production21`,
-   `v10-production29`, `v4-response-chunks`.
-2. **Experiment-summary drivers** (4):
-   `initial-run`, `v1-initial-run`, `v3-initial-run`, `v5-initial-run`.
-   These need the pcomp trial collector/averages, analogous to the paired,
-   fan, BST, and one-hit drivers.
-3. **Trial-chunk driver** (1):
-   `trial-chunk` needs a one-trial device sidecar/driver; the current case
-   runs the model with no display, so imaginal is empty.
+1. **`v1-initial-run`** (1): summary diverges from the first block with
+   `:epl t`; investigate the EPL/compiled-production learning path.
+2. **`v10-one-game-result-unused`** (1): expected 24 nil-utility productions,
+   engine has ~150. The expected set is a strict subset of the engine's,
+   pointing at compiled-production creation/candidate-set differences.
+3. **`v11-test-runs`** (1): first four games match exactly; game 5's score
+   diverges and the next reset has 25 fewer RNG draws.
+4. **`v12-50-runs` / `v13-50-runs`** (2): first summary block diverges for
+   v12; v13 is the same multi-game family and has not been re-run.
 
-Recommended order:
+Recommended next steps:
 
-1. Recover the event-hook drivers first; they are trace projections and
-   should expose remaining engine behavior with small diffs.
-2. Then `trial-chunk` with a one-trial device fixture.
-3. Then the experiment summaries, which can reuse a shared collector.
+1. Diff the compiled-production set and cached utilities after the last
+   matching game for v11, then compare the first diverging candidate set.
+2. Use `v10-one-game-result-unused` as the smaller oracle for that
+   production-set difference.
+3. Check EPL's compiled-production update separately against v1.
 
 Pcomp-specific gotchas:
 

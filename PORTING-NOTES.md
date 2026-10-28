@@ -5255,3 +5255,22 @@ copy's source (`RESPONSE-2-0 (RESPONSE-2)`), while ordinary `buffer-chunk`
 dumps keep their plain names.
 
 Corpus: **497 passed / 70 ignored**.
+
+## 317. Pcomp game driver, seed search, and model-body WHEN
+
+Added `Step::PcompGame` with fixed-seed, model-seed, and continue-stream
+modes, plus the pcomp trial loop (two RNG draws per trial, feedback, space,
+block-wise score/RT summaries). Recovered `v10-one-game-result`,
+`initial-run`, `v3-initial-run`, `v5-initial-run`, and `v7-find-seed`;
+`trial-chunk` now uses a one-trial sidecar with feedback.
+
+`Mt` tracks `(seed, draws)` for `:SEED` trace lines, and `reset_keep_rng`
+preserves the stream across games. Registered task commands are recorded so
+`v7`'s `set-flag` stops the search after the matching game.
+
+The model loader now accepts model-body `(when ...)` seeding blocks and
+one-key `(sgp :seed)` getters. Vendored the v11-v13 pcomp models.
+
+Corpus: **503 passed / 64 ignored**. Remaining pcomp cases are engine
+divergences: v1 EPL summary, v10 unused compiled-production set, and the
+v11-v13 multi-game summaries.
