@@ -5159,3 +5159,24 @@ that the engine does not yet reproduce at those timestamps. The hook-phase
 harness (`swap_hook_at`) and `Step::ResetSilent` are in place for that follow-up.
 
 Corpus: **473 passed / 94 ignored**.
+
+## 312. Hook commands, buffer predicates, and retrieval-history traces
+
+Hooks can now queue a whitelisted `HookEffect::Command` (`record-history`,
+`stop-recording-history`, `mod-buffer-chunk`). `EventView` also carries the
+non-empty buffer names at the event's pre-execution state, so filters can
+implement `(buffer-read <name>)` predicates.
+
+`record-history "retrieval-history"` now enables `:sact` and copies the saved
+per-chunk activation narration into `RetrievalChunk.activation_trace`, matching
+`retrieval-history.lisp`'s `printed-chunk-activation-trace` field. Added
+`Step::RetrievalHistoryTrace` for grouped's `get-history-data` + `find`/`nth`
+output shape.
+
+Recovered:
+
+- `tutorial-unit5-grouped-commission-act-trace`
+- `tutorial-unit5-grouped-omission-act-trace`
+- `tutorial-unit8-categorize-goal-chunk-part2`
+
+Corpus: **476 passed / 91 ignored**.

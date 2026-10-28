@@ -172,6 +172,7 @@ impl HookCase {
     /// Replace the active hook immediately before driver step `at`. The
     /// paired filters install `filter`, delete it, then install `filter2`;
     /// this mirrors that lifecycle without requiring a hook-aware `Step`.
+    #[allow(dead_code)]
     pub fn swap_hook_at(mut self, at: usize, hook: impl EventHook + 'static) -> Self {
         self.hook_swaps.push((at, Box::new(hook)));
         self

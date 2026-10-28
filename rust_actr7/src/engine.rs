@@ -84,6 +84,16 @@ pub struct EventView {
     pub production: Option<String>,
     pub out: Out,
     pub shown: bool,
+    /// Non-empty buffers at the event's pre-execution state. Hooks use this
+    /// for `(buffer-read <name>)`-style predicates.
+    pub buffers: HashSet<String>,
+}
+
+impl EventView {
+    /// `buffer-read` truthiness: the named buffer currently holds a chunk.
+    pub fn buffer_present(&self, name: &str) -> bool {
+        self.buffers.contains(&name.to_uppercase())
+    }
 }
 
 /// What a pre-hook returns: whether to withhold/stop, and an optional trace
@@ -132,6 +142,9 @@ pub enum HookEffect {
         buffers: Vec<String>,
         sink: Rc<RefCell<String>>,
     },
+    /// A whitelisted engine command (`record-history`, `mod-buffer-chunk`,
+    /// ...), applied with the same semantics as the session command layer.
+    Command { name: String, args: Vec<Sexp> },
 }
 
 /// A two-phase hook, the Rust counterpart of ACT-R's
@@ -3948,8 +3961,57 @@ impl Engine {
                 let text = self.capture_printed_buffer_chunk(&buffers);
                 *sink.borrow_mut() = text;
             }
+            HookEffect::Command { name, args } => self.apply_hook_command(&name, &args)?,
         }
         Ok(())
+    }
+
+    /// The safe command subset a hook may run. Arbitrary Lisp commands stay
+    /// out; each arm maps to an engine operation the session layer exposes.
+    fn apply_hook_command(&mut self, name: &str, args: &[Sexp]) -> Result<(), EngineError> {
+        let text_arg = |s: &Sexp| match s {
+            Sexp::Str(s) | Sexp::Sym(s) => Some(s.clone()),
+            _ => None,
+        };
+        match name.to_uppercase().as_str() {
+            "RECORD-HISTORY" => {
+                let names: Vec<String> = args.iter().filter_map(text_arg).collect();
+                self.record_history_names(&names);
+                Ok(())
+            }
+            "STOP-RECORDING-HISTORY" => {
+                let names: Vec<String> = args.iter().filter_map(text_arg).collect();
+                self.stop_recording_history_names(&names);
+                Ok(())
+            }
+            "MOD-BUFFER-CHUNK" => {
+                let buffer = args
+                    .first()
+                    .and_then(text_arg)
+                    .ok_or_else(|| EngineError::Model("mod-buffer-chunk needs a buffer".into()))?;
+                let slots = match args.get(1) {
+                    Some(Sexp::List(items)) if items.len() % 2 == 0 => items,
+                    _ => {
+                        return Err(EngineError::Model(
+                            "mod-buffer-chunk needs an even slot/value list".into(),
+                        ))
+                    }
+                };
+                let mods: Vec<(String, Sexp)> = slots
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|pair| {
+                        let slot = text_arg(&pair[0]).ok_or_else(|| {
+                            EngineError::Model("mod-buffer-chunk slot is not a symbol".into())
+                        })?;
+                        Ok((slot, pair[1].clone()))
+                    })
+                    .collect::<Result<_, EngineError>>()?;
+                self.mod_buffer_chunk_rpc(&buffer, &mods)
+            }
+            other => Err(EngineError::NotImplemented(format!("hook command {other}"))),
+        }
     }
 
     fn emit(&mut self, module: &str, details: String) {
@@ -4159,6 +4221,12 @@ impl Engine {
                 ),
                 _ => ("", String::new(), None, None),
             };
+        let buffers = self
+            .buffers
+            .iter()
+            .filter(|(_, b)| b.chunk.is_some())
+            .map(|(name, _)| name.clone())
+            .collect();
         EventView {
             time_ms: self.time_ms,
             module,
@@ -4167,6 +4235,7 @@ impl Engine {
             production,
             out,
             shown,
+            buffers,
         }
     }
 

@@ -813,6 +813,10 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .print_sdm_activation_traces(spec, *time_ms),
+        Step::RetrievalHistoryTrace { at_ms, select } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .print_retrieval_history_trace(*at_ms, select),
         Step::RegisterTaskCommand(name) => session
             .engine_mut()
             .ok_or_else(no_model)?

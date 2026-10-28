@@ -541,3 +541,52 @@ fn reset_silent_suppresses_setup_trace() {
     assert_eq!(e.out_lines.len(), before);
     assert!(!e.trace_on);
 }
+
+#[test]
+fn hook_command_records_history_and_modifies_buffer() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.apply_hook_command("record-history", &[Sexp::Str("retrieval-history".into())])
+        .unwrap();
+    assert!(e.record_retrieval_history);
+    assert!(e.cfg.sact.is_some());
+
+    let mut chunk = inst("COUNT-FROM", vec![("START", sym("TWO"))]);
+    chunk.name = Some("COUNT-FROM-0".into());
+    e.buffers.get_mut("GOAL").unwrap().chunk = Some(chunk);
+    e.apply_hook_command(
+        "mod-buffer-chunk",
+        &[
+            Sexp::Sym("GOAL".into()),
+            Sexp::List(vec![
+                Sexp::Sym("STATE".into()),
+                Sexp::Sym("CATEGORIZE".into()),
+            ]),
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        e.buffers["GOAL"].chunk.as_ref().unwrap().get("STATE"),
+        Value::Sym("CATEGORIZE".into())
+    );
+}
+
+#[test]
+fn event_view_reports_non_empty_buffers() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.buffers.get_mut("GOAL").unwrap().chunk = Some(inst("COUNT-FROM", vec![]));
+    let view = e.event_view(&Event::ConflictResolution, Out::Low, true);
+    assert!(view.buffer_present("GOAL"));
+    assert!(!view.buffer_present("MISSING"));
+}

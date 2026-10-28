@@ -1223,47 +1223,20 @@ impl Session {
                 // `record-history` with buffer names drives the BOLD predictor;
                 // the history names enable their engine-side recorders.
                 if let Some(eng) = &mut self.engine {
-                    eng.set_bold_buffers(&names);
-                    for n in &names {
-                        if n.eq_ignore_ascii_case("retrieval-history") {
-                            eng.set_retrieval_history(true);
-                        } else if n.eq_ignore_ascii_case("buffer-history") {
-                            eng.set_buffer_history(true);
-                        } else if n.eq_ignore_ascii_case("visicon-history") {
-                            eng.set_visicon_history(true);
-                        } else if n.eq_ignore_ascii_case("buffer-trace") {
-                            eng.set_buffer_trace(true);
-                        } else if n.eq_ignore_ascii_case("production-history") {
-                            eng.set_production_history(true);
-                        } else if eng.is_buffer(n) {
-                            // `buffer-trace-<buffer>` constituent, addressed by
-                            // the bare buffer name (`71-pick-buffers.tcl`).
-                            eng.trace_buffer(n, true);
-                        }
-                    }
+                    eng.record_history_names(&names);
                 }
                 Ok(vec![Json::Null])
             }
             "stop-recording-history" => {
-                for n in args.iter().filter_map(|a| a.as_str()) {
+                let names: Vec<String> = args
+                    .iter()
+                    .filter_map(|a| a.as_str().map(str::to_string))
+                    .collect();
+                for n in &names {
                     self.hist_recording.remove(&n.to_uppercase());
                 }
                 if let Some(eng) = &mut self.engine {
-                    for n in args.iter().filter_map(|a| a.as_str()) {
-                        if n.eq_ignore_ascii_case("retrieval-history") {
-                            eng.set_retrieval_history(false);
-                        } else if n.eq_ignore_ascii_case("buffer-history") {
-                            eng.set_buffer_history(false);
-                        } else if n.eq_ignore_ascii_case("visicon-history") {
-                            eng.set_visicon_history(false);
-                        } else if n.eq_ignore_ascii_case("buffer-trace") {
-                            eng.set_buffer_trace(false);
-                        } else if n.eq_ignore_ascii_case("production-history") {
-                            eng.set_production_history(false);
-                        } else if eng.is_buffer(n) {
-                            eng.trace_buffer(n, false);
-                        }
-                    }
+                    eng.stop_recording_history_names(&names);
                 }
                 Ok(vec![Json::Null])
             }

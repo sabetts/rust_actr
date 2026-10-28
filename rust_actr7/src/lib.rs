@@ -170,6 +170,15 @@ pub enum OnehitMode {
     PythonLearning { first_seed: u64, games: u32 },
 }
 
+/// Selection for [`Step::RetrievalHistoryTrace`].
+#[derive(Debug, Clone)]
+pub enum HistoryTraceSelect {
+    /// Chunks named in this order (`find`).
+    Names(Vec<String>),
+    /// Zero-based chunk position in the recorded set.
+    Index(usize),
+}
+
 /// One driver step from a per-case test file (or a recovered driver spec).
 #[derive(Debug, Clone)]
 pub enum Step {
@@ -222,6 +231,12 @@ pub enum Step {
     /// For every chunk returned by `sdm`, print the saved activation trace at
     /// `time_ms`, filtered the way the v9 spreading-activation task does.
     SdmActivationTraces { spec: Vec<String>, time_ms: i64 },
+    /// Print saved retrieval-history activation traces at `at_ms` (the
+    /// `get-history-data` + `printed-chunk-activation-trace` shape).
+    RetrievalHistoryTrace {
+        at_ms: i64,
+        select: HistoryTraceSelect,
+    },
     /// Register a task command (`add-act-r-command`) for `!eval!`.
     RegisterTaskCommand(String),
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
@@ -444,6 +459,9 @@ pub fn run_model_steps_with_hook(
             }
             Step::SdmActivationTraces { spec, time_ms } => {
                 eng.print_sdm_activation_traces(spec, *time_ms);
+            }
+            Step::RetrievalHistoryTrace { at_ms, select } => {
+                eng.print_retrieval_history_trace(*at_ms, select);
             }
             Step::RegisterTaskCommand(name) => eng.register_task_command(name),
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),

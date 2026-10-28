@@ -3094,6 +3094,48 @@ impl Engine {
         self.record_retrieval_history = on;
     }
 
+    /// `record-history` for the names a hook passes. `retrieval-history`
+    /// enables `:sact` as Lisp's `enable-retrieval-history` does, so the
+    /// recorded chunks carry their activation narration.
+    pub fn record_history_names(&mut self, names: &[String]) {
+        self.set_bold_buffers(names);
+        for n in names {
+            if n.eq_ignore_ascii_case("retrieval-history") {
+                self.set_retrieval_history(true);
+                self.cfg.sact = Some(Act::T);
+            } else if n.eq_ignore_ascii_case("buffer-history") {
+                self.set_buffer_history(true);
+            } else if n.eq_ignore_ascii_case("visicon-history") {
+                self.set_visicon_history(true);
+            } else if n.eq_ignore_ascii_case("buffer-trace") {
+                self.set_buffer_trace(true);
+            } else if n.eq_ignore_ascii_case("production-history") {
+                self.set_production_history(true);
+            } else if self.is_buffer(n) {
+                self.trace_buffer(n, true);
+            }
+        }
+    }
+
+    /// `stop-recording-history` counterpart for hook command effects.
+    pub fn stop_recording_history_names(&mut self, names: &[String]) {
+        for n in names {
+            if n.eq_ignore_ascii_case("retrieval-history") {
+                self.set_retrieval_history(false);
+            } else if n.eq_ignore_ascii_case("buffer-history") {
+                self.set_buffer_history(false);
+            } else if n.eq_ignore_ascii_case("visicon-history") {
+                self.set_visicon_history(false);
+            } else if n.eq_ignore_ascii_case("buffer-trace") {
+                self.set_buffer_trace(false);
+            } else if n.eq_ignore_ascii_case("production-history") {
+                self.set_production_history(false);
+            } else if self.is_buffer(n) {
+                self.trace_buffer(n, false);
+            }
+        }
+    }
+
     /// The `sdp` chunk block (`commands/dm-commands.lisp:784`): the esc
     /// sub-symbolic parameter lines for one DM chunk, for the retrieval
     /// history's params field. `activation` and `base` are the values computed
@@ -3123,6 +3165,58 @@ impl Engine {
     /// The recorded `retrieval-history` records, in request order.
     pub fn retrieval_history(&self) -> &[RetrievalRecord] {
         &self.retrieval_history
+    }
+
+    /// Print the activation traces saved in a retrieval-history record:
+    /// grouped's `(get-history-data "retrieval-history" nil <time>)` followed
+    /// by `find`/`nth` on the recorded chunk set.
+    pub fn print_retrieval_history_trace(
+        &mut self,
+        at_ms: i64,
+        select: &crate::HistoryTraceSelect,
+    ) {
+        let Some(record) = self
+            .retrieval_history
+            .iter()
+            .find(|r| r.time_ms == at_ms)
+            .cloned()
+        else {
+            self.out_lines.push(format!(
+                "No retrieval history data available for time {}",
+                fmt_secs(at_ms)
+            ));
+            return;
+        };
+        let traces: Vec<String> = match select {
+            crate::HistoryTraceSelect::Names(names) => names
+                .iter()
+                .filter_map(|name| {
+                    record
+                        .chunks
+                        .iter()
+                        .find(|c| c.name.eq_ignore_ascii_case(name))
+                        .map(|c| c.activation_trace.clone())
+                })
+                .collect(),
+            crate::HistoryTraceSelect::Index(index) => record
+                .chunks
+                .get(*index)
+                .map(|c| c.activation_trace.clone())
+                .into_iter()
+                .collect(),
+        };
+        let mut printed = false;
+        for trace in traces.into_iter().filter(|t| !t.is_empty()) {
+            if printed {
+                self.out_lines.push(String::new());
+            }
+            self.out_lines.extend(trace.lines().map(str::to_string));
+            printed = true;
+        }
+        if printed {
+            // `model-output` of the history string leaves its trailing newline.
+            self.out_lines.push(String::new());
+        }
     }
 
     /// The parameter groups the Environment's viewer shows, keyed by module

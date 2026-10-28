@@ -2993,6 +2993,7 @@ impl Engine {
             activations,
             rt,
         });
+        let sact_details: HashMap<String, String> = sact_chunks.iter().cloned().collect();
         if sact {
             let result = match &best {
                 None => "No matching chunk found retrieval failure".to_string(),
@@ -3060,12 +3061,13 @@ impl Engine {
                     let name = self.dm[cidx].name.clone().unwrap_or_default();
                     let text = self.printed_chunk(&name).unwrap_or_default();
                     let params = self.sdp_chunk_block(cidx, cact, cbase);
+                    let activation_trace = sact_details.get(&name).cloned().unwrap_or_default();
                     chunks.push(RetrievalChunk {
                         failure: false,
                         name,
                         text,
                         params,
-                        activation_trace: String::new(),
+                        activation_trace,
                     });
                 }
             }
