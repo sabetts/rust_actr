@@ -1943,11 +1943,15 @@ impl Engine {
             self.set_module_width(22);
             self.last_output_key = None;
             self.open_window(300, 300);
+            // `open-exp-window` creates a fresh window; finsts from the
+            // previous game must not transfer into it.
+            self.pending_finst_transfers.clear();
 
             let mut game_scores = [0i32; BLOCKS];
             let mut game_times = [0.0f64; BLOCKS];
             let mut game_counts = [0u32; BLOCKS];
             for trial in 0..TRIALS {
+                self.set_trace(false);
                 self.clear_window();
                 let val1 = self.rng.borrow_mut().random_int(4) as usize;
                 let val2 = self.rng.borrow_mut().random_int(4) as usize;

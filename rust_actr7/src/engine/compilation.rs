@@ -257,6 +257,7 @@ pub(super) fn canon_prod(
     Vec<(String, Vec<(String, String)>)>,
     Vec<(String, Vec<(String, String)>)>,
 ) {
+    let rename = canon_prod_var_map(prod);
     let mut lhs: Vec<(String, Vec<(String, String)>)> = Vec::new();
     for item in &prod.lhs {
         match item {
@@ -264,7 +265,7 @@ pub(super) fn canon_prod(
                 let mut slots: Vec<(String, String)> = tests
                     .iter()
                     .filter(|t| t.slot != "ISA")
-                    .map(|t| (t.slot.clone(), canon_pattern(&t.value)))
+                    .map(|t| (t.slot.clone(), canon_pattern_with(&t.value, &rename)))
                     .collect();
                 slots.sort();
                 lhs.push((format!("={buffer}>"), slots));
@@ -272,7 +273,7 @@ pub(super) fn canon_prod(
             LhsItem::Query { buffer, queries } => {
                 let mut slots: Vec<(String, String)> = queries
                     .iter()
-                    .map(|(s, v)| (s.clone(), canon_pattern(v)))
+                    .map(|(s, v)| (s.clone(), canon_pattern_with(v, &rename)))
                     .collect();
                 slots.sort();
                 lhs.push((format!("?{buffer}>"), slots));
@@ -283,7 +284,7 @@ pub(super) fn canon_prod(
     lhs.sort_by(|a, b| a.0.cmp(&b.0));
     let mut rhs: Vec<(String, Vec<(String, String)>)> = Vec::new();
     for a in &prod.rhs {
-        if let Some((tok, mut slots)) = canon_action(a) {
+        if let Some((tok, mut slots)) = canon_action(a, &rename) {
             slots.sort();
             rhs.push((tok, slots));
         }
@@ -292,32 +293,68 @@ pub(super) fn canon_prod(
     (lhs, rhs)
 }
 
+/// ACT-R's standard representation renames LHS slot variables by their first
+/// buffer/slot location (`=GOAL-&-STATE`). Without this, semantically equal
+/// compositions with different generated variable names look distinct and
+/// duplicate detection installs hundreds of extra productions.
+fn canon_prod_var_map(prod: &Production) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    for item in &prod.lhs {
+        if let LhsItem::Match { buffer, tests } = item {
+            for t in tests {
+                if let Pattern::Var(v) = &t.value {
+                    if !is_buffer_name(&v.to_uppercase()) {
+                        map.entry(v.to_uppercase()).or_insert_with(|| {
+                            format!("={}-&-{}", buffer.to_uppercase(), t.slot.to_uppercase())
+                        });
+                    }
+                }
+            }
+        }
+    }
+    map
+}
+
 /// The canonical token/slots of one RHS action (`None` for non-buffer ones).
-pub(super) fn canon_action(a: &RhsAction) -> Option<(String, Vec<(String, String)>)> {
+pub(super) fn canon_action(
+    a: &RhsAction,
+    rename: &HashMap<String, String>,
+) -> Option<(String, Vec<(String, String)>)> {
     let pair = |buffer: &str, slots: Vec<(String, String)>| Some((format!("{buffer}>"), slots));
     match a {
         RhsAction::Modify { buffer, slots } => pair(
             &format!("={buffer}"),
             slots
                 .iter()
-                .map(|(n, v)| (n.clone(), canon_pattern(v)))
+                .map(|(n, v)| (n.clone(), canon_pattern_with(v, rename)))
                 .collect(),
         ),
         RhsAction::ModifyRequest { buffer, slots } => pair(
             &format!("*{buffer}"),
             slots
                 .iter()
-                .map(|(n, v)| (n.clone(), canon_pattern(v)))
+                .map(|(n, v)| (n.clone(), canon_pattern_with(v, rename)))
                 .collect(),
         ),
         RhsAction::Request { buffer, spec } => match spec {
-            ChunkDesc::Spec { slots, .. } => pair(
-                &format!("+{buffer}"),
-                slots
+            ChunkDesc::Spec {
+                slots, neg, rels, ..
+            } => {
+                let mut out: Vec<(String, String)> = slots
                     .iter()
-                    .map(|(n, v)| (n.clone(), canon_pattern(v)))
-                    .collect(),
-            ),
+                    .map(|(n, v)| (n.clone(), canon_pattern_with(v, rename)))
+                    .collect();
+                for (name, v) in neg {
+                    out.push((format!("- {name}"), canon_pattern_with(v, rename)));
+                }
+                for (name, v, op) in rels {
+                    out.push((
+                        format!("{} {}", slot_op_str(*op), name),
+                        canon_pattern_with(v, rename),
+                    ));
+                }
+                pair(&format!("+{buffer}"), out)
+            }
             ChunkDesc::Named(n) => pair(&format!("+{buffer}"), vec![("=".into(), format!("={n}"))]),
         },
         RhsAction::Clear { buffer } => Some((format!("-{buffer}>"), Vec::new())),
@@ -325,9 +362,12 @@ pub(super) fn canon_action(a: &RhsAction) -> Option<(String, Vec<(String, String
     }
 }
 
-pub(super) fn canon_pattern(p: &Pattern) -> String {
+fn canon_pattern_with(p: &Pattern, rename: &HashMap<String, String>) -> String {
     match p {
-        Pattern::Var(v) => format!("={v}"),
+        Pattern::Var(v) => rename
+            .get(&v.to_uppercase())
+            .cloned()
+            .unwrap_or_else(|| format!("={v}")),
         Pattern::Nil => "NIL".to_string(),
         other => Value::from_pattern(other)
             .map(|x| x.show())
@@ -344,11 +384,39 @@ pub(super) fn canon_composed(
     Vec<(String, Vec<(String, String)>)>,
     Vec<(String, Vec<(String, String)>)>,
 ) {
+    let mut rename: HashMap<String, String> = HashMap::new();
+    for (tok, slots) in lhs {
+        let Some(buffer) = tok.strip_prefix('=').and_then(|s| s.strip_suffix('>')) else {
+            continue;
+        };
+        for (slot, value) in slots {
+            if let SlotVal::Var(v) = value {
+                if !is_buffer_name(&v.to_uppercase()) {
+                    rename.entry(v.to_uppercase()).or_insert_with(|| {
+                        format!("={}-&-{}", buffer.to_uppercase(), slot.to_uppercase())
+                    });
+                }
+            }
+        }
+    }
+    let slot = |v: &SlotVal| match v {
+        SlotVal::Var(n) => rename
+            .get(&n.to_uppercase())
+            .cloned()
+            .unwrap_or_else(|| format!("={n}")),
+        SlotVal::Lit(s) => s.clone(),
+    };
+    let rhs_var = |s: &String| {
+        s.strip_prefix('=')
+            .and_then(|v| rename.get(&v.to_uppercase()))
+            .cloned()
+            .unwrap_or_else(|| s.clone())
+    };
     let mut cl: Vec<(String, Vec<(String, String)>)> = lhs
         .iter()
         .map(|(tok, slots)| {
             let mut s: Vec<(String, String)> =
-                slots.iter().map(|(n, v)| (n.clone(), v.render())).collect();
+                slots.iter().map(|(n, v)| (n.clone(), slot(v))).collect();
             s.sort();
             (tok.clone(), s)
         })
@@ -357,7 +425,8 @@ pub(super) fn canon_composed(
     let mut cr: Vec<(String, Vec<(String, String)>)> = rhs
         .iter()
         .map(|(tok, slots)| {
-            let mut s = slots.clone();
+            let mut s: Vec<(String, String)> =
+                slots.iter().map(|(n, v)| (n.clone(), rhs_var(v))).collect();
             s.sort();
             (tok.clone(), s)
         })
