@@ -64,21 +64,40 @@ Recovered deterministic engine/API cases:
 - Pcomp safe-eval, modifier invalidation, compiled request defaults,
   negative request slots, and utility updates while trace is suppressed.
 
-### Wave 1 - Pcomp Residual (NEXT)
+### Wave 1 - Pcomp Residual (IN PROGRESS)
 
 Goal: finish the remaining ignored pcomp cases.
 
-Driver work is complete. Remaining cases are engine divergences:
+Completed:
 
-1. **`v1-initial-run`** (1): summary diverges from the first block with
-   `:epl t`; investigate the EPL/compiled-production learning path.
-2. **`v10-one-game-result-unused`** (1): expected 24 nil-utility productions,
-   engine has ~150. The expected set is a strict subset of the engine's,
-   pointing at compiled-production creation/candidate-set differences.
-3. **`v11-test-runs`** (1): first four games match exactly; game 5's score
-   diverges and the next reset has 25 fewer RNG draws.
-4. **`v12-50-runs` / `v13-50-runs`** (2): first summary block diverges for
-   v12; v13 is the same multi-game family and has not been re-run.
+- [x] `trial-chunk` - one-trial device fixture with feedback.
+- [x] `v10-one-game-result` - shared pcomp game driver.
+- [x] `initial-run` - 50-game seeded summary.
+- [x] `v3-initial-run` - 50-game seeded summary.
+- [x] `v5-initial-run` - 10-game seeded summary.
+- [x] `v7-find-seed` - task-command flag and preserved RNG across games.
+- [x] Earlier pass: `v10-attend-num-1/2-productions`,
+  `v10-one-game-late-productions`, `v10-production21`,
+  `v10-production29`, `v4-response-chunks`.
+- [x] Driver/API work: `Step::PcompGame`, block-wise score/RT summaries,
+  fixed-seed and continue-stream modes, RNG `(seed, draws)` state,
+  `reset_keep_rng`, registered-command capture, model-body `(when ...)`
+  seeding, and `(sgp :seed)` getters.
+- [x] Vendored pcomp models v11-v13.
+- [x] Full suite green at **503 passed / 64 ignored**.
+
+Remaining:
+
+- [ ] **`v1-initial-run`** (1): summary diverges from the first block with
+  `:epl t`; investigate the EPL/compiled-production learning path.
+- [ ] **`v10-one-game-result-unused`** (1): expected 24 nil-utility
+  productions, engine has ~150. The expected set is a strict subset of the
+  engine's, pointing at compiled-production creation/candidate-set
+  differences.
+- [ ] **`v11-test-runs`** (1): first four games match exactly; game 5's score
+  diverges and the next reset has 25 fewer RNG draws.
+- [ ] **`v12-50-runs` / `v13-50-runs`** (2): first summary block diverges for
+  v12; v13 is the same multi-game family and has not been re-run.
 
 Recommended next steps:
 
