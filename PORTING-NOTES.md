@@ -5364,3 +5364,18 @@ consumes makes the seed state match ACT-R at both retrievals:
 and the expected value `-0.7636829`.
 
 Corpus: **506 passed / 61 ignored**.
+
+## 323. Paired learning alpha recovery and final-case blocker
+
+Recovered `tutorial-unit7-paired-learning-alpha-1` with the same task-RNG
+correction used for the activation trace: each `permute-list` takes one pair
+(one draw), not a two-string list, and the explicit `ConsumeRng(1)` steps were
+double-counting those draws. The filter hook then breaks at 25.435 on
+`PRODUCTION7` and the 33-line projection matches.
+
+`tutorial-unit7-paired-learning-alpha-1-final` now uses its real hook too, but
+with 27 pairs it fails earlier: installing a later composed production returns
+`bad model: unbound variable =VAL on RHS`. That is a new compiled-production
+validity/binding issue to isolate separately.
+
+Corpus: **507 passed / 60 ignored**.

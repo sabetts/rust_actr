@@ -63,7 +63,6 @@ impl EventHook for Filter2 {
 }
 
 #[test]
-#[ignore = "engine-divergence: conflict resolution picks PRODUCTION8 instead of PRODUCTION7 at 25.435"]
 fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit7-paired-learning-alpha-1")
         .models(&[
@@ -76,13 +75,12 @@ fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
             Step::Reset,
             Step::Command {
                 name: "permute-list".into(),
-                args: crate::sexps(r#"(("zinc" "9"))"#),
+                args: crate::sexps(r#"((("zinc" "9")))"#),
             },
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":EPL".into(), crate::sexp(r#"T"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"T"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
-            Step::ConsumeRng(1),
             Step::RunFullTime {
                 secs: 5.0,
                 trace: true,
@@ -97,26 +95,8 @@ fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
             },
             Step::Command {
                 name: "permute-list".into(),
-                args: crate::sexps(r#"(("zinc" "9"))"#),
+                args: crate::sexps(r#"((("zinc" "9")))"#),
             },
-            Step::ConsumeRng(1),
-            Step::RunFullTime {
-                secs: 5.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 5.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::Command {
-                name: "permute-list".into(),
-                args: crate::sexps(r#"(("zinc" "9"))"#),
-            },
-            Step::ConsumeRng(1),
             Step::RunFullTime {
                 secs: 5.0,
                 trace: true,
@@ -131,9 +111,24 @@ fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
             },
             Step::Command {
                 name: "permute-list".into(),
-                args: crate::sexps(r#"(("zinc" "9"))"#),
+                args: crate::sexps(r#"((("zinc" "9")))"#),
             },
-            Step::ConsumeRng(1),
+            Step::RunFullTime {
+                secs: 5.0,
+                trace: true,
+                width: 22,
+                seed: Some((100, 0)),
+            },
+            Step::RunFullTime {
+                secs: 5.0,
+                trace: true,
+                width: 22,
+                seed: Some((100, 0)),
+            },
+            Step::Command {
+                name: "permute-list".into(),
+                args: crate::sexps(r#"((("zinc" "9")))"#),
+            },
             Step::RunFullTime {
                 secs: 5.0,
                 trace: true,
@@ -152,6 +147,6 @@ fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
                 width: 22,
             },
         ])
-        .swap_hook_at(21, Filter2::default())
+        .swap_hook_at(17, Filter2::default())
         .check_segment(Filter::default())
 }

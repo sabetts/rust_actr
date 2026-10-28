@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **506 passed / 61 ignored / 0 failed**
+- Full suite: **507 passed / 60 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **506 passed / 61 ignored**.
+- [x] Full suite green at **507 passed / 60 ignored**.
 
 Remaining:
 
@@ -140,10 +140,12 @@ Reconnaissance:
 - `keypad-test` blocks on the unimplemented `HAND-TO-KEYPAD` manual request.
 - Unit-4 paired summaries still differ only by the known 4-5 ms per-key
   offset.
-- `tutorial-unit7-paired-learning-alpha-1` now has its real filter hook; the
-  first divergence is conflict resolution at 25.435 (ACT-R picks
-  `PRODUCTION7`, Rust picks `PRODUCTION8`), a utility/noise candidate-order
-  issue.
+- [x] `tutorial-unit7-paired-learning-alpha-1` recovered with the same
+  `permute-list`/`ConsumeRng` correction as the activation-trace case. Its
+  real filter hook now breaks at `PRODUCTION7` on the expected state.
+- [ ] `tutorial-unit7-paired-learning-alpha-1-final` now reaches the real
+  filter, but the engine hits `bad model: unbound variable =VAL on RHS`
+  while installing a later compiled production.
 - [x] `tutorial-unit4-paired-act-trace` recovered. The test's
   `permute-list` command was permuting two strings instead of one pair, and
   the extra `ConsumeRng(1)` steps double-counted the task draw. Correcting
