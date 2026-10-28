@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **503 passed / 64 ignored / 0 failed**
+- Full suite: **504 passed / 63 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -84,28 +84,30 @@ Completed:
   `reset_keep_rng`, registered-command capture, model-body `(when ...)`
   seeding, and `(sgp :seed)` getters.
 - [x] Vendored pcomp models v11-v13.
-- [x] Full suite green at **503 passed / 64 ignored**.
+- [x] `v10-one-game-result-unused` - compiled-production canonicalization now
+  matches ACT-R's 111-production set.
+- [x] Full suite green at **504 passed / 63 ignored**.
 
 Remaining:
 
 - [ ] **`v1-initial-run`** (1): summary diverges from the first block with
   `:epl t`; investigate the EPL/compiled-production learning path.
-- [ ] **`v10-one-game-result-unused`** (1): expected 24 nil-utility
-  productions, engine has ~150. The expected set is a strict subset of the
-  engine's, pointing at compiled-production creation/candidate-set
-  differences.
-- [ ] **`v11-test-runs`** (1): first four games match exactly; game 5's score
-  diverges and the next reset has 25 fewer RNG draws.
-- [ ] **`v12-50-runs` / `v13-50-runs`** (2): first summary block diverges for
-  v12; v13 is the same multi-game family and has not been re-run.
+- [ ] **`v11-test-runs`** (1): first five games match exactly. Game 6, trial 10
+  is the first divergence: `guess-other` retrieves `RESPONSE-1` instead of
+  `RESPONSE-3`. The trace is identical through the request, but the engine has
+  consumed one fewer RNG draw by the response (35753 vs 35754).
+- [ ] **`v12-50-runs` / `v13-50-runs`** (2): same multi-game family; re-run
+  after fixing the v11 retrieval tie.
 
 Recommended next steps:
 
-1. Diff the compiled-production set and cached utilities after the last
-   matching game for v11, then compare the first diverging candidate set.
-2. Use `v10-one-game-result-unused` as the smaller oracle for that
-   production-set difference.
-3. Check EPL's compiled-production update separately against v1.
+1. Instrument the trial-10 retrievals before `guess-other` to find the request
+   whose candidate count is one lower in the engine (likely partial matching or
+   conflict-set noise).
+2. Compare the trial-10 conflict-set candidates at the compiled production
+   before `guess-other`; the first production-name divergence is
+   `PRODUCTION70` vs `PRODUCTION65`.
+3. After v11, re-run v12/v13, then isolate v1's EPL summary separately.
 
 Pcomp-specific gotchas:
 

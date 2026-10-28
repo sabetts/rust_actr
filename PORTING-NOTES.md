@@ -5274,3 +5274,20 @@ one-key `(sgp :seed)` getters. Vendored the v11-v13 pcomp models.
 Corpus: **503 passed / 64 ignored**. Remaining pcomp cases are engine
 divergences: v1 EPL summary, v10 unused compiled-production set, and the
 v11-v13 multi-game summaries.
+
+## 318. Compiled-production duplicate canonicalization
+
+ACT-R compares compiled productions with `production-comparison-rep`, which
+renames LHS slot variables by buffer/slot (`=GOAL-&-STATE`) and folds request
+relation/exclusion tests into the comparison. The engine compared raw variable
+names and ignored `neg`/`rels`, so equivalent compositions were installed
+repeatedly: v10's unused-utility case saw 257 productions instead of ACT-R's
+111.
+
+Canonicalization now renames variables by location and includes negative and
+relative request slots. `v10-one-game-result-unused` passes; corpus **504
+passed / 63 ignored**.
+
+The remaining v11 divergence is isolated: game 6, trial 10, `guess-other`
+retrieves `RESPONSE-1` instead of `RESPONSE-3`; the engine consumes one fewer
+RNG draw by the response. Traces agree through the request.
