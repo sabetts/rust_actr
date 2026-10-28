@@ -1094,6 +1094,9 @@ pub(super) fn render_production(
     types: &[ChunkType],
 ) -> String {
     let mut s = format!("(P {}\n", prod.name);
+    if let Some(doc) = &prod.documentation {
+        s.push_str(&format!("  \"{doc}\"\n"));
+    }
     for item in &prod.lhs {
         match item {
             LhsItem::Match { buffer, tests } => {

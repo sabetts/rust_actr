@@ -160,6 +160,8 @@ pub enum RhsAction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Production {
     pub name: String,
+    /// Optional documentation string after the name (`(p name "doc" ...)`).
+    pub documentation: Option<String>,
     pub lhs: Vec<LhsItem>,
     pub rhs: Vec<RhsAction>,
     /// `(spp <name> :reward R)`: propagated as a reward when the production
@@ -2215,10 +2217,9 @@ fn parse_production(form: &Sexp, extra_buffers: &[String]) -> Result<Production,
     // An optional documentation string follows the name
     // (`production-parsing.lisp`: `(p name "doc" lhs ==> rhs)`), exactly as a
     // chunk type may carry one. It is not an LHS item.
-    let body = if matches!(body.first(), Some(Sexp::Str(_))) {
-        &body[1..]
-    } else {
-        body
+    let (documentation, body) = match body.first() {
+        Some(Sexp::Str(doc)) => (Some(doc.clone()), &body[1..]),
+        _ => (None, body),
     };
     let Some(split) = body
         .iter()
@@ -2249,6 +2250,7 @@ fn parse_production(form: &Sexp, extra_buffers: &[String]) -> Result<Production,
     }
     Ok(Production {
         name: name.clone(),
+        documentation,
         lhs,
         rhs,
         reward: None,

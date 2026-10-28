@@ -5240,3 +5240,18 @@ Recovered:
 - `tutorial-unit7modeling-pcomp-issues-v10-non-win-composition`
 
 Corpus: **491 passed / 76 ignored**.
+
+## 315. Pcomp pp drivers and compiled-production documentation
+
+Recovered the simple pcomp `pp`/`pprint-chunks` drivers by replaying their
+trial sidecars with `ResetSilent` plus `ConsumeRng(2)`, then enabling `:v`
+only for the final command. Recovered `v10-attend-num-1/2-productions`,
+`v10-production21`, `v10-production29`, `v10-one-game-late-productions`, and
+`v4-response-chunks`.
+
+Compiled productions now retain their `(P name "doc" ...)` documentation
+string, so `pp` prints the composition description. `pprint-chunks` shows a
+copy's source (`RESPONSE-2-0 (RESPONSE-2)`), while ordinary `buffer-chunk`
+dumps keep their plain names.
+
+Corpus: **497 passed / 70 ignored**.

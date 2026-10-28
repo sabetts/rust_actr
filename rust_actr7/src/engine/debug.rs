@@ -217,17 +217,25 @@ impl Engine {
     /// `command-output`'s newline). Returns the chunk's name.
     pub(super) fn push_chunk(&mut self, c: &ChunkInst) -> String {
         let name = c.name.clone().unwrap_or_default();
-        self.push_chunk_named(c, &name);
+        self.push_chunk_named(c, &name, false);
         name
     }
 
     /// `pprint-a-chunk` when the requested name is an alias for a DM chunk:
     /// print the requested name followed by the chunk's canonical name in
     /// parentheses (`CHUNK0 (G1)`).
-    fn push_chunk_named(&mut self, c: &ChunkInst, display: &str) {
+    fn push_chunk_named(&mut self, c: &ChunkInst, display: &str, show_source: bool) {
         let name = c.name.clone().unwrap_or_default();
         if display.eq_ignore_ascii_case(&name) {
-            self.out_lines.push(name);
+            if show_source {
+                if let Some(source) = self.copy_source.get(&name.to_uppercase()) {
+                    self.out_lines.push(format!("{display} ({source})"));
+                } else {
+                    self.out_lines.push(name);
+                }
+            } else {
+                self.out_lines.push(name);
+            }
         } else {
             self.out_lines.push(format!("{display} ({name})"));
         }
@@ -329,7 +337,7 @@ impl Engine {
         chunks
             .iter()
             .map(|(c, display)| {
-                self.push_chunk_named(c, display);
+                self.push_chunk_named(c, display, true);
                 display.clone()
             })
             .collect()

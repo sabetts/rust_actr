@@ -1,0 +1,8 @@
+(RUN 1
+ (ADD-TEXT 0 "3" 10 50)
+ (ADD-TEXT 0 "3" 110 50)
+ (ADD-TEXT 10942 "draw" 50 100)
+ (CLEAR 0)
+ (CLEAR 10942)
+ (INSTALL)
+ )

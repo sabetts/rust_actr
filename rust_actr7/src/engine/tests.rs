@@ -106,6 +106,7 @@ fn harvest_rules() {
     use crate::model::{LhsItem, Production, RhsAction, SlotTest};
     let probe = Production {
         name: "PROBE".to_string(),
+        documentation: None,
         reward: None,
         at: None,
         utility: None,
@@ -302,6 +303,7 @@ fn render_production_instantiated() {
     use crate::model::{LhsItem, Pattern as Pat, Production, RhsAction, SlotTest};
     let prod = Production {
         name: "SMALL".to_string(),
+        documentation: None,
         reward: None,
         at: None,
         utility: None,

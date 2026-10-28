@@ -1,0 +1,219 @@
+# ACT-R Rust Porting Plan
+
+## Mission
+
+Make the vendored ACT-R regression corpus pass from the Rust engine without
+weakening the oracle:
+
+- Never edit a `.ref`.
+- Do not branch on a test/case name.
+- Prefer an engine-backed fix. A task-driver port is acceptable when the
+  behavior is genuinely task-side.
+- Keep `cargo test` green after every wave.
+
+## Current Baseline
+
+- Repo: `C:\Users\sabetts\src4\actr7.x_rust`
+- Crate: `rust_actr7`
+- Latest commit: see `git log -1` (the pcomp/residual wave is committed)
+- Full suite: **497 passed / 70 ignored / 0 failed**
+- Separate environment-gated test: `rpc_conformance` (1 ignored; needs
+  Python, bash, and a local ACT-R checkout).
+
+Useful commands:
+
+```powershell
+cargo fmt --all
+cargo test
+cargo test --test test_models <test_name> -- --ignored --nocapture
+python rust_actr7/tools/list-ignored.py --counts
+python rust_actr7/tools/list-ignored.py --case pcomp --files
+```
+
+Oracle: `actr7.x/load-single-threaded-act-r.lisp` under SBCL. Use temporary
+scripts outside the repo (for example under the OS temp directory) to
+instrument ACT-R functions and compare a first divergence.
+
+## Working Rules
+
+1. Start a case by reading its `.rs`, `.ref`, upstream `.lisp`, and relevant
+   `PORTING-NOTES.md` entries.
+2. Find the first true divergence, not the last visible one.
+3. For trace mismatches, compare normalized lines; for RNG/timing, compare
+   draw counts/times as well as selected productions.
+4. Add or update the smallest engine API needed; avoid test-specific logic.
+5. Promote by removing `#[ignore]` only after the case passes in isolation.
+6. Run the full suite, update `PORTING-NOTES.md`, and commit each coherent
+   wave.
+7. Re-run non-ignored tests that share changed code paths; fixture/device
+   changes are data, not tests.
+
+## Wave Status
+
+### Wave 0 - Completed
+
+Recovered deterministic engine/API cases:
+
+- Event-hook effects, hook commands, retrieval-history traces.
+- Module modification requests and hidden hook-line capture.
+- Imaginal-action event ordering.
+- Count/imaginal mod-request cases.
+- BST imaginal-action trace.
+- Zbrodoff single-trial setup.
+- Pcomp task RNG at trial boundaries.
+- Pcomp safe-eval, modifier invalidation, compiled request defaults,
+  negative request slots, and utility updates while trace is suppressed.
+
+### Wave 1 - Pcomp Residual (NEXT)
+
+Goal: finish the remaining ignored pcomp cases.
+
+Remaining groups:
+
+1. **Remaining event-hook/game drivers** (6):
+   `v10-one-game-result`, `v10-one-game-result-unused`,
+   `v11-test-runs`, `v12-50-runs`, `v13-50-runs`, `v7-find-seed`.
+   The `.tmp/specs-full/*.spec` files have `:STEPS NIL`, so recover the
+   drivers from the upstream test model's `run-it`, its hook, and the ref.
+   Completed in the previous pass: `v10-attend-num-1/2-productions`,
+   `v10-one-game-late-productions`, `v10-production21`,
+   `v10-production29`, `v4-response-chunks`.
+2. **Experiment-summary drivers** (4):
+   `initial-run`, `v1-initial-run`, `v3-initial-run`, `v5-initial-run`.
+   These need the pcomp trial collector/averages, analogous to the paired,
+   fan, BST, and one-hit drivers.
+3. **Trial-chunk driver** (1):
+   `trial-chunk` needs a one-trial device sidecar/driver; the current case
+   runs the model with no display, so imaginal is empty.
+
+Recommended order:
+
+1. Recover the event-hook drivers first; they are trace projections and
+   should expose remaining engine behavior with small diffs.
+2. Then `trial-chunk` with a one-trial device fixture.
+3. Then the experiment summaries, which can reuse a shared collector.
+
+Pcomp-specific gotchas:
+
+- The task draws two `act-r-random 4` values at every trial start. The first
+  pair is covered by `Step::ConsumeRng(2)`; later pairs belong in the device
+  sidecar as `(RNG-DRAW ms 2 4)` before the two trial `ADD-TEXT` ops.
+- `(RNG-DRAW ...)` is consumed inside `proc_display`, before texts at the
+  same millisecond.
+- `!safe-eval!` is valid for compilation. First-parent variables stay
+  symbolic in composed LHS conditions; second-parent variables are
+  instantiated from the firing.
+- Recreated compiled productions update `:u` even when `:v`/`:pct` output is
+  suppressed.
+
+### Wave 2 - Paired, Motor, and Timing
+
+Goal: recover the paired and motor families.
+
+Targets include:
+
+- Six paired system-parameter/compiling/dynamic cases.
+- Six paired-summary timing cases.
+- `hand-move-test`, `keypad-test`.
+- Any paired case still blocked by pcomp state after Wave 1.
+
+Approach:
+
+- Audit the per-key motor/device timestamp offset (historically 4-5 ms high).
+- Validate against hand/keypad traces before touching summary formatters.
+- Unit-4 paired activation noise is separate from pcomp; compare RNG draw
+  order at the first divergent retrieval.
+- Use device timestamp instrumentation and the same first-divergence method.
+
+### Wave 3 - Numerical RNG and Summaries
+
+Goal: resolve exact numerical summaries.
+
+Targets:
+
+- Six Siegler response-distribution cases.
+- Sperling experiment summary and Sperling visicon/RNG case.
+- Three paired summaries still failing after motor fixes.
+- BST PPM learning summaries.
+
+Approach:
+
+- Compare per-trial RNG draw counts and order against a SBCL instrumented
+  run.
+- Separate activation noise from utility noise from task random draws.
+- Fix shared draw-order issues before individual summary formatting.
+
+### Wave 4 - Visicon, BST, PPM, and Hooks
+
+Goal: finish visual lifecycle and hook-feature clusters.
+
+Targets:
+
+- `nearest-vis-loc`, `unstuff-visual`, `agi-modify-test`,
+  `creating-an-image`, `bst-learn`.
+- BST PPM copies/length, `test-ppm`, `adaptive-noise`.
+- Revisit `fan-w-tree` with the full info-gain conflict-tree builder.
+
+Approach:
+
+- Implement the upstream conflict-tree info-gain builder if conflict-set
+  order is still needed; it may also affect pcomp/utility draw order.
+- Fix auto-stuff/location numbering/removal and visicon update lifecycle as
+  one cluster.
+
+### Wave 5 - Residual Engine Features
+
+Targets:
+
+- Multi-model trace columns (`unit-1-together-1-mp`).
+- Audio sound-object replay (`audio-updates`).
+- Base-level inhibition/safety traces.
+- Runtime `:ncnar nil` vs v10 refs.
+- `rpc_conformance` promotion or documented environment gate.
+- Long-tail driver cases (`save-model`, `thorough-p-test`, Siegler original,
+  etc.).
+
+### External Blockers
+
+These need the protected source/password or an upstream copy:
+
+- Three protected Zbrodoff solution variants.
+- `tutorial-unit6-choice-results`.
+- Two protected categorize experiments.
+
+Also determine whether `tutorial-unit3-subitize-results` should be treated as
+source-missing or recoverable from the available case ref.
+
+## First-Divergence Harness
+
+Use this loop for any cluster:
+
+1. Run the ignored case:
+   `cargo test --test test_models <name> -- --ignored --nocapture`
+2. Read the first `L n exp=... got=...` line. Ignore trailing differences
+   until that line is understood.
+3. If the ref is a filtered hook projection, replay the upstream `run-it`
+   under SBCL and instrument the relevant ACT-R function
+   (`act-r-noise`, `linear-update-utility`, `format-event`, etc.).
+4. If timing/RNG is involved, log:
+   - model time
+   - selected/fired production
+   - utility draw count and value
+   - task random draw count
+5. Fix the shared cause, then re-run the representative case and the full
+   suite.
+
+Recent examples:
+
+- Pcomp utility mismatch was not a utility formula bug: task trial RNG draws
+  were missing between trials.
+- Pcomp `:u` mismatch was a trace-gated side effect: recreation utility was
+  updated only when `:pct` output was visible.
+
+## Definition of Done
+
+- `cargo test` passes with zero failures.
+- All recoverable ignored cases are promoted.
+- Only externally blocked cases remain ignored, with a named reason.
+- `PORTING-NOTES.md` records each root cause and the new corpus count.
+- Working tree is clean after the final commit.

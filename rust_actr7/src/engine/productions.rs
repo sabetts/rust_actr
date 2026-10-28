@@ -1145,10 +1145,14 @@ impl Engine {
     pub(super) fn install_compiled(
         &mut self,
         name: &str,
+        doc: &str,
         lhs: &[(String, Vec<(String, SlotVal)>)],
         rhs: &[(String, Vec<(String, String)>)],
     ) {
         let mut text = format!("(P {name}");
+        if !doc.is_empty() {
+            text.push_str(&format!(" \"{doc}\""));
+        }
         for (token, slots) in lhs {
             text.push_str(&format!(" {token}"));
             for (n, v) in slots {
@@ -1309,6 +1313,30 @@ impl Engine {
                             self.utilities[*didx] = old + alpha * (parent - old);
                         }
                     }
+                    let install_doc = {
+                        let mut dropped: Vec<(String, String)> = Vec::new();
+                        for x in lhs_buffers(&self.model.productions[idx]) {
+                            if x != "RETRIEVAL" {
+                                continue;
+                            }
+                            if buffer_usage(&self.model.productions[p1_idx], &x) & 4 == 0 {
+                                continue;
+                            }
+                            if let Some(v) = bindings.get(&format!("={x}")) {
+                                let name = v.show();
+                                let name = self.copy_source.get(&name).cloned().unwrap_or(name);
+                                dropped.push((x, name));
+                            }
+                        }
+                        dropped.sort_by(|a, b| a.0.cmp(&b.0));
+                        if dropped.is_empty() {
+                            format!("{p1name} & {p2name}")
+                        } else {
+                            let vals: Vec<String> =
+                                dropped.iter().map(|(_, n)| n.clone()).collect();
+                            format!("{p1name} & {p2name} - {}", vals.join(" - "))
+                        }
+                    };
                     if trace {
                         self.out(format!(
                             "  Production {p1name} and {p2name} are being composed."
@@ -1383,7 +1411,7 @@ impl Engine {
                         }
                     }
                     if dup.is_none() {
-                        self.install_compiled(&cname, &lhs, &rhs);
+                        self.install_compiled(&cname, &install_doc, &lhs, &rhs);
                         if let Some(last) = self.model.productions.last_mut() {
                             last.reward = reward;
                         }
