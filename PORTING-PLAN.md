@@ -92,14 +92,15 @@ Completed:
 
 Remaining:
 
-- [ ] **`v1-initial-run`** (1): summary diverges from the first block with
-  `:epl t`; investigate the EPL/compiled-production learning path.
+- [ ] **`v1-initial-run`** (1): rechecked after the compile fixes; still
+  diverges from the first block with `:epl t` (`1.00 2.32 2.10 ...` vs
+  `0.86 1.68 2.98 ...`).
 - [ ] **`v12-50-runs`** (1): games 1-39 match. Game 40, trial 10 is the first
   real divergence: `retrieve-past-trial` returns the same
   `imaginal-chunk0-6`, but Rust latches it at 80.419 vs oracle 81.913. This
   is a DM activation/history-latency issue, not production compilation.
-- [ ] **`v13-50-runs`** (1): same 50-game family, not yet re-run after the
-  v11 and activation fixes.
+- [ ] **`v13-50-runs`** (1): rechecked after the compile fixes; still diverges
+  (`2.56 5.44 6.38 ...` vs `3.04 4.38 5.58 ...`). Shares the v12 family.
 
 Recommended next steps:
 
@@ -132,12 +133,23 @@ Targets include:
 - `hand-move-test`, `keypad-test`.
 - Any paired case still blocked by pcomp state after Wave 1.
 
+Reconnaissance:
+
+- `hand-move-test` blocks at model load: nested `offsets ((index -1 0))`
+  needs a non-atomic slot-pattern representation.
+- `keypad-test` blocks on the unimplemented `HAND-TO-KEYPAD` manual request.
+- Unit-4 paired summaries still differ only by the known 4-5 ms per-key
+  offset.
+- `tutorial-unit7-paired-learning-alpha-1` now has its real filter hook; the
+  first divergence is conflict resolution at 25.435 (ACT-R picks
+  `PRODUCTION7`, Rust picks `PRODUCTION8`), a utility/noise candidate-order
+  issue.
+
 Approach:
 
-- Audit the per-key motor/device timestamp offset (historically 4-5 ms high).
-- Validate against hand/keypad traces before touching summary formatters.
-- Unit-4 paired activation noise is separate from pcomp; compare RNG draw
-  order at the first divergent retrieval.
+- Audit the per-key motor/device timestamp offset first.
+- Then take the event-hook/utility cluster, comparing noisy utility draws and
+  candidate order at the first divergent conflict resolution.
 - Use device timestamp instrumentation and the same first-divergence method.
 
 ### Wave 3 - Numerical RNG and Summaries

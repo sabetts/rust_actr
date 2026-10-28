@@ -2,13 +2,70 @@
 //! ref:  tutorial-unit7-paired-learning-alpha-1.ref
 //! lisp: actr7.x/test-models/tutorial-unit7-paired-learning-alpha-1.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use crate::hooks::{self, action};
+use actr_engine::{EventHook, EventView, HookEffect, PreResult, Step, Verdict};
+
+#[derive(Default)]
+struct Filter {
+    started: bool,
+    effects: Vec<HookEffect>,
+}
+
+impl EventHook for Filter {
+    fn pre(&mut self, ev: &EventView) -> PreResult {
+        if !self.started {
+            self.started = true;
+            self.effects.push(HookEffect::Sgp {
+                key: ":SEED".into(),
+                value: crate::sexp("(101 1)"),
+            });
+            self.effects.push(HookEffect::Sgp {
+                key: ":ALPHA".into(),
+                value: crate::sexp("1"),
+            });
+            self.effects.push(HookEffect::Sgp {
+                key: ":PCT".into(),
+                value: crate::sexp("T"),
+            });
+        }
+        if ev.time_ms == 25435 && action(ev, "production-fired") {
+            return PreResult {
+                verdict: Verdict::Break,
+                trace: Some(false),
+            };
+        }
+        PreResult {
+            verdict: Verdict::Continue,
+            trace: Some(false),
+        }
+    }
+
+    fn take_effects(&mut self) -> Vec<HookEffect> {
+        std::mem::take(&mut self.effects)
+    }
+}
+
+#[derive(Default)]
+struct Filter2 {
+    output: u32,
+}
+
+impl EventHook for Filter2 {
+    fn pre(&mut self, _ev: &EventView) -> PreResult {
+        if self.output == 1 {
+            self.output += 1;
+            PreResult::trace(false)
+        } else {
+            self.output += 1;
+            PreResult::CONTINUE
+        }
+    }
+}
 
 #[test]
-#[ignore = "event-hook system-parameter effects pending"]
+#[ignore = "engine-divergence: conflict resolution picks PRODUCTION8 instead of PRODUCTION7 at 25.435"]
 fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
-    Case::new("tutorial-unit7-paired-learning-alpha-1")
+    hooks::HookCase::new("tutorial-unit7-paired-learning-alpha-1")
         .models(&[
             "tutorial;lisp;paired.lisp",
             "tutorial;unit4;paired-model.lisp",
@@ -95,5 +152,6 @@ fn tutorial_unit7_paired_learning_alpha_1() -> Result<(), String> {
                 width: 22,
             },
         ])
-        .check()
+        .swap_hook_at(21, Filter2::default())
+        .check_segment(Filter::default())
 }

@@ -5318,3 +5318,26 @@ divergence is game 40, trial 10: `retrieve-past-trial` returns the same
 production-compilation or task-side match.
 
 Corpus: **505 passed / 62 ignored**.
+
+## 321. v1/v13 recheck and Wave 2 reconnaissance
+
+Re-ran the parked pcomp cases after the compilation fixes. Both still fail:
+
+- `v1-initial-run`: `1.00 2.32 2.10 2.38 ...` vs expected `0.86 1.68 2.98 ...`.
+- `v13-50-runs`: `2.56 5.44 6.38 ...` vs expected `3.04 4.38 5.58 ...`.
+
+Wave 2 reconnaissance found earlier blockers than the known 4-5 ms summary
+offset:
+
+- `hand-move-test` fails at model load: `offsets ((index -1 0))` is a nested
+  list where the model parser only accepts atomic slot patterns.
+- `keypad-test` fails with `manual request (Some("HAND-TO-KEYPAD"), None)`.
+- The three unit-4 paired summaries still differ only by the known per-key
+  timing (about 4-5 ms high).
+- `tutorial-unit7-paired-learning-alpha-1` now uses its real filter hook. The
+  first divergence is at 25.435: ACT-R fires `PRODUCTION7`, Rust fires
+  `PRODUCTION8`; both productions exist and the timing differs by 1 ms. This
+  is conflict-resolution utility/noise/candidate ordering, not missing
+  production compilation.
+
+Corpus: **505 passed / 62 ignored**.
