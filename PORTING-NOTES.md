@@ -5341,3 +5341,9 @@ offset:
   production compilation.
 
 Corpus: **505 passed / 62 ignored**.
+
+The paired activation-trace filter now emits the correct 18-line shape; the
+only remaining difference is the second retrieval's transient noise
+(`-0.7636829` expected vs `0.12914158` actual). Consume-count scans did not
+match, so this is an RNG stream/noise-draw-order issue rather than a projection
+bug.

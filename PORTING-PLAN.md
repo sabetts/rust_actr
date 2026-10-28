@@ -144,6 +144,8 @@ Reconnaissance:
   first divergence is conflict resolution at 25.435 (ACT-R picks
   `PRODUCTION7`, Rust picks `PRODUCTION8`), a utility/noise candidate-order
   issue.
+- `tutorial-unit4-paired-act-trace` now matches the 18-line projection except
+  for the second retrieval's transient noise (`-0.7636829` vs `0.12914158`).
 
 Approach:
 
