@@ -50,7 +50,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine divergence: utility values (pending)"]
 fn hook_tutorial_unit7modeling_pcomp_issues_v5_recreate_encode() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit7modeling-pcomp-issues-v5-recreate-encode")
         .models(&[

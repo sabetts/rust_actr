@@ -972,10 +972,25 @@ impl Engine {
     /// `None` means valid. With `:cia` off, any indirect action invalidates.
     pub(super) fn invalid_compilation_reason(&self, idx: usize) -> Option<String> {
         let prod = &self.model.productions[idx];
-        if prod.lhs.iter().any(|x| matches!(x, LhsItem::Eval { .. }))
-            || prod.rhs.iter().any(|x| matches!(x, RhsAction::Eval { .. }))
+        if prod
+            .lhs
+            .iter()
+            .any(|x| matches!(x, LhsItem::Eval { safe: false, .. }))
+            || prod
+                .rhs
+                .iter()
+                .any(|x| matches!(x, RhsAction::Eval { safe: false, .. }))
         {
             return Some("it contains one or more !eval! operators".to_string());
+        }
+        if prod.lhs.iter().any(|x| {
+            matches!(
+                x,
+                LhsItem::Match { tests, .. }
+                    if tests.iter().any(|t| t.op != crate::model::SlotOp::Eq)
+            )
+        }) {
+            return Some("it has conditions with modifiers on slot tests".to_string());
         }
         if let Some(buf) = indirect_action_buffer_name(prod) {
             if !self.cfg.cia {
@@ -1137,7 +1152,11 @@ impl Engine {
         for (token, slots) in lhs {
             text.push_str(&format!(" {token}"));
             for (n, v) in slots {
-                text.push_str(&format!(" {n} {}", v.render()));
+                if n.is_empty() {
+                    text.push_str(&format!(" {}", v.render()));
+                } else {
+                    text.push_str(&format!(" {n} {}", v.render()));
+                }
             }
         }
         text.push_str(" ==>");
@@ -1279,6 +1298,17 @@ impl Engine {
                             _ => r1.or(r2),
                         }
                     };
+                    // `update-utility-for-compiled-production`
+                    // (`utility-and-reward-1.lisp:497`) runs even while the
+                    // trace is suppressed. Only its printed block is gated.
+                    if let Some((didx, _, compiled)) = &dup {
+                        if *compiled && self.cfg.esc && self.cfg.ul {
+                            let alpha = self.cfg.alpha;
+                            let parent = self.utilities[p1_idx];
+                            let old = self.utilities[*didx];
+                            self.utilities[*didx] = old + alpha * (parent - old);
+                        }
+                    }
                     if trace {
                         self.out(format!(
                             "  Production {p1name} and {p2name} are being composed."
@@ -1286,17 +1316,6 @@ impl Engine {
                         if let Some((didx, dname, compiled)) = &dup {
                             if *compiled {
                                 self.out(format!("  Recreating production {dname}"));
-                                // `update-utility-for-compiled-production`
-                                // (`utility-and-reward-1.lisp:497`): the existing
-                                // compiled production's `u` moves toward the first
-                                // parent's via `linear-update-utility`, then the
-                                // updated parameters are printed.
-                                if self.cfg.esc && self.cfg.ul {
-                                    let alpha = self.cfg.alpha;
-                                    let parent = self.utilities[p1_idx];
-                                    let old = self.utilities[*didx];
-                                    self.utilities[*didx] = old + alpha * (parent - old);
-                                }
                                 let u = self.utilities[*didx];
                                 let utility = self.production_utility[*didx];
                                 let reward = self.model.productions[*didx].reward.clone();
@@ -1698,15 +1717,18 @@ impl Engine {
                 })
                 .collect()
         };
-        let p1_lhs = prod_lhs_slots(p1, b1, &self.model.chunk_types);
+        // The first production's `!safe-eval!` keeps its variables: they are
+        // still bound by the composed LHS. The second's are instantiated from
+        // its firing (e.g. `=result` -> `(QUOTE LOSE)`).
+        let p1_lhs = prod_lhs_slots(p1, &Bindings::new(), &self.model.chunk_types);
         let p2_lhs: Vec<(String, Vec<(String, SlotVal)>)> =
             prod_lhs_slots(p2, b2, &self.model.chunk_types)
                 .into_iter()
                 .map(|(b, s)| (b, rename_slots(s)))
                 .collect();
-        let p1_acts = prod_rhs_actions(p1, b1);
+        let p1_acts = prod_rhs_actions(p1, b1, &self.model.chunk_types);
         let p2_acts: Vec<(char, String, Vec<(String, SlotVal)>, Option<String>)> =
-            prod_rhs_actions(p2, b2)
+            prod_rhs_actions(p2, b2, &self.model.chunk_types)
                 .into_iter()
                 .map(|(op, buf, slots, var)| (op, buf, rename_slots(slots), var))
                 .collect();

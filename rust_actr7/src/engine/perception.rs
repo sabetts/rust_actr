@@ -508,6 +508,22 @@ impl Engine {
         // label goes through) must not queue another one — the ref has a single
         // `visicon-update` for a whole `build-display`.
         self.display_queued_ms = Some(now);
+        // A task's setup draws happen before the `add-text` calls at the same
+        // instant (`pcomp-issues` picks the two trial numbers first).
+        let mut due_rng = Vec::new();
+        self.pending_rng.retain(|r| {
+            if r.at_ms <= now {
+                due_rng.push(r.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for r in due_rng {
+            for _ in 0..r.count {
+                self.rng.borrow_mut().random_int(r.limit);
+            }
+        }
         // `process-display` runs `check-finsts` (`vision.lisp:1796`): finsts older
         // than `:visual-finst-span` are dropped before the display is searched.
         self.check_visual_finsts();

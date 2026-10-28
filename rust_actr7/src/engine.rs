@@ -544,6 +544,17 @@ struct Config {
     seed: Option<(u64, u64)>,
 }
 
+/// Model-RNG draws a task makes at a point in its window setup (e.g.
+/// `pcomp-issues` choosing the two trial numbers before adding their text).
+#[derive(Debug, Clone)]
+pub struct DeviceRng {
+    pub at_ms: i64,
+    pub count: u64,
+    pub limit: u64,
+    /// See [`DeviceText::run`].
+    pub run: Option<u32>,
+}
+
 /// One scripted device action: show text at a time and position.
 /// Mirrors what a task file does with `open-exp-window` /
 /// `add-text-to-exp-window` after install.
@@ -846,6 +857,8 @@ pub struct DeviceSetup {
     /// `schedule-event-relative`/`schedule-event` with a string action
     /// prints `NONE <action> <params>` at its `:output` level.
     pub commands: Vec<DeviceCommand>,
+    /// Task RNG draws at a scripted time, before the window ops at that time.
+    pub rng_draws: Vec<DeviceRng>,
     /// Scripted tone sounds (`new-tone-sound`), re-armed on every reset.
     pub sounds: Vec<DeviceSound>,
     /// Run-full-time dummy: keep running to this ms, then time-limit stop.
@@ -2293,6 +2306,8 @@ pub struct Engine {
     valid_slots: HashSet<String>,
     /// Scripted device items not yet shown, by appearance time.
     pending_texts: Vec<DeviceText>,
+    /// Task RNG draws not yet consumed, by time.
+    pending_rng: Vec<DeviceRng>,
     /// Scripted window buttons/lines not yet applied, by time.
     pending_buttons: Vec<DeviceButton>,
     pending_lines: Vec<DeviceLine>,
@@ -2312,6 +2327,7 @@ pub struct Engine {
     /// The full device script, re-armed on every `reset` (a task re-applies
     /// its window setup each run; `pending_*` is consumed as time advances).
     device_texts: Vec<DeviceText>,
+    device_rng_draws: Vec<DeviceRng>,
     device_buttons: Vec<DeviceButton>,
     device_lines: Vec<DeviceLine>,
     device_line_modifies: Vec<DeviceLineModify>,
@@ -2686,6 +2702,7 @@ impl Engine {
             clears,
             removes,
             prints,
+            rng_draws,
             commands,
             sounds,
             end,
@@ -2753,6 +2770,11 @@ impl Engine {
                 v.sort_by_key(|t| t.at_ms);
                 v
             },
+            pending_rng: {
+                let mut v = rng_draws.clone();
+                v.sort_by_key(|r| r.at_ms);
+                v
+            },
             pending_buttons: {
                 let mut v = buttons.clone();
                 v.sort_by_key(|b| b.at_ms);
@@ -2797,6 +2819,11 @@ impl Engine {
             device_texts: {
                 let mut v = texts;
                 v.sort_by_key(|t| t.at_ms);
+                v
+            },
+            device_rng_draws: {
+                let mut v = rng_draws;
+                v.sort_by_key(|r| r.at_ms);
                 v
             },
             device_buttons: {
@@ -3105,6 +3132,12 @@ impl Engine {
             .device_texts
             .iter()
             .filter(|t| t.run.is_none() || t.run == Some(run))
+            .cloned()
+            .collect();
+        self.pending_rng = self
+            .device_rng_draws
+            .iter()
+            .filter(|r| r.run.is_none() || r.run == Some(run))
             .cloned()
             .collect();
         self.pending_buttons = self

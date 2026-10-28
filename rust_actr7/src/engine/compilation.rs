@@ -169,6 +169,15 @@ pub(super) fn prod_lhs_slots(
                 token.to_string(),
                 vec![(format!("={var}"), SlotVal::Lit(sexp_lisp(value)))],
             ));
+        } else if let LhsItem::Eval { value, safe } = item {
+            // `!safe-eval!` is valid for compilation; the predicate becomes a
+            // prefix condition in the composed production, with the parent's
+            // bindings substituted (`replace-variables-for-eval`).
+            let token = if *safe { "!SAFE-EVAL!" } else { "!EVAL!" };
+            out.push((
+                token.to_string(),
+                vec![(String::new(), SlotVal::Lit(show_eval_sexp(value, _b)))],
+            ));
         } else if let LhsItem::Query { buffer, queries } = item {
             // State/failure queries (`?imaginal> state free`).
             let mut slots: Vec<(String, SlotVal)> = queries
@@ -363,6 +372,7 @@ pub(super) fn canon_composed(
 pub(super) fn prod_rhs_actions(
     p: &Production,
     b: &Bindings,
+    types: &[crate::model::ChunkType],
 ) -> Vec<(char, String, Vec<(String, SlotVal)>, Option<String>)> {
     let mut out = Vec::new();
     for a in &p.rhs {
@@ -413,7 +423,13 @@ pub(super) fn prod_rhs_actions(
                 ChunkDesc::Named(n) if n.starts_with('=') => {
                     out.push(('r', buffer.clone(), Vec::new(), Some(n[1..].to_string())))
                 }
-                ChunkDesc::Spec { slots, rels, .. } => {
+                ChunkDesc::Spec {
+                    ctype,
+                    slots,
+                    neg,
+                    rels,
+                    ..
+                } => {
                     let mut s: Vec<(String, SlotVal)> = slots
                         .iter()
                         .map(|(n, v)| {
@@ -430,6 +446,45 @@ pub(super) fn prod_rhs_actions(
                             )
                         })
                         .collect();
+                    // `isa TYPE` request specs carry the type defaults (the
+                    // same expansion `prod_lhs_slots` performs).
+                    if let Some(ct) = types.iter().find(|t| t.name.eq_ignore_ascii_case(ctype)) {
+                        for (slot, pat) in &ct.defaults {
+                            if !s.iter().any(|(n, _)| n.eq_ignore_ascii_case(slot)) {
+                                s.push((
+                                    slot.to_uppercase(),
+                                    SlotVal::Lit(
+                                        Value::from_pattern(pat)
+                                            .map(|x| x.show())
+                                            .unwrap_or_default(),
+                                    ),
+                                ));
+                            }
+                        }
+                    }
+                    for (slot, val) in builtin_type_defaults(ctype) {
+                        if !s.iter().any(|(n, _)| n.eq_ignore_ascii_case(slot)) {
+                            s.push((slot.to_string(), SlotVal::Lit(val.to_string())));
+                        }
+                    }
+                    // ACT-R's standard representation sorts the real slots;
+                    // exclusions/relative tests stay after them.
+                    s.sort_by(|a, b| a.0.cmp(&b.0));
+                    // Negative request slots (`- key =key`) are exclusions,
+                    // kept as `"- <slot>"` pseudo-slots on the composed RHS.
+                    for (name, v) in neg {
+                        s.push((
+                            format!("- {name}"),
+                            match v {
+                                Pattern::Var(v) => SlotVal::Var(v.clone()),
+                                other => SlotVal::Lit(
+                                    Value::from_pattern(other)
+                                        .map(|x| x.show())
+                                        .unwrap_or_default(),
+                                ),
+                            },
+                        ));
+                    }
                     // Relative tests (`> screen-x current`) are carried as
                     // `"<op> <slot>"` pseudo-slots so both the trace
                     // (`render_compiled`) and the installed production
@@ -481,7 +536,13 @@ pub(super) fn render_compiled(
         if token.starts_with('!') {
             let args: Vec<String> = slots
                 .iter()
-                .map(|(n, v)| format!("{n} {}", v.render()))
+                .map(|(n, v)| {
+                    if n.is_empty() {
+                        v.render()
+                    } else {
+                        format!("{n} {}", v.render())
+                    }
+                })
                 .collect();
             s.push_str(&format!("   {token} {}\n", args.join(" ")));
             continue;
@@ -508,9 +569,12 @@ pub(super) fn render_compiled(
 /// from a request's `> slot value`) prints the way `render_production` does
 /// (`    >  slot value`); everything else is `       slot value`.
 pub(super) fn render_rhs_slot(n: &str, v: &str) -> String {
-    for op in [">=", "<=", ">", "<"] {
+    for op in [">=", "<=", ">", "<", "-"] {
         if let Some(rest) = n.strip_prefix(op) {
             if let Some(slot) = rest.strip_prefix(' ') {
+                if op == "-" {
+                    return format!("    -  {slot} {v}\n");
+                }
                 return format!("    {op:<2} {slot} {v}\n");
             }
         }
@@ -941,6 +1005,43 @@ pub(super) fn slot_disp(slot: &str, b: &Bindings) -> String {
             .map(|v| v.show())
             .unwrap_or_else(|| slot.to_string()),
         None => slot.to_string(),
+    }
+}
+
+/// Substitute a parent's `=variables` inside a compiled `!safe-eval!`
+/// predicate. A symbol value has to be quoted (`=result` -> `(QUOTE LOSE)`);
+/// plain `Value::show` would inject it as an unquoted symbol.
+fn show_eval_sexp(a: &Sexp, b: &Bindings) -> String {
+    match a {
+        Sexp::Sym(s) => {
+            if let Some(var) = s.strip_prefix('=') {
+                match b.get(var) {
+                    Some(Value::Sym(v)) => format!("(QUOTE {v})"),
+                    Some(Value::Str(v)) => format!("{v:?}"),
+                    Some(Value::Int(i)) => i.to_string(),
+                    Some(Value::Num(x)) => Value::Num(*x).show(),
+                    Some(Value::Nil) => "NIL".to_string(),
+                    Some(Value::List(vs)) => format!(
+                        "(QUOTE ({}))",
+                        vs.iter().map(|v| v.show()).collect::<Vec<_>>().join(" ")
+                    ),
+                    None => s.clone(),
+                }
+            } else {
+                s.clone()
+            }
+        }
+        Sexp::Int(i) => i.to_string(),
+        Sexp::Float(x) => Value::Num(*x).show(),
+        Sexp::Str(s) => format!("{s:?}"),
+        Sexp::List(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(|i| show_eval_sexp(i, b))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
     }
 }
 

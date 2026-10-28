@@ -5206,3 +5206,37 @@ Recovered:
 - `tutorial-unit4-zbrodoff-correct-chunk`
 
 Corpus: **480 passed / 87 ignored**.
+
+## 314. Pcomp task RNG at trial boundaries, safe-eval, and compiled actions
+
+The pcomp task draws two `act-r-random 4` values at the start of every trial.
+The scripted device replay only consumed the first pair, so from the second
+trial on the model RNG diverged while matching outputs still looked plausible;
+the first visible symptom was the utility-noise sample cached for the recreated
+production. Device scripts now support `(RNG-DRAW ms count limit)`, consumed in
+`proc_display` before the `add-text` ops at that instant, and the pcomp
+sidecars carry the per-trial draws.
+
+Pcomp compilation also had three LHS/RHS gaps: `!safe-eval!` is now a valid
+compiled prefix condition (with second-parent variables substituted, first-
+parent variables retained), slot modifiers invalidate compilation in ACT-R's
+order, and composed request actions expand chunk-type defaults and keep
+negative request slots. Recreated compiled productions update their utility
+even while `:v`/`:pct` output is suppressed; only the printed parameter block
+is gated. This was the remaining `:u 5.281` vs `2.004` difference.
+
+Recovered:
+
+- `tutorial-unit7modeling-pcomp-issues-v4-pct-successful-retrieval`
+- `tutorial-unit7modeling-pcomp-issues-v4-two-trial-pct-2`
+- `tutorial-unit7modeling-pcomp-issues-v5-production3-recreated`
+- `tutorial-unit7modeling-pcomp-issues-v5-recreate-encode`
+- `tutorial-unit7modeling-pcomp-issues-v5-retrieval-time`
+- `tutorial-unit7modeling-pcomp-issues-v5-retrieved-a-win`
+- `tutorial-unit7modeling-pcomp-issues-v6-retrieved-a-win`
+- `tutorial-unit7modeling-pcomp-issues-v8-eval-issue`
+- `tutorial-unit7modeling-pcomp-issues-v9-non-win-composition`
+- `tutorial-unit7modeling-pcomp-issues-v10-guess-other-composition`
+- `tutorial-unit7modeling-pcomp-issues-v10-non-win-composition`
+
+Corpus: **491 passed / 76 ignored**.

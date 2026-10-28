@@ -50,10 +50,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-// BLOCKED ON: pcomp trial timing. `!eval!` task-command registration and the
-// invalid-`:epl` trace are implemented; the first production now fires at
-// 37.244 instead of the ref's 36.267.
-#[ignore = "engine divergence: pcomp trial timing"]
 fn hook_tutorial_unit7modeling_pcomp_issues_v8_eval_issue() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit7modeling-pcomp-issues-v8-eval-issue")
         .models(&[

@@ -42,7 +42,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine divergence: utility values (pending)"]
 fn tutorial_unit7modeling_pcomp_issues_v5_retrieval_time() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit7modeling-pcomp-issues-v5-retrieval-time")
         .models(&[

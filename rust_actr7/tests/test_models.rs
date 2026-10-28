@@ -492,7 +492,8 @@ fn normalize(s: &str) -> Vec<String> {
 /// Per-case device sidecar `<name>.device.sexp` in `fixtures/devices/`, mirroring
 /// the task file's post-reset `add-text-to-exp-window` / `clear-exp-window`
 /// calls (same form as `tests/extra_traces.rs`): `((ADD-TEXT ms "text" x y) ...)`,
-/// plus optional `(CLEAR ms)`, `(END ms)`, `(REWARD ms v)`, `(SIMILARITY a b v)`.
+/// plus optional `(CLEAR ms)`, `(END ms)`, `(REWARD ms v)`, `(SIMILARITY a b v)`,
+/// and `(RNG-DRAW ms count limit)` for task random draws before setup text.
 fn load_spec_device(name: &str) -> Result<DeviceSetup, String> {
     let path = devices_dir().join(format!("{name}.device.sexp"));
     if !path.is_file() {
@@ -535,6 +536,12 @@ fn parse_device_op(
         let op = v.first().and_then(|s| s.as_sym()).unwrap_or("");
         let ms = || as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms".to_string());
         match op {
+            "RNG-DRAW" => device.rng_draws.push(actr_engine::engine::DeviceRng {
+                at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
+                count: as_i64(v.get(2).ok_or("missing count")?).ok_or("bad count")? as u64,
+                limit: as_i64(v.get(3).ok_or("missing limit")?).ok_or("bad limit")? as u64,
+                run,
+            }),
             "ADD-TEXT" => device.texts.push(DeviceText {
                 at_ms: as_i64(v.get(1).ok_or("missing ms")?).ok_or("bad ms")?,
                 text: as_str(v.get(2).ok_or("missing text")?).ok_or("bad text")?,
