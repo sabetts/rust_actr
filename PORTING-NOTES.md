@@ -5401,3 +5401,9 @@ including `paired-learning` (`pre =state` became `pre wait`) and several pcomp
 compositions. It was reverted. The fix needs to be confined to the retrieval
 map: match ACT-R's decision to leave this p2 condition variable symbolic
 instead of globally instantiating unbound RHS variables.
+
+A narrower attempt (skip retrieval-condition mapping when the same variable
+appears in p2's RHS) avoided the `=VAL` crash but produced
+`unbound variable =STATE1 on RHS` in another composition, so it was also
+reverted. The remaining work is to reproduce ACT-R's `the-chunk`/p2 binding
+state at this composition, not to change RHS substitution globally.
