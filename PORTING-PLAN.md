@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **508 passed / 59 ignored / 0 failed**
+- Full suite: **511 passed / 56 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **508 passed / 59 ignored**.
+- [x] Full suite green at **511 passed / 56 ignored**.
 
 Remaining:
 
@@ -152,6 +152,11 @@ Reconnaissance:
   `permute-list` command was permuting two strings instead of one pair, and
   the extra `ConsumeRng(1)` steps double-counted the task draw. Correcting
   both puts the activation-noise draw at ACT-R's `(200 10)` state.
+- [x] `tutorial-unit7-paired-learning-results-of-compiling` recovered with
+  its real filter hook and the corrected task RNG draws.
+- [x] `tutorial-unit8-paired-dynamic-compiling-to-dynamic` and
+  `...-compiling-to-static` recovered with their filter hooks
+  (breaks at 400/600).
 
 Approach:
 

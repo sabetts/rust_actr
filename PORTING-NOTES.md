@@ -5427,3 +5427,23 @@ that arm to `GOAL` leaves the retrieval condition symbolic, matching ACT-R's
 
 The narrower change preserves v11; a fully goal-only loop had broken v11's
 compiled-production mappings. Corpus: **508 passed / 59 ignored**.
+
+## 326. Paired compiling filter cases recovered
+
+Recovered three filtered paired cases by replacing their generated drivers with
+the real hook lifecycle:
+
+- `tutorial-unit7-paired-learning-results-of-compiling` (break at 400 ms)
+- `tutorial-unit8-paired-dynamic-compiling-to-dynamic` (break at 400 ms)
+- `tutorial-unit8-paired-dynamic-compiling-to-static` (break at 600 ms)
+
+Each uses the same `filter`/`filter2` pattern as the alpha cases: suppress the
+trace until the target production fires, break there, then resume with
+`run-n-events 2`. Their `permute-list` arguments also needed the one-pair list
+form; the generated two-string form over-consumed RNG draws.
+
+The remaining paired stub, `tutorial-unit7-paired-composed-production`, needs
+`pp PRODUCTION0` output after a suppressed paired-task run; the current test
+driver has not yet captured that command output.
+
+Corpus: **511 passed / 56 ignored**.
