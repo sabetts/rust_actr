@@ -844,6 +844,10 @@ fn apply_session_step(
             }
         }
         Step::Reset => session.reset_model()?,
+        Step::ResetSilent => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            eng.reset_silent().map_err(|e| e.to_string())?
+        }
         Step::PDisable(names) => session.engine_mut().ok_or_else(no_model)?.pdisable(names),
         Step::PEnable(names) => session.engine_mut().ok_or_else(no_model)?.penable(names),
         Step::PBreak(names) => session

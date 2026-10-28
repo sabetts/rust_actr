@@ -448,3 +448,96 @@ fn base_level_matches_lisp_table() {
         "table shrank: acts={acts} rows={rows}"
     );
 }
+
+#[test]
+fn hook_effects_apply_sgp_and_output() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.out_lines.clear();
+    e.apply_hook_effect(HookEffect::Sgp {
+        key: ":V".into(),
+        value: Sexp::Sym("NIL".into()),
+    })
+    .unwrap();
+    assert!(!e.trace_on);
+    e.apply_hook_effect(HookEffect::ModelOutput("hook output".into()))
+        .unwrap();
+    assert_eq!(e.out_lines, vec!["hook output"]);
+}
+
+#[test]
+fn hook_effect_captures_buffer_without_trace() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    let mut chunk = inst(
+        "COUNT-FROM",
+        vec![("START", sym("TWO")), ("END", sym("FOUR"))],
+    );
+    chunk.name = Some("COUNT-FROM-0".into());
+    e.buffers.get_mut("GOAL").unwrap().chunk = Some(chunk);
+    let mark = e.out_lines.len();
+    let sink = Rc::new(RefCell::new(String::new()));
+    e.apply_hook_effect(HookEffect::CaptureBufferChunk {
+        buffers: vec!["GOAL".into()],
+        sink: sink.clone(),
+    })
+    .unwrap();
+    assert!(sink.borrow().contains("GOAL: COUNT-FROM-0"));
+    assert_eq!(e.out_lines.len(), mark);
+}
+
+#[test]
+fn hook_break_still_applies_pre_effects() {
+    struct BreakHook;
+    impl EventHook for BreakHook {
+        fn pre(&mut self, _ev: &EventView) -> PreResult {
+            PreResult::BREAK
+        }
+        fn take_effects(&mut self) -> Vec<HookEffect> {
+            vec![HookEffect::Sgp {
+                key: ":V".into(),
+                value: Sexp::Sym("NIL".into()),
+            }]
+        }
+    }
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.schedule_dummy(1);
+    e.set_event_hook(Some(Box::new(BreakHook)));
+    e.run_n_events(1).unwrap();
+    assert!(!e.trace_on);
+    assert!(
+        e.queue.peek().is_some(),
+        "break must leave the event queued"
+    );
+}
+
+#[test]
+fn reset_silent_suppresses_setup_trace() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    let before = e.out_lines.len();
+    e.reset_silent().unwrap();
+    assert_eq!(e.out_lines.len(), before);
+    assert!(!e.trace_on);
+}

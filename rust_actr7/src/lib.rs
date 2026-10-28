@@ -34,7 +34,9 @@ pub mod trace;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-pub use engine::{DeviceSetup, DeviceText, EngineError, EventHook, EventView, PreResult, Verdict};
+pub use engine::{
+    DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, PreResult, Verdict,
+};
 pub use model::{load_models, ChunkDesc, Model};
 
 use std::collections::HashMap;
@@ -233,6 +235,9 @@ pub enum Step {
     Sgp(String, sexpr::Sexp),
     /// `(reset)`.
     Reset,
+    /// `(reset)` with its setup trace suppressed, then leave `:v` off. Used
+    /// by hook drivers whose filter suppresses the reset segment.
+    ResetSilent,
     /// `(pdisable <name>...)`: skip the named productions.
     PDisable(Vec<String>),
     /// `(penable <name>...)`: re-enable the named productions.
@@ -446,6 +451,7 @@ pub fn run_model_steps_with_hook(
             Step::SetDetail(d) => eng.set_detail(*d),
             Step::Sgp(k, v) => eng.apply_sgp(k, v)?,
             Step::Reset => eng.reset()?,
+            Step::ResetSilent => eng.reset_silent()?,
             Step::PDisable(names) => eng.pdisable(names),
             Step::PEnable(names) => eng.penable(names),
             Step::PBreak(names) => eng.pbreak_quiet(names),

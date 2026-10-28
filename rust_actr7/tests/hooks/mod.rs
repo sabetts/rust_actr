@@ -134,6 +134,7 @@ pub struct HookCase {
     seed: (u64, u64),
     steps: Vec<Step>,
     device: Option<String>,
+    hook_swaps: Vec<(usize, Box<dyn EventHook>)>,
 }
 
 impl HookCase {
@@ -144,6 +145,7 @@ impl HookCase {
             seed: (100, 0),
             steps: Vec::new(),
             device: None,
+            hook_swaps: Vec::new(),
         }
     }
 
@@ -164,6 +166,14 @@ impl HookCase {
 
     pub fn device(mut self, name: &str) -> Self {
         self.device = Some(name.to_string());
+        self
+    }
+
+    /// Replace the active hook immediately before driver step `at`. The
+    /// paired filters install `filter`, delete it, then install `filter2`;
+    /// this mirrors that lifecycle without requiring a hook-aware `Step`.
+    pub fn swap_hook_at(mut self, at: usize, hook: impl EventHook + 'static) -> Self {
+        self.hook_swaps.push((at, Box::new(hook)));
         self
     }
 
@@ -204,6 +214,7 @@ impl HookCase {
             seed,
             steps,
             device,
+            hook_swaps,
         } = self;
         let device_name = device.as_deref().unwrap_or(&case);
         let device = load_spec_device(device_name)?;
@@ -213,10 +224,14 @@ impl HookCase {
             _ => false,
         });
         if needs_session {
-            run_session_hook(&root, &models, seed, &steps, &device, hook)
-        } else {
+            run_session_hook(&root, &models, seed, &steps, &device, hook, hook_swaps)
+        } else if hook_swaps.is_empty() {
             run_model_steps_with_hook(&root, &models, seed, &steps, &device, Some(hook))
                 .map_err(|e| format!("{case}: engine error: {e}"))
+        } else {
+            Err(format!(
+                "{case}: hook swaps require a command-bearing session driver"
+            ))
         }
     }
 }
@@ -246,6 +261,7 @@ fn run_session_hook(
     steps: &[Step],
     device: &actr_engine::DeviceSetup,
     hook: Box<dyn EventHook>,
+    hook_swaps: Vec<(usize, Box<dyn EventHook>)>,
 ) -> Result<String, String> {
     let mut session = Session::new(root.to_path_buf(), seed);
     let mut remote = NoRemote;
@@ -264,7 +280,15 @@ fn run_session_hook(
         .engine_mut()
         .ok_or("no model loaded")?
         .set_event_hook(Some(hook));
-    for step in steps {
+    let mut swaps = hook_swaps.into_iter().peekable();
+    for (i, step) in steps.iter().enumerate() {
+        while swaps.peek().is_some_and(|(at, _)| *at == i) {
+            let (_, next) = swaps.next().unwrap();
+            session
+                .engine_mut()
+                .ok_or("no model loaded")?
+                .set_event_hook(Some(next));
+        }
         apply_session_step(&mut session, step, &mut remote)?;
     }
     Ok(session.take_trace_output())

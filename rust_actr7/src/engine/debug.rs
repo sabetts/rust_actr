@@ -3333,6 +3333,16 @@ impl Engine {
         text
     }
 
+    /// `printed-buffer-chunk` for one or more buffers, captured without
+    /// appending to the trace. Used by [`super::HookEffect`].
+    pub fn capture_printed_buffer_chunk(&mut self, buffers: &[String]) -> String {
+        let mark = self.out_lines.len();
+        self.print_printed_buffer_chunk(buffers);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+
     /// `printed-buffer-status`: the buffer status block as a string.
     pub fn printed_buffer_status(&mut self, name: &str) -> String {
         let mark = self.out_lines.len();

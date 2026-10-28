@@ -31,6 +31,7 @@
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::rc::Rc;
 
 use crate::json::Json;
 use crate::model::{
@@ -113,17 +114,47 @@ impl PreResult {
     }
 }
 
+/// A side effect queued by an [`EventHook`]. Hooks cannot borrow the engine
+/// while an event is running, so they describe these effects and the engine
+/// applies them immediately after `pre` or after all `post` lines.
+#[derive(Debug, Clone)]
+pub enum HookEffect {
+    /// `(sgp key value)`: apply before the event executes (or after it for a
+    /// post hook).
+    Sgp { key: String, value: Sexp },
+    /// `(model-output "text")`: append a raw output line, independent of `:v`.
+    ModelOutput(String),
+    /// `(printed-buffer-chunk ...)`: append the buffer dump to the trace.
+    PrintBufferChunk(Vec<String>),
+    /// `(printed-buffer-chunk ...)` stored in a task variable instead of
+    /// printed. The captured text is written to `sink`.
+    CaptureBufferChunk {
+        buffers: Vec<String>,
+        sink: Rc<RefCell<String>>,
+    },
+}
+
 /// A two-phase hook, the Rust counterpart of ACT-R's
 /// `add-pre-event-hook`/`add-post-event-hook` pair (`scheduling.lisp:717`,
 /// `:775`). `pre` runs before the event executes and may [`Verdict::Break`] or
 /// toggle `:v`; `post` runs after a shown event with the exact trace line the
 /// engine would have emitted (available even while `:v` is off, matching the
 /// pre-hook's `(format-event evt)`).
+///
+/// Effects queued by `pre`/`post` are drained by the engine after the hook
+/// call. They are applied in queue order; in `pre` they run after the legacy
+/// [`PreResult::trace`] toggle, so a queued `:V` sgp wins.
 pub trait EventHook {
     fn pre(&mut self, _ev: &EventView) -> PreResult {
         PreResult::CONTINUE
     }
     fn post(&mut self, _line: &str, _ev: &EventView) {}
+
+    /// Side effects queued since the last drain. The default is no effects,
+    /// so existing projection/trace-window hooks need no changes.
+    fn take_effects(&mut self) -> Vec<HookEffect> {
+        Vec::new()
+    }
 }
 
 #[derive(Debug)]
@@ -3021,6 +3052,17 @@ impl Engine {
         self.reset_impl()
     }
 
+    /// `(reset)` with the reset segment removed from the trace and `:v` left
+    /// off. Hook drivers use this when their filter suppresses the initial
+    /// setup trace (the `paired` family).
+    pub fn reset_silent(&mut self) -> Result<(), EngineError> {
+        let mark = self.out_lines.len();
+        self.reset()?;
+        self.out_lines.truncate(mark);
+        self.trace_on = false;
+        Ok(())
+    }
+
     /// The body of `reset`; the construction reset calls this directly so the
     /// spec's first `(reset)` is device run 1.
     /// Arm the device script for the current run (`self.device_run`).
@@ -3845,6 +3887,71 @@ impl Engine {
         self.event_hook = hook;
     }
 
+    /// Run the pre hook and its queued effects. The returned view is kept for
+    /// `post`; a `Break` verdict must be handled by the caller (withhold the
+    /// event and stop the run).
+    fn pre_event_hook(
+        &mut self,
+        event: &Event,
+        out: Out,
+        show: bool,
+    ) -> Result<Option<(EventView, Verdict)>, EngineError> {
+        if self.event_hook.is_none() {
+            return Ok(None);
+        }
+        let view = self.event_view(event, out, show);
+        let result = self.event_hook.as_mut().unwrap().pre(&view);
+        if let Some(t) = result.trace {
+            self.trace_on = t;
+        }
+        // A pre-hook's sgp/model-output side effects happen before event
+        // execution, and even when the hook also returns "break".
+        self.drain_hook_effects()?;
+        Ok(Some((view, result.verdict)))
+    }
+
+    /// Run the post hook for every line the event emitted, then apply effects
+    /// once so a multi-line event cannot duplicate them.
+    fn post_event_hook(&mut self, view: &EventView, lines: &[String]) -> Result<(), EngineError> {
+        if self.event_hook.is_none() {
+            return Ok(());
+        }
+        {
+            let hook = self.event_hook.as_mut().unwrap();
+            for line in lines {
+                hook.post(line, view);
+            }
+        }
+        self.drain_hook_effects()
+    }
+
+    fn drain_hook_effects(&mut self) -> Result<(), EngineError> {
+        let effects = self
+            .event_hook
+            .as_mut()
+            .map(|hook| hook.take_effects())
+            .unwrap_or_default();
+        for effect in effects {
+            self.apply_hook_effect(effect)?;
+        }
+        Ok(())
+    }
+
+    fn apply_hook_effect(&mut self, effect: HookEffect) -> Result<(), EngineError> {
+        match effect {
+            HookEffect::Sgp { key, value } => self.apply_sgp(&key, &value)?,
+            HookEffect::ModelOutput(text) => self.model_output(&text),
+            HookEffect::PrintBufferChunk(buffers) => {
+                self.print_printed_buffer_chunk(&buffers);
+            }
+            HookEffect::CaptureBufferChunk { buffers, sink } => {
+                let text = self.capture_printed_buffer_chunk(&buffers);
+                *sink.borrow_mut() = text;
+            }
+        }
+        Ok(())
+    }
+
     fn emit(&mut self, module: &str, details: String) {
         // Capture the rendered line(s) for `EventHook::post` before the `:v`
         // gate: a pre-hook may turn tracing off (`sgp :v nil`) yet still
@@ -4393,30 +4500,21 @@ impl Engine {
         let bh_info = self.bh_event_info_take(&next.event);
         let bt_info = self.bt_event_info_take(&next.event);
         let show = self.cfg.detail.shows(next.out);
-        let hook_view = if self.event_hook.is_some() {
-            let view = self.event_view(&next.event, next.out, show);
-            let r = self.event_hook.as_mut().unwrap().pre(&view);
-            if let Some(t) = r.trace {
-                self.trace_on = t;
-            }
-            if r.verdict == Verdict::Break {
+        let hook_view = match self.pre_event_hook(&next.event, next.out, show)? {
+            Some((_, Verdict::Break)) => {
                 self.queue.push(next);
                 return Ok(true);
             }
-            Some(view)
-        } else {
-            None
+            Some((view, Verdict::Continue)) => Some(view),
+            None => None,
         };
         let is_cr = matches!(next.event, Event::ConflictResolution);
         let maintenance = next.maintenance;
         self.current_lines.clear();
         self.exec(next.event, show)?;
-        if self.event_hook.is_some() {
+        if let Some(view) = hook_view.as_ref() {
             let lines = std::mem::take(&mut self.current_lines);
-            let h = self.event_hook.as_mut().unwrap();
-            for line in &lines {
-                h.post(line, hook_view.as_ref().unwrap());
-            }
+            self.post_event_hook(view, &lines)?;
         }
         self.bh_record(bh_info);
         self.bt_post(bt_info);
@@ -4540,30 +4638,21 @@ impl Engine {
             let bh_info = self.bh_event_info_take(&next.event);
             let bt_info = self.bt_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
-            let hook_view = if self.event_hook.is_some() {
-                let view = self.event_view(&next.event, next.out, show);
-                let r = self.event_hook.as_mut().unwrap().pre(&view);
-                if let Some(t) = r.trace {
-                    self.trace_on = t;
-                }
-                if r.verdict == Verdict::Break {
+            let hook_view = match self.pre_event_hook(&next.event, next.out, show)? {
+                Some((_, Verdict::Break)) => {
                     self.queue.push(next);
                     break;
                 }
-                Some(view)
-            } else {
-                None
+                Some((view, Verdict::Continue)) => Some(view),
+                None => None,
             };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.current_lines.clear();
             self.exec(next.event, show)?;
-            if self.event_hook.is_some() {
+            if let Some(view) = hook_view.as_ref() {
                 let lines = std::mem::take(&mut self.current_lines);
-                let h = self.event_hook.as_mut().unwrap();
-                for line in &lines {
-                    h.post(line, hook_view.as_ref().unwrap());
-                }
+                self.post_event_hook(view, &lines)?;
             }
             self.bh_record(bh_info);
             self.bt_post(bt_info);
@@ -4718,32 +4807,23 @@ impl Engine {
             let bh_info = self.bh_event_info_take(&next.event);
             let bt_info = self.bt_event_info_take(&next.event);
             let show = self.cfg.detail.shows(next.out);
-            let hook_view = if self.event_hook.is_some() {
-                let view = self.event_view(&next.event, next.out, show);
-                let r = self.event_hook.as_mut().unwrap().pre(&view);
-                if let Some(t) = r.trace {
-                    self.trace_on = t;
-                }
-                if r.verdict == Verdict::Break {
+            let hook_view = match self.pre_event_hook(&next.event, next.out, show)? {
+                Some((_, Verdict::Break)) => {
                     // Withhold the event (it stays queued) and stop the run,
                     // like `run-one-event`'s `"break"` return.
                     self.queue.push(next);
                     break;
                 }
-                Some(view)
-            } else {
-                None
+                Some((view, Verdict::Continue)) => Some(view),
+                None => None,
             };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
             self.current_lines.clear();
             self.exec(next.event, show)?;
-            if self.event_hook.is_some() {
+            if let Some(view) = hook_view.as_ref() {
                 let lines = std::mem::take(&mut self.current_lines);
-                let h = self.event_hook.as_mut().unwrap();
-                for line in &lines {
-                    h.post(line, hook_view.as_ref().unwrap());
-                }
+                self.post_event_hook(view, &lines)?;
             }
             self.bh_record(bh_info);
             self.bt_post(bt_info);

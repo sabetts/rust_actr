@@ -5135,3 +5135,27 @@ The BST imaginal-action trace driver is now implemented with the break at
 remains ignored on that event-order divergence.
 
 Corpus: **471 passed / 96 ignored**.
+
+## 311. Event-hook effects: sgp, model output, and buffer dumps
+
+`EventHook` now has an opt-in effect queue (`take_effects`) without changing the
+existing `pre`/`post` signatures. The engine drains it after `pre` and after all
+`post` lines, so multi-line events do not duplicate effects:
+
+- `Sgp`: apply `:seed`, `:act`, `:v`, `:alpha`, `:pct`, ... at the event.
+- `ModelOutput`: write a raw Lisp `model-output` line.
+- `PrintBufferChunk`: append a `printed-buffer-chunk` dump.
+- `CaptureBufferChunk`: capture a dump into a task-owned sink.
+
+Pre effects run before event execution (and still run when the hook returns
+`break`); post effects run after the event's lines. The three run loops now
+share the same pre/post helpers.
+
+This recovered `tutorial-unit2-demo2-visual-chunk` and
+`tutorial-unit2-demo2-visual-location-chunk`. The paired drivers were ported to
+the new effects, but they remain blocked: the unit-4 trace differs only in the
+activation-noise draw, and the unit-7 traces need production-compilation state
+that the engine does not yet reproduce at those timestamps. The hook-phase
+harness (`swap_hook_at`) and `Step::ResetSilent` are in place for that follow-up.
+
+Corpus: **473 passed / 94 ignored**.
