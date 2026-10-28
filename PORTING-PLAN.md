@@ -94,18 +94,18 @@ Remaining:
 
 - [ ] **`v1-initial-run`** (1): summary diverges from the first block with
   `:epl t`; investigate the EPL/compiled-production learning path.
-- [ ] **`v12-50-runs`** (1): first 11 games match; game 12 has a 0.01 s RT
-  difference, then game 40 diverges in score. This is now a multi-game
-  timing/accumulation issue rather than the old compile-set bug.
+- [ ] **`v12-50-runs`** (1): games 1-39 match. Game 40, trial 10 is the first
+  real divergence: `retrieve-past-trial` returns the same
+  `imaginal-chunk0-6`, but Rust latches it at 80.419 vs oracle 81.913. This
+  is a DM activation/history-latency issue, not production compilation.
 - [ ] **`v13-50-runs`** (1): same 50-game family, not yet re-run after the
-  v11 fix.
+  v11 and activation fixes.
 
 Recommended next steps:
 
-1. For v12, compare per-trial oracle/Rust results for game 12 and locate the
-   0.01 s RT difference; determine whether it is task feedback timing or a
-   retrieval/motor latency rounding issue.
-2. Re-run v13 after that timing fix.
+1. Compare the base-level activation history for `imaginal-chunk0-6` in game
+   40 trial 10 and explain the 1.494 s latency gap.
+2. Re-run v13 after that activation fix.
 3. Isolate v1's EPL summary separately.
 
 Pcomp-specific gotchas:

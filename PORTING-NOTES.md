@@ -5308,3 +5308,13 @@ from the second parent's firing, matching ACT-R's composed `RESPONSE "s"` /
 `v11-test-runs` passes. Corpus **505 passed / 62 ignored**. v12/v13 remain as
 50-game timing divergences; v12 matches through game 11 and first differs by
 0.01 s in game 12's RT block.
+
+## 320. v12/v13 residual: activation-history latency
+
+After the v11 compile fix, v12 matches through game 39. The first real
+divergence is game 40, trial 10: `retrieve-past-trial` returns the same
+`IMAGINAL-CHUNK0-6` in both, but Rust latches it at 80.419 s and ACT-R at
+81.913 s (1.494 s slower). That is a DM activation/history/latency gap, not a
+production-compilation or task-side match.
+
+Corpus: **505 passed / 62 ignored**.
