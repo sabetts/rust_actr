@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **505 passed / 62 ignored / 0 failed**
+- Full suite: **506 passed / 61 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **505 passed / 62 ignored**.
+- [x] Full suite green at **506 passed / 61 ignored**.
 
 Remaining:
 
@@ -144,8 +144,10 @@ Reconnaissance:
   first divergence is conflict resolution at 25.435 (ACT-R picks
   `PRODUCTION7`, Rust picks `PRODUCTION8`), a utility/noise candidate-order
   issue.
-- `tutorial-unit4-paired-act-trace` now matches the 18-line projection except
-  for the second retrieval's transient noise (`-0.7636829` vs `0.12914158`).
+- [x] `tutorial-unit4-paired-act-trace` recovered. The test's
+  `permute-list` command was permuting two strings instead of one pair, and
+  the extra `ConsumeRng(1)` steps double-counted the task draw. Correcting
+  both puts the activation-noise draw at ACT-R's `(200 10)` state.
 
 Approach:
 

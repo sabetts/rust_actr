@@ -5347,3 +5347,20 @@ only remaining difference is the second retrieval's transient noise
 (`-0.7636829` expected vs `0.12914158` actual). Consume-count scans did not
 match, so this is an RNG stream/noise-draw-order issue rather than a projection
 bug.
+
+## 322. Paired activation trace: task RNG double-count
+
+Recovered `tutorial-unit4-paired-act-trace`. The projection itself was already
+right; the test driver was consuming the wrong random stream. ACT-R's
+`permute-list` draws once per item, and `(permute-list (subseq *pairs* 19))`
+receives one pair, so it draws once. The Rust command arguments were
+`(("zinc" "9"))`, which the command layer flattened to `("zinc" "9")` and
+permuted as two items, drawing twice. The driver also had two extra
+`Step::ConsumeRng(1)` steps for those same setup draws.
+
+Using `((("zinc" "9")))` (one pair in the list) and removing the explicit
+consumes makes the seed state match ACT-R at both retrievals:
+`(200 6)`, then `(200 9)`, with the second retrieval's noise at `(200 10)`
+and the expected value `-0.7636829`.
+
+Corpus: **506 passed / 61 ignored**.

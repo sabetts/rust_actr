@@ -40,7 +40,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine-divergence: transient activation noise draw"]
 fn tutorial_unit4_paired_act_trace() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit4-paired-act-trace")
         .models(&[
@@ -52,13 +51,12 @@ fn tutorial_unit4_paired_act_trace() -> Result<(), String> {
             Step::Reset,
             Step::Command {
                 name: "permute-list".into(),
-                args: crate::sexps(r#"(("zinc" "9"))"#),
+                args: crate::sexps(r#"((("zinc" "9")))"#),
             },
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
-            Step::ConsumeRng(1),
             Step::RunFullTime {
                 secs: 5.0,
                 trace: false,
@@ -73,9 +71,8 @@ fn tutorial_unit4_paired_act_trace() -> Result<(), String> {
             },
             Step::Command {
                 name: "permute-list".into(),
-                args: crate::sexps(r#"(("zinc" "9"))"#),
+                args: crate::sexps(r#"((("zinc" "9")))"#),
             },
-            Step::ConsumeRng(1),
             Step::RunFullTime {
                 secs: 5.0,
                 trace: false,
