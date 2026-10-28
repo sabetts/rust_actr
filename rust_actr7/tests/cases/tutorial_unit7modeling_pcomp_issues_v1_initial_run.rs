@@ -25,6 +25,7 @@ fn tutorial_unit7modeling_pcomp_issues_v1_initial_run() -> Result<(), String> {
             continue_rng: false,
             print_seed: false,
             print_summary: true,
+            stop_on_command: None,
         })])
         .check()
 }

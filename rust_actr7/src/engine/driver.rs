@@ -1933,6 +1933,12 @@ impl Engine {
             if let Some(pct) = cfg.pct {
                 self.apply_sgp(":PCT", &Sexp::Sym(if pct { "T" } else { "NIL" }.into()))?;
             }
+            if cfg.print_seed {
+                let (seed, draws) = self.rng.borrow().state();
+                self.out_lines.push(format!(
+                    ":SEED ({seed} {draws}) (default NO-DEFAULT) : Current seed of the random number generator"
+                ));
+            }
             self.set_trace(false);
             self.set_module_width(22);
             self.last_output_key = None;
@@ -1999,9 +2005,41 @@ impl Engine {
                 };
                 time_totals[i] += avg;
             }
+
+            if cfg.stop_on_command.is_some() && cfg.print_summary {
+                self.out_lines.push(String::new());
+                self.out_lines.push("Average Score of 1 trials".to_string());
+                let mut line = String::new();
+                for score in game_scores {
+                    line.push_str(&format!("{:4.2} ", score as f64));
+                }
+                self.out_lines.push(line);
+                self.out_lines.push("Average Response times".to_string());
+                let mut line = String::new();
+                for (total, count) in game_times.iter().zip(game_counts.iter()) {
+                    let avg = if *count == 0 {
+                        0.0
+                    } else {
+                        total / *count as f64
+                    };
+                    line.push_str(&format!("{:4.2} ", avg / 1000.0));
+                }
+                self.out_lines.push(line);
+            }
+
+            if let Some(cmd) = cfg.stop_on_command {
+                if self
+                    .fired_task_commands
+                    .borrow()
+                    .iter()
+                    .any(|fired| fired.eq_ignore_ascii_case(cmd))
+                {
+                    break;
+                }
+            }
         }
 
-        if cfg.print_summary {
+        if cfg.print_summary && cfg.stop_on_command.is_none() {
             self.out_lines.push(String::new());
             self.out_lines
                 .push(format!("Average Score of {} trials", cfg.games));

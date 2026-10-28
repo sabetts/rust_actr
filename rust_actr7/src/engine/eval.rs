@@ -337,6 +337,9 @@ impl Engine {
         if self.task_commands.contains(&name.to_uppercase())
             || self.user_fns.contains_key(&name.to_uppercase())
         {
+            self.fired_task_commands
+                .borrow_mut()
+                .push(name.to_uppercase());
             return Ok(Value::Nil);
         }
         Err(format!("unsupported eval command \"{name}\""))

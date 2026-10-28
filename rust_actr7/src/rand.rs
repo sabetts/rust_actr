@@ -27,6 +27,8 @@ const LOWER_MASK: u32 = 0x7fffffff;
 pub struct Mt {
     mt: [u32; N],
     mti: usize,
+    seed: u64,
+    draws: u64,
 }
 
 impl Mt {
@@ -35,6 +37,8 @@ impl Mt {
         Mt {
             mt: [0; N],
             mti: N + 1,
+            seed: 0,
+            draws: 0,
         }
     }
 
@@ -91,6 +95,8 @@ impl Mt {
 
     /// `(sgp :seed (seed count))`: init from seed, then discard `count`.
     pub fn set_seed(&mut self, seed: u64, count: u64) {
+        self.seed = seed;
+        self.draws = 0;
         if seed < (1u64 << 32) {
             self.init_genrand(seed as u32);
         } else {
@@ -101,8 +107,14 @@ impl Mt {
         }
     }
 
+    /// Current `(sgp :seed)` state: the initial seed and draws consumed.
+    pub fn state(&self) -> (u64, u64) {
+        (self.seed, self.draws)
+    }
+
     /// `genrand_int32`.
     pub fn next_u32(&mut self) -> u32 {
+        self.draws += 1;
         if self.mti >= N {
             if self.mti > N {
                 // Uninitialized state safety net (random.lisp:274).

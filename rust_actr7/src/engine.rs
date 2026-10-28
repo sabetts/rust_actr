@@ -2642,6 +2642,9 @@ pub struct Engine {
     /// trace (`add-act-r-command`), so `!eval! ("cmd")` can run them as a
     /// no-op.
     task_commands: HashSet<String>,
+    /// Task commands fired through `!eval!` since the driver last read them
+    /// (`v7-find-seed`'s `set-flag`).
+    fired_task_commands: RefCell<Vec<String>>,
     /// Task-file `defparameter`/`defvar` values (upper-cased names).
     user_vars: HashMap<String, Value>,
 }
@@ -3012,6 +3015,7 @@ impl Engine {
             trace_on: true,
             user_fns: HashMap::new(),
             task_commands: HashSet::new(),
+            fired_task_commands: RefCell::new(Vec::new()),
             user_vars: HashMap::new(),
         };
         // `process-slots-specs` (`chunk-spec.lisp:597`): a request

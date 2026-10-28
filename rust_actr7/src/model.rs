@@ -2573,6 +2573,11 @@ fn parse_model(
         match head {
             "SGP" => {
                 let rest = &items[1..];
+                // A one-key form is a parameter getter (`(sgp :seed)`), not a
+                // setting; the trace-producing runtime handles it.
+                if rest.len() == 1 {
+                    continue;
+                }
                 if rest.len() % 2 != 0 {
                     return structural("sgp needs even key/value count");
                 }
@@ -3027,6 +3032,44 @@ fn parse_model(
                         _ => v.clone(),
                     };
                     model.set_param_values.push((k.to_uppercase(), v));
+                }
+            }
+            // Model-body `(when *flag* (sgp ...) (setf ...))`: the pcomp
+            // models use this to seed only on a file's first load. The engine
+            // owns the seed through the `:seed` parameter, so fold the active
+            // `sgp` forms into the model params; the `setf` is bookkeeping.
+            "WHEN" => {
+                let active = match items.get(1) {
+                    Some(Sexp::Sym(name)) => defs
+                        .get(&name.to_uppercase())
+                        .map(|v| !matches!(v, Sexp::Sym(s) if s.eq_ignore_ascii_case("NIL")))
+                        .unwrap_or(false),
+                    Some(_) => true,
+                    None => false,
+                };
+                if active {
+                    for sub in &items[2..] {
+                        let Sexp::List(parts) = sub else { continue };
+                        if parts.first().and_then(Sexp::as_sym) != Some("SGP") {
+                            continue;
+                        }
+                        let rest = &parts[1..];
+                        if rest.len() == 1 {
+                            continue;
+                        }
+                        if rest.len() % 2 != 0 {
+                            return structural("sgp needs even key/value count");
+                        }
+                        for kv in rest.as_chunks::<2>().0 {
+                            let key = match &kv[0] {
+                                Sexp::Sym(k) => k.clone(),
+                                got => {
+                                    return structural(format!("sgp key must be a symbol: {got:?}"))
+                                }
+                            };
+                            model.params.push((key, subst_bare(&kv[1], defs)));
+                        }
+                    }
                 }
             }
             got => return structural(format!("unknown model body form: {got}")),

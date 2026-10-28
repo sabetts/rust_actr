@@ -202,6 +202,8 @@ pub struct PcompGameConfig {
     /// Print the final game summary. The unused-utility driver runs the game
     /// with its summary outside the captured output stream.
     pub print_summary: bool,
+    /// Stop after the game in which this task command fires (`v7-find-seed`).
+    pub stop_on_command: Option<&'static str>,
 }
 
 /// One driver step from a per-case test file (or a recovered driver spec).
