@@ -14,13 +14,12 @@ struct Filter {
 
 impl EventHook for Filter {
     fn post(&mut self, line: &str, ev: &EventView) {
-        let keep = action(ev, "mod-buffer-chunk") || action(ev, "module-request");
+        let keep = action(ev, "mod-buffer-chunk") || action(ev, "module-mod-request");
         self.out.borrow_mut().record(line, keep, false);
     }
 }
 
 #[test]
-#[ignore = "event-hook driver + production redefinition pending"]
 fn tutorial_unit5_count_mod_request_goal_event() -> Result<(), String> {
     let out = Rc::new(RefCell::new(hooks::Projection::default()));
     hooks::HookCase::new("tutorial-unit5-count-mod-request-goal-event")

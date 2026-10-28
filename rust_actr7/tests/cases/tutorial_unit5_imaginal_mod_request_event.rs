@@ -15,14 +15,13 @@ struct Filter {
 impl EventHook for Filter {
     fn post(&mut self, line: &str, ev: &EventView) {
         let keep = action(ev, "mod-buffer-chunk")
-            || action(ev, "module-request")
+            || action(ev, "module-mod-request")
             || action(ev, "production-fired");
         self.out.borrow_mut().record(line, keep, false);
     }
 }
 
 #[test]
-#[ignore = "engine divergence: imaginal module request (pending)"]
 fn tutorial_unit5_imaginal_mod_request_event() -> Result<(), String> {
     let out = Rc::new(RefCell::new(hooks::Projection::default()));
     hooks::HookCase::new("tutorial-unit5-imaginal-mod-request-event")

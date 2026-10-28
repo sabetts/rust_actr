@@ -22,10 +22,11 @@ struct Filter {
 
 impl EventHook for Filter {
     fn post(&mut self, line: &str, ev: &EventView) {
-        let collect = self.phase == Phase::Collect
-            || (self.phase == Phase::Idle
-                && action(ev, "production-fired")
-                && production(ev, "do-report"));
+        let collect = ev.shown
+            && (self.phase == Phase::Collect
+                || (self.phase == Phase::Idle
+                    && action(ev, "production-fired")
+                    && production(ev, "do-report")));
         if collect {
             self.out.borrow_mut().push_line(line);
             if self.phase == Phase::Idle {
@@ -33,7 +34,7 @@ impl EventHook for Filter {
             } else if self.phase == Phase::Collect && action(ev, "production-fired") {
                 self.phase = Phase::Done;
             }
-        } else {
+        } else if ev.shown {
             self.out.borrow_mut().push_ellipsis();
         }
     }

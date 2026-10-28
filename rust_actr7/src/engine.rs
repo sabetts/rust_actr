@@ -1746,6 +1746,13 @@ enum Event {
         /// module for `*buffer>` (`buffer-mod-request`).
         module: String,
     },
+    /// `*buffer>` request (`schedule-module-mod-request`): trace the
+    /// `MODULE-MOD-REQUEST` event now, then let the buffer's module apply the
+    /// delayed modification (`ModBuffer`).
+    ModuleModRequest {
+        buffer: String,
+        slots: Vec<(String, Value)>,
+    },
     ModuleRequest {
         buffer: String,
         spec: NewChunk,
@@ -1824,6 +1831,9 @@ enum Event {
     ImaginalDone {
         spec: NewChunk,
     },
+    /// A simple imaginal-action's delayed `set-buffer-chunk` landed; the
+    /// separate `set-imaginal-free` maintenance event follows it.
+    ImaginalFree,
     /// A simple imaginal-action whose function returned `nil`: set the
     /// module's error state and free it (`set-imaginal-error`,
     /// `imaginal.lisp:296`).
@@ -4014,18 +4024,24 @@ impl Engine {
         }
     }
 
-    fn emit(&mut self, module: &str, details: String) {
-        // Capture the rendered line(s) for `EventHook::post` before the `:v`
-        // gate: a pre-hook may turn tracing off (`sgp :v nil`) yet still
-        // project the line (ACT-R's pre-hook `(format-event evt)`).
+    /// Capture the rendered line for `EventHook::post` without regard to the
+    /// `:v`/`:trace-detail` gates. `format-event` in a filter does not consult
+    /// `filter-test`, so hidden output still has to reach the hook.
+    fn capture_line(&mut self, module: &str, details: &str) {
         if self.event_hook.is_some() {
             self.current_lines.push(format_line(
                 self.time_ms,
                 module,
-                &details,
+                details,
                 self.cfg.module_width,
             ));
         }
+    }
+
+    fn emit(&mut self, module: &str, details: String) {
+        // Capture before the `:v` gate: a pre-hook may turn tracing off
+        // (`sgp :v nil`) yet still project the line.
+        self.capture_line(module, &details);
         if !self.trace_on {
             return;
         }
@@ -4083,6 +4099,12 @@ impl Engine {
                 Event::ModBuffer { buffer, module, .. } => (
                     "mod-buffer-chunk",
                     module.clone(),
+                    Some(buffer.clone()),
+                    None,
+                ),
+                Event::ModuleModRequest { buffer, .. } => (
+                    "module-mod-request",
+                    "PROCEDURAL".into(),
                     Some(buffer.clone()),
                     None,
                 ),

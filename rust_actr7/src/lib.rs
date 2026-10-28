@@ -283,6 +283,14 @@ pub enum Step {
     AlDriver,
     /// Zbrodoff alpha-arithmetic experiment driver.
     Zbrodoff(ZbrodoffMode),
+    /// `(zbrodoff-problem addend1 addend2 sum answer t)`: run one trial and
+    /// leave the model's buffers for a following dump.
+    ZbrodoffProblem {
+        addend1: String,
+        addend2: String,
+        sum: String,
+        answer: String,
+    },
     /// One-hit blackjack task driver.
     Onehit(OnehitMode),
     /// Building-sticks experiment driver.
@@ -490,6 +498,12 @@ pub fn run_model_steps_with_hook(
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
             Step::Zbrodoff(mode) => eng.zbrodoff_driver(*mode)?,
+            Step::ZbrodoffProblem {
+                addend1,
+                addend2,
+                sum,
+                answer,
+            } => eng.zbrodoff_problem(addend1, addend2, sum, answer)?,
             Step::Onehit(mode) => eng.onehit_driver(*mode)?,
             Step::Bst(mode) => eng.bst_driver(*mode)?,
             Step::FanCollect => eng.fan_collect_start(),

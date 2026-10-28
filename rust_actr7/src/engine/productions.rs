@@ -1,12 +1,11 @@
 //! Procedural matching, conflict resolution, firing, compilation orchestration.
 use super::compilation::{
-    basic_vars, bound_text, buffer_module, buffer_usage, canon_composed, canon_prod,
-    compute_retain_buffers, constant_value, failure_wait, goal_reason, imaginal_reason,
-    indirect_action_buffer_name, indirect_action_vars, indirect_safe_bind_reason,
-    instantiate_slot_names, instantiate_var, is_buffer_name, latency, lhs_buffers, motor_reason,
-    perceptual_reason, prod_lhs_slots, prod_rhs_actions, production_bind_vars, r_b_c1, r_b_c2,
-    remove_dup_keep_last, render_compiled, render_production, retrieval_reason, rhs_buffers,
-    sort_token, var_buffers,
+    basic_vars, bound_text, buffer_usage, canon_composed, canon_prod, compute_retain_buffers,
+    constant_value, failure_wait, goal_reason, imaginal_reason, indirect_action_buffer_name,
+    indirect_action_vars, indirect_safe_bind_reason, instantiate_slot_names, instantiate_var,
+    is_buffer_name, latency, lhs_buffers, motor_reason, perceptual_reason, prod_lhs_slots,
+    prod_rhs_actions, production_bind_vars, r_b_c1, r_b_c2, remove_dup_keep_last, render_compiled,
+    render_production, retrieval_reason, rhs_buffers, sort_token, var_buffers,
 };
 use super::dm::{bl_equation, ol_str};
 use super::rhs::{explicit_out, implicit_clears, implicit_queries};
@@ -853,34 +852,14 @@ impl Engine {
                         ));
                     }
                     self.extend_buffer_chunk(buffer, &dyn_slots, 61);
-                    if buffer == "IMAGINAL" {
-                        self.imag_busy = true;
-                        let delay = if self.cfg.vidt {
-                            self.randomize_ms(self.cfg.imaginal_delay_ms)
-                        } else {
-                            self.cfg.imaginal_delay_ms
-                        };
-                        self.push(
-                            self.time_ms + delay,
-                            Prio::Num(0),
-                            Out::Low,
-                            Event::ModBuffer {
-                                buffer: buffer.clone(),
-                                slots: sub,
-                                module: buffer_module(buffer),
-                            },
-                        );
-                    } else {
-                        self.now(
-                            Prio::Num(100),
-                            Out::Medium,
-                            Event::ModBuffer {
-                                buffer: buffer.clone(),
-                                slots: sub,
-                                module: buffer_module(buffer),
-                            },
-                        );
-                    }
+                    self.now(
+                        Prio::Num(60),
+                        explicit_out(self.cfg.rhst),
+                        Event::ModuleModRequest {
+                            buffer: buffer.clone(),
+                            slots: sub,
+                        },
+                    );
                 }
                 RhsAction::Request { buffer, spec } => {
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");

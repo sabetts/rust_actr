@@ -570,12 +570,20 @@ impl Engine {
         };
         let at = self.time_ms + delay;
         match result {
-            Some(chunk) => self.push(
-                at,
-                Prio::Num(-1000),
-                Out::Low,
-                Event::ImaginalDone { spec: chunk },
-            ),
+            Some(chunk) => {
+                self.push(
+                    at,
+                    Prio::Num(-1000),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "IMAGINAL".to_string(),
+                        chunk,
+                        requested: true,
+                        shown: None,
+                    },
+                );
+                self.push_m(at, Prio::Num(-1001), Out::Never, true, Event::ImaginalFree);
+            }
             None => self.push(at, Prio::Num(0), Out::Never, Event::ImaginalError),
         }
         Ok(())

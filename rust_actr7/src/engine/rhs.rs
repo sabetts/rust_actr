@@ -398,7 +398,7 @@ pub(super) fn implicit_clears(
 pub(super) fn implicit_queries(prod: &Production, exempt: &[String]) -> Vec<String> {
     let mut out = Vec::new();
     for a in &prod.rhs {
-        if let RhsAction::Request { buffer, .. } = a {
+        if let RhsAction::Request { buffer, .. } | RhsAction::ModifyRequest { buffer, .. } = a {
             let explicit = prod.lhs.iter().any(|item| match item {
                 LhsItem::Query { buffer: b, .. } => b == buffer,
                 _ => false,

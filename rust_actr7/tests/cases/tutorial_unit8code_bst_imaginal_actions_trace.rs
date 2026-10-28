@@ -43,10 +43,6 @@ impl EventHook for Filter {
 }
 
 #[test]
-// BLOCKED ON: imaginal-action event ordering. The break/projection driver
-// matches the reference shape, but the engine emits CLEAR-BUFFER
-// IMAGINAL-ACTION before MODULE-REQUEST IMAGINAL-ACTION.
-#[ignore = "engine divergence: imaginal-action event order"]
 fn tutorial_unit8code_bst_imaginal_actions_trace() -> Result<(), String> {
     let lines = Rc::new(RefCell::new(Projection::default()));
     let filter = Filter {

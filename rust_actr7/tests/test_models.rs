@@ -905,6 +905,16 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .zbrodoff_driver(*mode)
             .map_err(|e| e.to_string())?,
+        Step::ZbrodoffProblem {
+            addend1,
+            addend2,
+            sum,
+            answer,
+        } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .zbrodoff_problem(addend1, addend2, sum, answer)
+            .map_err(|e| e.to_string())?,
         Step::Onehit(mode) => session
             .engine_mut()
             .ok_or_else(no_model)?

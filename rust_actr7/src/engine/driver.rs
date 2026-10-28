@@ -1114,6 +1114,27 @@ impl Engine {
         Ok(())
     }
 
+    /// `zbrodoff-problem` (`tutorial/lisp/zbrodoff.lisp:246`): construct and
+    /// run one trial, leaving the model's imaginal buffer for a following
+    /// `sdm`/`buffer-chunk` dump.
+    pub fn zbrodoff_problem(
+        &mut self,
+        addend1: &str,
+        addend2: &str,
+        sum: &str,
+        answer: &str,
+    ) -> Result<(), EngineError> {
+        self.zbrodoff_reset(100)?;
+        let trial = ZbrodoffTrial {
+            block: 1,
+            addend: addend2.parse().unwrap_or(2),
+            text: format!("{addend1} + {addend2} = {sum}"),
+            answer: answer.to_string(),
+        };
+        self.zbrodoff_run_trials(&[trial])?;
+        Ok(())
+    }
+
     fn zbrodoff_experiment_blocks() -> Vec<usize> {
         (1..=3)
             .flat_map(|block| std::iter::repeat(block).take(8))

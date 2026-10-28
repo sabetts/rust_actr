@@ -3527,6 +3527,10 @@ impl Engine {
             Event::ModBuffer { buffer, module, .. } => {
                 (module.clone(), format!("MOD-BUFFER-CHUNK {buffer}"))
             }
+            Event::ModuleModRequest { buffer, .. } => (
+                "PROCEDURAL".to_string(),
+                format!("MODULE-MOD-REQUEST {buffer}"),
+            ),
             Event::ModuleRequest { buffer, trace, .. } => (
                 "PROCEDURAL".to_string(),
                 if *trace {
@@ -3691,6 +3695,11 @@ impl Engine {
                 };
                 Some((buffer.clone(), action.to_string(), render_slots_spec(slots)))
             }
+            Event::ModuleModRequest { buffer, slots } => Some((
+                buffer.clone(),
+                "module-mod-request".to_string(),
+                render_slots_spec(slots),
+            )),
             Event::ModuleRequest { buffer, spec, .. } => Some((
                 buffer.clone(),
                 "module-request".to_string(),

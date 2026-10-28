@@ -1,4 +1,5 @@
 //! Event dispatcher (`exec`).
+use super::compilation::buffer_module;
 use super::motor::{key_is_punch, key_xy};
 use super::perception::{audio_event_chunk, sound_chunk};
 use super::*;
@@ -508,6 +509,41 @@ impl Engine {
                 js.extend(self.al_source_buffer_chunks());
                 self.al_update(&chunk, &js);
             }
+            Event::ModuleModRequest { buffer, slots } => {
+                if show {
+                    self.emit("PROCEDURAL", format!("MODULE-MOD-REQUEST {buffer}"));
+                } else {
+                    self.capture_line("PROCEDURAL", &format!("MODULE-MOD-REQUEST {buffer}"));
+                }
+                if buffer == "IMAGINAL" {
+                    self.imag_busy = true;
+                    let delay = if self.cfg.vidt {
+                        self.randomize_ms(self.cfg.imaginal_delay_ms)
+                    } else {
+                        self.cfg.imaginal_delay_ms
+                    };
+                    self.push(
+                        self.time_ms + delay,
+                        Prio::Num(0),
+                        Out::Low,
+                        Event::ModBuffer {
+                            buffer: buffer.clone(),
+                            slots,
+                            module: buffer_module(&buffer),
+                        },
+                    );
+                } else {
+                    self.now(
+                        Prio::Num(100),
+                        Out::Medium,
+                        Event::ModBuffer {
+                            buffer: buffer.clone(),
+                            slots,
+                            module: buffer_module(&buffer),
+                        },
+                    );
+                }
+            }
             Event::ModBuffer {
                 buffer,
                 slots,
@@ -515,6 +551,8 @@ impl Engine {
             } => {
                 if show {
                     self.emit(&module, format!("MOD-BUFFER-CHUNK {buffer}"));
+                } else {
+                    self.capture_line(&module, &format!("MOD-BUFFER-CHUNK {buffer}"));
                 }
                 {
                     let b = self.buffer_mut(&buffer);
@@ -550,8 +588,12 @@ impl Engine {
                 var_slots,
                 trace,
             } => {
-                if show && trace {
-                    self.emit("PROCEDURAL", format!("MODULE-REQUEST {buffer}"));
+                if trace {
+                    if show {
+                        self.emit("PROCEDURAL", format!("MODULE-REQUEST {buffer}"));
+                    } else {
+                        self.capture_line("PROCEDURAL", &format!("MODULE-REQUEST {buffer}"));
+                    }
                 }
                 if !trace {
                     // A task `module-request` dispatches straight to the
@@ -997,6 +1039,11 @@ impl Engine {
                         shown: None,
                     },
                 );
+            }
+            Event::ImaginalFree => {
+                // `set-imaginal-free` (`imaginal.lisp`, maintenance event).
+                self.imag_busy = false;
+                self.buffer_mut("IMAGINAL").busy = false;
             }
             Event::ImaginalError => {
                 // set-imaginal-error: free the module and mark the imaginal

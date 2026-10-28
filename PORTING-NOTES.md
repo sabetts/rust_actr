@@ -5180,3 +5180,29 @@ Recovered:
 - `tutorial-unit8-categorize-goal-chunk-part2`
 
 Corpus: **476 passed / 91 ignored**.
+
+## 313. Module modification requests and hidden hook lines
+
+`*buffer>` now schedules a real `MODULE-MOD-REQUEST` event before the
+module's delayed `MOD-BUFFER-CHUNK`, and `implicit_queries` adds ACT-R's
+state-free test for both `+buffer>` and `*buffer>` RHS actions. This recovers
+the count and imaginal mod-request hook cases.
+
+Hook lines now distinguish rendering from trace visibility: hidden
+`MODULE-REQUEST`/`MOD-BUFFER-CHUNK` events are still captured for filters that
+call `format-event` directly, while filters using `filter-test` must check
+`EventView::shown` (the Sperling projection does). Simple imaginal actions
+schedule `set-buffer-chunk` directly plus the maintenance
+`set-imaginal-free`, matching ACT-R's event count instead of hiding the set
+behind an extra wrapper event.
+
+Added `Step::ZbrodoffProblem` for the single-trial `zbrodoff-problem` driver.
+
+Recovered:
+
+- `tutorial-unit5-count-mod-request-goal-event`
+- `tutorial-unit5-imaginal-mod-request-event`
+- `tutorial-unit8code-bst-imaginal-actions-trace`
+- `tutorial-unit4-zbrodoff-correct-chunk`
+
+Corpus: **480 passed / 87 ignored**.
