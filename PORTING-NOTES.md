@@ -5379,3 +5379,25 @@ with 27 pairs it fails earlier: installing a later composed production returns
 validity/binding issue to isolate separately.
 
 Corpus: **507 passed / 60 ignored**.
+
+## 324. Paired learning final: retrieval condition over-mapping
+
+`tutorial-unit7-paired-learning-alpha-1-final` is blocked in the composition
+of `PRODUCTION48 & PRODUCTION16` (`PRODUCTION100`). ACT-R keeps p2's retrieval
+condition and RHS variable symbolic:
+
+```
+=RETRIEVAL> ARG2 =VAL
++MANUAL> KEY =VAL
+```
+
+Rust's `MAP-RETRIEVAL-BUFFER` instantiates the p2 condition variable from the
+retrieved chunk (`ARG2 "9"`) but leaves the RHS as `=VAL`, so firing fails with
+`bad model: unbound variable =VAL on RHS`.
+
+A broad fix ("instantiate every p2 RHS variable that is absent from the
+composed LHS from p2's firing") removed the crash but regressed 21 cases,
+including `paired-learning` (`pre =state` became `pre wait`) and several pcomp
+compositions. It was reverted. The fix needs to be confined to the retrieval
+map: match ACT-R's decision to leave this p2 condition variable symbolic
+instead of globally instantiating unbound RHS variables.

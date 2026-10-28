@@ -144,8 +144,10 @@ Reconnaissance:
   `permute-list`/`ConsumeRng` correction as the activation-trace case. Its
   real filter hook now breaks at `PRODUCTION7` on the expected state.
 - [ ] `tutorial-unit7-paired-learning-alpha-1-final` now reaches the real
-  filter, but the engine hits `bad model: unbound variable =VAL on RHS`
-  while installing a later compiled production.
+  filter, but `PRODUCTION48 & PRODUCTION16` over-maps p2's retrieval condition
+  (`ARG2 "9"`) while leaving `KEY =VAL` on the RHS, so firing hits
+  `bad model: unbound variable =VAL on RHS`. ACT-R keeps both as `=VAL`.
+  A global RHS instantiation fix regressed 21 cases and was reverted.
 - [x] `tutorial-unit4-paired-act-trace` recovered. The test's
   `permute-list` command was permuting two strings instead of one pair, and
   the extra `ConsumeRng(1)` steps double-counted the task draw. Correcting
