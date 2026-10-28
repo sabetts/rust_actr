@@ -3,13 +3,9 @@
 //! lisp: actr7.x/test-models/tutorial-unit7modeling-pcomp-issues-v5-initial-run.lisp
 
 use crate::Case;
-use actr_engine::Step;
+use actr_engine::{PcompGameConfig, Step};
 
 #[test]
-// BLOCKED ON: `pcomp-issues-experiment` averages.
-// The driver runs 10 seeded trials but has no collector/summary for the ref's
-// average score and response-time rows.
-#[ignore = "driver-summary: pcomp experiment"]
 fn tutorial_unit7modeling_pcomp_issues_v5_initial_run() -> Result<(), String> {
     Case::new("tutorial-unit7modeling-pcomp-issues-v5-initial-run")
         .models(&[
@@ -18,101 +14,15 @@ fn tutorial_unit7modeling_pcomp_issues_v5_initial_run() -> Result<(), String> {
             "test-models;models;production-compilation-issues-model-v5.lisp",
         ])
         .seed((100, 0))
-        .steps(vec![
-            Step::Reset,
-            Step::Seed((301, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":PCT".into(), crate::sexp(r#"T"#)),
-            Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((302, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((303, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((304, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((305, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((306, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((307, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((308, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((309, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-            Step::Reset,
-            Step::Seed((310, 0)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::ConsumeRng(2),
-            Step::Run {
-                secs: 20000.0,
-                trace: false,
-                width: 22,
-            },
-        ])
+        .steps(vec![Step::PcompGame(PcompGameConfig {
+            games: 10,
+            first_seed: Some(301),
+            epl: Some(false),
+            pct: Some(true),
+            show_games: false,
+            continue_rng: false,
+            print_seed: false,
+            print_summary: true,
+        })])
         .check()
 }

@@ -5,7 +5,7 @@ use super::rhs::new_chunk;
 use super::*;
 use crate::json::Json;
 use crate::sexpr::Sexp;
-use crate::{BstMode, OnehitMode, ZbrodoffMode};
+use crate::{BstMode, OnehitMode, PcompGameConfig, ZbrodoffMode};
 
 #[derive(Clone)]
 struct ZbrodoffTrial {
@@ -1882,6 +1882,187 @@ impl Engine {
         } else {
             *current_line = Some(self.add_window_line((75, 135), (75 + current, 135), "blue"));
         }
+    }
+
+    /// `pcomp-issues-game`: run complete 150-trial games of the production
+    /// compilation task and print its block-wise score/response-time summary.
+    pub fn pcomp_game(&mut self, cfg: PcompGameConfig) -> Result<(), EngineError> {
+        const TRIALS: usize = 150;
+        const BLOCKS: usize = 15;
+        const RESULTS: [[[&str; 4]; 4]; 4] = [
+            [
+                ["win", "lose", "draw", "lose"],
+                ["win", "lose", "draw", "lose"],
+                ["win", "lose", "draw", "lose"],
+                ["lose", "draw", "win", "lose"],
+            ],
+            [
+                ["win", "lose", "draw", "lose"],
+                ["win", "lose", "draw", "lose"],
+                ["lose", "draw", "win", "lose"],
+                ["lose", "draw", "win", "lose"],
+            ],
+            [
+                ["win", "lose", "draw", "lose"],
+                ["win", "lose", "draw", "lose"],
+                ["lose", "draw", "win", "lose"],
+                ["lose", "draw", "win", "lose"],
+            ],
+            [
+                ["win", "lose", "draw", "lose"],
+                ["lose", "draw", "win", "lose"],
+                ["lose", "draw", "win", "lose"],
+                ["lose", "draw", "win", "lose"],
+            ],
+        ];
+
+        let mut score_totals = [0.0f64; BLOCKS];
+        let mut time_totals = [0.0f64; BLOCKS];
+        for game in 0..cfg.games {
+            if game > 0 && cfg.continue_rng {
+                self.reset_keep_rng()?;
+            } else {
+                self.reset()?;
+            }
+            if let Some(first) = cfg.first_seed {
+                self.set_seed((first + game as u64, 0));
+            }
+            if let Some(epl) = cfg.epl {
+                self.apply_sgp(":EPL", &Sexp::Sym(if epl { "T" } else { "NIL" }.into()))?;
+            }
+            if let Some(pct) = cfg.pct {
+                self.apply_sgp(":PCT", &Sexp::Sym(if pct { "T" } else { "NIL" }.into()))?;
+            }
+            self.set_trace(false);
+            self.set_module_width(22);
+            self.last_output_key = None;
+            self.open_window(300, 300);
+
+            let mut game_scores = [0i32; BLOCKS];
+            let mut game_times = [0.0f64; BLOCKS];
+            let mut game_counts = [0u32; BLOCKS];
+            for trial in 0..TRIALS {
+                self.clear_window();
+                let val1 = self.rng.borrow_mut().random_int(4) as usize;
+                let val2 = self.rng.borrow_mut().random_int(4) as usize;
+                self.add_window_text(&val1.to_string(), 10, 50, 75, 20, 12);
+                self.add_window_text(&val2.to_string(), 110, 50, 75, 20, 12);
+                let start = self.time_ms;
+                let (key, time) = self.pcomp_wait_key(20_000)?;
+                let response = match key.to_ascii_lowercase().as_str() {
+                    "s" => 0,
+                    "d" => 1,
+                    "f" => 2,
+                    _ => 3,
+                };
+                let result = RESULTS[val1][val2][response];
+                let block = trial / 10;
+                match result {
+                    "win" => game_scores[block] += 1,
+                    "lose" => game_scores[block] -= 1,
+                    _ => {}
+                }
+                game_times[block] += (time - start) as f64;
+                game_counts[block] += 1;
+
+                self.clear_window();
+                self.add_window_text(result, 50, 100, 75, 20, 12);
+                self.pcomp_wait_space(20_000)?;
+            }
+
+            if cfg.show_games {
+                self.out_lines.push("Score".to_string());
+                let mut line = String::new();
+                for score in game_scores {
+                    line.push_str(&format!("{score:4}"));
+                }
+                self.out_lines.push(line);
+                self.out_lines.push("Average response times".to_string());
+                let mut line = String::new();
+                for (total, count) in game_times.iter().zip(game_counts.iter()) {
+                    let avg = if *count == 0 {
+                        0.0
+                    } else {
+                        total / *count as f64
+                    };
+                    line.push_str(&format!("{:4.2} ", avg / 1000.0));
+                }
+                self.out_lines.push(line);
+            }
+
+            for i in 0..BLOCKS {
+                score_totals[i] += game_scores[i] as f64;
+                let avg = if game_counts[i] == 0 {
+                    0.0
+                } else {
+                    game_times[i] / game_counts[i] as f64
+                };
+                time_totals[i] += avg;
+            }
+        }
+
+        if cfg.print_summary {
+            self.out_lines.push(String::new());
+            self.out_lines
+                .push(format!("Average Score of {} trials", cfg.games));
+            let mut line = String::new();
+            for total in score_totals {
+                line.push_str(&format!("{:4.2} ", total / cfg.games.max(1) as f64));
+            }
+            self.out_lines.push(line);
+            self.out_lines.push("Average Response times".to_string());
+            let mut line = String::new();
+            for total in time_totals {
+                line.push_str(&format!(
+                    "{:4.2} ",
+                    total / cfg.games.max(1) as f64 / 1000.0
+                ));
+            }
+            self.out_lines.push(line);
+        }
+        Ok(())
+    }
+
+    fn pcomp_wait_key(&mut self, limit_ms: i64) -> Result<(String, i64), EngineError> {
+        let limit = self.time_ms + limit_ms;
+        self.last_output_key = None;
+        while self.time_ms < limit {
+            if !self.step_once()? {
+                break;
+            }
+            if let Some(key) = self.last_output_key.take() {
+                return Ok(key);
+            }
+        }
+        Err(unimpl("pcomp task produced no output-key"))
+    }
+
+    fn pcomp_wait_space(&mut self, limit_ms: i64) -> Result<(), EngineError> {
+        let limit = self.time_ms + limit_ms;
+        while self.time_ms < limit {
+            let (key, _) = self.pcomp_wait_key(limit - self.time_ms)?;
+            if key.eq_ignore_ascii_case("space") {
+                return Ok(());
+            }
+        }
+        Err(unimpl("pcomp task produced no space output-key"))
+    }
+
+    /// Print the productions whose cached utility is non-nil, in model order.
+    pub fn pcomp_utility_names(&mut self) {
+        self.out_lines.push(
+            "? (mapcar 'car (remove-if (lambda (x) x) (no-output (spp :name :utility)) :key 'second))"
+                .to_string(),
+        );
+        let names: Vec<String> = self
+            .model
+            .productions
+            .iter()
+            .zip(self.production_utility.iter())
+            .filter(|(_, u)| u.is_none())
+            .map(|(p, _)| p.name.clone())
+            .collect();
+        self.out_lines.push(format!("({})", names.join(" ")));
     }
 
     /// Start `fan-no-pm`'s `fan-experiment` result recording. The task's

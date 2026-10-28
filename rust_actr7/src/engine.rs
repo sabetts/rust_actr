@@ -3102,6 +3102,16 @@ impl Engine {
         self.reset_impl()
     }
 
+    /// `(reset)` while preserving the current random stream. Some task
+    /// drivers reset between games after a model-body seed has run once;
+    /// ACT-R does not reseed on those later resets.
+    pub fn reset_keep_rng(&mut self) -> Result<(), EngineError> {
+        let saved = self.rng.borrow().clone();
+        self.reset()?;
+        *self.rng.borrow_mut() = saved;
+        Ok(())
+    }
+
     /// `(reset)` with the reset segment removed from the trace and `:v` left
     /// off. Hook drivers use this when their filter suppresses the initial
     /// setup trace (the `paired` family).

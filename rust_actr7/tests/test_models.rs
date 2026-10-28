@@ -932,6 +932,15 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .bst_driver(*mode)
             .map_err(|e| e.to_string())?,
+        Step::PcompGame(cfg) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .pcomp_game(*cfg)
+            .map_err(|e| e.to_string())?,
+        Step::PcompUtilityNames => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .pcomp_utility_names(),
         Step::FanCollect => session
             .engine_mut()
             .ok_or_else(no_model)?

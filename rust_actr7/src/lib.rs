@@ -179,6 +179,31 @@ pub enum HistoryTraceSelect {
     Index(usize),
 }
 
+/// Configuration for the `pcomp-issues` game driver.
+#[derive(Debug, Clone, Copy)]
+pub struct PcompGameConfig {
+    /// Number of 150-trial games to run.
+    pub games: u32,
+    /// Fixed first seed; each game uses `first_seed + game_index`. `None`
+    /// leaves the seed to the model body.
+    pub first_seed: Option<u64>,
+    /// `:epl` value applied after each reset.
+    pub epl: Option<bool>,
+    /// `:pct` value applied after each reset.
+    pub pct: Option<bool>,
+    /// Print each game's `Score`/response-time block, not just the final
+    /// average (`pcomp-issues-game`'s `show-games`).
+    pub show_games: bool,
+    /// Preserve the RNG stream across game resets instead of applying the
+    /// model-body seed again.
+    pub continue_rng: bool,
+    /// Print the model's `(sgp :seed)` state line after each reset.
+    pub print_seed: bool,
+    /// Print the final game summary. The unused-utility driver runs the game
+    /// with its summary outside the captured output stream.
+    pub print_summary: bool,
+}
+
 /// One driver step from a per-case test file (or a recovered driver spec).
 #[derive(Debug, Clone)]
 pub enum Step {
@@ -295,6 +320,12 @@ pub enum Step {
     Onehit(OnehitMode),
     /// Building-sticks experiment driver.
     Bst(BstMode),
+    /// `pcomp-issues-game`: run complete 150-trial games and print the
+    /// block-wise score/response-time summary.
+    PcompGame(PcompGameConfig),
+    /// Print the productions whose cached utility is non-nil
+    /// (`pcomp-issues-v10-one-game-result-unused`).
+    PcompUtilityNames,
     /// Start collecting the per-run response times/answers for
     /// `fan-no-pm`'s `fan-experiment`.
     FanCollect,
@@ -506,6 +537,8 @@ pub fn run_model_steps_with_hook(
             } => eng.zbrodoff_problem(addend1, addend2, sum, answer)?,
             Step::Onehit(mode) => eng.onehit_driver(*mode)?,
             Step::Bst(mode) => eng.bst_driver(*mode)?,
+            Step::PcompGame(cfg) => eng.pcomp_game(*cfg)?,
+            Step::PcompUtilityNames => eng.pcomp_utility_names(),
             Step::FanCollect => eng.fan_collect_start(),
             Step::FanSummary => eng.fan_no_pm_summary(),
             Step::FanExperimentSummary => eng.fan_experiment_summary(),
