@@ -63,7 +63,6 @@ impl EventHook for Filter2 {
 }
 
 #[test]
-#[ignore = "engine-divergence: compiled production has unbound =VAL"]
 fn tutorial_unit7_paired_learning_alpha_1_final() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit7-paired-learning-alpha-1-final")
         .models(&[
@@ -516,6 +515,6 @@ fn tutorial_unit7_paired_learning_alpha_1_final() -> Result<(), String> {
                 width: 22,
             },
         ])
-        .swap_hook_at(88, Filter2::default())
+        .swap_hook_at(86, Filter2::default())
         .check_segment(Filter::default())
 }

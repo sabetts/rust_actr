@@ -5407,3 +5407,23 @@ appears in p2's RHS) avoided the `=VAL` crash but produced
 `unbound variable =STATE1 on RHS` in another composition, so it was also
 reverted. The remaining work is to reproduce ACT-R's `the-chunk`/p2 binding
 state at this composition, not to change RHS substitution globally.
+
+## 325. Paired learning final recovered; goal map arm confined
+
+Recovered `tutorial-unit7-paired-learning-alpha-1-final`. The failing
+composition was `PRODUCTION48 & PRODUCTION16`: the generic same-slot mapping
+loop ran for every buffer, and its `p1 variable / p2 constant` arm
+instantiated the retrieval condition variable `VAL` from p1's firing
+(`ARG2 "9"`) while the p2 RHS stayed `KEY =VAL`.
+
+ACT-R's `MAP-GOAL-BUFFER` variable-to-constant arm is goal-only. Confining
+that arm to `GOAL` leaves the retrieval condition symbolic, matching ACT-R's
+`PRODUCTION100`:
+
+```
+=RETRIEVAL> ARG2 =VAL
++MANUAL> KEY =VAL
+```
+
+The narrower change preserves v11; a fully goal-only loop had broken v11's
+compiled-production mappings. Corpus: **508 passed / 59 ignored**.

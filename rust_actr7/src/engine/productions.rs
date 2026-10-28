@@ -1804,7 +1804,7 @@ impl Engine {
                                     map.insert(c.clone(), SlotVal::Lit(val));
                                 }
                             }
-                            (SlotVal::Var(a), SlotVal::Lit(_)) => {
+                            (SlotVal::Var(a), SlotVal::Lit(_)) if buf == "GOAL" => {
                                 if let Some(val) = instantiate_var(a, b1) {
                                     map.insert(a.clone(), SlotVal::Lit(val));
                                 }

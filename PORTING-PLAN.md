@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **507 passed / 60 ignored / 0 failed**
+- Full suite: **508 passed / 59 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **507 passed / 60 ignored**.
+- [x] Full suite green at **508 passed / 59 ignored**.
 
 Remaining:
 
@@ -143,11 +143,11 @@ Reconnaissance:
 - [x] `tutorial-unit7-paired-learning-alpha-1` recovered with the same
   `permute-list`/`ConsumeRng` correction as the activation-trace case. Its
   real filter hook now breaks at `PRODUCTION7` on the expected state.
-- [ ] `tutorial-unit7-paired-learning-alpha-1-final` now reaches the real
-  filter, but `PRODUCTION48 & PRODUCTION16` over-maps p2's retrieval condition
-  (`ARG2 "9"`) while leaving `KEY =VAL` on the RHS, so firing hits
-  `bad model: unbound variable =VAL on RHS`. ACT-R keeps both as `=VAL`.
-  A global RHS instantiation fix regressed 21 cases and was reverted.
+- [x] `tutorial-unit7-paired-learning-alpha-1-final` recovered. The generic
+  mapping pass was applying `MAP-GOAL-BUFFER`'s variable-to-constant arm to
+  retrieval slots, turning `ARG2 =VAL` into `ARG2 "9"` while leaving
+  `KEY =VAL` on the RHS. Restricting that arm to `GOAL` fixes the composition
+  without disturbing v11.
 - [x] `tutorial-unit4-paired-act-trace` recovered. The test's
   `permute-list` command was permuting two strings instead of one pair, and
   the extra `ConsumeRng(1)` steps double-counted the task draw. Correcting
