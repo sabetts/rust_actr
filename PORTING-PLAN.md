@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **504 passed / 63 ignored / 0 failed**
+- Full suite: **505 passed / 62 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -86,28 +86,27 @@ Completed:
 - [x] Vendored pcomp models v11-v13.
 - [x] `v10-one-game-result-unused` - compiled-production canonicalization now
   matches ACT-R's 111-production set.
-- [x] Full suite green at **504 passed / 63 ignored**.
+- [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
+  the composed `guess-other & respond` production matches ACT-R.
+- [x] Full suite green at **505 passed / 62 ignored**.
 
 Remaining:
 
 - [ ] **`v1-initial-run`** (1): summary diverges from the first block with
   `:epl t`; investigate the EPL/compiled-production learning path.
-- [ ] **`v11-test-runs`** (1): first five games match exactly. Game 6, trial 10
-  is the first divergence: `guess-other` retrieves `RESPONSE-1` instead of
-  `RESPONSE-3`. The trace is identical through the request, but the engine has
-  consumed one fewer RNG draw by the response (35753 vs 35754).
-- [ ] **`v12-50-runs` / `v13-50-runs`** (2): same multi-game family; re-run
-  after fixing the v11 retrieval tie.
+- [ ] **`v12-50-runs`** (1): first 11 games match; game 12 has a 0.01 s RT
+  difference, then game 40 diverges in score. This is now a multi-game
+  timing/accumulation issue rather than the old compile-set bug.
+- [ ] **`v13-50-runs`** (1): same 50-game family, not yet re-run after the
+  v11 fix.
 
 Recommended next steps:
 
-1. Instrument the trial-10 retrievals before `guess-other` to find the request
-   whose candidate count is one lower in the engine (likely partial matching or
-   conflict-set noise).
-2. Compare the trial-10 conflict-set candidates at the compiled production
-   before `guess-other`; the first production-name divergence is
-   `PRODUCTION70` vs `PRODUCTION65`.
-3. After v11, re-run v12/v13, then isolate v1's EPL summary separately.
+1. For v12, compare per-trial oracle/Rust results for game 12 and locate the
+   0.01 s RT difference; determine whether it is task feedback timing or a
+   retrieval/motor latency rounding issue.
+2. Re-run v13 after that timing fix.
+3. Isolate v1's EPL summary separately.
 
 Pcomp-specific gotchas:
 

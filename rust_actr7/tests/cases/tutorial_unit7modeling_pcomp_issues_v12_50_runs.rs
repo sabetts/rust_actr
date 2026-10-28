@@ -5,7 +5,7 @@ use crate::Case;
 use actr_engine::{PcompGameConfig, Step};
 
 #[test]
-#[ignore = "engine-divergence: pcomp multi-game compilation"]
+#[ignore = "engine-divergence: pcomp multi-game timing"]
 fn tutorial_unit7modeling_pcomp_issues_v12_50_runs() -> Result<(), String> {
     Case::new("tutorial-unit7modeling-pcomp-issues-v12-50-runs")
         .models(&[

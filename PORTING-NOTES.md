@@ -5291,3 +5291,20 @@ passed / 63 ignored**.
 The remaining v11 divergence is isolated: game 6, trial 10, `guess-other`
 retrieves `RESPONSE-1` instead of `RESPONSE-3`; the engine consumes one fewer
 RNG draw by the response. Traces agree through the request.
+
+## 319. Retrieval-compilation negative request variables
+
+`MAP-RETRIEVAL-BUFFER` only instantiates a variable request-slot *value* for
+an `=` request slot. The engine also instantiated negative slots, so the
+composed `GUESS-OTHER & RESPOND` production turned `- key =key` into
+`- key "f"`. That narrowed the compiled production's LHS, removed it from the
+conflict set on later trials, and shifted one activation-noise draw.
+
+Negative/relative request slots now keep their variables. Second-parent
+action variables that came from the first parent's request are instantiated
+from the second parent's firing, matching ACT-R's composed `RESPONSE "s"` /
+`KEY "s"` form while the LHS keeps `KEY =KEY`.
+
+`v11-test-runs` passes. Corpus **505 passed / 62 ignored**. v12/v13 remain as
+50-game timing divergences; v12 matches through game 11 and first differs by
+0.01 s in game 12's RT block.

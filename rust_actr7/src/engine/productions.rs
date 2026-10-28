@@ -1511,9 +1511,18 @@ impl Engine {
                         if let Some(t) = bound_text(name, b1) {
                             m.push((SlotVal::Var(name[1..].to_string()), SlotVal::Lit(t)));
                         }
-                        if let SlotVal::Var(n) = v {
-                            if let Some(t) = bound_text(n, b1) {
-                                m.push((SlotVal::Var(n.clone()), SlotVal::Lit(t)));
+                        // `MAP-RETRIEVAL-BUFFER` only instantiates a
+                        // variable *value* for an `=` request slot. Negative
+                        // and relative slots keep their variables (`- key
+                        // =key` must not become `- key "f"`).
+                        let value_eq = !name.starts_with('-')
+                            && !name.starts_with('>')
+                            && !name.starts_with('<');
+                        if value_eq {
+                            if let SlotVal::Var(n) = v {
+                                if let Some(t) = bound_text(n, b1) {
+                                    m.push((SlotVal::Var(n.clone()), SlotVal::Lit(t)));
+                                }
                             }
                         }
                     }
@@ -1818,7 +1827,15 @@ impl Engine {
                 map.insert("RETRIEVAL".to_string(), SlotVal::Lit(chunk.clone()));
                 for (op, buf, slots, _) in &p1_acts {
                     if buf == "RETRIEVAL" && (*op == '+' || *op == 'r') {
-                        for (_, v) in slots {
+                        for (name, v) in slots {
+                            // Only `=` request slots instantiate their value
+                            // variables; `- key =key` stays symbolic.
+                            if name.starts_with('-')
+                                || name.starts_with('>')
+                                || name.starts_with('<')
+                            {
+                                continue;
+                            }
                             if let SlotVal::Var(n) = v {
                                 if let Some(val) = instantiate_var(n, b1) {
                                     map.insert(n.clone(), SlotVal::Lit(val));
@@ -2062,8 +2079,41 @@ impl Engine {
                 })
                 .collect::<Vec<_>>()
         };
+        let p1_request_vars: HashSet<String> = p1_acts
+            .iter()
+            .filter(|(op, _, _, _)| matches!(*op, '+' | 'r'))
+            .flat_map(|(_, _, slots, _)| slots.iter())
+            .filter_map(|(_, v)| match v {
+                SlotVal::Var(n) => Some(n.clone()),
+                _ => None,
+            })
+            .collect();
         let p1_acts = sub_acts(inst_acts(&p1_acts, b1, &indirect_vars));
-        let p2_acts = sub_acts(inst_acts(&p2_acts, b2, &indirect_vars));
+        let p2_acts_inst: Vec<(char, String, Vec<(String, SlotVal)>, Option<String>)> = p2_acts
+            .iter()
+            .map(|(op, buf, slots, var)| {
+                (
+                    *op,
+                    buf.clone(),
+                    slots
+                        .iter()
+                        .map(|(n, v)| {
+                            let v = match v {
+                                SlotVal::Var(name)
+                                    if p1_request_vars.contains(name) && b2.contains_key(name) =>
+                                {
+                                    SlotVal::Lit(b2[name].show())
+                                }
+                                _ => subst(v, b2, &indirect_vars),
+                            };
+                            (n.clone(), v)
+                        })
+                        .collect(),
+                    var.clone(),
+                )
+            })
+            .collect();
+        let p2_acts = sub_acts(p2_acts_inst);
 
         let mut buffers: Vec<String> = Vec::new();
         let add_buf = |buffers: &mut Vec<String>, b: &str| {
