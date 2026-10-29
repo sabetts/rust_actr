@@ -630,6 +630,10 @@ fn parse_device_op(
             // it only records that a device exists (see
             // `DeviceSetup::installed`).
             "INSTALL" => device.installed = true,
+            "WINDOW-VISIBLE" => {
+                let value = v.get(1).ok_or("missing visibility")?;
+                device.window_visible = Some(!matches!(value, Sexp::Sym(s) if s == "NIL"));
+            }
             "COMMAND" => {
                 // `(COMMAND ms output [module] details)`: the module is
                 // present only for commands the task scheduled with an
@@ -831,6 +835,15 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .register_task_command(name),
+        Step::SetTaskCommandValue { name, value } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .set_task_command_value_sexp(name, value)
+            .map_err(|e| e.to_string())?,
+        Step::MoveAttention(loc) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .schedule_move_attention(loc),
         Step::RecordHistory(buffers) => session
             .engine_mut()
             .ok_or_else(no_model)?

@@ -894,6 +894,10 @@ pub struct DeviceSetup {
     /// a traced `default-speech-action` (`speech.lisp:267`), so the
     /// `SPEAK <text>` line is suppressed.
     pub installed: bool,
+    /// `(WINDOW-VISIBLE NIL)` for an invisible virtual window. The visible
+    /// RPM window iterates its subviews in screen-x order; the invisible
+    /// window keeps add order, which changes feature-name numbering.
+    pub window_visible: Option<bool>,
 }
 
 /// EMMA `saccade` movement style (`emma.lisp:448`): the geometry and times
@@ -2387,6 +2391,9 @@ pub struct Engine {
     /// Live experiment-window origin (`open-exp-window` x/y; ACT-R default
     /// 300,300). RPC-driven window items are placed relative to it.
     window_origin: (i64, i64),
+    /// Whether the experiment window is visible. Visible windows iterate
+    /// subviews in screen-x order; invisible windows keep add order.
+    device_window_visible: bool,
     /// Model time of a window `ProcDisplay` this engine queued, so a second
     /// request at the same time coalesces instead of emitting two
     /// `visicon-update` lines.
@@ -2494,6 +2501,9 @@ pub struct Engine {
     /// Location copy named in the last `move-attention`, re-encoded when
     /// the window changes underneath it.
     last_attention: Option<String>,
+    /// `center-point` (`vision.lisp:1326`, default `#(0 0)`): the reference
+    /// point for `:nearest clockwise`/`counterclockwise` requests.
+    visual_center: (f32, f32),
     /// Vision tracking (`start-tracking`/`update-tracking-mth`,
     /// `vision.lisp:2665`): the visicon feature being tracked and the
     /// location chunk that last held it (`tracked-obj-lastloc`).
@@ -2676,6 +2686,9 @@ pub struct Engine {
     /// trace (`add-act-r-command`), so `!eval! ("cmd")` can run them as a
     /// no-op.
     task_commands: HashSet<String>,
+    /// Scripted return values for task commands (`nearest-vis-loc`'s
+    /// `which-one`). A registered command without an entry stays a no-op.
+    task_command_values: HashMap<String, Value>,
     /// Task commands fired through `!eval!` since the driver last read them
     /// (`v7-find-seed`'s `set-flag`).
     fired_task_commands: RefCell<Vec<String>>,
@@ -2748,6 +2761,7 @@ impl Engine {
             clear_on_keypress,
             consume_rng,
             installed,
+            window_visible,
         } = device;
         let base_prods = model.productions.len();
         let valid_slots: HashSet<String> = model
@@ -2922,6 +2936,7 @@ impl Engine {
             visicon_alias: HashMap::new(),
             feat_seq: 0,
             window_origin,
+            device_window_visible: window_visible.unwrap_or(true),
             display_queued_ms: None,
             window_items: Vec::new(),
             window_actions: HashMap::new(),
@@ -2960,6 +2975,7 @@ impl Engine {
             loc_failure: false,
             visual_prep_busy: false,
             last_attention: None,
+            visual_center: (0.0, 0.0),
             tracked: None,
             tracked_lastloc: None,
             emma_eye: (0.0, 0.0, 1080.0),
@@ -3061,6 +3077,7 @@ impl Engine {
             trace_on: true,
             user_fns: HashMap::new(),
             task_commands: HashSet::new(),
+            task_command_values: HashMap::new(),
             fired_task_commands: RefCell::new(Vec::new()),
             user_vars: HashMap::new(),
         };
@@ -3600,6 +3617,7 @@ impl Engine {
         self.visual_lock = false;
         self.blocked_proc_display = false;
         self.last_attention = None;
+        self.visual_center = (0.0, 0.0);
         self.tracked = None;
         self.tracked_lastloc = None;
         self.emma_eye = (0.0, 0.0, 1080.0);

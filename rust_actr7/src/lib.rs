@@ -266,6 +266,15 @@ pub enum Step {
     },
     /// Register a task command (`add-act-r-command`) for `!eval!`.
     RegisterTaskCommand(String),
+    /// Install a task command's return value (a task-driver bridge for
+    /// commands such as `which-one` that `!bind!` reads).
+    SetTaskCommandValue {
+        name: String,
+        value: sexpr::Sexp,
+    },
+    /// `(module-request 'visual (define-chunk-spec cmd move-attention ...))`:
+    /// schedule an attention shift to the named location now.
+    MoveAttention(String),
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -515,6 +524,10 @@ pub fn run_model_steps_with_hook(
                 eng.print_retrieval_history_trace(*at_ms, select);
             }
             Step::RegisterTaskCommand(name) => eng.register_task_command(name),
+            Step::SetTaskCommandValue { name, value } => {
+                eng.set_task_command_value_sexp(name, value)?
+            }
+            Step::MoveAttention(loc) => eng.schedule_move_attention(loc),
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),

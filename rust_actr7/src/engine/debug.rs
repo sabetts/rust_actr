@@ -1040,6 +1040,19 @@ impl Engine {
         self.push(at_ms, Prio::Num(0), Out::Always, Event::Dummy);
     }
 
+    /// A task's `(module-request 'visual ... move-attention ...)`: queue the
+    /// attention shift now (`:priority 0`), before the armed
+    /// conflict-resolution.
+    pub fn schedule_move_attention(&mut self, loc: &str) {
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::MoveAttention {
+                loc: loc.to_string(),
+            },
+        );
+    }
+
     /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
     /// stub's "Installing a default touch device�?�" banner.
     pub fn emit_warning(&mut self, msg: &str) {
@@ -1202,9 +1215,35 @@ impl Engine {
         self.task_commands.insert(name.to_uppercase());
     }
 
+    /// Install the value a scripted task command returns to `!bind!`. The real
+    /// task owns the value (e.g. `nearest-vis-loc`'s `*which*`); this is the
+    /// task-driver bridge, not an engine special case.
+    fn set_task_command_value(&mut self, name: &str, value: Value) {
+        self.task_command_values
+            .insert(name.to_uppercase(), value);
+    }
+
+    /// Sexp form used by the scripted [`crate::Step`] driver.
+    pub fn set_task_command_value_sexp(
+        &mut self,
+        name: &str,
+        value: &Sexp,
+    ) -> Result<(), EngineError> {
+        let value = Value::from_sexp(value)?;
+        self.set_task_command_value(name, value);
+        Ok(())
+    }
+
     /// Remove a task command (`remove-act-r-command`).
     pub fn remove_task_command(&mut self, name: &str) {
         self.task_commands.remove(&name.to_uppercase());
+        self.task_command_values.remove(&name.to_uppercase());
+    }
+
+    /// `set-visual-center-point` (`vision.lisp:2031`): the reference point
+    /// used by `:nearest clockwise`/`counterclockwise`.
+    pub fn set_visual_center_point(&mut self, x: f32, y: f32) {
+        self.visual_center = (x, y);
     }
 
     /// Install task-file globals for the bounded evaluator.

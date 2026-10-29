@@ -333,7 +333,14 @@ impl Engine {
     ) -> Result<Value, String> {
         // A registered task command (`add-act-r-command`): its side effects
         // (e.g. recording a response in the task's own variable) are not part
-        // of the trace, so a no-op matches.
+        // of the trace. A task driver may install the command's return value
+        // (`nearest-vis-loc`'s `which-one`); otherwise it is a no-op.
+        if let Some(value) = self.task_command_values.get(&name.to_uppercase()) {
+            self.fired_task_commands
+                .borrow_mut()
+                .push(name.to_uppercase());
+            return Ok(value.clone());
+        }
         if self.task_commands.contains(&name.to_uppercase())
             || self.user_fns.contains_key(&name.to_uppercase())
         {

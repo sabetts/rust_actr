@@ -1,3 +1,4 @@
+(WINDOW-VISIBLE NIL)
 (RUN 1
  (ADD-TEXT 0 "x" 30 40)
  (ADD-TEXT 0 "y" 40 30)

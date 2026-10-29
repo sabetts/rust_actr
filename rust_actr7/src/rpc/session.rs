@@ -173,6 +173,7 @@ pub const BUILTINS: &[&str] = &[
     "delete-visicon-features",
     "delete-all-visicon-features",
     "print-visicon",
+    "set-visual-center-point",
     "new-tone-sound",
     "new-word-sound",
     "new-digit-sound",
@@ -1712,6 +1713,17 @@ impl Session {
                     eng.print_visicon_rpc(true, None);
                 }
                 Ok(vec![Json::Null])
+            }
+            "set-visual-center-point" => {
+                let x = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let y = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                if let Some(eng) = &mut self.engine {
+                    eng.set_visual_center_point(x as f32, y as f32);
+                }
+                Ok(vec![Json::Arr(vec![
+                    Json::Float(x),
+                    Json::Float(y),
+                ])])
             }
             "new-tone-sound" => {
                 // `new-tone-sound <freq> <duration> [onset] [time-in-ms]`

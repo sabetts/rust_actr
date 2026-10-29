@@ -732,11 +732,15 @@ impl Engine {
                 }
             }
         }
-        // The environment returns window items column-major, so the
+        // The visible RPM window returns its subviews column-major, so the
         // `VISUAL-LOCATION{n}` names follow `(screen-x, screen-y)` order
         // (verified against `sperling`: the input order `V N T Z / C R Y K /
-        // W J G F` names `V C W N R J T Y G Z K F` as `0..11`).
-        due.sort_by_key(|t| (t.x, t.y));
+        // W J G F` names `V C W N R J T Y G Z K F` as `0..11`). An invisible
+        // virtual window keeps the task's add order instead
+        // (`nearest-vis-loc`'s `x, y, z`).
+        if self.device_window_visible {
+            due.sort_by_key(|t| (t.x, t.y));
+        }
         for t in due {
             let n = self.feat_seq;
             self.feat_seq += 1;
@@ -815,6 +819,11 @@ impl Engine {
             if let Some(feat) = self.newest_feature() {
                 let base = feat.name.clone();
                 self.place_vl(&base, false)?;
+                // `stuff-visloc-buffer` schedules `unlock-vision` at priority
+                // 9, just before its priority-10 set (`vision.lisp:1989`).
+                // The hidden event counts toward `run-n-events`, which is why
+                // `nearest-vis-loc`'s `run-n-events 2` stops before the SET.
+                self.now_m(Prio::Num(11), Out::Never, true, Event::Dummy);
             }
         }
         // Tracking re-syncs the vision buffers to the moved object
@@ -1279,6 +1288,73 @@ impl Engine {
         self.rng.borrow_mut().random_int(n as u64) as usize
     }
 
+    /// The `:nearest` post-filter from `find-current-locs-with-spec`
+    /// (`vision.lisp:2137`). It narrows the candidates to the closest by the
+    /// selected coordinate/distance, or to the first/last angular candidate
+    /// around the module's center point.
+    fn apply_nearest_filter(
+        &self,
+        cands: &mut Vec<Feature>,
+        nearest: &Value,
+        center: Option<&Value>,
+    ) {
+        let name = match nearest {
+            Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+            _ => return,
+        };
+        let current = self
+            .last_attention
+            .as_ref()
+            .map(|loc| self.emma_loc_xyz(loc))
+            .unwrap_or((0.0, 0.0, 1080.0));
+        let center = match center {
+            Some(Value::Sym(n)) | Some(Value::Str(n)) if self.loc_known(n) => {
+                let p = self.emma_loc_xyz(n);
+                (p.0, p.1)
+            }
+            _ => self.visual_center,
+        };
+        let point = if matches!(
+            name.as_str(),
+            "CURRENT" | "CURRENT-X" | "CURRENT-Y" | "CURRENT-DISTANCE" | "CLOCKWISE"
+                | "COUNTERCLOCKWISE"
+        ) {
+            None
+        } else if self.loc_known(&name) {
+            Some(self.emma_loc_xyz(&name))
+        } else {
+            return;
+        };
+        let maximize = name == "CLOCKWISE";
+        let score = |f: &Feature| -> Option<f32> {
+            Some(match name.as_str() {
+                "CURRENT" => vec_dist((f.x as f32, f.y as f32, 1080.0), current),
+                "CURRENT-X" => (f.x as f32 - current.0).abs(),
+                "CURRENT-Y" => (f.y as f32 - current.1).abs(),
+                "CURRENT-DISTANCE" => (1080.0f32 - current.2).abs(),
+                "CLOCKWISE" | "COUNTERCLOCKWISE" => angle_between_points(
+                    center,
+                    (current.0, current.1),
+                    (f.x as f32, f.y as f32),
+                ),
+                _ => vec_dist(
+                    (f.x as f32, f.y as f32, 1080.0),
+                    point.unwrap_or(current),
+                ),
+            })
+        };
+        let best = cands.iter().filter_map(|f| score(f)).fold(None, |acc, x| {
+            Some(match acc {
+                None => x,
+                Some(a) if (maximize && x > a) || (!maximize && x < a) => x,
+                Some(a) => a,
+            })
+        });
+        if let Some(best) = best {
+            cands.retain(|f| score(f).is_some_and(|s| (s - best).abs() <= 1e-6));
+        }
+    }
+
     /// Find-location: newest-tstamp candidates, random among them,
     /// construct a fresh (dedup-named) location chunk into the buffer.
     pub(super) fn find_location(&mut self, spec: NewChunk) -> Result<(), EngineError> {
@@ -1290,15 +1366,22 @@ impl Engine {
         };
         // `find-current-locs-with-spec` (`vision.lisp:2088`) remaps every
         // `current` value to the current marker's slot before matching; a
-        // slot missing from the marker drops the test entirely.
+        // slot missing from the marker drops the test entirely. `:nearest`
+        // and `:center` are request parameters, not chunk slots, and are
+        // applied after the ordinary match.
         let mut remapped_want: Vec<(String, Value)> = Vec::new();
+        let mut nearest: Option<Value> = None;
+        let mut center: Option<Value> = None;
         for (s, v) in want {
-            if matches!(&v, Value::Sym(x) if x.eq_ignore_ascii_case("CURRENT")) {
-                if let Some(value) = self.current_loc_slot(s.trim_start_matches(':')) {
-                    remapped_want.push((s, value));
+            match s.trim_start_matches(':').to_uppercase().as_str() {
+                "NEAREST" => nearest = Some(v),
+                "CENTER" => center = Some(v),
+                _ if matches!(&v, Value::Sym(x) if x.eq_ignore_ascii_case("CURRENT")) => {
+                    if let Some(value) = self.current_loc_slot(s.trim_start_matches(':')) {
+                        remapped_want.push((s, value));
+                    }
                 }
-            } else {
-                remapped_want.push((s, v));
+                _ => remapped_want.push((s, v)),
             }
         }
         let want = remapped_want;
@@ -1353,6 +1436,9 @@ impl Engine {
             if let Some(b) = best {
                 cands.retain(|f| val(f) == Some(b));
             }
+        }
+        if let Some(nearest) = nearest {
+            self.apply_nearest_filter(&mut cands, &nearest, center.as_ref());
         }
         if cands.is_empty() {
             self.loc_failure = true;
@@ -1690,6 +1776,19 @@ pub(super) fn loc_rel_matches(feat: &Feature, rels: &[(String, Value, SlotOp)]) 
 /// Euclidean distance between two 3-vectors (`dist`, `misc-utils.lisp:1156`).
 pub(super) fn vec_dist(a: (f32, f32, f32), b: (f32, f32, f32)) -> f32 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
+}
+
+/// `angle-between` (`vision.lisp:2045`) around a center point, in radians and
+/// wrapped to `[0, 2π)`. ACT-R's `py` uses the GUI's upward-positive y, while
+/// the visicon's `screen-y` grows downward, hence the negated y term.
+/// Clockwise is the maximum angle (`vision.lisp:2041`).
+fn angle_between_points(center: (f32, f32), p1: (f32, f32), p2: (f32, f32)) -> f32 {
+    let angle = |p: (f32, f32)| (-(p.1 - center.1)).atan2(p.0 - center.0);
+    let mut a = angle(p1) - angle(p2);
+    if a < 0.0 {
+        a += std::f32::consts::TAU;
+    }
+    a
 }
 
 /// `angle-between-vectors` (`vision.lisp:2386`) in degrees.
