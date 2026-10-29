@@ -929,6 +929,7 @@ impl Engine {
                             requested: false,
                             shown: None,
                             module: "PROCEDURAL".to_string(),
+                            copy_name: None,
                         },
                     );
                 }

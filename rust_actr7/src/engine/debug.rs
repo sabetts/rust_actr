@@ -1480,6 +1480,24 @@ impl Engine {
                     self.cfg.dat_ms = (x * 1000.0).round() as i64;
                 }
             }
+            // Visual-location stuffing parameters (`vision.lisp:3499`).
+            // `:unstuff-visual-location` is nil, t (the module's `new-span`),
+            // or a delay in seconds; the test changes it between runs.
+            ":UNSTUFF-VISUAL-LOCATION" => {
+                self.cfg.unstuff_vl = match val {
+                    Sexp::Sym(s) if s == "NIL" => UnstuffVl::Off,
+                    Sexp::Sym(_) => UnstuffVl::NewSpan,
+                    Sexp::Int(i) => UnstuffVl::Delay(i * 1000),
+                    Sexp::Float(x) => UnstuffVl::Delay((x * 1000.0).round() as i64),
+                    _ => UnstuffVl::NewSpan,
+                }
+            }
+            ":OVERSTUFF-VISUAL-LOCATION" => self.cfg.overstuff_visual = truthy,
+            ":VISUAL-ONSET-SPAN" => {
+                if let Some(secs) = num(val) {
+                    self.cfg.onset_span_ms = (secs * 1000.0).round() as i64;
+                }
+            }
             // `:overstuff-aural-location` (`audio.lisp:1544`): whether a later
             // sound may overwrite the chunk in `AURAL-LOCATION`
             // (`stuff-sound-buffer`, `audio.lisp:716`).

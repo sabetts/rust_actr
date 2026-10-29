@@ -803,11 +803,11 @@ impl Engine {
                 li += 1;
             }
         }
-        let empty = self
+        let old_present = self
             .buffers
             .get("VISUAL-LOCATION")
             .and_then(|b| b.chunk.as_ref())
-            .is_none();
+            .is_some();
         // A rebuilt display re-attaches the finsts of the features that were
         // attended when it was cleared (`transfer-finst`, `vision.lisp:2306`),
         // before the auto-stuff searches it. `process-display` then runs
@@ -815,10 +815,10 @@ impl Engine {
         // not keep the rebuilt feature marked attended.
         self.apply_finst_transfers();
         self.check_visual_finsts();
-        if empty && self.tracked.is_none() {
+        if self.can_stuff_visual() && self.tracked.is_none() {
             if let Some(feat) = self.newest_feature() {
                 let base = feat.name.clone();
-                self.place_vl(&base, false)?;
+                self.place_vl_at(&base, false, 10, old_present)?;
                 // `stuff-visloc-buffer` schedules `unlock-vision` at priority
                 // 9, just before its priority-10 set (`vision.lisp:1989`).
                 // The hidden event counts toward `run-n-events`, which is why
@@ -880,7 +880,7 @@ impl Engine {
     /// requested base name, but the buffer holds a `-k` copy (which is
     /// what later requests bind). Aliased back to the feature.
     pub(super) fn place_vl(&mut self, base: &str, requested: bool) -> Result<(), EngineError> {
-        self.place_vl_at(base, requested, 10)
+        self.place_vl_at(base, requested, 10, false)
     }
 
     pub(super) fn place_vl_at(
@@ -888,6 +888,7 @@ impl Engine {
         base: &str,
         requested: bool,
         prio: i64,
+        overwrite: bool,
     ) -> Result<(), EngineError> {
         let idx = self
             .features
@@ -913,21 +914,41 @@ impl Engine {
         };
         self.buffer_mut("VISUAL-LOCATION").failed = false;
         self.buffer_mut("VISUAL-LOCATION").modified = false;
-        self.now(
-            Prio::Num(prio),
-            Out::Low,
-            Event::SetBuffer {
-                buffer: "VISUAL-LOCATION".to_string(),
-                chunk: NewChunk::Instance(inst),
-                requested,
-                shown: Some(base.to_string()),
-            },
-        );
+        if overwrite {
+            self.now(
+                Prio::Num(prio),
+                Out::Low,
+                Event::OverwriteBuffer {
+                    buffer: "VISUAL-LOCATION".to_string(),
+                    chunk: NewChunk::Instance(inst),
+                    requested,
+                    shown: Some(base.to_string()),
+                    module: "VISION".to_string(),
+                    copy_name: Some(copy.clone()),
+                },
+            );
+        } else {
+            self.now(
+                Prio::Num(prio),
+                Out::Low,
+                Event::SetBuffer {
+                    buffer: "VISUAL-LOCATION".to_string(),
+                    chunk: NewChunk::Instance(inst),
+                    requested,
+                    shown: Some(base.to_string()),
+                },
+            );
+        }
         // `stuff-visloc-buffer` (`vision.lisp:1995`): an auto-stuffed
         // (unrequested) location is unstuffed after `new-span`, unless
         // `:unstuff-visual-location` is nil.
         if !requested {
-            if let Some(delay) = self.cfg.unstuff_vl_ms {
+            let delay = match self.cfg.unstuff_vl {
+                UnstuffVl::Off => None,
+                UnstuffVl::NewSpan => Some(self.cfg.onset_span_ms),
+                UnstuffVl::Delay(ms) => Some(ms),
+            };
+            if let Some(delay) = delay {
                 self.push_m(
                     self.time_ms + delay,
                     Prio::Num(0),
@@ -1004,7 +1025,7 @@ impl Engine {
 
     /// `set-vis-loc`: stuff the tracked object's location chunk.
     pub(super) fn track_set_vis_loc(&mut self, feature: &str) {
-        let _ = self.place_vl_at(feature, false, 15);
+        let _ = self.place_vl_at(feature, false, 15, false);
     }
 
     /// `mod-vis-loc`: refresh the location chunk in place. A modified chunk

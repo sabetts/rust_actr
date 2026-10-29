@@ -338,6 +338,15 @@ enum Nsji {
     Clamp,
 }
 
+/// `:unstuff-visual-location` (`vision.lisp:3499`): off, the module's
+/// `new-span`, or an explicit delay.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UnstuffVl {
+    Off,
+    NewSpan,
+    Delay(i64),
+}
+
 #[derive(Debug, Clone)]
 struct Config {
     detail: Detail,
@@ -451,9 +460,12 @@ struct Config {
     onset_span_ms: i64,
     dat_ms: i64,
     attention_ms: i64,
-    /// `:unstuff-visual-location` (`vision.lisp:3499`): `None` disables the
-    /// automatic unstuff; `Some(delay)` is the unstuff delay in ms.
-    unstuff_vl_ms: Option<i64>,
+    /// `:unstuff-visual-location` (`vision.lisp:3499`).
+    unstuff_vl: UnstuffVl,
+    /// `:overstuff-visual-location` (`vision.lisp:3504`, default nil): whether
+    /// a new location may replace an unrequested, unmodified auto-stuffed
+    /// copy.
+    overstuff_visual: bool,
     /// `:overstuff-aural-location` (`audio.lisp:1544`, default nil): whether a
     /// chunk already stuffed into `AURAL-LOCATION` may be overwritten by a
     /// later sound (`stuff-sound-buffer`, `audio.lisp:716`).
@@ -1335,16 +1347,16 @@ impl Config {
         // `:unstuff-visual-location` (`vision.lisp:3499`): nil disables the
         // automatic unstuff; t uses `new-span`; a number is the delay itself.
         let onset_span_ms = secs_to_ms(":VISUAL-ONSET-SPAN", 0.5)?;
-        let unstuff_vl_ms = match m
+        let unstuff_vl = match m
             .params
             .iter()
             .find(|(k, _)| k == ":UNSTUFF-VISUAL-LOCATION")
         {
-            None => Some(onset_span_ms),
-            Some((_, Sexp::Sym(s))) if s == "NIL" => None,
-            Some((_, Sexp::Sym(_))) => Some(onset_span_ms),
-            Some((_, Sexp::Float(x))) => Some((x * 1000.0).round() as i64),
-            Some((_, Sexp::Int(i))) => Some(i * 1000),
+            None => UnstuffVl::NewSpan,
+            Some((_, Sexp::Sym(s))) if s == "NIL" => UnstuffVl::Off,
+            Some((_, Sexp::Sym(_))) => UnstuffVl::NewSpan,
+            Some((_, Sexp::Float(x))) => UnstuffVl::Delay((x * 1000.0).round() as i64),
+            Some((_, Sexp::Int(i))) => UnstuffVl::Delay(i * 1000),
             Some((_, got)) => return Err(bad(format!("bad :unstuff-visual-location {got:?}"))),
         };
         let mut cfg = Config {
@@ -1449,7 +1461,8 @@ impl Config {
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
             attention_ms: secs_to_ms(":VISUAL-ATTENTION-LATENCY", 0.085)?,
-            unstuff_vl_ms,
+            unstuff_vl,
+            overstuff_visual: sgp_bool(&m.params, ":OVERSTUFF-VISUAL-LOCATION"),
             overstuff_aural: sgp_bool(&m.params, ":OVERSTUFF-AURAL-LOCATION"),
             unstuff_aural: unstuff_aural_from(&m.params),
             decay_time_ms: secs_to_ms(":DECAY-TIME", 3.0)?,
@@ -2155,6 +2168,10 @@ enum Event {
         requested: bool,
         shown: Option<String>,
         module: String,
+        /// A prepared visual-location copy name. Auto-overstuff already made
+        /// the `{base}-{k}` chunk; production `@buffer>` sets leave this nil
+        /// and let the handler make the copy.
+        copy_name: Option<String>,
     },
     /// A production `@buffer>` direct erase (`production-parsing.lisp:1140`):
     /// `ERASE-BUFFER <buffer>` (remove the chunk, keep the buffer state).
@@ -2398,6 +2415,10 @@ pub struct Engine {
     /// request at the same time coalesces instead of emitting two
     /// `visicon-update` lines.
     display_queued_ms: Option<i64>,
+    /// `run-until-time` boundary: a device `ProcDisplay` at the exact end is
+    /// the task's `add-text` call *after* the run, so it stays queued for the
+    /// next run rather than being processed by this one.
+    defer_display_at: Option<i64>,
     /// Live window items: item key -> the visicon feature names it created
     /// (`add-text-to-exp-window` etc.), for `remove-items-from-exp-window`.
     window_items: Vec<(String, Vec<String>)>,
@@ -2938,6 +2959,7 @@ impl Engine {
             window_origin,
             device_window_visible: window_visible.unwrap_or(true),
             display_queued_ms: None,
+            defer_display_at: None,
             window_items: Vec::new(),
             window_actions: HashMap::new(),
             pending_device_actions: Vec::new(),
@@ -4592,6 +4614,16 @@ impl Engine {
     /// modifies the location — keeps it too. ACT-R's `or`-branch also accepts a
     /// chunk still `equal-chunks-fct` to the last stuffed event; no ref reaching
     /// this point needs that disjunct.
+    /// `stuff-visloc-buffer`'s test (`vision.lisp:1966`): the buffer is empty,
+    /// or overstuff is enabled and the old chunk was auto-stuffed
+    /// (`unrequested`) and is unmodified.
+    fn can_stuff_visual(&self) -> bool {
+        let Some(buf) = self.buffers.get("VISUAL-LOCATION") else {
+            return true;
+        };
+        buf.chunk.is_none() || (self.cfg.overstuff_visual && !buf.requested && !buf.modified)
+    }
+
     fn can_stuff_aural(&self) -> bool {
         let Some(buf) = self.buffers.get("AURAL-LOCATION") else {
             return true;
@@ -4844,7 +4876,10 @@ impl Engine {
         let secs = (end_ms - self.time_ms) as f64 / 1000.0;
         if secs > 0.0 {
             self.push_m(end_ms, Prio::Min, Out::Never, true, Event::Dummy);
-            self.zz_run_step_mode(secs, false)?;
+            self.defer_display_at = Some(end_ms);
+            let r = self.zz_run_step_mode(secs, false);
+            self.defer_display_at = None;
+            r?;
         }
         self.finish_paired_run(start);
         Ok(())
@@ -5020,6 +5055,17 @@ impl Engine {
                     } else {
                         self.emit("------", "Stopped because no events left to process".into());
                     }
+                    break;
+                }
+                Some(t)
+                    if self.defer_display_at == Some(t)
+                        && self
+                            .queue
+                            .peek()
+                            .is_some_and(|q| matches!(&q.event, Event::ProcDisplay)) =>
+                {
+                    self.time_ms = limit_ms;
+                    self.emit("------", "Stopped because time limit reached".into());
                     break;
                 }
                 Some(t) if (if full { t >= limit_ms } else { t > limit_ms }) => {

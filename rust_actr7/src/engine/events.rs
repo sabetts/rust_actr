@@ -91,6 +91,7 @@ impl Engine {
                 requested,
                 shown,
                 module,
+                copy_name,
             } => {
                 let mut inst = self.instantiate(&buffer, chunk)?;
                 let source = shown.clone().unwrap_or_else(|| inst.show());
@@ -102,12 +103,18 @@ impl Engine {
                         .insert("VISUAL-CHUNK0".to_string(), source.clone());
                     inst.name = Some("VISUAL-CHUNK0".to_string());
                 } else if buffer == "VISUAL-LOCATION" {
-                    // `@visual-location> vl-1` copies into `VL-1-{k}`.
-                    let n = *self.copy_count.entry(source.clone()).or_insert(0);
-                    self.copy_count.insert(source.clone(), n + 1);
-                    let copy = format!("{source}-{n}");
-                    self.vl_copied_from.insert(copy.clone(), source.clone());
-                    inst.name = Some(copy);
+                    if let Some(copy) = copy_name {
+                        // Auto-overstuff already made the `{base}-{k}` copy.
+                        inst.name = Some(copy.clone());
+                        self.vl_copied_from.insert(copy, source.clone());
+                    } else {
+                        // `@visual-location> vl-1` copies into `VL-1-{k}`.
+                        let n = *self.copy_count.entry(source.clone()).or_insert(0);
+                        self.copy_count.insert(source.clone(), n + 1);
+                        let copy = format!("{source}-{n}");
+                        self.vl_copied_from.insert(copy.clone(), source.clone());
+                        inst.name = Some(copy);
+                    }
                 }
                 if show {
                     let mut details = format!("OVERWRITE-BUFFER-CHUNK {buffer} {source}");
@@ -337,6 +344,7 @@ impl Engine {
                             requested: false,
                             shown: None,
                             module: "AUDIO".to_string(),
+                            copy_name: None,
                         },
                     );
                 } else {
@@ -716,6 +724,7 @@ impl Engine {
                                     requested: true,
                                     shown: None,
                                     module: "GOAL".to_string(),
+                                    copy_name: None,
                                 },
                             );
                             return Ok(());

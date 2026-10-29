@@ -122,6 +122,7 @@ impl Engine {
                         requested: false,
                         shown: None,
                         module: "GOAL".to_string(),
+                        copy_name: None,
                     },
                 );
             }
