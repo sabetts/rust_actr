@@ -325,36 +325,62 @@ impl Engine {
                 {
                     return Some((c, up));
                 }
+                if up == "VISUAL-CHUNK0" {
+                    if let Some(c) = self
+                        .buffers
+                        .get("VISUAL")
+                        .and_then(|b| b.chunk.as_ref())
+                        .cloned()
+                    {
+                        let display = self
+                            .vl_copied_from
+                            .get(&up)
+                            .map(|s| format!("{s}-0"))
+                            .unwrap_or_else(|| up.clone());
+                        let mut c = c;
+                        c.name = Some(display.clone());
+                        return Some((c, display));
+                    }
+                }
                 let target = self.resolve_alias(&up);
                 if target != up {
                     if let Some(c) = self.find_chunk(&target).cloned() {
                         return Some((c, up));
                     }
                 }
-                self.features.iter().find(|f| f.name == up).map(|f| {
-                    let mut slots = f.filled_slots();
-                    slots.retain(|(k, _)| {
-                        k != "TEXT"
-                            && k != "OVAL"
-                            && k != "LINE"
-                            && !k.starts_with("END1")
-                            && !k.starts_with("END2")
-                    });
-                    if f.kind == "TEXT" || f.kind == "OVAL" {
-                        if let Some((_, v)) = slots.iter_mut().find(|(k, _)| k == "VALUE") {
-                            *v = Value::Sym(f.kind.clone());
+                let feature_name = self
+                    .vl_copied_from
+                    .get(&up)
+                    .cloned()
+                    .unwrap_or_else(|| up.clone());
+                self.features
+                    .iter()
+                    .find(|f| f.name == feature_name)
+                    .map(|f| {
+                        let mut slots = f.filled_slots();
+                        slots.retain(|(k, _)| {
+                            k != "TEXT"
+                                && k != "OVAL"
+                                && k != "LINE"
+                                && k != "IMAGE"
+                                && !k.starts_with("END1")
+                                && !k.starts_with("END2")
+                        });
+                        if f.kind == "TEXT" || f.kind == "OVAL" || f.kind == "IMAGE" {
+                            if let Some((_, v)) = slots.iter_mut().find(|(k, _)| k == "VALUE") {
+                                *v = Value::Sym(f.kind.clone());
+                            }
                         }
-                    }
-                    (
-                        ChunkInst {
-                            name: Some(up.clone()),
-                            ctype: "VISUAL-LOCATION".to_string(),
-                            slots,
-                            bare: false,
-                        },
-                        up.clone(),
-                    )
-                })
+                        (
+                            ChunkInst {
+                                name: Some(up.clone()),
+                                ctype: "VISUAL-LOCATION".to_string(),
+                                slots,
+                                bare: false,
+                            },
+                            up.clone(),
+                        )
+                    })
             })
             .collect();
         chunks
@@ -3090,36 +3116,114 @@ impl Engine {
         key
     }
 
-    /// Queue the `:action` of the window button under the cursor, if any
-    /// (`uwi.lisp`'s button press). ACT-R tests the buttons topmost-first, and
-    /// `window_items` is in add order, so scan in reverse. The click lands on
-    /// the button's oval (`build-vis-locs-for`'s `oval` feature).
+    /// Queue the `:action` of the window button/image under the cursor
+    /// (`uwi.lisp`'s button press and `image-feature.lisp`'s image click).
+    /// ACT-R tests items topmost-first, and `window_items` is in add order, so
+    /// scan in reverse.
     pub(super) fn record_click_action(&mut self) {
         let (mx, my, _) = self.zz_mouse_pos;
         let hit = self.window_items.iter().rev().find_map(|(key, names)| {
             if !self.window_actions.contains_key(key) {
                 return None;
             }
-            let under = names.iter().any(|n| {
-                self.features.iter().any(|f| {
-                    &f.name == n
-                        && f.kind == "OVAL"
-                        && (mx - f.x).abs() <= f.width / 2
-                        && (my - f.y).abs() <= f.height / 2
-                })
-            });
-            under.then(|| key.clone())
+            names.iter().find_map(|n| {
+                self.features
+                    .iter()
+                    .find(|f| {
+                        &f.name == n
+                            && (f.kind == "OVAL" || f.kind == "IMAGE")
+                            && (mx - f.x).abs() <= f.width / 2
+                            && (my - f.y).abs() <= f.height / 2
+                    })
+                    .map(|f| (key.clone(), f.clone()))
+            })
         });
-        if let Some(key) = hit {
+        if let Some((key, feat)) = hit {
             if let Some((cmd, args)) = self.window_actions.get(&key).cloned() {
+                let action = if self.scripted_click_actions && feat.kind == "IMAGE" {
+                    let x = mx - (feat.x - feat.width / 2);
+                    let y = my - (feat.y - feat.height / 2);
+                    let line = match cmd.as_str() {
+                        "IMAGE-WARNING" => format!(
+                            "#|Warning: Image {:?} with no valid action clicked at position {},{} at time {}. |#",
+                            feat.value,
+                            x,
+                            y,
+                            lisp_s_f32(self.time_ms as f32 / 1000.0)
+                        ),
+                        "IMAGE-CLICK" => {
+                            format!("Clicked image {:?} at {} {}", feat.value, x, y)
+                        }
+                        "IMAGE-CLICK2" => format!(
+                            "Clicked the second brain image given value {}",
+                            args.first().map(|a| a.as_str().unwrap_or("")).unwrap_or("")
+                        ),
+                        _ => String::new(),
+                    };
+                    ("MODEL-OUTPUT".to_string(), vec![Json::Str(line)])
+                } else {
+                    (cmd, args)
+                };
                 if self.scripted_click_actions {
-                    self.pending_scripted_click = Some((cmd, args));
+                    self.pending_scripted_click = Some(action);
                     self.run_scripted_click();
                 } else {
-                    self.pending_device_actions.push((cmd, args));
+                    self.pending_device_actions.push(action);
                 }
             }
         }
+    }
+
+    /// `add-image-to-exp-window` (the AGI image extension): an image feature
+    /// with `value` = the image name.
+    pub fn add_window_image(
+        &mut self,
+        text: &str,
+        x: i64,
+        y: i64,
+        width: i64,
+        height: i64,
+        action: Option<(String, Vec<Json>)>,
+    ) -> String {
+        let key = format!("IMAGE-VDI-{}", self.window_item_seq);
+        self.window_item_seq += 1;
+        let (ox, oy) = self.window_origin;
+        let name = format!("VISUAL-LOCATION{}", self.feat_seq);
+        self.feat_seq += 1;
+        let sx = ox + x + round_half_even_f(width as f64 / 2.0) as i64;
+        let sy = oy + y + round_half_even_f(height as f64 / 2.0) as i64;
+        // `image-vdi`'s `build-vis-locs-for` (`tools/image-feature.lisp:292`).
+        // The printed-table order is the reverse of the construction order.
+        let spec = vec![
+            ("VALUE".to_string(), Value::Str(text.to_string())),
+            ("WIDTH".to_string(), Value::Int(width)),
+            ("HEIGHT".to_string(), Value::Int(height)),
+            ("KIND".to_string(), Value::Sym("IMAGE".to_string())),
+            ("IMAGE".to_string(), Value::Sym("T".to_string())),
+            ("SCREEN-X".to_string(), Value::Int(sx)),
+            ("SCREEN-Y".to_string(), Value::Int(sy)),
+        ];
+        self.features.push(Feature {
+            name: name.clone(),
+            kind: "IMAGE".to_string(),
+            value: text.to_string(),
+            x: sx,
+            y: sy,
+            width,
+            height,
+            extra: Vec::new(),
+            spec,
+            spec_pre: Vec::new(),
+            tstamp_ms: self.time_ms,
+            new_p: true,
+            finst_ms: None,
+        });
+        self.window_items.push((key.clone(), vec![name]));
+        if let Some(action) = action {
+            self.window_actions.insert(key.clone(), action);
+        }
+        self.now_display();
+        key
     }
 
     /// Fire a scripted click's held action at the mouse release, the point

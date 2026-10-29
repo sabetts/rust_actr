@@ -326,6 +326,25 @@ impl Engine {
                         };
                         return Ok(Value::Str(self.copy_chunk(&name)));
                     }
+                    // `pprint-chunks-fct` (`chunks.lisp:736`): print the
+                    // named chunks into the trace.
+                    "PPRINT-CHUNKS-FCT" => {
+                        let v =
+                            self.m_eval(items.get(1).ok_or("pprint-chunks-fct needs names")?, b)?;
+                        let names: Vec<String> = match v {
+                            Value::List(v) => v
+                                .into_iter()
+                                .filter_map(|x| match x {
+                                    Value::Sym(s) | Value::Str(s) => Some(s),
+                                    _ => None,
+                                })
+                                .collect(),
+                            Value::Sym(s) | Value::Str(s) => vec![s],
+                            _ => Vec::new(),
+                        };
+                        self.print_pprint_chunks(&names);
+                        return Ok(Value::Nil);
+                    }
                     // `mod-chunk-fct` (`chunks.lisp:1054`): set slots on a
                     // named chunk, returning its name.
                     "MOD-CHUNK-FCT" => {

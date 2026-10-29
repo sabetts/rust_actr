@@ -1972,12 +1972,9 @@ impl Engine {
                 let (cx, cy) = (self.zz_mouse_pos.0, self.zz_mouse_pos.1);
                 let r_pix = (((tx - cx) as f32).powi(2) + ((ty - cy) as f32).powi(2)).sqrt();
                 let theta = ((ty - cy) as f32).atan2((tx - cx) as f32);
-                let w_dva = self
-                    .resolve_loc(name)
-                    .ok()
-                    .map(|i| (self.features[i].width, self.features[i].height))
-                    .filter(|&(w, h)| w > 0 && h > 0)
-                    .map(|(w, h)| pm_pixels_to_angle(approach_width(w as f32, h as f32, theta)))
+                let (w, h) = self.loc_wh(name);
+                let w_dva = (w > 0 && h > 0)
+                    .then(|| pm_pixels_to_angle(approach_width(w as f32, h as f32, theta)))
                     .unwrap_or(1.0);
                 let mut coef = self.cfg.touch_cursor_coeff;
                 if let Some(d) = self.cfg.zz_cdd {

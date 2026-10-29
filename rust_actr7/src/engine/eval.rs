@@ -33,9 +33,13 @@ impl Engine {
             if let Some(v) = b.get(var) {
                 return Ok(v.clone());
             }
-            if self.buffers.contains_key(var) {
-                // A buffer reference (`=goal`) denotes the buffer's chunk;
-                // keep it as a marker resolved by `chunk-slot-value-fct`.
+            if let Some(buf) = self.buffers.get(var) {
+                // A buffer reference (`=goal`) denotes the buffer's chunk.
+                if let Some(name) = buf.chunk.as_ref().and_then(|c| c.name.clone()) {
+                    return Ok(Value::Sym(name));
+                }
+                // Keep the marker for an empty buffer; predicates that test
+                // buffer contents resolve it from the buffer.
                 return Ok(Value::Sym(format!("={var}")));
             }
             return Err(format!("unbound variable {s}"));

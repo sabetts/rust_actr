@@ -1066,6 +1066,36 @@ impl Engine {
                 // Buffer failure was set when the search failed.
             }
             Event::ImaginalDone { spec } => {
+                // `+imaginal> =loc` copies a visual-location chunk's slots, not
+                // its name. An image's location chunk has no color and prints
+                // `kind height width screen-y screen-x value distance size`.
+                let spec = if let NewChunk::Named(n) = &spec {
+                    let base = self.vl_copied_from.get(n).cloned();
+                    base.and_then(|base| {
+                        self.features
+                            .iter()
+                            .find(|f| f.name == base && f.kind == "IMAGE")
+                            .map(|f| NewChunk::Spec {
+                                ctype: String::new(),
+                                slots: vec![
+                                    ("KIND".to_string(), Value::Sym("IMAGE".to_string())),
+                                    ("HEIGHT".to_string(), Value::Int(f.height)),
+                                    ("WIDTH".to_string(), Value::Int(f.width)),
+                                    ("SCREEN-Y".to_string(), Value::Int(f.y)),
+                                    ("SCREEN-X".to_string(), Value::Int(f.x)),
+                                    ("VALUE".to_string(), Value::Sym("IMAGE".to_string())),
+                                    ("DISTANCE".to_string(), Value::Int(1080)),
+                                    ("SIZE".to_string(), Value::Num(f.size())),
+                                ],
+                                neg: Vec::new(),
+                                rels: Vec::new(),
+                                bare: true,
+                            })
+                    })
+                } else {
+                    None
+                }
+                .unwrap_or(spec);
                 // set-imaginal-free + goal-style-request, both invisible.
                 self.imag_busy = false;
                 self.now(

@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: image window items and click actions.
-// The task builds image VDIs and registers click callbacks; the ref's
-// visicon/click trace is not reproduced yet.
-#[ignore = "engine-divergence: image window/visicon"]
 fn creating_an_image() -> Result<(), String> {
     Case::new("creating-an-image")
         .models(&["test-models;models;creating-an-image.lisp"])
@@ -22,6 +18,7 @@ fn creating_an_image() -> Result<(), String> {
             Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
+            Step::CreatingImageSetup,
             Step::RunNEvents { count: 2, trace: true, width: 22 },
             Step::Command { name: "print-visicon".into(), args: crate::sexps(r#"()"#) },
             Step::Run { secs: 5.0, trace: true, width: 22 },

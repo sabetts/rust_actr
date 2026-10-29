@@ -142,6 +142,20 @@ impl Engine {
         if let Some(f) = self.features.iter().find(|f| f.name == name) {
             return (f.width, f.height);
         }
+        // A manual target may be an imaginal/goal chunk carrying width/height.
+        if let Some(c) = self.find_chunk_by_name(name) {
+            let slot = |k: &str| {
+                c.slots
+                    .iter()
+                    .find(|(s, _)| s == k)
+                    .and_then(|(_, v)| match v {
+                        Value::Int(i) => Some(*i),
+                        Value::Num(x) => Some(*x as i64),
+                        _ => None,
+                    })
+            };
+            return (slot("WIDTH").unwrap_or(0), slot("HEIGHT").unwrap_or(0));
+        }
         (0, 0)
     }
 
@@ -1022,14 +1036,19 @@ impl Engine {
             .find(|(k, _)| k == "COLOR")
             .map(|(_, v)| v.clone())
             .unwrap_or_else(|| Value::Sym("BLACK".to_string()));
-        vec![
+        let mut slots = vec![
             ("SCREEN-POS".to_string(), Value::Sym(screen_pos.to_string())),
             ("VALUE".to_string(), Value::Str(feat.value.clone())),
-            ("COLOR".to_string(), color),
+        ];
+        if feat.kind != "IMAGE" {
+            slots.push(("COLOR".to_string(), color));
+        }
+        slots.extend([
             ("HEIGHT".to_string(), Value::Int(feat.height)),
             ("WIDTH".to_string(), Value::Int(feat.width)),
             (feat.kind.clone(), Value::Sym("T".to_string())),
-        ]
+        ]);
+        slots
     }
 
     /// `set-vis-loc`: stuff the tracked object's location chunk.

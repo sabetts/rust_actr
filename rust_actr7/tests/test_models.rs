@@ -849,6 +849,10 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .agi_modify(*phase),
+        Step::CreatingImageSetup => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .creating_image_setup(),
         Step::RecordHistory(buffers) => session
             .engine_mut()
             .ok_or_else(no_model)?

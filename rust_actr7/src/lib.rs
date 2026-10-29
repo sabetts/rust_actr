@@ -276,6 +276,8 @@ pub enum Step {
     AgiSetup,
     /// `agi-modify-test`'s task-side modification block.
     AgiModify(u8),
+    /// `creating-an-image`'s initial image window.
+    CreatingImageSetup,
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -531,6 +533,7 @@ pub fn run_model_steps_with_hook(
             Step::MoveAttention(loc) => eng.schedule_move_attention(loc),
             Step::AgiSetup => eng.agi_setup(),
             Step::AgiModify(phase) => eng.agi_modify(*phase),
+            Step::CreatingImageSetup => eng.creating_image_setup(),
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),

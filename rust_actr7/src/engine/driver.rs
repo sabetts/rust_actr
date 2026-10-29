@@ -1978,6 +1978,38 @@ impl Engine {
         self.agi_items = vec![t1, t2, t3, b1, b2, b3, l1, l2, l3];
     }
 
+    /// `creating-an-image`'s three images (the task's `run-it` setup).
+    pub fn creating_image_setup(&mut self) {
+        self.scripted_click_actions = true;
+        self.add_window_image(
+            "logo",
+            10,
+            10,
+            288,
+            142,
+            Some(("IMAGE-WARNING".to_string(), Vec::new())),
+        );
+        self.add_window_image(
+            "brain",
+            10,
+            160,
+            128,
+            128,
+            Some(("IMAGE-CLICK".to_string(), Vec::new())),
+        );
+        self.add_window_image(
+            "brain-2",
+            10,
+            290,
+            128,
+            128,
+            Some((
+                "IMAGE-CLICK2".to_string(),
+                vec![Json::Str("\"this string\"".into())],
+            )),
+        );
+    }
+
     fn agi_item(&self, i: usize) -> String {
         self.agi_items.get(i).cloned().unwrap_or_default()
     }
