@@ -64,9 +64,12 @@ Recovered deterministic engine/API cases:
 - Pcomp safe-eval, modifier invalidation, compiled request defaults,
   negative request slots, and utility updates while trace is suppressed.
 
-### Wave 1 - Pcomp Residual (IN PROGRESS)
+### Wave 1 - Pcomp Residual (PARKED)
 
 Goal: finish the remaining ignored pcomp cases.
+
+The main Wave 1 work is complete. The three cases below are parked as a
+separate activation/history follow-up so they do not block later waves.
 
 Completed:
 
@@ -88,9 +91,10 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **520 passed / 47 ignored**.
+- [x] Full suite green at **520 passed / 47 ignored** at the time this block
+  closed; later waves raised the baseline to **530 / 37**.
 
-Remaining:
+Remaining (parked):
 
 - [ ] **`v1-initial-run`** (1): rechecked after the compile fixes; still
   diverges from the first block with `:epl t` (`1.00 2.32 2.10 ...` vs
@@ -215,21 +219,91 @@ Approach:
 
 ### Wave 4 - Visicon, BST, PPM, and Hooks
 
-Goal: finish visual lifecycle and hook-feature clusters.
+Goal: finish the visual lifecycle and the independent hook/conflict-tree
+clusters. The work is split so each sub-wave has a coherent oracle.
+
+Completed before Wave 4:
+
+- [x] BST PPM copy-base naming, imaginal-action ordering, button-action
+  replay, and per-trial window resets.
+- [x] `bst-learn-ppm` and `bst-learn-ppm-w-tree` summaries.
+
+#### Wave 4A - Visual-location selection and stuffing
 
 Targets:
 
-- `nearest-vis-loc`, `unstuff-visual`, `agi-modify-test`,
-  `creating-an-image`, `bst-learn`.
-- `test-ppm`, `adaptive-noise`.
-- Revisit `fan-w-tree` with the full info-gain conflict-tree builder.
+- `nearest-vis-loc`
+- `unstuff-visual`
+
+Why first: both exercise `find-current-locs-with-spec` and the visual-location
+stuff/unstuff lifecycle, and `:nearest` is also needed by image and BST tasks.
+The refs are comparatively small, and the engine already has most of the
+visual-location copy/finst machinery.
 
 Approach:
 
-- Implement the upstream conflict-tree info-gain builder if conflict-set
-  order is still needed; it may also affect pcomp/utility draw order.
-- Fix auto-stuff/location numbering/removal and visicon update lifecycle as
-  one cluster.
+- Pull `:nearest` and `:center` out of ordinary slot matching.
+- Implement `current`, `current-x`, `current-y`, `current-distance`,
+  `clockwise`, `counterclockwise`, and chunk-valued nearest selection.
+- Track the attention point (`clof`) independently of whether encoding found
+  an object, and add the `set-visual-center-point` command.
+- Recreate `nearest-vis-loc`'s per-cycle `*which*` task values; add only the
+  smallest general task-command return-value path needed for `which-one`.
+- Apply `:unstuff-visual-location`, `:overstuff-visual-location`, and
+  `:visual-onset-span` at run time, not only at model load.
+- Auto-stuff when the buffer is empty or overstuff is enabled and the old
+  chunk is an unrequested, unmodified copy. Use `OVERWRITE-BUFFER-CHUNK` for
+  overstuff and preserve location-copy/finst identity.
+- Supersede the previous unstuff when a new location is stuffed, while keeping
+  `check-unstuff-buffer`'s unchanged-copy precondition.
+
+Exit: both cases promoted; visual regressions pass; corpus **532 / 35**.
+
+#### Wave 4B - Visicon lifecycle and image AGI
+
+Targets:
+
+- `agi-modify-test`
+- `creating-an-image`
+- `bst-learn` (recheck after the lifecycle fixes)
+
+Approach:
+
+- Generalize window items beyond text/button/line to identity-bearing items
+  with kind, geometry, color, action, and modify/remove semantics.
+- Support image VDIs and click-action parameters.
+- Reproduce add/modify/remove visicon updates without changing a location
+  chunk's name/finst when ACT-R's `:update` path keeps it.
+- Add the missing device sidecars/drivers for the AGI and image tasks.
+- Re-evaluate `bst-learn`'s 15-trial live window after these pieces land.
+
+#### Wave 4C - Conflict-tree information gain
+
+Target:
+
+- `fan-w-tree`
+
+Approach:
+
+- Implement the upstream information-gain split builder used by
+  `print-conflict-tree`, replacing the simpler first-discriminating-test
+  printer where it changes split shape.
+- Keep the existing `count-w-tree` result as the regression oracle.
+- Check whether conflict-set ordering changes pcomp/utility draw order.
+
+#### Wave 4D - Task hooks
+
+Targets:
+
+- `test-ppm`
+- `adaptive-noise`
+
+Approach:
+
+- Evaluate task-defined `:ppm-hook` functions with the bounded evaluator and
+  emit their `model-output` lines in conflict-resolution order.
+- Recover the adaptive-noise task driver and `:bl-hook`/`:noise-hook`
+  callbacks as a separate, larger follow-up.
 
 ### Wave 5 - Residual Engine Features
 
@@ -237,7 +311,12 @@ Targets:
 
 - Multi-model trace columns (`unit-1-together-1-mp`).
 - Audio sound-object replay (`audio-updates`).
-- Base-level inhibition/safety traces.
+- Base-level inhibition/safety traces (`base-level-inhibition`,
+  `base-level-safety-check`).
+- Unassigned/no-run cases: `spacing-effect`, `time-size-check`.
+- `imaginal-action` and production-compilation dynamism.
+- Command-layer output cases (`tutorial-unit1modeling-warnings`,
+  `undefined-slots`).
 - Runtime `:ncnar nil` vs v10 refs.
 - `rpc_conformance` promotion or documented environment gate.
 - Long-tail driver cases (`save-model`, `thorough-p-test`, Siegler original,
