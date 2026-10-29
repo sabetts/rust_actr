@@ -5511,3 +5511,20 @@ Verified `dynamic-production-compilation-tests`, `retain-indirect-retrievals`,
 and `paired-learning-dynamic` after the change.
 
 Corpus: **517 passed / 50 ignored**.
+
+## 329. Composed-production hook case and query ordering
+
+Recovered `tutorial-unit7-paired-composed-production` with a real driver and
+device sidecar. The task is `paired-task 1 2`: two 10 s probe/feedback cycles
+for the `zinc`/`9` pair, with the filter setting `:v nil`/`:epl t` on the first
+event, then `pp production0`. The sidecar supplies the four prompts at
+0/5000/10000/15000 ms; two `permute-list` command steps consume the task's
+one-pair draws.
+
+The remaining mismatch was the composed production's LHS query order. Rust
+emitted `?imaginal` (p1's explicit query) before p2's `?visual`/`?manual`;
+ACT-R orders query conditions by `buffer-index` (`visual` < `manual` <
+`imaginal`). Match ordering stays in its existing order, so pcomp LHS traces
+are unchanged.
+
+Corpus: **518 passed / 49 ignored**.

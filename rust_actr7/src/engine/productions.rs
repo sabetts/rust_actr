@@ -23,6 +23,25 @@ fn dynamic_slot(slot: &str, b: &Bindings) -> String {
     }
 }
 
+/// ACT-R's default `buffer-index` order (`framework/buffers.lisp`); the
+/// composition buffer loop sorts by it.
+fn buffer_sort_index(name: &str) -> u32 {
+    match name {
+        "RETRIEVAL" => 0,
+        "GOAL" => 1,
+        "VISUAL" => 3,
+        "VISUAL-LOCATION" => 4,
+        "MANUAL" | "MANUAL-LEFT" | "MANUAL-RIGHT" => 5,
+        "AURAL" => 6,
+        "AURAL-LOCATION" => 7,
+        "VOCAL" | "SPEECH" => 8,
+        "BLENDING" => 9,
+        "IMAGINAL" => 10,
+        "TEMPORAL" => 11,
+        _ => 100,
+    }
+}
+
 /// Whether an LHS match/query item's dynamic slot-name variables are all bound,
 /// so it can be matched now (ACT-R orders conditions by dependency).
 /// `isa` matching including the vision chunk-type hierarchy: `line`, `oval`
@@ -2187,12 +2206,21 @@ impl Engine {
                 }
             }
         }
-        // Query conditions (`?buffer> state free`) follow the matches.
+        // Query conditions (`?buffer> state free`) follow the matches, in
+        // ACT-R buffer-index order.
+        let mut queries: Vec<(String, Vec<(String, SlotVal)>)> = Vec::new();
         for (b, s) in p1_lhs.iter().chain(&p2_lhs) {
-            if b.starts_with('?') && !lhs.iter().any(|(t, _)| t == b) {
-                lhs.push((b.clone(), remove_dup_keep_last(s.clone())));
+            if b.starts_with('?')
+                && !lhs.iter().any(|(t, _)| t == b)
+                && !queries.iter().any(|(t, _)| t == b)
+            {
+                queries.push((b.clone(), remove_dup_keep_last(s.clone())));
             }
         }
+        queries.sort_by_key(|(b, _)| {
+            buffer_sort_index(b.trim_start_matches('?').trim_end_matches('>'))
+        });
+        lhs.extend(queries);
         // `!bind!`/`!safe-bind!` conditions are prepended
         // (`post-conditions`, production-compilation.lisp:1742).
         let mut binds: Vec<(String, Vec<(String, SlotVal)>)> = Vec::new();

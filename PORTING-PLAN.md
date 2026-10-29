@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **517 passed / 50 ignored / 0 failed**
+- Full suite: **518 passed / 49 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **517 passed / 50 ignored**.
+- [x] Full suite green at **518 passed / 49 ignored**.
 
 Remaining:
 
@@ -167,12 +167,12 @@ Completed:
   (`=which-slot`): resolving it against p1's firing lets composition drop the
   matching p2 imaginal condition, and instantiating p2's dynamic LHS slot name
   in the imaginal mapping supplies the `STIMULUS -> VAL` mapping.
+- [x] `tutorial-unit7-paired-composed-production` recovered with a real
+  `paired-task 1 2` driver, a four-prompt device sidecar, and `pp production0`.
+  Composed query conditions now follow ACT-R's `buffer-index` order.
 
 Remaining in this wave:
 
-- [ ] `tutorial-unit7-paired-composed-production`: the current driver never
-  presents paired stimuli, so `pp` shows only base productions and no
-  `PRODUCTION0`. Needs a paired-task/device sidecar or equivalent replay.
 - [ ] `hand-move-test`: model load blocks on nested
   `offsets ((index -1 0))`, which needs a non-atomic slot-pattern
   representation.
@@ -183,8 +183,7 @@ Approach:
 
 - Compare per-trial `(start, key)` rows against a trained oracle subject; the
   aggregate summary hides which trials diverge.
-- Build a paired stimulus sidecar for the composed-production case.
-- Then address `hand-move-test`'s slot-value representation and `keypad-test`'s
+- Address `hand-move-test`'s slot-value representation and `keypad-test`'s
   manual request.
 
 ### Wave 3 - Numerical RNG and Summaries
