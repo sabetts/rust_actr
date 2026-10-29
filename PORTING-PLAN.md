@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **519 passed / 48 ignored / 0 failed**
+- Full suite: **520 passed / 47 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **519 passed / 48 ignored**.
+- [x] Full suite green at **520 passed / 47 ignored**.
 
 Remaining:
 
@@ -173,17 +173,11 @@ Completed:
 - [x] `hand-move-test` recovered. `Pattern::List` supports nested offsets;
   base hand-to-mouse/home, point-hand-at-key, manual clear, and base
   peck/punch release behavior now match the motor trace.
+- [x] `keypad-test` recovered. Keypad start geometry/offsets, `HAND-TO-KEYPAD`
+  with target width 4, keypad key mappings, canonical device key names, and
+  the goal-mod-request ordering are implemented.
 
-Remaining in this wave:
-
-- [ ] `keypad-test`: blocks on the unimplemented `HAND-TO-KEYPAD` manual
-  request.
-
-Approach:
-
-- Compare per-trial `(start, key)` rows against a trained oracle subject; the
-  aggregate summary hides which trials diverge.
-- Add `HAND-TO-KEYPAD` to the base manual request routing.
+Remaining in this wave: none.
 
 ### Wave 3 - Numerical RNG and Summaries
 

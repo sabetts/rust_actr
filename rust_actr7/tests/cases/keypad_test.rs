@@ -2,16 +2,32 @@
 //! ref:  keypad-test.ref
 //! lisp: actr7.x/test-models/keypad-test.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use crate::hooks;
+use actr_engine::{EventHook, EventView, HookEffect, Step};
+
+#[derive(Default)]
+struct KeyHandler {
+    effects: Vec<HookEffect>,
+}
+
+impl EventHook for KeyHandler {
+    fn post(&mut self, line: &str, _ev: &EventView) {
+        if line.contains("output-key") {
+            if let Some(key) = line.split_whitespace().last() {
+                self.effects
+                    .push(HookEffect::ModelOutput(format!("The key is \"{key}\"")));
+            }
+        }
+    }
+
+    fn take_effects(&mut self) -> Vec<HookEffect> {
+        std::mem::take(&mut self.effects)
+    }
+}
 
 #[test]
-// BLOCKED ON: keypad punch event trace.
-// The ref walks the keypad through repeated presses; motor preparation and
-// key-event timing still differ.
-#[ignore = "engine-divergence: motor keypad trace"]
 fn keypad_test() -> Result<(), String> {
-    Case::new("keypad-test")
+    hooks::HookCase::new("keypad-test")
         .models(&["test-models;models;keypad-test.lisp"])
         .seed((100, 0))
         .steps(vec![
@@ -25,5 +41,5 @@ fn keypad_test() -> Result<(), String> {
                 width: 22,
             },
         ])
-        .check()
+        .check_segment(KeyHandler::default())
 }

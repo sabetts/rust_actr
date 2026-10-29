@@ -5549,3 +5549,21 @@ emitting `The key is "…"`; the hook is reinstalled after the driver's
 `chunk-type` command, which rebuilds the engine.
 
 Corpus: **519 passed / 48 ignored**.
+
+## 331. Keypad test: keypad geometry and canonical key names
+
+Recovered `keypad-test`. Reset now honors `(start-hand-at-keypad)` by placing
+the right hand at keypad `(19,4)` with the keypad finger offsets, and
+`hand-to-keypad` builds a hand-ply with target width `4.0`
+(`keyboard.lisp:637`), matching the oracle's Fitts execution time.
+
+Added keypad key geometry, finger specs, `key_xy`/`xy_key` entries, and
+alias canonicalization (`keypad-minus` -> `keypad--`, `keypad-plus` ->
+`keypad-+`, `keypad-period` -> `keypad-.`). `*goal>` module modifications
+now land at priority 40, after a same-time manual request, matching the
+keypad production's source order.
+
+The task-side `output-key` handler is represented by the same post-event hook
+pattern as `hand-move-test`.
+
+Corpus: **520 passed / 47 ignored**.

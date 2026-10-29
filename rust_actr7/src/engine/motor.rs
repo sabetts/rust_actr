@@ -349,6 +349,168 @@ pub(super) fn key_table() -> HashMap<String, KeySpec> {
                 theta: 0.0,
             },
         ),
+        (
+            "CLEAR".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-=".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-/".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-*".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "PINKIE",
+                r: 3.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-7".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-8".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-9".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-MINUS".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "PINKIE",
+                r: 2.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-4".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 0.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "KEYPAD-5".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 0.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "KEYPAD-6".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 0.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "KEYPAD-PLUS".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "PINKIE",
+                r: 1.0,
+                theta: -1.57,
+            },
+        ),
+        (
+            "KEYPAD-1".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "INDEX",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "KEYPAD-2".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "MIDDLE",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "KEYPAD-3".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 1.0,
+                theta: 1.57,
+            },
+        ),
+        (
+            "ENTER".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "PINKIE",
+                r: 0.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "KEYPAD-0".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "THUMB",
+                r: 0.0,
+                theta: 0.0,
+            },
+        ),
+        (
+            "KEYPAD-PERIOD".to_string(),
+            KeySpec {
+                hand: "RIGHT",
+                finger: "RING",
+                r: 2.0,
+                theta: 1.57,
+            },
+        ),
     ])
 }
 
@@ -392,7 +554,19 @@ pub(super) const STANDARD_MANUAL_SLOTS: &[&str] =
 pub(super) fn key_is_punch(key: &str) -> bool {
     matches!(
         key.to_uppercase().as_str(),
-        "A" | "S" | "D" | "F" | "J" | "K" | "L" | ";" | "SPACE"
+        "A" | "S"
+            | "D"
+            | "F"
+            | "J"
+            | "K"
+            | "L"
+            | ";"
+            | "SPACE"
+            | "KEYPAD-4"
+            | "KEYPAD-5"
+            | "KEYPAD-6"
+            | "ENTER"
+            | "KEYPAD-0"
     )
 }
 
@@ -454,6 +628,24 @@ pub(super) fn key_xy(key: &str) -> Option<(i64, i64)> {
         "/" | "SLASH" => (10, 5),
         "RIGHT-SHIFT" => (11, 5),
         "SPACE" => (5, 6),
+        "CLEAR" => (19, 2),
+        "KEYPAD-=" => (20, 2),
+        "KEYPAD-/" => (21, 2),
+        "KEYPAD-*" => (22, 2),
+        "KEYPAD-7" => (19, 3),
+        "KEYPAD-8" => (20, 3),
+        "KEYPAD-9" => (21, 3),
+        "KEYPAD-MINUS" => (22, 3),
+        "KEYPAD-4" => (19, 4),
+        "KEYPAD-5" => (20, 4),
+        "KEYPAD-6" => (21, 4),
+        "KEYPAD-PLUS" => (22, 4),
+        "KEYPAD-1" => (19, 5),
+        "KEYPAD-2" => (20, 5),
+        "KEYPAD-3" => (21, 5),
+        "ENTER" => (22, 5),
+        "KEYPAD-0" => (19, 6),
+        "KEYPAD-PERIOD" => (21, 6),
         _ => return None,
     };
     Some(p)
@@ -485,6 +677,15 @@ pub(super) fn xy_key(x: i64, y: i64) -> Option<&'static str> {
         (8, 3) => "i",
         (9, 3) => "o",
         (10, 3) => "p",
+        (0, 2) => "`",
+        (11, 2) => "-",
+        (12, 2) => "=",
+        (13, 2) => "delete",
+        (0, 3) => "tab",
+        (11, 3) => "[",
+        (12, 3) => "]",
+        (13, 3) => "\\",
+        (0, 4) => "caps-lock",
         (1, 4) => "a",
         (2, 4) => "s",
         (3, 4) => "d",
@@ -501,9 +702,50 @@ pub(super) fn xy_key(x: i64, y: i64) -> Option<&'static str> {
         (5, 5) => "b",
         (6, 5) => "n",
         (7, 5) => "m",
+        (8, 5) => ",",
+        (9, 5) => ".",
+        (10, 5) => "/",
+        (11, 5) => "right-shift",
+        (10, 4) => ";",
+        (11, 4) => "'",
+        (12, 4) => "return",
+        (0, 5) => "shift",
+        (5, 6) => "space",
+        (6, 6) => "space",
+        (19, 2) => "clear",
+        (20, 2) => "keypad-=",
+        (21, 2) => "keypad-/",
+        (22, 2) => "keypad-*",
+        (19, 3) => "keypad-7",
+        (20, 3) => "keypad-8",
+        (21, 3) => "keypad-9",
+        (22, 3) => "keypad--",
+        (19, 4) => "keypad-4",
+        (20, 4) => "keypad-5",
+        (21, 4) => "keypad-6",
+        (22, 4) => "keypad-+",
+        (19, 5) => "keypad-1",
+        (20, 5) => "keypad-2",
+        (21, 5) => "keypad-3",
+        (22, 5) => "enter",
+        (19, 6) => "keypad-0",
+        (21, 6) => "keypad-.",
         _ => return None,
     };
     Some(s)
+}
+
+/// Keyboard aliases report the canonical device key from `specify-key`.
+pub(super) fn canonical_output_key(key: &str) -> String {
+    match key.to_uppercase().as_str() {
+        "KEYPAD-" | "KEYPAD--" | "KEYPAD-MINUS" | "KEYPAD-HYPHEN" => "keypad--".to_string(),
+        "KEYPAD-+" | "KEYPAD-PLUS" => "keypad-+".to_string(),
+        "KEYPAD-." | "KEYPAD-PERIOD" | "KEYPAD-DOT" => "keypad-.".to_string(),
+        "KEYPAD-=" | "KEYPAD-EQUAL" => "keypad-=".to_string(),
+        "KEYPAD-/" | "KEYPAD-DIVIDE" | "KEYPAD-SLASH" => "keypad-/".to_string(),
+        "KEYPAD-*" | "KEYPAD-ASTERISK" | "KEYPAD-TIMES" => "keypad-*".to_string(),
+        _ => key.to_lowercase(),
+    }
 }
 
 pub(super) fn key_hand_finger(key: &str) -> Option<(usize, usize)> {
@@ -2446,6 +2688,9 @@ impl Engine {
             self.man_proc[0] = true;
             self.man_proc[1] = true;
         }
+        if !to_mouse {
+            self.zz_hands[1].offsets = RIGHT_FINGER_OFFSETS;
+        }
         // `HAND-TO-MOUSE`/`HAND-TO-HOME` request trace (custom).
         let line = if to_mouse {
             "HAND-TO-MOUSE".to_string()
@@ -2474,6 +2719,41 @@ impl Engine {
         Ok(())
     }
 
+    /// `hand-to-keypad` (`keyboard.lisp:617`): move the right hand to the
+    /// keypad's home position and install its finger offsets.
+    pub(super) fn zz_hand_to_keypad(&mut self) -> Result<(), EngineError> {
+        let hand = 1;
+        let target = (19, 4);
+        let (hx, hy) = self.zz_hands[hand].loc;
+        let dx = (target.0 - hx) as f64;
+        let dy = (target.1 - hy) as f64;
+        let r = (dx * dx + dy * dy).sqrt() as f32;
+        let theta = dy.atan2(dx) as f32;
+        self.now(
+            Prio::Num(0),
+            Out::Low,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: "HAND-TO-KEYPAD".to_string(),
+            },
+        );
+        self.zz_hands[hand].offsets = KEYPAD_FINGER_OFFSETS;
+        if !self.cfg.zz_ext {
+            self.man_exec_busy = true;
+        }
+        self.zz_hand_ply_request(
+            "HAND-PLY",
+            hand,
+            r,
+            theta,
+            lisp_s_f32(r),
+            lisp_s_f32(theta),
+            target,
+            4.0,
+            false,
+        )
+    }
+
     /// Schedule a `hand-ply` (a `ply` that moves the hand loc) movement.
     /// Used by `prepare`/`execute` and `point-hand-at-key`
     /// (`motor.lisp:1096`/`:1149`). `r_str`/`theta_str` are the pre-rendered
@@ -2489,6 +2769,7 @@ impl Engine {
         r_str: String,
         theta_str: String,
         target: (i64, i64),
+        twidth: f32,
         deferred: bool,
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
@@ -2531,6 +2812,7 @@ impl Engine {
                 r_str,
                 theta_str,
                 target,
+                twidth,
                 req_ms,
                 deferred,
             },
@@ -2571,7 +2853,9 @@ impl Engine {
             (hx as f32 + r * theta.cos()).round() as i64,
             (hy as f32 + r * theta.sin()).round() as i64,
         );
-        self.zz_hand_ply_request("HAND-PLY", hand, r, theta, r_str, theta_str, target, true)
+        self.zz_hand_ply_request(
+            "HAND-PLY", hand, r, theta, r_str, theta_str, target, 1.0, true,
+        )
     }
 
     /// `execute` (`general-pm.lisp:580`): queue the last prepared movement and
@@ -2673,6 +2957,7 @@ impl Engine {
             lisp_s_f32(r),
             lisp_s_f32(theta),
             target,
+            1.0,
             false,
         )
     }
@@ -2858,6 +3143,7 @@ impl Engine {
             }
             (Some("HAND-TO-MOUSE"), _) => self.zz_hand_to(true),
             (Some("HAND-TO-HOME"), _) => self.zz_hand_to(false),
+            (Some("HAND-TO-KEYPAD"), _) => self.zz_hand_to_keypad(),
             (Some("POINT-HAND-AT-KEY"), _) => self.zz_point_hand_at_key(&slots),
             (Some("CLEAR"), None) => self.manual_clear(),
             (Some(c), _)

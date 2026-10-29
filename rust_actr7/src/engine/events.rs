@@ -534,7 +534,7 @@ impl Engine {
                     );
                 } else {
                     self.now(
-                        Prio::Num(100),
+                        Prio::Num(40),
                         Out::Medium,
                         Event::ModBuffer {
                             buffer: buffer.clone(),
@@ -1374,6 +1374,7 @@ impl Engine {
                 r_str,
                 theta_str,
                 target,
+                twidth,
                 req_ms,
                 deferred,
             } => {
@@ -1392,9 +1393,9 @@ impl Engine {
                 let init = self.cfg.init_ms;
                 let burst = self.cfg.burst_ms;
                 // `hand-ply` (`motor.lisp:1084`): exec = init + fitts with the
-                // mouse coefficient and the default target width (1.0); finish
-                // = exec + burst.
-                let fit = (self.cfg.touch_cursor_coeff * (r + 0.5).log2())
+                // mouse coefficient and the request's target width (the keypad
+                // passes 4.0, `keyboard.lisp:637`); finish = exec + burst.
+                let fit = (self.cfg.touch_cursor_coeff * (r / twidth + 0.5).log2())
                     .max(self.cfg.min_fitts_ms as f32 / 1000.0);
                 let exec = init + (fit * 1000.0).round() as i64;
                 let finish = exec + burst;
@@ -2140,7 +2141,8 @@ impl Engine {
                 let _ = req_ms;
             }
             Event::OutputKey { key } => {
-                self.last_output_key = Some((key.to_lowercase(), self.time_ms));
+                let key = super::motor::canonical_output_key(&key);
+                self.last_output_key = Some((key.clone(), self.time_ms));
                 self.fired_commands.push((
                     "output-key".to_string(),
                     self.model.name.clone(),

@@ -1127,6 +1127,7 @@ struct TouchPlan {
 /// (`motor.lisp:508`): `(index, middle, ring, pinkie, thumb)`.
 const LEFT_FINGER_OFFSETS: [(i64, i64); 5] = [(0, 0), (-1, 0), (-2, 0), (-3, 0), (1, 2)];
 const RIGHT_FINGER_OFFSETS: [(i64, i64); 5] = [(0, 0), (1, 0), (2, 0), (3, 0), (-1, 2)];
+const KEYPAD_FINGER_OFFSETS: [(i64, i64); 5] = [(0, 0), (1, 0), (2, 0), (3, 1), (0, 2)];
 
 /// `hand-ply` and `all-fingers-to-home` set `finger :dummy`
 /// (`motor.lisp:1063`, `motor-extension.lisp:2263`); a sentinel lets
@@ -1949,6 +1950,7 @@ enum Event {
         r_str: String,
         theta_str: String,
         target: (i64, i64),
+        twidth: f32,
         req_ms: i64,
         deferred: bool,
     },
@@ -3611,6 +3613,10 @@ impl Engine {
                 held: [None, None, None, None, None],
             },
         ];
+        if self.model.hand_start.as_deref() == Some("KEYPAD") {
+            self.zz_hands[1].loc = (19, 4);
+            self.zz_hands[1].offsets = KEYPAD_FINGER_OFFSETS;
+        }
         // ACT-R re-evaluates the model body on reset (`model.lisp:983`);
         // re-parse `p-fct` productions with the current `*query*`.
         if !self.model.pfct.is_empty() {
