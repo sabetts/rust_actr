@@ -849,6 +849,13 @@ impl Engine {
             Pattern::Int(i) => *got == Value::Int(*i),
             Pattern::Num(x) => *got == Value::Num(*x),
             Pattern::Str(s) => self.value_eq(got, &Value::Str(s.clone())),
+            Pattern::List(ps) => {
+                let vals = ps
+                    .iter()
+                    .map(Value::from_pattern)
+                    .collect::<Result<Vec<_>, _>>()?;
+                self.value_eq(got, &Value::List(vals))
+            }
         };
         Ok(if negated { !ok } else { ok })
     }

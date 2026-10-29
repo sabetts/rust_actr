@@ -382,7 +382,8 @@ pub(super) const STANDARD_MANUAL_CMDS: &[&str] = &[
 /// The slots a built-in style's chunk carries (`defStyle`): the movement
 /// itself (`hand`/`finger`/`r`/`theta`) and, for the cursor styles, the target
 /// location (`loc`).
-pub(super) const STANDARD_MANUAL_SLOTS: &[&str] = &["HAND", "FINGER", "LOC", "R", "THETA"];
+pub(super) const STANDARD_MANUAL_SLOTS: &[&str] =
+    &["HAND", "FINGER", "LOC", "R", "THETA", "TO-KEY", "OFFSETS"];
 
 /// Keys whose `key->cmd` mapping is a `punch` movement (`other-files/keyboard.lisp`
 /// ASDF row and space): the finger is already home, so no polar geometry is
@@ -2044,17 +2045,15 @@ impl Engine {
             .find(|(s, _)| s == "FINGER")
             .and_then(|(_, v)| Self::touch_finger_idx(&name_of(v)))
             .unwrap_or(0);
-        let r = slots
-            .iter()
-            .find(|(s, _)| s == "R")
-            .and_then(|(_, v)| num_of(v))
-            .unwrap_or(0.0) as f32;
-        let theta = slots
-            .iter()
-            .find(|(s, _)| s == "THETA")
-            .and_then(|(_, v)| num_of(v))
-            .unwrap_or(0.0) as f32;
-        self.zz_direct_style_trace(cmd, hand, finger, r, theta);
+        let r_val = slots.iter().find(|(s, _)| s == "R").map(|(_, v)| v);
+        let theta_val = slots.iter().find(|(s, _)| s == "THETA").map(|(_, v)| v);
+        let r = r_val.and_then(num_of).unwrap_or(0.0) as f32;
+        let theta = theta_val.and_then(num_of).unwrap_or(0.0) as f32;
+        let r_text = r_val.map(lisp_num_str).unwrap_or_else(|| "0".to_string());
+        let theta_text = theta_val
+            .map(lisp_num_str)
+            .unwrap_or_else(|| "0".to_string());
+        self.zz_direct_style_trace(cmd, hand, finger, &r_text, &theta_text);
         // `move-a-finger` shifts the offset by the polar vector.
         let cur = self.zz_finger_loc(hand, finger);
         let target = if r == 0.0 {
@@ -2068,6 +2067,9 @@ impl Engine {
         // A direct style has no `key` slot; the device names the output from
         // the finger's location (`motor.lisp:960`).
         let key = xy_key(target.0, target.1).unwrap_or("").to_string();
+        if !self.cfg.zz_ext {
+            self.man_exec_busy = true;
+        }
         self.zz_key_request(cmd, cmd, &key, hand, finger, r, theta, Some(target), 0)
     }
 
@@ -2078,18 +2080,14 @@ impl Engine {
         class: &str,
         hand: usize,
         finger: usize,
-        r: f32,
-        theta: f32,
+        r_text: &str,
+        theta_text: &str,
     ) {
         let h = if hand == 0 { "LEFT" } else { "RIGHT" };
         let f = ["INDEX", "MIDDLE", "RING", "PINKIE", "THUMB"][finger];
         let (_, _, hfrt) = Self::zz_style_info(class);
         let line = if hfrt {
-            format!(
-                "{class} HAND {h} FINGER {f} R {} THETA {}",
-                lisp_s_f32(r),
-                lisp_s_f32(theta)
-            )
+            format!("{class} HAND {h} FINGER {f} R {r_text} THETA {theta_text}")
         } else {
             format!("{class} HAND {h} FINGER {f}")
         };
@@ -2375,6 +2373,31 @@ impl Engine {
         }
     }
 
+    /// `isa clear`: clear the manual module and free its state.
+    fn manual_clear(&mut self) -> Result<(), EngineError> {
+        self.man_prep_busy = true;
+        self.man_exec_busy = true;
+        self.zz_last_move = None;
+        self.zz_last_style = None;
+        self.now(
+            Prio::Num(0),
+            Out::Always,
+            Event::Emit {
+                module: "MOTOR".to_string(),
+                line: "CLEAR".to_string(),
+            },
+        );
+        self.push(
+            self.time_ms + self.cfg.feat_prep_ms,
+            Prio::Num(0),
+            Out::Always,
+            Event::ChangeState {
+                module: "MANUAL".to_string(),
+            },
+        );
+        Ok(())
+    }
+
     /// `hand-to-mouse`/`hand-to-home` (a `hand-ply`): move the right hand to
     /// the mouse / home, auto-releasing any held key.
     pub(super) fn zz_hand_to(&mut self, to_mouse: bool) -> Result<(), EngineError> {
@@ -2389,21 +2412,32 @@ impl Engine {
         let dy = (target.1 - cy) as f64;
         let r = (dx * dx + dy * dy).sqrt() as f32;
         let theta = dy.atan2(dx) as f32;
+        let (style_name, maxfeats, hfrt, feats) = if self.cfg.zz_ext {
+            ("PLY", 3, false, 4)
+        } else {
+            let (style_name, maxfeats, hfrt) = Self::zz_style_info("HAND-PLY");
+            let feats =
+                self.zz_feat_differences(style_name, maxfeats, 1, ZZ_DUMMY_FINGER, r, theta);
+            (style_name, maxfeats, hfrt, feats)
+        };
         self.zz_last_style = Some((
             "HAND-PLY".to_string(),
             "HAND-PLY".to_string(),
             "RIGHT".to_string(),
         ));
         self.zz_last_move = Some(ZzMoveInfo {
-            style_name: "HAND-PLY".to_string(),
+            style_name: style_name.to_string(),
             hand: 1,
-            finger: 0,
+            finger: ZZ_DUMMY_FINGER,
             r,
             theta,
-            maxfeats: 3,
-            hfrt: false,
+            maxfeats,
+            hfrt,
         });
         self.man_prep_busy = true;
+        if !self.cfg.zz_ext {
+            self.man_exec_busy = true;
+        }
         self.man_last_prep = Some(1);
         self.zz_last_cmd[1] = "HAND-PLY".to_string();
         if self.cfg.zz_two_proc {
@@ -2427,7 +2461,7 @@ impl Engine {
             },
         );
         self.push(
-            self.time_ms + 4 * self.cfg.feat_prep_ms,
+            self.time_ms + feats * self.cfg.feat_prep_ms,
             Prio::Num(0),
             Out::Always,
             Event::ZzHandPrep {
@@ -2575,14 +2609,47 @@ impl Engine {
             .map(|(_, v)| name_of(v))
             .unwrap_or_default();
         let hand_name = if hand == 0 { "LEFT" } else { "RIGHT" };
+        let mut line = format!("POINT-HAND-AT-KEY HAND {hand_name} TO-KEY {to_key}");
+        if let Some((_, offsets)) = slots.iter().find(|(s, _)| s == "OFFSETS") {
+            line.push_str(&format!(" OFFSETS {}", offsets.show()));
+        }
         self.now(
             Prio::Num(0),
             Out::Low,
             Event::Emit {
                 module: "MOTOR".to_string(),
-                line: format!("POINT-HAND-AT-KEY HAND {hand_name} TO-KEY {to_key}"),
+                line,
             },
         );
+        if let Some((_, offsets)) = slots.iter().find(|(s, _)| s == "OFFSETS") {
+            match offsets {
+                Value::Sym(s) if s.eq_ignore_ascii_case("STANDARD") => {
+                    self.zz_hands[hand].offsets = if hand == 0 {
+                        LEFT_FINGER_OFFSETS
+                    } else {
+                        RIGHT_FINGER_OFFSETS
+                    };
+                }
+                Value::List(items) => {
+                    for item in items {
+                        let Value::List(parts) = item else {
+                            continue;
+                        };
+                        let (Some(Value::Sym(finger)), Some(x), Some(y)) = (
+                            parts.first(),
+                            parts.get(1).and_then(num_of),
+                            parts.get(2).and_then(num_of),
+                        ) else {
+                            continue;
+                        };
+                        if let Some(f) = Self::touch_finger_idx(finger) {
+                            self.zz_hands[hand].offsets[f] = (x as i64, y as i64);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
         let Some(new_loc) = key_xy(&to_key) else {
             return Ok(());
         };
@@ -2590,15 +2657,14 @@ impl Engine {
         let dx = (new_loc.0 - hx) as f64;
         let dy = (new_loc.1 - hy) as f64;
         let r = (dx * dx + dy * dy).sqrt() as f32;
-        if r == 0.0 {
-            // `:686`: warning only, no movement.
-            return Ok(());
-        }
         let theta = dy.atan2(dx) as f32;
         let target = (
             (hx as f32 + r * theta.cos()).round() as i64,
             (hy as f32 + r * theta.sin()).round() as i64,
         );
+        if !self.cfg.zz_ext {
+            self.man_exec_busy = true;
+        }
         self.zz_hand_ply_request(
             "HAND-PLY",
             hand,
@@ -2790,6 +2856,10 @@ impl Engine {
             {
                 self.zz_mouse_request(c, &slots)
             }
+            (Some("HAND-TO-MOUSE"), _) => self.zz_hand_to(true),
+            (Some("HAND-TO-HOME"), _) => self.zz_hand_to(false),
+            (Some("POINT-HAND-AT-KEY"), _) => self.zz_point_hand_at_key(&slots),
+            (Some("CLEAR"), None) => self.manual_clear(),
             (Some(c), _)
                 if self.cfg.zz_ext
                     && matches!(
@@ -2802,8 +2872,6 @@ impl Engine {
                             | "RELEASE-KEY-TO-HOME"
                             | "MOVE-FINGER-TO-HOME"
                             | "ALL-FINGERS-TO-HOME"
-                            | "HAND-TO-MOUSE"
-                            | "HAND-TO-HOME"
                     ) =>
             {
                 self.zz_key_cmd(c, &slots)
@@ -2818,14 +2886,12 @@ impl Engine {
                         | "PECK-RECOIL"
                         | "POINT-FINGER"
                         | "RELEASE"
-                        | "HAND-TO-HOME"
                 ) =>
             {
                 self.zz_direct_style(c, &slots)
             }
             (Some("PREPARE"), _) if self.cfg.zz_ext => self.zz_prepare(&slots),
             (Some("EXECUTE"), _) if self.cfg.zz_ext => self.zz_execute(),
-            (Some("POINT-HAND-AT-KEY"), _) if self.cfg.zz_ext => self.zz_point_hand_at_key(&slots),
             (Some("DELAYED-PUNCH"), _) if self.cfg.zz_ext => self.zz_delayed_punch(&slots),
             (Some("RELEASE-ALL-FINGERS"), _) if self.cfg.zz_ext => self.zz_release_all_fingers(),
             got => Err(unimpl(format!("manual request {got:?}"))),

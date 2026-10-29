@@ -1216,6 +1216,9 @@ impl Engine {
                     // strike time, finish is the full move time (they differ
                     // only when `peck-strike-distance` is set).
                     "HOLD-PECK" => (init + strike, None, init + move_ms),
+                    // Base `peck`/`punch` only press; the extended styles add
+                    // the automatic release (`set-finger-up`).
+                    "PECK" if !self.cfg.zz_ext => (init + strike, None, init + move_ms + burst),
                     "PECK" => (
                         init + strike,
                         Some(init + move_ms + self.cfg.zz_krt_ms),
@@ -1236,6 +1239,7 @@ impl Engine {
                         Some(init + kct + delay_ms),
                         init + kct + delay_ms + burst,
                     ),
+                    "PUNCH" if !self.cfg.zz_ext => (init + kct, None, init + burst + burst),
                     "PUNCH" => (
                         init + kct,
                         Some(init + self.cfg.zz_krt_ms),
@@ -1311,7 +1315,14 @@ impl Engine {
                 // The finger goes down/up at execution time (`set-finger-down`
                 // / `set-finger-up`).
                 self.zz_hands[hand].down[finger] = down;
-                self.zz_hands[hand].held[finger] = if down { Some(key.clone()) } else { None };
+                // Base direct `peck`/`punch` presses are reported once; only
+                // the extended styles leave the finger held for a later
+                // release event.
+                self.zz_hands[hand].held[finger] = if down && self.cfg.zz_ext {
+                    Some(key.clone())
+                } else {
+                    None
+                };
                 if down {
                     self.zz_data
                         .push(("PRESSED".to_string(), self.time_ms, key));
@@ -1897,15 +1908,26 @@ impl Engine {
             }
             Event::ChangeState { module } => {
                 if show {
-                    self.emit(
-                        &module,
-                        "CHANGE-STATE :LAST NONE :PREP FREE :PROC FREE".into(),
-                    );
+                    if module == "MANUAL" {
+                        self.emit("MOTOR", "CHANGE-STATE LAST NONE PREP FREE PROC FREE".into());
+                    } else {
+                        self.emit(
+                            &module,
+                            "CHANGE-STATE :LAST NONE :PREP FREE :PROC FREE".into(),
+                        );
+                    }
                 }
                 // `clear`'s scheduled `change-state` frees the vision module's
-                // preparation state (`general-pm.lisp:333`).
+                // preparation state (`general-pm.lisp:333`), and the manual
+                // module's prep/processor state.
                 if module == "VISION" {
                     self.visual_prep_busy = false;
+                    self.changed();
+                } else if module == "MANUAL" {
+                    self.man_prep_busy = false;
+                    self.man_exec_busy = false;
+                    self.man_exec[0] = false;
+                    self.man_exec[1] = false;
                     self.changed();
                 }
             }
@@ -2214,6 +2236,8 @@ impl Engine {
                     }
                     self.zz_maybe_execute();
                 } else {
+                    self.man_exec[0] = false;
+                    self.man_exec[1] = false;
                     self.man_exec_busy = false;
                 }
             }

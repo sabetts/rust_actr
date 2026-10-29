@@ -30,6 +30,7 @@ pub enum Pattern {
     Num(f64),
     Str(String),
     Nil,
+    List(Vec<Pattern>),
 }
 
 impl Pattern {
@@ -41,9 +42,11 @@ impl Pattern {
             Sexp::Int(i) => Ok(Pattern::Int(*i)),
             Sexp::Float(x) => Ok(Pattern::Num(*x)),
             Sexp::Str(v) => Ok(Pattern::Str(v.clone())),
-            Sexp::List(_) => Err(LoadError::Structural(format!(
-                "list where atomic pattern expected: {s:?}"
-            ))),
+            Sexp::List(v) => Ok(Pattern::List(
+                v.iter()
+                    .map(Pattern::from_sexp)
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
         }
     }
 }

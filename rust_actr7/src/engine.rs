@@ -242,6 +242,11 @@ impl Value {
             Pattern::Num(x) => Ok(Value::Num(*x)),
             Pattern::Str(s) => Ok(Value::Str(s.clone())),
             Pattern::Nil => Ok(Value::Nil),
+            Pattern::List(ps) => Ok(Value::List(
+                ps.iter()
+                    .map(Value::from_pattern)
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
         }
     }
 

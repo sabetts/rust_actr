@@ -5528,3 +5528,24 @@ ACT-R orders query conditions by `buffer-index` (`visual` < `manual` <
 are unchanged.
 
 Corpus: **518 passed / 49 ignored**.
+
+## 330. Hand-move test: nested offsets and base motor hand styles
+
+Recovered `hand-move-test`. Added `Pattern::List` so a manual request slot can
+carry `offsets ((index -1 0))` (and the nested list converts through
+`Value::List` for matching/printing).
+
+The base manual module now routes `hand-to-mouse`, `hand-to-home`,
+`point-hand-at-key`, and `isa clear` through the existing hand-ply machinery.
+`hand-ply` prep uses ACT-R's feature-difference logic for base models (4
+features initially, then distance/direction differences); the extended
+actions path keeps its previous 4-feature behavior. Base `peck`/`punch` emit
+only the press (no automatic `release-key`), and `point-hand-at-key` applies
+`standard`/explicit finger offsets. Manual clear now holds the module busy
+until its scheduled change-state and resets the last prepared movement.
+
+The test's task-side `output-key` handler is represented by a post-event hook
+emitting `The key is "…"`; the hook is reinstalled after the driver's
+`chunk-type` command, which rebuilds the engine.
+
+Corpus: **519 passed / 48 ignored**.

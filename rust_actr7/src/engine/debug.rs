@@ -4333,5 +4333,9 @@ fn pattern_show(p: &crate::model::Pattern) -> String {
         Pattern::Int(i) => i.to_string(),
         Pattern::Num(x) => x.to_string(),
         Pattern::Str(s) => format!("\"{s}\""),
+        Pattern::List(ps) => format!(
+            "({})",
+            ps.iter().map(pattern_show).collect::<Vec<_>>().join(" ")
+        ),
     }
 }

@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **518 passed / 49 ignored / 0 failed**
+- Full suite: **519 passed / 48 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **518 passed / 49 ignored**.
+- [x] Full suite green at **519 passed / 48 ignored**.
 
 Remaining:
 
@@ -170,12 +170,12 @@ Completed:
 - [x] `tutorial-unit7-paired-composed-production` recovered with a real
   `paired-task 1 2` driver, a four-prompt device sidecar, and `pp production0`.
   Composed query conditions now follow ACT-R's `buffer-index` order.
+- [x] `hand-move-test` recovered. `Pattern::List` supports nested offsets;
+  base hand-to-mouse/home, point-hand-at-key, manual clear, and base
+  peck/punch release behavior now match the motor trace.
 
 Remaining in this wave:
 
-- [ ] `hand-move-test`: model load blocks on nested
-  `offsets ((index -1 0))`, which needs a non-atomic slot-pattern
-  representation.
 - [ ] `keypad-test`: blocks on the unimplemented `HAND-TO-KEYPAD` manual
   request.
 
@@ -183,8 +183,7 @@ Approach:
 
 - Compare per-trial `(start, key)` rows against a trained oracle subject; the
   aggregate summary hides which trials diverge.
-- Address `hand-move-test`'s slot-value representation and `keypad-test`'s
-  manual request.
+- Add `HAND-TO-KEYPAD` to the base manual request routing.
 
 ### Wave 3 - Numerical RNG and Summaries
 

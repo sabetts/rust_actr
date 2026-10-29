@@ -2,25 +2,51 @@
 //! ref:  hand-move-test.ref
 //! lisp: actr7.x/test-models/hand-move-test.lisp
 
-use crate::Case;
-use actr_engine::Step;
+use crate::hooks;
+use actr_engine::{EventHook, EventView, HookEffect, Step};
+
+#[derive(Default)]
+struct KeyHandler {
+    effects: Vec<HookEffect>,
+}
+
+impl EventHook for KeyHandler {
+    fn post(&mut self, line: &str, _ev: &EventView) {
+        if line.contains("output-key") {
+            if let Some(key) = line.split_whitespace().last() {
+                self.effects
+                    .push(HookEffect::ModelOutput(format!("The key is \"{key}\"")));
+            }
+        }
+    }
+
+    fn take_effects(&mut self) -> Vec<HookEffect> {
+        std::mem::take(&mut self.effects)
+    }
+}
 
 #[test]
-// BLOCKED ON: hand move/key-event trace.
-// The ref records cursor movement and handler output for a manual move; the
-// engine's motor event sequence still differs.
-#[ignore = "engine-divergence: motor move trace"]
 fn hand_move_test() -> Result<(), String> {
-    Case::new("hand-move-test")
+    hooks::HookCase::new("hand-move-test")
         .models(&["test-models;models;hand-move-test.lisp"])
         .seed((100, 0))
         .steps(vec![
-            Step::Command { name: "chunk-type".into(), args: crate::sexps(r#"((CURSOR (:INCLUDE VISUAL-OBJECT)) (CURSOR T) SCREEN-POS VALUE STATUS COLOR HEIGHT WIDTH)"#) },
+            Step::Command {
+                name: "chunk-type".into(),
+                args: crate::sexps(
+                    r#"((CURSOR (:INCLUDE VISUAL-OBJECT)) (CURSOR T) SCREEN-POS VALUE STATUS COLOR HEIGHT WIDTH)"#,
+                ),
+            },
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
-            Step::Run { secs: 10.0, trace: true, width: 22 },
+            Step::Run {
+                secs: 10.0,
+                trace: true,
+                width: 22,
+            },
         ])
-        .check()
+        .swap_hook_at(1, KeyHandler::default())
+        .check_segment(KeyHandler::default())
 }
