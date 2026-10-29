@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **532 passed / 35 ignored / 0 failed**
+- Full suite: **535 passed / 32 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -283,6 +283,20 @@ Approach:
   chunk's name/finst when ACT-R's `:update` path keeps it.
 - Add the missing device sidecars/drivers for the AGI and image tasks.
 - Re-evaluate `bst-learn`'s 15-trial live window after these pieces land.
+
+Completed:
+
+- [x] `agi-modify-test` promoted. Added identity-based text/button/line
+  updates, scripted button output at click completion, visicon `Att` aging,
+  finst transfer across remove/re-add, and the re-encode when the attended
+  item moves.
+- [x] `creating-an-image` promoted. Added image features, image click
+  callbacks, imaginal image-chunk expansion, and image approach-width motor
+  timing.
+- [x] `bst-learn` promoted. The learning driver now builds the window itself
+  (without the duplicate sidecar), preserves inter-trial stop markers, and
+  uses the ref's summary column formatting.
+- [x] Full suite green at **535 passed / 32 ignored**.
 
 #### Wave 4C - Conflict-tree information gain
 

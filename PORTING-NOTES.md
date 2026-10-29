@@ -5685,3 +5685,44 @@ run, matching the ref's `Stopped because time limit reached` before the new
 `proc-display` at the same millisecond.
 
 Corpus: **532 passed / 35 ignored**.
+
+## 336. AGI item lifecycle, image VDIs, and the BST learning trace
+
+Recovered `agi-modify-test`, `creating-an-image`, and `bst-learn`.
+
+AGI exposed that `set-visloc-default` was only consulted for `:attended`; the
+auto-stuff search now uses the whole default spec (`kind oval screen-x lowest`
+in this task). Visicon feature chunks are also printable by `pprint-chunks`
+(copy names resolve through `chunk-copied-from`), with the loc-chunk `VALUE`
+showing the feature kind (`TEXT`, `OVAL`, `IMAGE`) while a line keeps its
+orientation.
+
+Window-item identity is now task-side and shared:
+
+- text/button/line modifies update the existing feature names in place and do
+  not refresh their visual timestamp, so an old unattended item becomes `NIL`
+  rather than `NEW`; `printed-visicon` uses the same onset-span `Att` rule.
+- removing an attended item records a finst transfer, so a same-position
+  re-add stays `T` (AGI's button B).
+- scripted button/image clicks fire their action when the MOUSE notify event
+  completes, not at the request; button callbacks and the image extension's
+  warning/click outputs therefore land at the ref time.
+- an in-place move of the attended button schedules the 85 ms
+  `encoding-complete`/`no visual-object found` pair and keeps vision busy
+  until it lands.
+
+`creating-an-image` adds image features (`IMAGE` kind/value/geometry), the
+image click callbacks (`default-image-action`, `click-brain`, and the
+parameterized second action), `+imaginal> =loc` image-slot expansion, and
+width/height lookup from an imaginal target for Fitts timing. `pprint-chunks-
+fct` and buffer references (`=visual`, `=visual-location`) now resolve to the
+buffer's copy; a visual buffer copy prints as its source object copy
+(`IMAGE0-0`).
+
+`bst-learn` uses its task driver's own window rather than the extracted
+sidecar, which also contains the same buttons/lines. The driver drops the
+armed script, preserves the inter-trial `Stopped because no events left`
+marker, and formats the learning summary with the ref's 8-column/two-decimal
+table (the experiment variant keeps its 6-column/one-decimal table).
+
+Corpus: **535 passed / 32 ignored**.
