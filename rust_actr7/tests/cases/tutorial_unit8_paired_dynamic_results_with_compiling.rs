@@ -6,10 +6,12 @@
 use crate::Case;
 
 #[test]
-// BLOCKED ON: exact per-subject key timings.
-// The paired summary matches within a few milliseconds; the remaining diff
-// is in individual latency rows, not the aggregate shape (#294).
-#[ignore = "numerical: paired-summary timing"]
+// BLOCKED ON: dynamic paired retrieval success/latency pattern.
+// The summary now has the right shape, but per-trial retrieval successes and
+// compiled-production latencies still diverge from the oracle.
+#[ignore = "numerical: dynamic paired retrieval/latency pattern"]
 fn tutorial_unit8_paired_dynamic_results_with_compiling() -> Result<(), String> {
-    Case::from_spec("tutorial-unit8-paired-dynamic-results-with-compiling").check()
+    Case::from_spec("tutorial-unit8-paired-dynamic-results-with-compiling")
+        .paired_summary()
+        .check()
 }

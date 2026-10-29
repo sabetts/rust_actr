@@ -5447,3 +5447,35 @@ The remaining paired stub, `tutorial-unit7-paired-composed-production`, needs
 driver has not yet captured that command output.
 
 Corpus: **511 passed / 56 ignored**.
+
+## 327. Paired summaries: motor feature tolerances and probe-run collection
+
+Recovered the five remaining paired summary cases:
+
+- `tutorial-unit4-paired-experiment`
+- `tutorial-unit4-paired-experiment-no-bll`
+- `tutorial-unit4-paired-experiment-with-rt`
+- `tutorial-unit7-paired-learning-results-no-compiling`
+- `tutorial-unit7-paired-learning-results-with-compiling`
+
+The supposed uniform 4-5 ms offset was six individual trials, not a global
+timestamp shift. Comparing a trained oracle subject against Rust trial by trial
+showed 6/160 keys exactly 100 ms slow; all were adjacent same-finger key
+transitions (`6->7`, `4->5`, `5->4`). ACT-R's `feat-differences` uses
+`distance=`/`direction=` tolerances for peck features (2 degrees and 45
+degrees, `motor.lisp:890`), while Rust compared `r`/`theta` for exact equality
+and therefore prepared two extra features. Applying the upstream tolerances
+recovers all six trials and all five summaries without an offset hack.
+
+The unit-7/8 paired collector also needed two driver fixes: read the probe from
+`IMAGINAL.ARG1`/`WORD` as well as unit-4's `PROBE`, and keep only the probe half
+of each 10 s probe/feedback cycle (the feedback display leaves the probe slot
+populated). Their generated tests were calling `check()` without
+`.paired_summary()`, so they had been comparing an empty trace.
+
+`tutorial-unit8-paired-dynamic-results-with-compiling` now has the correct
+summary shape, but its per-trial retrieval-success pattern still diverges from
+the oracle (first subject differs from trial 20 onward), so it remains ignored
+on the dynamic-model activation/retrieval issue rather than timing.
+
+Corpus: **516 passed / 51 ignored**.

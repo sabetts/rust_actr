@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **511 passed / 56 ignored / 0 failed**
+- Full suite: **516 passed / 51 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **511 passed / 56 ignored**.
+- [x] Full suite green at **516 passed / 51 ignored**.
 
 Remaining:
 
@@ -133,13 +133,8 @@ Targets include:
 - `hand-move-test`, `keypad-test`.
 - Any paired case still blocked by pcomp state after Wave 1.
 
-Reconnaissance:
+Completed:
 
-- `hand-move-test` blocks at model load: nested `offsets ((index -1 0))`
-  needs a non-atomic slot-pattern representation.
-- `keypad-test` blocks on the unimplemented `HAND-TO-KEYPAD` manual request.
-- Unit-4 paired summaries still differ only by the known 4-5 ms per-key
-  offset.
 - [x] `tutorial-unit7-paired-learning-alpha-1` recovered with the same
   `permute-list`/`ConsumeRng` correction as the activation-trace case. Its
   real filter hook now breaks at `PRODUCTION7` on the expected state.
@@ -157,13 +152,41 @@ Reconnaissance:
 - [x] `tutorial-unit8-paired-dynamic-compiling-to-dynamic` and
   `...-compiling-to-static` recovered with their filter hooks
   (breaks at 400/600).
+- [x] Six paired event-hook/compiling cases recovered in total; the shared
+  fixes were the one-pair `permute-list` form, the real `filter`/`filter2`
+  lifecycle, and confining the goal map's variable arm.
+- [x] Five paired-summary cases recovered:
+  `tutorial-unit4-paired-experiment`, `...-no-bll`, `...-with-rt`, and
+  `tutorial-unit7-paired-learning-results-no-compiling`/`...-with-compiling`.
+  The 4-5 ms offset was six adjacent same-finger key transitions; Rust now
+  uses ACT-R's `distance=`/`direction=` peck tolerances (`motor.lisp:890`).
+  The collector also reads `IMAGINAL.ARG1`/`WORD` and keeps only the probe half
+  of each 10 s probe/feedback cycle.
+
+Remaining in this wave:
+
+- [ ] `tutorial-unit8-paired-dynamic-results-with-compiling`: summary shape is
+  correct, but the per-trial retrieval-success pattern still diverges from the
+  oracle (first subject differs from trial 20 onward). This is a dynamic-model
+  activation/retrieval issue, not the motor timestamp.
+- [ ] `tutorial-unit7-paired-composed-production`: the current driver never
+  presents paired stimuli, so `pp` shows only base productions and no
+  `PRODUCTION0`. Needs a paired-task/device sidecar or equivalent replay.
+- [ ] `hand-move-test`: model load blocks on nested
+  `offsets ((index -1 0))`, which needs a non-atomic slot-pattern
+  representation.
+- [ ] `keypad-test`: blocks on the unimplemented `HAND-TO-KEYPAD` manual
+  request.
 
 Approach:
 
-- Audit the per-key motor/device timestamp offset first.
-- Then take the event-hook/utility cluster, comparing noisy utility draws and
-  candidate order at the first divergent conflict resolution.
-- Use device timestamp instrumentation and the same first-divergence method.
+- Compare per-trial `(start, key)` rows against a trained oracle subject; the
+  aggregate summary hides which trials diverge.
+- For the remaining unit-8 dynamic case, isolate retrieval success/activation
+  from motor timing before touching the summary.
+- Build a paired stimulus sidecar for the composed-production case.
+- Then address `hand-move-test`'s slot-value representation and `keypad-test`'s
+  manual request.
 
 ### Wave 3 - Numerical RNG and Summaries
 
@@ -173,7 +196,7 @@ Targets:
 
 - Six Siegler response-distribution cases.
 - Sperling experiment summary and Sperling visicon/RNG case.
-- Three paired summaries still failing after motor fixes.
+- Unit-8 dynamic paired summary retrieval/latency pattern.
 - BST PPM learning summaries.
 
 Approach:

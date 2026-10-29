@@ -1944,8 +1944,15 @@ impl Engine {
                         } else if *f != spec.finger {
                             3
                         } else {
-                            (if *r != spec.r { 1 } else { 0 })
-                                + (if *t != spec.theta { 1 } else { 0 })
+                            // `distance=`/`direction=` (`motor.lisp:890`):
+                            // peck features use the 2-degree / 45-degree
+                            // tolerances, not exact polar equality.
+                            let distance_same = (*r - spec.r).abs() < 2.0;
+                            let delta = (*t - spec.theta).abs();
+                            let direction_same = delta < std::f32::consts::FRAC_PI_4
+                                || delta > 7.0 * std::f32::consts::PI / 4.0;
+                            (if distance_same { 0 } else { 1 })
+                                + (if direction_same { 0 } else { 1 })
                         }
                     }
                 };

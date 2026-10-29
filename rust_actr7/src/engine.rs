@@ -4707,7 +4707,17 @@ impl Engine {
         if !self.paired_collect {
             return;
         }
-        let Some(probe) = self.buffer_slot_value("IMAGINAL", "PROBE") else {
+        // Each trial is a 5 s probe run followed by a 5 s feedback run. The
+        // feedback display leaves ARG1/PROBE in imaginal, so keep only the
+        // probe half of each 10 s cycle.
+        if start_ms % 10000 != 0 {
+            return;
+        }
+        let Some(probe) = self
+            .buffer_slot_value("IMAGINAL", "PROBE")
+            .or_else(|| self.buffer_slot_value("IMAGINAL", "ARG1"))
+            .or_else(|| self.buffer_slot_value("IMAGINAL", "WORD"))
+        else {
             return;
         };
         self.paired_runs.push(PairedRun {
