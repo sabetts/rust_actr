@@ -5587,3 +5587,37 @@ use direct `SieglerDriver` steps with the source seeds and parameters:
 - rt-and-base: seed 102, `:rt -10`, `:mp 5`, `:ans .5`, fact base 0
 
 Corpus: **526 passed / 41 ignored**.
+
+## 333. Sperling summaries: monitor-visicon print, event ordering, and trial seeds
+
+Recovered both Sperling targets.
+
+`sperling` was missing the task's `visicon-update` monitor print. A new
+`(PRINT-VISICON-UPDATE ms)` device op queues the table from `visicon-update`
+at priority -1, after the update but before the wave's conflict resolution.
+The sidecar now records the `SOUND` events as well as the display, and the
+second trial switches to high detail.
+
+The high-detail trace exposed three ordering/state bugs:
+
+- an AURAL module request emitted `ATTEND-SOUND` synchronously at priority
+  50, ahead of the production's priority-10 buffer clears. It now queues an
+  `AttendSound` event at priority 0.
+- clearing `AURAL-LOCATION` did not clear the pending audio-event id, so a
+  later `AUDIO-EVENT-ENDED` fired after the buffer was empty. Buffer clears
+  now reset it.
+- a deferred `update-attended-loc` re-encode could be scheduled after a new
+  move-attention had already gone busy. It now returns early while vision is
+  busy, removing the duplicate `ENCODING-COMPLETE`/`NO VISUAL-OBJECT FOUND`
+  pair.
+
+`tutorial-unit3-sperling-experiment` now drives the recovered 800-run spec
+with a per-trial score collector. The task's tone frequency is absent from the
+recorded `new-sound` line, so the collector derives the row from the trial
+seed (21 letter draws, then `act-r-random 3`) and recreates the tone. The
+collector also drops the four block-order `permute-list` draws from the
+scripted consume: the sidecar already fixes the block order, and the task
+reseeds before each trial, so only the 23 post-seed task draws belong in that
+stream.
+
+Corpus: **528 passed / 39 ignored**.

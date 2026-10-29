@@ -72,6 +72,7 @@ impl Engine {
                 self.buffer_mut(&buffer).requested = requested;
                 if buffer == "GOAL" {
                     self.bold_point("GOAL");
+                    self.sperling_capture_row();
                 }
                 self.changed();
             }
@@ -116,6 +117,9 @@ impl Engine {
                 self.buffer_mut(&buffer).failed = false;
                 self.buffer_mut(&buffer).modified = false;
                 self.buffer_mut(&buffer).requested = requested;
+                if buffer == "GOAL" {
+                    self.sperling_capture_row();
+                }
                 self.changed();
             }
             Event::EraseBuffer { buffer, module } => {
@@ -388,6 +392,21 @@ impl Engine {
                     }
                 }
             }
+            Event::AttendSound { idx } => {
+                let s = self.sounds[idx].clone();
+                if let Some(buf) = self.buffers.get_mut("AURAL") {
+                    buf.busy = true;
+                }
+                if self.cfg.detail.shows(Out::Medium) {
+                    self.emit("AUDIO", format!("ATTEND-SOUND {}-0", s.ename));
+                }
+                self.push(
+                    self.time_ms + s.recode,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::AudioEncodingComplete { idx },
+                );
+            }
             Event::AudioEncodingComplete { idx } => {
                 // `audio-encoding-complete` (`audio.lisp:1205`): free the
                 // module, give the sound chunk `content`/`kind`/`event`, then
@@ -435,6 +454,11 @@ impl Engine {
                 }
                 let cleared = self.buffer_mut(&buffer).chunk.take();
                 self.buffer_mut(&buffer).modified = false;
+                if buffer == "AURAL-LOCATION" {
+                    // `aural-location-update-check` only fires while the buffer
+                    // still holds the event (audio.lisp:1068).
+                    self.aural_loc_evt = None;
+                }
                 if buffer == "GOAL" && self.cfg.threads {
                     if let Some(n) = cleared.as_ref().and_then(|c| c.name.clone()) {
                         self.goal_set
@@ -580,6 +604,9 @@ impl Engine {
                         self.tracker_check_buffer_changes(&buffer, Some(&s));
                     }
                 }
+                if buffer == "GOAL" {
+                    self.sperling_capture_row();
+                }
                 self.changed();
             }
             Event::ModuleRequest {
@@ -723,19 +750,7 @@ impl Engine {
                         };
                         if let Some(ename) = ename {
                             if let Some(idx) = self.sounds.iter().position(|s| s.ename == ename) {
-                                if let Some(buf) = self.buffers.get_mut("AURAL") {
-                                    buf.busy = true;
-                                }
-                                if self.cfg.detail.shows(Out::Medium) {
-                                    self.emit("AUDIO", format!("ATTEND-SOUND {ename}-0"));
-                                }
-                                let recode = self.sounds[idx].recode;
-                                self.push(
-                                    self.time_ms + recode,
-                                    Prio::Num(0),
-                                    Out::Medium,
-                                    Event::AudioEncodingComplete { idx },
-                                );
+                                self.now(Prio::Num(0), Out::Medium, Event::AttendSound { idx });
                             }
                         }
                     }
@@ -984,9 +999,14 @@ impl Engine {
                     }
                 });
                 for p in late {
+                    let prio = if p.after_update {
+                        Prio::Num(-1)
+                    } else {
+                        Prio::Min
+                    };
                     self.push_m(
                         p.at_ms,
-                        Prio::Min,
+                        prio,
                         Out::Always,
                         true,
                         Event::PrintVisicon {
@@ -2142,6 +2162,9 @@ impl Engine {
             }
             Event::OutputKey { key } => {
                 let key = super::motor::canonical_output_key(&key);
+                if self.sperling_collect && !key.eq_ignore_ascii_case("space") {
+                    self.sperling_responses.push(key.clone());
+                }
                 self.last_output_key = Some((key.clone(), self.time_ms));
                 self.fired_commands.push((
                     "output-key".to_string(),

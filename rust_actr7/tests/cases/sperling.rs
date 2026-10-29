@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: Sperling visicon ordering and RNG draws.
-// The known first divergence is the first auto-stuffed location (#168); the
-// `ConsumeRng(23)` offsets are calibrated to the Lisp stream.
-#[ignore = "engine-divergence: Sperling visicon/RNG"]
 fn sperling() -> Result<(), String> {
     Case::new("sperling")
         .models(&[
@@ -30,6 +26,7 @@ fn sperling() -> Result<(), String> {
                 width: 22,
             },
             Step::Reset,
+            Step::SetDetail(crate::Detail::High),
             Step::ConsumeRng(23),
             Step::Run {
                 secs: 30.0,

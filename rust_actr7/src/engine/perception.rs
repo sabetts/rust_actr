@@ -705,7 +705,11 @@ impl Engine {
             None => false,
         };
         let _ = (cleared, removed);
-        if attended_gone {
+        // `update-attended-loc` returns early when a movement already occupies
+        // the visual module (Sperling's 0.941 clear is processed at 0.975,
+        // after the new move-attention has set exec BUSY, so only that
+        // movement's requested encode lands at 1.060).
+        if attended_gone && !self.visual_busy {
             if let Some(loc) = self.last_attention.clone() {
                 if self.cfg.emma {
                     let end = self.emma_loc_xyz(&loc);

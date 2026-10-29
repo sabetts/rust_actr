@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **526 passed / 41 ignored / 0 failed**
+- Full suite: **528 passed / 39 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -195,10 +195,13 @@ Completed:
   trial seed was one low (`110` vs the task's `incf` result `111`), and the
   five spec-backed cases now run `SieglerDriver` with their source seeds and
   parameters instead of feeding an observed matrix to `CORRELATION`.
+- [x] Sperling experiment summary and Sperling visicon/RNG case. The trace
+  needed the monitor-visicon print, AURAL/attend-sound ordering, stale
+  audio-event state, and the post-move re-encode guard; the experiment
+  collector scores the 800-run sidecar and recreates each seed-derived tone.
 
 Remaining:
 
-- Sperling experiment summary and Sperling visicon/RNG case.
 - BST PPM learning summaries.
 
 Approach:

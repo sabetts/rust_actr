@@ -2208,6 +2208,157 @@ impl Engine {
         self.paired_collect = true;
     }
 
+    pub fn sperling_collect_start(&mut self) {
+        self.sperling_counts = [0; 4];
+        self.sperling_trials = 0;
+        self.sperling_row = None;
+        self.sperling_responses.clear();
+        self.sperling_collect = true;
+    }
+
+    /// Set the per-trial seed and, while collecting a Sperling experiment,
+    /// recreate the tone the task derives from its 21-draw letter permutation.
+    /// The sidecar supplies the exact display; only the tone frequency is
+    /// seed-dependent and therefore absent from the recorded `new-sound` line.
+    pub fn sperling_set_seed(&mut self, seed: (u64, u64)) {
+        self.set_seed(seed);
+        if !self.sperling_collect {
+            return;
+        }
+        let mut rng = self.rng.borrow().clone();
+        for _ in 0..21 {
+            rng.next_u32();
+        }
+        let row = rng.random_int(3);
+        let Some(at) = self
+            .device_commands
+            .iter()
+            .find(|c| {
+                c.run == Some(self.device_run) && c.module == "AUDIO" && c.details == "new-sound"
+            })
+            .map(|c| c.at_ms)
+        else {
+            return;
+        };
+        let freq = match row {
+            0 => 2000,
+            1 => 1000,
+            _ => 500,
+        };
+        let idx = self.add_sound(freq, 500, at);
+        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+    }
+
+    /// Record the current trial's target row when the goal buffer gets it
+    /// (`START-REPORT` sets `ROW` before the report production clears GOAL).
+    pub(super) fn sperling_capture_row(&mut self) {
+        if !self.sperling_collect {
+            return;
+        }
+        let Some(row) = self.buffer_slot_value("GOAL", "ROW") else {
+            return;
+        };
+        self.sperling_row = match row.trim_matches('\'').to_ascii_uppercase().as_str() {
+            "HIGH" => Some(0),
+            "MEDIUM" => Some(1),
+            "LOW" => Some(2),
+            _ => None,
+        };
+    }
+
+    /// Score the run that just finished. The experiment's device sidecar
+    /// records the trial's display; the tone-onset condition is the scheduled
+    /// `new-sound` time (0/150/300/1000 ms).
+    pub(super) fn sperling_finish_trial(&mut self) {
+        let run = self.device_run;
+        let Some(row) = self.sperling_row else {
+            return;
+        };
+        let Some(condition) = self
+            .device_commands
+            .iter()
+            .find(|c| c.run == Some(run) && c.module == "AUDIO" && c.details == "new-sound")
+            .and_then(|c| match c.at_ms {
+                0 => Some(0),
+                150 => Some(1),
+                300 => Some(2),
+                1000 => Some(3),
+                _ => None,
+            })
+        else {
+            return;
+        };
+        let y = 100 + row as i64 * 50;
+        let mut answers: Vec<&str> = self
+            .device_texts
+            .iter()
+            .filter(|t| t.run == Some(run) && t.y == y)
+            .map(|t| t.text.as_str())
+            .collect();
+        answers.sort_by_key(|t| {
+            self.device_texts
+                .iter()
+                .filter(|d| d.run == Some(run) && d.y == y && d.text == *t)
+                .map(|d| d.x)
+                .min()
+                .unwrap_or(0)
+        });
+        let score = answers
+            .iter()
+            .filter(|a| {
+                self.sperling_responses
+                    .iter()
+                    .any(|r| r.eq_ignore_ascii_case(a))
+            })
+            .count() as u32;
+        self.sperling_counts[condition] += score;
+        self.sperling_trials += 1;
+        if self.sperling_trials == 400 {
+            self.sperling_flush();
+        }
+    }
+
+    pub fn sperling_summary(&mut self) {
+        self.sperling_flush();
+        self.sperling_collect = false;
+    }
+
+    fn sperling_flush(&mut self) {
+        if self.sperling_trials == 0 {
+            return;
+        }
+        const DATA: [f64; 4] = [3.03, 2.40, 2.03, 1.50];
+        let blocks = (self.sperling_trials / 4) as f64;
+        let predicted: Vec<f64> = self
+            .sperling_counts
+            .iter()
+            .map(|c| *c as f64 / blocks)
+            .collect();
+        let sum_r: f64 = predicted.iter().sum();
+        let sum_d: f64 = DATA.iter().sum();
+        let sum_r2: f64 = predicted.iter().map(|x| x * x).sum();
+        let sum_d2: f64 = DATA.iter().map(|x| x * x).sum();
+        let sum_rd: f64 = predicted.iter().zip(DATA.iter()).map(|(a, b)| a * b).sum();
+        let avg_r = sum_r / 4.0;
+        let avg_d = sum_d / 4.0;
+        let corr = (sum_rd / 4.0 - avg_r * avg_d)
+            / ((sum_r2 / 4.0 - avg_r * avg_r).sqrt() * (sum_d2 / 4.0 - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / 4.0).sqrt();
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines.push(String::new());
+        self.out_lines
+            .push("Condition    Current Participant   Original Experiment".to_string());
+        for (i, condition) in [0.00, 0.15, 0.30, 1.00].iter().enumerate() {
+            self.out_lines.push(format!(
+                " {condition:4.2} sec.          {:6.2}                {:6.2}",
+                predicted[i], DATA[i]
+            ));
+        }
+        self.sperling_counts = [0; 4];
+        self.sperling_trials = 0;
+    }
+
     /// `output-data`/`print-results` from `tutorial/lisp/paired.lisp:167`:
     /// average the per-block accuracy and correct-response latency over the
     /// experiment runs and compare with the original paired-associate data.

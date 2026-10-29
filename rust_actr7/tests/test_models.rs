@@ -615,10 +615,13 @@ fn parse_device_op(
             }),
             // `(PRINT-VISICON ms)` / `(PRINT-VISICON-LATE ms)`: a task
             // `print-visicon` called inside a run, which cannot be a step.
-            "PRINT-VISICON" | "PRINT-VISICON-LATE" => {
+            // `(PRINT-VISICON-UPDATE ms)` is a monitor callback on the
+            // `visicon-update` command (Sperling).
+            "PRINT-VISICON" | "PRINT-VISICON-LATE" | "PRINT-VISICON-UPDATE" => {
                 device.prints.push(actr_engine::engine::DevicePrint {
                     at_ms: ms()?,
                     late: op == "PRINT-VISICON-LATE",
+                    after_update: op == "PRINT-VISICON-UPDATE",
                     run,
                     seq,
                 })
@@ -958,6 +961,14 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .paired_collect_start(),
         Step::PairedSummary => session.engine_mut().ok_or_else(no_model)?.paired_summary(),
+        Step::SperlingCollect => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .sperling_collect_start(),
+        Step::SperlingSummary => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .sperling_summary(),
         Step::SieglerDriver {
             first_seed,
             sets,
@@ -1061,6 +1072,28 @@ impl Case {
     pub fn paired_summary(mut self) -> Self {
         self.steps.insert(0, Step::PairedCollect);
         self.steps.push(Step::PairedSummary);
+        self
+    }
+
+    /// Wrap the Sperling experiment spec with its per-trial score collector
+    /// and final summary. The collector reports each completed 400-trial run,
+    /// so the task's second experiment prompt stays between the two tables.
+    pub fn sperling_summary(mut self) -> Self {
+        // The extractor records the four-onset `permute-list` of a block as
+        // task draws before the block's first trial. The block order is already
+        // fixed by the device sidecar, and the task reseeds the model before
+        // every trial, so only the 23 draws made after `:seed` affect that
+        // trial's noise stream. Drop the four block-order draws from the
+        // scripted consume so the trial stream matches ACT-R.
+        for step in &mut self.steps {
+            if let Step::ConsumeRng(n) = step {
+                if *n == 27 {
+                    *n = 23;
+                }
+            }
+        }
+        self.steps.insert(0, Step::SperlingCollect);
+        self.steps.push(Step::SperlingSummary);
         self
     }
 

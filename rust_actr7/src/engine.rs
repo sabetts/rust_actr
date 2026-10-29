@@ -595,6 +595,10 @@ pub struct DeviceRemove {
 pub struct DevicePrint {
     pub at_ms: i64,
     pub late: bool,
+    /// The task monitors `visicon-update` and prints from the monitor, so the
+    /// table lands after `visicon-update` but before the wave's conflict
+    /// resolution (Sperling's `test-sperling`).
+    pub after_update: bool,
     pub run: Option<u32>,
     pub seq: u32,
 }
@@ -2121,6 +2125,12 @@ enum Event {
     StuffSound {
         idx: usize,
     },
+    /// Audio module: `attend-sound` (`audio.lisp:1099`), queued with the
+    /// request's default priority so a production's buffer clears at
+    /// priority 10 land first.
+    AttendSound {
+        idx: usize,
+    },
     /// Audio module: `attend-sound` finishes, building the sound chunk and
     /// setting the `AURAL` buffer.
     AudioEncodingComplete {
@@ -2612,6 +2622,14 @@ pub struct Engine {
     /// the imaginal buffer when the run stopped.
     paired_runs: Vec<PairedRun>,
     paired_collect: bool,
+    /// Sperling experiment scores, indexed by tone-onset condition.
+    sperling_counts: [u32; 4],
+    sperling_trials: u32,
+    sperling_collect: bool,
+    /// Target row for the current Sperling trial (`HIGH`/`MEDIUM`/`LOW`).
+    sperling_row: Option<usize>,
+    /// Non-space keys reported by `output-key` in the current trial.
+    sperling_responses: Vec<String>,
     /// Last `output-key` event in the current run.
     last_output_key: Option<(String, i64)>,
     /// act-touch: which hands are on the touch device (left=0, right=1).
@@ -3008,6 +3026,11 @@ impl Engine {
             fan_collect: false,
             paired_runs: Vec::new(),
             paired_collect: false,
+            sperling_counts: [0; 4],
+            sperling_trials: 0,
+            sperling_collect: false,
+            sperling_row: None,
+            sperling_responses: Vec::new(),
             last_output_key: None,
             touch_hands: [false, false],
             touch_fingers: [[(0, 0, 1); 5]; 2],
@@ -3234,9 +3257,11 @@ impl Engine {
         // wave at the same instant, so it is queued now at the highest
         // priority. The *late* one (`:priority :min`) is queued by the wave
         // it follows, so it lands after that wave's `conflict-resolution`.
+        // A monitor print is queued by `visicon-update` and runs immediately
+        // after it, before the wave's conflict resolution.
         let prints: Vec<DevicePrint> = std::mem::take(&mut self.pending_prints);
         for p in prints {
-            if !p.late {
+            if !p.late && !p.after_update {
                 self.push_m(
                     p.at_ms,
                     Prio::Max,
@@ -4692,7 +4717,14 @@ impl Engine {
         if self.paired_collect || self.fan_collect {
             self.last_output_key = None;
         }
+        if self.sperling_collect {
+            self.sperling_row = None;
+            self.sperling_responses.clear();
+        }
         self.zz_run_step_mode(secs, false)?;
+        if self.sperling_collect {
+            self.sperling_finish_trial();
+        }
         if self.fan_collect {
             // `fan-sentence` returns the time of the key press, not the time
             // the run stopped (the full fan task uses the manual module).

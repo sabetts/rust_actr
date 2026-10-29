@@ -340,6 +340,12 @@ pub enum Step {
     PairedCollect,
     /// Print the paired-associate latency/accuracy summary.
     PairedSummary,
+    /// Start collecting Sperling trial scores from the spec runs. Every
+    /// completed 400-trial experiment is reported immediately so the task's
+    /// second `sperling-experiment 100` prompt stays between the summaries.
+    SperlingCollect,
+    /// Print any remaining Sperling trial summary.
+    SperlingSummary,
     /// `siegler-experiment` task driver: fixed per-trial seeds, digit sounds,
     /// and the response matrix/statistics table. `fact_base` applies the
     /// `f00`..`f40` base levels; `all_base` applies `set-all-base-levels`.
@@ -487,7 +493,7 @@ pub fn run_model_steps_with_hook(
             }
             Step::ModelOutput(s) => eng.model_output(s),
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
-            Step::Seed(s) => eng.set_seed(*s),
+            Step::Seed(s) => eng.sperling_set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
             Step::Sdm(spec) => {
                 eng.print_sdm(spec);
@@ -546,6 +552,8 @@ pub fn run_model_steps_with_hook(
             Step::FanExperimentSummary => eng.fan_experiment_summary(),
             Step::PairedCollect => eng.paired_collect_start(),
             Step::PairedSummary => eng.paired_summary(),
+            Step::SperlingCollect => eng.sperling_collect_start(),
+            Step::SperlingSummary => eng.sperling_summary(),
             Step::SieglerDriver {
                 first_seed,
                 sets,
