@@ -1720,10 +1720,7 @@ impl Session {
                 if let Some(eng) = &mut self.engine {
                     eng.set_visual_center_point(x as f32, y as f32);
                 }
-                Ok(vec![Json::Arr(vec![
-                    Json::Float(x),
-                    Json::Float(y),
-                ])])
+                Ok(vec![Json::Arr(vec![Json::Float(x), Json::Float(y)])])
             }
             "new-tone-sound" => {
                 // `new-tone-sound <freq> <duration> [onset] [time-in-ms]`

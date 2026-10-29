@@ -1219,8 +1219,7 @@ impl Engine {
     /// task owns the value (e.g. `nearest-vis-loc`'s `*which*`); this is the
     /// task-driver bridge, not an engine special case.
     fn set_task_command_value(&mut self, name: &str, value: Value) {
-        self.task_command_values
-            .insert(name.to_uppercase(), value);
+        self.task_command_values.insert(name.to_uppercase(), value);
     }
 
     /// Sexp form used by the scripted [`crate::Step`] driver.

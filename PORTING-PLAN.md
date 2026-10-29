@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **530 passed / 37 ignored / 0 failed**
+- Full suite: **532 passed / 35 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -257,7 +257,14 @@ Approach:
 - Supersede the previous unstuff when a new location is stuffed, while keeping
   `check-unstuff-buffer`'s unchanged-copy precondition.
 
-Exit: both cases promoted; visual regressions pass; corpus **532 / 35**.
+Completed:
+
+- [x] `nearest-vis-loc` promoted. Added the nearest filters, task-command
+  return values, center point, the hidden auto-stuff event, and invisible
+  window add-order naming.
+- [x] `unstuff-visual` promoted. Runtime visual parameters, overstuff
+  overwrite, copy identity, and the run-until display boundary are in place.
+- [x] Full suite green at **532 passed / 35 ignored**.
 
 #### Wave 4B - Visicon lifecycle and image AGI
 

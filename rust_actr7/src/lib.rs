@@ -268,10 +268,7 @@ pub enum Step {
     RegisterTaskCommand(String),
     /// Install a task command's return value (a task-driver bridge for
     /// commands such as `which-one` that `!bind!` reads).
-    SetTaskCommandValue {
-        name: String,
-        value: sexpr::Sexp,
-    },
+    SetTaskCommandValue { name: String, value: sexpr::Sexp },
     /// `(module-request 'visual (define-chunk-spec cmd move-attention ...))`:
     /// schedule an attention shift to the named location now.
     MoveAttention(String),

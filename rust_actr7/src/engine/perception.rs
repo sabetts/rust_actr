@@ -1337,7 +1337,11 @@ impl Engine {
         };
         let point = if matches!(
             name.as_str(),
-            "CURRENT" | "CURRENT-X" | "CURRENT-Y" | "CURRENT-DISTANCE" | "CLOCKWISE"
+            "CURRENT"
+                | "CURRENT-X"
+                | "CURRENT-Y"
+                | "CURRENT-DISTANCE"
+                | "CLOCKWISE"
                 | "COUNTERCLOCKWISE"
         ) {
             None
@@ -1353,15 +1357,10 @@ impl Engine {
                 "CURRENT-X" => (f.x as f32 - current.0).abs(),
                 "CURRENT-Y" => (f.y as f32 - current.1).abs(),
                 "CURRENT-DISTANCE" => (1080.0f32 - current.2).abs(),
-                "CLOCKWISE" | "COUNTERCLOCKWISE" => angle_between_points(
-                    center,
-                    (current.0, current.1),
-                    (f.x as f32, f.y as f32),
-                ),
-                _ => vec_dist(
-                    (f.x as f32, f.y as f32, 1080.0),
-                    point.unwrap_or(current),
-                ),
+                "CLOCKWISE" | "COUNTERCLOCKWISE" => {
+                    angle_between_points(center, (current.0, current.1), (f.x as f32, f.y as f32))
+                }
+                _ => vec_dist((f.x as f32, f.y as f32, 1080.0), point.unwrap_or(current)),
             })
         };
         let best = cands.iter().filter_map(|f| score(f)).fold(None, |acc, x| {

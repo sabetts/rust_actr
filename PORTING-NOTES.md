@@ -5645,3 +5645,43 @@ preserves the ref's next-trial location names and re-encode events. The final
 summary divides over experiment runs, not over the 15 trial positions.
 
 Corpus: **530 passed / 37 ignored**.
+
+## 335. Visual-location selection and stuffing: nearest, overstuff, and run boundaries
+
+Recovered `nearest-vis-loc` and `unstuff-visual`.
+
+`:nearest` and `:center` are request parameters, not ordinary chunks slots.
+`find-current-locs-with-spec` now pulls them out before matching and applies
+the post-filter: `current`/`current-x`/`current-y`/`current-distance`,
+`clockwise`/`counterclockwise` around the module's center point, or a
+chunk-valued location. `set-visual-center-point` is wired through the RPC
+command layer. The angle helper negates screen-y because ACT-R's `py` uses the
+GUI's upward-positive coordinate system; with that sign, clockwise is the
+maximum angle as upstream documents.
+
+`nearest-vis-loc`'s `which-one` is a task function. `!bind!` now reads a
+scripted task-command return value (`Step::SetTaskCommandValue`) instead of
+treating every registered command as a `nil` no-op. The test also needed the
+explicit move-attention-to-START request and an invisible-window marker:
+visible RPM windows iterate subviews in screen-x order, while invisible
+virtual windows keep the task's add order, which changes location-chunk
+numbering.
+
+Auto-stuff now schedules the hidden `unlock-vision` maintenance event. It
+counts toward `run-n-events`, so `run-n-events 2` stops after `proc-display`
+and leaves the priority-10 `SET-BUFFER-CHUNK` for the following run.
+
+For `unstuff-visual`, `apply_sgp` was ignoring the visual parameters at run
+time. `:unstuff-visual-location` is now an off/new-span/delay mode,
+`:visual-onset-span` updates the live span, and
+`:overstuff-visual-location` enables replacement of an unrequested,
+unmodified auto-stuffed copy. Overstuff uses `OVERWRITE-BUFFER-CHUNK` and keeps
+the prepared `{base}-{k}` copy name, so its trace and `chunk-copied-from`
+identity match ACT-R.
+
+Finally, a device `ProcDisplay` at the exact `run-until-time` end represents
+the task's window change *after* that run returns. It stays queued for the next
+run, matching the ref's `Stopped because time limit reached` before the new
+`proc-display` at the same millisecond.
+
+Corpus: **532 passed / 35 ignored**.
