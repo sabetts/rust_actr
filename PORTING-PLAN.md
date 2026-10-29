@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **528 passed / 39 ignored / 0 failed**
+- Full suite: **530 passed / 37 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -199,10 +199,12 @@ Completed:
   needed the monitor-visicon print, AURAL/attend-sound ordering, stale
   audio-event state, and the post-move re-encode guard; the experiment
   collector scores the 800-run sidecar and recreates each seed-derived tone.
+- [x] BST PPM learning summaries. Copy names now share a per-base counter,
+  simple imaginal actions see the same firing's imaginal update, and the
+  sidecar button actions/line redraws are replayed per trial before the
+  summary is printed.
 
-Remaining:
-
-- BST PPM learning summaries.
+Remaining in this wave: none.
 
 Approach:
 
@@ -219,7 +221,7 @@ Targets:
 
 - `nearest-vis-loc`, `unstuff-visual`, `agi-modify-test`,
   `creating-an-image`, `bst-learn`.
-- BST PPM copies/length, `test-ppm`, `adaptive-noise`.
+- `test-ppm`, `adaptive-noise`.
 - Revisit `fan-w-tree` with the full info-gain conflict-tree builder.
 
 Approach:

@@ -2419,6 +2419,8 @@ pub struct Engine {
     bold_demand: HashMap<String, Vec<(f64, f64)>>,
     /// Location-name copy counter: requested base -> copies made.
     copy_count: HashMap<String, u64>,
+    /// Copy name -> the shared base counter it belongs to (chunks.lisp:860).
+    copy_base: HashMap<String, String>,
     /// Copy fan-out (`c-fan-out`): a copied chunk's source fan-out at copy
     /// time, used for Sji when the source is not in DM
     /// (`chunk-fan-j-to-i`, declarative-memory.lisp:2554).
@@ -2630,6 +2632,13 @@ pub struct Engine {
     sperling_row: Option<usize>,
     /// Non-space keys reported by `output-key` in the current trial.
     sperling_responses: Vec<String>,
+    /// Building-sticks PPM trial collection (`bst-learn-ppm`).
+    bst_collect: bool,
+    bst_current: i64,
+    bst_done: bool,
+    bst_choice: Option<String>,
+    bst_current_line: Option<String>,
+    bst_choices: Vec<String>,
     /// Last `output-key` event in the current run.
     last_output_key: Option<(String, i64)>,
     /// act-touch: which hands are on the touch device (left=0, right=1).
@@ -2924,6 +2933,7 @@ impl Engine {
             bold_open: HashMap::new(),
             bold_demand: HashMap::new(),
             copy_count: HashMap::new(),
+            copy_base: HashMap::new(),
             c_fan_out: HashMap::new(),
             chunk_alias: HashMap::new(),
             copy_source: HashMap::new(),
@@ -3031,6 +3041,12 @@ impl Engine {
             sperling_collect: false,
             sperling_row: None,
             sperling_responses: Vec::new(),
+            bst_collect: false,
+            bst_current: 0,
+            bst_done: false,
+            bst_choice: None,
+            bst_current_line: None,
+            bst_choices: Vec::new(),
             last_output_key: None,
             touch_hands: [false, false],
             touch_fingers: [[(0, 0, 1); 5]; 2],
@@ -3539,6 +3555,7 @@ impl Engine {
         self.arm_device_script();
         self.feat_seq = 0;
         self.copy_count.clear();
+        self.copy_base.clear();
         self.c_fan_out.clear();
         self.chunk_alias.clear();
         self.copy_source.clear();
@@ -4686,6 +4703,9 @@ impl Engine {
         let maintenance = next.maintenance;
         self.current_lines.clear();
         self.exec(next.event, show)?;
+        if self.bst_collect {
+            self.bst_process_actions();
+        }
         if let Some(view) = hook_view.as_ref() {
             let lines = std::mem::take(&mut self.current_lines);
             self.post_event_hook(view, &lines)?;
@@ -4721,9 +4741,15 @@ impl Engine {
             self.sperling_row = None;
             self.sperling_responses.clear();
         }
+        if self.bst_collect {
+            self.bst_begin_trial();
+        }
         self.zz_run_step_mode(secs, false)?;
         if self.sperling_collect {
             self.sperling_finish_trial();
+        }
+        if self.bst_collect {
+            self.bst_finish_trial();
         }
         if self.fan_collect {
             // `fan-sentence` returns the time of the key press, not the time
@@ -4841,6 +4867,9 @@ impl Engine {
             let maintenance = next.maintenance;
             self.current_lines.clear();
             self.exec(next.event, show)?;
+            if self.bst_collect {
+                self.bst_process_actions();
+            }
             if let Some(view) = hook_view.as_ref() {
                 let lines = std::mem::take(&mut self.current_lines);
                 self.post_event_hook(view, &lines)?;
@@ -5012,6 +5041,9 @@ impl Engine {
             let maintenance = next.maintenance;
             self.current_lines.clear();
             self.exec(next.event, show)?;
+            if self.bst_collect {
+                self.bst_process_actions();
+            }
             if let Some(view) = hook_view.as_ref() {
                 let lines = std::mem::take(&mut self.current_lines);
                 self.post_event_hook(view, &lines)?;

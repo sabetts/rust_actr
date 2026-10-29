@@ -969,6 +969,11 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .sperling_summary(),
+        Step::BstCollect => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .bst_collect_start(),
+        Step::BstSummary => session.engine_mut().ok_or_else(no_model)?.bst_summary(),
         Step::SieglerDriver {
             first_seed,
             sets,
@@ -1094,6 +1099,20 @@ impl Case {
         }
         self.steps.insert(0, Step::SperlingCollect);
         self.steps.push(Step::SperlingSummary);
+        self
+    }
+
+    /// Collect the 15 building-sticks PPM choices and print their experiment
+    /// summary after the final run.
+    pub fn bst_summary(mut self) -> Self {
+        let at = self
+            .steps
+            .iter()
+            .rposition(|s| matches!(s, Step::Command { name, .. } if name == "chunk-type"))
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        self.steps.insert(at, Step::BstCollect);
+        self.steps.push(Step::BstSummary);
         self
     }
 

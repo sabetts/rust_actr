@@ -1884,6 +1884,125 @@ impl Engine {
         }
     }
 
+    pub fn bst_collect_start(&mut self) {
+        self.bst_choices.clear();
+        self.bst_collect = true;
+        self.bst_begin_trial();
+    }
+
+    pub(super) fn bst_begin_trial(&mut self) {
+        if !self.bst_choices.is_empty() {
+            // Each task trial opens a fresh experiment window.
+            self.clear_window();
+        }
+        self.bst_current = 0;
+        self.bst_done = false;
+        self.bst_choice = None;
+        self.bst_current_line = None;
+    }
+
+    pub(super) fn bst_finish_trial(&mut self) {
+        self.bst_choices
+            .push(self.bst_choice.clone().unwrap_or_default());
+    }
+
+    /// Execute the button actions queued by a `bst-ppm` click. The sidecar
+    /// supplies the trial display; the line redraws and `Done` prompt are the
+    /// task's `button-pressed`/`update-current-line` effects at click time.
+    pub(super) fn bst_process_actions(&mut self) {
+        let actions = self.take_pending_device_actions();
+        if actions.is_empty() {
+            return;
+        }
+        let target = self
+            .device_lines
+            .iter()
+            .filter(|l| l.y2 == 110 && l.at_ms <= self.time_ms)
+            .max_by_key(|l| l.at_ms)
+            .map(|l| l.x2 - 75)
+            .unwrap_or(0);
+        for (cmd, args) in actions {
+            if cmd == "bst-ppm-button-pressed" {
+                let len = match args.first() {
+                    Some(Json::Int(i)) => *i,
+                    _ => continue,
+                };
+                if self.bst_choice.is_none() {
+                    if let Some(Json::Str(dir)) = args.get(1) {
+                        self.bst_choice = Some(dir.clone());
+                    }
+                }
+                if !self.bst_done {
+                    if self.bst_current > target {
+                        self.bst_current -= len;
+                    } else {
+                        self.bst_current += len;
+                    }
+                    let current = self.bst_current;
+                    let mut done = self.bst_done;
+                    let mut line = self.bst_current_line.take();
+                    self.bst_update_line(target, current, &mut line, &mut done);
+                    self.bst_current = current;
+                    self.bst_done = done;
+                    self.bst_current_line = line;
+                }
+            } else if cmd == "bst-ppm-reset-button-pressed" && !self.bst_done {
+                self.bst_current = 0;
+                let current = self.bst_current;
+                let mut done = self.bst_done;
+                let mut line = self.bst_current_line.take();
+                self.bst_update_line(target, current, &mut line, &mut done);
+                self.bst_current = current;
+                self.bst_done = done;
+                self.bst_current_line = line;
+            }
+        }
+    }
+
+    pub fn bst_summary(&mut self) {
+        self.bst_collect = false;
+        const DATA: [f64; 15] = [
+            20.0, 67.0, 20.0, 47.0, 87.0, 20.0, 80.0, 93.0, 83.0, 13.0, 29.0, 27.0, 80.0, 73.0,
+            53.0,
+        ];
+        let runs = (self.bst_choices.len() / 15).max(1);
+        let counts: Vec<u32> = (0..15)
+            .map(|i| {
+                (0..runs)
+                    .filter(|r| self.bst_choices[i + r * 15] == "over")
+                    .count() as u32
+            })
+            .collect();
+        let n = runs as f64;
+        let percentages: Vec<f64> = counts.iter().map(|c| *c as f64 * 100.0 / n).collect();
+        let sum_r: f64 = percentages.iter().sum();
+        let sum_d: f64 = DATA.iter().sum();
+        let sum_r2: f64 = percentages.iter().map(|x| x * x).sum();
+        let sum_d2: f64 = DATA.iter().map(|x| x * x).sum();
+        let sum_rd: f64 = percentages
+            .iter()
+            .zip(DATA.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+        let avg_r = sum_r / 15.0;
+        let avg_d = sum_d / 15.0;
+        let corr = (sum_rd / 15.0 - avg_r * avg_d)
+            / ((sum_r2 / 15.0 - avg_r * avg_r).sqrt() * (sum_d2 / 15.0 - avg_d * avg_d).sqrt());
+        let md = ((sum_r2 + sum_d2 - 2.0 * sum_rd) / 15.0).sqrt();
+        self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
+        self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
+        self.out_lines.push(String::new());
+        let header: String = (1..=15).map(|i| format!("{i:<8}")).collect();
+        self.out_lines.push(format!("Trial {header}"));
+        let values: String = percentages.iter().map(|v| format!("{v:8.2}")).collect();
+        self.out_lines.push(format!("  {values}"));
+        self.out_lines.push(String::new());
+        for name in ["DECIDE-OVER", "DECIDE-UNDER"] {
+            self.out_lines
+                .push(format!("{name:<12}: {:6.4}", self.bst_utility(name)));
+        }
+    }
+
     /// `pcomp-issues-game`: run complete 150-trial games of the production
     /// compilation task and print its block-wise score/response-time summary.
     pub fn pcomp_game(&mut self, cfg: PcompGameConfig) -> Result<(), EngineError> {

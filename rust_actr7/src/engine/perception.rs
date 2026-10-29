@@ -790,7 +790,8 @@ impl Engine {
             };
             if take_button {
                 let b = &due_buttons[bi];
-                self.add_window_button(&b.text, b.x, b.y, b.width, b.height, &b.color, None);
+                let action = b.action.as_deref().and_then(parse_button_action);
+                self.add_window_button(&b.text, b.x, b.y, b.width, b.height, &b.color, action);
                 bi += 1;
             } else {
                 let l = &due_lines[li];
@@ -1735,5 +1736,30 @@ pub(super) fn sound_chunk(s: &Sound) -> ChunkInst {
             ("EVENT".to_string(), Value::Sym(s.ename.clone())),
         ],
         bare: false,
+    }
+}
+
+/// Parse an `add-button-to-exp-window` `:action` captured by the device
+/// sidecar: `"command"` or `("command" arg ...)`.
+fn parse_button_action(raw: &str) -> Option<(String, Vec<Json>)> {
+    use crate::sexpr::{parse_all, Sexp};
+    fn json(s: &Sexp) -> Json {
+        match s {
+            Sexp::Sym(x) | Sexp::Str(x) => Json::Str(x.clone()),
+            Sexp::Int(i) => Json::Int(*i),
+            Sexp::Float(x) => Json::Float(*x),
+            Sexp::List(items) => Json::Arr(items.iter().map(json).collect()),
+        }
+    }
+    match parse_all(raw).ok()?.first()? {
+        Sexp::Sym(name) | Sexp::Str(name) => Some((name.clone(), Vec::new())),
+        Sexp::List(items) => {
+            let name = match items.first()? {
+                Sexp::Sym(name) | Sexp::Str(name) => name.clone(),
+                _ => return None,
+            };
+            Some((name, items[1..].iter().map(json).collect()))
+        }
+        _ => None,
     }
 }

@@ -5621,3 +5621,27 @@ reseeds before each trial, so only the 23 post-seed task draws belong in that
 stream.
 
 Corpus: **528 passed / 39 ignored**.
+
+## 334. BST PPM summaries: copy bases, action replay, and trial windows
+
+Recovered `bst-learn-ppm` and `bst-learn-ppm-w-tree`.
+
+Copy naming now follows ACT-R's per-base counter (`chunks.lisp:860`): a chunk's
+`base-name` is fixed once, so `IMAGINAL-CHUNK0 -> -0`, then `-1`, rather than
+`-0-0`. The imaginal buffer also keeps its reusable `IMAGINAL-CHUNK0` name
+internally while the trace prints the action copy's name.
+
+A simple imaginal action now sees the same-production `=imaginal>` update. The
+module-request line keeps priority 50; before invoking the action, the engine
+silently applies the still-queued imaginal modification (priority 40). This is
+what lets `compute-difference` read the new `length` without changing the
+hook-visible request/clear ordering.
+
+Device sidecar buttons now retain and parse their `:action`. BST collects the
+first `bst-ppm-button-pressed` choice per run and replays the task's line
+redraws/`Done` prompt at click time. Each trial starts with a fresh window
+(the old features are cleared but `VISUAL-LOCATION` numbering continues), which
+preserves the ref's next-trial location names and re-encode events. The final
+summary divides over experiment runs, not over the 15 trial positions.
+
+Corpus: **530 passed / 37 ignored**.

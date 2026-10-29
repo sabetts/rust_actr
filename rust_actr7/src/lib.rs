@@ -346,6 +346,10 @@ pub enum Step {
     SperlingCollect,
     /// Print any remaining Sperling trial summary.
     SperlingSummary,
+    /// Start collecting the 15 building-sticks PPM choices.
+    BstCollect,
+    /// Print the building-sticks PPM experiment summary.
+    BstSummary,
     /// `siegler-experiment` task driver: fixed per-trial seeds, digit sounds,
     /// and the response matrix/statistics table. `fact_base` applies the
     /// `f00`..`f40` base levels; `all_base` applies `set-all-base-levels`.
@@ -554,6 +558,8 @@ pub fn run_model_steps_with_hook(
             Step::PairedSummary => eng.paired_summary(),
             Step::SperlingCollect => eng.sperling_collect_start(),
             Step::SperlingSummary => eng.sperling_summary(),
+            Step::BstCollect => eng.bst_collect_start(),
+            Step::BstSummary => eng.bst_summary(),
             Step::SieglerDriver {
                 first_seed,
                 sets,

@@ -44,6 +44,15 @@ impl Engine {
                         inst.name = Some(name);
                     }
                 }
+                if buffer == "IMAGINAL"
+                    && !self.model.no_reuse_buffers.iter().any(|b| b == "IMAGINAL")
+                {
+                    // The imaginal buffer's reusable chunk is `IMAGINAL-CHUNK0`;
+                    // `set-buffer-chunk` copies the new content into it and
+                    // `buffer-read` returns that name, even though the trace
+                    // prints the action's copy name.
+                    inst.name = Some(self.reuse_buffer_name("IMAGINAL"));
+                }
                 if show {
                     let mut details = format!("SET-BUFFER-CHUNK {buffer} {text}");
                     if !requested {
@@ -666,6 +675,7 @@ impl Engine {
                         }
                     }
                     "IMAGINAL-ACTION" => {
+                        self.apply_pending_imaginal_mod();
                         self.imaginal_action_request(spec)?;
                     }
                     "TRACKER" => {

@@ -520,6 +520,39 @@ impl Engine {
         self.fan_in.insert(name, counts);
     }
 
+    /// Apply a same-time `=imaginal>` modification queued by the production
+    /// that also requested an imaginal action. ACT-R's action sees the updated
+    /// slots; the modification is invisible in the trace (the module-request
+    /// line is the next visible event), so consume the queued event silently.
+    pub(super) fn apply_pending_imaginal_mod(&mut self) {
+        let now = self.time_ms;
+        let Some(slots) = self.queue.iter().find_map(|q| match &q.event {
+            Event::ModBuffer { buffer, slots, .. } if buffer == "IMAGINAL" && q.time_ms == now => {
+                Some(slots.clone())
+            }
+            _ => None,
+        }) else {
+            return;
+        };
+        self.queue.retain(|q| {
+            !matches!(&q.event, Event::ModBuffer { buffer, .. }
+                if buffer == "IMAGINAL" && q.time_ms == now)
+        });
+        if let Some(chunk) = self
+            .buffers
+            .get_mut("IMAGINAL")
+            .and_then(|b| b.chunk.as_mut())
+        {
+            for (slot, value) in slots {
+                match chunk.slots.iter_mut().find(|(k, _)| *k == slot) {
+                    Some((_, old)) => *old = value,
+                    None => chunk.slots.push((slot, value)),
+                }
+            }
+        }
+        self.buffer_mut("IMAGINAL").modified = true;
+    }
+
     /// `imaginal-action` request (`imaginal.lisp:343`): a production's
     /// `+imaginal-action>` asks a task function to compute the imaginal
     /// buffer's next chunk. A `simple` action clears the imaginal buffer,

@@ -100,14 +100,21 @@ impl Engine {
         s.to_string()
     }
 
-    /// Copy a chunk to `{name}-{k}` (PORTING-NOTES #41): the copy is a named,
-    /// non-DM chunk whose copy fan-out is the source's fan-out at copy
-    /// time (`copy-from-chunk-function chunk-fan-out`).
+    /// Copy a chunk to `{base}-{k}` (PORTING-NOTES #41/#267): a chunk's
+    /// `base-name` is fixed once, so copies of copies keep advancing the same
+    /// counter (`IMAGINAL-CHUNK0` -> `-0`, then `-1`) instead of chaining
+    /// (`-0-0`).
     pub(super) fn copy_chunk(&mut self, name: &str) -> String {
-        let n = *self.copy_count.entry(name.to_string()).or_insert(0);
-        self.copy_count.insert(name.to_string(), n + 1);
-        let copy = format!("{name}-{n}");
+        let base = self
+            .copy_base
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| name.to_string());
+        let n = *self.copy_count.entry(base.clone()).or_insert(0);
+        self.copy_count.insert(base.clone(), n + 1);
+        let copy = format!("{base}-{n}");
         self.copy_chunk_as(name, &copy);
+        self.copy_base.insert(copy.clone(), base);
         copy
     }
 
@@ -115,6 +122,12 @@ impl Engine {
     /// the fan-out/copy fan bookkeeping. The caller chooses the name, which
     /// lets the reusable-buffer path use `{BUFFER}-CHUNK{n}`.
     pub(super) fn copy_chunk_as(&mut self, name: &str, copy: &str) {
+        let base = self
+            .copy_base
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| name.to_string());
+        self.copy_base.insert(copy.to_string(), base);
         self.copy_source.insert(copy.to_string(), name.to_string());
         if let Some(src) = self
             .dm
