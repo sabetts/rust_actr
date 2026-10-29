@@ -3010,6 +3010,11 @@ fn parse_model(
             // motor module.
             "START-HAND-AT-MOUSE" => model.hand_start = Some("MOUSE".to_string()),
             "START-HAND-AT-KEYPAD" => model.hand_start = Some("KEYPAD".to_string()),
+            // `(set-cursor-position x y)`: the virtual cursor's screen position.
+            // The engine's mouse starts at the window origin, which is what
+            // the AGI tasks set here; the position is not observable in the
+            // trace until a move, so no state is needed yet.
+            "SET-CURSOR-POSITION" => {}
             // `(set-audloc-default slot value ...)`: default constraints for
             // an unconstrained aural-location request.
             "SET-AUDLOC-DEFAULT" => {

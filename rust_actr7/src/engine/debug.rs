@@ -315,7 +315,7 @@ impl Engine {
         let chunks: Vec<(ChunkInst, String)> = names
             .iter()
             .filter_map(|n| {
-                let up = n.to_uppercase();
+                let up = n.trim_start_matches("#:").to_uppercase();
                 if let Some(c) = self
                     .dm
                     .iter()
@@ -331,7 +331,30 @@ impl Engine {
                         return Some((c, up));
                     }
                 }
-                None
+                self.features.iter().find(|f| f.name == up).map(|f| {
+                    let mut slots = f.filled_slots();
+                    slots.retain(|(k, _)| {
+                        k != "TEXT"
+                            && k != "OVAL"
+                            && k != "LINE"
+                            && !k.starts_with("END1")
+                            && !k.starts_with("END2")
+                    });
+                    if f.kind == "TEXT" || f.kind == "OVAL" {
+                        if let Some((_, v)) = slots.iter_mut().find(|(k, _)| k == "VALUE") {
+                            *v = Value::Sym(f.kind.clone());
+                        }
+                    }
+                    (
+                        ChunkInst {
+                            name: Some(up.clone()),
+                            ctype: "VISUAL-LOCATION".to_string(),
+                            slots,
+                            bare: false,
+                        },
+                        up.clone(),
+                    )
+                })
             })
             .collect();
         chunks
@@ -1053,8 +1076,23 @@ impl Engine {
         );
     }
 
+    /// A task window change moved the attended item: schedule the
+    /// `update-attended-loc` re-encode that finds no object.
+    pub fn schedule_attended_missing(&mut self) {
+        if let Some(loc) = self.last_attention.clone() {
+            self.visual_busy = true;
+            self.push(
+                self.time_ms + self.cfg.attention_ms,
+                Prio::Num(0),
+                Out::Medium,
+                Event::EncodingMissing { loc },
+            );
+            self.changed();
+        }
+    }
+
     /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
-    /// stub's "Installing a default touch device�?�" banner.
+    /// stub's "Installing a default touch device���?���" banner.
     pub fn emit_warning(&mut self, msg: &str) {
         if self.trace_on {
             self.out_lines.push(format!("#|Warning: {msg} |#"));
@@ -2512,7 +2550,7 @@ impl Engine {
                 }
             }
         }
-        if f.new_p {
+        if self.feature_is_new(f) {
             "NEW".to_string()
         } else {
             "NIL".to_string()
@@ -2767,6 +2805,7 @@ impl Engine {
     pub fn clear_window(&mut self) {
         self.window_items.clear();
         self.window_actions.clear();
+        self.agi_items.clear();
         // `process-display` runs `check-finsts` before `:delete-all`
         // (`vision.lisp:1796` / `:1656`): an expired finst must not transfer
         // to the rebuilt display.
@@ -2834,9 +2873,23 @@ impl Engine {
         text: &str,
         x: i64,
         y: i64,
+        width: i64,
+        height: i64,
+        font_size: i64,
+    ) -> String {
+        self.add_window_text_styled(text, x, y, width, height, font_size, "black")
+    }
+
+    /// Styled `add-text-to-exp-window` (the AGI task passes a color).
+    pub fn add_window_text_styled(
+        &mut self,
+        text: &str,
+        x: i64,
+        y: i64,
         _width: i64,
         _height: i64,
         font_size: i64,
+        color: &str,
     ) -> String {
         let key = format!("TEXT-VDI-{}", self.window_item_seq);
         self.window_item_seq += 1;
@@ -2850,7 +2903,7 @@ impl Engine {
         // `y-pos = y-pos + round(line-height, 2)`, and no `x-fct`, so
         // `build-string-feats` starts each line at `start-x`.
         let y_screen = y + oy + round_half_even(line_h, 2);
-        self.push_text_item(&key, text, x + 1 + ox, y_screen, char_w, text_h);
+        self.push_text_item(&key, text, x + 1 + ox, y_screen, char_w, text_h, color);
         self.now_display();
         key
     }
@@ -2868,6 +2921,7 @@ impl Engine {
         screen_y: i64,
         char_w: i64,
         text_h: i64,
+        color: &str,
     ) {
         let mut names = Vec::new();
         let mut curr_x = start_screen_x;
@@ -2897,7 +2951,7 @@ impl Engine {
                             ("VALUE".to_string(), Value::Str(w.clone())),
                             ("WIDTH".to_string(), Value::Int(wd)),
                             ("SCREEN-X".to_string(), Value::Int(sx)),
-                            ("COLOR".to_string(), Value::Sym("BLACK".to_string())),
+                            ("COLOR".to_string(), Value::Sym(color.to_uppercase())),
                             ("KIND".to_string(), Value::Sym("TEXT".to_string())),
                             ("TEXT".to_string(), Value::Sym("T".to_string())),
                         ],
@@ -2970,8 +3024,8 @@ impl Engine {
             name: name.clone(),
             kind: "OVAL".to_string(),
             value: text.to_string(),
-            x: ox + x + width.div_euclid(2),
-            y: oy + y + height.div_euclid(2),
+            x: ox + x + round_half_even_f(width as f64 / 2.0) as i64,
+            y: oy + y + round_half_even_f(height as f64 / 2.0) as i64,
             width,
             height,
             extra: vec![("COLOR".to_string(), Value::Sym(color.to_uppercase()))],
@@ -2981,11 +3035,11 @@ impl Engine {
             spec: vec![
                 (
                     "SCREEN-X".to_string(),
-                    Value::Int(ox + x + width.div_euclid(2)),
+                    Value::Int(ox + x + round_half_even_f(width as f64 / 2.0) as i64),
                 ),
                 (
                     "SCREEN-Y".to_string(),
-                    Value::Int(oy + y + height.div_euclid(2)),
+                    Value::Int(oy + y + round_half_even_f(height as f64 / 2.0) as i64),
                 ),
                 ("WIDTH".to_string(), Value::Int(width)),
                 ("HEIGHT".to_string(), Value::Int(height)),
@@ -3012,8 +3066,8 @@ impl Engine {
         let char_w = round_half_even_f(12.0 * 7.0 / 12.0).max(1);
         let text_h = round_half_even_f(12.0 * 10.0 / 12.0).max(1);
         let total_w = char_w * text.chars().count() as i64;
-        let oval_x = ox + x + width.div_euclid(2);
-        let oval_y = oy + y + height.div_euclid(2);
+        let oval_x = ox + x + round_half_even_f(width as f64 / 2.0) as i64;
+        let oval_y = oy + y + round_half_even_f(height as f64 / 2.0) as i64;
         let tkey = format!("TEXT-VDI-{}", self.window_item_seq);
         self.window_item_seq += 1;
         self.push_text_item(
@@ -3023,6 +3077,7 @@ impl Engine {
             oval_y,
             char_w,
             text_h,
+            "black",
         );
         if let Some((_, tnames)) = self.window_items.iter().find(|(k, _)| k == &tkey) {
             names.extend(tnames.iter().cloned());
@@ -3057,7 +3112,25 @@ impl Engine {
         });
         if let Some(key) = hit {
             if let Some((cmd, args)) = self.window_actions.get(&key).cloned() {
-                self.pending_device_actions.push((cmd, args));
+                if self.scripted_click_actions {
+                    self.pending_scripted_click = Some((cmd, args));
+                    self.run_scripted_click();
+                } else {
+                    self.pending_device_actions.push((cmd, args));
+                }
+            }
+        }
+    }
+
+    /// Fire a scripted click's held action at the mouse release, the point
+    /// where the GUI invokes a button item's callback.
+    pub(super) fn run_scripted_click(&mut self) {
+        let Some((cmd, args)) = self.pending_scripted_click.take() else {
+            return;
+        };
+        if cmd.eq_ignore_ascii_case("MODEL-OUTPUT") {
+            if let Some(Json::Str(s)) = args.first() {
+                self.model_output(s);
             }
         }
     }
@@ -3085,6 +3158,23 @@ impl Engine {
             }
         });
         if !dropped.is_empty() {
+            // A removed attended item can be re-added at the same place; keep
+            // its finst so the rebuilt feature stays `T` (AGI's button B).
+            for f in &self.features {
+                if dropped.contains(&f.name) {
+                    if let Some(t) = f.finst_ms {
+                        self.pending_finst_transfers.push(FinstTransfer {
+                            kind: f.kind.clone(),
+                            x: f.x,
+                            y: f.y,
+                            width: f.width,
+                            height: f.height,
+                            value: f.value.clone(),
+                            finst_ms: t,
+                        });
+                    }
+                }
+            }
             self.features.retain(|f| !dropped.contains(&f.name));
             self.now_display();
         }
@@ -3120,7 +3210,6 @@ impl Engine {
                 })
                 .unwrap_or_else(|| "BLACK".to_string());
             set_line_geometry(f, start, end, origin, &color);
-            f.tstamp_ms = self.time_ms;
         }
         self.now_display();
     }
@@ -3138,7 +3227,139 @@ impl Engine {
             if let Some(ny) = y {
                 f.y = ny;
             }
-            f.tstamp_ms = self.time_ms;
+        }
+        self.now_display();
+    }
+
+    /// Full `modify-text-for-exp-window` update used by the AGI task. The
+    /// item keeps its identity but the visicon feature is rebuilt in place.
+    pub fn modify_window_text_full(
+        &mut self,
+        key: &str,
+        text: Option<&str>,
+        x: Option<i64>,
+        y: Option<i64>,
+        color: Option<&str>,
+        font_size: Option<i64>,
+    ) {
+        let Some((_, names)) = self.window_items.iter().find(|(k, _)| k == key) else {
+            return;
+        };
+        let names = names.clone();
+        let (ox, oy) = self.window_origin;
+        let font = font_size.unwrap_or(12);
+        let char_w = round_half_even_f(font as f64 * 7.0 / 12.0).max(1);
+        let text_h = round_half_even_f(font as f64 * 10.0 / 12.0).max(1);
+        let line_h = round_half_even_f(text_h as f64 / 0.8).max(text_h + 1);
+        for f in self.features.iter_mut().filter(|f| names.contains(&f.name)) {
+            if let Some(t) = text {
+                f.value = t.to_string();
+                f.set_slot("VALUE", Value::Str(t.to_string()));
+                if t.is_ascii() {
+                    let wd = char_w * t.chars().count() as i64;
+                    f.width = wd;
+                    f.set_slot("WIDTH", Value::Int(wd));
+                    if let Some(nx) = x {
+                        f.x = nx + 1 + ox + round_half_even(wd, 2);
+                        f.set_slot("SCREEN-X", Value::Int(f.x));
+                    }
+                }
+            }
+            if let Some(nx) = x {
+                if text.is_none() {
+                    f.x = nx + 1 + ox;
+                    f.set_slot("SCREEN-X", Value::Int(f.x));
+                }
+            }
+            if let Some(ny) = y {
+                f.y = ny + oy + round_half_even(line_h, 2);
+                f.set_slot("SCREEN-Y", Value::Int(f.y));
+            }
+            if let Some(c) = color {
+                f.set_slot("COLOR", Value::Sym(c.to_uppercase()));
+            }
+            f.height = text_h;
+            f.set_slot("HEIGHT", Value::Int(text_h));
+        }
+        self.now_display();
+    }
+
+    /// Full `modify-button-for-exp-window` update: the button's oval and its
+    /// label keep their feature names while their slots change.
+    pub fn modify_window_button_full(
+        &mut self,
+        key: &str,
+        text: Option<&str>,
+        x: Option<i64>,
+        y: Option<i64>,
+        width: Option<i64>,
+        height: Option<i64>,
+        color: Option<&str>,
+        action: Option<(String, Vec<Json>)>,
+    ) {
+        let Some((_, names)) = self.window_items.iter().find(|(k, _)| k == key) else {
+            return;
+        };
+        let names = names.clone();
+        let (ox, oy) = self.window_origin;
+        let mut oval_x = 0;
+        let mut oval_y = 0;
+        for f in self.features.iter_mut().filter(|f| names.contains(&f.name)) {
+            if f.kind == "OVAL" {
+                if let Some(t) = text {
+                    f.value = t.to_string();
+                    f.set_slot("VALUE", Value::Str(t.to_string()));
+                }
+                if let Some(w) = width {
+                    f.width = w;
+                    f.set_slot("WIDTH", Value::Int(w));
+                    if let Some(nx) = x {
+                        f.x = ox + nx + round_half_even_f(w as f64 / 2.0) as i64;
+                        f.set_slot("SCREEN-X", Value::Int(f.x));
+                    }
+                } else if let Some(nx) = x {
+                    f.x = ox + nx + round_half_even_f(f.width as f64 / 2.0) as i64;
+                    f.set_slot("SCREEN-X", Value::Int(f.x));
+                }
+                if let Some(h) = height {
+                    f.height = h;
+                    f.set_slot("HEIGHT", Value::Int(h));
+                    if let Some(ny) = y {
+                        f.y = oy + ny + round_half_even_f(h as f64 / 2.0) as i64;
+                        f.set_slot("SCREEN-Y", Value::Int(f.y));
+                    }
+                } else if let Some(ny) = y {
+                    f.y = oy + ny + round_half_even_f(f.height as f64 / 2.0) as i64;
+                    f.set_slot("SCREEN-Y", Value::Int(f.y));
+                }
+                if let Some(c) = color {
+                    f.set_slot("COLOR", Value::Sym(c.to_uppercase()));
+                }
+                oval_x = f.x;
+                oval_y = f.y;
+            }
+        }
+        if let Some(t) = text {
+            let char_w = 7;
+            let text_h = 10;
+            let total_w = char_w * t.chars().count() as i64;
+            for f in self.features.iter_mut().filter(|f| names.contains(&f.name)) {
+                if f.kind == "TEXT" {
+                    f.value = t.to_string();
+                    f.x = oval_x;
+                    f.y = oval_y;
+                    f.width = total_w;
+                    f.height = text_h;
+                    f.set_slot("VALUE", Value::Str(t.to_string()));
+                    f.set_slot("SCREEN-X", Value::Int(f.x));
+                    f.set_slot("SCREEN-Y", Value::Int(f.y));
+                    f.set_slot("WIDTH", Value::Int(total_w));
+                    f.set_slot("HEIGHT", Value::Int(text_h));
+                }
+            }
+        }
+        if let Some(action) = action {
+            self.window_actions.insert(key.to_string(), action);
         }
         self.now_display();
     }

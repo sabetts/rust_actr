@@ -1960,6 +1960,128 @@ impl Engine {
         }
     }
 
+    /// `agi-modify-test`'s initial `run-it` window: three texts, three
+    /// buttons, and three lines.
+    pub fn agi_setup(&mut self) {
+        self.scripted_click_actions = true;
+        self.agi_items.clear();
+        let output = |text: &str| Some(("MODEL-OUTPUT".to_string(), vec![Json::Str(text.into())]));
+        let t1 = self.add_window_text_styled("A", 20, 20, 40, 30, 24, "blue");
+        let t2 = self.add_window_text_styled("B", 60, 30, 30, 40, 14, "red");
+        let t3 = self.add_window_text_styled("C", 100, 50, 20, 50, 8, "green");
+        let b1 = self.add_window_button("A", 20, 100, 30, 20, "blue", output("Pressed B1"));
+        let b2 = self.add_window_button("B", 60, 110, 40, 30, "red", output("Pressed B2"));
+        let b3 = self.add_window_button("C", 100, 120, 50, 40, "green", output("Pressed B3"));
+        let l1 = self.add_window_line((20, 160), (55, 180), "blue");
+        let l2 = self.add_window_line((60, 180), (95, 150), "red");
+        let l3 = self.add_window_line((130, 170), (100, 180), "green");
+        self.agi_items = vec![t1, t2, t3, b1, b2, b3, l1, l2, l3];
+    }
+
+    fn agi_item(&self, i: usize) -> String {
+        self.agi_items.get(i).cloned().unwrap_or_default()
+    }
+
+    /// The two task-side modification blocks in `agi-modify-test`.
+    pub fn agi_modify(&mut self, phase: u8) {
+        let output = |text: &str| Some(("MODEL-OUTPUT".to_string(), vec![Json::Str(text.into())]));
+        match phase {
+            1 => {
+                let t3 = self.agi_item(2);
+                self.modify_window_text_full(
+                    &t3,
+                    Some("E"),
+                    Some(110),
+                    Some(40),
+                    Some("brown"),
+                    Some(14),
+                );
+                let b1 = self.agi_item(3);
+                self.modify_window_button_full(
+                    &b1,
+                    Some("DDD"),
+                    Some(15),
+                    Some(105),
+                    Some(35),
+                    Some(25),
+                    Some("gray"),
+                    output("Pressed B1m1"),
+                );
+                let b3 = self.agi_item(5);
+                self.modify_window_button_full(
+                    &b3,
+                    Some("E"),
+                    Some(115),
+                    Some(115),
+                    Some(45),
+                    Some(35),
+                    Some("brown"),
+                    output("Pressed B3m1"),
+                );
+                self.schedule_attended_missing();
+                let l1 = self.agi_item(6);
+                self.modify_window_line(&l1, (15, 180), (45, 160), Some("gray"));
+                let l2 = self.agi_item(7);
+                self.modify_window_line(&l2, (60, 180), (95, 150), None);
+
+                let remove = [self.agi_item(0), self.agi_item(4), self.agi_item(8)];
+                self.remove_window_items(&remove);
+                let t1 = self.add_window_text_styled("D", 15, 10, 30, 20, 20, "gray");
+                let b2 = self.add_window_button("B", 60, 110, 40, 30, "red", output("Pressed B2"));
+                let l3 = self.add_window_line((140, 190), (110, 165), "brown");
+                self.agi_items[0] = t1;
+                self.agi_items[4] = b2;
+                self.agi_items[8] = l3;
+            }
+            2 => {
+                let t1 = self.agi_item(0);
+                self.modify_window_text_full(
+                    &t1,
+                    Some("F"),
+                    Some(18),
+                    Some(15),
+                    Some("pink"),
+                    Some(10),
+                );
+                let t2 = self.agi_item(1);
+                self.modify_window_text_full(
+                    &t2,
+                    Some("G"),
+                    Some(65),
+                    Some(20),
+                    Some("yellow"),
+                    Some(22),
+                );
+                let b2 = self.agi_item(4);
+                self.modify_window_button_full(
+                    &b2,
+                    Some("F"),
+                    Some(55),
+                    Some(125),
+                    Some(30),
+                    Some(35),
+                    Some("yellow"),
+                    output("Pressed B2m2"),
+                );
+                let l2 = self.agi_item(7);
+                self.modify_window_line(&l2, (65, 160), (85, 190), Some("yellow"));
+                let l3 = self.agi_item(8);
+                self.modify_window_line(&l3, (112, 175), (145, 193), Some("pink"));
+
+                let remove = [self.agi_item(2), self.agi_item(5), self.agi_item(6)];
+                self.remove_window_items(&remove);
+                let t3 = self.add_window_text_styled("E", 110, 40, 30, 30, 14, "brown");
+                let b3 =
+                    self.add_window_button("GGG", 112, 110, 25, 45, "pink", output("Pressed B3m2"));
+                let l1 = self.add_window_line((15, 180), (45, 160), "gray");
+                self.agi_items[2] = t3;
+                self.agi_items[5] = b3;
+                self.agi_items[6] = l1;
+            }
+            _ => {}
+        }
+    }
+
     pub fn bst_summary(&mut self) {
         self.bst_collect = false;
         const DATA: [f64; 15] = [

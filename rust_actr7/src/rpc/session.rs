@@ -1430,10 +1430,18 @@ impl Session {
                 Ok(vec![Json::Arr(out.into_iter().map(Json::Str).collect())])
             }
             "pprint-chunks" | "pprint-chunks-fct" => {
-                let names: Vec<String> = args
-                    .iter()
-                    .filter_map(|a| a.as_str().map(str::to_string))
-                    .collect();
+                let mut names: Vec<String> = Vec::new();
+                for a in args {
+                    match a {
+                        Json::Arr(items) => names
+                            .extend(items.iter().filter_map(|x| x.as_str().map(str::to_string))),
+                        _ => {
+                            if let Some(s) = a.as_str() {
+                                names.push(s.to_string());
+                            }
+                        }
+                    }
+                }
                 let out = self
                     .engine
                     .as_mut()
@@ -1953,7 +1961,7 @@ impl Session {
                 let key = self
                     .engine
                     .as_mut()
-                    .map(|e| e.add_window_text(text, x, y, w, h, font))
+                    .map(|e| e.add_window_text_styled(text, x, y, w, h, font, &color))
                     .unwrap_or_default();
                 if !key.is_empty() {
                     let title = self.vwin_title();

@@ -1158,6 +1158,12 @@ impl Engine {
                 }
                 self.encoding_complete(loc, requested)?;
             }
+            Event::EncodingMissing { loc } => {
+                if show {
+                    self.emit("VISION", format!("Encoding-complete {loc} NIL"));
+                }
+                self.encoding_no_object()?;
+            }
             Event::EmmaPrepComplete { trgt } => {
                 if show {
                     self.emit(
@@ -1721,6 +1727,7 @@ impl Engine {
                     self.time_ms,
                     format!("({mx} {my} {mz})"),
                 ));
+                self.run_scripted_click();
             }
             Event::TrackerUpdate { gen } => {
                 if gen == self.tracker_gen {
@@ -2284,6 +2291,7 @@ impl Engine {
                     self.man_exec[1] = false;
                     self.man_exec_busy = false;
                 }
+                self.run_scripted_click();
             }
             Event::Command { name, params } => {
                 if show {

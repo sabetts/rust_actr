@@ -816,13 +816,14 @@ impl Engine {
         self.apply_finst_transfers();
         self.check_visual_finsts();
         if self.can_stuff_visual() && self.tracked.is_none() {
-            if let Some(feat) = self.newest_feature() {
+            if let Some(feat) = self.newest_feature()? {
                 let base = feat.name.clone();
                 self.place_vl_at(&base, false, 10, old_present)?;
                 // `stuff-visloc-buffer` schedules `unlock-vision` at priority
                 // 9, just before its priority-10 set (`vision.lisp:1989`).
                 // The hidden event counts toward `run-n-events`, which is why
                 // `nearest-vis-loc`'s `run-n-events 2` stops before the SET.
+                self.now_m(Prio::Num(12), Out::Never, true, Event::Dummy);
                 self.now_m(Prio::Num(11), Out::Never, true, Event::Dummy);
             }
         }
@@ -1011,15 +1012,23 @@ impl Engine {
     }
 
     /// The visual-object chunk slots (`SCREEN-POS`, `VALUE`, `COLOR`,
-    /// `HEIGHT`, `WIDTH`, `TEXT`).
+    /// `HEIGHT`, `WIDTH`, and the kind marker `TEXT`/`OVAL`/`LINE`).
     pub(super) fn object_slots(feat: &Feature, screen_pos: &str) -> Vec<(String, Value)> {
+        let color = feat
+            .spec
+            .iter()
+            .chain(feat.spec_pre.iter())
+            .chain(feat.extra.iter())
+            .find(|(k, _)| k == "COLOR")
+            .map(|(_, v)| v.clone())
+            .unwrap_or_else(|| Value::Sym("BLACK".to_string()));
         vec![
             ("SCREEN-POS".to_string(), Value::Sym(screen_pos.to_string())),
             ("VALUE".to_string(), Value::Str(feat.value.clone())),
-            ("COLOR".to_string(), Value::Sym("BLACK".to_string())),
+            ("COLOR".to_string(), color),
             ("HEIGHT".to_string(), Value::Int(feat.height)),
             ("WIDTH".to_string(), Value::Int(feat.width)),
-            ("TEXT".to_string(), Value::Sym("T".to_string())),
+            (feat.kind.clone(), Value::Sym("T".to_string())),
         ]
     }
 
@@ -1210,53 +1219,68 @@ impl Engine {
         f.new_p && self.time_ms - f.tstamp_ms <= self.cfg.onset_span_ms
     }
 
-    pub(super) fn newest_feature(&mut self) -> Option<Feature> {
-        // `stuff-visloc-buffer` (`vision.lisp:1978`) searches with the
-        // vision module's `default-spec` = `screen-x lowest :attended new`
-        // (`vision.lisp:3178`): the LEFTMOST still-`NEW` column, then the
-        // newest-tstamp ties, sorted by name before `random-item`.
-        // `set-visloc-default` replaces that spec (`vision.lisp:4057`); when
-        // the model drops `:attended new` (e.g. the tracker's `:attended nil`)
-        // no `new` filter applies.
-        let require_new = self.visloc_default_attended_new();
-        let min_x = self
-            .features
+    pub(super) fn newest_feature(&mut self) -> Result<Option<Feature>, EngineError> {
+        // `stuff-visloc-buffer` (`vision.lisp:1978`) calls
+        // `find-current-locs-with-spec` with the vision module's
+        // `default-spec` and then picks among the newest timestamps with
+        // `random-item`. The module default is `screen-x lowest :attended new`
+        // (`vision.lisp:3178`); `set-visloc-default` replaces it wholesale
+        // (`vision.lisp:4057`), e.g. AGI's `kind oval screen-x lowest`.
+        let spec = self.default_visloc_spec();
+        let (plain, minmax): (Vec<_>, Vec<_>) = spec
+            .into_iter()
+            .partition(|(_, v)| !matches!(v, Value::Sym(s) if s == "LOWEST" || s == "HIGHEST"));
+        let mut cands: Vec<Feature> = Vec::new();
+        for f in &self.features {
+            if loc_matches(f, &plain, self.time_ms, self.cfg.onset_span_ms)? {
+                cands.push(f.clone());
+            }
+        }
+        for (slot, v) in minmax {
+            let lowest = matches!(&v, Value::Sym(s) if s == "LOWEST");
+            let slot = slot.trim_start_matches(':');
+            let best = cands.iter().filter_map(|f| feature_num(f, slot)).fold(
+                None,
+                |acc: Option<f64>, x| {
+                    Some(match acc {
+                        None => x,
+                        Some(a) if (lowest && x < a) || (!lowest && x > a) => x,
+                        Some(a) => a,
+                    })
+                },
+            );
+            if let Some(best) = best {
+                cands.retain(|f| feature_num(f, slot) == Some(best));
+            }
+        }
+        if cands.is_empty() {
+            return Ok(None);
+        }
+        let top = cands.iter().map(|f| f.tstamp_ms).max().unwrap();
+        let mut names: Vec<String> = cands
             .iter()
-            .filter(|f| !require_new || self.feature_is_new(f))
-            .map(|f| f.x)
-            .min()?;
-        let top = self
-            .features
-            .iter()
-            .filter(|f| (!require_new || self.feature_is_new(f)) && f.x == min_x)
-            .map(|f| f.tstamp_ms)
-            .max()?;
-        let mut names: Vec<String> = self
-            .features
-            .iter()
-            .filter(|f| {
-                (!require_new || self.feature_is_new(f)) && f.x == min_x && f.tstamp_ms == top
-            })
+            .filter(|f| f.tstamp_ms == top)
             .map(|f| f.name.clone())
             .collect();
         names.sort();
         // `random-item` consumes exactly one draw, even for singletons.
         let pick = self.rng_draw(names.len());
         let want = names[pick].clone();
-        self.features.iter().find(|f| f.name == want).cloned()
+        Ok(self.features.iter().find(|f| f.name == want).cloned())
     }
 
-    /// Whether the default visual-location spec still requires `:attended
-    /// new`. `stuff-visloc-buffer` searches with `(default-spec vis-mod)`,
-    /// which `set-visloc-default` replaces wholesale (`vision.lisp:4057`); the
-    /// module default (`vision.lisp:3178`) is `screen-x lowest :attended new`.
-    fn visloc_default_attended_new(&self) -> bool {
-        for (k, v) in &self.model.visloc_default {
-            if k == ":ATTENDED" {
-                return v.as_sym().is_some_and(|s| s.eq_ignore_ascii_case("NEW"));
-            }
+    fn default_visloc_spec(&self) -> Vec<(String, Value)> {
+        if self.model.visloc_default.is_empty() {
+            return vec![
+                ("SCREEN-X".to_string(), Value::Sym("LOWEST".to_string())),
+                (":ATTENDED".to_string(), Value::Sym("NEW".to_string())),
+            ];
         }
-        true
+        self.model
+            .visloc_default
+            .iter()
+            .filter_map(|(k, v)| Value::from_sexp(v).ok().map(|v| (k.clone(), v)))
+            .collect()
     }
 
     /// `assign-finst` / `add-finst` (`vision.lisp:2282`): record or refresh the

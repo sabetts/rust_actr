@@ -1886,6 +1886,11 @@ enum Event {
         /// does not.
         requested: bool,
     },
+    /// A window change moved the attended item out from under the eye: ACT-R
+    /// logs `Encoding-complete <loc> NIL` and then finds no object.
+    EncodingMissing {
+        loc: String,
+    },
     /// EMMA: a saccade's preparation finished (`PREPARATION-COMPLETE`).
     EmmaPrepComplete {
         trgt: Option<String>,
@@ -2432,6 +2437,10 @@ pub struct Engine {
     /// this is non-empty so the server can call the client back and apply the
     /// window commands the action issues (`bst`'s `button-pressed`).
     pending_device_actions: Vec<(String, Vec<Json>)>,
+    /// Scripted task-window clicks (AGI/image drivers): the action is held
+    /// until the motor click's release event, matching the GUI callback time.
+    scripted_click_actions: bool,
+    pending_scripted_click: Option<(String, Vec<Json>)>,
     /// Set by `run_slice` when it stopped early for a pending device action.
     device_action_yield: bool,
     /// Set when a chunked run ([`Engine::run_chunk`]) stopped early on its
@@ -2439,6 +2448,8 @@ pub struct Engine {
     run_capped: bool,
     /// Auto-naming counter for live window items (`TEXT-VDI-{n}`).
     window_item_seq: u64,
+    /// AGI task driver: item keys in text/button/line declaration order.
+    agi_items: Vec<String>,
     /// BOLD demand recorder (`other-files/bold.lisp` + the buffer-trace):
     /// the traced buffers, the open demand-period start (seconds) per
     /// buffer, and the recorded `(start, end)` periods in seconds.
@@ -2963,9 +2974,12 @@ impl Engine {
             window_items: Vec::new(),
             window_actions: HashMap::new(),
             pending_device_actions: Vec::new(),
+            scripted_click_actions: false,
+            pending_scripted_click: None,
             device_action_yield: false,
             run_capped: false,
             window_item_seq: 0,
+            agi_items: Vec::new(),
             bold_buffers: Vec::new(),
             bold_open: HashMap::new(),
             bold_demand: HashMap::new(),
@@ -4338,6 +4352,12 @@ impl Engine {
                     None,
                 ),
                 Event::EncodingComplete { .. } => (
+                    "encoding-complete",
+                    "VISION".into(),
+                    Some("VISUAL".into()),
+                    None,
+                ),
+                Event::EncodingMissing { .. } => (
                     "encoding-complete",
                     "VISION".into(),
                     Some("VISUAL".into()),

@@ -844,6 +844,11 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .schedule_move_attention(loc),
+        Step::AgiSetup => session.engine_mut().ok_or_else(no_model)?.agi_setup(),
+        Step::AgiModify(phase) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .agi_modify(*phase),
         Step::RecordHistory(buffers) => session
             .engine_mut()
             .ok_or_else(no_model)?

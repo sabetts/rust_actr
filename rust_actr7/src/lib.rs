@@ -272,6 +272,10 @@ pub enum Step {
     /// `(module-request 'visual (define-chunk-spec cmd move-attention ...))`:
     /// schedule an attention shift to the named location now.
     MoveAttention(String),
+    /// `agi-modify-test`'s initial window.
+    AgiSetup,
+    /// `agi-modify-test`'s task-side modification block.
+    AgiModify(u8),
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -525,6 +529,8 @@ pub fn run_model_steps_with_hook(
                 eng.set_task_command_value_sexp(name, value)?
             }
             Step::MoveAttention(loc) => eng.schedule_move_attention(loc),
+            Step::AgiSetup => eng.agi_setup(),
+            Step::AgiModify(phase) => eng.agi_modify(*phase),
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),
