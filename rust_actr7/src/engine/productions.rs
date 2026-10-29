@@ -1874,7 +1874,7 @@ impl Engine {
             let p1_rhs_i: Vec<(String, SlotVal)> = p1_acts
                 .iter()
                 .filter(|(op, b, _, _)| matches!(*op, '=' | '*') && b == "IMAGINAL")
-                .flat_map(|(_, _, s, _)| s.clone())
+                .flat_map(|(_, _, s, _)| instantiate_slot_names(s, b1))
                 .collect();
             let rhs_names: Vec<String> = p1_rhs_i.iter().map(|(n, _)| n.clone()).collect();
             let mut p1_slots: Vec<(String, SlotVal)> = p1_lhs_i
@@ -1883,6 +1883,7 @@ impl Engine {
                 .collect();
             p1_slots.extend(p1_rhs_i);
             if let Some((_, p2_slots)) = p2_lhs.iter().find(|(b, _)| b == "IMAGINAL") {
+                let p2_slots = instantiate_slot_names(p2_slots, b2);
                 for (n1, v1) in &p1_slots {
                     if let Some((_, v2)) = p2_slots.iter().find(|(n, _)| n == n1) {
                         match (v1, v2) {
@@ -2153,7 +2154,7 @@ impl Engine {
             let c2 = lhs_for(&p2_lhs, buf);
             let mut modified: Vec<String> = Vec::new();
             for (s, _) in acts_for(&p1_acts, buf, &['=', '*']) {
-                for (n, _) in s {
+                for (n, _) in instantiate_slot_names(&s, b1) {
                     modified.push(n);
                 }
             }
@@ -2170,7 +2171,12 @@ impl Engine {
             } else {
                 let mut slots = c1;
                 for (n, v) in c2 {
-                    if !modified.contains(&n) {
+                    let resolved = if n.starts_with('=') {
+                        bound_text(&n, b2).unwrap_or_else(|| n.clone())
+                    } else {
+                        n.clone()
+                    };
+                    if !modified.contains(&resolved) {
                         slots.push((n, v));
                     }
                 }

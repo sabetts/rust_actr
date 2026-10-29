@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **516 passed / 51 ignored / 0 failed**
+- Full suite: **517 passed / 50 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -88,7 +88,7 @@ Completed:
   matches ACT-R's 111-production set.
 - [x] `v11-test-runs` - negative retrieval-request variables stay symbolic;
   the composed `guess-other & respond` production matches ACT-R.
-- [x] Full suite green at **516 passed / 51 ignored**.
+- [x] Full suite green at **517 passed / 50 ignored**.
 
 Remaining:
 
@@ -162,13 +162,14 @@ Completed:
   uses ACT-R's `distance=`/`direction=` peck tolerances (`motor.lisp:890`).
   The collector also reads `IMAGINAL.ARG1`/`WORD` and keeps only the probe half
   of each 10 s probe/feedback cycle.
+- [x] `tutorial-unit8-paired-dynamic-results-with-compiling` recovered. The
+  missing compiled candidate was tied to p1's dynamic modify-request slot
+  (`=which-slot`): resolving it against p1's firing lets composition drop the
+  matching p2 imaginal condition, and instantiating p2's dynamic LHS slot name
+  in the imaginal mapping supplies the `STIMULUS -> VAL` mapping.
 
 Remaining in this wave:
 
-- [ ] `tutorial-unit8-paired-dynamic-results-with-compiling`: summary shape is
-  correct, but the per-trial retrieval-success pattern still diverges from the
-  oracle (first subject differs from trial 20 onward). This is a dynamic-model
-  activation/retrieval issue, not the motor timestamp.
 - [ ] `tutorial-unit7-paired-composed-production`: the current driver never
   presents paired stimuli, so `pp` shows only base productions and no
   `PRODUCTION0`. Needs a paired-task/device sidecar or equivalent replay.
@@ -182,8 +183,6 @@ Approach:
 
 - Compare per-trial `(start, key)` rows against a trained oracle subject; the
   aggregate summary hides which trials diverge.
-- For the remaining unit-8 dynamic case, isolate retrieval success/activation
-  from motor timing before touching the summary.
 - Build a paired stimulus sidecar for the composed-production case.
 - Then address `hand-move-test`'s slot-value representation and `keypad-test`'s
   manual request.
@@ -196,7 +195,6 @@ Targets:
 
 - Six Siegler response-distribution cases.
 - Sperling experiment summary and Sperling visicon/RNG case.
-- Unit-8 dynamic paired summary retrieval/latency pattern.
 - BST PPM learning summaries.
 
 Approach:

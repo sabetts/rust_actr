@@ -5479,3 +5479,35 @@ the oracle (first subject differs from trial 20 onward), so it remains ignored
 on the dynamic-model activation/retrieval issue rather than timing.
 
 Corpus: **516 passed / 51 ignored**.
+
+## 328. Unit-8 dynamic summary: instantiated dynamic slot names in composition
+
+Recovered `tutorial-unit8-paired-dynamic-results-with-compiling`. The first
+divergence was not activation noise: Rust was missing the compiled candidate
+`PRODUCTION84` at 150.385, so it drew one fewer utility noise per trial and
+shifted the activation stream before trial 20. `PRODUCTION84` is
+`PRODUCTION1 & RETRIEVE-ASSOCIATE`, whose oracle LHS keeps an empty
+`=imaginal>` condition while Rust kept `WORD =STIMULUS`, so the candidate did
+not match.
+
+The parent's dynamic modify-request slot is `*imaginal> =which-slot =val`.
+Resolving that slot name against p1's firing (`WORD`) lets the composed LHS see
+that p1 modifies `WORD` and drop p2's matching imaginal condition. The imaginal
+mapping also needs p2's dynamic LHS slot name (`=target`) resolved from p2's
+firing before comparing slots, which supplies `STIMULUS -> VAL` and avoids an
+unbound RHS variable.
+
+Kept the fix narrow:
+
+- `instantiate_slot_names` now only resolves slot names beginning with `=`
+  (`chunk-spec-variable-p`), preserving `!safe-bind!` and query slot names.
+- The composed LHS compares p2 slot names under p2's bindings when deciding
+  whether p1's modifications supersede them.
+- The imaginal mapping instantiates p2 slot names locally; p2's LHS
+  representation itself is unchanged, preserving self-composition and other
+  dynamic-compilation traces.
+
+Verified `dynamic-production-compilation-tests`, `retain-indirect-retrievals`,
+and `paired-learning-dynamic` after the change.
+
+Corpus: **517 passed / 50 ignored**.

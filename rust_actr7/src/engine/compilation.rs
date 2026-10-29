@@ -239,9 +239,15 @@ pub(super) fn instantiate_slot_names(
 ) -> Vec<(String, SlotVal)> {
     slots
         .iter()
-        .map(|(n, v)| match bound_text(n, b) {
-            Some(t) => (t, v.clone()),
-            None => (n.clone(), v.clone()),
+        .map(|(n, v)| {
+            if n.starts_with('=') {
+                match bound_text(n, b) {
+                    Some(t) => (t, v.clone()),
+                    None => (n.clone(), v.clone()),
+                }
+            } else {
+                (n.clone(), v.clone())
+            }
         })
         .collect()
 }
