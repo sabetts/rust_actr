@@ -1712,6 +1712,9 @@ impl Engine {
         let mut utilities = vec![0.0f64; names.len()];
         for run in 0..runs {
             self.reset()?;
+            if learn {
+                self.clear_device_script();
+            }
             self.set_seed(if learn { (1, 0) } else { (101 + run as u64, 0) });
             self.set_trace(learn);
             for (i, &(a, b, c, goal)) in STIMS.iter().enumerate() {
@@ -1747,10 +1750,17 @@ impl Engine {
         self.out_lines.push(format!("CORRELATION: {corr:6.3}"));
         self.out_lines.push(format!("MEAN DEVIATION: {md:6.3}"));
         self.out_lines.push(String::new());
-        let header: String = (1..=15).map(|i| format!("{i:<6}")).collect();
-        self.out_lines.push(format!("Trial {header}"));
-        let values: String = percentages.iter().map(|v| format!("{v:6.1}")).collect();
-        self.out_lines.push(format!("  {values}"));
+        if learn {
+            let header: String = (1..=15).map(|i| format!("{i:<8}")).collect();
+            self.out_lines.push(format!("Trial {header}"));
+            let values: String = percentages.iter().map(|v| format!("{v:8.2}")).collect();
+            self.out_lines.push(format!("  {values}"));
+        } else {
+            let header: String = (1..=15).map(|i| format!("{i:<6}")).collect();
+            self.out_lines.push(format!("Trial {header}"));
+            let values: String = percentages.iter().map(|v| format!("{v:6.1}")).collect();
+            self.out_lines.push(format!("  {values}"));
+        }
         self.out_lines.push(String::new());
         for (name, total) in names.iter().zip(utilities) {
             self.out_lines
@@ -1827,8 +1837,10 @@ impl Engine {
         let mut current_line = None;
         let start = self.time_ms;
         let limit = start + 60_000;
+        let mut exhausted = false;
         while self.time_ms < limit {
             if !self.step_once()? {
+                exhausted = true;
                 break;
             }
             for (cmd, args) in self.take_pending_device_actions() {
@@ -1857,6 +1869,9 @@ impl Engine {
                     self.bst_update_line(target, current, &mut current_line, &mut done);
                 }
             }
+        }
+        if exhausted {
+            self.emit("------", "Stopped because no events left to process".into());
         }
         Ok(choice)
     }

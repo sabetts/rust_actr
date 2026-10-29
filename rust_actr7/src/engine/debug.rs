@@ -2811,6 +2811,26 @@ impl Engine {
         self.clear_window();
     }
 
+    /// Drop the armed scripted device timeline. The BST learning driver
+    /// builds each trial's window itself, while the extracted sidecar also
+    /// contains the same buttons/lines; only one may drive the visicon.
+    pub fn clear_device_script(&mut self) {
+        self.pending_texts.clear();
+        self.pending_rng.clear();
+        self.pending_buttons.clear();
+        self.pending_lines.clear();
+        self.pending_line_modifies.clear();
+        self.pending_line_removes.clear();
+        self.pending_modifies.clear();
+        self.pending_clears.clear();
+        self.pending_removes.clear();
+        self.pending_prints.clear();
+        self.pending_late_prints.clear();
+        self.queue
+            .retain(|q| !matches!(q.event, Event::ProcDisplay));
+        self.display_queued_ms = None;
+    }
+
     /// Queue a window display wave, **coalescing requests at the same time**.
     ///
     /// A window op is only a visicon change, and ACT-R recomputes the visicon
