@@ -5567,3 +5567,23 @@ The task-side `output-key` handler is represented by the same post-event hook
 pattern as `hand-move-test`.
 
 Corpus: **520 passed / 47 ignored**.
+
+## 332. Siegler response distributions: first-trial seed and direct drivers
+
+Recovered all six Siegler response-distribution cases. The original variant
+started the task at `*starting-seed*` 110, which `incf`s to 111 before the
+first trial; the Rust driver was seeded at 110, shifting the whole response
+matrix (1+1 was `.15/.77/.06` instead of `.07/.80/.12`).
+
+The five `tutorial-unit5code` variants had been running their recovered specs,
+which replay the runs and then feed the already-observed response matrix into
+`CORRELATION`; they never exercised the model's actual responses. They now
+use direct `SieglerDriver` steps with the source seeds and parameters:
+
+- fact-base: seed 302, `:rt -.7`, fact base .5
+- good-mp: seed 102, `:rt -10`, fact base 0
+- mp-and-ans: seed 102, `:rt 0`, `:mp 5`, `:ans .5`, all base 0
+- new-rt: seed 302, `:rt -.7`, fact base 0
+- rt-and-base: seed 102, `:rt -10`, `:mp 5`, `:ans .5`, fact base 0
+
+Corpus: **526 passed / 41 ignored**.

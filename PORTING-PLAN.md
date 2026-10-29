@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **520 passed / 47 ignored / 0 failed**
+- Full suite: **526 passed / 41 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -186,6 +186,18 @@ Goal: resolve exact numerical summaries.
 Targets:
 
 - Six Siegler response-distribution cases.
+- Sperling experiment summary and Sperling visicon/RNG case.
+- BST PPM learning summaries.
+
+Completed:
+
+- [x] Six Siegler response-distribution cases. The original case's first
+  trial seed was one low (`110` vs the task's `incf` result `111`), and the
+  five spec-backed cases now run `SieglerDriver` with their source seeds and
+  parameters instead of feeding an observed matrix to `CORRELATION`.
+
+Remaining:
+
 - Sperling experiment summary and Sperling visicon/RNG case.
 - BST PPM learning summaries.
 

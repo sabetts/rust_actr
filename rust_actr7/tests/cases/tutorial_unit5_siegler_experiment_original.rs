@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: exact Siegler response distribution.
-// The summary structure matches, but the response cells are close rather
-// than exact (#281).
-#[ignore = "numerical: Siegler response distribution"]
 fn tutorial_unit5_siegler_experiment_original() -> Result<(), String> {
     Case::new("tutorial-unit5-siegler-experiment-original")
         .models(&[
@@ -17,7 +13,7 @@ fn tutorial_unit5_siegler_experiment_original() -> Result<(), String> {
             "tutorial;unit5;siegler-model.lisp",
         ])
         .steps(vec![Step::SieglerDriver {
-            first_seed: 110,
+            first_seed: 111,
             sets: 100,
             rt: None,
             mp: None,
