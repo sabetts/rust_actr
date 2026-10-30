@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 6A: unit8 BST, ncnar, imaginal, BST utility, save-model)
-- Full suite: **552 passed / 15 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 6A: unit8 BST, ncnar, imaginal, BST utility, save-model, siegler)
+- Full suite: **553 passed / 14 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -458,8 +458,11 @@ Completed:
 - [x] **`save-model`** promoted. Added `save-model-file` serialization for
   parameters, seed, chunk types, chunks, DM names, productions, `spp` rows,
   and buffer focus. The ref's wall-clock header is frozen by an explicit
-  `SaveModel` timestamp for determinism. Full suite green at **552 passed /
-  15 ignored**.
+  `SaveModel` timestamp for determinism.
+- [x] **`siegler`** promoted. Added a trace-capable `siegler-experiment`
+  driver with per-trial digit sounds, speech-device suppression, and the
+  original 2-set response matrix. Full suite green at **553 passed / 14
+  ignored**.
 
 Parked:
 

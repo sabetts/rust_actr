@@ -6044,3 +6044,21 @@ cleared reusable/copy chunks survive in ACT-R's chunk table. The serializer
 recovers missing buffer/reuse copies from the matching DM `-0` chunk.
 
 Corpus: **552 passed / 15 ignored**.
+
+## 351. Siegler experiment trace and per-trial seed reset
+
+`siegler` is promoted with `Step::SieglerExperiment`. The ref is the full
+12-trial trace, not the response summary already covered by `SieglerDriver`:
+
+- Each trial follows `siegler-trial`: reset, re-seed from the
+  `:starting-parameters (:seed (1 0))` value, create the two digit sounds,
+  run 30 s, and capture the spoken response.
+- The task installs a speech/microphone device, so the default
+  `SPEAK <text>` device-notification line is suppressed even though the
+  self-heard `new-sound` remains.
+- The 2 sets feed the existing `siegler_results` matrix/correlation display.
+
+The case now uses the shared driver and `no_device()` so the extracted
+`siegler.device.sexp` audio trace does not duplicate the driver's sounds.
+
+Corpus: **553 passed / 14 ignored**.
