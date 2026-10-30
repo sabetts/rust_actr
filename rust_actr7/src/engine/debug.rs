@@ -585,7 +585,7 @@ impl Engine {
             self.spreading_activation(&name, self.cfg.mas)
         };
         self.cfg.act = old_act;
-        let mut a = base + spread;
+        let mut a = base + spread + self.inhibition_offset(&refs);
         if let Some(mp) = mp {
             for (s, v) in neg {
                 if s.starts_with(':') {
@@ -914,7 +914,11 @@ impl Engine {
             Some(s) => self.rng.borrow_mut().noise(s),
             None => 0.0,
         };
-        (base, spread, base + spread + noise)
+        (
+            base,
+            spread,
+            base + spread + self.inhibition_offset(&refs) + noise,
+        )
     }
 
     fn sdp_sjis(&mut self, idx: usize) -> Vec<(String, f32)> {
@@ -1381,6 +1385,17 @@ impl Engine {
                     Sexp::Float(x) => Ol::Num(*x),
                     other => return Err(bad(format!("bad :ol {other:?}"))),
                 };
+            }
+            ":ENABLE-INHIBITION" => self.cfg.inhibition = truthy,
+            ":INHIBITION-SCALE" => {
+                if let Some(x) = num(val) {
+                    self.cfg.inhibition_scale = x;
+                }
+            }
+            ":INHIBITION-DECAY" => {
+                if let Some(x) = num(val) {
+                    self.cfg.inhibition_decay = x;
+                }
             }
             ":PPM" => self.cfg.ppm = num(val),
             ":PPM-HOOK" => {

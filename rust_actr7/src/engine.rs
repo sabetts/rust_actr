@@ -364,6 +364,11 @@ struct Config {
     blc: f32,
     bll: Option<f32>,
     ol: Ol,
+    /// Base-level-inhibition extra: activation offset enabled by
+    /// `:enable-inhibition` (`extras/base-level-inhibition/bl-inhibition.lisp`).
+    inhibition: bool,
+    inhibition_scale: f32,
+    inhibition_decay: f32,
     act_scale: f32,
     ans: Option<f32>,
     egs: f32,
@@ -1462,6 +1467,9 @@ impl Config {
             onset_span_ms,
             bll,
             ol,
+            inhibition: sgp_bool(&m.params, ":ENABLE-INHIBITION"),
+            inhibition_scale: sgp_single(&m.params, ":INHIBITION-SCALE")?.unwrap_or(5.0),
+            inhibition_decay: sgp_single(&m.params, ":INHIBITION-DECAY")?.unwrap_or(1.0),
             act_scale,
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
@@ -1923,6 +1931,11 @@ enum Event {
     /// non-maintenance for a real-time slack hook's `(schedule-event <t> 'fn)`
     /// no-op, which is hidden at medium but wakes an armed CR.
     Dummy,
+    /// A scheduled `!stop!` break (`schedule-break-relative`): prints the
+    /// BREAK-EVENT line and stops the current run.
+    Break {
+        details: String,
+    },
     /// A deferred trace line (`schedule-event-now` from a request handler).
     Emit {
         module: String,
@@ -3553,6 +3566,25 @@ impl Engine {
                 };
             }
         }
+        // Model-body `(sdp :creation-time ... :references ...)`: global DM
+        // history parameters applied after the reset histories are built.
+        if let Some(seconds) = self.model.sdp_creation_time {
+            let creation_ms = (seconds * 1000.0).round() as i64;
+            for h in &mut self.hist {
+                h.creation_ms = creation_ms;
+            }
+        }
+        if let Some(ref refs) = self.model.sdp_references {
+            let refs_ms: Vec<i64> = refs.iter().map(|s| (s * 1000.0).round() as i64).collect();
+            for h in &mut self.hist {
+                h.count = refs_ms.len();
+                h.refs = match &self.cfg.ol {
+                    Ol::On => Vec::new(),
+                    Ol::Num(ol) => refs_ms.iter().take(*ol as usize).cloned().collect(),
+                    Ol::Off => refs_ms.clone(),
+                };
+            }
+        }
         // Model-body `set-similarities`: explicit Sji both directions.
         for (a, b, v) in &self.model.similarities {
             self.sims.insert((a.clone(), b.clone()), *v);
@@ -4919,6 +4951,7 @@ impl Engine {
             self.last_output_key = None;
         }
         let mut n = 0u64;
+        self.stopped = false;
         self.p_hist_run_start();
         loop {
             self.skip_unnecessary_events();
@@ -4961,8 +4994,6 @@ impl Engine {
                 break;
             }
             if self.stopped {
-                self.queue.clear();
-                self.emit("------", "BREAK-EVENT Stopped by !stop!".into());
                 break;
             }
             let silent = self.event_silent;
@@ -5050,6 +5081,7 @@ impl Engine {
         self.schedule_display();
         self.device_action_yield = false;
         self.run_capped = false;
+        self.stopped = false;
         let mut processed = false;
         let mut chunk_events = 0u64;
         loop {
@@ -5152,8 +5184,6 @@ impl Engine {
                 break;
             }
             if self.stopped {
-                self.queue.clear();
-                self.emit("------", "BREAK-EVENT Stopped by !stop!".into());
                 break;
             }
             // Armed conflict-resolution wakes after any later

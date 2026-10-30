@@ -20,6 +20,21 @@ impl Engine {
             .or_else(|| self.named.get(name))
     }
 
+    /// The base-level-inhibition activation offset, when the extra is
+    /// enabled (`bl-inhibition-term`).
+    pub(super) fn inhibition_offset(&self, refs: &[i64]) -> f32 {
+        if self.cfg.inhibition {
+            inhibition_term(
+                self.time_ms,
+                refs,
+                self.cfg.inhibition_scale,
+                self.cfg.inhibition_decay,
+            )
+        } else {
+            0.0
+        }
+    }
+
     /// DM chunk order as `all-dm-chunks` (`declarative-memory.lisp:2747`):
     /// `dm-chunks` is an alist of signature -> chunks, built by pushing new
     /// signature groups and new chunks to the front, then flattened. So
@@ -163,7 +178,7 @@ impl Engine {
         } else {
             0.0
         };
-        let mut a = base + spread;
+        let mut a = base + spread + self.inhibition_offset(&self.hist[idx].refs);
         if let Some(mp) = self.cfg.mp {
             for (s, v) in want_slots {
                 if s.starts_with(':') || *v == Value::Nil {
@@ -637,6 +652,19 @@ impl Engine {
         }
         Ok(())
     }
+}
+
+/// Base-level-inhibition activation offset
+/// (`bl-inhibition.lisp:105`): `-log(1 + (Tn/ts)^-ds)`, where `Tn` is the
+/// seconds since the most recent reference, clamped to 0.05.
+pub(super) fn inhibition_term(now_ms: i64, refs: &[i64], scale: f32, decay: f32) -> f32 {
+    let Some(reference) = refs.first() else {
+        return 0.0;
+    };
+    let t = ((now_ms - reference) as f64 / 1000.0).max(0.05) as f32;
+    let ratio = (t / scale) as f64;
+    let pow = ((-decay as f64) * ratio.ln()).exp() as f32;
+    -(((1.0f32 + pow) as f64).ln()) as f32
 }
 
 /// `~s` of an `:ol` value in the base-level trace.

@@ -870,6 +870,11 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .creating_image_setup(),
+        Step::BaseLevelInhibition => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .base_level_inhibition_driver()
+            .map_err(|e| e.to_string())?,
         Step::AdaptiveNoiseTrace => session
             .engine_mut()
             .ok_or_else(no_model)?

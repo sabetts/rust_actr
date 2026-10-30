@@ -287,6 +287,8 @@ pub enum Step {
     CreatingImageSetup,
     /// `adaptive-noise`'s five-request trace.
     AdaptiveNoiseTrace,
+    /// `base-level-inhibition`'s two 100-trial free-recall runs.
+    BaseLevelInhibition,
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -555,6 +557,7 @@ pub fn run_model_steps_with_hook(
             Step::AgiModify(phase) => eng.agi_modify(*phase),
             Step::CreatingImageSetup => eng.creating_image_setup(),
             Step::AdaptiveNoiseTrace => eng.adaptive_noise_trace()?,
+            Step::BaseLevelInhibition => eng.base_level_inhibition_driver()?,
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),

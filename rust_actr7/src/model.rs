@@ -350,6 +350,12 @@ pub struct Model {
     /// Model-body `(set-all-base-levels <level> [creation-seconds])`: a fixed
     /// base level for every DM chunk (`commands/dm-commands.lisp:600`).
     pub set_all_base_levels: Option<(f32, Option<f64>)>,
+    /// Model-body `(sdp :creation-time S ...)`: the creation time applied to
+    /// every DM chunk on reset (`commands/dm-commands.lisp:860`).
+    pub sdp_creation_time: Option<f64>,
+    /// Model-body `(sdp :references (...))`: the reference list (seconds)
+    /// applied to every DM chunk on reset.
+    pub sdp_references: Option<Vec<f64>>,
     /// Extras requested via top-level `(require-extra "name")`.
     pub required_extras: Vec<String>,
     pub initial_goal: Option<ChunkDesc>,
@@ -2531,6 +2537,8 @@ fn parse_model(
         similarities: Vec::new(),
         base_levels: Vec::new(),
         set_all_base_levels: None,
+        sdp_creation_time: None,
+        sdp_references: None,
         required_extras: Vec::new(),
         initial_goal: None,
         goal_focuses: Vec::new(),
@@ -2713,6 +2721,31 @@ fn parse_model(
                 if let Some(level) = items.get(1).and_then(sexp_f64) {
                     let creation = items.get(2).and_then(sexp_f64);
                     model.set_all_base_levels = Some((level as f32, creation));
+                }
+            }
+            // `(sdp :creation-time S :references (...))`: global DM history
+            // parameters. The model body is re-evaluated on reset, so these
+            // are stored and applied after the DM histories are rebuilt.
+            "SDP" => {
+                let mut i = 1;
+                while i + 1 < items.len() {
+                    if let Some(key) = items[i].as_sym() {
+                        match key.to_uppercase().as_str() {
+                            ":CREATION-TIME" => {
+                                if let Some(v) = sexp_f64(&items[i + 1]) {
+                                    model.sdp_creation_time = Some(v);
+                                }
+                            }
+                            ":REFERENCES" => {
+                                if let Sexp::List(refs) = &items[i + 1] {
+                                    model.sdp_references =
+                                        Some(refs.iter().filter_map(sexp_f64).collect::<Vec<_>>());
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    i += 2;
                 }
             }
             // `(declare-buffer-usage <buffer> <chunk-type> <slots...>)`:

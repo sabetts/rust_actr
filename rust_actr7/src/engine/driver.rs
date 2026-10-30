@@ -1020,7 +1020,7 @@ impl Engine {
             None => self.hist[idx].fixed_base.unwrap_or(self.cfg.blc),
         };
         let spread = self.spreading_activation(name, self.cfg.mas);
-        (base + spread) as f64
+        (base + spread + self.inhibition_offset(&self.hist[idx].refs)) as f64
     }
 
     /// `output-person-location` (`al-fan-study.lisp:467`): the correlation and
@@ -2127,6 +2127,60 @@ impl Engine {
             }
             _ => {}
         }
+    }
+
+    /// `base-level-inhibition`'s two 100-trial free-recall runs. The task
+    /// prints the reference-count distribution after each run: first without
+    /// inhibition, then with the extension enabled.
+    pub fn base_level_inhibition_driver(&mut self) -> Result<(), EngineError> {
+        self.free_recall_run(false)?;
+        let without = self.free_recall_frequencies();
+        self.model_output(&format!("without: {}", Value::List(without).show()));
+        self.model_output("");
+
+        self.free_recall_run(true)?;
+        let with = self.free_recall_frequencies();
+        self.model_output(&format!("with: {}", Value::List(with).show()));
+        self.model_output("");
+        Ok(())
+    }
+
+    fn free_recall_run(&mut self, inhibit: bool) -> Result<(), EngineError> {
+        self.reset()?;
+        // The task's `(ssp :starting-parameters (:seed (1 0) ...))` re-seeds
+        // on every reset.
+        self.set_seed((1, 0));
+        self.apply_sgp(
+            ":ENABLE-INHIBITION",
+            &Sexp::Sym(if inhibit { "T" } else { "NIL" }.to_string()),
+        )?;
+        if inhibit {
+            self.apply_sgp(":INHIBITION-SCALE", &Sexp::Float(5.0))?;
+            self.apply_sgp(":INHIBITION-DECAY", &Sexp::Float(1.0))?;
+        }
+        let goal = ChunkDesc::Named("G".to_string());
+        for _ in 0..100 {
+            self.run_full_time(1.0)?;
+            self.goal_focus(&goal)?;
+            self.run_secs(10.0)?;
+        }
+        self.run_full_time(20.0)?;
+        Ok(())
+    }
+
+    fn free_recall_frequencies(&self) -> Vec<Value> {
+        let mut rows: Vec<(usize, usize)> = self
+            .dm
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.ctype.eq_ignore_ascii_case("MEMORY"))
+            .map(|(i, _)| (i, self.hist[i].count))
+            .collect();
+        rows.sort_by(|a, b| b.1.cmp(&a.1));
+        rows.into_iter()
+            .take(10)
+            .map(|(_, count)| Value::Num(((count as f32 - 10.0) / 100.0) as f64))
+            .collect()
     }
 
     /// `adaptive-noise`'s request timeline (the task also rehearses silently).

@@ -800,18 +800,24 @@ impl Engine {
                     self.now_m(Prio::Max, Out::Never, true, Event::Dummy);
                 }
                 RhsAction::Other { head, .. } => {
-                    // `!stop!` ends the run with a BREAK-EVENT.
+                    // `!stop!` schedules a priority-`:min` break event
+                    // (`schedule-break-relative 0 :priority :min`); implicit
+                    // clears and the other same-time actions still run first.
                     if head == "!STOP!" {
-                        self.stopped = true;
+                        self.now_m(
+                            Prio::Min,
+                            Out::Medium,
+                            true,
+                            Event::Break {
+                                details: "Stopped by !stop!".to_string(),
+                            },
+                        );
                     } else {
                         return Err(unimpl(format!("RHS {head} needs a Lisp evaluator")));
                     }
                 }
                 _ => {}
             }
-        }
-        if self.stopped {
-            return Ok(());
         }
         // Whole-chunk requests resolved this fire (`+retrieval> =goal`),
         // used by production compilation for indirect actions.
@@ -2939,7 +2945,7 @@ impl Engine {
             } else {
                 0.0
             };
-            let mut a = base + spread;
+            let mut a = base + spread + self.inhibition_offset(&self.hist[idx].refs);
             // Partial matching: `=` slots add `mp * similarity`; `-` slots
             // add `mp * md` only when the chunk's value matches the
             // negated value (similarity == ms), per

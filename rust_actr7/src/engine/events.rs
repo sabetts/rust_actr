@@ -1247,6 +1247,10 @@ impl Engine {
                 );
             }
             Event::Dummy => {}
+            Event::Break { details } => {
+                self.emit("------", format!("BREAK-EVENT {details}"));
+                self.stopped = true;
+            }
             Event::Emit { module, line } => {
                 if show {
                     self.emit(&module, line);
