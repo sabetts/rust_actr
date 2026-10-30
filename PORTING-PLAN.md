@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (all parked pcomp cases are committed)
-- Full suite: **547 passed / 20 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 6A partial: unit8 BST, ncnar, imaginal-action)
+- Full suite: **550 passed / 17 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -443,10 +443,24 @@ Completed:
 - [x] **`v13-50-runs`** promoted by the same canonicalization fix. Full suite
   green at **547 passed / 20 ignored**.
 
-Next:
+#### Wave 6 - Residual ignored cases
 
-- All parked pcomp cases are complete. Move on to the remaining long-tail
-  drivers and external-blocker follow-ups.
+- [x] **`tutorial-unit8-bst-experiment-data`** promoted; the existing PPM
+  driver already matched the ref.
+- [x] **`tutorial-unit5modeling-v9-p7-8-run-ncnar-nil`** promoted. Runtime
+  `:NCNAR`/`:DCNN` now update `update-chunks-on-the-fly`; v10 refs stay green.
+- [x] **`imaginal-action`** promoted. Completed `simple-action` defaults,
+  `define-chunks`, scheduled imaginal modifications/free/error commands, and
+  the `?buffer> error t/nil` query. Full suite green at **550 passed / 17
+  ignored**.
+
+Parked:
+
+- **`tutorial-unit6-bst-utility-trace`** still needs a hook-aware BST trial
+  driver. The ref's reward at 6.475 requires the task callback/release timing
+  and the full click history; the current replay lacks both.
+- **`time-size-check`** has an upstream placeholder ref (`XXXXX`); leave
+  ignored as a diagnostic, not an engine gap.
 
 ### External Blockers
 

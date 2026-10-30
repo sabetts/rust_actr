@@ -5983,3 +5983,27 @@ lets duplicate detection work, removes the extra candidate and its utility
 noise draw, and restores the task RNG stream at game 40.
 
 Corpus: **547 passed / 20 ignored**.
+
+## 348. Wave 6A: unit8 BST, runtime ncnar, imaginal-action
+
+Stale-ignore recheck first: `tutorial-unit8-bst-experiment-data` already
+matched through the existing `BstMode::Ppm` driver and is promoted.
+
+Runtime `:NCNAR`/`:DCNN` were accepted but ignored after model load.
+`Config` now keeps both flags and recomputes `update-chunks-on-the-fly` when
+either changes. The v9 `:ncnar nil` companion prints `GOAL CHUNK0`, while the
+v10 `sdm`/`sdp` refs remain green.
+
+`imaginal-action` exposed several shared gaps: core `simple-action`'s
+`(simple t)` default, `define-chunks` as a macro, `schedule-mod-buffer-chunk`,
+scheduled `set-imaginal-free`/`set-imaginal-error` commands, and the
+`?buffer> error t/nil` query (which was inverted and only consulted blending).
+With those fixed the 38-line trace matches byte-for-byte. `SLOTS` is now a
+standard module slot for `generic-action` requests.
+
+`tutorial-unit6-bst-utility-trace` remains parked: its reward time requires
+the task callback/release timing and full click history, not just the
+production/utility engine path. `time-size-check` remains an upstream
+placeholder ref.
+
+Corpus: **550 passed / 17 ignored**.
