@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 5B.2 is committed)
-- Full suite: **542 passed / 25 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 5B.3 is committed)
+- Full suite: **544 passed / 23 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -423,12 +423,17 @@ Completed:
   emits the model-name column plus the global `-` terminator. Full suite green
   at **542 passed / 25 ignored**.
 
+- [x] **Wave 5B.3 - Command-layer output.** `tutorial-unit1modeling-warnings`
+  and `undefined-slots` are promoted. Added `Step::SetBufferChunk` for the
+  task's direct goal set; the warning lines are emitted as command output and
+  the `whynot` blocks use the engine. Full suite green at **544 passed /
+  23 ignored**.
+
 Next:
 
-- **Wave 5B.3 - Command-layer output.** `tutorial-unit1modeling-warnings` and
-  `undefined-slots`.
-- Keep the three parked pcomp cases (`v1`, `v12`, `v13`) as a separate
-  activation-history track.
+- The Wave 5B residual clusters are complete. Resume the three parked pcomp
+  cases (`v1`, `v12`, `v13`) as a separate activation-history track, then the
+  remaining long-tail drivers.
 
 ### External Blockers
 
