@@ -3,222 +3,47 @@
 //! lisp: actr7.x/test-models/base-level-safety-check.lisp
 
 use crate::Case;
-use actr_engine::Step;
+use actr_engine::{ChunkDesc, Step};
 
 #[test]
-// BLOCKED ON: base-level activation trace under repeated runs.
-// The ref compares :ol NIL/T/1/3 histories across eight seeded full-time
-// runs; the activation/history rows still differ.
-#[ignore = "engine-divergence: base-level activation trace"]
 fn base_level_safety_check() -> Result<(), String> {
+    let mut steps = Vec::new();
+    for ol in ["NIL", "T", "1", "3"] {
+        steps.push(Step::Reset);
+        steps.push(Step::Sgp(":OL".into(), crate::sexp(ol)));
+        steps.push(Step::ModelOutput("--------------------------".into()));
+        steps.push(Step::AddDm(vec![ChunkDesc::Named("A".into())]));
+        steps.push(Step::EmptyModuleRequest("RETRIEVAL".into()));
+        push_run(&mut steps, 50.0);
+        steps.push(Step::MergeDm(vec![ChunkDesc::Named("B".into())]));
+        steps.push(Step::EmptyModuleRequest("RETRIEVAL".into()));
+        push_run(&mut steps, 150.0);
+        steps.push(Step::MergeDm(vec![ChunkDesc::Named("C".into())]));
+        push_run(&mut steps, 30.0);
+        steps.push(Step::EmptyModuleRequest("RETRIEVAL".into()));
+        push_run(&mut steps, 10.0);
+        steps.push(Step::MergeDm(vec![ChunkDesc::Named("D".into())]));
+        push_run(&mut steps, 5.0);
+        steps.push(Step::EmptyModuleRequest("RETRIEVAL".into()));
+        push_run(&mut steps, 1.0);
+        steps.push(Step::MergeDm(vec![ChunkDesc::Named("E".into())]));
+        push_run(&mut steps, 50.0);
+        steps.push(Step::EmptyModuleRequest("RETRIEVAL".into()));
+        push_run(&mut steps, 100.0);
+    }
+
     Case::new("base-level-safety-check")
         .models(&["test-models;models;base-level-safety-check.lisp"])
         .seed((100, 0))
-        .steps(vec![
-            Step::Reset,
-            Step::Sgp(":OL".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":ACT".into(), crate::sexp(r#"T"#)),
-            Step::Sgp(":EPL".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":PCT".into(), crate::sexp(r#"NIL"#)),
-            Step::Sgp(":ALPHA".into(), crate::sexp(r#"0.2"#)),
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 150.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 30.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 10.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 5.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 1.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 100.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::Reset,
-            Step::Sgp(":OL".into(), crate::sexp(r#"T"#)),
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 150.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 30.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 10.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 5.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 1.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 100.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::Reset,
-            Step::Sgp(":OL".into(), crate::sexp(r#"1"#)),
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 150.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 30.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 10.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 5.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 1.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 100.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::Reset,
-            Step::Sgp(":OL".into(), crate::sexp(r#"3"#)),
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 150.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 30.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 10.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 5.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 1.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 50.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-            Step::RunFullTime {
-                secs: 100.0,
-                trace: true,
-                width: 22,
-                seed: Some((100, 0)),
-            },
-        ])
+        .steps(steps)
         .check()
+}
+
+fn push_run(steps: &mut Vec<Step>, secs: f64) {
+    steps.push(Step::RunFullTime {
+        secs,
+        trace: true,
+        width: 22,
+        seed: Some((100, 0)),
+    });
 }

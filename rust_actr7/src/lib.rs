@@ -269,6 +269,13 @@ pub enum Step {
     /// Install a task command's return value (a task-driver bridge for
     /// commands such as `which-one` that `!bind!` reads).
     SetTaskCommandValue { name: String, value: sexpr::Sexp },
+    /// `(add-dm (name ...) ...)`: add named runtime DM chunks outside a run.
+    AddDm(Vec<ChunkDesc>),
+    /// `(merge-dm (name ...) ...)`: merge named chunks into DM by content.
+    MergeDm(Vec<ChunkDesc>),
+    /// `(module-request '<buffer> (define-chunk-spec))`: schedule an empty
+    /// request to the named module.
+    EmptyModuleRequest(String),
     /// `(module-request 'visual (define-chunk-spec cmd move-attention ...))`:
     /// schedule an attention shift to the named location now.
     MoveAttention(String),
@@ -532,6 +539,17 @@ pub fn run_model_steps_with_hook(
             Step::SetTaskCommandValue { name, value } => {
                 eng.set_task_command_value_sexp(name, value)?
             }
+            Step::AddDm(descs) => {
+                for desc in descs {
+                    eng.add_dm_desc(desc)?;
+                }
+            }
+            Step::MergeDm(descs) => {
+                for desc in descs {
+                    eng.merge_dm_desc(desc)?;
+                }
+            }
+            Step::EmptyModuleRequest(buffer) => eng.empty_module_request(buffer)?,
             Step::MoveAttention(loc) => eng.schedule_move_attention(loc),
             Step::AgiSetup => eng.agi_setup(),
             Step::AgiModify(phase) => eng.agi_modify(*phase),

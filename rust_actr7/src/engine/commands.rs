@@ -3,6 +3,22 @@ use super::eval::as_num;
 use super::motor::key_table;
 use super::*;
 
+/// `add-dm`/`merge-dm` driver steps carry named chunks only. Literal slot
+/// definitions use the model loader or the command layer.
+fn named_dm_chunk(desc: &ChunkDesc, cmd: &str) -> Result<ChunkInst, EngineError> {
+    match desc {
+        ChunkDesc::Named(name) => Ok(ChunkInst {
+            name: Some(name.clone()),
+            ctype: String::new(),
+            slots: Vec::new(),
+            bare: false,
+        }),
+        ChunkDesc::Spec { .. } => Err(EngineError::Model(format!(
+            "{cmd} step requires a named chunk descriptor"
+        ))),
+    }
+}
+
 /// Minimal `format` for task hooks: `~%`, `~~`, `~S`, and `~A`.
 fn format_lisp_simple(fmt: &str, args: &[Value]) -> String {
     let mut out = String::new();
@@ -607,6 +623,42 @@ impl Engine {
             names.push(name);
         }
         Ok(names)
+    }
+
+    /// `(add-dm (name ...))` for a driver step: add a named empty chunk.
+    pub fn add_dm_desc(&mut self, desc: &ChunkDesc) -> Result<(), EngineError> {
+        self.add_runtime_dm(named_dm_chunk(desc, "add-dm")?);
+        Ok(())
+    }
+
+    /// `(merge-dm (name ...))` for a driver step: merge a named empty chunk
+    /// into DM by content, adding a reference on an existing match.
+    pub fn merge_dm_desc(&mut self, desc: &ChunkDesc) -> Result<(), EngineError> {
+        self.merge_into_dm(named_dm_chunk(desc, "merge-dm")?, "MERGE-DM");
+        Ok(())
+    }
+
+    /// `(module-request '<buffer> (define-chunk-spec))` for a driver step.
+    /// The empty spec matches every chunk in the module.
+    pub fn empty_module_request(&mut self, buffer: &str) -> Result<(), EngineError> {
+        let spec = NewChunk::Spec {
+            ctype: String::new(),
+            slots: Vec::new(),
+            neg: Vec::new(),
+            rels: Vec::new(),
+            bare: true,
+        };
+        self.now(
+            Prio::Num(0),
+            Out::Medium,
+            Event::ModuleRequest {
+                buffer: buffer.to_uppercase(),
+                spec,
+                var_slots: Vec::new(),
+                trace: false,
+            },
+        );
+        Ok(())
     }
 
     pub(super) fn add_runtime_dm(&mut self, inst: ChunkInst) {

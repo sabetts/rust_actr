@@ -1373,6 +1373,15 @@ impl Engine {
                     }
                 }
             }
+            ":OL" => {
+                self.cfg.ol = match val {
+                    Sexp::Sym(s) if s == "NIL" => Ol::Off,
+                    Sexp::Sym(s) if s == "T" => Ol::On,
+                    Sexp::Int(i) => Ol::Num(*i as f64),
+                    Sexp::Float(x) => Ol::Num(*x),
+                    other => return Err(bad(format!("bad :ol {other:?}"))),
+                };
+            }
             ":PPM" => self.cfg.ppm = num(val),
             ":PPM-HOOK" => {
                 self.cfg.ppm_hook = match val {

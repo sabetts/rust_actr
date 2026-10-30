@@ -644,6 +644,9 @@ pub(super) fn ol_str(ol: &Ol) -> String {
     match ol {
         Ol::On => "T".to_string(),
         Ol::Off => "NIL".to_string(),
+        // `:ol` takes an integer; the trace prints it with `~s`, not as a
+        // float (the corpus has `:ol 1`/`:ol 3`).
+        Ol::Num(n) if n.fract() == 0.0 => format!("{}", *n as i64),
         Ol::Num(n) => lisp_f(*n as f32),
     }
 }

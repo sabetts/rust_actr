@@ -835,6 +835,23 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .register_task_command(name),
+        Step::AddDm(descs) => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            for desc in descs {
+                eng.add_dm_desc(desc).map_err(|e| e.to_string())?;
+            }
+        }
+        Step::MergeDm(descs) => {
+            let eng = session.engine_mut().ok_or_else(no_model)?;
+            for desc in descs {
+                eng.merge_dm_desc(desc).map_err(|e| e.to_string())?;
+            }
+        }
+        Step::EmptyModuleRequest(buffer) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .empty_module_request(buffer)
+            .map_err(|e| e.to_string())?,
         Step::SetTaskCommandValue { name, value } => session
             .engine_mut()
             .ok_or_else(no_model)?
