@@ -6024,3 +6024,23 @@ then match the four-click B/C/C/A path and all 153 utility lines.
 `HookCase` gained `no_device()` for drivers that create their own window.
 
 Corpus: **551 passed / 16 ignored**.
+
+## 350. save-model serialization and deterministic wall clock
+
+`save-model` is promoted with a new `Step::SaveModel` backed by
+`Engine::save_model`. The serializer mirrors `save-model-file`: model header,
+empty `(sgp ...)`, seed comment, pre-hooks, model chunk types, `(define-chunks
+...)`, `(add-dm-chunks ...)`, `pp`, `(spp ...)`, and the final buffer focus.
+
+The Lisp ref embeds `(get-decoded-time)`, and the Lisp comparator does not
+normalize it, so a faithful rerun always differs after the ref date. The step
+therefore takes an explicit timestamp; the test supplies the captured
+`2025/12/17 14:47:15`. The default remains the current wall clock for normal
+save-model use.
+
+Two runtime details surfaced: demo2's task draws 21 RNG values in
+`permute-list` before the run (the saved seed needs 23 total draws), and
+cleared reusable/copy chunks survive in ACT-R's chunk table. The serializer
+recovers missing buffer/reuse copies from the matching DM `-0` chunk.
+
+Corpus: **552 passed / 15 ignored**.

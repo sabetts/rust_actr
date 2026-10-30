@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 6A: unit8 BST, ncnar, imaginal-action, BST utility)
-- Full suite: **551 passed / 16 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 6A: unit8 BST, ncnar, imaginal, BST utility, save-model)
+- Full suite: **552 passed / 15 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -454,8 +454,12 @@ Completed:
   the `?buffer> error t/nil` query.
 - [x] **`tutorial-unit6-bst-utility-trace`** promoted. Added a hook-aware
   single-trial BST driver that builds the live window without the sidecar and
-  stops on the filter's reward break. Full suite green at **551 passed / 16
-  ignored**.
+  stops on the filter's reward break.
+- [x] **`save-model`** promoted. Added `save-model-file` serialization for
+  parameters, seed, chunk types, chunks, DM names, productions, `spp` rows,
+  and buffer focus. The ref's wall-clock header is frozen by an explicit
+  `SaveModel` timestamp for determinism. Full suite green at **552 passed /
+  15 ignored**.
 
 Parked:
 
