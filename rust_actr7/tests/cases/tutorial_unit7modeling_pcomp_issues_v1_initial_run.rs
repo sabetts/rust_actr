@@ -6,8 +6,6 @@ use crate::Case;
 use actr_engine::{PcompGameConfig, Step};
 
 #[test]
-// BLOCKED ON: EPL production compilation changes the summary.
-#[ignore = "engine-divergence: EPL pcomp summary"]
 fn tutorial_unit7modeling_pcomp_issues_v1_initial_run() -> Result<(), String> {
     Case::new("tutorial-unit7modeling-pcomp-issues-v1-initial-run")
         .models(&[

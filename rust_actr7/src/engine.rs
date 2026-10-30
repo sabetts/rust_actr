@@ -4615,26 +4615,42 @@ impl Engine {
     /// `:ignore-buffers` skip this; no test sets it.
     fn merge_into_dm(&mut self, mut chunk: ChunkInst, buffer: &str) {
         let now = self.time_ms;
-        // A vision object's `screen-pos` names a buffer copy that is
-        // recreated on each attention, so the same object re-encountered
-        // later must match an existing DM chunk on its other slots rather
-        // than add a new one (verified against `paired`'s DM, which keeps two
-        // objects across task 1's two identical trials).
-        let no_pos: Vec<(String, Value)> = chunk
-            .slots
-            .iter()
-            .filter(|(k, _)| k != "SCREEN-POS")
-            .cloned()
-            .collect();
+        // Buffer chunk references are copies/aliases (`THREE-0`,
+        // `RESPONSE-1-0`, a visual-location copy). `equal-chunks-fct`
+        // compares their true names, so normalize every chunk-valued slot
+        // before comparing. This also keeps two visual objects at different
+        // locations distinct while merging the same object re-encountered.
+        let resolve = |name: &str| -> String {
+            let mut current = name.to_string();
+            loop {
+                let next = self
+                    .chunk_alias
+                    .get(&current)
+                    .or_else(|| self.copy_source.get(&current))
+                    .or_else(|| self.vl_copied_from.get(&current))
+                    .cloned();
+                match next {
+                    Some(n) if n != current => current = n,
+                    _ => return current,
+                }
+            }
+        };
+        let norm = |slots: &[(String, Value)]| -> Vec<(String, Value)> {
+            let mut out: Vec<(String, Value)> = slots
+                .iter()
+                .map(|(slot, value)| {
+                    if let Value::Sym(name) = value {
+                        return (slot.clone(), Value::Sym(resolve(name)));
+                    }
+                    (slot.clone(), value.clone())
+                })
+                .collect();
+            out.sort_by(|a, b| a.0.cmp(&b.0));
+            out
+        };
+        let want = norm(&chunk.slots);
         let found = self.dm.iter().position(|c| {
-            c.ctype == chunk.ctype
-                && c.slots.len() == chunk.slots.len()
-                && c.slots
-                    .iter()
-                    .filter(|(k, _)| k != "SCREEN-POS")
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    == no_pos
+            c.ctype == chunk.ctype && c.slots.len() == chunk.slots.len() && norm(&c.slots) == want
         });
         match found {
             Some(i) => {
