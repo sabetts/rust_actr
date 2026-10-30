@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 5B.3 is committed)
-- Full suite: **544 passed / 23 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 5C partial: pcomp v1 is committed)
+- Full suite: **545 passed / 22 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -429,11 +429,22 @@ Completed:
   the `whynot` blocks use the engine. Full suite green at **544 passed /
   23 ignored**.
 
+#### Wave 5C - Parked pcomp activation/history track
+
+- [x] **`v1-initial-run`** promoted. DM merge now normalizes copy/alias chunk
+  references and compares slot values by true names; this fixed the missing
+  visual-object merge and the extra RNG draw at trial 10. Full suite green at
+  **545 passed / 22 ignored**.
+- [ ] **`v12-50-runs`** still differs at game 40. Trials 0-8 match; Rust draws
+  one extra activation/utility sample at trial 9 (RT 1.441 s vs 2.936 s), so
+  trial 10's task RNG values diverge.
+- [ ] **`v13-50-runs`** shares the same residue.
+
 Next:
 
-- The Wave 5B residual clusters are complete. Resume the three parked pcomp
-  cases (`v1`, `v12`, `v13`) as a separate activation-history track, then the
-  remaining long-tail drivers.
+- Compare the game-40 trial-9 retrieval/conflict candidate sets and explain
+  the extra RNG draw, then re-run v13.
+- Remaining long-tail drivers after that.
 
 ### External Blockers
 

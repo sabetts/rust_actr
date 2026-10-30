@@ -5945,3 +5945,25 @@ Corpus: **542 passed / 25 ignored**.
   from `tutorial-unit1modeling-warnings.lisp`; no run trace is emitted.
 
 Corpus: **544 passed / 23 ignored**.
+
+## 346. Pcomp v1 recovery and v12/v13 residual
+
+`v1-initial-run` is promoted. The failure was in `merge-into-dm`, not EPL
+compilation. Buffer chunks carry copy/alias slot values (`THREE-0`,
+`RESPONSE-1-0`, visual-location copies), and the old merge compared raw slot
+vectors while ignoring `SCREEN-POS` entirely. That both collapsed distinct
+visual objects and failed to merge identical imaginal trials.
+
+Merge now resolves every chunk-valued slot through `chunk_alias`,
+`copy_source`, and `vl_copied_from`, sorts slots by name, and compares the
+true values. This fixed the missing visual chunk at trial 0, the duplicate
+imaginal chunk at trial 10, and the extra activation draw that shifted the
+task RNG. SBCL and Rust now match trial-for-trial through game 40.
+
+v12/v13 remain parked. SBCL/Rust agree through game 40 trial 8 (the earlier
+note said 39; the first 8 trials of game 40 now match). Trial 9 picks the same
+key in both but Rust latches it at 1.441 s vs 2.936 s and consumes one extra
+RNG draw; trial 10 then reads different task values. The next step is to
+compare the trial-9 retrieval/conflict candidate sets.
+
+Corpus: **545 passed / 22 ignored**.
