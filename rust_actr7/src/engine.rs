@@ -53,6 +53,8 @@ mod multi;
 mod perception;
 mod productions;
 mod rhs;
+mod save_model;
+
 #[cfg(test)]
 mod tests;
 

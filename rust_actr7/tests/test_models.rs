@@ -41,6 +41,8 @@ struct Spec {
     name: String,
     ref_name: String,
     models: Vec<String>,
+    /// Optional device sidecar name; defaults to the case name.
+    device: Option<String>,
     /// Effective seed of each run, in order (only the first is needed: the
     /// engine seeds once; later changes are explicit `Step::Seed`s).
     run_seeds: Vec<(u64, u64)>,
@@ -182,6 +184,7 @@ fn parse_spec(src: &str) -> Result<Spec, String> {
         name,
         ref_name,
         models,
+        device: None,
         run_seeds,
         steps,
         steps_unsupported,
@@ -696,7 +699,7 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     // A command-only spec has no run; the seed is unused, so any default
     // works (`(100 0)` is the corpus's canonical placeholder).
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
-    let device = load_spec_device(&spec.name)?;
+    let device = load_spec_device(spec.device.as_deref().unwrap_or(&spec.name))?;
     // A spec with a recorded command step is driven through the RPC command
     // layer (`Session::evaluate`), so the spec exercises the same dispatch a
     // Python client hits; everything else keeps the engine-level driver.
@@ -1007,6 +1010,10 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .bst_single_trial(*a, *b, *c, *target)
             .map_err(|e| e.to_string())?,
+        Step::SaveModel { timestamp } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .save_model(timestamp.as_deref()),
         Step::PcompGame(cfg) => session
             .engine_mut()
             .ok_or_else(no_model)?
@@ -1106,6 +1113,7 @@ pub struct Case {
     name: String,
     ref_name: String,
     models: Vec<String>,
+    device: Option<String>,
     seed: (u64, u64),
     steps: Vec<Step>,
 }
@@ -1116,6 +1124,7 @@ impl Case {
             name: name.to_string(),
             ref_name: format!("{name}.ref"),
             models: Vec::new(),
+            device: None,
             seed: (100, 0),
             steps: Vec::new(),
         }
@@ -1129,9 +1138,16 @@ impl Case {
             name: spec.name,
             ref_name: spec.ref_name,
             models: spec.models,
+            device: spec.device,
             seed: spec.run_seeds.first().copied().unwrap_or((100, 0)),
             steps: spec.steps,
         }
+    }
+
+    /// Use another case's device sidecar (e.g. `save-model` reuses `demo2`).
+    pub fn device(mut self, name: &str) -> Self {
+        self.device = Some(name.to_string());
+        self
     }
 
     pub fn ref_name(mut self, ref_name: &str) -> Self {
@@ -1222,6 +1238,7 @@ impl Case {
             name: self.name.clone(),
             ref_name: self.ref_name.clone(),
             models: self.models.clone(),
+            device: self.device.clone(),
             run_seeds: vec![self.seed],
             steps: self.steps.clone(),
             steps_unsupported: None,
