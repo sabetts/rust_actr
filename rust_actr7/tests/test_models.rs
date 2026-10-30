@@ -824,6 +824,11 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .goal_focus(desc)
             .map_err(|e| e.to_string())?,
+        Step::SetBufferChunk { buffer, desc } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .set_buffer_chunk_desc(buffer, desc)
+            .map_err(|e| e.to_string())?,
         Step::Seed(s) => session.engine_mut().ok_or_else(no_model)?.set_seed(*s),
         Step::ConsumeRng(n) => session.engine_mut().ok_or_else(no_model)?.consume_rng(*n),
         Step::Sdm(spec) => {

@@ -245,6 +245,9 @@ pub enum Step {
     ModelOutput(String),
     /// `(goal-focus <spec>)`.
     GoalFocus(ChunkDesc),
+    /// `(set-buffer-chunk <buffer> <spec>)`: place the described chunk now,
+    /// without the task's usual `define-chunks` name round-trip.
+    SetBufferChunk { buffer: String, desc: ChunkDesc },
     /// `(sgp :seed (S C))`.
     Seed((u64, u64)),
     /// Consume `n` draws from the random stream (the task's setup draws
@@ -521,6 +524,7 @@ pub fn run_model_steps_with_hook(
             }
             Step::ModelOutput(s) => eng.model_output(s),
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
+            Step::SetBufferChunk { buffer, desc } => eng.set_buffer_chunk_desc(buffer, desc)?,
             Step::Seed(s) => eng.sperling_set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
             Step::Sdm(spec) => {
