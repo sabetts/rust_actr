@@ -2550,6 +2550,8 @@ pub struct Engine {
     copy_source: HashMap<String, String>,
     /// `!stop!` was executed: end the run with a BREAK-EVENT.
     stopped: bool,
+    /// The last `step_once` hit an event-hook `Break` (the event is requeued).
+    hook_break_hit: bool,
     /// Recently-retrieved chunk finsts: `(name, time_ms)`, newest last.
     finsts: Vec<(String, i64)>,
     /// Threads extra: the goal multi-buffer's ordered chunk set.
@@ -3077,6 +3079,7 @@ impl Engine {
             chunk_alias: HashMap::new(),
             copy_source: HashMap::new(),
             stopped: false,
+            hook_break_hit: false,
             finsts: Vec::new(),
             goal_set: Vec::new(),
             vocal_busy: false,
@@ -4909,6 +4912,7 @@ impl Engine {
         let hook_view = match self.pre_event_hook(&next.event, next.out, show)? {
             Some((_, Verdict::Break)) => {
                 self.queue.push(next);
+                self.hook_break_hit = true;
                 return Ok(true);
             }
             Some((view, Verdict::Continue)) => Some(view),

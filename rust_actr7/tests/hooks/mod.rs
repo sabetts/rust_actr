@@ -134,6 +134,7 @@ pub struct HookCase {
     seed: (u64, u64),
     steps: Vec<Step>,
     device: Option<String>,
+    no_device: bool,
     hook_swaps: Vec<(usize, Box<dyn EventHook>)>,
 }
 
@@ -145,6 +146,7 @@ impl HookCase {
             seed: (100, 0),
             steps: Vec::new(),
             device: None,
+            no_device: false,
             hook_swaps: Vec::new(),
         }
     }
@@ -166,6 +168,13 @@ impl HookCase {
 
     pub fn device(mut self, name: &str) -> Self {
         self.device = Some(name.to_string());
+        self
+    }
+
+    /// Suppress the case's default device sidecar (drivers that build their
+    /// own live task window, e.g. `BstTrial`).
+    pub fn no_device(mut self) -> Self {
+        self.no_device = true;
         self
     }
 
@@ -215,10 +224,15 @@ impl HookCase {
             seed,
             steps,
             device,
+            no_device,
             hook_swaps,
         } = self;
-        let device_name = device.as_deref().unwrap_or(&case);
-        let device = load_spec_device(device_name)?;
+        let device = if no_device {
+            actr_engine::DeviceSetup::default()
+        } else {
+            let device_name = device.as_deref().unwrap_or(&case);
+            load_spec_device(device_name)?
+        };
         let needs_session = steps.iter().any(|s| match s {
             Step::Command { .. } => true,
             Step::Sgp(k, _) => k.eq_ignore_ascii_case(":STARTING-PARAMETERS"),

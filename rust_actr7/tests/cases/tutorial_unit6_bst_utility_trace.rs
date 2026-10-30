@@ -46,21 +46,22 @@ impl EventHook for Filter {
 }
 
 #[test]
-#[ignore = "engine divergence: reward/utility trace (pending)"]
 fn hook_tutorial_unit6_bst_utility_trace() -> Result<(), String> {
     hooks::HookCase::new("tutorial-unit6-bst-utility-trace")
         .models(&["tutorial;lisp;bst.lisp", "tutorial;unit6;bst-model.lisp"])
         .seed((100, 0))
+        .no_device()
         .steps(vec![
             Step::Sgp(":STARTING-PARAMETERS".into(), crate::sexp("(:SEED (1 1))")),
             Step::Sgp(":ACT".into(), crate::sexp("NIL")),
             Step::Sgp(":EPL".into(), crate::sexp("NIL")),
             Step::Sgp(":PCT".into(), crate::sexp("NIL")),
             Step::Sgp(":ALPHA".into(), crate::sexp("0.2")),
-            Step::Run {
-                secs: 60.0,
-                trace: false,
-                width: 22,
+            Step::BstTrial {
+                a: 15,
+                b: 250,
+                c: 55,
+                target: 125,
             },
             Step::RunNEvents {
                 count: 1,

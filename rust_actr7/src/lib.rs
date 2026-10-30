@@ -349,6 +349,8 @@ pub enum Step {
     Onehit(OnehitMode),
     /// Building-sticks experiment driver.
     Bst(BstMode),
+    /// One building-sticks trial for a hook-driven trace.
+    BstTrial { a: i64, b: i64, c: i64, target: i64 },
     /// `pcomp-issues-game`: run complete 150-trial games and print the
     /// block-wise score/response-time summary.
     PcompGame(PcompGameConfig),
@@ -597,6 +599,7 @@ pub fn run_model_steps_with_hook(
             } => eng.zbrodoff_problem(addend1, addend2, sum, answer)?,
             Step::Onehit(mode) => eng.onehit_driver(*mode)?,
             Step::Bst(mode) => eng.bst_driver(*mode)?,
+            Step::BstTrial { a, b, c, target } => eng.bst_single_trial(*a, *b, *c, *target)?,
             Step::PcompGame(cfg) => eng.pcomp_game(*cfg)?,
             Step::PcompUtilityNames => eng.pcomp_utility_names(),
             Step::FanCollect => eng.fan_collect_start(),

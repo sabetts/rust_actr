@@ -1777,13 +1777,7 @@ impl Engine {
         }
     }
 
-    fn bst_trial(
-        &mut self,
-        a: i64,
-        b: i64,
-        c: i64,
-        target: i64,
-    ) -> Result<Option<String>, EngineError> {
+    fn bst_trial_window(&mut self, a: i64, b: i64, c: i64, target: i64) {
         self.open_window(300, 300);
         let button = |text: &str, y: i64, width: i64, action: Option<(String, Vec<Json>)>| {
             (text.to_string(), y, width, action)
@@ -1831,6 +1825,16 @@ impl Engine {
         self.add_window_line((75, 110), (75 + target, 110), "green");
         self.zz_start_hand_at_mouse();
         self.last_output_key = None;
+    }
+
+    fn bst_trial(
+        &mut self,
+        a: i64,
+        b: i64,
+        c: i64,
+        target: i64,
+    ) -> Result<Option<String>, EngineError> {
+        self.bst_trial_window(a, b, c, target);
         let mut current = 0i64;
         let mut done = false;
         let mut choice = None;
@@ -1874,6 +1878,54 @@ impl Engine {
             self.emit("------", "Stopped because no events left to process".into());
         }
         Ok(choice)
+    }
+
+    /// Run one building-sticks trial through an event hook. Unlike
+    /// [`Self::bst_driver`], this stops when the hook breaks (leaving the
+    /// broken event queued for a following `run-n-events`).
+    pub fn bst_single_trial(
+        &mut self,
+        a: i64,
+        b: i64,
+        c: i64,
+        target: i64,
+    ) -> Result<(), EngineError> {
+        self.bst_trial_window(a, b, c, target);
+        self.hook_break_hit = false;
+        let mut current = 0i64;
+        let mut done = false;
+        let mut current_line = None;
+        let limit = self.time_ms + 60_000;
+        while self.time_ms < limit {
+            if !self.step_once()? || self.hook_break_hit {
+                self.hook_break_hit = false;
+                break;
+            }
+            for (cmd, args) in self.take_pending_device_actions() {
+                if cmd != "bst-button-pressed" && cmd != "bst-ppm-button-pressed" {
+                    if (cmd == "bst-reset-button-pressed" || cmd == "bst-ppm-reset-button-pressed")
+                        && !done
+                    {
+                        current = 0;
+                        self.bst_update_line(target, current, &mut current_line, &mut done);
+                    }
+                    continue;
+                }
+                let len = match args.first() {
+                    Some(Json::Int(i)) => *i,
+                    _ => continue,
+                };
+                if !done {
+                    if current > target {
+                        current -= len;
+                    } else {
+                        current += len;
+                    }
+                    self.bst_update_line(target, current, &mut current_line, &mut done);
+                }
+            }
+        }
+        Ok(())
     }
 
     fn bst_update_line(

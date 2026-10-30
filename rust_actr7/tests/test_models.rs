@@ -1002,6 +1002,11 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .bst_driver(*mode)
             .map_err(|e| e.to_string())?,
+        Step::BstTrial { a, b, c, target } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .bst_single_trial(*a, *b, *c, *target)
+            .map_err(|e| e.to_string())?,
         Step::PcompGame(cfg) => session
             .engine_mut()
             .ok_or_else(no_model)?
