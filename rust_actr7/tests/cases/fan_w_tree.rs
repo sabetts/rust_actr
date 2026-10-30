@@ -6,9 +6,6 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: conflict-tree split shape. The fan experiment summary now
-// matches, but the tree's incremental ARG2/ARG1 branches still differ.
-#[ignore = "engine divergence: conflict-tree split shape"]
 fn fan_w_tree() -> Result<(), String> {
     Case::new("fan-w-tree")
         .models(&["tutorial;lisp;fan.lisp", "tutorial;unit5;fan-model.lisp"])

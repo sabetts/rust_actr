@@ -715,24 +715,34 @@ impl Engine {
     pub fn print_conflict_tree(&mut self) {
         let mut classes: Vec<CtClass> = Vec::new();
         for prod in &self.model.productions {
-            let mut conds = Vec::new();
+            let mut conds: Vec<CtCond> = Vec::new();
             for item in &prod.lhs {
                 match item {
                     LhsItem::Match { buffer, tests } => {
                         for t in tests {
-                            if t.slot.eq_ignore_ascii_case("ISA")
-                                || matches!(t.value, crate::model::Pattern::Var(_))
-                            {
+                            if t.slot.eq_ignore_ascii_case("ISA") {
                                 continue;
                             }
+                            // `production-implicit`: every tested slot gets a
+                            // safe-chunk-slot-equal condition. A `nil` literal
+                            // is true (the slot must be empty); a variable is
+                            // false (no constant constraint).
                             let cond = CtCond {
                                 kind: CtKind::TestSlot,
                                 buffer: buffer.to_uppercase(),
                                 slot: t.slot.to_uppercase(),
                                 test: "SAFE-CHUNK-SLOT-EQUAL".to_string(),
-                                value: pattern_show(&t.value),
+                                value: match t.value {
+                                    crate::model::Pattern::Nil | crate::model::Pattern::Var(_) => {
+                                        "NIL".to_string()
+                                    }
+                                    _ => pattern_show(&t.value),
+                                },
+                                result: !matches!(t.value, crate::model::Pattern::Var(_)),
                             };
-                            if !conds.iter().any(|c: &CtCond| c.key() == cond.key()) {
+                            if let Some(e) = conds.iter_mut().find(|c| c.key() == cond.key()) {
+                                e.result |= cond.result;
+                            } else {
                                 conds.push(cond);
                             }
                         }
@@ -769,6 +779,15 @@ impl Engine {
         let branch = if branch { "T" } else { "NIL" };
         match node {
             CtNode::Leaf(names) => {
+                // `production-ordering` uses the model's production order.
+                let mut names = names.clone();
+                names.sort_by_key(|n| {
+                    self.model
+                        .productions
+                        .iter()
+                        .position(|p| &p.name == n)
+                        .unwrap_or(usize::MAX)
+                });
                 self.out_lines.push(format!(
                     "{indent}-{}- {branch} ->[leaf ({})]",
                     depth / 2,
@@ -4636,6 +4655,9 @@ struct CtCond {
     slot: String,
     test: String,
     value: String,
+    /// `cr-condition-result` for this production class: whether the test is
+    /// expected to be true (a `nil` slot test) or false.
+    result: bool,
 }
 
 impl CtCond {
@@ -4656,6 +4678,7 @@ impl CtCond {
     }
 }
 
+#[derive(Clone)]
 struct CtClass {
     names: Vec<String>,
     conds: Vec<CtCond>,
@@ -4685,42 +4708,140 @@ fn build_ct_node(classes: &[CtClass]) -> Option<CtNode> {
             }
         }
     }
-    // The Lisp builder's condition vector ends up in reverse production
-    // order for equal-information-gain ties; fan-w-tree's ARG2/ARG1 split is
-    // the corpus oracle for that tie.
+    // `build-tree-from-productions` chooses the highest information-gain
+    // condition. The condition vector ends up in reverse discovery order for
+    // equal-gain ties in this corpus (`fan-w-tree`'s ARG2 vs ARG1).
+    let mut best: Option<(f64, CtCond, Vec<CtClass>, Vec<CtClass>)> = None;
     for cond in candidates.into_iter().rev() {
-        let yes: Vec<CtClass> = classes
-            .iter()
-            .filter(|c| c.conds.iter().any(|x| x.key() == cond.key()))
-            .map(|c| CtClass {
-                names: c.names.clone(),
-                conds: c.conds.clone(),
-            })
-            .collect();
-        let no: Vec<CtClass> = classes
-            .iter()
-            .filter(|c| !c.conds.iter().any(|x| x.key() == cond.key()))
-            .map(|c| CtClass {
-                names: c.names.clone(),
-                conds: c.conds.clone(),
-            })
-            .collect();
+        let (gain, yes, no) = ct_split(classes, &cond);
         if yes.is_empty() || no.is_empty() {
             continue;
         }
-        let yes = build_ct_node(&yes)?;
-        let no = build_ct_node(&no)?;
-        return Some(CtNode::Test {
-            cond,
-            yes: Box::new(yes),
-            no: Box::new(no),
-        });
+        if best.as_ref().is_none_or(|(b, _, _, _)| gain > *b) {
+            best = Some((gain, cond, yes, no));
+        }
+    }
+    if let Some((gain, cond, yes, no)) = best {
+        if gain > 0.0 {
+            let yes = build_ct_node(&yes)?;
+            let no = build_ct_node(&no)?;
+            return Some(CtNode::Test {
+                cond,
+                yes: Box::new(yes),
+                no: Box::new(no),
+            });
+        }
     }
     let mut names = Vec::new();
     for c in classes {
         names.extend(c.names.clone());
     }
     Some(CtNode::Leaf(names))
+}
+
+/// `tree-entropy` (`commands/conflict-tree.lisp:575`): entropy over the
+/// production counts of the condition classes.
+fn ct_entropy(classes: &[CtClass]) -> f64 {
+    let n: usize = classes.iter().map(|c| c.names.len()).sum();
+    if n == 0 {
+        return 0.0;
+    }
+    classes
+        .iter()
+        .filter(|c| !c.names.is_empty())
+        .map(|c| {
+            let p = c.names.len() as f64 / n as f64;
+            -p * p.log2()
+        })
+        .sum()
+}
+
+fn ct_group(classes: &[CtClass]) -> Vec<CtClass> {
+    let mut out: Vec<CtClass> = Vec::new();
+    for c in classes {
+        if let Some(e) = out.iter_mut().find(|e| e.conds == c.conds) {
+            e.names.extend(c.names.clone());
+        } else {
+            out.push(CtClass {
+                names: c.names.clone(),
+                conds: c.conds.clone(),
+            });
+        }
+    }
+    out
+}
+
+/// `split-productions-with-condition` (`commands/conflict-tree.lisp:602`) for
+/// a binary test-slot condition. Productions that do not test the condition
+/// are present in *both* branches.
+fn ct_split(classes: &[CtClass], cond: &CtCond) -> (f64, Vec<CtClass>, Vec<CtClass>) {
+    let haves: Vec<CtClass> = classes
+        .iter()
+        .filter(|c| c.conds.iter().any(|x| x.key() == cond.key()))
+        .cloned()
+        .collect();
+    let have_nots: Vec<CtClass> = classes
+        .iter()
+        .filter(|c| !c.conds.iter().any(|x| x.key() == cond.key()))
+        .cloned()
+        .collect();
+    if haves.is_empty() {
+        return (0.0, Vec::new(), have_nots);
+    }
+    let base = ct_entropy(&haves);
+    let mut yes_without: Vec<CtClass> = Vec::new();
+    let mut no_without: Vec<CtClass> = Vec::new();
+    for c in &haves {
+        let result = c
+            .conds
+            .iter()
+            .find(|x| x.key() == cond.key())
+            .map(|x| x.result)
+            .unwrap_or(false);
+        let without = CtClass {
+            names: c.names.clone(),
+            conds: c
+                .conds
+                .iter()
+                .filter(|x| x.key() != cond.key())
+                .cloned()
+                .collect(),
+        };
+        if result {
+            yes_without.push(without);
+        } else {
+            no_without.push(without);
+        }
+    }
+    let yes_grouped = ct_group(&yes_without);
+    let no_grouped = ct_group(&no_without);
+    let total: f64 = yes_grouped
+        .iter()
+        .chain(no_grouped.iter())
+        .map(|c| c.names.len() as f64)
+        .sum();
+    let gain = if total == 0.0 {
+        0.0
+    } else {
+        let weighted = (yes_grouped
+            .iter()
+            .map(|c| c.names.len() as f64)
+            .sum::<f64>()
+            / total)
+            * ct_entropy(&yes_grouped)
+            + (no_grouped.iter().map(|c| c.names.len() as f64).sum::<f64>() / total)
+                * ct_entropy(&no_grouped);
+        base - weighted
+    };
+    let mut yes = yes_grouped;
+    let mut no = no_grouped;
+    if !have_nots.is_empty() {
+        yes.extend(have_nots.clone());
+        no.extend(have_nots);
+        yes = ct_group(&yes);
+        no = ct_group(&no);
+    }
+    (gain, yes, no)
 }
 
 /// A chunk-type default value as Lisp `~S` would print it
