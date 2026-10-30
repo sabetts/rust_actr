@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 5A.1 is committed)
-- Full suite: **539 passed / 28 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 5A.2 is committed)
+- Full suite: **540 passed / 27 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -386,28 +386,32 @@ Completed:
   the count.
 - [x] Full suite green at **539 passed / 28 ignored**.
 
-#### Wave 5A.2 - Base-level inhibition (next)
+#### Wave 5A.2 - Base-level inhibition (completed)
 
 Target:
 
 - `base-level-inhibition`
 
-This case has no recorded run steps. Rebuild its driver from
-`extras/base-level-inhibition/free-recall.lisp` and the ref: `free-recall`
-runs 100 trials with a 1 s delay, goal `G`, retrieval of `FIVE`, `HARVEST`,
-`BREAK-EVENT`, the retrieval threshold, and `!stop!`. Do not reduce it to a
-summary-only driver.
+Completed:
 
-The engine side still needs the `require-extra "base-level-inhibition"`
-parameters (`:enable-inhibition`, `:inhibition-scale`,
-`:inhibition-decay`), the activation-offset term
-`-log(1 + (Tn/ts)^-ds)`, and `sdp :creation-time`/`:references` history
-setup from the task model.
+- [x] Added `require-extra "base-level-inhibition"` parameters
+  (`:enable-inhibition`, `:inhibition-scale`, `:inhibition-decay`) and the
+  `-log(1 + (Tn/ts)^-ds)` activation offset in retrieval, blending, `sdp`,
+  and simulated-retrieval activation.
+- [x] Added model-body `(sdp :creation-time ... :references ...)`, applied to
+  every DM chunk on reset.
+- [x] Added the two 100-trial free-recall runs with the task's per-reset
+  `(1 0)` seed and reference-count summary rows.
+- [x] Made `!stop!` schedule a priority-`:min` break event, so implicit
+  clears run first and the queued conflict-resolution event survives into
+  the next run.
+- [x] `base-level-inhibition` promoted; full suite green at **540 passed /
+  27 ignored**.
 
 #### Wave 5B - Remaining residual clusters
 
-After 5A.2, take audio sound-object replay (`audio-updates`), multi-model
-trace columns (`unit-1-together-1-mp`), and command-layer output cases
+Next, take audio sound-object replay (`audio-updates`), multi-model trace
+columns (`unit-1-together-1-mp`), and command-layer output cases
 (`tutorial-unit1modeling-warnings`, `undefined-slots`). Keep the three parked
 pcomp cases (`v1`, `v12`, `v13`) as a separate activation-history track.
 

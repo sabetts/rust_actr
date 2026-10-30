@@ -5836,3 +5836,32 @@ keeping the count. `base-level-safety-check` is promoted.
 
 Oracle scripts now go under the repo-local `.tmp/` directory, not OS temp.
 Corpus: **539 passed / 28 ignored**.
+
+## 342. Base-level inhibition, global sdp history, and scheduled `!stop!`
+
+`base-level-inhibition` is promoted. The driver mirrors the task's two
+100-trial `free-recall` calls (without, then with inhibition), re-seeds to
+`(1 0)` on each reset from the task's `:starting-parameters`, and prints the
+reference-count distribution after each run. The blank line after each
+`without:`/`with:` row comes from `model-output`'s own trailing newline plus
+the task format's `~%`.
+
+Engine additions:
+
+- `:enable-inhibition`, `:inhibition-scale`, and `:inhibition-decay` are
+  live `sgp` parameters. The activation offset is
+  `-log(1 + (Tn/ts)^-ds)` using the most recent reference, applied in
+  retrieval, blending, `sdp`, and simulated retrieval.
+- Model-body `(sdp :creation-time S :references (...))` is parsed and applied
+  to every DM chunk on reset. The task's `:references` list is applied
+  directly under `:ol nil`; numeric `:ol` truncates, `:ol t` leaves the list
+  empty.
+
+`!stop!` now schedules a priority-`:min` `Event::Break` instead of setting the
+stop flag during the production fire. That lets implicit clears run first
+(`CLEAR-BUFFER RETRIEVAL`) and leaves the same-time conflict-resolution event
+queued; the next `run` processes it before advancing. `run_to_limit` and
+`run_n_events` reset the stop flag without discarding the queue. This also
+preserves the upstream `BREAK-EVENT` ordering used by `audio-updates`.
+
+Corpus: **540 passed / 27 ignored**.
