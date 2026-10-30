@@ -5750,3 +5750,24 @@ Leaves are sorted by model production order before printing
 (`production-ordering`), which fixes the final leaf membership order.
 
 `count-w-tree` still passes; corpus: **536 passed / 31 ignored**.
+
+## 338. PPM hook evaluation and model-output formatting
+
+Recovered `test-ppm`.
+
+`:PPM-HOOK` is now a live procedural parameter. At conflict resolution the
+engine calls the task function with the production name and the partial-match
+rows `(buffer slot requested actual similarity)`. A numeric return overrides
+the normal `ppm * Σ similarity` offset, matching `ppm-offset`
+(`procedural.lisp:2373`).
+
+The bounded task evaluator gained the small subset the hook uses: `car`/`first`,
+`fifth`, and `model-output`/`command-output` with `~%`, `~~`, `~S`, and `~A`.
+The test task file is loaded in the model chain so `show-ppm-values` is
+available as a task function.
+
+`adaptive-noise` remains parked: its task uses 100 s request intervals, and
+the engine's retrieval activations need permanent-noise/hook parity before its
+hardcoded result oracle can be replaced by engine output.
+
+Corpus: **537 passed / 30 ignored**.

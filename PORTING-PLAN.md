@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **536 passed / 31 ignored / 0 failed**
+- Full suite: **537 passed / 30 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -334,6 +334,18 @@ Approach:
   emit their `model-output` lines in conflict-resolution order.
 - Recover the adaptive-noise task driver and `:bl-hook`/`:noise-hook`
   callbacks as a separate, larger follow-up.
+
+Completed:
+
+- [x] `test-ppm` promoted. `:PPM-HOOK` is stored as a live parameter, the
+  task function is called with the production and mismatch rows, numeric
+  results override the normal offset, and the bounded evaluator now handles
+  `car`/`fifth` plus `model-output` formatting.
+- [ ] `adaptive-noise` remains parked for a dedicated pass: its task runs in
+  seconds (100 s request intervals), and the activation values need
+  permanent-noise/hook parity before the hardcoded result oracle can be
+  replaced by engine output.
+- [x] Full suite green at **537 passed / 30 ignored**.
 
 ### Wave 5 - Residual Engine Features
 
