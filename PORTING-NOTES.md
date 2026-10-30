@@ -5786,3 +5786,31 @@ need a dedicated parity pass (rehearsals and permanent-noise storage) before
 the hardcoded oracle can be replaced safely.
 
 Corpus: **538 passed / 29 ignored**.
+
+## 340. Wave 5 reconnaissance: base-level traces, inhibition, and adaptive-noise seed parity
+
+`adaptive-noise` now matches the retrieval timeline, but its result rows are
+still task-provided. An SBCL probe confirms the ref requires seed `(1, 0)`:
+the first row is `(C1 -1.3374588 -3.032042 3.809351)`. The task requests every
+100 s and rehearses every 50 s, so a future engine-generated oracle must
+model those merge references and the adaptive base-level/permanent-noise
+hooks, not just the request events.
+
+`base-level-safety-check` uses `:bll .5`, `:rt 5`, `:act t`, and eight
+`run-full-time` slices per `:ol` mode. The task merges B/C/D/E into DM at the
+slice boundaries. The first ref block is:
+
+- second reference: `1.5289993`
+- third reference: `-1.1299546`
+- fourth reference: `-0.31226993`
+
+The next comparison should start with the history's created time, reference
+list/count, transient noise, and permanent noise on the second run.
+
+`base-level-inhibition` has no recorded run steps, so it needs a driver from
+`extras/base-level-inhibition/free-recall.lisp`. Its ref begins with the
+task waiting to time 1 s, then goal `G`, retrieval of `FIVE`, `HARVEST`, a
+`!stop!` break, and repeated retrieval/break cycles. Preserve the real
+`BREAK-EVENT`/stop path rather than replacing it with a summary.
+
+Corpus remains **538 passed / 29 ignored**.
