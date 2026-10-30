@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 5C partial: pcomp v1 is committed)
-- Full suite: **545 passed / 22 ignored / 0 failed**
+- Latest commit: see `git log -1` (all parked pcomp cases are committed)
+- Full suite: **547 passed / 20 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -435,16 +435,18 @@ Completed:
   references and compares slot values by true names; this fixed the missing
   visual-object merge and the extra RNG draw at trial 10. Full suite green at
   **545 passed / 22 ignored**.
-- [ ] **`v12-50-runs`** still differs at game 40. Trials 0-8 match; Rust draws
-  one extra activation/utility sample at trial 9 (RT 1.441 s vs 2.936 s), so
-  trial 10's task RNG values diverge.
-- [ ] **`v13-50-runs`** shares the same residue.
+- [x] **`v12-50-runs`** promoted. The game-40 trial-9 divergence came from
+  duplicate compiled productions: `PRODUCTION49`/`50` mirrored ACT-R's
+  existing `PRODUCTION28`/`29`, but the comparison rep omitted
+  `!safe-eval!`. Including the eval token in `canon_prod` suppresses those
+  duplicates and restores the candidate/RNG stream.
+- [x] **`v13-50-runs`** promoted by the same canonicalization fix. Full suite
+  green at **547 passed / 20 ignored**.
 
 Next:
 
-- Compare the game-40 trial-9 retrieval/conflict candidate sets and explain
-  the extra RNG draw, then re-run v13.
-- Remaining long-tail drivers after that.
+- All parked pcomp cases are complete. Move on to the remaining long-tail
+  drivers and external-blocker follow-ups.
 
 ### External Blockers
 

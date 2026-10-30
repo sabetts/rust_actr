@@ -5967,3 +5967,19 @@ RNG draw; trial 10 then reads different task values. The next step is to
 compare the trial-9 retrieval/conflict candidate sets.
 
 Corpus: **545 passed / 22 ignored**.
+
+## 347. Pcomp v12/v13: safe-eval in the production comparison rep
+
+v12/v13 are promoted. The game-40 trial-9 divergence was not activation
+history: the retrieval and conflict traces matched up to the first candidate
+list. Rust had installed `PRODUCTION49`/`PRODUCTION50` as new compiled
+productions, while ACT-R considered them duplicates of the existing
+`PRODUCTION28`/`PRODUCTION29` (same documentation strings and bodies).
+
+`canon_prod` (the `production-comparison-rep`) ignored `LhsItem::Eval`, while
+the composed LHS kept a `!SAFE-EVAL!` prefix token. The two representations
+therefore never compared equal. Adding the eval token/value to `canon_prod`
+lets duplicate detection work, removes the extra candidate and its utility
+noise draw, and restores the task RNG stream at game 40.
+
+Corpus: **547 passed / 20 ignored**.
