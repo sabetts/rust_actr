@@ -364,6 +364,33 @@ Targets:
 - Long-tail driver cases (`save-model`, `thorough-p-test`, Siegler original,
   etc.).
 
+#### Wave 5A - Base-level safety and inhibition
+
+Targets:
+
+- `base-level-safety-check`
+- `base-level-inhibition`
+
+`base-level-safety-check` is a trace/history case: eight `run-full-time`
+slices per `:ol` mode (`nil`, `t`, `1`, `3`) with seed `(100, 0)` and
+`:act t`. The ref's first block shows the expected history and activation
+rows (`1.4978663`, `1.5289993`, `-1.1299546`, ...). Start by comparing the
+second run's reference list, creation time, base-level value, transient-noise
+draw, and permanent-noise value against SBCL.
+
+`base-level-inhibition` currently has no recorded run steps. Rebuild its
+driver from `extras/base-level-inhibition/free-recall.lisp` and the ref:
+goal `G`, retrieval of `FIVE`, `HARVEST`, `BREAK-EVENT`, and the subsequent
+retrieval/break cycles. The ref also exercises the retrieval threshold and
+`!stop!`; do not reduce it to a summary-only driver.
+
+#### Wave 5B - Remaining residual clusters
+
+After 5A, take audio sound-object replay (`audio-updates`), multi-model trace
+columns (`unit-1-together-1-mp`), and command-layer output cases
+(`tutorial-unit1modeling-warnings`, `undefined-slots`). Keep the three parked
+pcomp cases (`v1`, `v12`, `v13`) as a separate activation-history track.
+
 ### External Blockers
 
 These need the protected source/password or an upstream copy:
