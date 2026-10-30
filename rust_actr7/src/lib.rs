@@ -278,6 +278,8 @@ pub enum Step {
     AgiModify(u8),
     /// `creating-an-image`'s initial image window.
     CreatingImageSetup,
+    /// `adaptive-noise`'s five-request trace.
+    AdaptiveNoiseTrace,
     /// `(record-history "goal" "visual" …)`: the buffers the BOLD predictor
     /// traces (the demand recorder).
     RecordHistory(Vec<String>),
@@ -534,6 +536,7 @@ pub fn run_model_steps_with_hook(
             Step::AgiSetup => eng.agi_setup(),
             Step::AgiModify(phase) => eng.agi_modify(*phase),
             Step::CreatingImageSetup => eng.creating_image_setup(),
+            Step::AdaptiveNoiseTrace => eng.adaptive_noise_trace()?,
             Step::RecordHistory(buffers) => eng.set_bold_buffers(buffers),
             Step::PredictBold => eng.print_bold(),
             Step::SetDetail(d) => eng.set_detail(*d),

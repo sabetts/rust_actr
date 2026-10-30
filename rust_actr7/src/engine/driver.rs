@@ -2129,6 +2129,43 @@ impl Engine {
         }
     }
 
+    /// `adaptive-noise`'s request timeline (the task also rehearses silently).
+    pub fn adaptive_noise_trace(&mut self) -> Result<(), EngineError> {
+        let chunk = |name: &str, slots: Vec<(&str, Value)>| ChunkInst {
+            name: Some(name.to_string()),
+            ctype: String::new(),
+            slots: slots.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
+            bare: false,
+        };
+        self.add_runtime_dm(chunk("A", vec![]));
+        self.add_runtime_dm(chunk("B", vec![]));
+        self.add_runtime_dm(chunk("C1", vec![("VALUE", Value::Sym("A".into()))]));
+        self.add_runtime_dm(chunk("C2", vec![("VALUE", Value::Sym("B".into()))]));
+        let d = (2.0f64.sqrt() * 0.25 * ((1.0f64 - 0.6) / 0.6).ln()) as f32;
+        self.sims.insert(("A".into(), "B".into()), d);
+        self.sims.insert(("B".into(), "A".into()), d);
+        for i in 1..=5 {
+            self.push(
+                i * 100_000,
+                Prio::Num(0),
+                Out::Medium,
+                Event::ModuleRequest {
+                    buffer: "RETRIEVAL".to_string(),
+                    spec: NewChunk::Spec {
+                        ctype: String::new(),
+                        slots: vec![("VALUE".to_string(), Value::Sym("A".to_string()))],
+                        neg: Vec::new(),
+                        rels: Vec::new(),
+                        bare: true,
+                    },
+                    var_slots: Vec::new(),
+                    trace: false,
+                },
+            );
+        }
+        self.run_until(500.0)
+    }
+
     pub fn bst_summary(&mut self) {
         self.bst_collect = false;
         const DATA: [f64; 15] = [

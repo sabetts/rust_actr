@@ -609,7 +609,7 @@ impl Engine {
         Ok(names)
     }
 
-    fn add_runtime_dm(&mut self, inst: ChunkInst) {
+    pub(super) fn add_runtime_dm(&mut self, inst: ChunkInst) {
         let name = inst.name.clone().unwrap_or_default();
         if self
             .dm

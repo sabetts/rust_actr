@@ -853,6 +853,11 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .creating_image_setup(),
+        Step::AdaptiveNoiseTrace => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .adaptive_noise_trace()
+            .map_err(|e| e.to_string())?,
         Step::RecordHistory(buffers) => session
             .engine_mut()
             .ok_or_else(no_model)?
