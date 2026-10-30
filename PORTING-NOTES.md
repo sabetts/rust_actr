@@ -6062,3 +6062,25 @@ The case now uses the shared driver and `no_device()` so the extracted
 `siegler.device.sexp` audio trace does not duplicate the driver's sounds.
 
 Corpus: **553 passed / 14 ignored**.
+
+## 352. Thorough production test: merge-chunks, nil inequalities, whynot matrix
+
+`thorough-p-test` is promoted with a dedicated driver over the three
+`slot2` values and thirteen `slot1` values. Each iteration modifies `G1`,
+overwrites the goal buffer, prints the buffer chunk, and projects the
+`whynot` conflict set into the operator/value matrix.
+
+Two model-layer facilities were needed:
+
+- `(merge-chunks a b)` now records an alias when the two named chunks are
+  content-equal. The alias is applied after reset's alias tables are cleared,
+  so `MERGED` resolves to `DUMMY1` for production matching while the buffer
+  still prints `MERGED`.
+- LHS numeric inequalities with a literal `NIL` value are rejected with the
+  ACT-R warning pairs (`Invalid syntax ...` and `A < test for slot ...`).
+  Variable-slot forms (`< =slot nil`) stay accepted, matching the ref.
+
+The extracted reference also depends on the vendored model source; it was
+added to the fixture manifest and copied from the checkout.
+
+Corpus: **554 passed / 13 ignored**.
