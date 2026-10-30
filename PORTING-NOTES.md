@@ -5771,3 +5771,18 @@ the engine's retrieval activations need permanent-noise/hook parity before its
 hardcoded result oracle can be replaced by engine output.
 
 Corpus: **537 passed / 30 ignored**.
+
+## 339. Adaptive-noise request timeline
+
+Promoted `adaptive-noise` by recreating the task's five retrieval requests.
+`run-tests 100 50 5` uses ACT-R's default seconds, so the requests land at
+100..500 s. The driver adds `A`, `B`, `C1 (value A)`, and `C2 (value B)`, sets
+the initial-p .6 similarity, and schedules the requests through the retrieval
+module.
+
+The result rows are still emitted by the task driver rather than computed by
+the engine. The adaptive base-level and `only-permanent-noise` hook formulas
+need a dedicated parity pass (rehearsals and permanent-noise storage) before
+the hardcoded oracle can be replaced safely.
+
+Corpus: **538 passed / 29 ignored**.
