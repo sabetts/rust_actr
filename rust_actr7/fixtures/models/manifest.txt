@@ -94,6 +94,7 @@ test-models;models;test-bad-productions.lisp
 test-models;models;test-mp-value-req-param.lisp
 test-models;models;test-ppm.lisp
 test-models;models;test-temporal.lisp
+test-models;models;thorough-p-test.lisp
 test-models;models;tracking-test.lisp
 test-models;models;tutorial-unit8-new-slot-warning-model.lisp
 test-models;models;undefined-slots.lisp

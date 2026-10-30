@@ -3728,6 +3728,26 @@ impl Engine {
         self.c_fan_out.clear();
         self.chunk_alias.clear();
         self.copy_source.clear();
+        // `(merge-chunks a b)`: equal named chunks share one representation;
+        // later references to `b` resolve through `chunk_alias`.
+        for (a, b) in self.model.merge_chunks.clone() {
+            let equal = match (self.named.get(&a), self.named.get(&b)) {
+                (Some(ca), Some(cb))
+                    if ca.ctype == cb.ctype && ca.slots.len() == cb.slots.len() =>
+                {
+                    let mut sa = ca.slots.clone();
+                    let mut sb = cb.slots.clone();
+                    sa.sort_by(|x, y| x.0.cmp(&y.0));
+                    sb.sort_by(|x, y| x.0.cmp(&y.0));
+                    sa == sb
+                }
+                _ => false,
+            };
+            if equal {
+                self.named.remove(&b);
+                self.chunk_alias.insert(b, a);
+            }
+        }
         self.stopped = false;
         self.finsts.clear();
         self.goal_set.clear();

@@ -354,6 +354,8 @@ pub enum Step {
     /// Serialize the current model in `save-model-file` form. `timestamp`
     /// freezes the otherwise wall-clock header for deterministic tests.
     SaveModel { timestamp: Option<String> },
+    /// `thorough-p-test`: slot-test/operator match matrix.
+    ThoroughP,
     /// `pcomp-issues-game`: run complete 150-trial games and print the
     /// block-wise score/response-time summary.
     PcompGame(PcompGameConfig),
@@ -606,6 +608,7 @@ pub fn run_model_steps_with_hook(
             Step::Bst(mode) => eng.bst_driver(*mode)?,
             Step::BstTrial { a, b, c, target } => eng.bst_single_trial(*a, *b, *c, *target)?,
             Step::SaveModel { timestamp } => eng.save_model(timestamp.as_deref()),
+            Step::ThoroughP => eng.thorough_p_test()?,
             Step::PcompGame(cfg) => eng.pcomp_game(*cfg)?,
             Step::PcompUtilityNames => eng.pcomp_utility_names(),
             Step::FanCollect => eng.fan_collect_start(),

@@ -1021,6 +1021,11 @@ fn apply_session_step(
             .engine_mut()
             .ok_or_else(no_model)?
             .save_model(timestamp.as_deref()),
+        Step::ThoroughP => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .thorough_p_test()
+            .map_err(|e| e.to_string())?,
         Step::PcompGame(cfg) => session
             .engine_mut()
             .ok_or_else(no_model)?

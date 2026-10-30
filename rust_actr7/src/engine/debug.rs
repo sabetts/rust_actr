@@ -1913,6 +1913,31 @@ impl Engine {
         Ok(())
     }
 
+    /// `overwrite-buffer-chunk <buffer> <chunk-name>`: replace the reusable
+    /// buffer chunk with a copy of the named source, recording the
+    /// `[SOURCE]` alias printed by `buffer-chunk`.
+    pub fn overwrite_buffer_chunk_named(
+        &mut self,
+        buffer: &str,
+        source: &str,
+    ) -> Result<(), EngineError> {
+        let bname = buffer.to_uppercase();
+        let mut inst = self.instantiate(&bname, NewChunk::Named(source.to_string()))?;
+        let reuse = self
+            .buffer_reuse
+            .get(&bname)
+            .cloned()
+            .unwrap_or_else(|| format!("{bname}-CHUNK0"));
+        inst.name = Some(reuse.clone());
+        self.copy_source.insert(reuse, source.to_uppercase());
+        let b = self.buffer_mut(&bname);
+        b.chunk = Some(inst);
+        b.failed = false;
+        b.modified = false;
+        self.changed();
+        Ok(())
+    }
+
     /// `extend-possible-slots <slot>`: make a slot name usable on any chunk.
     pub fn extend_possible_slots(&mut self, slot: &str) {
         self.valid_slots.insert(slot.to_uppercase());

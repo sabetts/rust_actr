@@ -343,6 +343,9 @@ pub struct Model {
     /// (values/references only; resolved for goal-focus and `=buffer>`
     /// copies). `add-dm` puts its chunks in `chunks` instead.
     pub defined_chunks: Vec<Chunk>,
+    /// Model-body `(merge-chunks a b)` aliases, applied after the named
+    /// chunks exist on reset.
+    pub merge_chunks: Vec<(String, String)>,
     /// Model-body `(set-similarities (a b v) ...)`.
     pub similarities: Vec<(String, String, f32)>,
     /// Model-body `(set-base-levels (name level [creation-seconds]) ...)`.
@@ -926,6 +929,36 @@ fn define_chunk_spec_warning(definition: &[Sexp]) -> Option<String> {
     }
 }
 
+/// A numeric inequality whose value is the literal `NIL`. ACT-R rejects the
+/// entire production and prints the predicate name in the warning.
+fn nil_inequality(definition: &[Sexp]) -> Option<(String, String)> {
+    let mut i = 0;
+    if matches!(definition.first(), Some(Sexp::Sym(isa)) if isa == "ISA") {
+        i = 2;
+    }
+    while i + 2 < definition.len() {
+        let op = match &definition[i] {
+            Sexp::Sym(op) if matches!(op.as_str(), "<" | "<=" | ">" | ">=") => op.clone(),
+            _ => {
+                i += 2;
+                continue;
+            }
+        };
+        let slot = match &definition[i + 1] {
+            Sexp::Sym(slot) if !slot.starts_with('=') => slot.clone(),
+            _ => {
+                i += 3;
+                continue;
+            }
+        };
+        if matches!(&definition[i + 2], Sexp::Sym(v) if v == "NIL") {
+            return Some((op, slot));
+        }
+        i += 3;
+    }
+    None
+}
+
 /// `parse-conditions` (production-parsing.lisp:1491): the rejection block, or
 /// `None` when the LHS is well-formed.
 fn validate_lhs(lhs: &[Sexp], extra: &[String]) -> Option<Vec<String>> {
@@ -947,6 +980,14 @@ fn validate_lhs(lhs: &[Sexp], extra: &[String]) -> Option<Vec<String>> {
                 }
                 if definition.is_empty() {
                     continue;
+                }
+                if let Some((op, slot)) = nil_inequality(definition) {
+                    return Some(vec![
+                        format!("Invalid syntax in {} condition.", seg_text(seg)),
+                        format!(
+                            "A {op} test for slot {slot} with a value of nil not allowed in chunk-spec."
+                        ),
+                    ]);
                 }
                 if let Some(w) = define_chunk_spec_warning(definition) {
                     return Some(vec![
@@ -2539,6 +2580,7 @@ fn parse_model(
         chunk_types: Vec::new(),
         chunks: Vec::new(),
         defined_chunks: Vec::new(),
+        merge_chunks: Vec::new(),
         similarities: Vec::new(),
         base_levels: Vec::new(),
         set_all_base_levels: None,
@@ -2661,6 +2703,17 @@ fn parse_model(
                 for e in &items[1..] {
                     define_chunk_table_entry(e, &mut model)?;
                 }
+            }
+            "MERGE-CHUNKS" | "MERGE-CHUNKS-FCT" => {
+                let a = match items.get(1).and_then(Sexp::as_sym) {
+                    Some(a) => a.to_uppercase(),
+                    None => return structural("merge-chunks needs two chunk names"),
+                };
+                let b = match items.get(2).and_then(Sexp::as_sym) {
+                    Some(b) => b.to_uppercase(),
+                    None => return structural("merge-chunks needs two chunk names"),
+                };
+                model.merge_chunks.push((a, b));
             }
             "GOAL-FOCUS" | "GOAL-FOCUS-FCT" => {
                 if items.len() != 2 {

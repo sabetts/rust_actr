@@ -3,12 +3,13 @@
 //! lisp: actr7.x/test-models/thorough-p-test.lisp
 
 use crate::Case;
+use actr_engine::Step;
 
 #[test]
-// Full reason: model and task sources are available; the 64 KB ref needs a
-// generated driver over 39 goal states using buffer modification, whynot, and
-// exact matrix formatting.
-#[ignore = "pending: generated whynot driver (sources available)"]
 fn thorough_p_test() -> Result<(), String> {
-    Case::new("thorough-p-test").seed((100, 0)).check()
+    Case::new("thorough-p-test")
+        .models(&["test-models;models;thorough-p-test.lisp"])
+        .seed((100, 0))
+        .steps(vec![Step::Reset, Step::ThoroughP])
+        .check()
 }

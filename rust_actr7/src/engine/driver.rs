@@ -2318,6 +2318,79 @@ impl Engine {
 
     /// `pcomp-issues-game`: run complete 150-trial games of the production
     /// compilation task and print its block-wise score/response-time summary.
+    /// `thorough-p-test`: exercise every slot test operator/value form and
+    /// print the resulting production-match matrix.
+    pub fn thorough_p_test(&mut self) -> Result<(), EngineError> {
+        const X_VALUES: [&str; 3] = ["SLOT1", "SLOT3", "NOT-A-SLOT"];
+        const OPS: [&str; 6] = ["=", "-", "<", "<=", ">", ">="];
+        const COLUMNS: [&str; 6] = ["chunk", "implicit-chunk", "string", "number", "t", "nil"];
+        let y_values = || {
+            vec![
+                Value::Sym("DUMMY1".into()),
+                Value::Sym("MERGED".into()),
+                Value::Sym("DUMMY2".into()),
+                Value::Sym("DUMMY3".into()),
+                Value::Sym("DUMMY4".into()),
+                Value::Sym("FREE".into()),
+                Value::Str("dummy1".into()),
+                Value::Str("dummy2".into()),
+                Value::Sym("T".into()),
+                Value::Nil,
+                Value::Int(3),
+                Value::Int(5),
+                Value::Int(7),
+            ]
+        };
+        for x in X_VALUES {
+            for y in y_values() {
+                let Some(g1) = self.named.get_mut("G1") else {
+                    continue;
+                };
+                for (slot, value) in [("SLOT2", Value::Sym(x.to_string())), ("SLOT1", y)] {
+                    match g1.slots.iter_mut().find(|(k, _)| k == slot) {
+                        Some((_, old)) => *old = value,
+                        None => g1.slots.push((slot.to_string(), value)),
+                    }
+                }
+                self.overwrite_buffer_chunk_named("GOAL", "G1")?;
+                self.out_lines.push(String::new());
+                self.out_lines.push(String::new());
+                self.out_lines
+                    .push("############################".to_string());
+                self.out_lines.push(String::new());
+                self.print_buffer_chunk(&["GOAL".to_string()]);
+
+                let mark = self.out_lines.len();
+                let matches = self.print_whynot(&[]);
+                self.out_lines.truncate(mark);
+
+                let mut dummy_num = 1;
+                for (prefix, label) in [
+                    ("SLOT1", "P"),
+                    ("P*-SLOT1", "P*"),
+                    ("P*-IMPLICIT-SLOT", "P* indirect"),
+                ] {
+                    dummy_num += 1;
+                    self.out_lines.push(String::new());
+                    self.out_lines.push(format!("{label} productions"));
+                    self.out_lines.push(format!(
+                        "           dummy1   dummy{dummy_num}   \"dummy1\"   5        t      nil"
+                    ));
+                    for op in OPS {
+                        let mut line = format!("test {op:<2}     ");
+                        for column in COLUMNS {
+                            let name = format!("{prefix}{op}{column}").to_uppercase();
+                            let hit = matches.iter().any(|m| m.eq_ignore_ascii_case(&name));
+                            line.push_str(&format!("{:<9}", if hit { "T" } else { "NIL" }));
+                        }
+                        self.out_lines.push(line);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn pcomp_game(&mut self, cfg: PcompGameConfig) -> Result<(), EngineError> {
         const TRIALS: usize = 150;
         const BLOCKS: usize = 15;
