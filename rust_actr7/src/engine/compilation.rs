@@ -284,6 +284,16 @@ pub(super) fn canon_prod(
                 slots.sort();
                 lhs.push((format!("?{buffer}>"), slots));
             }
+            LhsItem::Eval { value, safe } => {
+                // `compose_pair` keeps the predicate as a prefix token
+                // (`!SAFE-EVAL!`/`!EVAL!`); the comparison rep must include it
+                // or a composed production with a safe-eval is never detected
+                // as a duplicate.
+                lhs.push((
+                    if *safe { "!SAFE-EVAL!" } else { "!EVAL!" }.to_string(),
+                    vec![(String::new(), sexp_lisp(value))],
+                ));
+            }
             _ => {}
         }
     }
