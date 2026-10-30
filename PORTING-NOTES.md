@@ -6007,3 +6007,20 @@ production/utility engine path. `time-size-check` remains an upstream
 placeholder ref.
 
 Corpus: **550 passed / 17 ignored**.
+
+## 349. BST utility trace: live window, not the sidecar
+
+`tutorial-unit6-bst-utility-trace` is promoted with a hook-aware single-trial
+driver (`Step::BstTrial`). The trial builds the live BST window directly;
+loading the extracted sidecar in addition duplicated the initial line
+features and made `look-for-current` encode the target instead of the current
+stick.
+
+The driver processes each `bst-button-pressed` action, updates the current
+line, and stops when the event filter breaks on `propagate-reward`, leaving
+that event queued for the following `run-n-events 1`. The ref's callback times
+then match the four-click B/C/C/A path and all 153 utility lines.
+
+`HookCase` gained `no_device()` for drivers that create their own window.
+
+Corpus: **551 passed / 16 ignored**.
