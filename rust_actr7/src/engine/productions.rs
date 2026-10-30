@@ -531,6 +531,14 @@ impl Engine {
                         {
                             self.loc_failure
                         }
+                        // `?retrieval> state error`: the declarative module's
+                        // failure flag (`query-module`, declarative-memory.lisp).
+                        ("STATE", Pattern::Sym(s)) if s == "ERROR" && buffer == "RETRIEVAL" => {
+                            self.buffers
+                                .get(buffer)
+                                .ok_or_else(|| bad(format!("unknown buffer ?{buffer}>")))?
+                                .failed
+                        }
                         // extended-motor-actions adds per-stage queries.
                         ("PROCESSOR", Pattern::Sym(s)) if s == "FREE" => {
                             self.query_processor_free(buffer)?

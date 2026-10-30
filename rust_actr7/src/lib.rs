@@ -35,7 +35,8 @@ pub mod trace;
 pub mod wasm;
 
 pub use engine::{
-    DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, PreResult, Verdict,
+    DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, MultiEngine, PreResult,
+    Verdict,
 };
 pub use model::{load_models, ChunkDesc, Model};
 

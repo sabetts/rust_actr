@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::engine::{DeviceSetup, Engine, EngineError};
+use crate::engine::{DeviceSetup, Engine, EngineError, MultiEngine};
 use crate::json::Json;
 use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
 use crate::sexpr::Sexp;
@@ -235,6 +235,12 @@ pub struct Session {
     user_vars: std::collections::HashMap<String, Sexp>,
     commands: BTreeMap<String, Command>,
     engine: Option<Engine>,
+    /// A multi-model file (`unit-1-together-1-mp`) runs all models on a
+    /// shared clock; the single `engine` above remains the last model for
+    /// command compatibility.
+    multi: Option<MultiEngine>,
+    /// A single loaded file defined more than one model.
+    multi_file: bool,
     current_model: Option<String>,
     trace_pos: usize,
     seed: (u64, u64),
@@ -300,6 +306,8 @@ impl Session {
             user_vars: Default::default(),
             commands,
             engine: None,
+            multi: None,
+            multi_file: false,
             current_model: None,
             trace_pos: 0,
             seed,
@@ -416,7 +424,12 @@ impl Session {
     /// Take the trace lines emitted since the last call (the RPC server
     /// streams these to the `model-trace` monitors).
     pub fn take_trace(&mut self) -> Vec<String> {
-        let lines = if let Some(eng) = &self.engine {
+        let lines = if let Some(multi) = &self.multi {
+            let pos = self.trace_pos;
+            let lines = multi.out_since(pos);
+            self.trace_pos = multi.out_len();
+            lines
+        } else if let Some(eng) = &self.engine {
             let pos = self.trace_pos;
             let lines = eng.out_since(pos);
             self.trace_pos = eng.out_len();
@@ -524,6 +537,19 @@ impl Session {
     /// engine level while routing commands through [`Session::evaluate`].
     pub fn engine_mut(&mut self) -> Option<&mut Engine> {
         self.engine.as_mut()
+    }
+
+    /// Whether the loaded file defined more than one model.
+    pub fn is_multi(&self) -> bool {
+        self.multi.is_some()
+    }
+
+    /// Drive all loaded models on the shared meta-process clock.
+    pub fn run_multi_secs(&mut self, secs: f64, trace: bool, width: usize) -> Result<(), String> {
+        let multi = self.multi.as_mut().ok_or("no multi-model engine")?;
+        multi.set_trace(trace);
+        multi.set_module_width(width);
+        multi.run_secs(secs).map_err(|e| e.to_string())
     }
 
     /// Install a scripted device and rebuild the engine around it (the spec
@@ -2367,8 +2393,11 @@ impl Session {
             return Err(format!("no such file: {}", path.display()));
         }
         if crate::file_defines_model(&path) {
-            self.defs
-                .extend(load_models(&path).map_err(|e| e.to_string())?);
+            let loaded = load_models(&path).map_err(|e| e.to_string())?;
+            if loaded.len() > 1 {
+                self.multi_file = true;
+            }
+            self.defs.extend(loaded);
         }
         if let Ok(src) = std::fs::read_to_string(&path) {
             self.user_fns.extend(model::parse_defuns(&src));
@@ -2551,10 +2580,11 @@ impl Session {
             // The test-step command form has no JSON object type, so a flat
             // third argument is its parameter list.
             Some(Json::Arr(a)) => a.iter().map(json_to_sexp).collect(),
-            _ => match option(options, "params") {
-                Some(Json::Arr(a)) => a.iter().map(json_to_sexp).collect(),
+            Some(Json::Obj(items)) => match items.iter().find(|(k, _)| k == "params") {
+                Some((_, Json::Arr(a))) => a.iter().map(json_to_sexp).collect(),
                 _ => Vec::new(),
             },
+            _ => Vec::new(),
         };
         if let Some(eng) = &mut self.engine {
             eng.schedule_command_rpc(at_ms, action, &sexps);
@@ -2601,6 +2631,19 @@ impl Session {
         eng.set_user_vars(self.user_vars.clone());
         eng.apply_model_commands().map_err(|e| e.to_string())?;
         self.engine = Some(eng);
+        self.multi = if self.multi_file {
+            Some(
+                MultiEngine::new(
+                    self.defs.clone(),
+                    self.seed,
+                    self.device.clone(),
+                    crate::trace::MODULE_WIDTH,
+                )
+                .map_err(|e| e.to_string())?,
+            )
+        } else {
+            None
+        };
         self.trace_pos = 0;
         // `set-system-parameter-value` settings are global in ACT-R and
         // survive a model (re)load — `:starting-parameters` is re-applied by

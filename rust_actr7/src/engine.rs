@@ -28,7 +28,7 @@
 //! `compilation`, `dm`, `perception`, `motor`, `driver`, `debug`, `rhs` —
 //! with `tests` for the unit tests.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::rc::Rc;
@@ -49,6 +49,7 @@ mod driver;
 mod eval;
 mod events;
 mod motor;
+mod multi;
 mod perception;
 mod productions;
 mod rhs;
@@ -56,6 +57,7 @@ mod rhs;
 mod tests;
 
 use motor::even_references;
+pub use multi::MultiEngine;
 use rhs::{chunk_inst, implicit_clears, implicit_queries, new_chunk};
 
 // ---------------------------------------------------------------- event hooks
@@ -2345,6 +2347,9 @@ pub struct Engine {
     buffers: HashMap<String, Buffer>,
     queue: BinaryHeap<Queued>,
     seq: u64,
+    /// Multi-model meta-process: the shared FIFO sequence allocator, so events
+    /// scheduled by different models keep their global insertion order.
+    shared_seq: Option<Rc<Cell<u64>>>,
     time_ms: i64,
     limit_ms: i64,
     /// Events evaluated in the current `run` — ACT-R's `event-count`
@@ -2891,6 +2896,7 @@ impl Engine {
             buffers: HashMap::new(),
             queue: BinaryHeap::new(),
             seq: 0,
+            shared_seq: None,
             time_ms: 0,
             limit_ms: (run_secs * 1000.0).round() as i64,
             run_events: 0,
@@ -4140,8 +4146,18 @@ impl Engine {
     }
 
     fn push_m(&mut self, time_ms: i64, prio: Prio, out: Out, maintenance: bool, event: Event) {
-        let seq = self.seq;
-        self.seq += 1;
+        let seq = match &self.shared_seq {
+            Some(shared) => {
+                let seq = shared.get();
+                shared.set(seq + 1);
+                seq
+            }
+            None => {
+                let seq = self.seq;
+                self.seq += 1;
+                seq
+            }
+        };
         self.queue.push(Queued {
             time_ms,
             prio,
@@ -4907,6 +4923,80 @@ impl Engine {
     /// `event-count`).
     pub fn run_events(&self) -> u64 {
         self.run_events
+    }
+
+    /// Set the shared clock before a multi-model run resumes.
+    pub fn set_time_ms(&mut self, time_ms: i64) {
+        self.time_ms = time_ms;
+    }
+
+    /// Give this model the multi-model meta-process's global FIFO sequence.
+    /// Events already queued from construction are renumbered in their
+    /// existing local order, so a model's initial setup follows model order.
+    pub fn use_shared_sequence(&mut self, shared: Rc<Cell<u64>>) {
+        let mut queued: Vec<Queued> = self.queue.drain().collect();
+        queued.sort_by_key(|q| q.seq);
+        for event in &mut queued {
+            let seq = shared.get();
+            shared.set(seq + 1);
+            event.seq = seq;
+        }
+        self.queue.extend(queued);
+        self.shared_seq = Some(shared);
+    }
+
+    /// The next queued event's global ordering key: `(time_ms, priority,
+    /// sequence)`. Higher priority sorts first; lower sequence wins ties.
+    /// This is only for the multi-model meta-process, which interleaves
+    /// independent model queues.
+    pub fn next_event_key(&mut self) -> Option<(i64, i64, u64)> {
+        self.skip_unnecessary_events();
+        self.queue.peek().map(|q| {
+            let rank = match q.prio {
+                Prio::Min => i64::MIN,
+                Prio::Num(n) => n,
+                Prio::Max => i64::MAX,
+            };
+            (q.time_ms, rank, q.seq)
+        })
+    }
+
+    /// Execute one queued event without a run terminator. Returns `false`
+    /// when the queue is empty. The multi-model runner uses this to select
+    /// the next event across models by `(time, priority, model, sequence)`.
+    pub fn run_one_event(&mut self) -> Result<bool, EngineError> {
+        self.skip_unnecessary_events();
+        let Some(next) = self.queue.pop() else {
+            return Ok(false);
+        };
+        self.time_ms = next.time_ms;
+        let show = self.cfg.detail.shows(next.out);
+        let hook_view = match self.pre_event_hook(&next.event, next.out, show)? {
+            Some((_, Verdict::Break)) => {
+                self.queue.push(next);
+                return Ok(false);
+            }
+            Some((view, Verdict::Continue)) => Some(view),
+            None => None,
+        };
+        let is_cr = matches!(next.event, Event::ConflictResolution);
+        let maintenance = next.maintenance;
+        self.current_lines.clear();
+        self.exec(next.event, show)?;
+        if let Some(view) = hook_view.as_ref() {
+            let lines = std::mem::take(&mut self.current_lines);
+            self.post_event_hook(view, &lines)?;
+        }
+        self.run_events += 1;
+        if self.stopped {
+            return Ok(true);
+        }
+        let silent = self.event_silent;
+        self.event_silent = false;
+        if !is_cr && !maintenance && !silent {
+            self.changed();
+        }
+        Ok(true)
     }
 
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {

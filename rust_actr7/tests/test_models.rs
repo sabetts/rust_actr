@@ -28,7 +28,7 @@ use actr_engine::json::Json;
 use actr_engine::rpc::session::{sexp_to_json, Remote, Session};
 use actr_engine::sexpr::{parse_all, Sexp};
 use actr_engine::trace::Detail;
-use actr_engine::{run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
+use actr_engine::{load_models, run_model_steps, ChunkDesc, DeviceSetup, DeviceText, Step};
 
 mod common;
 mod hooks;
@@ -704,11 +704,20 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     // A `:STARTING-PARAMETERS` step also needs the session: its
     // `:testing-function` drives the reset hook, which lives there (`fan-no-pm`
     // and `fan` rely on `trace-fan-run` turning `:act` on for every run).
-    let needs_session = spec.steps.iter().any(|s| match s {
-        Step::Command { .. } => true,
-        Step::Sgp(k, _) => k.eq_ignore_ascii_case(":STARTING-PARAMETERS"),
-        _ => false,
+    // A file with more than one `define-model` needs the session's
+    // multi-model meta-process (the model-name trace column).
+    let multi_model = spec.models.iter().any(|m| {
+        let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
+        load_models(&root.join(rel))
+            .map(|defs| defs.len() > 1)
+            .unwrap_or(false)
     });
+    let needs_session = multi_model
+        || spec.steps.iter().any(|s| match s {
+            Step::Command { .. } => true,
+            Step::Sgp(k, _) => k.eq_ignore_ascii_case(":STARTING-PARAMETERS"),
+            _ => false,
+        });
     let actual = if needs_session {
         run_spec_session(root, spec, &device)?
     } else {
@@ -766,10 +775,14 @@ fn apply_session_step(
                 .map_err(|e| format!("command {name}: {e}"))?;
         }
         Step::Run { secs, trace, width } => {
-            let eng = session.engine_mut().ok_or_else(no_model)?;
-            eng.set_module_width(*width);
-            eng.set_trace(*trace);
-            eng.run_secs(*secs).map_err(|e| e.to_string())?;
+            if session.is_multi() {
+                session.run_multi_secs(*secs, *trace, *width)?;
+            } else {
+                let eng = session.engine_mut().ok_or_else(no_model)?;
+                eng.set_module_width(*width);
+                eng.set_trace(*trace);
+                eng.run_secs(*secs).map_err(|e| e.to_string())?;
+            }
         }
         Step::RunFullTime {
             secs,
