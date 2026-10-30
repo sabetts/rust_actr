@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 5A.2 is committed)
-- Full suite: **540 passed / 27 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 5B.1 is committed)
+- Full suite: **541 passed / 26 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -410,10 +410,22 @@ Completed:
 
 #### Wave 5B - Remaining residual clusters
 
-Next, take audio sound-object replay (`audio-updates`), multi-model trace
-columns (`unit-1-together-1-mp`), and command-layer output cases
-(`tutorial-unit1modeling-warnings`, `undefined-slots`). Keep the three parked
-pcomp cases (`v1`, `v12`, `v13`) as a separate activation-history track.
+Completed:
+
+- [x] **Wave 5B.1 - Audio sound-object replay.** `audio-updates` is promoted.
+  The engine now supports ongoing/custom sounds, `end-ongoing-sound`,
+  `print-audicon`, explicit `AURAL-LOCATION`/`find-sound`, audio-event
+  offset/duration updates, and `:audio-ms-times`. Full suite green at
+  **541 passed / 26 ignored**.
+
+Next:
+
+- **Wave 5B.2 - Multi-model trace columns.** `unit-1-together-1-mp` runs
+  COUNT+SEMANTIC+ADDITION in parallel with a model-name column.
+- **Wave 5B.3 - Command-layer output.** `tutorial-unit1modeling-warnings` and
+  `undefined-slots`.
+- Keep the three parked pcomp cases (`v1`, `v12`, `v13`) as a separate
+  activation-history track.
 
 ### External Blockers
 

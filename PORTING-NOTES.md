@@ -5865,3 +5865,44 @@ queued; the next `run` processes it before advancing. `run_to_limit` and
 preserves the upstream `BREAK-EVENT` ordering used by `audio-updates`.
 
 Corpus: **540 passed / 27 ignored**.
+
+## 343. Audio sound-object replay and `audio-updates`
+
+`audio-updates` is promoted. Its driver replays the task explicitly: two tone
+sounds, two ongoing sounds, two runs with a `print-audicon` after each, ending
+the first ongoing sound, scheduling `end-ongoing-sound` for the second at
+`+0.7 s`, then the remaining two runs and tables. The second pass repeats the
+same sequence after `:audio-ms-times` is set. The old device-sidecar
+`new-sound` commands were removed; the engine now emits those itself.
+
+Engine additions:
+
+- `Sound` carries string/numeric content, an optional offset/duration,
+  location, attended state, and `:evt`/`:sound`/`:both` custom features.
+- `new-ongoing-sound`/`end-ongoing-sound` and the `print-audicon`/
+  `printed-audicon` commands. `:audio-ms-times` switches event chunk and table
+  units between seconds and milliseconds.
+- Explicit `+aural-location>` requests now dispatch `find-sound`: detectable
+  filtering, numeric `offset highest`/`lowest` relative constraints, one RNG
+  draw for `random-item`, `FIND-SOUND`, then the copied buffer set.
+- Audio-event chunks are synced on stuff/find and `audio-event-ended`; the
+  `offset`/`duration` slots are only added once the sound is finished.
+  `audio-encoding-complete` updates only the sound chunk, since otherwise a
+  finished ongoing event would gain an offset just by being attended.
+- `AURAL-LOCATION`/`AURAL` sets create `{source}-{k}` copies, and
+  `pprint-chunks` resolves them. `unstuff` resolves the copy back to its
+  source.
+- `OFFSET`, `PITCH`, `ID`, and `LOCATION` joined the standard module slot
+  universe, preventing a false undefined-slot warning for `offset highest`.
+
+Trace details recovered:
+
+- `ATTEND-SOUND` prints the request's copy name (e.g. `AUDIO-EVENT2-1`).
+- Audio unstuff's nested `ERASE-BUFFER` line is high-detail only; the buffer
+  still changes at medium detail.
+- `AUDIO-ENCODING-COMPLETE` is high-detail only.
+- `audio-event-ended`'s buffer mod does not mark the auto-stuffed copy as
+  modified, so it can still be overwritten/unstuffed.
+- An ongoing sound's `sound-event-index` ids start at 1.
+
+Corpus: **541 passed / 26 ignored**.
