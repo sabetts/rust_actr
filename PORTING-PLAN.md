@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **538 passed / 29 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 5A.1 is committed)
+- Full suite: **539 passed / 28 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -30,9 +30,9 @@ python rust_actr7/tools/list-ignored.py --counts
 python rust_actr7/tools/list-ignored.py --case pcomp --files
 ```
 
-Oracle: `actr7.x/load-single-threaded-act-r.lisp` under SBCL. Use temporary
-scripts outside the repo (for example under the OS temp directory) to
-instrument ACT-R functions and compare a first divergence.
+Oracle: `actr7.x/load-single-threaded-act-r.lisp` under SBCL. Put temporary
+scripts under the repo-local `.tmp/` directory (the sandbox rejects OS temp
+paths) to instrument ACT-R functions and compare a first divergence.
 
 ## Working Rules
 
@@ -364,30 +364,50 @@ Targets:
 - Long-tail driver cases (`save-model`, `thorough-p-test`, Siegler original,
   etc.).
 
-#### Wave 5A - Base-level safety and inhibition
+#### Wave 5A.1 - Base-level safety (completed)
 
-Targets:
+Target:
 
 - `base-level-safety-check`
+
+Completed:
+
+- [x] Added reusable `Step::AddDm`, `Step::MergeDm`, and
+  `Step::EmptyModuleRequest` driver steps, wired through both the engine and
+  session paths.
+- [x] Rebuilt the case from the upstream `run-test` sequence: four
+  `Reset`/`:OL` blocks, `A` added, `B`-`E` merged, and five empty retrieval
+  requests at the task timestamps.
+- [x] Runtime `(sgp :ol ...)` now updates the live config; previously only
+  the model-load `:ol` was read.
+- [x] Integer `:ol` values print as `1`/`3` in the activation trace.
+- [x] `base-level-safety-check` promoted. New chunks keep their creation
+  reference under `:ol t`; subsequent merges clear the list while preserving
+  the count.
+- [x] Full suite green at **539 passed / 28 ignored**.
+
+#### Wave 5A.2 - Base-level inhibition (next)
+
+Target:
+
 - `base-level-inhibition`
 
-`base-level-safety-check` is a trace/history case: eight `run-full-time`
-slices per `:ol` mode (`nil`, `t`, `1`, `3`) with seed `(100, 0)` and
-`:act t`. The ref's first block shows the expected history and activation
-rows (`1.4978663`, `1.5289993`, `-1.1299546`, ...). Start by comparing the
-second run's reference list, creation time, base-level value, transient-noise
-draw, and permanent-noise value against SBCL.
+This case has no recorded run steps. Rebuild its driver from
+`extras/base-level-inhibition/free-recall.lisp` and the ref: `free-recall`
+runs 100 trials with a 1 s delay, goal `G`, retrieval of `FIVE`, `HARVEST`,
+`BREAK-EVENT`, the retrieval threshold, and `!stop!`. Do not reduce it to a
+summary-only driver.
 
-`base-level-inhibition` currently has no recorded run steps. Rebuild its
-driver from `extras/base-level-inhibition/free-recall.lisp` and the ref:
-goal `G`, retrieval of `FIVE`, `HARVEST`, `BREAK-EVENT`, and the subsequent
-retrieval/break cycles. The ref also exercises the retrieval threshold and
-`!stop!`; do not reduce it to a summary-only driver.
+The engine side still needs the `require-extra "base-level-inhibition"`
+parameters (`:enable-inhibition`, `:inhibition-scale`,
+`:inhibition-decay`), the activation-offset term
+`-log(1 + (Tn/ts)^-ds)`, and `sdp :creation-time`/`:references` history
+setup from the task model.
 
 #### Wave 5B - Remaining residual clusters
 
-After 5A, take audio sound-object replay (`audio-updates`), multi-model trace
-columns (`unit-1-together-1-mp`), and command-layer output cases
+After 5A.2, take audio sound-object replay (`audio-updates`), multi-model
+trace columns (`unit-1-together-1-mp`), and command-layer output cases
 (`tutorial-unit1modeling-warnings`, `undefined-slots`). Keep the three parked
 pcomp cases (`v1`, `v12`, `v13`) as a separate activation-history track.
 

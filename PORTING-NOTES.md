@@ -5814,3 +5814,25 @@ task waiting to time 1 s, then goal `G`, retrieval of `FIVE`, `HARVEST`, a
 `BREAK-EVENT`/stop path rather than replacing it with a summary.
 
 Corpus remains **538 passed / 29 ignored**.
+
+## 341. Base-level safety driver and runtime `:ol` (verified)
+
+`base-level-safety-check` was not actually exercising its task: the Rust test
+only had `Reset`/`Sgp`/`RunFullTime`. Added reusable driver steps
+`Step::AddDm`, `Step::MergeDm`, and `Step::EmptyModuleRequest` (the first two
+currently take named empty chunks; literal chunk definitions still use the
+command layer) and rebuilt the test from `run-test`.
+
+Two engine gaps surfaced while comparing:
+
+- Runtime `(sgp :ol ...)` was not handled by `apply_sgp`; only the `:ol` in
+  the model body was read. It now updates `cfg.ol`.
+- The base-level trace printed integer `:ol` values as `1.0`/`3.0`. `ol_str`
+  now prints integral values as `1`/`3`.
+
+A new chunk keeps its creation reference under `:ol t` (the first block shows
+`1 references (0.000)`); only later merges clear the reference list while
+keeping the count. `base-level-safety-check` is promoted.
+
+Oracle scripts now go under the repo-local `.tmp/` directory, not OS temp.
+Corpus: **539 passed / 28 ignored**.
