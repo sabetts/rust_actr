@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (the pcomp/residual wave is committed)
-- Full suite: **535 passed / 32 ignored / 0 failed**
+- Full suite: **536 passed / 31 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -311,6 +311,15 @@ Approach:
   printer where it changes split shape.
 - Keep the existing `count-w-tree` result as the regression oracle.
 - Check whether conflict-set ordering changes pcomp/utility draw order.
+
+Completed:
+
+- [x] `fan-w-tree` promoted. The printer now builds the upstream information
+  gain tree, including implicit safe-slot conditions, true/false result
+  splits, both-branch have-not classes, max-gain selection, and production
+  ordering inside leaves.
+- [x] `count-w-tree` remains green; full suite is now **536 passed / 31
+  ignored**.
 
 #### Wave 4D - Task hooks
 

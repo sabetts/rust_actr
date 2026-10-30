@@ -5726,3 +5726,27 @@ marker, and formats the learning summary with the ref's 8-column/two-decimal
 table (the experiment variant keeps its 6-column/one-decimal table).
 
 Corpus: **535 passed / 32 ignored**.
+
+## 337. Conflict tree: information-gain splits and implicit safe-slot tests
+
+Recovered `fan-w-tree`.
+
+The previous printer chose the first condition that separated production
+classes. The upstream builder instead scores each candidate with information
+gain over condition classes. A class is the set of productions with the same
+condition map; a candidate is scored by the entropy of the classes that test
+it against the re-grouped classes on its true and false branches. Classes that
+do not test the condition are carried into *both* branches. The highest-gain
+candidate wins, with ties following the upstream condition-vector order, and
+the recursion stops at a leaf when no positive-gain split remains.
+
+The condition map must include ACT-R's implicit `safe-chunk-slot-equal`
+conditions, not only explicit literal tests. Every tested slot contributes
+that condition: a `nil` value is a true result, a variable is false. This is
+what makes the FAN tree split on imaginal `ARG2` and then `ARG1` even though
+the source has only two explicit literal tests.
+
+Leaves are sorted by model production order before printing
+(`production-ordering`), which fixes the final leaf membership order.
+
+`count-w-tree` still passes; corpus: **536 passed / 31 ignored**.
