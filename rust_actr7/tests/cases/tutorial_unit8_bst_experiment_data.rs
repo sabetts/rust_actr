@@ -6,10 +6,6 @@ use crate::Case;
 use actr_engine::{BstMode, Step};
 
 #[test]
-// Full reason: the shared BST driver recovers unit 6, but the unit 8 PPM model
-// always chooses the over strategy here; its imaginal-action difference/PPM
-// similarities still diverge from the Lisp ref.
-#[ignore = "pending: BST PPM strategy-choice divergence"]
 fn tutorial_unit8_bst_experiment_data() -> Result<(), String> {
     Case::new("tutorial-unit8-bst-experiment-data")
         .models(&[
