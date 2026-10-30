@@ -125,6 +125,19 @@ impl Engine {
         params: Vec<Value>,
     ) -> Result<(), EngineError> {
         let key = name.to_uppercase();
+        if key == "SET-IMAGINAL-FREE" {
+            self.imag_busy = false;
+            self.buffer_mut("IMAGINAL").busy = false;
+            return Ok(());
+        }
+        if key == "SET-IMAGINAL-ERROR" {
+            self.imag_busy = false;
+            let b = self.buffer_mut("IMAGINAL");
+            b.busy = false;
+            b.failed = true;
+            self.changed();
+            return Ok(());
+        }
         let def = self
             .user_fns
             .get(&key)
@@ -307,11 +320,30 @@ impl Engine {
                         self.valid_slots.insert(name.clone());
                         return Ok(Value::Sym(name));
                     }
-                    "DEFINE-CHUNKS-FCT" | "ADD-DM-FCT" => {
-                        let defs =
-                            self.m_eval(items.get(1).ok_or("chunk definition list expected")?, b)?;
+                    "DEFINE-CHUNKS" | "DEFINE-CHUNKS-FCT" | "ADD-DM-FCT" => {
+                        // `define-chunks` is a macro: its argument is a raw
+                        // chunk-definition form. The `-fct` variants evaluate
+                        // their argument first.
+                        let defs = if h.eq_ignore_ascii_case("DEFINE-CHUNKS") {
+                            Value::from_sexp(items.get(1).ok_or("chunk definition list expected")?)
+                                .map_err(|e| e.to_string())?
+                        } else {
+                            self.m_eval(items.get(1).ok_or("chunk definition list expected")?, b)?
+                        };
                         let defs = match defs {
-                            Value::List(v) => v,
+                            Value::List(v) => {
+                                // One anonymous spec `(isa type ...)` is a
+                                // single definition; a list whose first item is
+                                // a list is already the definition list.
+                                let anon = v.first().is_some_and(
+                                    |x| matches!(x, Value::Sym(s) if s.eq_ignore_ascii_case("ISA")),
+                                );
+                                if anon {
+                                    vec![Value::List(v)]
+                                } else {
+                                    v
+                                }
+                            }
                             Value::Nil => Vec::new(),
                             other => return Err(format!("chunk definitions {}", other.show())),
                         };
@@ -365,6 +397,58 @@ impl Engine {
                         self.print_buffer_chunk(&names);
                         return Ok(Value::Nil);
                     }
+                    "SCHEDULE-MOD-BUFFER-CHUNK" => {
+                        let bv = self.m_eval(
+                            items
+                                .get(1)
+                                .ok_or("schedule-mod-buffer-chunk needs a buffer")?,
+                            b,
+                        )?;
+                        let buffer = match bv {
+                            Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                            other => {
+                                return Err(format!("bad buffer name {}", other.show()));
+                            }
+                        };
+                        let mods = match self.m_eval(
+                            items
+                                .get(2)
+                                .ok_or("schedule-mod-buffer-chunk needs slots")?,
+                            b,
+                        )? {
+                            Value::List(v) => v,
+                            Value::Nil => Vec::new(),
+                            other => return Err(format!("bad mod slots {}", other.show())),
+                        };
+                        let mut slots = Vec::new();
+                        for pair in mods.chunks(2) {
+                            let name = match &pair[0] {
+                                Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
+                                other => return Err(format!("bad mod slot {}", other.show())),
+                            };
+                            slots.push((name, pair.get(1).cloned().unwrap_or(Value::Nil)));
+                        }
+                        let delay = self.m_eval(
+                            items
+                                .get(3)
+                                .ok_or("schedule-mod-buffer-chunk needs a delay")?,
+                            b,
+                        )?;
+                        let delay = as_num(&delay)
+                            .ok_or_else(|| "mod delay is not a number".to_string())?;
+                        let module = buffer.clone();
+                        self.push(
+                            self.time_ms + (delay * 1000.0).round() as i64,
+                            Prio::Num(0),
+                            Out::Medium,
+                            Event::ModBuffer {
+                                buffer,
+                                slots,
+                                module,
+                            },
+                        );
+                        return Ok(Value::Nil);
+                    }
                     "SCHEDULE-EVENT-RELATIVE" | "SCHEDULE-EVENT" => {
                         let relative = h.eq_ignore_ascii_case("schedule-event-relative");
                         let at =
@@ -391,12 +475,16 @@ impl Engine {
                         }
                         let base = if relative { self.time_ms } else { 0 };
                         let at_ms = base + (at_secs * 1000.0).round() as i64;
-                        self.push(
-                            at_ms,
-                            Prio::Num(0),
-                            Out::Medium,
-                            Event::Command { name, params },
-                        );
+                        // The imaginal module's state-maintenance commands are
+                        // scheduled with `:output nil` in ACT-R.
+                        let out = if name.eq_ignore_ascii_case("SET-IMAGINAL-FREE")
+                            || name.eq_ignore_ascii_case("SET-IMAGINAL-ERROR")
+                        {
+                            Out::Never
+                        } else {
+                            Out::Medium
+                        };
+                        self.push(at_ms, Prio::Num(0), out, Event::Command { name, params });
                         return Ok(Value::Nil);
                     }
                     // `(let* ((var expr) ...) body ...)`: sequential local
@@ -735,8 +823,8 @@ impl Engine {
         if self.imag_busy {
             return Ok(());
         }
-        let slots = match &spec {
-            NewChunk::Spec { slots, .. } => slots.clone(),
+        let (ctype, slots) = match &spec {
+            NewChunk::Spec { ctype, slots, .. } => (ctype.clone(), slots.clone()),
             _ => return Ok(()),
         };
         let get = |k: &str| slots.iter().find(|(n, _)| n == k).map(|(_, v)| v.clone());
@@ -751,7 +839,12 @@ impl Engine {
             Some(Value::List(v)) => v,
             _ => Vec::new(),
         };
-        let simple = get("SIMPLE").map(|v| v != Value::Nil).unwrap_or(false);
+        // `simple-action` declares `(simple t)` as a chunk-type default
+        // (`imaginal.lisp:267`); core-module types are not part of the
+        // model's declared chunk types, so apply that default here.
+        let simple = get("SIMPLE")
+            .map(|v| v != Value::Nil)
+            .unwrap_or_else(|| ctype.eq_ignore_ascii_case("SIMPLE-ACTION"));
         // The action runs at request time, with the module marked busy.
         self.imag_busy = true;
         let result = self.call_action(&name, &extra);

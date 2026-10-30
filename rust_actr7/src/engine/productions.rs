@@ -245,8 +245,8 @@ impl Engine {
                         ("STATE", Pattern::Sym(s)) if s == "BUSY" => {
                             !self.query_free(buffer).unwrap_or(false)
                         }
-                        ("ERROR", Pattern::Nil) => self.buffer_error(buffer),
-                        ("ERROR", Pattern::Sym(s)) if s == "T" => !self.buffer_error(buffer),
+                        ("ERROR", Pattern::Nil) => !self.buffer_error(buffer),
+                        ("ERROR", Pattern::Sym(s)) if s == "T" => self.buffer_error(buffer),
                         _ => true,
                     };
                     if !ok {
@@ -696,10 +696,14 @@ impl Engine {
         Ok(self.zz_hands[hand].down[f])
     }
 
-    /// `?buffer> error t/nil`: only the blending module tracks an error
-    /// flag; every other buffer reports no error.
+    /// `?buffer> error t/nil`: blending owns a module-level flag; other
+    /// buffers use their `failed` state (e.g. an imaginal-action `nil`).
     pub(super) fn buffer_error(&self, buffer: &str) -> bool {
-        buffer == "BLENDING" && self.blending_error
+        if buffer == "BLENDING" {
+            self.blending_error
+        } else {
+            self.buffers.get(buffer).is_some_and(|b| b.failed)
+        }
     }
 
     /// `instantiate-chunk-spec` (`chunk-spec.lisp:777`): a `=buffer>`/

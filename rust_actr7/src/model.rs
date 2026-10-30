@@ -1380,6 +1380,7 @@ const STANDARD_MODULE_SLOTS: &[&str] = &[
     "SCREEN-Y",
     "SIMPLE",
     "SIZE",
+    "SLOTS",
     "SOUND",
     "START-WIDTH",
     "STATE",
