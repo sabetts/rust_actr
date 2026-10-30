@@ -5906,3 +5906,24 @@ Trace details recovered:
 - An ongoing sound's `sound-event-index` ids start at 1.
 
 Corpus: **541 passed / 26 ignored**.
+
+## 344. Multi-model meta-process trace
+
+`unit-1-together-1-mp` is promoted. `MultiEngine` builds one independent
+`Engine` per `define-model`, gives each the same seed/device/module width, and
+drives them on one shared clock. Each model keeps its own queue, but all
+engines allocate from one global FIFO sequence, so a same-time/same-priority
+event scheduled earlier by another model runs first. Initial reset events are
+renumbered in model order.
+
+The multi trace formatter inserts a ten-character model-name column after the
+timestamp. Per-model `Stopped because ...` lines are removed; one global
+terminator is emitted at the final model time with `-` in the model column.
+The test harness detects a single file defining more than one model and routes
+it through `Session`/`MultiEngine`; multiple files that each define one model
+remain single-model.
+
+Also added `?retrieval> state error`, needed by SEMANTIC's `fail` production:
+it tests the retrieval buffer's failure flag.
+
+Corpus: **542 passed / 25 ignored**.

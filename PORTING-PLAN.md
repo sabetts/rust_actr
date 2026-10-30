@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 5B.1 is committed)
-- Full suite: **541 passed / 26 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 5B.2 is committed)
+- Full suite: **542 passed / 25 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -417,11 +417,14 @@ Completed:
   `print-audicon`, explicit `AURAL-LOCATION`/`find-sound`, audio-event
   offset/duration updates, and `:audio-ms-times`. Full suite green at
   **541 passed / 26 ignored**.
+- [x] **Wave 5B.2 - Multi-model trace columns.** `unit-1-together-1-mp` is
+  promoted. `MultiEngine` runs each model with its own queue but a shared
+  FIFO sequence, interleaves by time/priority/global insertion order, and
+  emits the model-name column plus the global `-` terminator. Full suite green
+  at **542 passed / 25 ignored**.
 
 Next:
 
-- **Wave 5B.2 - Multi-model trace columns.** `unit-1-together-1-mp` runs
-  COUNT+SEMANTIC+ADDITION in parallel with a model-name column.
 - **Wave 5B.3 - Command-layer output.** `tutorial-unit1modeling-warnings` and
   `undefined-slots`.
 - Keep the three parked pcomp cases (`v1`, `v12`, `v13`) as a separate
