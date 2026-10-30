@@ -386,6 +386,10 @@ struct Config {
     /// equality tests may mismatch when the value similarity exceeds `:md`,
     /// and utility is adjusted by `ppm * Σ similarities`.
     ppm: Option<f32>,
+    /// `:ppm-hook` (`procedural.lisp:2686`): a task function called with the
+    /// production name and its partial-match rows; a numeric result overrides
+    /// the normal `ppm * Σ similarity` offset.
+    ppm_hook: Option<String>,
     /// Production-compilation `:epl` (enable production learning).
     epl: bool,
     /// Production-compilation `:pct` (trace).
@@ -1376,6 +1380,7 @@ impl Config {
             md: sgp_single(&m.params, ":MD")?.unwrap_or(-1.0),
             sim_hook: sgp_str(&m.params, ":SIM-HOOK"),
             ppm: sgp_single(&m.params, ":PPM")?,
+            ppm_hook: sgp_str(&m.params, ":PPM-HOOK"),
             epl: sgp_bool(&m.params, ":EPL"),
             model_warnings: sgp_bool(&m.params, ":MODEL-WARNINGS"),
             pct: sgp_bool(&m.params, ":PCT"),

@@ -1374,6 +1374,12 @@ impl Engine {
                 }
             }
             ":PPM" => self.cfg.ppm = num(val),
+            ":PPM-HOOK" => {
+                self.cfg.ppm_hook = match val {
+                    Sexp::Sym(s) | Sexp::Str(s) if s != "NIL" => Some(s.clone()),
+                    _ => None,
+                }
+            }
             ":EGS" => self.cfg.egs = num(val).unwrap_or(0.0),
             // `(sgp :seed (S C))` (`random.lisp:417`): init the stream from `S`
             // and discard `C` draws; `nil` clears it. Applied immediately and

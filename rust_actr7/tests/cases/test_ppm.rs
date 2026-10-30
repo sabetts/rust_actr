@@ -6,13 +6,9 @@ use crate::Case;
 use actr_engine::Step;
 
 #[test]
-// BLOCKED ON: `:PPM-HOOK SHOW-PPM-VALUES`.
-// The first two sections run, but the ref's third section is produced by a
-// task-defined Lisp callback.
-#[ignore = "missing-feature: PPM hook"]
 fn test_ppm() -> Result<(), String> {
     Case::new("test-ppm")
-        .models(&["test-models;models;test-ppm.lisp"])
+        .models(&["test-models;test-ppm.lisp", "test-models;models;test-ppm.lisp"])
         .seed((100, 0))
         .steps(vec![
             Step::Reset,

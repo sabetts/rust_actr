@@ -2,6 +2,36 @@
 use super::eval::as_num;
 use super::motor::key_table;
 use super::*;
+
+/// Minimal `format` for task hooks: `~%`, `~~`, `~S`, and `~A`.
+fn format_lisp_simple(fmt: &str, args: &[Value]) -> String {
+    let mut out = String::new();
+    let mut chars = fmt.chars().peekable();
+    let mut ai = 0usize;
+    while let Some(c) = chars.next() {
+        if c != '~' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('%') => out.push('\n'),
+            Some('~') => out.push('~'),
+            Some('S') | Some('A') => {
+                if let Some(v) = args.get(ai) {
+                    out.push_str(&v.show());
+                    ai += 1;
+                }
+            }
+            Some(other) => {
+                out.push('~');
+                out.push(other);
+            }
+            None => out.push('~'),
+        }
+    }
+    out
+}
+
 impl Engine {
     /// Run a scheduled task command: bind its `:params` to the `defun`'s
     /// parameters and execute the body (side-effecting forms handled by
@@ -31,6 +61,46 @@ impl Engine {
             }
         }
         Ok(())
+    }
+
+    /// `ppm-offset`'s `:ppm-hook` call: task function receives the production
+    /// name and `(buffer slot expected actual similarity)` rows. A numeric
+    /// result overrides the normal PPM offset.
+    pub(super) fn ppm_hook_offset(
+        &mut self,
+        production: &str,
+        mismatches: &[PpmMismatch],
+    ) -> Option<f32> {
+        let hook = self.cfg.ppm_hook.clone()?;
+        let def = self.user_fns.get(&hook.to_uppercase())?.clone();
+        let p = Value::Sym(production.to_uppercase());
+        let rows = Value::List(
+            mismatches
+                .iter()
+                .map(|(buffer, slot, want, got, sim)| {
+                    Value::List(vec![
+                        Value::Sym(buffer.to_uppercase()),
+                        Value::Sym(slot.to_uppercase()),
+                        want.clone(),
+                        got.clone(),
+                        Value::Num(*sim as f64),
+                    ])
+                })
+                .collect(),
+        );
+        let mut b: Bindings = HashMap::new();
+        for (param, value) in def.params.iter().zip([p, rows]) {
+            b.insert(param.to_uppercase(), value);
+        }
+        let mut result = Value::Nil;
+        for e in &def.body {
+            result = self.m_eval(e, &b).ok()?;
+        }
+        match result {
+            Value::Num(x) => Some(x as f32),
+            Value::Int(i) => Some(i as f32),
+            _ => None,
+        }
     }
 
     pub(super) fn run_command(
@@ -79,6 +149,37 @@ impl Engine {
                             out.push(self.m_eval(a, b)?);
                         }
                         return Ok(Value::List(out));
+                    }
+                    "CAR" | "FIRST" => {
+                        let v = self.m_eval(items.get(1).ok_or("car needs a list")?, b)?;
+                        return Ok(match v {
+                            Value::List(v) => v.into_iter().next().unwrap_or(Value::Nil),
+                            Value::Nil => Value::Nil,
+                            other => return Err(format!("car of {}", other.show())),
+                        });
+                    }
+                    "FIFTH" => {
+                        let v = self.m_eval(items.get(1).ok_or("fifth needs a list")?, b)?;
+                        return Ok(match v {
+                            Value::List(v) => v.into_iter().nth(4).unwrap_or(Value::Nil),
+                            Value::Nil => Value::Nil,
+                            other => return Err(format!("fifth of {}", other.show())),
+                        });
+                    }
+                    "MODEL-OUTPUT" | "COMMAND-OUTPUT" => {
+                        let fmt =
+                            self.m_eval(items.get(1).ok_or("model-output needs a format")?, b)?;
+                        let fmt = match fmt {
+                            Value::Str(s) | Value::Sym(s) => s,
+                            other => other.show(),
+                        };
+                        let mut args = Vec::new();
+                        for a in &items[2..] {
+                            args.push(self.m_eval(a, b)?);
+                        }
+                        let text = format_lisp_simple(&fmt, &args);
+                        self.model_output(&text);
+                        return Ok(Value::Nil);
                     }
                     "ACT-R-RANDOM" => {
                         let lim =

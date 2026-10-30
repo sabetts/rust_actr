@@ -99,11 +99,15 @@ impl Engine {
                 if self.cfg.egs != 0.0 {
                     u += self.rng.borrow_mut().noise(self.cfg.egs);
                 }
-                // `ppm-offset` (procedural.lisp:2373): penalty is
-                // `:ppm * Σ similarity` over the mismatched slots (the
-                // similarities are negative, so this lowers utility).
+                // `ppm-offset` (procedural.lisp:2373): the hook may override
+                // the default `:ppm * Σ similarity` offset.
+                let hook_offset = if self.cfg.ppm.is_some() && !mism.is_empty() {
+                    self.ppm_hook_offset(&pname, &mism)
+                } else {
+                    None
+                };
                 if let Some(p) = self.cfg.ppm {
-                    u += p * mism.iter().map(|m| m.4).sum::<f32>();
+                    u += hook_offset.unwrap_or_else(|| p * mism.iter().map(|m| m.4).sum::<f32>());
                 }
                 // `compute-utility` with `save` (`utility-and-reward-1.lisp:357`,
                 // called at `procedural.lisp:2230`) caches the value with the
