@@ -175,6 +175,9 @@ pub const BUILTINS: &[&str] = &[
     "print-visicon",
     "set-visual-center-point",
     "new-tone-sound",
+    "new-ongoing-sound",
+    "end-ongoing-sound",
+    "print-audicon",
     "new-word-sound",
     "new-digit-sound",
     "pbreak",
@@ -1589,7 +1592,14 @@ impl Session {
                     .unwrap_or_default();
                 Ok(vec![Json::Str(out.join("\n"))])
             }
-            "printed-audicon" => Ok(vec![Json::Str(String::new())]),
+            "printed-audicon" => {
+                let out = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.printed_audicon().join("\n"))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(out)])
+            }
             // The production transition graph (nodes + counted edges) for the
             // Environment's Production Graph view.
             "production-graph" => {
@@ -1755,6 +1765,66 @@ impl Session {
                 };
                 if let Some(eng) = &mut self.engine {
                     eng.new_tone_sound_rpc(freq, duration_ms, onset_ms);
+                }
+                Ok(vec![Json::Null])
+            }
+            "new-ongoing-sound" => {
+                // `new-ongoing-sound content delay recode [onset location
+                // kind time-in-ms other-features...]` (`audio.lisp:840`).
+                let content = match args.first().map(json_to_sexp) {
+                    Some(crate::sexpr::Sexp::Str(s)) => s,
+                    Some(crate::sexpr::Sexp::Sym(s)) => s,
+                    _ => String::new(),
+                };
+                let delay = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let recode = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let onset = args.get(3).and_then(|a| a.as_f64());
+                let location = args
+                    .get(4)
+                    .map(json_to_text)
+                    .unwrap_or_else(|| "EXTERNAL".to_string());
+                let kind = args
+                    .get(5)
+                    .map(json_to_text)
+                    .unwrap_or_else(|| "SPEECH".to_string());
+                let in_ms = args
+                    .get(6)
+                    .map(|a| matches!(a, Json::Bool(true)))
+                    .unwrap_or(false);
+                let (delay_ms, recode_ms, onset_ms) = if in_ms {
+                    (delay as i64, recode as i64, onset.map(|v| v as i64))
+                } else {
+                    (
+                        (delay * 1000.0).round() as i64,
+                        (recode * 1000.0).round() as i64,
+                        onset.map(|v| (v * 1000.0).round() as i64),
+                    )
+                };
+                let other: Vec<crate::sexpr::Sexp> =
+                    args.iter().skip(7).map(json_to_sexp).collect();
+                let id = self
+                    .engine
+                    .as_mut()
+                    .map(|e| {
+                        e.new_ongoing_sound_rpc(
+                            content, delay_ms, recode_ms, onset_ms, location, kind, &other,
+                        )
+                    })
+                    .transpose()
+                    .map_err(|e| e.to_string())?
+                    .unwrap_or(0);
+                Ok(vec![Json::Int(id)])
+            }
+            "end-ongoing-sound" => {
+                let id = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                if let Some(eng) = &mut self.engine {
+                    eng.end_ongoing_sound_rpc(id).map_err(|e| e.to_string())?;
+                }
+                Ok(vec![Json::Bool(true)])
+            }
+            "print-audicon" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.print_audicon_rpc();
                 }
                 Ok(vec![Json::Null])
             }
@@ -2477,9 +2547,14 @@ impl Session {
         let Some(action) = action.and_then(|a| a.as_str()) else {
             return;
         };
-        let sexps: Vec<Sexp> = match option(options, "params") {
+        let sexps: Vec<Sexp> = match options {
+            // The test-step command form has no JSON object type, so a flat
+            // third argument is its parameter list.
             Some(Json::Arr(a)) => a.iter().map(json_to_sexp).collect(),
-            _ => Vec::new(),
+            _ => match option(options, "params") {
+                Some(Json::Arr(a)) => a.iter().map(json_to_sexp).collect(),
+                _ => Vec::new(),
+            },
         };
         if let Some(eng) = &mut self.engine {
             eng.schedule_command_rpc(at_ms, action, &sexps);

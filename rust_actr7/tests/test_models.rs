@@ -1633,6 +1633,7 @@ fn case_files_cover_every_ref() -> Result<(), String> {
 fn cmd_arg_json(s: &Sexp) -> Json {
     match s {
         Sexp::Str(x) => Json::Obj(vec![("str".to_string(), Json::Str(x.clone()))]),
+        Sexp::List(items) => Json::Arr(items.iter().map(cmd_arg_json).collect()),
         other => sexp_to_json(other),
     }
 }

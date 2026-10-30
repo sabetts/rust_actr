@@ -1,5 +1,15 @@
 //! Vision, audio, and EMMA.
 use super::*;
+/// `decode-string` (`dispatcher.lisp:911`): a value wrapped in single quotes
+/// is a literal string; otherwise it names a Lisp symbol.
+fn decode_audio_string(s: &str) -> String {
+    if s.len() > 1 && s.starts_with('\'') && s.ends_with('\'') {
+        s[1..s.len() - 1].to_string()
+    } else {
+        s.to_string()
+    }
+}
+
 impl Engine {
     /// `new-tone-sound` (`audio.lisp:778`): create a tone sound event. Names
     /// come from the two independent counters (`TONE{n}` / `AUDIO-EVENT{n}`),
@@ -22,15 +32,20 @@ impl Engine {
             sname: format!("TONE{n}"),
             ename: format!("AUDIO-EVENT{en}"),
             kind: "TONE".to_string(),
-            content: freq,
+            content: Value::Int(freq),
+            location: "EXTERNAL".to_string(),
             onset,
-            offset: onset + duration,
-            duration,
+            offset: Some(onset + duration),
+            duration: Some(duration),
             delay: 50,
             recode: 285,
             pitch: pitch.to_string(),
+            attended: SoundAttended::Nil,
+            other_features: Vec::new(),
         });
-        self.sounds.len() - 1
+        let idx = self.sounds.len() - 1;
+        self.sync_audio_chunks(idx);
+        idx
     }
 
     /// `new-digit-sound` (`audio.lisp:760`): a `DIGIT` sound whose `content`
@@ -45,16 +60,137 @@ impl Engine {
             sname: format!("DIGIT{n}"),
             ename: format!("AUDIO-EVENT{en}"),
             kind: "DIGIT".to_string(),
-            content: digit,
+            content: Value::Int(digit),
+            location: "EXTERNAL".to_string(),
             onset,
-            offset: onset + 600,
-            duration: 600,
+            offset: Some(onset + 600),
+            duration: Some(600),
             delay: 300,
             recode: 500,
             pitch: "NIL".to_string(),
+            attended: SoundAttended::Nil,
+            other_features: Vec::new(),
         });
         let idx = self.sounds.len() - 1;
+        self.sync_audio_chunks(idx);
         self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+    }
+
+    /// `new-ongoing-sound` (`audio.lisp:840`): a custom sound with no offset
+    /// until `end-ongoing-sound`. Returns the command's id.
+    pub fn new_ongoing_sound_rpc(
+        &mut self,
+        content: String,
+        delay_ms: i64,
+        recode_ms: i64,
+        onset: Option<i64>,
+        location: String,
+        kind: String,
+        other_features: &[crate::sexpr::Sexp],
+    ) -> Result<i64, EngineError> {
+        let mut features = Vec::new();
+        for feature in other_features {
+            let Sexp::List(items) = feature else {
+                return Err(bad("other sound feature is not a list".to_string()));
+            };
+            if items.len() < 3 {
+                return Err(bad("other sound feature needs three items".to_string()));
+            }
+            let scope = match items[0]
+                .as_sym()
+                .unwrap_or("")
+                .trim_start_matches(':')
+                .to_uppercase()
+                .as_str()
+            {
+                "EVT" => AudioFeatureScope::Evt,
+                "SOUND" => AudioFeatureScope::Sound,
+                "BOTH" => AudioFeatureScope::Both,
+                _ => return Err(bad("bad sound feature scope".to_string())),
+            };
+            let slot = items[1]
+                .as_sym()
+                .ok_or_else(|| bad("bad sound feature slot".to_string()))?
+                .to_uppercase();
+            self.extend_possible_slots(&slot);
+            let value = match Value::from_sexp(&items[2])? {
+                Value::Str(s) => Value::Str(decode_audio_string(&s)),
+                other => other,
+            };
+            features.push(AudioFeature { scope, slot, value });
+        }
+        let n = self.sound_seq;
+        self.sound_seq += 1;
+        let en = self.audio_events;
+        self.audio_events += 1;
+        let at = onset.unwrap_or(self.time_ms);
+        self.sounds.push(Sound {
+            sname: format!("SOUND{n}"),
+            ename: format!("AUDIO-EVENT{en}"),
+            kind: kind.to_uppercase(),
+            content: Value::Str(decode_audio_string(&content)),
+            location: location.to_uppercase(),
+            onset: at,
+            offset: None,
+            duration: None,
+            delay: delay_ms,
+            recode: recode_ms,
+            pitch: "MIDDLE".to_string(),
+            attended: SoundAttended::Nil,
+            other_features: features,
+        });
+        let idx = self.sounds.len() - 1;
+        self.sync_audio_chunks(idx);
+        self.ongoing_seq += 1;
+        let id = self.ongoing_seq as i64;
+        self.ongoing_sounds.insert(id as u64, idx);
+        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        Ok(id)
+    }
+
+    /// `end-ongoing-sound` (`audio.lisp:877`): stop an ongoing sound at the
+    /// current model time and schedule its high-detail end check.
+    pub fn end_ongoing_sound_rpc(&mut self, id: i64) -> Result<(), EngineError> {
+        self.end_ongoing_sound(id as u64)
+    }
+
+    pub(super) fn end_ongoing_sound(&mut self, id: u64) -> Result<(), EngineError> {
+        let Some(idx) = self.ongoing_sounds.remove(&id) else {
+            return Ok(());
+        };
+        let now = self.time_ms;
+        let sound = &mut self.sounds[idx];
+        sound.offset = Some(now);
+        sound.duration = Some(now - sound.onset);
+        let evt = sound
+            .ename
+            .trim_start_matches("AUDIO-EVENT")
+            .parse::<u64>()
+            .map_err(|_| bad("bad audio-event name".to_string()))?;
+        self.push_m(
+            now,
+            Prio::Num(9),
+            Out::Always,
+            true,
+            Event::AudioEventEnded { evt },
+        );
+        Ok(())
+    }
+
+    /// `update-sound-evt` (`audio.lisp:922`): refresh the source audio chunks
+    /// from the live sound state. The event chunk only gains `offset` /
+    /// `duration` once the sound is finished.
+    pub(super) fn sync_audio_chunks(&mut self, idx: usize) {
+        let s = self.sounds[idx].clone();
+        let event = audio_event_chunk(&s, self.time_ms, self.cfg.audio_ms_times);
+        self.named.insert(s.ename.clone(), event);
+        self.sync_sound_chunk(idx);
+    }
+
+    pub(super) fn sync_sound_chunk(&mut self, idx: usize) {
+        let sound = sound_chunk(&self.sounds[idx]);
+        self.named
+            .insert(sound.name.clone().unwrap_or_default(), sound);
     }
 
     /// Device request routing for the visual buffer: only
@@ -1868,35 +2004,72 @@ pub(super) fn add_gaussian_noise(rng: &mut Mt, x: f32, stddev: f32) -> f32 {
     x + if s == 0.0 { 0.0 } else { rng.noise(s) }
 }
 
+fn audio_time_value(ms: i64, audio_ms_times: bool) -> Value {
+    if audio_ms_times {
+        Value::Int(ms)
+    } else {
+        Value::Num(ms as f64 / 1000.0)
+    }
+}
+
 /// The sound's `audio-event` chunk (`update-sound-evt`, `audio.lisp:922`):
-/// `onset`, `location`, `kind`, `id`, `pitch`. The model's `detected-sound`
-/// matches it untested and copies it as `event`.
-pub(super) fn audio_event_chunk(s: &Sound) -> ChunkInst {
+/// `onset`, optional `offset`/`duration`, `pitch`, `kind`, `location`, `id`,
+/// then the `:evt`/`:both` custom slots. The model's `detected-sound` matches
+/// it untested and copies it as `event`.
+pub(super) fn audio_event_chunk(s: &Sound, now_ms: i64, audio_ms_times: bool) -> ChunkInst {
+    let mut slots = vec![(
+        "ONSET".to_string(),
+        audio_time_value(s.onset, audio_ms_times),
+    )];
+    if let (Some(offset), Some(duration)) = (s.offset, s.duration) {
+        if now_ms >= offset {
+            slots.push((
+                "OFFSET".to_string(),
+                audio_time_value(offset, audio_ms_times),
+            ));
+            slots.push((
+                "DURATION".to_string(),
+                audio_time_value(duration, audio_ms_times),
+            ));
+        }
+    }
+    slots.extend([
+        ("PITCH".to_string(), Value::Sym(s.pitch.clone())),
+        ("KIND".to_string(), Value::Sym(s.kind.clone())),
+        ("LOCATION".to_string(), Value::Sym(s.location.clone())),
+        ("ID".to_string(), Value::Sym(s.ename.clone())),
+    ]);
+    for f in &s.other_features {
+        if matches!(f.scope, AudioFeatureScope::Evt | AudioFeatureScope::Both) {
+            slots.push((f.slot.clone(), f.value.clone()));
+        }
+    }
     ChunkInst {
         name: Some(s.ename.clone()),
         ctype: "AUDIO-EVENT".to_string(),
-        slots: vec![
-            ("ONSET".to_string(), Value::Int(s.onset)),
-            ("LOCATION".to_string(), Value::Sym("EXTERNAL".to_string())),
-            ("KIND".to_string(), Value::Sym(s.kind.clone())),
-            ("ID".to_string(), Value::Sym(s.ename.clone())),
-            ("PITCH".to_string(), Value::Sym(s.pitch.clone())),
-        ],
+        slots,
         bare: false,
     }
 }
 
 /// The sound chunk (`audio-encoding-complete`, `audio.lisp:1205`):
-/// `content`, `kind`, `event` (the `audio-event` chunk name).
+/// `kind`, `content`, `event` (the `audio-event` chunk name), then the
+/// `:sound`/`:both` custom slots.
 pub(super) fn sound_chunk(s: &Sound) -> ChunkInst {
+    let mut slots = vec![
+        ("KIND".to_string(), Value::Sym(s.kind.clone())),
+        ("CONTENT".to_string(), s.content.clone()),
+        ("EVENT".to_string(), Value::Sym(s.ename.clone())),
+    ];
+    for f in &s.other_features {
+        if matches!(f.scope, AudioFeatureScope::Sound | AudioFeatureScope::Both) {
+            slots.push((f.slot.clone(), f.value.clone()));
+        }
+    }
     ChunkInst {
         name: Some(s.sname.clone()),
         ctype: "SOUND".to_string(),
-        slots: vec![
-            ("CONTENT".to_string(), Value::Int(s.content)),
-            ("KIND".to_string(), Value::Sym(s.kind.clone())),
-            ("EVENT".to_string(), Value::Sym(s.ename.clone())),
-        ],
+        slots,
         bare: false,
     }
 }

@@ -53,6 +53,15 @@ impl Engine {
                     // prints the action's copy name.
                     inst.name = Some(self.reuse_buffer_name("IMAGINAL"));
                 }
+                if buffer == "AURAL" || buffer == "AURAL-LOCATION" {
+                    if let Some(source) = inst.name.clone() {
+                        let n = *self.copy_count.entry(source.clone()).or_insert(0);
+                        self.copy_count.insert(source.clone(), n + 1);
+                        let copy = format!("{source}-{n}");
+                        self.audio_copied_from.insert(copy.clone(), source);
+                        inst.name = Some(copy);
+                    }
+                }
                 if show {
                     let mut details = format!("SET-BUFFER-CHUNK {buffer} {text}");
                     if !requested {
@@ -115,6 +124,13 @@ impl Engine {
                         self.vl_copied_from.insert(copy.clone(), source.clone());
                         inst.name = Some(copy);
                     }
+                } else if (buffer == "AURAL" || buffer == "AURAL-LOCATION") && inst.name.is_some() {
+                    let base = inst.name.clone().unwrap();
+                    let n = *self.copy_count.entry(base.clone()).or_insert(0);
+                    self.copy_count.insert(base.clone(), n + 1);
+                    let copy = format!("{base}-{n}");
+                    self.audio_copied_from.insert(copy.clone(), base);
+                    inst.name = Some(copy);
                 }
                 if show {
                     let mut details = format!("OVERWRITE-BUFFER-CHUNK {buffer} {source}");
@@ -279,17 +295,26 @@ impl Engine {
                 // its `offset`/`duration`. The scheduled event's own trace
                 // line (`AUDIO-EVENT-ENDED <ename>`) precedes the mod.
                 if self.aural_loc_evt == Some(evt) {
+                    let ename = format!("AUDIO-EVENT{evt}");
+                    if let Some(idx) = self.sounds.iter().position(|s| s.ename == ename) {
+                        self.sync_audio_chunks(idx);
+                        self.update_audio_location_buffer(idx);
+                    }
                     // The scheduled event's own line is `:output high`
                     // (`audio.lisp:1048`), so only a high-detail run prints it:
                     // of the refs that reach `audio-event-ended`, only
-                    // `unstuff-aural` shows it — its model is the one that sets
+                    // `unstuff-aural` shows it �?" its model is the one that sets
                     // `(sgp :trace-detail high)`. The `mod-buffer-chunk` that
                     // follows is `medium` and appears in all of them.
                     if self.cfg.detail.shows(Out::Always) {
                         self.emit("AUDIO", format!("AUDIO-EVENT-ENDED AUDIO-EVENT{evt}"));
                     }
                     self.emit("AUDIO", "MOD-BUFFER-CHUNK AURAL-LOCATION".to_string());
+                    self.changed();
                 }
+            }
+            Event::EndOngoingSound { id } => {
+                self.end_ongoing_sound(id)?;
             }
             Event::ToneSound { idx } => {
                 // `new-sound-event :around` (`audio.lisp:733`): `new-sound`
@@ -319,12 +344,13 @@ impl Engine {
                 if !self.can_stuff_aural() {
                     return Ok(());
                 }
+                self.sync_audio_chunks(idx);
                 let s = self.sounds[idx].clone();
                 // `find-sound` (`audio.lisp:1031`) picks
                 // `(random-item matching-chunks)`; even a single live tone
                 // consumes one draw, and it lands between the visual finds.
                 let _ = self.rng_draw(1);
-                let chunk = audio_event_chunk(&s);
+                let chunk = audio_event_chunk(&s, self.time_ms, self.cfg.audio_ms_times);
                 // `find-sound` with `:stuffed t` and a chunk already in the
                 // buffer *overwrites* it (`schedule-overwrite-buffer-chunk`,
                 // `audio.lisp:1039`); an empty buffer gets a plain set. The two
@@ -370,18 +396,20 @@ impl Engine {
                 // their precondition.
                 if let Some(delay) = self.cfg.unstuff_aural {
                     let at = match delay {
-                        Some(ms) => self.time_ms + ms,
-                        None => s.offset + self.cfg.decay_time_ms,
+                        Some(ms) => Some(self.time_ms + ms),
+                        None => s.offset.map(|offset| offset + self.cfg.decay_time_ms),
                     };
-                    self.push_m(
-                        at,
-                        Prio::Min,
-                        Out::Never,
-                        true,
-                        Event::UnstuffAural {
-                            copy: s.ename.clone(),
-                        },
-                    );
+                    if let Some(at) = at {
+                        self.push_m(
+                            at,
+                            Prio::Min,
+                            Out::Never,
+                            true,
+                            Event::UnstuffAural {
+                                copy: s.ename.clone(),
+                            },
+                        );
+                    }
                 }
                 // `find-sound` also schedules the end check at the sound's
                 // `offset` (`audio.lisp:1048`). Only the speech path reached it
@@ -392,30 +420,117 @@ impl Engine {
                 // `(sgp :trace-detail high)`; `sperling` (medium) shows neither
                 // this event nor its mod, and `hear-self`'s speech sound gets
                 // its mod from the `new-sound` path instead.
-                if self.cfg.detail.shows(Out::Always) {
-                    if let Ok(evt) = s.ename.trim_start_matches("AUDIO-EVENT").parse::<u64>() {
-                        // The buffer now holds this event, which is what the end
-                        // check's precondition tests (`aural-location-update-check`,
-                        // `audio.lisp:1068`) — the tone path has to record it or
-                        // `AudioEventEnded` never fires.
-                        self.aural_loc_evt = Some(evt);
-                        self.push_m(
-                            s.offset,
-                            Prio::Num(0),
-                            Out::Always,
-                            false,
-                            Event::AudioEventEnded { evt },
-                        );
+                if let Ok(evt) = s.ename.trim_start_matches("AUDIO-EVENT").parse::<u64>() {
+                    // The buffer now holds this event, which is what the end
+                    // check's precondition tests (`aural-location-update-check`,
+                    // `audio.lisp:1068`).
+                    self.aural_loc_evt = Some(evt);
+                    if self.cfg.detail.shows(Out::Always) {
+                        if let Some(offset) = s.offset {
+                            self.push_m(
+                                offset,
+                                Prio::Num(0),
+                                Out::Always,
+                                false,
+                                Event::AudioEventEnded { evt },
+                            );
+                        }
                     }
                 }
             }
-            Event::AttendSound { idx } => {
+            Event::FindSound { spec } => {
+                if show {
+                    self.emit("AUDIO", "FIND-SOUND".to_string());
+                }
+                let NewChunk::Spec {
+                    slots, neg, rels, ..
+                } = spec
+                else {
+                    return Ok(());
+                };
+                let mut direct = Vec::new();
+                let mut relative = Vec::new();
+                for (slot, value) in slots {
+                    match value {
+                        Value::Sym(s) if s == "HIGHEST" || s == "LOWEST" => {
+                            relative.push((slot, s == "HIGHEST"));
+                        }
+                        other => direct.push((slot, other)),
+                    }
+                }
+                let now = self.time_ms;
+                let mut candidates: Vec<(usize, ChunkInst)> = self
+                    .sounds
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, s)| {
+                        s.onset <= now
+                            && now >= s.onset + s.delay
+                            && s.offset.map_or(true, |o| o + self.cfg.decay_time_ms >= now)
+                    })
+                    .map(|(idx, s)| (idx, audio_event_chunk(s, now, self.cfg.audio_ms_times)))
+                    .filter(|(_, c)| self.chunk_matches_req(c, &direct, &neg, &rels))
+                    .collect();
+                for (slot, highest) in relative {
+                    let mut best: Option<Value> = None;
+                    for (_, c) in &candidates {
+                        let value = c.get(&slot);
+                        let number = match value {
+                            Value::Int(i) => Some(i as f64),
+                            Value::Num(x) => Some(x),
+                            _ => None,
+                        };
+                        let Some(number) = number else {
+                            continue;
+                        };
+                        let better = match best.as_ref().and_then(|v| match v {
+                            Value::Int(i) => Some(*i as f64),
+                            Value::Num(x) => Some(*x),
+                            _ => None,
+                        }) {
+                            None => true,
+                            Some(old) => (highest && number > old) || (!highest && number < old),
+                        };
+                        if better {
+                            best = Some(Value::Num(number));
+                        }
+                    }
+                    if let Some(best) = best {
+                        candidates.retain(|(_, c)| self.value_eq(&c.get(&slot), &best));
+                    }
+                }
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let pick = self.rng_draw(candidates.len());
+                let (idx, chunk) = candidates.swap_remove(pick);
+                let event = chunk
+                    .name
+                    .as_deref()
+                    .and_then(|n| n.trim_start_matches("AUDIO-EVENT").parse::<u64>().ok());
+                if let Some(evt) = event {
+                    self.aural_loc_evt = Some(evt);
+                }
+                self.sync_audio_chunks(idx);
+                self.now(
+                    Prio::Num(10),
+                    Out::Low,
+                    Event::SetBuffer {
+                        buffer: "AURAL-LOCATION".to_string(),
+                        chunk: NewChunk::Instance(chunk),
+                        requested: true,
+                        shown: None,
+                    },
+                );
+            }
+            Event::AttendSound { idx, display } => {
+                self.sounds[idx].attended = SoundAttended::Requested;
                 let s = self.sounds[idx].clone();
                 if let Some(buf) = self.buffers.get_mut("AURAL") {
                     buf.busy = true;
                 }
                 if self.cfg.detail.shows(Out::Medium) {
-                    self.emit("AUDIO", format!("ATTEND-SOUND {}-0", s.ename));
+                    self.emit("AUDIO", format!("ATTEND-SOUND {display}"));
                 }
                 self.push(
                     self.time_ms + s.recode,
@@ -428,11 +543,13 @@ impl Engine {
                 // `audio-encoding-complete` (`audio.lisp:1205`): free the
                 // module, give the sound chunk `content`/`kind`/`event`, then
                 // set the AURAL buffer.
+                self.sounds[idx].attended = SoundAttended::Attended;
+                self.sync_sound_chunk(idx);
                 let s = self.sounds[idx].clone();
                 if let Some(buf) = self.buffers.get_mut("AURAL") {
                     buf.busy = false;
                 }
-                if self.cfg.detail.shows(Out::Medium) {
+                if self.cfg.detail.shows(Out::Always) {
                     self.emit("AUDIO", format!("AUDIO-ENCODING-COMPLETE {}", s.ename));
                 }
                 let chunk = sound_chunk(&s);
@@ -514,11 +631,13 @@ impl Engine {
             }
             Event::UnstuffAural { copy } => {
                 // `unstuff-buffer` (`audio.lisp:1056`) with `:output nil`: the
-                // scheduled event prints nothing, only the erase shows.
+                // scheduled event prints nothing; the nested `erase-buffer`
+                // line is high-detail (`unstuff-aural` is the only ref that
+                // shows it).
                 if self.unstuff_aural_valid(&copy) {
                     self.now(
                         Prio::Min,
-                        Out::Medium,
+                        Out::Always,
                         Event::EraseBuffer {
                             buffer: "AURAL-LOCATION".to_string(),
                             module: "AUDIO".to_string(),
@@ -751,6 +870,9 @@ impl Engine {
                             },
                         );
                     }
+                    "AURAL-LOCATION" => {
+                        self.now(Prio::Num(0), Out::Medium, Event::FindSound { spec });
+                    }
                     "AURAL" => {
                         // `attend-sound` (`audio.lisp:1099`): resolve the
                         // audio-event chunk named by the request's `event`
@@ -768,8 +890,15 @@ impl Engine {
                             _ => None,
                         };
                         if let Some(ename) = ename {
-                            if let Some(idx) = self.sounds.iter().position(|s| s.ename == ename) {
-                                self.now(Prio::Num(0), Out::Medium, Event::AttendSound { idx });
+                            let display = ename.clone();
+                            let source =
+                                self.audio_copied_from.get(&ename).cloned().unwrap_or(ename);
+                            if let Some(idx) = self.sounds.iter().position(|s| s.ename == source) {
+                                self.now(
+                                    Prio::Num(0),
+                                    Out::Medium,
+                                    Event::AttendSound { idx, display },
+                                );
                             }
                         }
                     }
@@ -2343,5 +2472,27 @@ impl Engine {
             }
         }
         Ok(())
+    }
+
+    /// `audio-event-ended` calls `update-sound-evt` and then mods the
+    /// `AURAL-LOCATION` buffer (`audio.lisp:1077`). The buffer holds a
+    /// `{source}-{k}` copy, so only its slots change.
+    fn update_audio_location_buffer(&mut self, idx: usize) {
+        let s = self.sounds[idx].clone();
+        let event = audio_event_chunk(&s, self.time_ms, self.cfg.audio_ms_times);
+        let Some(buf) = self.buffers.get_mut("AURAL-LOCATION") else {
+            return;
+        };
+        let Some(chunk) = buf.chunk.as_mut() else {
+            return;
+        };
+        for (slot, value) in event.slots {
+            match chunk.slots.iter_mut().find(|(k, _)| *k == slot) {
+                Some((_, old)) => *old = value,
+                None => chunk.slots.push((slot, value)),
+            }
+        }
+        // `audio-event-ended`'s mod does not disqualify the auto-stuffed copy
+        // from overstuff/unstuff (`stuff-sound-buffer`, `audio.lisp:716`).
     }
 }

@@ -369,6 +369,9 @@ struct Config {
     inhibition: bool,
     inhibition_scale: f32,
     inhibition_decay: f32,
+    /// `:audio-ms-times` (`audio.lisp:1543`): print/store audio-event onset,
+    /// offset, and duration in milliseconds instead of seconds.
+    audio_ms_times: bool,
     act_scale: f32,
     ans: Option<f32>,
     egs: f32,
@@ -1470,6 +1473,7 @@ impl Config {
             inhibition: sgp_bool(&m.params, ":ENABLE-INHIBITION"),
             inhibition_scale: sgp_single(&m.params, ":INHIBITION-SCALE")?.unwrap_or(5.0),
             inhibition_decay: sgp_single(&m.params, ":INHIBITION-DECAY")?.unwrap_or(1.0),
+            audio_ms_times: false,
             act_scale,
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
@@ -1704,6 +1708,39 @@ impl HearSelf {
     }
 }
 
+/// Where a custom sound feature is copied (`update-sound-evt` /
+/// `audio-encoding-complete`, `audio.lisp:922`/`:1205`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AudioFeatureScope {
+    Evt,
+    Sound,
+    Both,
+}
+
+#[derive(Debug, Clone)]
+struct AudioFeature {
+    scope: AudioFeatureScope,
+    slot: String,
+    value: Value,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SoundAttended {
+    Nil,
+    Requested,
+    Attended,
+}
+
+impl SoundAttended {
+    fn table(self) -> &'static str {
+        match self {
+            SoundAttended::Nil => "NIL",
+            SoundAttended::Requested => "REQ",
+            SoundAttended::Attended => "T",
+        }
+    }
+}
+
 /// One audio sound event (`sound-event`, `core-modules/audio.lisp:571`). A
 /// tone's `sname` is `TONE{n}` (chunk `isa sound`) and its `ename` is
 /// `AUDIO-EVENT{n}` (chunk `isa audio-event`); the two name counters are
@@ -1713,18 +1750,20 @@ struct Sound {
     sname: String,
     ename: String,
     kind: String,
-    content: i64,
+    content: Value,
+    location: String,
     onset: i64,
-    offset: i64,
-    /// Sound duration in ms. Written but not yet read — the audio module will
-    /// use it once the unfinished scheduled-event path lands, so keep it.
-    #[allow(dead_code)]
-    duration: i64,
-    /// `tone-detect-delay` (50 ms): detect time is `onset + delay`.
+    /// Ongoing sounds have no offset/duration until `end-ongoing-sound`.
+    offset: Option<i64>,
+    duration: Option<i64>,
+    /// `tone-detect-delay` / the command's `delay`: detect time is
+    /// `onset + delay`.
     delay: i64,
-    /// `tone-recode-delay` (285 ms): `attend-sound` encoding time.
+    /// `tone-recode-delay` / the command's `recode`: encoding time.
     recode: i64,
     pitch: String,
+    attended: SoundAttended,
+    other_features: Vec<AudioFeature>,
 }
 
 // ---------------------------------------------------------------- events
@@ -2155,6 +2194,11 @@ enum Event {
     AudioEventEnded {
         evt: u64,
     },
+    /// Audio module: a scheduled `end-ongoing-sound` call (the task's
+    /// `schedule-event-relative`), which has no trace line of its own.
+    EndOngoingSound {
+        id: u64,
+    },
     /// Audio module: a tone's onset (`new-sound`, then schedule
     /// `stuff-sound-buffer` at `onset + detect-delay`).
     ToneSound {
@@ -2165,11 +2209,17 @@ enum Event {
     StuffSound {
         idx: usize,
     },
+    /// Audio module: an explicit `+aural-location>` request (`find-sound`,
+    /// `audio.lisp:1031`).
+    FindSound {
+        spec: NewChunk,
+    },
     /// Audio module: `attend-sound` (`audio.lisp:1099`), queued with the
     /// request's default priority so a production's buffer clears at
     /// priority 10 land first.
     AttendSound {
         idx: usize,
+        display: String,
     },
     /// Audio module: `attend-sound` finishes, building the sound chunk and
     /// setting the `AURAL` buffer.
@@ -2513,6 +2563,14 @@ pub struct Engine {
     tone_seq: u64,
     /// Audio module: next `DIGIT{n}` index (`new-name-fct "DIGIT"`).
     digit_seq: u64,
+    /// Audio module: next `SOUND{n}` index (`new-name-fct "SOUND"`).
+    sound_seq: u64,
+    /// Audio module: ongoing-sound command id -> live sound index.
+    ongoing_sounds: HashMap<u64, usize>,
+    /// Audio module: next `new-ongoing-sound` id (`ongoing-sound-index`).
+    ongoing_seq: u64,
+    /// Audio buffer copy name -> source audio-event/sound name.
+    audio_copied_from: HashMap<String, String>,
     /// Auto-naming counters for `define-chunks`-style names (`CHUNK0`, ...).
     name_count: HashMap<String, u64>,
     /// A reusable buffer's chunk name (`act-r-buffer-reuse-chunk`,
@@ -3017,6 +3075,10 @@ impl Engine {
             sounds: Vec::new(),
             tone_seq: 0,
             digit_seq: 0,
+            sound_seq: 0,
+            ongoing_sounds: HashMap::new(),
+            ongoing_seq: 0,
+            audio_copied_from: HashMap::new(),
             name_count: HashMap::new(),
             buffer_reuse: HashMap::new(),
             vl_copies: HashMap::new(),
@@ -3662,6 +3724,10 @@ impl Engine {
         self.sounds.clear();
         self.tone_seq = 0;
         self.digit_seq = 0;
+        self.sound_seq = 0;
+        self.ongoing_sounds.clear();
+        self.ongoing_seq = 0;
+        self.audio_copied_from.clear();
         let run = self.device_run;
         for s in self
             .device_sounds
@@ -4699,7 +4765,11 @@ impl Engine {
     /// why the ref shows two erases at `5100` and `10550`, not four.
     fn unstuff_aural_valid(&self, copy: &str) -> bool {
         self.buffers.get("AURAL-LOCATION").map_or(false, |b| {
-            !b.modified && b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(copy)
+            let name = b.chunk.as_ref().and_then(|c| c.name.as_deref());
+            let source = name
+                .and_then(|n| self.audio_copied_from.get(n).map(String::as_str))
+                .or(name);
+            !b.modified && source == Some(copy)
         })
     }
 

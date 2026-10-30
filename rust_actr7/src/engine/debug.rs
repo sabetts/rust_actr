@@ -342,6 +342,19 @@ impl Engine {
                         return Some((c, display));
                     }
                 }
+                if self.audio_copied_from.contains_key(&up) {
+                    for buffer in ["AURAL-LOCATION", "AURAL"] {
+                        if let Some(c) = self
+                            .buffers
+                            .get(buffer)
+                            .and_then(|b| b.chunk.as_ref())
+                            .filter(|c| c.name.as_deref() == Some(up.as_str()))
+                            .cloned()
+                        {
+                            return Some((c, up.clone()));
+                        }
+                    }
+                }
                 let target = self.resolve_alias(&up);
                 if target != up {
                     if let Some(c) = self.find_chunk(&target).cloned() {
@@ -1386,6 +1399,7 @@ impl Engine {
                     other => return Err(bad(format!("bad :ol {other:?}"))),
                 };
             }
+            ":AUDIO-MS-TIMES" => self.cfg.audio_ms_times = truthy,
             ":ENABLE-INHIBITION" => self.cfg.inhibition = truthy,
             ":INHIBITION-SCALE" => {
                 if let Some(x) = num(val) {
@@ -1846,7 +1860,20 @@ impl Engine {
                 Sexp::List(items) => Value::List(items.iter().map(value).collect()),
             }
         }
-        let params = params.iter().map(value).collect();
+        let params: Vec<Value> = params.iter().map(value).collect();
+        // The task schedules the built-in `end-ongoing-sound`; unlike a task
+        // defun it has no `NONE` command trace line.
+        if name.eq_ignore_ascii_case("end-ongoing-sound") {
+            if let Some(Value::Int(id)) = params.first() {
+                self.push(
+                    at_ms,
+                    Prio::Num(0),
+                    Out::Medium,
+                    Event::EndOngoingSound { id: *id as u64 },
+                );
+            }
+            return;
+        }
         self.push(
             at_ms,
             Prio::Num(0),
@@ -2469,6 +2496,82 @@ impl Engine {
         // line after each `print-visicon` block.
         out.push(String::new());
         self.out_lines.extend(out.clone());
+        out
+    }
+
+    /// `print-audicon` (`audio.lisp:1572`): the command-output form, which
+    /// leaves a blank line after the table (`command-output` ends `~%`).
+    pub fn print_audicon_rpc(&mut self) -> Vec<String> {
+        let mut out = self.printed_audicon();
+        out.push(String::new());
+        self.out_lines.extend(out.clone());
+        out
+    }
+
+    /// The `printed-audicon` body, without touching the output log.
+    pub fn printed_audicon(&self) -> Vec<String> {
+        let mut live: Vec<&Sound> = self
+            .sounds
+            .iter()
+            .filter(|s| {
+                s.onset <= self.time_ms
+                    && s.offset
+                        .map_or(true, |o| o + self.cfg.decay_time_ms >= self.time_ms)
+            })
+            .collect();
+        live.sort_by_key(|s| s.onset);
+        let mut out = vec![
+            "Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH".to_string(),
+            "--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----".to_string(),
+        ];
+        for s in live {
+            let num = |ms: i64| {
+                if self.cfg.audio_ms_times {
+                    ms.to_string()
+                } else {
+                    lisp_s_f32((ms as f64 / 1000.0) as f32)
+                }
+            };
+            let content = s.content.show();
+            let mut row = format!(
+                "{:<16}{:<5}{:<12}{:<15}{:<18}{:<14}{:>8}",
+                s.ename,
+                s.attended.table(),
+                if self.time_ms >= s.onset + s.delay {
+                    "T"
+                } else {
+                    "NIL"
+                },
+                s.kind,
+                content,
+                s.location,
+                num(s.onset),
+            );
+            match s.offset {
+                Some(offset) => {
+                    row.push_str(&format!("  {:>8}  ", num(offset)));
+                }
+                None => row.push_str("   ongoing  "),
+            }
+            row.push_str(&format!("{:<10}", s.sname));
+            let feature = |scope: AudioFeatureScope| {
+                s.other_features
+                    .iter()
+                    .find(|f| f.scope == scope)
+                    .map(|f| match &f.value {
+                        Value::Str(x) => x.clone(),
+                        v => v.show(),
+                    })
+                    .unwrap_or_default()
+            };
+            row.push_str(&format!(
+                "{:<12}{:<10}{:<4}",
+                feature(AudioFeatureScope::Sound),
+                feature(AudioFeatureScope::Evt),
+                feature(AudioFeatureScope::Both)
+            ));
+            out.push(row);
+        }
         out
     }
 
