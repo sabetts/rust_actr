@@ -395,6 +395,8 @@ pub enum Step {
         fact_base: Option<f32>,
         all_base: Option<f32>,
     },
+    /// `siegler-experiment <sets>` with its per-trial trace.
+    SieglerExperiment { sets: u32, trace: bool },
     /// `(modify-visicon-features ...)` at an absolute time.
     ModifyVisicon {
         at_ms: i64,
@@ -634,6 +636,7 @@ pub fn run_model_steps_with_hook(
                 *fact_base,
                 *all_base,
             )?,
+            Step::SieglerExperiment { sets, trace } => eng.siegler_experiment(*sets, *trace)?,
             Step::ModifyVisicon { at_ms, name, x, y } => {
                 eng.schedule_modify_visicon(*at_ms, name, *x, *y)
             }

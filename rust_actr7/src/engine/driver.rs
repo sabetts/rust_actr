@@ -2958,6 +2958,51 @@ impl Engine {
         Ok(())
     }
 
+    /// `siegler-experiment n` (`tutorial/lisp/siegler.lisp`), including the
+    /// per-trial trace. Unlike [`Self::siegler_driver`], this does not reseed
+    /// before each trial: the task's `reset` preserves the running RNG stream.
+    pub fn siegler_experiment(&mut self, sets: u32, trace: bool) -> Result<(), EngineError> {
+        const PAIRS: [(i64, i64); 6] = [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)];
+        const WORDS: [&str; 9] = [
+            "ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT",
+        ];
+        let mut counts = [[0u32; 10]; 6];
+        self.set_module_width(22);
+        // `:starting-parameters (:seed (1 0))` is re-applied on each reset.
+        let seed = self.rng.borrow().state().0;
+        // `siegler-trial` installs the speech/microphone device; that
+        // suppresses the default `SPEAK <text>` device-notification line.
+        self.speech_device = true;
+        for _ in 0..sets {
+            for (row, &(a, b)) in PAIRS.iter().enumerate() {
+                self.reset()?;
+                self.set_seed((seed, 0));
+                self.set_trace(trace);
+                self.new_digit_sound(a, self.time_ms);
+                self.new_digit_sound(b, self.time_ms + 750);
+                self.run_secs(30.0)?;
+                let response = self
+                    .last_speech
+                    .as_ref()
+                    .map(|(_, text)| text.to_ascii_uppercase());
+                let col = response
+                    .as_deref()
+                    .and_then(|r| WORDS.iter().position(|w| *w == r))
+                    .unwrap_or(9);
+                counts[row][col] += 1;
+            }
+        }
+        let n = sets as f64;
+        let mut results = [[0.0f64; 10]; 6];
+        for (row, out) in results.iter_mut().enumerate() {
+            for (col, slot) in out.iter_mut().enumerate() {
+                *slot = counts[row][col] as f64 / n;
+            }
+        }
+        self.siegler_results(&results);
+        Ok(())
+    }
+
     fn siegler_set_all_base(&mut self, level: f32) {
         let n = level.max(0.0).round() as usize;
         for h in &mut self.hist {

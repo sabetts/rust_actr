@@ -43,6 +43,8 @@ struct Spec {
     models: Vec<String>,
     /// Optional device sidecar name; defaults to the case name.
     device: Option<String>,
+    /// Suppress the device sidecar (the driver builds its own task events).
+    no_device: bool,
     /// Effective seed of each run, in order (only the first is needed: the
     /// engine seeds once; later changes are explicit `Step::Seed`s).
     run_seeds: Vec<(u64, u64)>,
@@ -185,6 +187,7 @@ fn parse_spec(src: &str) -> Result<Spec, String> {
         ref_name,
         models,
         device: None,
+        no_device: false,
         run_seeds,
         steps,
         steps_unsupported,
@@ -699,7 +702,11 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     // A command-only spec has no run; the seed is unused, so any default
     // works (`(100 0)` is the corpus's canonical placeholder).
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
-    let device = load_spec_device(spec.device.as_deref().unwrap_or(&spec.name))?;
+    let device = if spec.no_device {
+        actr_engine::DeviceSetup::default()
+    } else {
+        load_spec_device(spec.device.as_deref().unwrap_or(&spec.name))?
+    };
     // A spec with a recorded command step is driven through the RPC command
     // layer (`Session::evaluate`), so the spec exercises the same dispatch a
     // Python client hits; everything else keeps the engine-level driver.
@@ -1076,6 +1083,11 @@ fn apply_session_step(
                 *all_base,
             )
             .map_err(|e| e.to_string())?,
+        Step::SieglerExperiment { sets, trace } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .siegler_experiment(*sets, *trace)
+            .map_err(|e| e.to_string())?,
         Step::ModifyVisicon { at_ms, name, x, y } => session
             .engine_mut()
             .ok_or_else(no_model)?
@@ -1114,6 +1126,7 @@ pub struct Case {
     ref_name: String,
     models: Vec<String>,
     device: Option<String>,
+    no_device: bool,
     seed: (u64, u64),
     steps: Vec<Step>,
 }
@@ -1125,6 +1138,7 @@ impl Case {
             ref_name: format!("{name}.ref"),
             models: Vec::new(),
             device: None,
+            no_device: false,
             seed: (100, 0),
             steps: Vec::new(),
         }
@@ -1139,6 +1153,7 @@ impl Case {
             ref_name: spec.ref_name,
             models: spec.models,
             device: spec.device,
+            no_device: spec.no_device,
             seed: spec.run_seeds.first().copied().unwrap_or((100, 0)),
             steps: spec.steps,
         }
@@ -1147,6 +1162,13 @@ impl Case {
     /// Use another case's device sidecar (e.g. `save-model` reuses `demo2`).
     pub fn device(mut self, name: &str) -> Self {
         self.device = Some(name.to_string());
+        self
+    }
+
+    /// Suppress the case's default device sidecar when the driver emits the
+    /// task's events itself.
+    pub fn no_device(mut self) -> Self {
+        self.no_device = true;
         self
     }
 
@@ -1239,6 +1261,7 @@ impl Case {
             ref_name: self.ref_name.clone(),
             models: self.models.clone(),
             device: self.device.clone(),
+            no_device: self.no_device,
             run_seeds: vec![self.seed],
             steps: self.steps.clone(),
             steps_unsupported: None,
