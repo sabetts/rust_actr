@@ -434,6 +434,10 @@ struct Config {
     vpft: bool,
     /// `:vidt` — randomize the imaginal module delay.
     vidt: bool,
+    /// `:ncnar` non-nil (default `t`); can be changed at runtime.
+    ncnar: bool,
+    /// `:dcnn` non-nil (default `t`); can be changed at runtime.
+    dcnn: bool,
     /// `update-chunks-on-the-fly`: `:ncnar` non-nil AND `:dcnn` (both `t` by
     /// default). On a merge, rewrite references to the merged buffer chunk to
     /// the DM chunk's name (`framework/naming-module.lisp:452`).
@@ -1424,6 +1428,8 @@ impl Config {
             // (`framework/naming-module.lisp:452`). Both default to `t`; a
             // model that sets either to nil opts out of name remapping
             // (`sji-merge` sets `:dcnn nil`).
+            ncnar: sgp_tri_state(&m.params, ":NCNAR"),
+            dcnn: sgp_tri_state(&m.params, ":DCNN"),
             chunk_update: sgp_tri_state(&m.params, ":NCNAR") && sgp_tri_state(&m.params, ":DCNN"),
             threads: m
                 .required_extras

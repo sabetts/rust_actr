@@ -1399,6 +1399,17 @@ impl Engine {
                     other => return Err(bad(format!("bad :ol {other:?}"))),
                 };
             }
+            // `update-chunks-on-the-fly` is the conjunction of `:ncnar` and
+            // `:dcnn`; both may be changed at runtime
+            // (`framework/naming-module.lisp:238`).
+            ":NCNAR" => {
+                self.cfg.ncnar = truthy;
+                self.cfg.chunk_update = self.cfg.ncnar && self.cfg.dcnn;
+            }
+            ":DCNN" => {
+                self.cfg.dcnn = truthy;
+                self.cfg.chunk_update = self.cfg.ncnar && self.cfg.dcnn;
+            }
             ":AUDIO-MS-TIMES" => self.cfg.audio_ms_times = truthy,
             ":ENABLE-INHIBITION" => self.cfg.inhibition = truthy,
             ":INHIBITION-SCALE" => {
