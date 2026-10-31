@@ -12,12 +12,12 @@ parameter the engine silently accepts are invisible to the default suite.
 
 ## Confirmed blind spots
 
-- **Silent `sgp` no-ops.** `apply_sgp` used to end in `_ => {}`. Corpus models
-  set keys no handler reads: `:UAN`, `:BL-HOOK`, `:NOISE-HOOK`,
-  `:CHUNK-MERGE-HOOK`, `:RETRIEVAL-SET-HOOK`, `:UTILITY-OFFSETS`, and the
-  extended-motor `:CURSOR-DRAG-DELAY`/punch-delay family. Some are cosmetic or
-  compensated by a driver; the suite cannot distinguish those from real
-  omissions.
+- **Silent `sgp` no-ops.** `apply_sgp` used to end in `_ => {}`. The registry
+  in `engine/params.rs` now makes every accepted no-op explicit and rejects
+  unknown keys. Remaining real gaps are the adaptive-noise hooks
+  (`:UAN`/`:BL-HOOK`/`:NOISE-HOOK`, item 2) and the declarative task hooks
+  (`:CHUNK-MERGE-HOOK`/`:RETRIEVAL-SET-HOOK`); cosmetic flags and
+  driver-managed motor parameters carry their reason in the table.
 - **Task-provided outputs.** `adaptive-noise` prints literal result rows, so
   the adaptive base-level/permanent-noise hooks are untested (PORTING-NOTES
   #340). `tutorial-unit1modeling-warnings`, `undefined-slots`, and one
@@ -52,12 +52,12 @@ compilation-unit tests compare directly against Lisp traces.
 
 ## Ordered work
 
-1. **Parameter registry and strict validation.** One table of recognized
-   `sgp` keys used by `Config::from_model`, `apply_sgp`, and getters; unknown
-   keys fail or warn instead of silently doing nothing. Explicitly mark
-   cosmetic no-ops. Add a test that scans every `(sgp ...)` in
-   `fixtures/models` and every `Step::Sgp` in `tests/cases`, failing on
-   unclassified keys.
+1. [x] **Parameter registry and strict validation.** `engine/params.rs`
+   classifies every known `sgp` key as `Both`, `ModelOnly`, `RuntimeOnly`, or
+   `Ignored(reason)`. Unknown model-body and runtime keys now fail;
+   `tests/params.rs` scans every `(sgp …)`/`(ssp …)` in `fixtures/models` and
+   every driver `Sgp` key. Also fixed model-body `:audio-ms-times` loading;
+   model-body `:v` stays runtime-only because the harness controls traces.
 2. **Engine-generated adaptive-noise.** Port `:uan`, `:bl-hook`, and
    `:noise-hook`; derive the result rows from engine state and remove the
    literals.

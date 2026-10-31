@@ -50,6 +50,7 @@ mod eval;
 mod events;
 mod motor;
 mod multi;
+pub mod params;
 mod perception;
 mod productions;
 mod rhs;
@@ -1282,6 +1283,14 @@ fn sgp_nsji(params: &[(String, Sexp)], key: &str) -> Nsji {
 
 impl Config {
     fn from_model(m: &Model) -> Result<Config, EngineError> {
+        // Reject parameters the engine has never heard of instead of silently
+        // running with defaults. `params::sgp_support` also classifies the
+        // accepted no-ops so the corpus coverage test can tell them apart.
+        for (key, _) in &m.params {
+            if params::sgp_support(key).is_none() {
+                return Err(bad(format!("unknown sgp parameter {key}")));
+            }
+        }
         // Still beyond reach: utility learning hooks, permanent activation
         // sources. (`:mas` spreading is implemented below.)
         for key in [":PAS"] {
@@ -1500,7 +1509,7 @@ impl Config {
             inhibition: sgp_bool(&m.params, ":ENABLE-INHIBITION"),
             inhibition_scale: sgp_single(&m.params, ":INHIBITION-SCALE")?.unwrap_or(5.0),
             inhibition_decay: sgp_single(&m.params, ":INHIBITION-DECAY")?.unwrap_or(1.0),
-            audio_ms_times: false,
+            audio_ms_times: sgp_bool(&m.params, ":AUDIO-MS-TIMES"),
             act_scale,
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,

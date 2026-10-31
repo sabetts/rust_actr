@@ -1795,9 +1795,18 @@ impl Engine {
                     self.cfg.decay_time_ms = (secs * 1000.0).round() as i64;
                 }
             }
-            // `:UTILITY-OFFSETS`, seeds, etc. accepted without an observable
-            // effect here (the ppm offset is implicit in `:ppm`).
-            _ => {}
+            // Classify anything without an arm above. `Ignored` entries are
+            // accepted no-ops (cosmetic flags and documented parity gaps);
+            // `ModelOnly` has no runtime setter yet. A `Both`/`RuntimeOnly`
+            // key reaching here means its arm was removed without updating
+            // `params`; a missing key is a real error.
+            other => match params::sgp_support(other) {
+                Some(params::SgpSupport::Ignored(_)) | Some(params::SgpSupport::ModelOnly) => {}
+                Some(params::SgpSupport::Both) | Some(params::SgpSupport::RuntimeOnly) => {
+                    return Err(bad(format!("missing runtime arm for sgp {other}")));
+                }
+                None => return Err(bad(format!("unknown sgp parameter {other}"))),
+            },
         }
         Ok(())
     }

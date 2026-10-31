@@ -6216,3 +6216,28 @@ not an option: the solution model is inside the protected
 `tutorial/unit3/subitize-model.lisp` is the starting model (no productions).
 
 Corpus unchanged: **559 passed / 8 ignored**.
+
+## 359. `sgp` parameter registry and strict validation
+
+`apply_sgp` used to end in `_ => {}`, so an unimplemented parameter — or a
+typo — was accepted and silently ignored. `engine/params.rs` is now the single
+classification table: `Both` (model load + runtime), `ModelOnly`,
+`RuntimeOnly`, or `Ignored(reason)`. `Config::from_model` rejects unknown
+model-body keys, and the runtime default arm rejects unknown keys and reports
+registry drift (a `Both`/`RuntimeOnly` key that reaches it without an arm).
+
+The corpus audit made the accepted no-ops explicit: adaptive-noise hooks
+(`:uan`/`:bl-hook`/`:noise-hook`, still a parity gap), declarative task hooks
+(`:chunk-merge-hook`/`:retrieval-set-hook`), `:utility-offsets`,
+`:cache-sim-hook-results`, `:use-tree`, `:cmdt`, the GUI flags
+(`:show-focus`/`:show-fingers`/`:needs-mouse`), the extended-motor delay
+family, and the session-level `:testing-function`.
+
+One model-load no-op was fixed while adding the table: model-body
+`:audio-ms-times` is now read at load. Model-body `:v` stays runtime-only:
+the corpus harness (like ACT-R's `model-tester`) controls the trace per run,
+so treating the model's `:v nil` as an initial state would suppress the
+driver-internal runs that produce the refs. Everything else keeps its current
+behavior, but the classification is explicit and checked by
+`tests/params.rs`, which scans every `(sgp …)`/`(ssp …)` form in
+`fixtures/models` and every `Step::Sgp` key in the case drivers.

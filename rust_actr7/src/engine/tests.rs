@@ -265,6 +265,24 @@ fn eval_evaluator() {
 /// Task-file `defun`s are callable by symbol or string head, with bare
 /// parameters bound from the call scope.
 #[test]
+fn sgp_rejects_unknown_keys() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    let t = crate::sexpr::Sexp::Sym("T".into());
+    assert!(e.apply_sgp(":NOT-A-REAL-PARAM", &t).is_err());
+    // Documented no-ops stay accepted.
+    assert!(e.apply_sgp(":UAN", &t).is_ok());
+    assert!(e.apply_sgp(":SHOW-FOCUS", &t).is_ok());
+    // Model-load-only keys are accepted but have no runtime effect.
+    assert!(e.apply_sgp(":TRACE-DETAIL", &t).is_ok());
+}
+
+#[test]
 fn eval_user_defun() {
     use crate::model::UserDefun;
     use crate::sexpr::parse_all;
