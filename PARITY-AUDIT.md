@@ -5,6 +5,9 @@ project-authored compilation-unit tests and `pcomp` at 66/66. Green means the
 printed traces match; it does not mean the engine is in full parity with the
 Lisp implementation.
 
+Status: all six audit items are complete. The remaining accepted limitations
+are listed under item 5; the default `cargo test` remains self-contained.
+
 This document tracks verification work *beyond* what the per-case refs can
 see. The oracle is line-oriented trace text, so anything a ref does not print,
 any behavior supplied by a Rust driver instead of the engine, and any
