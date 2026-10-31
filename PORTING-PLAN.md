@@ -491,35 +491,40 @@ mask the composition rule under test. Covered components:
 - union subtraction
 - duplicate LHS safe-bind removal
 
-The WIP engine port lives on branch `faithful-port-wip`. It makes all
-component tests pass and returns `pcomp` to **66/66**, and moves
-`production-compilation-dynamism` from A1 to A143. It is not merged because
-three full-suite traces regress:
+The engine port continues on branch `resume/production-compilation`, created
+from `main`; the original `faithful-port-wip` branch remains as an archive.
+The resumed branch is green at **554 passed / 13 ignored**, plus **14 passed**
+component tests. `pcomp` remains **66/66**.
 
-- `ppm-compilation` - composed goal condition slot order.
-- `retain-indirect-retrievals` - composed goal condition slot order.
-- `dynamic-production-compilation-tests` - self-composition no longer
-  recognized as the existing production.
+Resolved from the old WIP branch:
 
-`main` remains green at **554 passed / 13 ignored**, with the nine component
-tests parked behind the standard WIP ignore reason:
-`engine-divergence: faithful composition port WIP`.
+- `dynamic-production-compilation-tests` - added the missing LHS-to-LHS
+  mappings for productions with a null RHS, including goal, imaginal, and
+  perceptual buffers, so self-composition finds the existing production.
+- `ppm-compilation` - with `:ppm`, composed mappings now replace a
+  constant-valued cdr with the variable's actual firing binding, preserving
+  partially-matched slot values and ACT-R's condition order.
+- `retain-indirect-retrievals` - indirect-action instantiation now checks the
+  resolved mapping target as well as the original variable, so a renamed
+  shared variable resolves to the same firing value.
+- A143 / `PRODUCTION142` - keep safe-bind variable names symbolic in action
+  slot names while still applying their value mappings, and include
+  instantiated p2 action slot names when subtracting p1's action slots.
 
-Next steps on `faithful-port-wip`:
+Current dynamism first divergence: after the goal modification at 749.6 s,
+Rust fires `C1` immediately; the ref has no events left until the next run at
+754.6 s. A143 and `PRODUCTION142` now match exactly. The likely cause is a
+state difference left by an installed compiled production, not the printed
+A143 composition block.
 
-1. Fix the three regressions without weakening the component suite.
-   - Reintroduce the older `:ppm`-on mapping behavior rather than routing it
-     through the new `compose_mappings` path.
-   - Preserve self-composition's effective identity so duplicate detection
-     finds the existing production.
-   - Restore ACT-R's pre-mapping standard-representation slot order for LHS
-     conditions in the ppm/retain family.
-2. Continue from the current dynamism divergence at A143 (production
-   `PRODUCTION142`): bind-variable-driven dynamic action slots need to map
-   from p1's action name to p2's renamed slot so p2's action overrides it.
-3. Unignore component tests one at a time as their regressions clear.
-4. Merge back to `main` only when `cargo test` is fully green and dynamism
-   matches all 10,894 ref lines.
+Next steps:
+
+1. Compare Lisp and Rust goal/imaginal state after the 749.6 s modification,
+   then trace which installed compiled production differs.
+2. Add a focused regression test once the C1-state cause is identified.
+3. Continue the dynamism first-difference loop toward all 10,894 ref lines.
+4. Merge `resume/production-compilation` to `main` only after full green and
+   an exact dynamism match; update the final corpus counts then.
 
 Parked:
 
