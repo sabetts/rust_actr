@@ -139,6 +139,7 @@ mod tests {
 }
 
 /// Load `<name>.device.sexp` if present: `((ADD-TEXT ms "text" x y) ...)`.
+#[allow(dead_code)]
 pub fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
     let sidecar = trace_path.with_extension("device.sexp");
     if !sidecar.is_file() {
@@ -190,6 +191,7 @@ pub fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
 }
 
 /// Split top-level `(...)` forms (no nesting needed here).
+#[allow(dead_code)]
 fn split_forms(src: &str) -> Vec<String> {
     let mut forms = Vec::new();
     let mut depth = 0;
@@ -243,6 +245,7 @@ fn split_forms(src: &str) -> Vec<String> {
 
 /// Split one `(...)` form into atoms, honoring quotes. Returns None on
 /// unbalanced input.
+#[allow(dead_code)]
 fn split_atoms(form: &str) -> Option<Vec<String>> {
     let inner = form.trim().strip_prefix('(')?.strip_suffix(')')?;
     let mut atoms = Vec::new();
@@ -287,6 +290,7 @@ fn split_atoms(form: &str) -> Option<Vec<String>> {
     Some(atoms)
 }
 
+#[allow(dead_code)]
 fn unquote(s: &str) -> Option<String> {
     let inner = s.strip_prefix('"')?.strip_suffix('"')?;
     Some(inner.replace("\\\"", "\"").replace("\\\\", "\\"))
