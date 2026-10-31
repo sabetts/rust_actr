@@ -491,12 +491,13 @@ mask the composition rule under test. Covered components:
 - union subtraction
 - duplicate LHS safe-bind removal
 
-The engine port continues on branch `resume/production-compilation`, created
-from `main`; the original `faithful-port-wip` branch remains as an archive.
-The resumed branch is green at **554 passed / 13 ignored**, plus **14 passed**
-component tests. `pcomp` remains **66/66**.
+The engine port was completed on branch `resume/production-compilation`,
+created from `main`; the original `faithful-port-wip` branch remains as an
+archive. `production-compilation-dynamism` now matches the full 10,894-line
+ref and is promoted. The branch is green at **555 passed / 12 ignored**, plus
+**14 passed** component tests. `pcomp` remains **66/66**.
 
-Resolved from the old WIP branch:
+Resolved along the way:
 
 - `dynamic-production-compilation-tests` - added the missing LHS-to-LHS
   mappings for productions with a null RHS, including goal, imaginal, and
@@ -510,21 +511,19 @@ Resolved from the old WIP branch:
 - A143 / `PRODUCTION142` - keep safe-bind variable names symbolic in action
   slot names while still applying their value mappings, and include
   instantiated p2 action slot names when subtracting p1's action slots.
-
-Current dynamism first divergence: after the goal modification at 749.6 s,
-Rust fires `C1` immediately; the ref has no events left until the next run at
-754.6 s. A143 and `PRODUCTION142` now match exactly. The likely cause is a
-state difference left by an installed compiled production, not the printed
-A143 composition block.
+- C1 / 749.6 s - the fixture spec was missing the reverse-phase
+  `MOD-BUFFER-CHUNK IMAGINAL` calls from `run-it`; restoring them fixed the
+  trial boundary. Trials 126/127 also needed `VALUE 1`, and the final two
+  trials modify imaginal `145`/`146` while scheduling goal `128`/`129`.
+- C20 / D20 - ported the imaginal RHS `+` request-to-LHS mapping and
+  generalized the request-plus-modify `buffer+-union` action from goal to all
+  buffers.
 
 Next steps:
 
-1. Compare Lisp and Rust goal/imaginal state after the 749.6 s modification,
-   then trace which installed compiled production differs.
-2. Add a focused regression test once the C1-state cause is identified.
-3. Continue the dynamism first-difference loop toward all 10,894 ref lines.
-4. Merge `resume/production-compilation` to `main` only after full green and
-   an exact dynamism match; update the final corpus counts then.
+1. Merge `resume/production-compilation` back to `main`.
+2. Keep only the named external blockers and diagnostic placeholders ignored.
+3. Record the final corpus counts and branch merge in the porting notes.
 
 Parked:
 

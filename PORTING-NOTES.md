@@ -6098,9 +6098,30 @@ The task-side plumbing is complete:
   matching the low-detail trace; the module-request line still prints at
   normal detail.
 
-The case remains ignored. Its first divergence is still the first composed
-production: p2's dynamic slot is specialized to `COLOR` instead of being
-renamed/mapped across the pair (`A1 & B1`, expected `SLOT1 =S0`). A broader
-mapping rework reached 10,328 of the 10,894 ref lines but regressed 12 existing
-pcomp traces, so it was reverted. Full suite after the checkpoint:
-**554 passed / 13 ignored**.
+At this checkpoint the case remained ignored. Its first divergence was the
+first composed production: p2's dynamic slot was specialized to `COLOR`
+instead of being renamed/mapped across the pair (`A1 & B1`, expected
+`SLOT1 =S0`). A broader mapping rework reached 10,328 of the 10,894 ref lines
+but regressed 12 existing pcomp traces, so it was reverted. Full suite after
+the checkpoint: **554 passed / 13 ignored**. Superseded by note 354.
+
+## 354. `production-compilation-dynamism` promoted
+
+The full 10,894-line dynamism trace now matches. The final blockers were not
+in the composed texts alone:
+
+- The fixture spec had been generated without the reverse-phase
+  `MOD-BUFFER-CHUNK IMAGINAL` calls from `run-it`, so trial 0 accidentally
+  matched `C1` one trial early. Trials 126/127 also need their `VALUE 1`
+  modification, and the last two trials modify imaginal `TEST-NUM 145`/`146`
+  while scheduling goal `128`/`129` (the model's own off-by-128 quirk).
+- `MAP-IMAGINAL-BUFFER` needed the RHS `+` request to LHS `=` case. The
+  request's dynamic slot name maps to p2's renamed dynamic slot (`S -> S144`
+  in `C20 & D20`).
+- Request-plus-modify composition is not goal-specific. The same
+  `buffer+-union` rule now applies to imaginal actions, including effective
+  p2 slot names when subtracting p1's request slots.
+
+The case is promoted and the full suite is green at
+**555 passed / 12 ignored**, with 14 project-authored compilation-unit tests
+and `pcomp` at 66/66.
