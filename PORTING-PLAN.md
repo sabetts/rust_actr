@@ -466,6 +466,61 @@ Completed:
   matrix driver, `merge-chunks` model support, and the nil-inequality
   production warnings. Full suite green at **554 passed / 13 ignored**.
 
+#### Production-compilation component harness
+
+Added a project-authored differential suite separate from the upstream
+regression corpus:
+
+- Lisp micro-models: `actr7.x/user-loads/compilation-units/*.lisp`
+- Vendored copies: `rust_actr7/fixtures/models/user-loads/compilation-units/`
+- Manifest: `rust_actr7/fixtures/compilation-units/manifest.lisp`
+- Regenerator: `rust_actr7/fixtures/compilation-units/regen.{ps1,sh}`
+- Lisp traces: `rust_actr7/fixtures/compilation-traces/*.trace/.meta`
+- Rust runner: `rust_actr7/tests/compilation_units.rs`
+
+Each test causes exactly one p1 -> p2 composition and compares only the
+`New production:` block, so startup timing and unrelated trace noise cannot
+mask the composition rule under test. Covered components:
+
+- same-location and different-location shared-variable renaming
+- goal RHS `=`/`+`/`*` dynamic-name mapping and round-trips
+- static-vs-dynamic goal specialization
+- imaginal mapping
+- retrieval literal instantiation
+- safe-bind/output mapping
+- union subtraction
+- duplicate LHS safe-bind removal
+
+The WIP engine port lives on branch `faithful-port-wip`. It makes all
+component tests pass and returns `pcomp` to **66/66**, and moves
+`production-compilation-dynamism` from A1 to A143. It is not merged because
+three full-suite traces regress:
+
+- `ppm-compilation` - composed goal condition slot order.
+- `retain-indirect-retrievals` - composed goal condition slot order.
+- `dynamic-production-compilation-tests` - self-composition no longer
+  recognized as the existing production.
+
+`main` remains green at **554 passed / 13 ignored**, with the nine component
+tests parked behind the standard WIP ignore reason:
+`engine-divergence: faithful composition port WIP`.
+
+Next steps on `faithful-port-wip`:
+
+1. Fix the three regressions without weakening the component suite.
+   - Reintroduce the older `:ppm`-on mapping behavior rather than routing it
+     through the new `compose_mappings` path.
+   - Preserve self-composition's effective identity so duplicate detection
+     finds the existing production.
+   - Restore ACT-R's pre-mapping standard-representation slot order for LHS
+     conditions in the ppm/retain family.
+2. Continue from the current dynamism divergence at A143 (production
+   `PRODUCTION142`): bind-variable-driven dynamic action slots need to map
+   from p1's action name to p2's renamed slot so p2's action overrides it.
+3. Unignore component tests one at a time as their regressions clear.
+4. Merge back to `main` only when `cargo test` is fully green and dynamism
+   matches all 10,894 ref lines.
+
 Parked:
 
 - **`time-size-check`** has an upstream placeholder ref (`XXXXX`); leave
