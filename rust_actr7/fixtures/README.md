@@ -16,6 +16,7 @@ fixtures/
   extra-traces/    project-authored scenarios not covered upstream
   full-detail/     SBCL maximal-detail traces (tests/full_detail.rs)
   draws/           SBCL act-r-random/noise sequences (tests/draws.rs)
+  surrogates/      project-authored traces for blocked solution-source cases
   units/           module latency / base-level tables (unit tests)
   errors/          err-*.lisp fixtures for the error-path tests
   manifest.lisp    model list for the extra traces (regen input)
@@ -85,6 +86,14 @@ and write `<name>.draws.sexp` plus `<name>.meta`. `tests/draws.rs` replays the
 same model/seed/settings and compares the logged kind, argument, value, and
 order. This catches draw-order drift that never changes a printed trace.
 
+### surrogates/
+
+`traces/` holds project-authored oracles for the upstream cases whose models
+live in a password-protected archive: categorize (PPM + dynamic slots +
+indirect retrieval), Zbrodoff retrieval hit/miss, and choice utility learning.
+They are compared byte-exact by `tests/surrogates.rs`; they are not upstream
+refs. Regenerate with `surrogates/regen-surrogates.sh`.
+
 ### units/
 
 `units/tables/*.sexp` are module-level latency / base-level tables checked
@@ -100,6 +109,7 @@ regenerate them.
 ./regen.sh /tmp/g2         # elsewhere; diff -r proves determinism
 ./regen-specs.sh           # regression/specs/ (data-heavy experiments)
 ./units/regen-units.sh     # units/tables/
+./surrogates/regen-surrogates.sh  # surrogates/traces/
 ```
 
 The regen scripts require an `actr7.x` checkout (`ACTR_DIR`, default

@@ -6330,3 +6330,42 @@ reason (`requires Python 3 and an ACT-R checkout`). Running
 `actr server`, drives the vendored Python `actr.py` client, and passed all 20
 expected test-models (`RPC-RESULT 20 expected tests passed`). The default
 `cargo test` still does not need Python or the checkout.
+
+## 365. Surrogates for the blocked solution-source cases
+
+The seven `#[ignore]` upstream cases whose task/model source is inside the
+encrypted `act-r-solutions.zip`/`solution-tests.zip` now have project-authored
+differential surrogates in `tests/surrogates.rs`:
+
+- `categorize` — PPM with `:sim-hook`, dynamic imaginal slots, indirect
+  retrieval, declarative partial matching.
+- `zbrodoff-retrieval-hit` / `-miss` — retrieval of a known problem and the
+  counting fallback after retrieval failure.
+- `choice-surrogate` — reward-driven utility learning over 12 choice trials.
+
+The traces are captured from SBCL by `fixtures/surrogates/regen-surrogates.sh`
+and compared byte-exact. They are not upstream refs and do not reproduce the
+protected models. `tutorial-unit3-subitize-results` remains source-blocked but
+is data-only: its stub runs an empty model and copies the already-vendored
+table.
+
+## 366. Engine fixes found by the categorize surrogate
+
+- The bounded user-function evaluator now supports `if`, needed by a
+  piecewise `:sim-hook` without the full normal-distribution helpers.
+- Indirect requests (`+retrieval> =imaginal`) now resolve a buffer chunk
+  before `named`/DM. Previously a stale named copy made before a dynamic slot
+  update won, so the request omitted the new slots.
+- Partial matching adds its summed component to activation once, matching
+  Lisp's `(+ base spreading partial noise)`; adding each slot score
+  individually changed the last float bit.
+- `trigger-reward` is now an engine/RPC command, so the choice surrogate can
+  propagate a reward immediately.
+
+## 367. Surrogate source-fidelity notes
+
+The Zbrodoff and choice surrogates use the public ACT-R 6 solution files as
+algorithm references, modernized to the current API. The Zbrodoff surrogate
+uses low trace detail (production firing, retrieval, keypress) so module
+scheduling noise does not dominate the oracle; the categorize surrogate uses
+high detail with `:ans nil`/`:egs 0` to keep activation exact.

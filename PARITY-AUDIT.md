@@ -97,6 +97,31 @@ compilation-unit tests compare directly against Lisp traces.
    passes all 20 expected Python test-models here; it stays out of the
    default suite so `cargo test` remains self-contained.
 
+## Blocked solution-source cases
+
+Seven upstream cases remain `#[ignore]` because their model/task source lives
+in a password-protected archive. The refs alone are aggregate outputs
+(correlation, mean deviation, RT/choice tables), so they do not reveal the
+production/event paths. The available task sources and the unit text do:
+
+| blocked case(s) | missing asset | paths exercised | surrogate |
+|---|---|---|---|
+| `tutorial-unit4-zbrodoff-with-*` | Zbrodoff solution model | task loop, keypress/RT, retrieval-before-counting, `:rt/:bll/:ans/:lf`, `set-all-base-levels` | `tests/surrogates.rs::zbrodoff_retrieval_{hit,miss}` |
+| `tutorial-unit8-categorize-*` | categorize solution model | procedural partial matching + `:sim-hook`, dynamic imaginal slots, indirect retrieval, declarative partial matching | `tests/surrogates.rs::categorize_surrogate` |
+| `tutorial-unit6-choice-results` | choice task + model | visual choice, keypress, reward-driven utility learning over 12-trial blocks | `tests/surrogates.rs::choice_surrogate` |
+| `tutorial-unit3-subitize-results` | `unit-3-subitize-solution.ref` scrape input only | the stub runs an empty model and copies lines; no engine path | none (data-only blocker) |
+
+The surrogates are project-authored models under
+`fixtures/models/extras/surrogates/`; their SBCL traces live in
+`fixtures/surrogates/traces/` and are compared byte-exact. They do not replace
+the upstream refs or match their protected models.
+
+The categorize surrogate exposed and fixed four engine gaps: `if` in the
+bounded user-function evaluator, live-buffer chunk lookup for indirect
+requests (a stale `named` copy previously won), adding the partial-matching
+component once (Lisp's float result), and the missing `trigger-reward` RPC
+command used by the choice surrogate.
+
 ## Exit criteria
 
 - Unknown parameters fail loudly; every corpus `sgp` key is either handled or

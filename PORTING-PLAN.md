@@ -547,7 +547,10 @@ Remaining ignored cases:
 
 ### External Blockers
 
-These need the protected source/password or an upstream copy:
+These need the protected source/password or an upstream copy. Their engine
+mechanisms are now covered by project-authored surrogates in
+`tests/surrogates.rs` (see `PARITY-AUDIT.md`), but the upstream refs still
+cannot be promoted without the original models:
 
 - Three protected Zbrodoff solution variants.
 - `tutorial-unit6-choice-results`.
