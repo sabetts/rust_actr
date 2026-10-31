@@ -44,6 +44,7 @@ pub fn sgp_support(key: &str) -> Option<SgpSupport> {
         ":PCT" | ":PPM" | ":PPM-HOOK" | ":RANDOMIZE-TIME" => SgpSupport::Both,
         ":RECORD-TICKS" | ":RIR" | ":RT" | ":SACT" => SgpSupport::Both,
         ":SE-INTERCEPT" | ":SE-SCALE" | ":SEED" | ":SIM-HOOK" => SgpSupport::Both,
+        ":TRACE-DETAIL" => SgpSupport::Both,
         ":TOUCH-DRAG-DELAY" | ":UAN" | ":UL" | ":ULT" | ":UNSTUFF-AURAL-LOCATION" => {
             SgpSupport::Both
         }
@@ -79,9 +80,7 @@ pub fn sgp_support(key: &str) -> Option<SgpSupport> {
         ":THUMB-WIDTH" | ":TIME-MASTER-START-INCREMENT" | ":TIME-MULT" | ":TIME-NOISE" => {
             SgpSupport::ModelOnly
         }
-        ":TMP" | ":TOUCH-ROTATE-WIDTH" | ":TRACE-DETAIL" | ":TRACE-TRACKER" => {
-            SgpSupport::ModelOnly
-        }
+        ":TMP" | ":TOUCH-ROTATE-WIDTH" | ":TRACE-TRACKER" => SgpSupport::ModelOnly,
         ":TT" | ":VIS-OBJ-FREQ" | ":VISUAL-ATTENTION-LATENCY" | ":VISUAL-ENCODING-EXPONENT" => {
             SgpSupport::ModelOnly
         }

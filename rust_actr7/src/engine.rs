@@ -2910,9 +2910,13 @@ impl Engine {
         // `init_genrand(100)` instead. A model-body `:seed` is re-applied by
         // `reset` anyway.
         match cfg.seed {
+            // A model-body `:seed` wins (it is re-applied on reset too).
             Some((s, c)) => rng.set_seed(s, c),
-            None if seed != (100, 0) => rng.set_seed(seed.0, seed.1),
-            None => {}
+            // `(100 0)` is a real seed for the API/driver paths: the upstream
+            // model-tester re-applies `:starting-parameters (:seed (100 0))`
+            // on every test. Only an extractor placeholder for a *mid-run*
+            // seed is skipped (`Step::RunFullTime`).
+            None => rng.set_seed(seed.0, seed.1),
         }
         let DeviceSetup {
             texts,

@@ -279,7 +279,7 @@ fn sgp_rejects_unknown_keys() {
     assert!(e.apply_sgp(":UAN", &t).is_ok());
     assert!(e.apply_sgp(":SHOW-FOCUS", &t).is_ok());
     // Model-load-only keys are accepted but have no runtime effect.
-    assert!(e.apply_sgp(":TRACE-DETAIL", &t).is_ok());
+    assert!(e.apply_sgp(":TRACE-TRACKER", &t).is_ok());
 }
 
 #[test]

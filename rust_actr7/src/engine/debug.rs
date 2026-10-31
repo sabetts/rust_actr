@@ -1741,6 +1741,25 @@ impl Engine {
                     _ => return Err(bad(format!("bad :act {val:?}"))),
                 };
             }
+            ":TRACE-DETAIL" => {
+                self.cfg.detail = match val {
+                    Sexp::Sym(s) => match s.as_str() {
+                        "HIGH" => crate::trace::Detail::High,
+                        "MEDIUM" => crate::trace::Detail::Medium,
+                        "LOW" => crate::trace::Detail::Low,
+                        _ => return Err(bad(format!("bad :trace-detail {s}"))),
+                    },
+                    Sexp::List(v) if v.len() == 2 && v[0].as_sym() == Some("QUOTE") => {
+                        match v[1].as_sym() {
+                            Some("HIGH") => crate::trace::Detail::High,
+                            Some("MEDIUM") => crate::trace::Detail::Medium,
+                            Some("LOW") => crate::trace::Detail::Low,
+                            got => return Err(bad(format!("bad :trace-detail {got:?}"))),
+                        }
+                    }
+                    got => return Err(bad(format!("bad :trace-detail {got:?}"))),
+                };
+            }
             ":SACT" => {
                 self.cfg.sact = match val {
                     Sexp::Sym(s) if s == "NIL" => None,
