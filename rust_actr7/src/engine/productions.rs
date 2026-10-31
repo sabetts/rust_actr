@@ -1787,7 +1787,88 @@ impl Engine {
                 }
             }
         }
-        // --- MAP-IMAGINAL-BUFFER, LHS `=` with null RHS to LHS `=` ------
+        // --- MAP-IMAGINAL-BUFFER, RHS `+` request to LHS `=` ------------
+        if matches!(u1i, 4 | 12 | 13 | 20 | 28 | 29)
+            && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29 | 40 | 56)
+        {
+            let p1b = act_of(p1_acts, "IMAGINAL", &['+']);
+            let p2a = lhs_of(p2_lhs, "IMAGINAL");
+            let p2b = act_of(p2_acts, "IMAGINAL", &['=', '*']);
+            let slotsb = instantiate_slot_names(&p1b, b1);
+            let slots2 = instantiate_slot_names(&p2a, b2);
+            let slots2b = instantiate_slot_names(&p2b, b2);
+            let vsb = var_slots(&p1b, b1);
+            let vs2 = var_slots(&p2a, b2);
+            let vs2b = var_slots(&p2b, b2);
+            let mut interesting: Vec<String> = Vec::new();
+            for src in [&slotsb, &slots2, &slots2b] {
+                for (n, _) in src {
+                    if !interesting.contains(n) {
+                        interesting.push(n.clone());
+                    }
+                }
+            }
+            for slot in &interesting {
+                let p1v: Vec<&String> = vsb
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p2v: Vec<&String> = vs2
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p2vb: Vec<&String> = vs2b
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                if !p1v.is_empty() && !p2v.is_empty() {
+                    for a in &p1v {
+                        for c in &p2v {
+                            m.push((SlotVal::Var((*a).clone()), SlotVal::Var((*c).clone())));
+                        }
+                    }
+                }
+                if !p1v.is_empty() && !p2vb.is_empty() {
+                    for a in &p1v {
+                        for c in &p2vb {
+                            m.push((SlotVal::Var((*a).clone()), SlotVal::Var((*c).clone())));
+                        }
+                    }
+                }
+                if !p1v.is_empty() && has_slot(&p2a, slot) {
+                    for a in &p1v {
+                        m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p1v.is_empty() && has_slot(&p2b, slot) {
+                    for a in &p1v {
+                        m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p2v.is_empty() && has_slot(&p1b, slot) {
+                    for c in &p2v {
+                        m.push((SlotVal::Var((*c).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p2vb.is_empty() && has_slot(&p1b, slot) {
+                    for c in &p2vb {
+                        m.push((SlotVal::Var((*c).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                for (_, v1) in slotsb.iter().filter(|(n, _)| n == slot) {
+                    for (_, v2) in slots2.iter().filter(|(n, _)| n == slot) {
+                        if constant_value(v2) {
+                            m.push((v1.clone(), v2.clone()));
+                        } else {
+                            m.push((v2.clone(), v1.clone()));
+                        }
+                    }
+                }
+            }
+        } // --- MAP-IMAGINAL-BUFFER, LHS `=` with null RHS to LHS `=` ------
         if matches!(u1i, 8 | 24) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29 | 40 | 56) {
             let p1a = lhs_of(p1_lhs, "IMAGINAL");
             let p2a = lhs_of(p2_lhs, "IMAGINAL");
@@ -2560,20 +2641,18 @@ impl Engine {
             let sv = |s: Vec<(String, SlotVal)>| -> Vec<(String, String)> {
                 s.iter().map(|(n, v)| (n.clone(), v.render())).collect()
             };
-            // `COMPOSE-GOAL-BUFFER`'s `(4 12 13 44)` case
-            // (`goal-compilation.lisp:544`): p1 requests the buffer and p2
-            // modifies it (without requesting), so the composed action is
-            // p1's `+` with p2's `=`/`*` slots merged in (`buffer+-union`:
-            // p1's non-matching slots then p2's, sorted).
-            let p1_goal_req = acts_for(&p1_acts, buf, &['+', 'r']);
-            let p2_goal_eq = acts_for(&p2_acts, buf, &['=', '*']);
-            if buf == "GOAL"
-                && !p1_goal_req.is_empty()
-                && !p2_goal_eq.is_empty()
+            // `COMPOSE-*-BUFFER` request-plus-modify case (`(4 12 13 44)`):
+            // p1 requests the buffer and p2 modifies it, so the composed
+            // action is p1's `+` with p2's `=`/`*` slots merged in
+            // (`buffer+-union`: p1's non-matching slots then p2's, sorted).
+            let p1_req = acts_for(&p1_acts, buf, &['+', 'r']);
+            let p2_eq = acts_for(&p2_acts, buf, &['=', '*']);
+            if !p1_req.is_empty()
+                && !p2_eq.is_empty()
                 && acts_for(&p2_acts, buf, &['+', 'r']).is_empty()
             {
-                // `a1=`/`a1*`: p1's own `=`/`*` modify is emitted first
-                // (`goal-compilation.lisp:546`), then the `+` union.
+                // `a1=`/`a1*`: p1's own `=`/`*` modify is emitted first,
+                // then the `+` union.
                 let p1_eq: Vec<(String, SlotVal)> = acts_for(&p1_acts, buf, &['='])
                     .into_iter()
                     .flat_map(|(s, _)| s)
@@ -2588,12 +2667,27 @@ impl Engine {
                     rhs.push((format!("*{buf}>"), sv(p1_star)));
                 }
                 let mut slots: Vec<(String, SlotVal)> =
-                    p1_goal_req.into_iter().flat_map(|(s, _)| s).collect();
+                    p1_req.into_iter().flat_map(|(s, _)| s).collect();
                 let mut eq: Vec<(String, SlotVal)> =
-                    p2_goal_eq.into_iter().flat_map(|(s, _)| s).collect();
+                    p2_eq.into_iter().flat_map(|(s, _)| s).collect();
                 eq.sort_by(|a, b| a.0.cmp(&b.0));
                 let names2: Vec<String> = eq.iter().map(|(n, _)| n.clone()).collect();
-                slots.retain(|(n, _)| !names2.contains(n));
+                let p2_effective: Vec<String> = eq
+                    .iter()
+                    .map(|(n, _)| {
+                        if n.starts_with('=') {
+                            bound_text(n, b2).unwrap_or_else(|| n.clone())
+                        } else {
+                            n.clone()
+                        }
+                    })
+                    .collect();
+                slots.retain(|(n, _)| {
+                    !names2.contains(n)
+                        && !p2_effective.contains(n)
+                        && !(n.starts_with('=')
+                            && bound_text(n, b1).is_some_and(|t| p2_effective.contains(&t)))
+                });
                 slots.extend(eq);
                 rhs.push((format!("+{buf}>"), sv(slots)));
                 continue;
