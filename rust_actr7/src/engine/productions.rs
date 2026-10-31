@@ -2040,6 +2040,37 @@ impl Engine {
         // is not modelled here — the existing `bindings` fallback keeps those
         // traces as they were.
         let mappings = self.compose_mappings(p1, p2, &p1_lhs, &p1_acts, &p2_lhs, &p2_acts, b1, b2);
+        // `compose-productions` removes duplicate LHS safe-binds: the second
+        // production`s bind is kept and the first`s variable is rewritten to
+        // it.  This is applied after the normal mappings, so it must bypass
+        // the bind-variable guard below.
+        let mut duplicate_bindings: Vec<(SlotVal, SlotVal)> = Vec::new();
+        for (b1t, s1) in &p1_lhs {
+            if b1t != "!SAFE-BIND!" {
+                continue;
+            }
+            let Some((n1, v1)) = s1.first() else { continue };
+            let Some(v1) = (match v1 {
+                SlotVal::Lit(v) => Some(v),
+                SlotVal::Var(_) => None,
+            }) else {
+                continue;
+            };
+            for (b2t, s2) in &p2_lhs {
+                if b2t != "!SAFE-BIND!" {
+                    continue;
+                }
+                let Some((n2, SlotVal::Lit(v2))) = s2.first() else {
+                    continue;
+                };
+                if v1 == v2 {
+                    if let (Some(v1), Some(v2)) = (n1.strip_prefix("="), n2.strip_prefix("=")) {
+                        duplicate_bindings
+                            .push((SlotVal::Var(v1.to_string()), SlotVal::Var(v2.to_string())));
+                    }
+                }
+            }
+        }
         // ACT-R applies the mappings one at a time, and after applying one it
         // rewrites every still-queued entry whose car equals the applied
         // entry's car to that entry's cdr (`(dolist (x mappings) (when (eq (car
@@ -2067,6 +2098,7 @@ impl Engine {
                 }
             }
         }
+        applied.extend(duplicate_bindings.clone());
         // `replace-variables-special` applies the mappings to the reps one at
         // a time.  Replaying them for a single variable preserves the
         // composition order, including pairs that deliberately round-trip
@@ -2327,12 +2359,33 @@ impl Engine {
         lhs.extend(queries);
         // `!bind!`/`!safe-bind!` conditions are prepended
         // (`post-conditions`, production-compilation.lisp:1742).
+        let duplicate_bind_vars: HashSet<String> = duplicate_bindings
+            .iter()
+            .filter_map(|(k, _)| match k {
+                SlotVal::Var(v) => Some(v.clone()),
+                SlotVal::Lit(_) => None,
+            })
+            .collect();
         let mut binds: Vec<(String, Vec<(String, SlotVal)>)> = Vec::new();
-        for (b, s) in p1_lhs.iter().chain(&p2_lhs) {
+        // ACT-R builds `p3-s` with p2`s binds first, then p1`s non-duplicate
+        // binds.  The trace printer pushes and therefore reverses them.
+        for (b, s) in &p2_lhs {
             if b.starts_with('!') {
                 binds.push((b.clone(), s.clone()));
             }
         }
+        for (b, s) in &p1_lhs {
+            let duplicate = b == "!SAFE-BIND!"
+                && s.first()
+                    .and_then(|(n, _)| n.strip_prefix('='))
+                    .is_some_and(|v| duplicate_bind_vars.contains(v));
+            if b.starts_with('!') && !duplicate {
+                binds.push((b.clone(), s.clone()));
+            }
+        }
+        // `compose-productions` keeps the second copy of a duplicate bind.
+        // The later entry is also the renamed/p2-backed form.
+        let mut binds = remove_dup_keep_last(binds);
         if !binds.is_empty() {
             binds.extend(lhs);
             lhs = binds;
@@ -2396,22 +2449,18 @@ impl Engine {
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            eq1.sort_by(|a, b| a.0.cmp(&b.0));
             let mut eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            eq2.sort_by(|a, b| a.0.cmp(&b.0));
             let mut st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            st1.sort_by(|a, b| a.0.cmp(&b.0));
             let mut st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            st2.sort_by(|a, b| a.0.cmp(&b.0));
             // `buffer=-union` when the first modifies-by-request and the second
             // modifies: the union is a single `*` (`COMPOSE-IMAGINAL-BUFFER`
             // `(and a1* a2=)`), not a separate `=` plus `*`.

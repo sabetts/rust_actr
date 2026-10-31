@@ -503,10 +503,8 @@ pub(super) fn prod_rhs_actions(
     let mut out = Vec::new();
     for a in &p.rhs {
         match a {
-            RhsAction::Modify { buffer, slots } => out.push((
-                '=',
-                buffer.clone(),
-                slots
+            RhsAction::Modify { buffer, slots } => {
+                let mut s: Vec<(String, SlotVal)> = slots
                     .iter()
                     .map(|(n, v)| {
                         (
@@ -521,13 +519,12 @@ pub(super) fn prod_rhs_actions(
                             },
                         )
                     })
-                    .collect(),
-                None,
-            )),
-            RhsAction::ModifyRequest { buffer, slots } => out.push((
-                '*',
-                buffer.clone(),
-                slots
+                    .collect();
+                s.sort_by(|a, b| a.0.cmp(&b.0));
+                out.push(('=', buffer.clone(), s, None));
+            }
+            RhsAction::ModifyRequest { buffer, slots } => {
+                let mut s: Vec<(String, SlotVal)> = slots
                     .iter()
                     .map(|(n, v)| {
                         (
@@ -542,9 +539,10 @@ pub(super) fn prod_rhs_actions(
                             },
                         )
                     })
-                    .collect(),
-                None,
-            )),
+                    .collect();
+                s.sort_by(|a, b| a.0.cmp(&b.0));
+                out.push(('*', buffer.clone(), s, None));
+            }
             RhsAction::Request { buffer, spec } => match spec {
                 ChunkDesc::Named(n) if n.starts_with('=') => {
                     out.push(('r', buffer.clone(), Vec::new(), Some(n[1..].to_string())))
