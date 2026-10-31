@@ -532,7 +532,9 @@ Completed:
   compilation-unit tests and `pcomp` at 66/66.
 
 Next steps: none for the regression corpus; only externally blocked,
-diagnostic, and environment-gated cases remain.
+diagnostic, and environment-gated cases remain. Post-corpus verification
+work (silent parameter no-ops, task-provided outputs, full-detail
+differential traces) is tracked in [`PARITY-AUDIT.md`](PARITY-AUDIT.md).
 
 Remaining ignored cases:
 
