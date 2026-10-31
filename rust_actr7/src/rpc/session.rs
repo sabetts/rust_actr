@@ -1170,6 +1170,53 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "schedule-mod-buffer-chunk" => {
+                let buffer = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("schedule-mod-buffer-chunk needs a buffer")?;
+                let items: Vec<Json> = match args.get(1) {
+                    Some(Json::Arr(a)) => a.clone(),
+                    Some(_) => args[1..].to_vec(),
+                    None => Vec::new(),
+                };
+                let mut mods = Vec::new();
+                for pair in items.chunks(2) {
+                    let name = pair.first().map(json_to_text).unwrap_or_default();
+                    let value = pair
+                        .get(1)
+                        .map(json_to_sexp)
+                        .unwrap_or(Sexp::Sym("NIL".into()));
+                    mods.push((name.to_uppercase(), value));
+                }
+                let delay = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let mut delay_ms = (delay * 1000.0).round() as i64;
+                let mut priority = 0i64;
+                let mut module = "NONE".to_string();
+                let mut i = 3;
+                while i + 1 < args.len() {
+                    let key = args[i].as_str().unwrap_or("").to_uppercase();
+                    match key.as_str() {
+                        ":PRIORITY" => {
+                            priority = args[i + 1].as_f64().unwrap_or(0.0) as i64;
+                        }
+                        ":MODULE" => {
+                            module = json_to_text(&args[i + 1]).to_uppercase();
+                        }
+                        ":TIME-IN-MS" => {
+                            if !matches!(args[i + 1], Json::Bool(false) | Json::Null) {
+                                delay_ms = delay as i64;
+                            }
+                        }
+                        _ => {}
+                    }
+                    i += 2;
+                }
+                if let Some(eng) = &mut self.engine {
+                    eng.schedule_mod_buffer_chunk_rpc(buffer, &mods, delay_ms, &module, priority);
+                }
+                Ok(vec![Json::Null])
+            }
             "extend-possible-slots" => {
                 for arg in args {
                     if let Some(slot) = arg.as_str() {

@@ -1938,6 +1938,40 @@ impl Engine {
         Ok(())
     }
 
+    /// `schedule-mod-buffer-chunk <buffer> <mods> <delay>`: queue a task-side
+    /// buffer modification. Unlike a module's `*buffer>` request, the default
+    /// module is `:none`, so the trace column is `NONE` and the imaginal
+    /// module's busy state is untouched.
+    pub fn schedule_mod_buffer_chunk_rpc(
+        &mut self,
+        buffer: &str,
+        mods: &[(String, Sexp)],
+        delay_ms: i64,
+        module: &str,
+        priority: i64,
+    ) {
+        let bname = buffer.to_uppercase();
+        let slots = mods
+            .iter()
+            .map(|(name, value)| {
+                (
+                    name.to_uppercase(),
+                    Value::from_sexp(value).unwrap_or(Value::Nil),
+                )
+            })
+            .collect();
+        self.push(
+            self.time_ms + delay_ms,
+            Prio::Num(priority),
+            Out::Low,
+            Event::ModBuffer {
+                buffer: bname,
+                slots,
+                module: module.to_uppercase(),
+            },
+        );
+    }
+
     /// `extend-possible-slots <slot>`: make a slot name usable on any chunk.
     pub fn extend_possible_slots(&mut self, slot: &str) {
         self.valid_slots.insert(slot.to_uppercase());
