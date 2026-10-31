@@ -6302,3 +6302,22 @@ The Lisp generator wraps both functions and writes one `(:random limit value)` /
 `(7 0)`; `tests/draws.rs` replays each model and compares kind, integer/float
 form, argument, value, and order. Reference merges, utility updates, and event
 ordering remain covered by the full-detail traces.
+
+## 363. Warning paths and runtime `(p ...)` redefinition
+
+`tutorial-unit1modeling-warnings` is engine-driven now. Three model-warning
+paths were added:
+
+- `define-chunks` creates an undefined chunk for a bare slot value and emits
+  `Creating chunk X with no slots` on reset (gated by `:model-warnings`).
+- A second queued RETRIEVAL request emits `A retrieval event has been aborted
+  by a new request`; `StartRetrieval` clears the pending flag.
+- Runtime `(p ...)` for an existing name emits `Production X already exists
+  and it is being redefined`.
+
+The engine's `:model-warnings` default remains nil (note #232); the warning
+case enables it through `:starting-parameters` so the setting survives the
+reset that re-runs the model body. `undefined-slots` and one `act-touch` case
+still emit literal warning strings, and `:cst` writes to the trace stream here
+while Lisp sends it to command output; both are recorded as accepted
+limitations in `PARITY-AUDIT.md`.

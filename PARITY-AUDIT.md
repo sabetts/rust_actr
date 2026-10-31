@@ -21,9 +21,9 @@ parameter the engine silently accepts are invisible to the default suite.
 - **Task-provided outputs.** `adaptive-noise` used to print literal result
   rows, so the adaptive base-level/permanent-noise hooks were untested
   (PORTING-NOTES #340). Item 2 now generates those rows from engine state.
-  `tutorial-unit1modeling-warnings`, `undefined-slots`, and one `act-touch`
-  case still emit literal warning strings instead of triggering the engine's
-  warning path.
+  `tutorial-unit1modeling-warnings` is engine-driven (item 5);
+  `undefined-slots` and one `act-touch` case still emit literal warning
+  strings.
 - **Source echoes.** 177 of 567 tests are `source_case!` source checks that
   never run the engine (about 31% of the green count).
 - **Task logic outside the engine.** 67 cases replay task RNG with
@@ -81,9 +81,14 @@ compilation-unit tests compare directly against Lisp traces.
    `tests/draws.rs` compares kind/argument/value/order entry-for-entry. The
    reference history, utility updates, and event ordering are covered by the
    full-detail traces (`bll-count`, `ul-test`, `attend`).
-5. **Warning and placeholder oracles.** Make warning cases trigger the real
-   conditions; add SBCL-generated refs for `print-visicon` and custom
-   sounds, or record them as accepted limitations.
+5. [x] **Warning and placeholder oracles.** `tutorial-unit1modeling-warnings`
+   now triggers the real paths: `define-chunks` no-slots, a second queued
+   retrieval, and runtime `(p ...)` redefinition. `undefined-slots` and one
+   `act-touch` case still emit literals; `:cst` writes to command output in
+   Lisp but the trace stream in Rust; custom `new-word-sound`/`new-digit-sound`
+   remain no-ops. Those are recorded as accepted limitations.
+   `print-visicon` is already exercised by several refs (the old #2982 note is
+   historical).
 6. **RPC conformance.** Promote `rpc_conformance` or keep the documented
    environment gate explicit.
 
