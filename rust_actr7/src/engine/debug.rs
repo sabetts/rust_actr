@@ -495,13 +495,22 @@ impl Engine {
         }
         let base = self.base_level(idx, self.cfg.bll, true);
         let spread = self.spreading_activation(&cname, self.cfg.mas);
-        let noise = match self.cfg.ans {
-            Some(s) => self.rng.borrow_mut().noise(s),
-            None => 0.0,
+        let noise = if self.cfg.uan {
+            0.0
+        } else {
+            match self.cfg.ans {
+                Some(s) => self.rng.borrow_mut().noise(s),
+                None => 0.0,
+            }
         };
         if self.act_medium() {
-            self.out(format!("Adding transient noise {}", lisp_f(noise)));
-            self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+            if self.cfg.uan {
+                self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+                self.out(format!("noise hook returns: {}", lisp_f(0.0)));
+            } else {
+                self.out(format!("Adding transient noise {}", lisp_f(noise)));
+                self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+            }
         }
         let activation = base + spread + self.inhibition_offset(&self.hist[idx].refs) + noise;
         if self.act_low() {
@@ -737,9 +746,13 @@ impl Engine {
                 a += mp * sim;
             }
         }
-        let noise = match self.cfg.ans {
-            Some(s) => self.rng.borrow_mut().noise(s),
-            None => 0.0,
+        let noise = if self.cfg.uan {
+            0.0
+        } else {
+            match self.cfg.ans {
+                Some(s) => self.rng.borrow_mut().noise(s),
+                None => 0.0,
+            }
         };
         a + noise
     }
@@ -1025,9 +1038,13 @@ impl Engine {
             self.spreading_activation(&name, self.cfg.mas)
         };
         self.cfg.act = old_act;
-        let noise = match self.cfg.ans {
-            Some(s) => self.rng.borrow_mut().noise(s),
-            None => 0.0,
+        let noise = if self.cfg.uan {
+            0.0
+        } else {
+            match self.cfg.ans {
+                Some(s) => self.rng.borrow_mut().noise(s),
+                None => 0.0,
+            }
         };
         (
             base,
@@ -1639,6 +1656,7 @@ impl Engine {
                     self.cfg.se_scale = x;
                 }
             }
+            ":UAN" => self.cfg.uan = truthy,
             ":UL" => self.cfg.ul = truthy,
             ":ULT" => self.cfg.ult = truthy,
             ":RECORD-TICKS" => self.cfg.record_ticks = truthy,

@@ -244,7 +244,11 @@ fn corpus_sgp_keys_are_classified() {
 fn support_categories_are_well_formed() {
     assert_eq!(sgp_support(":act"), Some(SgpSupport::Both));
     assert_eq!(sgp_support(":Act"), Some(SgpSupport::Both));
-    assert!(matches!(sgp_support(":UAN"), Some(SgpSupport::Ignored(_))));
+    assert_eq!(sgp_support(":UAN"), Some(SgpSupport::Both));
+    assert!(matches!(
+        sgp_support(":BL-HOOK"),
+        Some(SgpSupport::Ignored(_))
+    ));
     assert!(matches!(
         sgp_support(":SHOW-FOCUS"),
         Some(SgpSupport::Ignored(_))

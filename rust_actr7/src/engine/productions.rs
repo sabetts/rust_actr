@@ -3421,13 +3421,24 @@ impl Engine {
                     self.out(format!("Total similarity score {}", lisp_f(total)));
                 }
             }
-            let noise = match ans {
-                Some(s) => self.rng.borrow_mut().noise(s),
-                None => 0.0,
+            // `:uan` moved the transient noise inside the base-level log and
+            // replaced the noise hook with `only-permanent-noise`.
+            let noise = if self.cfg.uan {
+                0.0
+            } else {
+                match ans {
+                    Some(s) => self.rng.borrow_mut().noise(s),
+                    None => 0.0,
+                }
             };
             if self.act_medium() {
-                self.out(format!("Adding transient noise {}", lisp_f(noise)));
-                self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+                if self.cfg.uan {
+                    self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+                    self.out(format!("noise hook returns: {}", lisp_f(0.0)));
+                } else {
+                    self.out(format!("Adding transient noise {}", lisp_f(noise)));
+                    self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+                }
             }
             a += noise;
             self.hist[idx].last_retrieval = Some((self.time_ms, a));

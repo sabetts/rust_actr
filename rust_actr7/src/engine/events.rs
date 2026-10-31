@@ -1383,6 +1383,18 @@ impl Engine {
                 );
             }
             Event::Dummy => {}
+            Event::AdaptiveRow => self.adaptive_noise_row(),
+            Event::MergeDm { specs } => {
+                for slots in specs {
+                    let inst = ChunkInst {
+                        name: None,
+                        ctype: String::new(),
+                        slots,
+                        bare: false,
+                    };
+                    self.merge_into_dm(inst, "MERGE-DM");
+                }
+            }
             Event::Break { details } => {
                 self.emit("------", format!("BREAK-EVENT {details}"));
                 self.stopped = true;

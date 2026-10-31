@@ -173,9 +173,13 @@ impl Engine {
                 }
             }
         }
-        let noise = match self.cfg.ans {
-            Some(s) => self.rng.borrow_mut().noise(s),
-            None => 0.0,
+        let noise = if self.cfg.uan {
+            0.0
+        } else {
+            match self.cfg.ans {
+                Some(s) => self.rng.borrow_mut().noise(s),
+                None => 0.0,
+            }
         };
         (a + noise, base)
     }
@@ -235,14 +239,129 @@ impl Engine {
         decays
     }
 
+    /// `an-logistic-noise` (`extras/adaptive-noise/adaptive-noise.lisp`):
+    /// `exp(act-r-noise(:ans))`, or 0 without `:ans`. Consumes one draw.
+    fn adaptive_noise(&mut self) -> f32 {
+        match self.cfg.ans {
+            Some(s) => exp_coerced(self.rng.borrow_mut().noise(s)),
+            None => 0.0,
+        }
+    }
+
+    /// `compute-adaptive-noise-references`: the `:ol nil` / numeric / `t`
+    /// formulas with the logistic noise inside the log.
+    fn adaptive_references(
+        &self,
+        refs: &[i64],
+        count: usize,
+        creation: i64,
+        bll: f32,
+        noise: f32,
+    ) -> f32 {
+        let now = self.time_ms;
+        let minus_decay = -bll;
+        let mut value = 0.0f32;
+        let mut last = 0i64;
+        for r in refs {
+            let lag = (now - r).max(50) as f32;
+            value += lag.powf(minus_decay);
+            last = *r;
+        }
+        let scale = (0.001f32).powf(-bll);
+        match &self.cfg.ol {
+            Ol::Off => log_coerced(scale * value + noise),
+            Ol::On => {
+                let t = ((now - creation).max(0) as f32 / 1000.0).max(0.05);
+                let denom = 1.0f32 + minus_decay;
+                let p = (minus_decay as f64 * (t as f64).ln()).exp() as f32;
+                let result = count as f32 * p / denom;
+                log_coerced(result + noise)
+            }
+            Ol::Num(n) => {
+                let denom = 1.0f32 + minus_decay;
+                if count as f64 > *n {
+                    let a = (now - creation).max(0) as f32;
+                    let b = (now - last).max(0) as f32;
+                    value += ((count as f32 - *n as f32) * (a.powf(denom) - b.powf(denom)))
+                        / ((last - creation).max(50) as f32 * denom);
+                }
+                log_coerced(scale * value + noise)
+            }
+        }
+    }
+
+    /// `adaptive-noise-base-level-activation`
+    /// (`extras/adaptive-noise/adaptive-noise.lisp:198`): the `:bll` base
+    /// level with the noise inside the log, or a fixed base plus `n1` when
+    /// `:bll` is nil.
+    fn adaptive_base_level(&mut self, idx: usize, bll: Option<f32>, trace: bool) -> f32 {
+        let show = trace && self.act_medium();
+        let (refs, creation, count, fixed_base) = {
+            let h = &self.hist[idx];
+            (h.refs.clone(), h.creation_ms, h.count, h.fixed_base)
+        };
+        match bll {
+            Some(bll) => {
+                if show {
+                    self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                }
+                if count == 0 {
+                    return -999999.0;
+                }
+                if show {
+                    let refs_str: Vec<String> = refs.iter().map(|r| fmt_secs(*r)).collect();
+                    self.out(format!(
+                        "Computing base-level from {count} references ({})",
+                        refs_str.join(" ")
+                    ));
+                    self.out(format!(
+                        "  creation time: {} decay: {}  Optimized-learning: {}",
+                        fmt_secs(creation),
+                        lisp_f(bll),
+                        ol_str(&self.cfg.ol)
+                    ));
+                }
+                let noise = self.adaptive_noise();
+                if show {
+                    self.out(format!("Adding adaptive noise: {}", lisp_f(noise)));
+                }
+                self.cfg.blc + self.adaptive_references(&refs, count, creation, bll, noise)
+            }
+            None => {
+                let base = match fixed_base {
+                    Some(b) => {
+                        if show {
+                            self.out(format!("User provided chunk base-level: {}", lisp_f(b)));
+                        }
+                        b
+                    }
+                    None => {
+                        if show {
+                            self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                        }
+                        self.cfg.blc
+                    }
+                };
+                base + self.adaptive_noise()
+            }
+        }
+    }
+
     /// The `base-level-activation` equation (`declarative-memory.lisp:2372`):
-    /// the spacing-effect hook when `:eblse` is enabled, else `:bll`/fixed
-    /// base/`:blc`. `trace` emits the medium-detail narration the retrieval
-    /// path needs; `sdp`/blending/simulated retrieval pass `false`.
+    /// the spacing-effect/adaptive-noise hooks when enabled, else
+    /// `:bll`/fixed base/`:blc`. `trace` emits the medium-detail narration the
+    /// retrieval path needs; `sdp`/blending/simulated retrieval pass `false`.
     pub(super) fn base_level(&mut self, idx: usize, bll: Option<f32>, trace: bool) -> f32 {
         let show = trace && self.act_medium();
         if self.cfg.eblse {
             let value = self.spacing_activation(idx);
+            if show {
+                self.out(format!("base-level hook returns: {}", lisp_f(value)));
+            }
+            return value;
+        }
+        if self.cfg.uan {
+            let value = self.adaptive_base_level(idx, bll, trace);
             if show {
                 self.out(format!("base-level hook returns: {}", lisp_f(value)));
             }

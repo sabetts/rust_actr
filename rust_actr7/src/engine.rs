@@ -375,6 +375,9 @@ struct Config {
     eblse: bool,
     se_intercept: f32,
     se_scale: f32,
+    /// Adaptive-noise extra (`:uan`): move transient activation noise inside
+    /// the base-level log and suppress the separate noise term.
+    uan: bool,
     /// Base-level-inhibition extra: activation offset enabled by
     /// `:enable-inhibition` (`extras/base-level-inhibition/bl-inhibition.lisp`).
     inhibition: bool,
@@ -1506,6 +1509,7 @@ impl Config {
             eblse,
             se_intercept: sgp_single(&m.params, ":SE-INTERCEPT")?.unwrap_or(0.5),
             se_scale: sgp_single(&m.params, ":SE-SCALE")?.unwrap_or(0.0),
+            uan: sgp_bool(&m.params, ":UAN"),
             inhibition: sgp_bool(&m.params, ":ENABLE-INHIBITION"),
             inhibition_scale: sgp_single(&m.params, ":INHIBITION-SCALE")?.unwrap_or(5.0),
             inhibition_decay: sgp_single(&m.params, ":INHIBITION-DECAY")?.unwrap_or(1.0),
@@ -2011,6 +2015,13 @@ enum Event {
     /// non-maintenance for a real-time slack hook's `(schedule-event <t> 'fn)`
     /// no-op, which is hidden at medium but wakes an armed CR.
     Dummy,
+    /// A scheduled task `merge-dm` (the adaptive-noise rehearsal): merge each
+    /// slot list into DM by content, adding references.
+    MergeDm {
+        specs: Vec<Vec<(String, Value)>>,
+    },
+    /// Capture the adaptive-noise result row after a retrieval request.
+    AdaptiveRow,
     /// A scheduled `!stop!` break (`schedule-break-relative`): prints the
     /// BREAK-EVENT line and stops the current run.
     Break {
@@ -2808,6 +2819,8 @@ pub struct Engine {
     bst_choice: Option<String>,
     bst_current_line: Option<String>,
     bst_choices: Vec<String>,
+    /// Adaptive-noise result rows captured after each retrieval request.
+    adaptive_rows: Vec<String>,
     /// Last `output-key` event in the current run.
     last_output_key: Option<(String, i64)>,
     /// act-touch: which hands are on the touch device (left=0, right=1).
@@ -3234,6 +3247,7 @@ impl Engine {
             bst_choice: None,
             bst_current_line: None,
             bst_choices: Vec::new(),
+            adaptive_rows: Vec::new(),
             last_output_key: None,
             touch_hands: [false, false],
             touch_fingers: [[(0, 0, 1); 5]; 2],

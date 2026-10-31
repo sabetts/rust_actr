@@ -44,7 +44,9 @@ pub fn sgp_support(key: &str) -> Option<SgpSupport> {
         ":PCT" | ":PPM" | ":PPM-HOOK" | ":RANDOMIZE-TIME" => SgpSupport::Both,
         ":RECORD-TICKS" | ":RIR" | ":RT" | ":SACT" => SgpSupport::Both,
         ":SE-INTERCEPT" | ":SE-SCALE" | ":SEED" | ":SIM-HOOK" => SgpSupport::Both,
-        ":TOUCH-DRAG-DELAY" | ":UL" | ":ULT" | ":UNSTUFF-AURAL-LOCATION" => SgpSupport::Both,
+        ":TOUCH-DRAG-DELAY" | ":UAN" | ":UL" | ":ULT" | ":UNSTUFF-AURAL-LOCATION" => {
+            SgpSupport::Both
+        }
         ":UNSTUFF-VISUAL-LOCATION" | ":VIDT" | ":VISUAL-ONSET-SPAN" => SgpSupport::Both,
         ":VPFT" => SgpSupport::Both,
 
@@ -88,8 +90,8 @@ pub fn sgp_support(key: &str) -> Option<SgpSupport> {
         }
 
         // Known no-ops. See `PARITY-AUDIT.md` for the ones that are real gaps.
-        ":UAN" | ":BL-HOOK" | ":NOISE-HOOK" => {
-            SgpSupport::Ignored("adaptive-noise hooks not implemented (parity audit item 2)")
+        ":BL-HOOK" | ":NOISE-HOOK" => {
+            SgpSupport::Ignored("adaptive-noise hook names; :UAN drives the behavior")
         }
         ":CHUNK-MERGE-HOOK" | ":RETRIEVAL-SET-HOOK" => {
             SgpSupport::Ignored("task data hooks not implemented; drivers compute the same data")

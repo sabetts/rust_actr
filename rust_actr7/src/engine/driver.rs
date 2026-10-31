@@ -2534,18 +2534,38 @@ impl Engine {
             slots: slots.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
             bare: false,
         };
+        self.adaptive_rows.clear();
         self.add_runtime_dm(chunk("A", vec![]));
         self.add_runtime_dm(chunk("B", vec![]));
         self.add_runtime_dm(chunk("C1", vec![("VALUE", Value::Sym("A".into()))]));
         self.add_runtime_dm(chunk("C2", vec![("VALUE", Value::Sym("B".into()))]));
-        let d = (2.0f64.sqrt() * 0.25 * ((1.0f64 - 0.6) / 0.6).ln()) as f32;
+        // SBCL evaluates this in single-float: `(sqrt 2)` is 1.4142135,
+        // `(log 2/3)` is single, and the product rounds to -0.14335358.
+        let d = 2.0f32.sqrt() * 0.25f32 * log_coerced((1.0f32 - 0.6f32) / 0.6f32);
         self.sims.insert(("A".into(), "B".into()), d);
         self.sims.insert(("B".into(), "A".into()), d);
+        // `(schedule-periodic-event 50 'rehearse :priority :min)`:
+        // `(merge-dm (value a) (value b))` every 50 s, six times through 500.
+        for t in (50..=500).step_by(50) {
+            self.push_m(
+                t * 1000,
+                Prio::Min,
+                Out::Never,
+                true,
+                Event::MergeDm {
+                    specs: vec![
+                        vec![("VALUE".to_string(), Value::Sym("A".to_string()))],
+                        vec![("VALUE".to_string(), Value::Sym("B".to_string()))],
+                    ],
+                },
+            );
+        }
         for i in 1..=5 {
-            self.push(
+            self.push_m(
                 i * 100_000,
                 Prio::Num(0),
                 Out::Medium,
+                true,
                 Event::ModuleRequest {
                     buffer: "RETRIEVAL".to_string(),
                     spec: NewChunk::Spec {
@@ -2559,8 +2579,52 @@ impl Engine {
                     trace: false,
                 },
             );
+            // The task's `record-result` runs at priority :min after the
+            // retrieval, so the row sees this request's activations.
+            self.push_m(i * 100_000, Prio::Min, Out::Never, true, Event::AdaptiveRow);
         }
-        self.run_until(500.0)
+        self.run_until(500.0)?;
+        self.model_output(&format!("results: ({})\n", self.adaptive_rows.join(" ")));
+        Ok(())
+    }
+
+    /// One `(winner c1-activation c2-activation latency)` row
+    /// (`record-result` in the adaptive-noise task).
+    pub(super) fn adaptive_noise_row(&mut self) {
+        let winner = self
+            .buffers
+            .get("RETRIEVAL")
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.clone())
+            .map(|n| {
+                self.copy_source
+                    .get(&n)
+                    .or_else(|| self.chunk_alias.get(&n))
+                    .cloned()
+                    .unwrap_or(n)
+            });
+        let pos = |name: &str| self.dm.iter().position(|c| c.name.as_deref() == Some(name));
+        let activation = |idx: Option<usize>| {
+            idx.and_then(|i| self.hist[i].last_retrieval)
+                .map(|(_, a)| a)
+                .unwrap_or(f32::NAN)
+        };
+        let c1 = pos("C1");
+        let c2 = pos("C2");
+        let a1 = activation(c1);
+        let a2 = activation(c2);
+        let latency = match winner.as_deref() {
+            Some("C1") => exp_coerced(-a1),
+            Some("C2") => exp_coerced(-a2),
+            _ => f32::NAN,
+        };
+        self.adaptive_rows.push(format!(
+            "({} {} {} {})",
+            winner.unwrap_or_else(|| "NIL".to_string()),
+            lisp_f(a1),
+            lisp_f(a2),
+            lisp_f(latency)
+        ));
     }
 
     pub fn bst_summary(&mut self) {
