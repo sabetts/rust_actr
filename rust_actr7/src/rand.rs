@@ -23,12 +23,27 @@ const MATRIX_A: u32 = 0x9908b0df;
 const UPPER_MASK: u32 = 0x80000000;
 const LOWER_MASK: u32 = 0x7fffffff;
 
+/// One logged RNG call. `kind` is `"random"` (`act-r-random`) or `"noise"`
+/// (`act-r-noise`); `int` marks an integer-limit `random` call. `value` is
+/// the returned number widened to f64 for comparison (integer results are
+/// exact for the small limits the corpus uses).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RngDraw {
+    pub kind: &'static str,
+    pub arg: f64,
+    pub value: f64,
+    pub int: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct Mt {
     mt: [u32; N],
     mti: usize,
     seed: u64,
     draws: u64,
+    /// When present, every public draw entry appends here. Used by the
+    /// draw-sequence differential test; off by default.
+    log: Option<Vec<RngDraw>>,
 }
 
 impl Mt {
@@ -39,6 +54,28 @@ impl Mt {
             mti: N + 1,
             seed: 0,
             draws: 0,
+            log: None,
+        }
+    }
+
+    /// Start recording `act-r-random` / `act-r-noise` calls.
+    pub fn start_log(&mut self) {
+        self.log = Some(Vec::new());
+    }
+
+    /// Stop recording and return the accumulated calls.
+    pub fn take_log(&mut self) -> Vec<RngDraw> {
+        self.log.take().unwrap_or_default()
+    }
+
+    fn record(&mut self, kind: &'static str, arg: f64, value: f64, int: bool) {
+        if let Some(log) = &mut self.log {
+            log.push(RngDraw {
+                kind,
+                arg,
+                value,
+                int,
+            });
         }
     }
 
@@ -148,14 +185,16 @@ impl Mt {
 
     /// `act-r-random` of a float limit: `limit * real2`.
     pub fn random_float(&mut self, limit: f32) -> f32 {
-        limit * self.real2_f32()
+        let v = limit * self.real2_f32();
+        self.record("random", limit as f64, v as f64, false);
+        v
     }
 
     /// `act-r-random` of an integer limit below 2^32:
     /// `floor(limit * real2_L)` with LONG (f64 here) division.
     /// Larger limits use the multi-draw path (random.lisp:491).
     pub fn random_int(&mut self, limit: u64) -> u64 {
-        if limit < (1u64 << 32) {
+        let v = if limit < (1u64 << 32) {
             ((limit as f64 * (self.next_u32() as f64 / 4294967296.0)).floor()) as u64
         } else {
             let bits = 64 - (limit.leading_zeros() as u64);
@@ -165,7 +204,9 @@ impl Mt {
                 accum = (accum << 32) | (self.next_u32() as u64);
             }
             accum % limit
-        }
+        };
+        self.record("random", limit as f64, v as f64, true);
+        v
     }
 
     /// `permute-list` (`framework/random.lisp:562`): reorder a non-empty list
@@ -190,7 +231,9 @@ impl Mt {
         debug_assert!(s > 0.0);
         let r = self.random_float(1.0);
         let p = r.clamp(0.0001, 0.9999);
-        s * ((1.0 - p) / p).ln()
+        let v = s * ((1.0 - p) / p).ln();
+        self.record("noise", s as f64, v as f64, false);
+        v
     }
 }
 

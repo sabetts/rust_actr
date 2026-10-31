@@ -1853,6 +1853,16 @@ impl Engine {
         self.rng.borrow_mut().set_seed(seed.0, seed.1);
     }
 
+    /// Start recording RNG calls (draw-sequence differential tests).
+    pub fn start_rng_log(&mut self) {
+        self.rng.borrow_mut().start_log();
+    }
+
+    /// Stop recording and return the RNG calls since `start_rng_log`.
+    pub fn take_rng_log(&mut self) -> Vec<crate::rand::RngDraw> {
+        self.rng.borrow_mut().take_log()
+    }
+
     /// Consume `n` draws from the random stream without using the values
     /// (a task's setup draws between runs).
     pub fn consume_rng(&mut self, n: u64) {
