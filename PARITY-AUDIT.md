@@ -14,15 +14,16 @@ parameter the engine silently accepts are invisible to the default suite.
 
 - **Silent `sgp` no-ops.** `apply_sgp` used to end in `_ => {}`. The registry
   in `engine/params.rs` now makes every accepted no-op explicit and rejects
-  unknown keys. Remaining real gaps are the adaptive-noise hooks
-  (`:UAN`/`:BL-HOOK`/`:NOISE-HOOK`, item 2) and the declarative task hooks
-  (`:CHUNK-MERGE-HOOK`/`:RETRIEVAL-SET-HOOK`); cosmetic flags and
-  driver-managed motor parameters carry their reason in the table.
-- **Task-provided outputs.** `adaptive-noise` prints literal result rows, so
-  the adaptive base-level/permanent-noise hooks are untested (PORTING-NOTES
-  #340). `tutorial-unit1modeling-warnings`, `undefined-slots`, and one
-  `act-touch` case emit literal warning strings instead of triggering the
-  engine's warning path.
+  unknown keys. `:UAN` is implemented (item 2); `:BL-HOOK`/`:NOISE-HOOK` are
+  accepted as the names `:UAN` drives. The declarative task hooks
+  (`:CHUNK-MERGE-HOOK`/`:RETRIEVAL-SET-HOOK`) remain no-ops; cosmetic flags
+  and driver-managed motor parameters carry their reason in the table.
+- **Task-provided outputs.** `adaptive-noise` used to print literal result
+  rows, so the adaptive base-level/permanent-noise hooks were untested
+  (PORTING-NOTES #340). Item 2 now generates those rows from engine state.
+  `tutorial-unit1modeling-warnings`, `undefined-slots`, and one `act-touch`
+  case still emit literal warning strings instead of triggering the engine's
+  warning path.
 - **Source echoes.** 177 of 567 tests are `source_case!` source checks that
   never run the engine (about 31% of the green count).
 - **Task logic outside the engine.** 67 cases replay task RNG with
@@ -58,9 +59,11 @@ compilation-unit tests compare directly against Lisp traces.
    `tests/params.rs` scans every `(sgp …)`/`(ssp …)` in `fixtures/models` and
    every driver `Sgp` key. Also fixed model-body `:audio-ms-times` loading;
    model-body `:v` stays runtime-only because the harness controls traces.
-2. **Engine-generated adaptive-noise.** Port `:uan`, `:bl-hook`, and
-   `:noise-hook`; derive the result rows from engine state and remove the
-   literals.
+2. [x] **Engine-generated adaptive-noise.** `:uan` now computes the
+   adaptive base-level formulas and suppresses the separate noise draw. The
+   driver schedules the task's rehearsals and captures the five
+   `(winner C1 C2 latency)` rows after each request; the literal rows are
+   gone.
 3. **Full-detail differential harness.** For one representative model per
    subsystem, run SBCL and Rust with maximal trace
    (`:v t :act high :pct t :sact t :cst t :blt t`) and store the SBCL output

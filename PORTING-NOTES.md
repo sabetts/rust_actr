@@ -6241,3 +6241,27 @@ driver-internal runs that produce the refs. Everything else keeps its current
 behavior, but the classification is explicit and checked by
 `tests/params.rs`, which scans every `(sgp …)`/`(ssp …)` form in
 `fixtures/models` and every `Step::Sgp` key in the case drivers.
+
+## 360. Adaptive-noise hooks and engine-generated result rows
+
+`:uan` is ported. Base-level activation now follows the extension's
+`compute-adaptive-noise-references`: the logistic noise is exponentiated and
+moved inside the log for the `:ol nil`, numeric `:ol`, and `:ol t` formulas,
+and the separate transient-noise draw is suppressed (the noise hook returns
+permanent noise only). `Config::from_model` and `apply_sgp` both read `:uan`;
+`:bl-hook`/`:noise-hook` remain accepted names documented in the parameter
+registry.
+
+The `adaptive-noise` driver now reproduces the task instead of printing canned
+rows: it schedules the 50 s `(merge-dm (value a) (value b))` rehearsals, the
+100 s retrieval requests, and a row capture at `:priority :min` after each
+request. Each row is `(winner C1-activation C2-activation latency)`, with the
+activation read from the retrieval history and `latency = exp(-activation)`.
+The test stub's `:starting-parameters (:seed (1 0))` is re-applied at reset,
+so the second run starts from the same RNG state.
+
+One ulp mattered: the initial-p similarity constant must be computed in
+single-float the way SBCL does it (`(sqrt 2)` is a single). The previous
+f64-then-cast form was one ulp off and changed the UAN row's last digit.
+
+Corpus: **559 passed / 8 ignored**, plus the two-parameter coverage suite.
