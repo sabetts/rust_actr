@@ -2207,12 +2207,26 @@ impl Engine {
         let mut queue = mappings.clone();
         let mut applied: Vec<(SlotVal, SlotVal)> = Vec::new();
         for i in 0..queue.len() {
-            let (k, v) = queue[i].clone();
+            let (k, mut v) = queue[i].clone();
             let SlotVal::Var(kv) = &k else {
                 continue;
             };
             if bind_vars.contains(&kv.to_uppercase()) {
                 continue;
+            }
+            // With `:ppm`, a mapping whose cdr is constant is replaced by the
+            // variable's actual firing binding (`(awhen (find (car mapping)
+            // bindings :key 'car) (setf mapping it))`). This is why a
+            // partially matched p2 variable does not simply take p1's constant.
+            if self.cfg.ppm.is_some() && constant_value(&v) {
+                let bound = b1
+                    .get(kv)
+                    .or_else(|| b1.get(&format!("={kv}")))
+                    .or_else(|| b2.get(kv))
+                    .or_else(|| b2.get(&format!("={kv}")));
+                if let Some(val) = bound {
+                    v = SlotVal::Lit(val.show());
+                }
             }
             applied.push((k.clone(), v.clone()));
             for later in queue.iter_mut().skip(i + 1) {
@@ -2283,10 +2297,21 @@ impl Engine {
         let subst = |v: &SlotVal, b: &Bindings, ivars: &HashSet<String>| -> SlotVal {
             match v {
                 SlotVal::Var(n) => {
+                    let resolved = resolve(n);
+                    let resolved_name = match &resolved {
+                        SlotVal::Var(w) => Some(w),
+                        SlotVal::Lit(_) => None,
+                    };
                     if ivars.contains(n) && b.contains_key(n) {
                         SlotVal::Lit(b[n].show())
-                    } else if resolve(n) != SlotVal::Var(n.clone()) {
-                        resolve(n)
+                    } else if let Some(w) = resolved_name {
+                        if ivars.contains(w) && b.contains_key(w) {
+                            SlotVal::Lit(b[w].show())
+                        } else {
+                            resolved
+                        }
+                    } else if resolved != SlotVal::Var(n.clone()) {
+                        resolved
                     } else if drop_retrieval && n == "RETRIEVAL" {
                         self.buffers
                             .get(n)

@@ -48,11 +48,22 @@ fn self_composition() {
     }
 }
 
+#[test]
+fn ppm_slot_order() {
+    if let Err(e) = run_case_selected("ppm-slot-order", Some("P4 & P5")) {
+        panic!("{e}");
+    }
+}
+
 fn traces_dir() -> PathBuf {
     crate_dir().join("fixtures").join("compilation-traces")
 }
 
 fn run_case(name: &str) -> Result<(), String> {
+    run_case_selected(name, None)
+}
+
+fn run_case_selected(name: &str, selected_doc: Option<&str>) -> Result<(), String> {
     let root = models_dir();
     if !root.is_dir() {
         return Err(format!(
@@ -75,8 +86,8 @@ fn run_case(name: &str) -> Result<(), String> {
     let actual = run_model(&root, &model, seed, run_time, &DeviceSetup::default())
         .map_err(|e| format!("{name}: engine error: {e}"))?;
 
-    let expected_blocks = composition_blocks(&expected);
-    let actual_blocks = composition_blocks(&actual);
+    let expected_blocks = select_blocks(composition_blocks(&expected), selected_doc);
+    let actual_blocks = select_blocks(composition_blocks(&actual), selected_doc);
     if expected_blocks.is_empty() {
         let expected = result_production(&expected).ok_or_else(|| {
             format!("{name}: Lisp trace has no composition block or result production")
@@ -115,6 +126,9 @@ fn run_case(name: &str) -> Result<(), String> {
     }
     let expected = normalize_eol(&expected_blocks[0]);
     let actual = normalize_eol(&actual_blocks[0]);
+    if std::env::var_os("UNIT_DEBUG").is_some() {
+        eprintln!("--- expected ---\n{expected}\n--- actual ---\n{actual}");
+    }
     if expected == actual {
         Ok(())
     } else {
@@ -125,6 +139,19 @@ fn run_case(name: &str) -> Result<(), String> {
             trace_path.display(),
             first_diff(&e, &a)
         ))
+    }
+}
+
+fn select_blocks(blocks: Vec<String>, doc: Option<&str>) -> Vec<String> {
+    match doc {
+        None => blocks,
+        Some(doc) => {
+            let needle = format!("\"{}\"", doc.to_ascii_lowercase());
+            blocks
+                .into_iter()
+                .filter(|b| b.to_ascii_lowercase().contains(&needle))
+                .collect()
+        }
     }
 }
 

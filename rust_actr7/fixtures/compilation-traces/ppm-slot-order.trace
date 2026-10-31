@@ -1,0 +1,335 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL TEST0 NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED P0
+Production Compilation process started for P0
+  No previous production to compose with.
+  Setting previous production to P0.
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-FIRED P1
+Production Compilation process started for P1
+  Production P0 and P1 are being composed.
+  New production:
+
+(P PRODUCTION0
+  "P0 & P1"
+   =GOAL>
+       SLOT SMALL
+       STATE NIL
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P2
+)
+  Setting previous production to P1.
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-FIRED P2
+Production Compilation process started for P2
+  Production P1 and P2 are being composed.
+  New production:
+
+(P PRODUCTION1
+  "P1 & P2"
+   =GOAL>
+       SLOT MEDIUM
+       STATE P1
+       SLOT SMALL
+ ==>
+   =GOAL>
+       STATE P3
+)
+  Setting previous production to P2.
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-FIRED P3
+Production Compilation process started for P3
+  Production P2 and P3 are being composed.
+  New production:
+
+(P PRODUCTION2
+  "P2 & P3"
+   =GOAL>
+       STATE P2
+       SLOT SMALL
+ ==>
+   =GOAL>
+       STATE P4
+)
+  Setting previous production to P3.
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-FIRED P4
+Production Compilation process started for P4
+  Production P3 and P4 are being composed.
+  New production:
+
+(P PRODUCTION3
+  "P3 & P4"
+   =GOAL>
+       SLOT SMALL
+       STATE P3
+       SLOT LARGE
+ ==>
+   =GOAL>
+       STATE P5
+)
+  Setting previous production to P4.
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             PRODUCTION-FIRED P5
+Production Compilation process started for P5
+  Production P4 and P5 are being composed.
+  New production:
+
+(P PRODUCTION4
+  "P4 & P5"
+   =GOAL>
+       SLOT LARGE
+       STATE P4
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P6
+)
+  Setting previous production to P5.
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             PRODUCTION-FIRED P6
+Production Compilation process started for P6
+  Production P5 and P6 are being composed.
+  New production:
+
+(P PRODUCTION5
+  "P5 & P6"
+   =GOAL>
+       SLOT MEDIUM
+       STATE P5
+       SLOT SMALL
+ ==>
+   =GOAL>
+       STATE P7
+)
+  Setting previous production to P6.
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.400   PROCEDURAL             PRODUCTION-FIRED P7
+Production Compilation process started for P7
+  Production P6 and P7 are being composed.
+  New production:
+
+(P PRODUCTION6
+  "P6 & P7"
+   =GOAL>
+       SLOT SMALL
+       STATE P6
+       MED MEDIUM
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P8
+)
+  Setting previous production to P7.
+     0.400   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             PRODUCTION-FIRED P8
+Production Compilation process started for P8
+  Production P7 and P8 are being composed.
+  New production:
+
+(P PRODUCTION7
+  "P7 & P8"
+   =GOAL>
+       MED MEDIUM
+       SLOT MEDIUM
+       STATE P7
+       SLOT SMALL
+ ==>
+   =GOAL>
+       STATE P9
+)
+  Setting previous production to P8.
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.500   PROCEDURAL             PRODUCTION-FIRED P9
+Production Compilation process started for P9
+  Production P8 and P9 are being composed.
+  New production:
+
+(P PRODUCTION8
+  "P8 & P9"
+   =GOAL>
+       STATE P8
+       SLOT SMALL
+       SMALL SMALL
+ ==>
+   =GOAL>
+       STATE P10
+)
+  Setting previous production to P9.
+     0.500   PROCEDURAL             CONFLICT-RESOLUTION
+     0.550   PROCEDURAL             PRODUCTION-FIRED P10
+Production Compilation process started for P10
+  Production P9 and P10 are being composed.
+  New production:
+
+(P PRODUCTION9
+  "P9 & P10"
+   =GOAL>
+       SMALL SMALL
+       STATE P9
+       SLOT SMALL
+ ==>
+   =GOAL>
+       STATE P11
+)
+  Setting previous production to P10.
+     0.550   PROCEDURAL             CONFLICT-RESOLUTION
+     0.600   PROCEDURAL             PRODUCTION-FIRED P11
+Production Compilation process started for P11
+  Production P10 and P11 are being composed.
+  New production:
+
+(P PRODUCTION10
+  "P10 & P11"
+   =GOAL>
+       SLOT SMALL
+       STATE P10
+       LARGE MEDIUM
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P12
+)
+  Setting previous production to P11.
+     0.600   PROCEDURAL             CONFLICT-RESOLUTION
+     0.650   PROCEDURAL             PRODUCTION-FIRED P12
+Production Compilation process started for P12
+  Production P11 and P12 are being composed.
+  New production:
+
+(P PRODUCTION11
+  "P11 & P12"
+   =GOAL>
+       LARGE MEDIUM
+       SLOT MEDIUM
+       STATE P11
+       SLOT SMALL
+ ==>
+   =GOAL>
+       STATE P13
+)
+  Setting previous production to P12.
+     0.650   PROCEDURAL             CONFLICT-RESOLUTION
+     0.700   PROCEDURAL             PRODUCTION-FIRED P13
+Production Compilation process started for P13
+  Production P12 and P13 are being composed.
+  New production:
+
+(P PRODUCTION12
+  "P12 & P13"
+   =GOAL>
+       SLOT SMALL
+       STATE P12
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P14
+)
+  Setting previous production to P13.
+     0.700   PROCEDURAL             CONFLICT-RESOLUTION
+     0.750   PROCEDURAL             PRODUCTION-FIRED P14
+Production Compilation process started for P14
+  Production P13 and P14 are being composed.
+  New production:
+
+(P PRODUCTION13
+  "P13 & P14"
+   =GOAL>
+       STATE P13
+       LARGE MEDIUM
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P15
+)
+  Setting previous production to P14.
+     0.750   PROCEDURAL             CONFLICT-RESOLUTION
+     0.800   PROCEDURAL             PRODUCTION-FIRED P15
+Production Compilation process started for P15
+  Production P14 and P15 are being composed.
+  New production:
+
+(P PRODUCTION14
+  "P14 & P15"
+   =GOAL>
+       LARGE MEDIUM
+       STATE P14
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P16
+)
+  Setting previous production to P15.
+     0.800   PROCEDURAL             CONFLICT-RESOLUTION
+     0.850   PROCEDURAL             PRODUCTION-FIRED P16
+Production Compilation process started for P16
+  Production P15 and P16 are being composed.
+  New production:
+
+(P PRODUCTION15
+  "P15 & P16"
+   =GOAL>
+       STATE P15
+       SLOT MEDIUM
+ ==>
+   =GOAL>
+       STATE P17
+)
+  Setting previous production to P16.
+     0.850   PROCEDURAL             CONFLICT-RESOLUTION
+     0.900   PROCEDURAL             PRODUCTION-FIRED P17
+Production Compilation process started for P17
+  Production P16 and P17 are being composed.
+  New production:
+
+(P PRODUCTION16
+  "P16 & P17"
+   =GOAL>
+       STATE P16
+       LARGE =S
+       SLOT =S
+ ==>
+   =GOAL>
+       STATE P18
+)
+  Setting previous production to P17.
+     0.900   PROCEDURAL             CONFLICT-RESOLUTION
+     0.950   PROCEDURAL             PRODUCTION-FIRED P18
+Production Compilation process started for P18
+  Production P17 and P18 are being composed.
+  New production:
+
+(P PRODUCTION17
+  "P17 & P18"
+   =GOAL>
+       LARGE =LARGE
+       STATE P17
+       MED =LARGE
+       SLOT =LARGE
+ ==>
+   =GOAL>
+       STATE P19
+)
+  Setting previous production to P18.
+     0.950   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   PROCEDURAL             PRODUCTION-FIRED P19
+Production Compilation process started for P19
+  Production P18 and P19 are being composed.
+  New production:
+
+(P PRODUCTION18
+  "P18 & P19"
+   =GOAL>
+       MED =MED
+       STATE P18
+       LARGE =MED
+       SLOT =MED
+ ==>
+   =GOAL>
+       STATE P20
+)
+  Setting previous production to P19.
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   ------                 Stopped because time limit reached
