@@ -281,6 +281,28 @@ impl Engine {
                 // A named request item that is actually a variable
                 // (`+retrieval> =goal`) resolves to the referenced chunk.
                 if let Some(var) = n.strip_prefix('=') {
+                    // `+retrieval> =imaginal` references the live buffer
+                    // chunk. Resolve it here, before a later RHS modification
+                    // can change the buffer, because the imaginal buffer is
+                    // the one that gains dynamic slots after its initial
+                    // `set-buffer-chunk`; a stale `named` copy would omit
+                    // them. Other buffer variables keep the DM/named path so
+                    // their trace slot order matches ACT-R.
+                    if var.eq_ignore_ascii_case("IMAGINAL") {
+                        if let Some(chunk) = self
+                            .buffers
+                            .get(&var.to_uppercase())
+                            .and_then(|b| b.chunk.as_ref())
+                        {
+                            return Ok(NewChunk::Spec {
+                                ctype: String::new(),
+                                slots: chunk.slots.clone(),
+                                neg: Vec::new(),
+                                rels: Vec::new(),
+                                bare: true,
+                            });
+                        }
+                    }
                     let v = self.subst(&Pattern::Var(var.to_string()), b)?;
                     match v {
                         Value::Sym(s) => Ok(NewChunk::Named(s)),

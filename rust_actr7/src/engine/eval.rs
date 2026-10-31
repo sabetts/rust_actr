@@ -16,6 +16,17 @@ impl Engine {
                     if h.eq_ignore_ascii_case("quote") {
                         return self.quote_value(items.get(1));
                     }
+                    if h.eq_ignore_ascii_case("if") {
+                        let test = self.eval_expr(items.get(1).ok_or("if needs a test")?, b)?;
+                        return if test == Value::Nil {
+                            match items.get(3) {
+                                Some(e) => self.eval_expr(e, b),
+                                None => Ok(Value::Nil),
+                            }
+                        } else {
+                            self.eval_expr(items.get(2).ok_or("if needs a then branch")?, b)
+                        };
+                    }
                 }
                 self.eval_call(&items[0], &items[1..], b)
             }

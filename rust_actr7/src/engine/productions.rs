@@ -3395,7 +3395,6 @@ impl Engine {
                         self.out(format!("  effective similarity value is {}", lisp_f(simd)));
                     }
                     total += simd;
-                    a += simd;
                 }
                 for (s, v) in &want_slots {
                     if s.starts_with(':') || *v == Value::Nil {
@@ -3415,11 +3414,14 @@ impl Engine {
                         self.out(format!("  effective similarity value is {}", lisp_f(simd)));
                     }
                     total += simd;
-                    a += simd;
                 }
                 if show {
                     self.out(format!("Total similarity score {}", lisp_f(total)));
                 }
+                // Lisp adds the partial-matching component to the activation
+                // once (`partial-matching` returns `total-sim`); adding each
+                // slot's score individually changes the last float bit.
+                a += total;
             }
             // `:uan` moved the transient noise inside the base-level log and
             // replaced the noise hook with `only-permanent-noise`.

@@ -183,6 +183,7 @@ pub const BUILTINS: &[&str] = &[
     "new-digit-sound",
     "pbreak",
     "punbreak",
+    "trigger-reward",
     "pdisable",
     "penable",
     "correlation",
@@ -1905,6 +1906,13 @@ impl Session {
             "new-word-sound" | "new-digit-sound" => {
                 // A speech-like sound: hold the vocal buffer busy, then
                 // release. The corpus's audio specs use tone sounds.
+                Ok(vec![Json::Null])
+            }
+            "trigger-reward" => {
+                let value = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as f32;
+                if let Some(eng) = &mut self.engine {
+                    eng.trigger_reward(value);
+                }
                 Ok(vec![Json::Null])
             }
             "pbreak" => {

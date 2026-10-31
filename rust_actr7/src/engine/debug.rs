@@ -2204,6 +2204,19 @@ impl Engine {
         );
     }
 
+    /// `trigger-reward` (`modules/utility-and-reward-1.lisp`): propagate a
+    /// reward now, updating every production fired since the last reward.
+    pub fn trigger_reward(&mut self, value: f32) {
+        self.push(
+            self.time_ms,
+            Prio::Max,
+            Out::Medium,
+            Event::PropagateReward {
+                value: crate::model::Reward::Num(value),
+            },
+        );
+    }
+
     /// `extend-possible-slots <slot>`: make a slot name usable on any chunk.
     pub fn extend_possible_slots(&mut self, slot: &str) {
         self.valid_slots.insert(slot.to_uppercase());
