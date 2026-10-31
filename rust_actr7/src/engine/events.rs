@@ -670,21 +670,6 @@ impl Engine {
                 self.al_update(&chunk, &js);
             }
             Event::ModuleModRequest { buffer, slots } => {
-                // A goal `*goal>` is applied directly (no module round-trip):
-                // ACT-R's goal buffer has no delayed module request and the
-                // trace is a plain low-output `MOD-BUFFER-CHUNK GOAL`.
-                if buffer == "GOAL" {
-                    self.now(
-                        Prio::Num(40),
-                        Out::Low,
-                        Event::ModBuffer {
-                            buffer,
-                            slots,
-                            module: buffer_module("GOAL"),
-                        },
-                    );
-                    return Ok(());
-                }
                 if show {
                     self.emit("PROCEDURAL", format!("MODULE-MOD-REQUEST {buffer}"));
                 } else {
@@ -708,9 +693,16 @@ impl Engine {
                         },
                     );
                 } else {
+                    // A goal `*goal>` lands as a low-output mod (visible even
+                    // with `:trace-detail low`); other modules keep medium.
+                    let out = if buffer == "GOAL" {
+                        Out::Low
+                    } else {
+                        Out::Medium
+                    };
                     self.now(
                         Prio::Num(40),
-                        Out::Medium,
+                        out,
                         Event::ModBuffer {
                             buffer: buffer.clone(),
                             slots,
