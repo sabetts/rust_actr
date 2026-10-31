@@ -1,0 +1,7 @@
+name: self-composition
+model: user-loads;compilation-units;self-composition.lisp
+seed: (100 0)
+run: 0.1
+task: "none"
+act-r-version: ("7.31.4-<3489:2026-06-10>")
+lisp: SBCL 2.6.9

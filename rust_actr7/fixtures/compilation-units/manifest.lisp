@@ -7,4 +7,5 @@
  ("retrieval-instantiate" "user-loads;compilation-units;retrieval-instantiate.lisp" (100 0) 1)
  ("safe-bind-output" "user-loads;compilation-units;safe-bind-output.lisp" (100 0) 1)
  ("union-subtract" "user-loads;compilation-units;union-subtract.lisp" (100 0) 1)
- ("duplicate-safe-bind" "user-loads;compilation-units;duplicate-safe-bind.lisp" (100 0) 1))
+ ("duplicate-safe-bind" "user-loads;compilation-units;duplicate-safe-bind.lisp" (100 0) 1)
+ ("self-composition" "user-loads;compilation-units;self-composition.lisp" (100 0) 0.1))

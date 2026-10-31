@@ -41,6 +41,14 @@ fn duplicate_safe_bind() {
     }
 }
 
+#[test]
+#[ignore = "engine-divergence: self-composition duplicate detection"]
+fn self_composition() {
+    if let Err(e) = run_case("self-composition") {
+        panic!("{e}");
+    }
+}
+
 fn traces_dir() -> PathBuf {
     crate_dir().join("fixtures").join("compilation-traces")
 }
@@ -70,6 +78,28 @@ fn run_case(name: &str) -> Result<(), String> {
 
     let expected_blocks = composition_blocks(&expected);
     let actual_blocks = composition_blocks(&actual);
+    if expected_blocks.is_empty() {
+        let expected = result_production(&expected).ok_or_else(|| {
+            format!("{name}: Lisp trace has no composition block or result production")
+        })?;
+        let actual = result_production(&actual).ok_or_else(|| {
+            format!(
+                "{name}: Rust trace has no composition block or result production; expected {expected}\n{actual}"
+            )
+        })?;
+        if !actual_blocks.is_empty() {
+            return Err(format!(
+                "{name}: Rust emitted a new production, expected duplicate {expected}"
+            ));
+        }
+        return if expected.eq_ignore_ascii_case(&actual) {
+            Ok(())
+        } else {
+            Err(format!(
+                "{name}: duplicate production mismatch: expected {expected}, got {actual}"
+            ))
+        };
+    }
     if expected_blocks.len() != 1 {
         return Err(format!(
             "{name}: Lisp trace has {} composition blocks, expected exactly one:\n{}",
@@ -97,6 +127,17 @@ fn run_case(name: &str) -> Result<(), String> {
             first_diff(&e, &a)
         ))
     }
+}
+
+/// The existing production named by a duplicate-result composition line.
+fn result_production(trace: &str) -> Option<String> {
+    trace.lines().find_map(|line| {
+        let t = line.trim();
+        t.strip_prefix("Result is production ")
+            .or_else(|| t.strip_prefix("result is production "))
+            .map(str::trim)
+            .map(str::to_string)
+    })
 }
 
 /// Extract every `New production:` block, ending before its parameter dump.

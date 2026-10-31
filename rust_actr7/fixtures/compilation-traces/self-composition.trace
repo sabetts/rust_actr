@@ -1,0 +1,12 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED G1
+Production Compilation process started for G1
+  No previous production to compose with.
+  Setting previous production to G1.
+     0.100   PROCEDURAL             PRODUCTION-FIRED G1
+Production Compilation process started for G1
+  Production G1 and G1 are being composed.
+  Result is production G1
+  No actions taken.
+  Setting previous production to G1.
+     0.100   ------                 Stopped because time limit reached
