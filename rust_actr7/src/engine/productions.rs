@@ -2204,6 +2204,12 @@ impl Engine {
             .into_iter()
             .chain(production_bind_vars(p2))
             .collect();
+        let mut action_bind_vars = bind_vars.clone();
+        for (orig, fresh) in &ren {
+            if bind_vars.contains(&orig.to_uppercase()) {
+                action_bind_vars.insert(fresh.to_uppercase());
+            }
+        }
         let mut queue = mappings.clone();
         let mut applied: Vec<(SlotVal, SlotVal)> = Vec::new();
         for i in 0..queue.len() {
@@ -2358,7 +2364,15 @@ impl Engine {
             v.into_iter()
                 .map(
                     |(op, b, s, var): (char, String, Vec<(String, SlotVal)>, Option<String>)| {
-                        let s = s.into_iter().map(|(n, val)| (sub_name(&n), val)).collect();
+                        let s = s
+                            .into_iter()
+                            .map(|(n, val)| {
+                                let keep = n
+                                    .strip_prefix('=')
+                                    .is_some_and(|v| action_bind_vars.contains(&v.to_uppercase()));
+                                (if keep { n } else { sub_name(&n) }, val)
+                            })
+                            .collect();
                         (op, b, s, var)
                     },
                 )
@@ -2622,11 +2636,29 @@ impl Engine {
                 rhs.push((format!("*{buf}>"), sv(slots)));
                 continue;
             }
+            let effective_names = |slots: &[(String, SlotVal)], b: &Bindings| -> Vec<String> {
+                slots
+                    .iter()
+                    .map(|(n, _)| {
+                        if n.starts_with('=') {
+                            bound_text(n, b).unwrap_or_else(|| n.clone())
+                        } else {
+                            n.clone()
+                        }
+                    })
+                    .collect()
+            };
             if has_eq1 || has_eq2 {
                 let names2: Vec<String> = eq2.iter().map(|(n, _)| n.clone()).collect();
+                let p2_effective = effective_names(&eq2, b2);
                 let mut slots: Vec<(String, SlotVal)> = eq1
                     .into_iter()
-                    .filter(|(n, _)| !names2.contains(n))
+                    .filter(|(n, _)| {
+                        !names2.contains(n)
+                            && !p2_effective.contains(n)
+                            && !(n.starts_with('=')
+                                && bound_text(n, b1).is_some_and(|t| p2_effective.contains(&t)))
+                    })
                     .collect();
                 slots.extend(eq2);
                 rhs.push((format!("={buf}>"), sv(slots)));
@@ -2634,9 +2666,15 @@ impl Engine {
             // `*` modify-request union.
             if !st1.is_empty() || !st2.is_empty() {
                 let names2: Vec<String> = st2.iter().map(|(n, _)| n.clone()).collect();
+                let p2_effective = effective_names(&st2, b2);
                 let mut slots: Vec<(String, SlotVal)> = st1
                     .into_iter()
-                    .filter(|(n, _)| !names2.contains(n))
+                    .filter(|(n, _)| {
+                        !names2.contains(n)
+                            && !p2_effective.contains(n)
+                            && !(n.starts_with('=')
+                                && bound_text(n, b1).is_some_and(|t| p2_effective.contains(&t)))
+                    })
                     .collect();
                 slots.extend(st2);
                 rhs.push((format!("*{buf}>"), sv(slots)));
