@@ -89,8 +89,10 @@ compilation-unit tests compare directly against Lisp traces.
    remain no-ops. Those are recorded as accepted limitations.
    `print-visicon` is already exercised by several refs (the old #2982 note is
    historical).
-6. **RPC conformance.** Promote `rpc_conformance` or keep the documented
-   environment gate explicit.
+6. [x] **RPC conformance.** The gate is explicit
+   (`#[ignore = "requires Python 3 and an ACT-R checkout"]`). The gated run
+   passes all 20 expected Python test-models here; it stays out of the
+   default suite so `cargo test` remains self-contained.
 
 ## Exit criteria
 

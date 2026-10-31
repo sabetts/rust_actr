@@ -6,13 +6,15 @@
 //!   cargo test --test rpc_conformance -- --ignored --nocapture
 //!
 //! Requires Python 3 and an ACT-R checkout; `cargo test` (non-ignored) never
-//! invokes it, so the default build stays free of both.
+//! invokes it, so the default build stays free of both. Verified with
+//! `cargo test --test rpc_conformance -- --ignored --nocapture` (20 expected
+//! Python test-models pass).
 
 use std::path::PathBuf;
 use std::process::Command;
 
 #[test]
-#[ignore]
+#[ignore = "requires Python 3 and an ACT-R checkout"]
 fn rpc_conformance() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let script = crate_dir.join("fixtures").join("rpc-conformance.sh");

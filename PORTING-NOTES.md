@@ -6321,3 +6321,12 @@ reset that re-runs the model body. `undefined-slots` and one `act-touch` case
 still emit literal warning strings, and `:cst` writes to the trace stream here
 while Lisp sends it to command output; both are recorded as accepted
 limitations in `PARITY-AUDIT.md`.
+
+## 364. RPC conformance gate verified
+
+`rpc_conformance` remains an ignored integration test, now with an explicit
+reason (`requires Python 3 and an ACT-R checkout`). Running
+`cargo test --test rpc_conformance -- --ignored --nocapture` starts
+`actr server`, drives the vendored Python `actr.py` client, and passed all 20
+expected test-models (`RPC-RESULT 20 expected tests passed`). The default
+`cargo test` still does not need Python or the checkout.
