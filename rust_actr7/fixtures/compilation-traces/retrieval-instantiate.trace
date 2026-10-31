@@ -1,0 +1,23 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED RETRIEVAL-A
+Production Compilation process started for RETRIEVAL-A
+  No previous production to compose with.
+  Setting previous production to RETRIEVAL-A.
+     0.050   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL RESP
+     0.100   PROCEDURAL             PRODUCTION-FIRED RETRIEVAL-B
+"d"
+Production Compilation process started for RETRIEVAL-B
+  Production RETRIEVAL-A and RETRIEVAL-B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "RETRIEVAL-A & RETRIEVAL-B - RESP"
+   =GOAL>
+       STEP ONE
+ ==>
+   =GOAL>
+       STEP DONE
+   !OUTPUT! "d"
+)
+  Setting previous production to RETRIEVAL-B.
+     0.100   ------                 Stopped because no events left to process

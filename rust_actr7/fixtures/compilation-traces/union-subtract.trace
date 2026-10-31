@@ -1,0 +1,24 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED UNION-A
+Production Compilation process started for UNION-A
+  No previous production to compose with.
+  Setting previous production to UNION-A.
+     0.100   PROCEDURAL             PRODUCTION-FIRED UNION-B
+Production Compilation process started for UNION-B
+  Production UNION-A and UNION-B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "UNION-A & UNION-B"
+   =GOAL>
+       STEP ONE
+       VAL OLD
+       EXTRA KEEP
+ ==>
+   =GOAL>
+       VAL NEW
+       EXTRA KEPT
+       STEP DONE
+)
+  Setting previous production to UNION-B.
+     0.100   ------                 Stopped because no events left to process

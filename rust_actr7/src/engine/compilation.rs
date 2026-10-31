@@ -13,55 +13,120 @@ impl SlotVal {
 /// Instantiated LHS match slots per buffer, sorted by slot name
 /// (`sort-production-slots`). `isa` is the chunk type, not a slot. Values
 /// stay symbolic (`=var`) so cross-production mappings can apply first.
+/// Every `=variable` in a pattern, including nested list values
+/// (`act-r-chunk-spec-variables`, used by `production-variables`).
+fn pattern_vars(p: &Pattern, out: &mut HashSet<String>) {
+    match p {
+        Pattern::Var(v) => {
+            out.insert(v.clone());
+        }
+        Pattern::List(xs) => {
+            for x in xs {
+                pattern_vars(x, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Every `=variable` in an S-expression (`find-variables`,
+/// `production-parsing.lisp:1831`).
+fn sexp_vars(s: &Sexp, out: &mut HashSet<String>) {
+    match s {
+        Sexp::List(xs) => {
+            for x in xs {
+                sexp_vars(x, out);
+            }
+        }
+        Sexp::Sym(t) if t.len() > 1 && t.starts_with('=') => {
+            out.insert(t[1..].to_string());
+        }
+        _ => {}
+    }
+}
+
 /// The variables of a production minus its buffer-name variables
 /// (`basic-variables`, `production-compilation.lisp:1964`): the ones
-/// `rename-variables` disambiguates across a composition.
+/// `rename-variables` disambiguates across a composition.  ACT-R builds this
+/// from `production-variables`, so dynamic slot names, safe-bind variables,
+/// and nested pattern variables all participate.
 pub(super) fn basic_vars(p: &Production) -> HashSet<String> {
     let mut s: HashSet<String> = HashSet::new();
     for item in &p.lhs {
         match item {
             LhsItem::Match { tests, .. } => {
                 for t in tests {
-                    if let Pattern::Var(x) = &t.value {
-                        s.insert(x.clone());
+                    if let Some(v) = t.slot.strip_prefix('=') {
+                        s.insert(v.to_string());
                     }
+                    pattern_vars(&t.value, &mut s);
                 }
             }
             LhsItem::Query { queries, .. } => {
-                for (_, v) in queries {
-                    if let Pattern::Var(x) = v {
-                        s.insert(x.clone());
+                for (name, v) in queries {
+                    if let Some(v) = name.strip_prefix('=') {
+                        s.insert(v.to_string());
                     }
+                    pattern_vars(v, &mut s);
                 }
             }
-            _ => {}
+            LhsItem::Eval { value, .. } => sexp_vars(value, &mut s),
+            LhsItem::Bind { var, value, .. } => {
+                s.insert(var.clone());
+                sexp_vars(value, &mut s);
+            }
+            LhsItem::MvBind { vars, value } => {
+                s.extend(vars.iter().cloned());
+                sexp_vars(value, &mut s);
+            }
         }
     }
     for a in &p.rhs {
         match a {
             RhsAction::Modify { slots, .. } | RhsAction::ModifyRequest { slots, .. } => {
-                for (_, v) in slots {
-                    if let Pattern::Var(x) = v {
-                        s.insert(x.clone());
+                for (name, v) in slots {
+                    if let Some(v) = name.strip_prefix('=') {
+                        s.insert(v.to_string());
                     }
+                    pattern_vars(v, &mut s);
                 }
             }
-            RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => {
-                if let ChunkDesc::Spec {
+            RhsAction::Request { spec, .. } | RhsAction::DirectSet { spec, .. } => match spec {
+                ChunkDesc::Spec {
                     slots, neg, rels, ..
-                } = spec
-                {
-                    for (_, v) in slots.iter().chain(neg.iter()) {
-                        if let Pattern::Var(x) = v {
-                            s.insert(x.clone());
+                } => {
+                    for (name, v) in slots.iter().chain(neg.iter()) {
+                        if let Some(v) = name.strip_prefix('=') {
+                            s.insert(v.to_string());
                         }
+                        pattern_vars(v, &mut s);
                     }
-                    for (_, v, _) in rels {
-                        if let Pattern::Var(x) = v {
-                            s.insert(x.clone());
+                    for (name, v, _) in rels {
+                        if let Some(v) = name.strip_prefix('=') {
+                            s.insert(v.to_string());
                         }
+                        pattern_vars(v, &mut s);
                     }
                 }
+                ChunkDesc::Named(n) => {
+                    if let Some(v) = n.strip_prefix('=') {
+                        s.insert(v.to_string());
+                    }
+                }
+            },
+            RhsAction::Output { args } => {
+                for a in args {
+                    sexp_vars(a, &mut s);
+                }
+            }
+            RhsAction::Eval { value, .. } => sexp_vars(value, &mut s),
+            RhsAction::Bind { var, value, .. } => {
+                s.insert(var.clone());
+                sexp_vars(value, &mut s);
+            }
+            RhsAction::MvBind { vars, value } => {
+                s.extend(vars.iter().cloned());
+                sexp_vars(value, &mut s);
             }
             _ => {}
         }
@@ -81,25 +146,6 @@ pub(super) fn builtin_type_defaults(name: &str) -> &'static [(&'static str, &'st
         "LINE" => &[("LINE", "T")],
         _ => &[],
     }
-}
-
-/// The LHS buffers whose slot values mention each variable (used to decide
-/// whether a shared variable really binds to the same place in both
-/// productions).
-pub(super) fn var_buffers(p: &Production) -> HashMap<String, HashSet<(String, String)>> {
-    let mut m: HashMap<String, HashSet<(String, String)>> = HashMap::new();
-    for item in &p.lhs {
-        if let LhsItem::Match { buffer, tests } = item {
-            for t in tests {
-                if let Pattern::Var(x) = &t.value {
-                    m.entry(x.clone())
-                        .or_default()
-                        .insert((buffer.clone(), t.slot.clone()));
-                }
-            }
-        }
-    }
-    m
 }
 
 pub(super) fn prod_lhs_slots(
@@ -200,11 +246,6 @@ pub(super) fn prod_lhs_slots(
         }
     }
     out
-}
-
-/// The printed value bound to an LHS variable, if bound.
-pub(super) fn instantiate_var(name: &str, b: &Bindings) -> Option<String> {
-    b.get(name).map(|v| v.show())
 }
 
 /// Look up a variable's bound text. A slot variable is stored under its bare
@@ -614,7 +655,7 @@ pub(super) fn render_compiled(
     doc: &str,
     lhs: &[(String, Vec<(String, SlotVal)>)],
     rhs: &[(String, Vec<(String, String)>)],
-    b: &Bindings,
+    _b: &Bindings,
 ) -> String {
     let mut s = format!("(P {name}\n  \"{doc}\"\n");
     for (token, slots) in lhs {
@@ -634,16 +675,28 @@ pub(super) fn render_compiled(
         }
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {
-            // A dynamic slot shows its bound name (the canonical form keeps
-            // `=var`, so substitute only for the trace).
-            s.push_str(&format!("       {} {}\n", slot_disp(n, b), v.render()));
+            s.push_str(&format!("       {} {}\n", n, v.render()));
         }
     }
     s.push_str(" ==>\n");
     for (token, slots) in rhs {
+        if token.starts_with('!') {
+            let args: Vec<String> = slots
+                .iter()
+                .map(|(n, v)| {
+                    if n.is_empty() {
+                        v.clone()
+                    } else {
+                        format!("{n} {v}")
+                    }
+                })
+                .collect();
+            s.push_str(&format!("   {token} {}\n", args.join(" ")));
+            continue;
+        }
         s.push_str(&format!("   {token}\n"));
         for (n, v) in slots {
-            s.push_str(&render_rhs_slot(&slot_disp(n, b), v));
+            s.push_str(&render_rhs_slot(n, v));
         }
     }
     s.push(')');

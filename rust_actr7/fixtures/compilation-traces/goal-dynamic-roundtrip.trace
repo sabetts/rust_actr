@@ -1,0 +1,25 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED DYNAMIC-A
+Production Compilation process started for DYNAMIC-A
+  No previous production to compose with.
+  Setting previous production to DYNAMIC-A.
+     0.100   PROCEDURAL             PRODUCTION-FIRED DYNAMIC-B
+1
+Production Compilation process started for DYNAMIC-B
+  Production DYNAMIC-A and DYNAMIC-B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "DYNAMIC-A & DYNAMIC-B"
+   !SAFE-BIND! =V 1
+   =GOAL>
+       STEP ONE
+       VAL =S0
+ ==>
+   =GOAL>
+       =S0 =V
+       STEP DONE
+   !OUTPUT! =V
+)
+  Setting previous production to DYNAMIC-B.
+     0.100   ------                 Stopped because no events left to process

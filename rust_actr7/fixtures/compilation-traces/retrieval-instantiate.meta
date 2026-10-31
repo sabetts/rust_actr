@@ -1,0 +1,7 @@
+name: retrieval-instantiate
+model: user-loads;compilation-units;retrieval-instantiate.lisp
+seed: (100 0)
+run: 1
+task: "none"
+act-r-version: ("7.31.4-<3489:2026-06-10>")
+lisp: SBCL 2.6.9

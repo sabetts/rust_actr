@@ -1,0 +1,25 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED BIND-A
+Production Compilation process started for BIND-A
+  No previous production to compose with.
+  Setting previous production to BIND-A.
+     0.100   PROCEDURAL             PRODUCTION-FIRED BIND-B
+NEW
+Production Compilation process started for BIND-B
+  Production BIND-A and BIND-B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "BIND-A & BIND-B"
+   !SAFE-BIND! =V 7
+   =GOAL>
+       STEP ONE
+       VAL =S
+ ==>
+   =GOAL>
+       VAL NEW
+       STEP DONE
+   !OUTPUT! NEW
+)
+  Setting previous production to BIND-B.
+     0.100   ------                 Stopped because no events left to process

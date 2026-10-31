@@ -1,0 +1,9 @@
+(
+ ("rename-shared" "user-loads;compilation-units;rename-shared.lisp" (100 0) 1)
+ ("rename-different" "user-loads;compilation-units;rename-different.lisp" (100 0) 1)
+ ("goal-dynamic-roundtrip" "user-loads;compilation-units;goal-dynamic-roundtrip.lisp" (100 0) 1)
+ ("goal-dynamic-static" "user-loads;compilation-units;goal-dynamic-static.lisp" (100 0) 1)
+ ("imaginal-dynamic" "user-loads;compilation-units;imaginal-dynamic.lisp" (100 0) 1)
+ ("retrieval-instantiate" "user-loads;compilation-units;retrieval-instantiate.lisp" (100 0) 1)
+ ("safe-bind-output" "user-loads;compilation-units;safe-bind-output.lisp" (100 0) 1)
+ ("union-subtract" "user-loads;compilation-units;union-subtract.lisp" (100 0) 1))

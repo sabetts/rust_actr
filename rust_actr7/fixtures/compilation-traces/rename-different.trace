@@ -1,0 +1,22 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL G NIL
+     0.050   PROCEDURAL             PRODUCTION-FIRED RENAME-A
+Production Compilation process started for RENAME-A
+  No previous production to compose with.
+  Setting previous production to RENAME-A.
+     0.100   PROCEDURAL             PRODUCTION-FIRED RENAME-B
+Production Compilation process started for RENAME-B
+  Production RENAME-A and RENAME-B are being composed.
+  New production:
+
+(P PRODUCTION0
+  "RENAME-A & RENAME-B"
+   =GOAL>
+       STEP ONE
+       VAL =S
+       OTHER =S0
+ ==>
+   =GOAL>
+       STEP DONE
+)
+  Setting previous production to RENAME-B.
+     0.100   ------                 Stopped because no events left to process
