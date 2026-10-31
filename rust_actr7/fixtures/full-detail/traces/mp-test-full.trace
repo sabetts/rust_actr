@@ -1,0 +1,49 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STATE START) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED RETRIEVE
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED RETRIEVE
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Computing activation for chunk T1
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot KIND
+  Requested: = AAC  Chunk's slot value: AAA
+  similarity: -0.02
+  effective similarity value is -0.08
+Total similarity score -0.08
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk T1 has an activation of: -0.08
+Chunk T1 has the current best activation -0.08
+Computing activation for chunk T2
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Computing partial matching component
+  comparing slot KIND
+  Requested: = AAC  Chunk's slot value: AAB
+  similarity: -0.2
+  effective similarity value is -0.8
+Total similarity score -0.8
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk T2 has an activation of: -0.8
+Chunk T1 with activation -0.08 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.104   DECLARATIVE            RETRIEVED-CHUNK T1
+     0.104   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL T1
+     0.104   PROCEDURAL             CONFLICT-RESOLUTION
+     0.104   PROCEDURAL             PRODUCTION-SELECTED DONE
+     0.104   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.104   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     0.154   PROCEDURAL             PRODUCTION-FIRED DONE
+     0.154   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.154   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.154   PROCEDURAL             CONFLICT-RESOLUTION
+     0.154   ------                 Stopped because no events left to process

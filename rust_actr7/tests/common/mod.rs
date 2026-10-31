@@ -13,7 +13,10 @@
 //! Model/task sources are vendored under [`models_dir`], so the default
 //! `cargo test` needs neither an ACT-R checkout nor SBCL.
 
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use actr_engine::{DeviceSetup, DeviceText};
 
 /// The crate root (`rust_actr7/`).
 pub fn crate_dir() -> PathBuf {
@@ -133,4 +136,158 @@ mod tests {
     fn eol_normalized() {
         assert_eq!(normalize_eol("a\r\nb\r\n"), "a\nb\n");
     }
+}
+
+/// Load `<name>.device.sexp` if present: `((ADD-TEXT ms "text" x y) ...)`.
+pub fn load_device(trace_path: &Path) -> Result<DeviceSetup, String> {
+    let sidecar = trace_path.with_extension("device.sexp");
+    if !sidecar.is_file() {
+        return Ok(DeviceSetup::default());
+    }
+    let src = fs::read_to_string(&sidecar).map_err(|e| format!("{}: {e}", sidecar.display()))?;
+    // Minimal reader (the crate's sexpr parser lives behind the lib boundary).
+    let mut device = DeviceSetup::default();
+    for form in split_forms(&src) {
+        let parts = split_atoms(&form)
+            .ok_or_else(|| format!("bad device form in {}: {form}", sidecar.display()))?;
+        match parts.as_slice() {
+            [op, ms, text, x, y] if op == "ADD-TEXT" => {
+                device.texts.push(DeviceText {
+                    at_ms: ms.parse().map_err(|_| format!("bad ms in {form}"))?,
+                    text: unquote(text).ok_or_else(|| format!("bad text in {form}"))?,
+                    x: x.parse().map_err(|_| format!("bad x in {form}"))?,
+                    y: y.parse().map_err(|_| format!("bad y in {form}"))?,
+                    run: None,
+                    seq: 0,
+                });
+            }
+            [op, ms] if op == "CLEAR" => {
+                device
+                    .clears
+                    .push((ms.parse().map_err(|_| format!("bad ms in {form}"))?, None));
+            }
+            [op, ms] if op == "END" => {
+                device.end = Some(ms.parse().map_err(|_| format!("bad ms in {form}"))?);
+            }
+            [op, ms, v] if op == "REWARD" => {
+                device.rewards.push((
+                    ms.parse().map_err(|_| format!("bad ms in {form}"))?,
+                    v.parse().map_err(|_| format!("bad value in {form}"))?,
+                ));
+            }
+            [op, a, b, v] if op == "SIMILARITY" => {
+                // Lisp symbols fold to uppercase (as do model files).
+                device.sims.push((
+                    a.to_uppercase(),
+                    b.to_uppercase(),
+                    v.parse().map_err(|_| format!("bad value in {form}"))?,
+                ));
+            }
+            _ => return Err(format!("bad device form in {}: {form}", sidecar.display())),
+        }
+    }
+    Ok(device)
+}
+
+/// Split top-level `(...)` forms (no nesting needed here).
+fn split_forms(src: &str) -> Vec<String> {
+    let mut forms = Vec::new();
+    let mut depth = 0;
+    let mut cur = String::new();
+    let mut instr = false;
+    let mut prev_bs = false;
+    let mut incomment = false;
+    for c in src.chars() {
+        if incomment {
+            if c == '\n' {
+                incomment = false;
+            }
+            continue;
+        }
+        if instr {
+            cur.push(c);
+            if c == '"' && !prev_bs {
+                instr = false;
+            }
+            prev_bs = c == '\\' && !prev_bs;
+            continue;
+        }
+        match c {
+            '"' => {
+                instr = true;
+                cur.push(c);
+            }
+            '(' => {
+                depth += 1;
+                cur.push(c);
+            }
+            ')' => {
+                depth -= 1;
+                cur.push(c);
+                if depth == 0 && !cur.trim().is_empty() {
+                    forms.push(std::mem::take(&mut cur));
+                }
+            }
+            ';' if depth == 0 => {
+                incomment = true;
+            }
+            _ => {
+                if depth > 0 {
+                    cur.push(c);
+                }
+            }
+        }
+    }
+    forms
+}
+
+/// Split one `(...)` form into atoms, honoring quotes. Returns None on
+/// unbalanced input.
+fn split_atoms(form: &str) -> Option<Vec<String>> {
+    let inner = form.trim().strip_prefix('(')?.strip_suffix(')')?;
+    let mut atoms = Vec::new();
+    let mut cur = String::new();
+    let mut instr = false;
+    let mut prev_bs = false;
+    let mut had = false;
+    for c in inner.chars() {
+        if instr {
+            cur.push(c);
+            if c == '"' && !prev_bs {
+                instr = false;
+            }
+            prev_bs = c == '\\' && !prev_bs;
+            had = true;
+            continue;
+        }
+        match c {
+            '"' => {
+                instr = true;
+                cur.push(c);
+                had = true;
+            }
+            c if c.is_whitespace() => {
+                if had {
+                    atoms.push(std::mem::take(&mut cur));
+                    had = false;
+                }
+            }
+            _ => {
+                cur.push(c);
+                had = true;
+            }
+        }
+    }
+    if instr {
+        return None;
+    }
+    if had {
+        atoms.push(cur);
+    }
+    Some(atoms)
+}
+
+fn unquote(s: &str) -> Option<String> {
+    let inner = s.strip_prefix('"')?.strip_suffix('"')?;
+    Some(inner.replace("\\\"", "\"").replace("\\\\", "\\"))
 }

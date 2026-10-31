@@ -1,0 +1,27 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA COUNT-FROM START TWO END FOUR) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED START
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED START
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Chunk FIVE does not match
+Chunk FOUR does not match
+Chunk THREE does not match
+Chunk TWO matches
+Chunk ONE does not match
+Computing activation for chunk TWO
+Computing base-level
+Starting with blc: 0.0
+Total base-level: 0.0
+Adding transient noise -0.08702893
+Adding permanent noise 0.0
+Chunk TWO has an activation of: -0.08702893
+Chunk TWO has the current best activation -0.08702893
+No chunk above the retrieval threshold: 0.0
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   DECLARATIVE            RETRIEVAL-FAILURE
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process

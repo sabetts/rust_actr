@@ -1,0 +1,99 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA COUNT-FROM START TWO END FOUR) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED START
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED START
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.050   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.050   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.050   DECLARATIVE            start-retrieval
+Chunk FIVE does not match
+Chunk FOUR does not match
+Chunk THREE does not match
+Chunk TWO matches
+Chunk ONE does not match
+Computing activation for chunk TWO
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 2.1910133
+Total base-level: 2.1910133
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk TWO has an activation of: 2.1910133
+Chunk TWO has the current best activation 2.1910133
+Chunk TWO with activation 2.1910133 is the best
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.056   DECLARATIVE            RETRIEVED-CHUNK TWO
+     0.056   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL TWO
+     0.056   PROCEDURAL             CONFLICT-RESOLUTION
+     0.056   PROCEDURAL             PRODUCTION-SELECTED INCREMENT
+     0.056   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.056   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     0.106   PROCEDURAL             PRODUCTION-FIRED INCREMENT
+TWO 
+     0.106   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.106   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.106   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.106   DECLARATIVE            start-retrieval
+Chunk FIVE does not match
+Chunk FOUR does not match
+Chunk THREE matches
+Chunk TWO does not match
+Chunk ONE does not match
+Computing activation for chunk THREE
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 1.8153052
+Total base-level: 1.8153052
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk THREE has an activation of: 1.8153052
+Chunk THREE has the current best activation 1.8153052
+Chunk THREE with activation 1.8153052 is the best
+     0.106   PROCEDURAL             CONFLICT-RESOLUTION
+     0.114   DECLARATIVE            RETRIEVED-CHUNK THREE
+     0.114   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL THREE
+     0.114   PROCEDURAL             CONFLICT-RESOLUTION
+     0.114   PROCEDURAL             PRODUCTION-SELECTED INCREMENT
+     0.114   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.114   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     0.164   PROCEDURAL             PRODUCTION-FIRED INCREMENT
+THREE 
+     0.164   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.164   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.164   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.164   DECLARATIVE            start-retrieval
+Chunk FIVE does not match
+Chunk FOUR matches
+Chunk THREE does not match
+Chunk TWO does not match
+Chunk ONE does not match
+Computing activation for chunk FOUR
+Computing base-level
+Starting with blc: 0.0
+Computing base-level from 1 references (0.000)
+  creation time: 0.000 decay: 0.5  Optimized-learning: T
+base-level value: 1.5970916
+Total base-level: 1.5970916
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk FOUR has an activation of: 1.5970916
+Chunk FOUR has the current best activation 1.5970916
+Chunk FOUR with activation 1.5970916 is the best
+     0.164   PROCEDURAL             CONFLICT-RESOLUTION
+     0.174   DECLARATIVE            RETRIEVED-CHUNK FOUR
+     0.174   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL FOUR
+     0.174   PROCEDURAL             CONFLICT-RESOLUTION
+     0.174   PROCEDURAL             PRODUCTION-SELECTED STOP
+     0.174   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.174   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     0.224   PROCEDURAL             PRODUCTION-FIRED STOP
+FOUR 
+     0.224   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.224   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.224   PROCEDURAL             CONFLICT-RESOLUTION
+     0.224   ------                 Stopped because no events left to process

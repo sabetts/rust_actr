@@ -1,0 +1,8 @@
+name: ul-test-full
+model: user-loads;ul-test.lisp
+seed: (100 0)
+run: 1
+task: "user-loads;ul-task.lisp"
+settings: (:TRACE-DETAIL HIGH :ACT HIGH :PCT T)
+act-r-version: ("7.31.4-<3489:2026-06-10>")
+lisp: SBCL 2.4.5.122-e2a9148

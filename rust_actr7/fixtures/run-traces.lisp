@@ -31,7 +31,7 @@
   #-sbcl (error "trace driver currently requires SBCL (missing env ~a)" name))
 
 (defun trace-run-one (entry outdir)
-  (destructuring-bind (name subpath seed runtime &optional taskpath) entry
+  (destructuring-bind (name subpath seed runtime &optional taskpath settings) entry
     (let ((trace-path (concatenate 'string outdir "/" name ".trace"))
           (meta-path (concatenate 'string outdir "/" name ".meta")))
       (when (probe-file trace-path)
@@ -59,7 +59,12 @@
               (when (and (fboundp 'task-setup) (not had-task-setup))
                 (funcall 'task-setup))
               (when (fboundp 'task-setup)
-                (fmakunbound 'task-setup)))
+                (fmakunbound 'task-setup))
+              ;; Extra `sgp` settings applied after reset, before the trace
+              ;; redirect: the full-detail harness asks for `:act high`,
+              ;; `:pct t`, `:cst t`, etc. here.
+              (when settings
+                (sgp-fct settings)))
             (sgp-fct (list :v trace-path))
             (unwind-protect
                  (run runtime)
@@ -73,6 +78,8 @@
               (format m "seed: ~S~%" seed)
               (format m "run: ~S~%" runtime)
               (format m "task: ~S~%" (or taskpath "none"))
+              (when settings
+                (format m "settings: ~S~%" settings))
               (format m "act-r-version: ~S~%" (ssp :act-r-version))
               (format m "lisp: ~a ~a~%"
                       (lisp-implementation-type)
