@@ -987,6 +987,11 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .al_driver()
             .map_err(|e| e.to_string())?,
+        Step::PastTenseWarning { override_buffers } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .past_tense_warning_trial(*override_buffers)
+            .map_err(|e| e.to_string())?,
         Step::Zbrodoff(mode) => session
             .engine_mut()
             .ok_or_else(no_model)?

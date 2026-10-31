@@ -2062,6 +2062,7 @@ impl Engine {
                 b.failed = false;
             }
             Event::PropagateReward { value } => {
+                self.reward_seen = true;
                 if show {
                     self.emit(
                         "UTILITY",

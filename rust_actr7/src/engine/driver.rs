@@ -22,6 +22,40 @@ struct ZbrodoffAnalysis {
     totals: [u32; 3],
 }
 
+const PAST_WORDS: [(u64, &str, &str, &str); 22] = [
+    (12458, "HAVE", "HAD", "BLANK"),
+    (16825, "DO", "DID", "BLANK"),
+    (19137, "MAKE", "MADE", "BLANK"),
+    (20623, "GET", "GOT", "BLANK"),
+    (21639, "USE", "USE", "ED"),
+    (22549, "LOOK", "LOOK", "ED"),
+    (23380, "SEEM", "SEEM", "ED"),
+    (24139, "TELL", "TOLD", "BLANK"),
+    (24779, "SHOW", "SHOW", "ED"),
+    (25410, "WANT", "WANT", "ED"),
+    (26037, "CALL", "CALL", "ED"),
+    (26649, "ASK", "ASK", "ED"),
+    (27215, "TURN", "TURN", "ED"),
+    (27755, "FOLLOW", "FOLLOW", "ED"),
+    (28251, "WORK", "WORK", "ED"),
+    (28723, "LIVE", "LIVE", "ED"),
+    (29195, "TRY", "TRY", "ED"),
+    (29663, "STAND", "STOOD", "BLANK"),
+    (30110, "MOVE", "MOVE", "ED"),
+    (30523, "NEED", "NEED", "ED"),
+    (30909, "START", "START", "ED"),
+    (31183, "LOSE", "LOST", "BLANK"),
+];
+
+fn past_sample(rng: &std::cell::RefCell<Mt>) -> (u64, &'static str, &'static str, &'static str) {
+    let n = rng.borrow_mut().random_int(31183);
+    PAST_WORDS
+        .iter()
+        .find(|(cum, ..)| n < *cum)
+        .copied()
+        .unwrap_or(PAST_WORDS[0])
+}
+
 impl Engine {
     /// All trace emitted so far, newline-terminated (empty if none).
     pub fn output(&self) -> String {
@@ -149,6 +183,103 @@ impl Engine {
         Ok(())
     }
 
+    /// One `past-tense-trials` trial for the warning cases. The task samples
+    /// two presentation chunks and one target from the tutorial's frequency
+    /// table, then runs the standard 200 s trial window.
+    pub fn past_tense_warning_trial(&mut self, override_buffers: bool) -> Result<(), EngineError> {
+        self.reset()?;
+        for _ in 0..2 {
+            let (_, verb, stem, suffix) = past_sample(&self.rng);
+            let name = format!("PAST-TENSE{}", self.dm.len());
+            self.add_runtime_dm(ChunkInst {
+                name: Some(name),
+                ctype: "PAST-TENSE".into(),
+                slots: vec![
+                    ("VERB".into(), Value::Sym(verb.into())),
+                    ("STEM".into(), Value::Sym(stem.into())),
+                    ("SUFFIX".into(), Value::Sym(suffix.into())),
+                ],
+                bare: false,
+            });
+        }
+        let (_, target, _, _) = past_sample(&self.rng);
+        self.set_buffer_chunk_desc(
+            "IMAGINAL",
+            &ChunkDesc::Spec {
+                ctype: "PAST-TENSE".into(),
+                slots: vec![("VERB".into(), Pattern::Sym(target.into()))],
+                auto_cmd: false,
+                neg: Vec::new(),
+                rels: Vec::new(),
+            },
+        )?;
+        self.goal_focus(&ChunkDesc::Spec {
+            ctype: "GOAL".into(),
+            slots: vec![("STATE".into(), Pattern::Sym("START".into()))],
+            auto_cmd: false,
+            neg: Vec::new(),
+            rels: Vec::new(),
+        })?;
+        if override_buffers {
+            self.push(
+                1000,
+                Prio::Num(0),
+                Out::Low,
+                Event::ModBuffer {
+                    buffer: "GOAL".into(),
+                    slots: vec![("STATE".into(), Value::Sym("DONE".into()))],
+                    module: "NONE".into(),
+                },
+            );
+            self.push(
+                1000,
+                Prio::Num(0),
+                Out::Low,
+                Event::ModBuffer {
+                    buffer: "IMAGINAL".into(),
+                    slots: vec![
+                        ("VERB".into(), Value::Sym("USE".into())),
+                        ("STEM".into(), Value::Sym("USE".into())),
+                        ("SUFFIX".into(), Value::Sym("ED".into())),
+                    ],
+                    module: "NONE".into(),
+                },
+            );
+        }
+        self.reward_seen = false;
+        let old_trace = self.trace_on;
+        self.trace_on = false;
+        self.run_secs(200.0)?;
+        self.trace_on = old_trace;
+        let produced = self
+            .buffers
+            .get("IMAGINAL")
+            .and_then(|b| b.chunk.as_ref())
+            .map(|c| {
+                let val = |name: &str| {
+                    c.slots
+                        .iter()
+                        .find(|(slot, _)| slot == name)
+                        .map(|(_, v)| v.show())
+                        .unwrap_or_else(|| "NIL".into())
+                };
+                (val("VERB"), val("STEM"), val("SUFFIX"))
+            })
+            .unwrap_or_else(|| ("NIL".into(), "NIL".into(), "NIL".into()));
+        if produced.0 != target {
+            self.out_lines.push(format!(
+                "#|Warning: Incorrectly formed verb.  Presented {} and produced VERB {} STEM {} SUFFIX {}. |#",
+                target, produced.0, produced.1, produced.2
+            ));
+        }
+        if !self.reward_seen {
+            self.out_lines.push(format!(
+                "#|Warning: Model did not receive a reward when given {}. |#",
+                target
+            ));
+        }
+        Ok(())
+    }
     /// `summarize-tests`/`display-data` (`test-model.lisp:84`): print one
     /// `#####` block per recorded `:test` marker.
     pub(super) fn zz_summarize(&mut self) {

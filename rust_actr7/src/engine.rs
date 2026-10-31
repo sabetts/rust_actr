@@ -2407,6 +2407,9 @@ pub struct Engine {
     buffer_trace: BufferTrace,
     /// `production-history` state (`record-history "production-history"`).
     production_history: ProductionHistory,
+    /// Set when a production reward propagates; task drivers that monitor
+    /// `trigger-reward` read this at the end of a trial.
+    reward_seen: bool,
     cr_armed: bool,
     dm_gen: u64,
     dm_busy: bool,
@@ -2931,6 +2934,7 @@ impl Engine {
             visicon_history: PerceptualHistory::default(),
             buffer_trace: BufferTrace::default(),
             production_history: ProductionHistory::default(),
+            reward_seen: false,
             cr_armed: false,
             dm_gen: 0,
             dm_busy: false,
@@ -3557,6 +3561,7 @@ impl Engine {
         self.production_history.records.clear();
         self.production_history.why_not.clear();
         self.production_history.running = false;
+        self.reward_seen = false;
         self.named = HashMap::new();
         // `create-model-default-chunks` (`model.lisp:753`): every model starts
         // with these state chunks (`(free name free)` etc., plus `clear`); a

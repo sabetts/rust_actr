@@ -2701,19 +2701,19 @@ impl Engine {
             // whose slots are sorted (`sort-production-slots`,
             // `production-compilation.lisp:1976`), so sort each side before
             // concatenating (`buffer+-union`'s `(append a1-remain a2)`).
-            let mut eq1: Vec<_> = acts_for(&p1_acts, buf, &['='])
+            let eq1: Vec<_> = acts_for(&p1_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            let mut eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
+            let eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            let mut st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
+            let st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            let mut st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
+            let st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();

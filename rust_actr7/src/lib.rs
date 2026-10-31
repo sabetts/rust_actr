@@ -335,6 +335,8 @@ pub enum Step {
     ZzDriver,
     /// `associative-learning` task driver (`run-it`/`approach-1-results`).
     AlDriver,
+    /// One `past-tense-trials` trial for the warning regressions.
+    PastTenseWarning { override_buffers: bool },
     /// Zbrodoff alpha-arithmetic experiment driver.
     Zbrodoff(ZbrodoffMode),
     /// `(zbrodoff-problem addend1 addend2 sum answer t)`: run one trial and
@@ -597,6 +599,9 @@ pub fn run_model_steps_with_hook(
             Step::TrackerSetup(slots) => eng.tracker_setup(slots),
             Step::ZzDriver => eng.zz_driver()?,
             Step::AlDriver => eng.al_driver()?,
+            Step::PastTenseWarning { override_buffers } => {
+                eng.past_tense_warning_trial(*override_buffers)?
+            }
             Step::Zbrodoff(mode) => eng.zbrodoff_driver(*mode)?,
             Step::ZbrodoffProblem {
                 addend1,
