@@ -15,6 +15,7 @@ fixtures/
     README.md
   extra-traces/    project-authored scenarios not covered upstream
   full-detail/     SBCL maximal-detail traces (tests/full_detail.rs)
+  draws/           SBCL act-r-random/noise sequences (tests/draws.rs)
   units/           module latency / base-level tables (unit tests)
   errors/          err-*.lisp fixtures for the error-path tests
   manifest.lisp    model list for the extra traces (regen input)
@@ -76,6 +77,13 @@ settings plist applied after reset (`:trace-detail high :act high :pct t`).
 `tests/full_detail.rs` compares them byte-exact. Task-setup sidecars
 (similarities/reward/window) mirror the Lisp `task-setup` calls, as in
 `extra-traces/`.
+
+### draws/
+
+`manifest.lisp` + `regen-draws.sh` wrap `act-r-random`/`act-r-noise` in SBCL
+and write `<name>.draws.sexp` plus `<name>.meta`. `tests/draws.rs` replays the
+same model/seed/settings and compares the logged kind, argument, value, and
+order. This catches draw-order drift that never changes a printed trace.
 
 ### units/
 

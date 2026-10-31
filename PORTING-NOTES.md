@@ -6290,3 +6290,15 @@ The harness also found a stream divergence: Lisp's `:cst` uses
 trace stream. The engine's `:cst` currently uses the trace stream, so it is
 excluded from the full-detail settings and noted for the warning/command
 oracle work.
+
+## 362. Draw-sequence differential
+
+`Mt` can record every public `act-r-random`/`act-r-noise` call
+(`start_log`/`take_log`, exposed on `Engine` as `start_rng_log`/`take_rng_log`).
+The Lisp generator wraps both functions and writes one `(:random limit value)` /
+`(:noise s value)` line per call; the wrapper order includes the inner
+`act-r-random 1.0` that `act-r-noise` makes, and the engine logs the same pair.
+`fixtures/draws/` contains sequences for `noisy-count` with seeds `(100 0)` and
+`(7 0)`; `tests/draws.rs` replays each model and compares kind, integer/float
+form, argument, value, and order. Reference merges, utility updates, and event
+ordering remain covered by the full-detail traces.

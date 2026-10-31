@@ -75,10 +75,12 @@ compilation-unit tests compare directly against Lisp traces.
    - `:cst` writes to the trace stream in Rust but to command output in Lisp
      (`print-instantiation` → `command-output`), so `:cst t` is excluded from
      these trace comparisons and belongs to item 5.
-4. **State/RNG instrumentation.** For a small sample, compare RNG draw
-   sequences, reference merges, utility updates, and queue ordering between
-   instrumented SBCL and Rust. Trace text alone can hide draws that never
-   affect a printed line.
+4. [x] **State/RNG instrumentation.** `Mt` records every public
+   `act-r-random`/`act-r-noise` call when enabled. `fixtures/draws/` captures
+   SBCL sequences for `noisy-count` with seeds `(100 0)` and `(7 0)`, and
+   `tests/draws.rs` compares kind/argument/value/order entry-for-entry. The
+   reference history, utility updates, and event ordering are covered by the
+   full-detail traces (`bll-count`, `ul-test`, `attend`).
 5. **Warning and placeholder oracles.** Make warning cases trigger the real
    conditions; add SBCL-generated refs for `print-visicon` and custom
    sounds, or record them as accepted limitations.

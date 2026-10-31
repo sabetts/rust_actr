@@ -44,8 +44,9 @@ Two static oracles, one `#[test]` per case and one Rust file per ACT-R ref:
   transforms. Four refs that scrape `core-modules/audio.lisp`/`vision.lisp`
   stay ignored pending engine-level chunk-type assertions.
 - `tests/extra_traces.rs` — project-authored scenarios, byte-exact.
-- `tests/full_detail.rs` — SBCL-captured maximal-detail traces, byte-exact;
-  `tests/params.rs` — every corpus `sgp` key is classified.
+- `tests/full_detail.rs` — SBCL-captured maximal-detail traces, byte-exact.
+- `tests/draws.rs` — SBCL-captured `act-r-random`/`act-r-noise` sequences.
+- `tests/params.rs` — every corpus `sgp` key is classified.
 - `tests/errors.rs`, `tests/rpc_conformance.rs` — error paths and the RPC
   surface.
 
