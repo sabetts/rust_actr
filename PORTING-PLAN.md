@@ -64,12 +64,13 @@ Recovered deterministic engine/API cases:
 - Pcomp safe-eval, modifier invalidation, compiled request defaults,
   negative request slots, and utility updates while trace is suppressed.
 
-### Wave 1 - Pcomp Residual (PARKED)
+### Wave 1 - Pcomp Residual (COMPLETE)
 
 Goal: finish the remaining ignored pcomp cases.
 
-The main Wave 1 work is complete. The three cases below are parked as a
-separate activation/history follow-up so they do not block later waves.
+The main Wave 1 work is complete. The activation/history follow-up also
+closed: `v1-initial-run`, `v12-50-runs`, and `v13-50-runs` all pass in the
+current full suite.
 
 Completed:
 
@@ -94,24 +95,13 @@ Completed:
 - [x] Full suite green at **520 passed / 47 ignored** at the time this block
   closed; later waves raised the baseline to **530 / 37**.
 
-Remaining (parked):
+Promoted in the follow-up:
 
-- [ ] **`v1-initial-run`** (1): rechecked after the compile fixes; still
-  diverges from the first block with `:epl t` (`1.00 2.32 2.10 ...` vs
-  `0.86 1.68 2.98 ...`).
-- [ ] **`v12-50-runs`** (1): games 1-39 match. Game 40, trial 10 is the first
-  real divergence: `retrieve-past-trial` returns the same
-  `imaginal-chunk0-6`, but Rust latches it at 80.419 vs oracle 81.913. This
-  is a DM activation/history-latency issue, not production compilation.
-- [ ] **`v13-50-runs`** (1): rechecked after the compile fixes; still diverges
-  (`2.56 5.44 6.38 ...` vs `3.04 4.38 5.58 ...`). Shares the v12 family.
+- [x] **`v1-initial-run`**.
+- [x] **`v12-50-runs`**.
+- [x] **`v13-50-runs`**.
 
-Recommended next steps:
-
-1. Compare the base-level activation history for `imaginal-chunk0-6` in game
-   40 trial 10 and explain the 1.494 s latency gap.
-2. Re-run v13 after that activation fix.
-3. Isolate v1's EPL summary separately.
+All three now pass in the full suite.
 
 Pcomp-specific gotchas:
 
@@ -519,16 +509,26 @@ Resolved along the way:
   generalized the request-plus-modify `buffer+-union` action from goal to all
   buffers.
 
-Next steps:
+Next steps: finish the recoverable residual cases, then merge any remaining
+work back to `main`.
 
-1. Merge `resume/production-compilation` back to `main`.
-2. Keep only the named external blockers and diagnostic placeholders ignored.
-3. Record the final corpus counts and branch merge in the porting notes.
+Remaining ignored cases:
 
-Parked:
-
-- **`time-size-check`** has an upstream placeholder ref (`XXXXX`); leave
-  ignored as a diagnostic, not an engine gap.
+- Recoverable:
+  - `tutorial-unit7-past-tense-warning`
+  - `tutorial-unit7-past-tense-no-reward-warning`
+  - `testing-child-slot`
+  - `spacing-effect`
+- Source audit:
+  - `tutorial-unit3-subitize-results` reads the missing
+    `unit-3-subitize-solution.ref`; classify as source-blocked unless that
+    source is recovered.
+- Diagnostic placeholder:
+  - **`time-size-check`** has an upstream placeholder ref (`XXXXX`); leave
+    ignored as a diagnostic, not an engine gap.
+- Environment-gated:
+  - `rpc_conformance` is a separate ignored binary requiring Python and an
+    ACT-R checkout.
 
 ### External Blockers
 
@@ -537,9 +537,6 @@ These need the protected source/password or an upstream copy:
 - Three protected Zbrodoff solution variants.
 - `tutorial-unit6-choice-results`.
 - Two protected categorize experiments.
-
-Also determine whether `tutorial-unit3-subitize-results` should be treated as
-source-missing or recoverable from the available case ref.
 
 ## First-Divergence Harness
 
