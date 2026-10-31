@@ -774,6 +774,7 @@ impl Engine {
             creation_ms: 0,
             refs: vec![0],
             count: 1,
+            decays: None,
             fixed_base: None,
             last_retrieval: None,
         });
@@ -1308,29 +1309,7 @@ impl Engine {
         let Some(idx) = self.dm.iter().position(|c| c.name.as_deref() == Some(name)) else {
             return f64::MIN;
         };
-        let base = match self.cfg.bll {
-            Some(bll) => {
-                let (refs, creation, count) = {
-                    let h = &self.hist[idx];
-                    (h.refs.clone(), h.creation_ms, h.count)
-                };
-                if count == 0 {
-                    -999999.0
-                } else {
-                    self.cfg.blc
-                        + bl_equation(
-                            self.time_ms,
-                            &refs,
-                            count as f32,
-                            creation,
-                            bll,
-                            &self.cfg.ol,
-                            self.cfg.act_scale,
-                        )
-                }
-            }
-            None => self.hist[idx].fixed_base.unwrap_or(self.cfg.blc),
-        };
+        let base = self.base_level(idx, self.cfg.bll, false);
         let spread = self.spreading_activation(name, self.cfg.mas);
         (base + spread + self.inhibition_offset(&self.hist[idx].refs)) as f64
     }
@@ -3395,6 +3374,7 @@ impl Engine {
             h.count = n;
             h.fixed_base = Some(level);
             h.refs.clear();
+            h.decays = None;
         }
     }
 
@@ -3409,6 +3389,7 @@ impl Engine {
                 self.hist[i].count = n;
                 self.hist[i].fixed_base = Some(level);
                 self.hist[i].refs.clear();
+                self.hist[i].decays = None;
             }
         }
     }

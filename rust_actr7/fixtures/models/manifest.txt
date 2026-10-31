@@ -9,6 +9,7 @@ extras;base-level-inhibition;free-recall.lisp
 extras;blending;blending-test-7.lisp
 extras;emma;example-demo2.lisp
 extras;extended-motor-actions;test-model.lisp
+extras;spacing-effect;spacing-effect.lisp
 extras;threads;sample.lisp
 extras;tracker;simple.lisp
 test-models;agi-modify-test.lisp
@@ -116,6 +117,7 @@ test-models;retain-indirect-retrievals.lisp
 test-models;retrieval-request-parameters.lisp
 test-models;safe-queries.lisp
 test-models;sji-merge.lisp
+test-models;spacing-effect.lisp
 test-models;test-bad-productions.lisp
 test-models;test-mp-value-req-param.lisp
 test-models;test-ppm.lisp

@@ -368,6 +368,12 @@ struct Config {
     blc: f32,
     bll: Option<f32>,
     ol: Ol,
+    /// Base-level spacing-effect extra (`extras/spacing-effect`): `:eblse`
+    /// replaces the base-level equation with the per-reference decay
+    /// computation (`:se-intercept` = a, `:se-scale` = c).
+    eblse: bool,
+    se_intercept: f32,
+    se_scale: f32,
     /// Base-level-inhibition extra: activation offset enabled by
     /// `:enable-inhibition` (`extras/base-level-inhibition/bl-inhibition.lisp`).
     inhibition: bool,
@@ -1348,8 +1354,8 @@ impl Config {
         let secs_to_ms = |key: &str, default: f64| -> Result<i64, EngineError> {
             Ok((sgp_num(&m.params, key, default)? * 1000.0).round() as i64)
         };
-        let bll = sgp_single(&m.params, ":BLL")?.filter(|b| *b > 0.0);
-        let ol = match m.params.iter().find(|(k, _)| k == ":OL") {
+        let mut bll = sgp_single(&m.params, ":BLL")?.filter(|b| *b > 0.0);
+        let mut ol = match m.params.iter().find(|(k, _)| k == ":OL") {
             // Unset :ol inherits central-parameters' default, which is T
             // (`:owner nil`; central default-value t).
             None => Ol::On,
@@ -1359,6 +1365,14 @@ impl Config {
             Some((_, Sexp::Float(x))) => Ol::Num(*x),
             Some((_, got)) => return Err(bad(format!("bad :ol {got:?}"))),
         };
+        // `:eblse t` owns `:bll`/`:ol`: it forces optimized learning off and
+        // sets `:bll` to its sentinel value 12.34
+        // (`extras/spacing-effect/spacing-effect.lisp:spacing-effect-params`).
+        let eblse = sgp_bool(&m.params, ":EBLSE");
+        if eblse {
+            bll = Some(12.34);
+            ol = Ol::Off;
+        }
         // (log (expt 1/1000 (- bll))): ratio coerced to single, as read.
         let act_scale = match bll {
             Some(b) => (0.001f32).powf(-b).ln(),
@@ -1480,6 +1494,9 @@ impl Config {
             onset_span_ms,
             bll,
             ol,
+            eblse,
+            se_intercept: sgp_single(&m.params, ":SE-INTERCEPT")?.unwrap_or(0.5),
+            se_scale: sgp_single(&m.params, ":SE-SCALE")?.unwrap_or(0.0),
             inhibition: sgp_bool(&m.params, ":ENABLE-INHIBITION"),
             inhibition_scale: sgp_single(&m.params, ":INHIBITION-SCALE")?.unwrap_or(5.0),
             inhibition_decay: sgp_single(&m.params, ":INHIBITION-DECAY")?.unwrap_or(1.0),
@@ -1654,6 +1671,11 @@ struct History {
     creation_ms: i64,
     refs: Vec<i64>,
     count: usize,
+    /// `chunk-decays` under the spacing-effect extra: `(reference, decay)`
+    /// pairs aligned newest-first with `refs`. `None` (or a list that no
+    /// longer matches `refs`) triggers the upstream recompute fallback
+    /// (`extras/spacing-effect/spacing-effect.lisp`).
+    decays: Option<Vec<(i64, f32)>>,
     /// Fixed `chunk-base-level` set by `set-base-levels` when `:bll` is nil
     /// (`set-bl` else-branch, dm-commands.lisp:623). Used verbatim as the
     /// base level; `None` falls back to `:blc`.
@@ -3605,6 +3627,7 @@ impl Engine {
                 creation_ms: 0,
                 refs: vec![0],
                 count: 1,
+                decays: None,
                 fixed_base: None,
                 last_retrieval: None,
             };
@@ -3630,6 +3653,7 @@ impl Engine {
                     Ol::Off => even_references(creation_ms, 0, n),
                     Ol::Num(ol) => even_references(creation_ms, 0, (*ol as usize).min(n)),
                 };
+                self.hist[i].decays = None;
             }
         }
         // Model-body `set-base-levels`: fixed history for named DM chunks.
@@ -3651,6 +3675,7 @@ impl Engine {
                     Ol::Off => even_references(creation_ms, 0, n),
                     Ol::Num(ol) => even_references(creation_ms, 0, (*ol as usize).min(n)),
                 };
+                self.hist[i].decays = None;
             }
         }
         // Model-body `(sdp :creation-time ... :references ...)`: global DM
@@ -3670,6 +3695,7 @@ impl Engine {
                     Ol::Num(ol) => refs_ms.iter().take(*ol as usize).cloned().collect(),
                     Ol::Off => refs_ms.clone(),
                 };
+                h.decays = None;
             }
         }
         // Model-body `set-similarities`: explicit Sji both directions.
@@ -4705,6 +4731,9 @@ impl Engine {
                     }
                     Ol::On => h.refs.clear(),
                 }
+                // The spacing-effect decay list must be recomputed after a
+                // reference merge (`add-decay-value`).
+                h.decays = None;
                 // A buffer chunk referenced elsewhere (a goal slot) merges
                 // into an existing DM chunk: alias the buffer name to the DM
                 // name so `value B` matches the stored reference
@@ -4759,6 +4788,7 @@ impl Engine {
                     creation_ms: now,
                     refs: vec![now],
                     count: 1,
+                    decays: None,
                     fixed_base: None,
                     last_retrieval: None,
                 });

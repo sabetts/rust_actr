@@ -1,6 +1,5 @@
 //! Trace/debug output, parameter setters, visicon and buffer dumps.
 use super::compilation::bold_values;
-use super::dm::bl_equation;
 use super::*;
 
 /// The implicit queries `pp` prints for a production: one `?buffer> state
@@ -476,6 +475,145 @@ impl Engine {
         names.to_vec()
     }
 
+    /// `compute-activation` (`commands/dm-commands.lisp:738`) for a named DM
+    /// chunk with an empty request spec: prints the activation narration for
+    /// `:act` and returns nothing. Unlike retrieval it does not record
+    /// `:last-retrieval-*`.
+    pub fn print_compute_activation(&mut self, name: &str) {
+        let up = name.to_uppercase();
+        let Some(idx) = self
+            .dm
+            .iter()
+            .position(|c| c.name.as_deref() == Some(up.as_str()))
+        else {
+            return;
+        };
+        let cname = self.dm[idx].name.clone().unwrap_or_default();
+        if self.act_medium() {
+            self.out(format!("Computing activation for chunk {cname}"));
+            self.out("Computing base-level".to_string());
+        }
+        let base = self.base_level(idx, self.cfg.bll, true);
+        let spread = self.spreading_activation(&cname, self.cfg.mas);
+        let noise = match self.cfg.ans {
+            Some(s) => self.rng.borrow_mut().noise(s),
+            None => 0.0,
+        };
+        if self.act_medium() {
+            self.out(format!("Adding transient noise {}", lisp_f(noise)));
+            self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+        }
+        let activation = base + spread + self.inhibition_offset(&self.hist[idx].refs) + noise;
+        if self.act_low() {
+            self.out(format!(
+                "Chunk {cname} has an activation of: {}",
+                lisp_f(activation)
+            ));
+        }
+    }
+
+    /// `(sdp <chunk> :references (...))`: replace the chunk's reference list
+    /// with the given times (seconds, newest first) and invalidate the
+    /// spacing-effect decay cache.
+    pub fn set_chunk_references(&mut self, name: &str, refs: &[f64]) {
+        let up = name.to_uppercase();
+        let Some(idx) = self
+            .dm
+            .iter()
+            .position(|c| c.name.as_deref() == Some(up.as_str()))
+        else {
+            return;
+        };
+        let refs_ms: Vec<i64> = refs.iter().map(|s| (s * 1000.0).round() as i64).collect();
+        let h = &mut self.hist[idx];
+        h.count = refs_ms.len();
+        h.refs = match &self.cfg.ol {
+            Ol::On => Vec::new(),
+            Ol::Num(ol) => refs_ms.iter().take(*ol as usize).cloned().collect(),
+            Ol::Off => refs_ms,
+        };
+        h.decays = None;
+    }
+
+    /// The spacing-effect decay list for a chunk, populating the cache through
+    /// the same recompute path activation uses (`chunk-decays`).
+    fn spacing_decays(&mut self, idx: usize) -> Vec<f32> {
+        if self.cfg.eblse {
+            self.spacing_activation(idx);
+        }
+        self.hist[idx]
+            .decays
+            .as_ref()
+            .map(|d| d.iter().map(|(_, x)| *x).collect())
+            .unwrap_or_default()
+    }
+
+    fn decays_line(&self, decays: &[f32]) -> String {
+        format!(
+            "({})",
+            decays
+                .iter()
+                .map(|x| lisp_f(*x))
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
+    }
+
+    /// `(model-output "~s" (mapcar 'second (chunk-decays 'g)))`: one decay
+    /// list line.
+    pub fn print_chunk_decays(&mut self, name: &str) {
+        let up = name.to_uppercase();
+        let Some(idx) = self
+            .dm
+            .iter()
+            .position(|c| c.name.as_deref() == Some(up.as_str()))
+        else {
+            return;
+        };
+        let decays = self.spacing_decays(idx);
+        let line = self.decays_line(&decays);
+        self.model_output(&line);
+    }
+
+    /// `(model-output "chunk a: ~s~%…")`: one labelled decay line per chunk.
+    pub fn print_named_decay_lines(&mut self, names: &[String]) {
+        for name in names {
+            let up = name.to_uppercase();
+            let Some(idx) = self
+                .dm
+                .iter()
+                .position(|c| c.name.as_deref() == Some(up.as_str()))
+            else {
+                continue;
+            };
+            let decays = self.spacing_decays(idx);
+            let line = format!(
+                "chunk {}: {}",
+                name.to_lowercase(),
+                self.decays_line(&decays)
+            );
+            self.model_output(&line);
+        }
+        // The task's single `(model-output "…~%…~%")` ends with a newline,
+        // which `command-output` turns into one trailing blank line.
+        self.model_output("");
+    }
+
+    /// `(clear-buffer <name>)` from a driver: clears without a trace line but
+    /// still notifies the declarative module, so the chunk merges into DM and
+    /// gains a reference (`clear-buffer-process`, `framework/buffers.lisp:1225`).
+    pub fn clear_buffer_driver(&mut self, buffer: &str) {
+        let bname = buffer.to_uppercase();
+        let cleared = self.buffer_mut(&bname).chunk.take();
+        self.buffer_mut(&bname).modified = false;
+        self.buffer_mut(&bname).failed = false;
+        if let Some(chunk) = cleared {
+            self.merge_into_dm(chunk, &bname);
+        }
+        // No `changed()`: like the direct command, a task-level clear does not
+        // re-arm conflict resolution.
+    }
+
     /// `simulate-retrieval-request` (`commands/dm-commands.lisp:1484`):
     /// report the activation a request would produce without scheduling a
     /// retrieval. The RNG is restored afterwards.
@@ -569,26 +707,8 @@ impl Engine {
         _rels: &[(String, Value, crate::model::SlotOp)],
         mp: Option<f32>,
     ) -> f32 {
-        let (refs, creation, count, fixed_base) = {
-            let h = &self.hist[idx];
-            (h.refs.clone(), h.creation_ms, h.count, h.fixed_base)
-        };
-        let base = match self.cfg.bll {
-            Some(bll) if count > 0 => {
-                self.cfg.blc
-                    + bl_equation(
-                        self.time_ms,
-                        &refs,
-                        count as f32,
-                        creation,
-                        bll,
-                        &self.cfg.ol,
-                        self.cfg.act_scale,
-                    )
-            }
-            Some(_) => -999999.0,
-            None => fixed_base.unwrap_or(self.cfg.blc),
-        };
+        let refs = self.hist[idx].refs.clone();
+        let base = self.base_level(idx, self.cfg.bll, false);
         let name = self.dm[idx].name.clone().unwrap_or_default();
         let old_act = self.cfg.act;
         self.cfg.act = None;
@@ -894,26 +1014,8 @@ impl Engine {
     /// `compute-activation` draws one activation-noise sample and uses no
     /// partial matching because the request has no slot tests.
     fn sdp_activation(&mut self, idx: usize) -> (f32, f32, f32) {
-        let (refs, creation, count, fixed_base) = {
-            let h = &self.hist[idx];
-            (h.refs.clone(), h.creation_ms, h.count, h.fixed_base)
-        };
-        let base = match self.cfg.bll {
-            Some(bll) if count > 0 => {
-                self.cfg.blc
-                    + bl_equation(
-                        self.time_ms,
-                        &refs,
-                        count as f32,
-                        creation,
-                        bll,
-                        &self.cfg.ol,
-                        self.cfg.act_scale,
-                    )
-            }
-            Some(_) => -999999.0,
-            None => fixed_base.unwrap_or(self.cfg.blc),
-        };
+        let refs = self.hist[idx].refs.clone();
+        let base = self.base_level(idx, self.cfg.bll, false);
         let name = self.dm[idx].name.clone().unwrap_or_default();
         let old_act = self.cfg.act;
         self.cfg.act = None;
@@ -1018,8 +1120,13 @@ impl Engine {
         if let Some((time, activation)) = self.hist[idx].last_retrieval {
             self.out_lines
                 .push(format!(" :Last-Retrieval-Activation {activation:>6.3}"));
+            // `~6/print-time-in-seconds/` left-pads the printed time to six
+            // characters (`misc-utils.lisp:1518`), so `0.050` keeps two
+            // spaces while a four-digit second value has one.
+            let t = fmt_secs(time);
+            let pad = 6usize.saturating_sub(t.len());
             self.out_lines
-                .push(format!(" :Last-Retrieval-Time  {}", fmt_secs(time)));
+                .push(format!(" :Last-Retrieval-Time {}{t}", " ".repeat(pad)));
         }
     }
 
@@ -1391,12 +1498,18 @@ impl Engine {
                 }
             }
             ":OL" => {
-                self.cfg.ol = match val {
-                    Sexp::Sym(s) if s == "NIL" => Ol::Off,
-                    Sexp::Sym(s) if s == "T" => Ol::On,
-                    Sexp::Int(i) => Ol::Num(*i as f64),
-                    Sexp::Float(x) => Ol::Num(*x),
-                    other => return Err(bad(format!("bad :ol {other:?}"))),
+                // Spacing effect requires optimized learning off; the module
+                // refuses to turn it back on while enabled.
+                self.cfg.ol = if self.cfg.eblse {
+                    Ol::Off
+                } else {
+                    match val {
+                        Sexp::Sym(s) if s == "NIL" => Ol::Off,
+                        Sexp::Sym(s) if s == "T" => Ol::On,
+                        Sexp::Int(i) => Ol::Num(*i as f64),
+                        Sexp::Float(x) => Ol::Num(*x),
+                        other => return Err(bad(format!("bad :ol {other:?}"))),
+                    }
                 };
             }
             // `update-chunks-on-the-fly` is the conjunction of `:ncnar` and
@@ -1493,11 +1606,38 @@ impl Engine {
                 }
             }
             ":BLL" => {
-                self.cfg.bll = num(val).filter(|b| *b > 0.0);
+                // The spacing-effect module owns `:bll` while `:eblse` is on
+                // (it is both the switch and the sentinel value).
+                self.cfg.bll = if self.cfg.eblse {
+                    Some(12.34)
+                } else {
+                    num(val).filter(|b| *b > 0.0)
+                };
                 self.cfg.act_scale = match self.cfg.bll {
                     Some(b) => (0.001f32).powf(-b).ln(),
                     None => 0.0,
                 };
+            }
+            // `extras/spacing-effect/spacing-effect.lisp`: `:eblse` replaces
+            // the decay equation with the per-reference spacing one. Enabling
+            // forces `:ol nil` and the `:bll` sentinel 12.34.
+            ":EBLSE" => {
+                self.cfg.eblse = truthy;
+                if truthy {
+                    self.cfg.ol = Ol::Off;
+                    self.cfg.bll = Some(12.34);
+                    self.cfg.act_scale = (0.001f32).powf(-12.34).ln();
+                }
+            }
+            ":SE-INTERCEPT" => {
+                if let Some(x) = num(val) {
+                    self.cfg.se_intercept = x;
+                }
+            }
+            ":SE-SCALE" => {
+                if let Some(x) = num(val) {
+                    self.cfg.se_scale = x;
+                }
             }
             ":UL" => self.cfg.ul = truthy,
             ":ULT" => self.cfg.ult = truthy,
@@ -2007,6 +2147,27 @@ impl Engine {
         buffer: &str,
         desc: &ChunkDesc,
     ) -> Result<(), EngineError> {
+        self.set_buffer_chunk_desc_impl(buffer, desc, true)
+    }
+
+    /// The same direct set without re-arming conflict resolution. A task-level
+    /// `(set-buffer-chunk …)` is not a production action, so ACT-R prints no
+    /// follow-up `CONFLICT-RESOLUTION` for it (the spacing-effect ref's fake
+    /// retrievals).
+    pub fn set_buffer_chunk_quiet(
+        &mut self,
+        buffer: &str,
+        desc: &ChunkDesc,
+    ) -> Result<(), EngineError> {
+        self.set_buffer_chunk_desc_impl(buffer, desc, false)
+    }
+
+    fn set_buffer_chunk_desc_impl(
+        &mut self,
+        buffer: &str,
+        desc: &ChunkDesc,
+        notify: bool,
+    ) -> Result<(), EngineError> {
         let inst = match super::rhs::new_chunk(desc)? {
             NewChunk::Instance(c) => c,
             NewChunk::Spec { ctype, slots, .. } => ChunkInst {
@@ -2021,7 +2182,9 @@ impl Engine {
         b.chunk = Some(inst);
         b.failed = false;
         b.modified = false;
-        self.changed();
+        if notify {
+            self.changed();
+        }
         Ok(())
     }
 
@@ -2106,6 +2269,9 @@ impl Engine {
             ":SIM-HOOK" => self.cfg.sim_hook.clone().unwrap_or_else(|| "NIL".into()),
             ":ANS" => self.cfg.ans.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":BLL" => self.cfg.bll.map(|x| x.to_string()).unwrap_or("NIL".into()),
+            ":EBLSE" => b(self.cfg.eblse),
+            ":SE-INTERCEPT" => self.cfg.se_intercept.to_string(),
+            ":SE-SCALE" => self.cfg.se_scale.to_string(),
             ":SJI" => "T".to_string(),
             ":TRACE-DETAIL" => format!("{:?}", self.cfg.detail).to_uppercase(),
             ":SEED" => self

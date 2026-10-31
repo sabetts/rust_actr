@@ -839,6 +839,37 @@ fn apply_session_step(
             .ok_or_else(no_model)?
             .set_buffer_chunk_desc(buffer, desc)
             .map_err(|e| e.to_string())?,
+        Step::SetBufferChunkQuiet { buffer, desc } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .set_buffer_chunk_quiet(buffer, desc)
+            .map_err(|e| e.to_string())?,
+        Step::ClearBuffer(buffer) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .clear_buffer_driver(buffer),
+        Step::ComputeActivation(name) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .print_compute_activation(name),
+        Step::SetChunkReferences { chunk, refs } => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .set_chunk_references(chunk, refs),
+        Step::SdpChunks(names) => {
+            session
+                .engine_mut()
+                .ok_or_else(no_model)?
+                .print_sdp_chunks(names);
+        }
+        Step::ChunkDecays(name) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .print_chunk_decays(name),
+        Step::ChunkDecayLines(names) => session
+            .engine_mut()
+            .ok_or_else(no_model)?
+            .print_named_decay_lines(names),
         Step::Seed(s) => session.engine_mut().ok_or_else(no_model)?.set_seed(*s),
         Step::ConsumeRng(n) => session.engine_mut().ok_or_else(no_model)?.consume_rng(*n),
         Step::Sdm(spec) => {

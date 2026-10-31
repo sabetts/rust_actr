@@ -764,6 +764,7 @@ impl Engine {
             creation_ms: self.time_ms,
             refs: vec![self.time_ms],
             count: 1,
+            decays: None,
             fixed_base: None,
             last_retrieval: None,
         });

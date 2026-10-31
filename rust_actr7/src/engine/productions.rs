@@ -7,7 +7,6 @@ use super::compilation::{
     production_bind_vars, r_b_c1, r_b_c2, remove_dup_keep_last, render_compiled, render_production,
     retrieval_reason, rhs_buffers, sexp_lisp, sort_token,
 };
-use super::dm::{bl_equation, ol_str};
 use super::rhs::{explicit_out, implicit_clears, implicit_queries};
 use super::*;
 
@@ -3341,66 +3340,10 @@ impl Engine {
                 self.out("Computing base-level".to_string());
             }
             // A = base-level + spreading + partial matching + activation
-            // noise. Base-level from the decay equation when :bll is set,
-            // else blc. Noise drawn per candidate in DM order.
-            let base = match bll {
-                Some(bll) => {
-                    let (refs, creation, count) = {
-                        let h = &self.hist[idx];
-                        (h.refs.clone(), h.creation_ms, h.count)
-                    };
-                    if count == 0 {
-                        // Mirrors the Lisp warning path; unreachable via
-                        // merge/add (both start count at 1).
-                        -999999.0
-                    } else {
-                        if self.act_medium() {
-                            self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
-                            let refs_str: Vec<String> = refs.iter().map(|r| fmt_secs(*r)).collect();
-                            self.out(format!(
-                                "Computing base-level from {count} references ({})",
-                                refs_str.join(" ")
-                            ));
-                            self.out(format!(
-                                "  creation time: {} decay: {}  Optimized-learning: {}",
-                                fmt_secs(creation),
-                                lisp_f(bll),
-                                ol_str(&self.cfg.ol)
-                            ));
-                        }
-                        let value = bl_equation(
-                            self.time_ms,
-                            &refs,
-                            count as f32,
-                            creation,
-                            bll,
-                            &self.cfg.ol,
-                            self.cfg.act_scale,
-                        );
-                        if self.act_medium() {
-                            self.out(format!("base-level value: {}", lisp_f(value)));
-                        }
-                        self.cfg.blc + value
-                    }
-                }
-                None => match self.hist[idx].fixed_base {
-                    Some(b) => {
-                        if self.act_medium() {
-                            self.out(format!("User provided chunk base-level: {}", lisp_f(b)));
-                        }
-                        b
-                    }
-                    None => {
-                        if self.act_medium() {
-                            self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
-                        }
-                        self.cfg.blc
-                    }
-                },
-            };
-            if self.act_medium() {
-                self.out(format!("Total base-level: {}", lisp_f(base)));
-            }
+            // noise. Base-level from the decay/spacing equation when `:bll`
+            // or `:eblse` is set, else blc. Noise drawn per candidate in DM
+            // order.
+            let base = self.base_level(idx, bll, true);
             let spread = if c.name.is_some() {
                 self.spreading_activation(&cname, mas)
             } else {

@@ -5,7 +5,7 @@
 use crate::Case;
 
 #[test]
-#[ignore = "no run recorded"]
+#[ignore = "upstream ref is a diagnostic placeholder (XXXXX)"]
 fn time_size_check() -> Result<(), String> {
     Case::new("time-size-check").seed((100, 0)).check()
 }

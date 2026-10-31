@@ -248,6 +248,25 @@ pub enum Step {
     /// `(set-buffer-chunk <buffer> <spec>)`: place the described chunk now,
     /// without the task's usual `define-chunks` name round-trip.
     SetBufferChunk { buffer: String, desc: ChunkDesc },
+    /// `(set-buffer-chunk <buffer> <spec>)` without re-arming conflict
+    /// resolution (a task-level direct set is not a production action).
+    SetBufferChunkQuiet { buffer: String, desc: ChunkDesc },
+    /// `(clear-buffer <name>)` from a driver: no trace line, but the cleared
+    /// chunk merges into DM like the command's module notification.
+    ClearBuffer(String),
+    /// `(compute-activation (get-module declarative) '<chunk> nil)`: print the
+    /// activation narration for one chunk.
+    ComputeActivation(String),
+    /// `(sdp <chunk> :references (...))`: replace a chunk's reference times
+    /// (seconds, newest first).
+    SetChunkReferences { chunk: String, refs: Vec<f64> },
+    /// `(sdp)` / `(sdp <chunk>...)`: print declarative parameter blocks.
+    SdpChunks(Vec<String>),
+    /// Print `(mapcar 'second (chunk-decays '<chunk>))` on one line.
+    ChunkDecays(String),
+    /// Print `chunk <name>: (<decays>)` for each chunk (the spacing-effect
+    /// experiment's final report).
+    ChunkDecayLines(Vec<String>),
     /// `(sgp :seed (S C))`.
     Seed((u64, u64)),
     /// Consume `n` draws from the random stream (the task's setup draws
@@ -496,6 +515,30 @@ pub fn run_model_steps_with_hook(
     eng.set_user_fns(user_fns);
     eng.set_user_vars(user_vars);
     eng.apply_model_commands()?;
+    apply_engine_steps(&mut eng, steps)?;
+    Ok(eng.output())
+}
+
+/// Run a scripted sequence over a model supplied as Lisp source rather than a
+/// fixture file. Task drivers whose model lives inside a `defun` (the
+/// `spacing-effect` subtests) use this so the vendored source stays the oracle.
+pub fn run_model_source_steps(
+    source: &str,
+    seed: (u64, u64),
+    steps: &[Step],
+    device: &DeviceSetup,
+) -> Result<String, EngineError> {
+    let defs = model::load_models_from_str(source)?;
+    let def = defs
+        .last()
+        .ok_or_else(|| EngineError::Model("no define-model in step source".to_string()))?;
+    let mut eng = engine::Engine::new(def.clone(), seed, 0.0, device.clone())?;
+    eng.apply_model_commands()?;
+    apply_engine_steps(&mut eng, steps)?;
+    Ok(eng.output())
+}
+
+fn apply_engine_steps(eng: &mut engine::Engine, steps: &[Step]) -> Result<(), EngineError> {
     for step in steps {
         match step {
             Step::Run { secs, trace, width } => {
@@ -538,6 +581,17 @@ pub fn run_model_steps_with_hook(
             Step::ModelOutput(s) => eng.model_output(s),
             Step::GoalFocus(desc) => eng.goal_focus(desc)?,
             Step::SetBufferChunk { buffer, desc } => eng.set_buffer_chunk_desc(buffer, desc)?,
+            Step::SetBufferChunkQuiet { buffer, desc } => {
+                eng.set_buffer_chunk_quiet(buffer, desc)?
+            }
+            Step::ClearBuffer(buffer) => eng.clear_buffer_driver(buffer),
+            Step::ComputeActivation(name) => eng.print_compute_activation(name),
+            Step::SetChunkReferences { chunk, refs } => eng.set_chunk_references(chunk, refs),
+            Step::SdpChunks(names) => {
+                eng.print_sdp_chunks(names);
+            }
+            Step::ChunkDecays(name) => eng.print_chunk_decays(name),
+            Step::ChunkDecayLines(names) => eng.print_named_decay_lines(names),
             Step::Seed(s) => eng.sperling_set_seed(*s),
             Step::ConsumeRng(n) => eng.consume_rng(*n),
             Step::Sdm(spec) => {
@@ -662,7 +716,7 @@ pub fn run_model_steps_with_hook(
             }
         }
     }
-    Ok(eng.output())
+    Ok(())
 }
 
 /// A `.../models/X.lisp` model's sibling task file `.../X.lisp`, if present

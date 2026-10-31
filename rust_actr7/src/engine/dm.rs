@@ -149,29 +149,7 @@ impl Engine {
         want_slots: &[(String, Value)],
         want_neg: &[(String, Value)],
     ) -> (f32, f32) {
-        let base = match self.cfg.bll {
-            Some(bll) => {
-                let (refs, creation, count) = {
-                    let h = &self.hist[idx];
-                    (h.refs.clone(), h.creation_ms, h.count)
-                };
-                if count == 0 {
-                    -999999.0
-                } else {
-                    self.cfg.blc
-                        + bl_equation(
-                            self.time_ms,
-                            &refs,
-                            count as f32,
-                            creation,
-                            bll,
-                            &self.cfg.ol,
-                            self.cfg.act_scale,
-                        )
-                }
-            }
-            None => self.hist[idx].fixed_base.unwrap_or(self.cfg.blc),
-        };
+        let base = self.base_level(idx, self.cfg.bll, false);
         let name = self.dm[idx].name.clone().unwrap_or_default();
         let spread = if self.dm[idx].name.is_some() {
             self.spreading_activation(&name, self.cfg.mas)
@@ -200,6 +178,135 @@ impl Engine {
             None => 0.0,
         };
         (a + noise, base)
+    }
+
+    /// `compute-spacing-effect-activation`
+    /// (`extras/spacing-effect/spacing-effect.lisp`): base level from the
+    /// chunk's per-reference decays. The cached list is used when it still
+    /// matches `refs`; otherwise it is recomputed with the module's fallback
+    /// (oldest-to-newest accumulation, first decay = intercept).
+    pub(super) fn spacing_activation(&mut self, idx: usize) -> f32 {
+        let refs = self.hist[idx].refs.clone();
+        if refs.is_empty() {
+            return -999999.0;
+        }
+        let cached = self.hist[idx].decays.clone();
+        let decays = match cached {
+            Some(d)
+                if d.len() == refs.len() && d.iter().map(|(t, _)| *t).eq(refs.iter().copied()) =>
+            {
+                d
+            }
+            _ => self.recompute_decays(idx, &refs),
+        };
+        let now = self.time_ms;
+        let mut value = 0.0f32;
+        for (r, (_, decay)) in refs.iter().zip(decays.iter()) {
+            let t = ((now - r) as f32 / 1000.0).max(0.05);
+            // `expt-coerced` on a single base: SBCL computes in double and
+            // rounds (see `bl_equation`'s `:ol t` branch).
+            value += ((-*decay as f64) * (t as f64).ln()).exp() as f32;
+        }
+        log_coerced(value)
+    }
+
+    /// The spacing-effect recompute branch: walk the references oldest to
+    /// newest, deriving each decay from the activation just before that
+    /// reference. Stores and returns the newest-first `(ref, decay)` list.
+    fn recompute_decays(&mut self, idx: usize, refs: &[i64]) -> Vec<(i64, f32)> {
+        let n = refs.len();
+        let mut acc_refs: Vec<i64> = vec![refs[n - 1]];
+        let mut acc_decays: Vec<f32> = vec![self.cfg.se_intercept];
+        for k in (0..n - 1).rev() {
+            let reference = refs[k];
+            let mut value = 0.0f32;
+            for (r, decay) in acc_refs.iter().zip(acc_decays.iter()) {
+                let t = ((reference - r) as f32 / 1000.0).max(0.05);
+                value += ((-*decay as f64) * (t as f64).ln()).exp() as f32;
+            }
+            let act = log_coerced(value);
+            let decay = exp_coerced(act) * self.cfg.se_scale + self.cfg.se_intercept;
+            acc_decays.push(decay);
+            acc_refs.push(reference);
+        }
+        acc_decays.reverse();
+        let decays: Vec<(i64, f32)> = refs.iter().copied().zip(acc_decays).collect();
+        self.hist[idx].decays = Some(decays.clone());
+        decays
+    }
+
+    /// The `base-level-activation` equation (`declarative-memory.lisp:2372`):
+    /// the spacing-effect hook when `:eblse` is enabled, else `:bll`/fixed
+    /// base/`:blc`. `trace` emits the medium-detail narration the retrieval
+    /// path needs; `sdp`/blending/simulated retrieval pass `false`.
+    pub(super) fn base_level(&mut self, idx: usize, bll: Option<f32>, trace: bool) -> f32 {
+        let show = trace && self.act_medium();
+        if self.cfg.eblse {
+            let value = self.spacing_activation(idx);
+            if show {
+                self.out(format!("base-level hook returns: {}", lisp_f(value)));
+            }
+            return value;
+        }
+        let (refs, creation, count, fixed_base) = {
+            let h = &self.hist[idx];
+            (h.refs.clone(), h.creation_ms, h.count, h.fixed_base)
+        };
+        let base = match bll {
+            Some(bll) => {
+                if count == 0 {
+                    // Mirrors the Lisp warning path; unreachable via
+                    // merge/add (both start count at 1).
+                    -999999.0
+                } else {
+                    if show {
+                        self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                        let refs_str: Vec<String> = refs.iter().map(|r| fmt_secs(*r)).collect();
+                        self.out(format!(
+                            "Computing base-level from {count} references ({})",
+                            refs_str.join(" ")
+                        ));
+                        self.out(format!(
+                            "  creation time: {} decay: {}  Optimized-learning: {}",
+                            fmt_secs(creation),
+                            lisp_f(bll),
+                            ol_str(&self.cfg.ol)
+                        ));
+                    }
+                    let value = bl_equation(
+                        self.time_ms,
+                        &refs,
+                        count as f32,
+                        creation,
+                        bll,
+                        &self.cfg.ol,
+                        self.cfg.act_scale,
+                    );
+                    if show {
+                        self.out(format!("base-level value: {}", lisp_f(value)));
+                    }
+                    self.cfg.blc + value
+                }
+            }
+            None => match fixed_base {
+                Some(b) => {
+                    if show {
+                        self.out(format!("User provided chunk base-level: {}", lisp_f(b)));
+                    }
+                    b
+                }
+                None => {
+                    if show {
+                        self.out(format!("Starting with blc: {}", lisp_f(self.cfg.blc)));
+                    }
+                    self.cfg.blc
+                }
+            },
+        };
+        if show {
+            self.out(format!("Total base-level: {}", lisp_f(base)));
+        }
+        base
     }
 
     /// `start-blending` (`extras/blending/blending.lisp:474`). Operates on
