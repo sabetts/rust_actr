@@ -6165,3 +6165,35 @@ Engine fixes exposed by the ref:
   keeping match/chosen traces.
 
 Corpus: **558 passed / 9 ignored**.
+
+## 357. Spacing-effect extra promoted
+
+`spacing-effect` is promoted with a driver over the four upstream subtests.
+The extra (`extras/spacing-effect/spacing-effect.lisp`) replaces the base-level
+equation with per-reference decays:
+
+- `:eblse t` forces `:ol nil` and the `:bll` sentinel 12.34. `:se-intercept`
+  (default 0.5) and `:se-scale` (default 0) are exposed as runtime/model
+  parameters.
+- `History` gains a lazy `(reference, decay)` cache. Every reference mutation
+  invalidates it; activation either uses it or rebuilds it with the module's
+  oldest-to-newest fallback (`d[i] = c*e^B[i-1] + a`), so incremental merges
+  and direct `(sdp :references ...)` histories produce the same list.
+- A shared `Engine::base_level` now serves retrieval, blending, `sdp`,
+  simulated retrieval, and associative-learning activations. The hook path
+  prints `base-level hook returns:` (no `Starting with blc`/`Total
+  base-level`); the `:bll` trace lines are unchanged for all other cases.
+- Driver additions: `ComputeActivation`, `SetChunkReferences`, `SdpChunks`,
+  `ChunkDecays`, `ChunkDecayLines`, plus quiet `SetBufferChunkQuiet` /
+  `ClearBuffer`. The task's fake retrievals must merge references into DM
+  without re-arming conflict resolution; the ref shows no `CONFLICT-RESOLUTION`
+  at those points.
+- `run_model_source_steps` runs a model supplied as Lisp source. Test 4's
+  model is extracted from the vendored `test-spacing-effect-4` defun, so the
+  model stays upstream-owned rather than duplicated in a fixture.
+- `sdp`'s `:Last-Retrieval-Time` uses upstream's
+  `~6/print-time-in-seconds/` field width: `5344.000` gets one space, `0.050`
+  keeps two.
+
+Corpus: **559 passed / 8 ignored**, with 14 project-authored compilation-unit
+tests and `pcomp` at 66/66.

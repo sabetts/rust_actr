@@ -15,8 +15,8 @@ weakening the oracle:
 
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
-- Latest commit: see `git log -1` (Wave 6A: unit8 BST, ncnar, imaginal, BST utility, save-model, siegler, thorough-p)
-- Full suite: **554 passed / 13 ignored / 0 failed**
+- Latest commit: see `git log -1` (Wave 7: spacing-effect)
+- Full suite: **559 passed / 8 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -509,13 +509,33 @@ Resolved along the way:
   generalized the request-plus-modify `buffer+-union` action from goal to all
   buffers.
 
-Next steps: finish the recoverable residual cases, then merge any remaining
-work back to `main`.
+#### Wave 7 - Base-level spacing effect
+
+Target:
+
+- `spacing-effect`
+
+Completed:
+
+- [x] `spacing-effect` promoted with a driver over the four upstream subtests.
+  The extra's per-reference decay equation (`d[i] = c*e^B[i-1] + a`) lives in a
+  lazy `History` cache; `:eblse` forces `:ol nil` and the `:bll` sentinel
+  12.34. A shared `Engine::base_level` now serves retrieval, blending, `sdp`,
+  simulated retrieval, and associative-learning activations, emitting
+  `base-level hook returns:` for the hook path. Driver additions:
+  `ComputeActivation`, `SetChunkReferences`, `SdpChunks`, `ChunkDecays`,
+  `ChunkDecayLines`, quiet `SetBufferChunkQuiet`/`ClearBuffer`, and
+  `run_model_source_steps` (test 4's model is extracted from the upstream
+  `defun`). `sdp`'s `:Last-Retrieval-Time` now uses the upstream
+  `~6/print-time-in-seconds/` field width.
+- [x] Full suite green at **559 passed / 8 ignored**, with 14 project-authored
+  compilation-unit tests and `pcomp` at 66/66.
+
+Next steps: none for the regression corpus; only externally blocked,
+source-blocked, diagnostic, and environment-gated cases remain.
 
 Remaining ignored cases:
 
-- Recoverable:
-  - `spacing-effect`
 - Source audit:
   - `tutorial-unit3-subitize-results` reads the missing
     `unit-3-subitize-solution.ref`; classify as source-blocked unless that
