@@ -34,6 +34,14 @@ unit_case!(retrieval_instantiate, "retrieval-instantiate");
 unit_case!(safe_bind_output, "safe-bind-output");
 unit_case!(union_subtract, "union-subtract");
 
+#[test]
+#[ignore = "engine-divergence: duplicate LHS safe-bind removal"]
+fn duplicate_safe_bind() {
+    if let Err(e) = run_case("duplicate-safe-bind") {
+        panic!("{e}");
+    }
+}
+
 fn traces_dir() -> PathBuf {
     crate_dir().join("fixtures").join("compilation-traces")
 }
