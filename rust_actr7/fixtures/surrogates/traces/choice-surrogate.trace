@@ -1,0 +1,183 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL GOAL NIL
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-FIRED HEADS
+     0.050   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.050   MOTOR                  PRESS-KEY KEY h
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.350   PROCEDURAL             CONFLICT-RESOLUTION
+     0.450   PROCEDURAL             CONFLICT-RESOLUTION
+     0.600   PROCEDURAL             CONFLICT-RESOLUTION
+     0.600   ------                 Stopped because no events left to process
+     0.600   UTILITY                PROPAGATE-REWARD -1
+ Utility updates with Reward = -1.0   alpha = 0.2
+  Updating utility of production HEADS
+   U(n-1) = 0.2   R(n) = -1.6 [-1.0 - 0.6 seconds since selection]
+   U(n) = -0.16000001
+     0.600   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     0.600   PROCEDURAL             CONFLICT-RESOLUTION
+     0.650   PROCEDURAL             PRODUCTION-FIRED TAILS
+     0.650   PROCEDURAL             CLEAR-BUFFER MANUAL
+     0.650   MOTOR                  PRESS-KEY KEY t
+     0.650   PROCEDURAL             CONFLICT-RESOLUTION
+     0.850   PROCEDURAL             CONFLICT-RESOLUTION
+     0.900   PROCEDURAL             CONFLICT-RESOLUTION
+     1.000   PROCEDURAL             CONFLICT-RESOLUTION
+     1.150   PROCEDURAL             CONFLICT-RESOLUTION
+     1.150   ------                 Stopped because no events left to process
+     1.150   UTILITY                PROPAGATE-REWARD 1
+ Utility updates with Reward = 1.0   alpha = 0.2
+  Updating utility of production TAILS
+   U(n-1) = 0.0   R(n) = 0.45 [1.0 - 0.55 seconds since selection]
+   U(n) = 0.089999996
+     1.150   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     1.150   PROCEDURAL             CONFLICT-RESOLUTION
+     1.200   PROCEDURAL             PRODUCTION-FIRED TAILS
+     1.200   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.200   MOTOR                  PRESS-KEY KEY t
+     1.200   PROCEDURAL             CONFLICT-RESOLUTION
+     1.250   PROCEDURAL             CONFLICT-RESOLUTION
+     1.350   PROCEDURAL             CONFLICT-RESOLUTION
+     1.500   PROCEDURAL             CONFLICT-RESOLUTION
+     1.500   ------                 Stopped because no events left to process
+     1.500   UTILITY                PROPAGATE-REWARD -1
+ Utility updates with Reward = -1.0   alpha = 0.2
+  Updating utility of production TAILS
+   U(n-1) = 0.089999996   R(n) = -1.35 [-1.0 - 0.35 seconds since selection]
+   U(n) = -0.19800001
+     1.500   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     1.500   PROCEDURAL             CONFLICT-RESOLUTION
+     1.550   PROCEDURAL             PRODUCTION-FIRED HEADS
+     1.550   PROCEDURAL             CLEAR-BUFFER MANUAL
+     1.550   MOTOR                  PRESS-KEY KEY h
+     1.550   PROCEDURAL             CONFLICT-RESOLUTION
+     1.750   PROCEDURAL             CONFLICT-RESOLUTION
+     1.800   PROCEDURAL             CONFLICT-RESOLUTION
+     1.900   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.050   ------                 Stopped because no events left to process
+     2.050   UTILITY                PROPAGATE-REWARD 1
+ Utility updates with Reward = 1.0   alpha = 0.2
+  Updating utility of production HEADS
+   U(n-1) = -0.16000001   R(n) = 0.45 [1.0 - 0.55 seconds since selection]
+   U(n) = -0.03800001
+     2.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     2.050   PROCEDURAL             CONFLICT-RESOLUTION
+     2.100   PROCEDURAL             PRODUCTION-FIRED HEADS
+     2.100   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.100   MOTOR                  PRESS-KEY KEY h
+     2.100   PROCEDURAL             CONFLICT-RESOLUTION
+     2.150   PROCEDURAL             CONFLICT-RESOLUTION
+     2.250   PROCEDURAL             CONFLICT-RESOLUTION
+     2.400   PROCEDURAL             CONFLICT-RESOLUTION
+     2.400   ------                 Stopped because no events left to process
+     2.400   UTILITY                PROPAGATE-REWARD -1
+ Utility updates with Reward = -1.0   alpha = 0.2
+  Updating utility of production HEADS
+   U(n-1) = -0.03800001   R(n) = -1.35 [-1.0 - 0.35 seconds since selection]
+   U(n) = -0.30040002
+     2.400   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     2.400   PROCEDURAL             CONFLICT-RESOLUTION
+     2.450   PROCEDURAL             PRODUCTION-FIRED TAILS
+     2.450   PROCEDURAL             CLEAR-BUFFER MANUAL
+     2.450   MOTOR                  PRESS-KEY KEY t
+     2.450   PROCEDURAL             CONFLICT-RESOLUTION
+     2.650   PROCEDURAL             CONFLICT-RESOLUTION
+     2.700   PROCEDURAL             CONFLICT-RESOLUTION
+     2.800   PROCEDURAL             CONFLICT-RESOLUTION
+     2.950   PROCEDURAL             CONFLICT-RESOLUTION
+     2.950   ------                 Stopped because no events left to process
+     2.950   UTILITY                PROPAGATE-REWARD 1
+ Utility updates with Reward = 1.0   alpha = 0.2
+  Updating utility of production TAILS
+   U(n-1) = -0.19800001   R(n) = 0.45 [1.0 - 0.55 seconds since selection]
+   U(n) = -0.06840001
+     2.950   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     2.950   PROCEDURAL             CONFLICT-RESOLUTION
+     3.000   PROCEDURAL             PRODUCTION-FIRED TAILS
+     3.000   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.000   MOTOR                  PRESS-KEY KEY t
+     3.000   PROCEDURAL             CONFLICT-RESOLUTION
+     3.050   PROCEDURAL             CONFLICT-RESOLUTION
+     3.150   PROCEDURAL             CONFLICT-RESOLUTION
+     3.300   PROCEDURAL             CONFLICT-RESOLUTION
+     3.300   ------                 Stopped because no events left to process
+     3.300   UTILITY                PROPAGATE-REWARD -1
+ Utility updates with Reward = -1.0   alpha = 0.2
+  Updating utility of production TAILS
+   U(n-1) = -0.06840001   R(n) = -1.35 [-1.0 - 0.35 seconds since selection]
+   U(n) = -0.32472003
+     3.300   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     3.300   PROCEDURAL             CONFLICT-RESOLUTION
+     3.350   PROCEDURAL             PRODUCTION-FIRED HEADS
+     3.350   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.350   MOTOR                  PRESS-KEY KEY h
+     3.350   PROCEDURAL             CONFLICT-RESOLUTION
+     3.550   PROCEDURAL             CONFLICT-RESOLUTION
+     3.600   PROCEDURAL             CONFLICT-RESOLUTION
+     3.700   PROCEDURAL             CONFLICT-RESOLUTION
+     3.850   PROCEDURAL             CONFLICT-RESOLUTION
+     3.850   ------                 Stopped because no events left to process
+     3.850   UTILITY                PROPAGATE-REWARD 1
+ Utility updates with Reward = 1.0   alpha = 0.2
+  Updating utility of production HEADS
+   U(n-1) = -0.30040002   R(n) = 0.45 [1.0 - 0.55 seconds since selection]
+   U(n) = -0.15032001
+     3.850   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     3.850   PROCEDURAL             CONFLICT-RESOLUTION
+     3.900   PROCEDURAL             PRODUCTION-FIRED HEADS
+     3.900   PROCEDURAL             CLEAR-BUFFER MANUAL
+     3.900   MOTOR                  PRESS-KEY KEY h
+     3.900   PROCEDURAL             CONFLICT-RESOLUTION
+     3.950   PROCEDURAL             CONFLICT-RESOLUTION
+     4.050   PROCEDURAL             CONFLICT-RESOLUTION
+     4.200   PROCEDURAL             CONFLICT-RESOLUTION
+     4.200   ------                 Stopped because no events left to process
+     4.200   UTILITY                PROPAGATE-REWARD -1
+ Utility updates with Reward = -1.0   alpha = 0.2
+  Updating utility of production HEADS
+   U(n-1) = -0.15032001   R(n) = -1.35 [-1.0 - 0.35 seconds since selection]
+   U(n) = -0.390256
+     4.200   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     4.200   PROCEDURAL             CONFLICT-RESOLUTION
+     4.250   PROCEDURAL             PRODUCTION-FIRED TAILS
+     4.250   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.250   MOTOR                  PRESS-KEY KEY t
+     4.250   PROCEDURAL             CONFLICT-RESOLUTION
+     4.450   PROCEDURAL             CONFLICT-RESOLUTION
+     4.500   PROCEDURAL             CONFLICT-RESOLUTION
+     4.600   PROCEDURAL             CONFLICT-RESOLUTION
+     4.750   PROCEDURAL             CONFLICT-RESOLUTION
+     4.750   ------                 Stopped because no events left to process
+     4.750   UTILITY                PROPAGATE-REWARD 1
+ Utility updates with Reward = 1.0   alpha = 0.2
+  Updating utility of production TAILS
+   U(n-1) = -0.32472003   R(n) = 0.45 [1.0 - 0.55 seconds since selection]
+   U(n) = -0.16977602
+     4.750   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     4.750   PROCEDURAL             CONFLICT-RESOLUTION
+     4.800   PROCEDURAL             PRODUCTION-FIRED TAILS
+     4.800   PROCEDURAL             CLEAR-BUFFER MANUAL
+     4.800   MOTOR                  PRESS-KEY KEY t
+     4.800   PROCEDURAL             CONFLICT-RESOLUTION
+     4.850   PROCEDURAL             CONFLICT-RESOLUTION
+     4.950   PROCEDURAL             CONFLICT-RESOLUTION
+     5.100   PROCEDURAL             CONFLICT-RESOLUTION
+     5.100   ------                 Stopped because no events left to process
+     5.100   UTILITY                PROPAGATE-REWARD -1
+ Utility updates with Reward = -1.0   alpha = 0.2
+  Updating utility of production TAILS
+   U(n-1) = -0.16977602   R(n) = -1.35 [-1.0 - 0.35 seconds since selection]
+   U(n) = -0.40582082
+     5.100   GOAL                   SET-BUFFER-CHUNK GOAL (ISA CHOOSE STATE CHOOSE) NIL
+     5.100   PROCEDURAL             CONFLICT-RESOLUTION
+     5.150   PROCEDURAL             PRODUCTION-FIRED HEADS
+     5.150   PROCEDURAL             CLEAR-BUFFER MANUAL
+     5.150   MOTOR                  PRESS-KEY KEY h
+     5.150   PROCEDURAL             CONFLICT-RESOLUTION
+     5.350   PROCEDURAL             CONFLICT-RESOLUTION
+     5.400   PROCEDURAL             CONFLICT-RESOLUTION
+     5.500   PROCEDURAL             CONFLICT-RESOLUTION
+     5.650   PROCEDURAL             CONFLICT-RESOLUTION
+     5.650   ------                 Stopped because no events left to process

@@ -1,0 +1,359 @@
+     0.000   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STATE ADD-ATTRIBUTE NAME EH VALUE 1) NIL
+     0.000   PROCEDURAL             CONFLICT-RESOLUTION
+     0.000   PROCEDURAL             PRODUCTION-SELECTED ENCODE-LARGE
+     0.000   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.000   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.050   PROCEDURAL             PRODUCTION-FIRED ENCODE-LARGE
+     0.050   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+     0.050   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   ------                 Stopped because no events left to process
+     0.050   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STATE ADD-ATTRIBUTE NAME ES VALUE -1) NIL
+     0.050   PROCEDURAL             CONFLICT-RESOLUTION
+     0.050   PROCEDURAL             PRODUCTION-SELECTED ENCODE-SMALL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.050   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.100   PROCEDURAL             PRODUCTION-FIRED ENCODE-SMALL
+     0.100   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+     0.100   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   ------                 Stopped because no events left to process
+     0.100   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STATE ADD-ATTRIBUTE NAME NL VALUE -1) NIL
+     0.100   PROCEDURAL             CONFLICT-RESOLUTION
+     0.100   PROCEDURAL             PRODUCTION-SELECTED ENCODE-SMALL
+     0.100   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.100   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.150   PROCEDURAL             PRODUCTION-FIRED ENCODE-SMALL
+     0.150   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+     0.150   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   ------                 Stopped because no events left to process
+     0.150   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STATE ADD-ATTRIBUTE NAME MH VALUE -1) NIL
+     0.150   PROCEDURAL             CONFLICT-RESOLUTION
+     0.150   PROCEDURAL             PRODUCTION-SELECTED ENCODE-SMALL
+     0.150   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.150   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.200   PROCEDURAL             PRODUCTION-FIRED ENCODE-SMALL
+     0.200   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+     0.200   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   ------                 Stopped because no events left to process
+     0.200   GOAL                   SET-BUFFER-CHUNK GOAL (ISA GOAL STATE CATEGORIZE) NIL
+     0.200   PROCEDURAL             CONFLICT-RESOLUTION
+     0.200   PROCEDURAL             PRODUCTION-SELECTED RETRIEVE-EXAMPLE
+     0.200   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.200   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.200   PROCEDURAL             QUERY-BUFFER-ACTION RETRIEVAL
+     0.250   PROCEDURAL             PRODUCTION-FIRED RETRIEVE-EXAMPLE
+     0.250   PROCEDURAL             MOD-BUFFER-CHUNK GOAL
+     0.250   PROCEDURAL             MODULE-REQUEST RETRIEVAL
+     0.250   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.250   DECLARATIVE            start-retrieval
+Computing activation for chunk EXAMPLE0
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 1
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: SMALL
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -3.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE0 has an activation of: 7.0
+Chunk EXAMPLE0 has the current best activation 7.0
+Computing activation for chunk EXAMPLE1
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 1
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+Total similarity score -2.6000001
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE1 has an activation of: 7.3999996
+Chunk EXAMPLE1 is now the current best with activation 7.3999996
+Computing activation for chunk EXAMPLE2
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 1
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: SMALL
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+Total similarity score -3.0000002
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE2 has an activation of: 7.0
+Computing activation for chunk EXAMPLE3
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 1
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: SMALL
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+Total similarity score -3.4
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE3 has an activation of: 6.6
+Computing activation for chunk EXAMPLE4
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 1
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: SMALL
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+Total similarity score -3.8
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE4 has an activation of: 6.2
+Computing activation for chunk EXAMPLE5
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 2
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: LARGE
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -1.0
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE5 has an activation of: 9.0
+Chunk EXAMPLE5 is now the current best with activation 9.0
+Computing activation for chunk EXAMPLE6
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 2
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: MEDIUM
+  similarity: -0.4
+  effective similarity value is -0.4
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+Total similarity score -2.6
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE6 has an activation of: 7.4
+Computing activation for chunk EXAMPLE7
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 2
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: LARGE
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+Total similarity score -1.8
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE7 has an activation of: 8.2
+Computing activation for chunk EXAMPLE8
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 2
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: LARGE
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+Total similarity score -2.6
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE8 has an activation of: 7.4
+Computing activation for chunk EXAMPLE9
+Computing base-level
+Starting with blc: 10.0
+Total base-level: 10.0
+Computing partial matching component
+  comparing slot CATEGORY
+  Requested: = UNKNOWN  Chunk's slot value: 2
+  similarity: -1.0
+  effective similarity value is -1.0
+  comparing slot EH
+  Requested: = LARGE  Chunk's slot value: LARGE
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot ES
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot NL
+  Requested: = SMALL  Chunk's slot value: SMALL
+  similarity: 0.0
+  effective similarity value is 0.0
+  comparing slot MH
+  Requested: = SMALL  Chunk's slot value: LARGE
+  similarity: -0.8
+  effective similarity value is -0.8
+Total similarity score -1.8
+Adding transient noise 0.0
+Adding permanent noise 0.0
+Chunk EXAMPLE9 has an activation of: 8.2
+Chunk EXAMPLE5 with activation 9.0 is the best
+     0.250   DECLARATIVE            RETRIEVED-CHUNK EXAMPLE5
+     0.250   DECLARATIVE            SET-BUFFER-CHUNK RETRIEVAL EXAMPLE5
+     0.250   PROCEDURAL             CONFLICT-RESOLUTION
+     0.250   PROCEDURAL             PRODUCTION-SELECTED SET-CATEGORY
+     0.250   PROCEDURAL             BUFFER-READ-ACTION GOAL
+     0.250   PROCEDURAL             BUFFER-READ-ACTION IMAGINAL
+     0.250   PROCEDURAL             BUFFER-READ-ACTION RETRIEVAL
+     0.250   PROCEDURAL             QUERY-BUFFER-ACTION IMAGINAL
+     0.300   PROCEDURAL             PRODUCTION-FIRED SET-CATEGORY
+     0.300   PROCEDURAL             MOD-BUFFER-CHUNK IMAGINAL
+     0.300   PROCEDURAL             CLEAR-BUFFER GOAL
+     0.300   PROCEDURAL             CLEAR-BUFFER RETRIEVAL
+     0.300   PROCEDURAL             CONFLICT-RESOLUTION
+     0.300   ------                 Stopped because no events left to process

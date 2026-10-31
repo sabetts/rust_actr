@@ -1,0 +1,7 @@
+name: categorize
+model: extras;surrogates;categorize-model.lisp
+task: extras;surrogates;categorize-task.lisp
+seed: (100 0)
+settings: (:mp 1 :ppm 1 :egs 0 :ans nil :trace-detail high :act high :pct t)
+scenario: attributes eh=1 es=-1 nl=-1 mh=-1; state categorize
+note: project-authored surrogate for tutorial-unit8-categorize-*

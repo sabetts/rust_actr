@@ -1,0 +1,6 @@
+name: zbrodoff-retrieval-miss
+model: extras;surrogates;zbrodoff-retrieval-miss.lisp
+seed: (100 0)
+settings: (:mp 1 :ppm 1 :egs 0 :ans nil :trace-detail low)
+scenario: one a+2=c trial with no pre-seeded problem chunk (count fallback)
+note: project-authored surrogate for tutorial-unit4-zbrodoff-with-*

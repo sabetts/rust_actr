@@ -1,0 +1,6 @@
+name: zbrodoff-retrieval-hit
+model: extras;surrogates;zbrodoff-retrieval-hit.lisp
+seed: (100 0)
+settings: (:mp 1 :ppm 1 :egs 0 :ans nil :trace-detail low)
+scenario: one a+2=c trial with a pre-seeded problem chunk
+note: project-authored surrogate for tutorial-unit4-zbrodoff-with-*

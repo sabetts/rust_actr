@@ -1,0 +1,7 @@
+name: choice-surrogate
+model: extras;surrogates;choice-model.lisp
+task: extras;surrogates;choice-task.lisp
+seed: (100 0)
+settings: (:trace-detail medium)
+scenario: 12 goal-buffer choice trials with alternating rewards
+note: project-authored surrogate for tutorial-unit6-choice-results
