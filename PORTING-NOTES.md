@@ -6084,3 +6084,23 @@ The extracted reference also depends on the vendored model source; it was
 added to the fixture manifest and copied from the checkout.
 
 Corpus: **554 passed / 13 ignored**.
+
+## 353. `production-compilation-dynamism` checkpoint
+
+The task-side plumbing is complete:
+
+- The stale fixture spec was replaced with the command-capturing version, so
+  every `SET-BUFFER-CHUNK`, `MOD-BUFFER-CHUNK`, `SCHEDULE-MOD-BUFFER-CHUNK`,
+  `CLEAR-BUFFER`, and `MOD-FOCUS` call is replayed.
+- `SCHEDULE-MOD-BUFFER-CHUNK` is implemented in the RPC session with
+  `:priority`, `:module`, and `:time-in-ms` handling.
+- A goal `MODULE-MOD-REQUEST` lands as a low-output `MOD-BUFFER-CHUNK GOAL`,
+  matching the low-detail trace; the module-request line still prints at
+  normal detail.
+
+The case remains ignored. Its first divergence is still the first composed
+production: p2's dynamic slot is specialized to `COLOR` instead of being
+renamed/mapped across the pair (`A1 & B1`, expected `SLOT1 =S0`). A broader
+mapping rework reached 10,328 of the 10,894 ref lines but regressed 12 existing
+pcomp traces, so it was reverted. Full suite after the checkpoint:
+**554 passed / 13 ignored**.
