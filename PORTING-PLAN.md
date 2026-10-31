@@ -532,14 +532,10 @@ Completed:
   compilation-unit tests and `pcomp` at 66/66.
 
 Next steps: none for the regression corpus; only externally blocked,
-source-blocked, diagnostic, and environment-gated cases remain.
+diagnostic, and environment-gated cases remain.
 
 Remaining ignored cases:
 
-- Source audit:
-  - `tutorial-unit3-subitize-results` reads the missing
-    `unit-3-subitize-solution.ref`; classify as source-blocked unless that
-    source is recovered.
 - Diagnostic placeholder:
   - **`time-size-check`** has an upstream placeholder ref (`XXXXX`); leave
     ignored as a diagnostic, not an engine gap.
@@ -554,6 +550,14 @@ These need the protected source/password or an upstream copy:
 - Three protected Zbrodoff solution variants.
 - `tutorial-unit6-choice-results`.
 - Two protected categorize experiments.
+- `tutorial-unit3-subitize-results` scraps
+  `unit-3-subitize-solution.ref`, which exists only as an entry in the
+  encrypted `test-models/solution-tests.zip` (all 28 entries are encrypted;
+  the build notes use a placeholder password). Its echoed table is documented
+  in `tutorial/python/unit3.ipynb`, so promotion needs only the extracted file
+  and a `SourceCase`, not engine work. The solution model is likewise inside
+  the protected `examples/act-r-solutions.zip`, so the run cannot be
+  regenerated from the shipped starting model.
 
 ## First-Divergence Harness
 

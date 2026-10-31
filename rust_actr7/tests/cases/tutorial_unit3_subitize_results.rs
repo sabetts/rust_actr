@@ -4,5 +4,5 @@
 ignored_case!(
     tutorial_unit3_subitize_results,
     "tutorial-unit3-subitize-results",
-    "scrape source missing from checkout: unit-3-subitize-solution.ref (pending)"
+    "blocked: protected solution-tests.zip entry (password required)"
 );

@@ -6197,3 +6197,22 @@ equation with per-reference decays:
 
 Corpus: **559 passed / 8 ignored**, with 14 project-authored compilation-unit
 tests and `pcomp` at 66/66.
+
+## 358. Subitize-results scrape source is protected, not lost
+
+`tutorial-unit3-subitize-results` is not missing its source: the probe file is
+`test-models/solution-tests.zip`'s `unit-3-subitize-solution.ref` entry
+(81,776 bytes). The archive is fully encrypted and the password is not in the
+checkout (`dev-tools/base/build-notes.txt` builds it with the placeholder
+`-p"XXX"`); SVN history never had the file as a loose path, and the current
+`test-models` listing does not include it.
+
+The echoed fragment is the table documented in
+`tutorial/python/unit3.ipynb` and matches the vendored
+`tutorial-unit3-subitize-results.ref`. Promotion therefore needs only the
+extracted file plus a `SourceCase`, not engine work. Regenerating the run is
+not an option: the solution model is inside the protected
+`examples/act-r-solutions.zip`, and the shipped
+`tutorial/unit3/subitize-model.lisp` is the starting model (no productions).
+
+Corpus unchanged: **559 passed / 8 ignored**.
