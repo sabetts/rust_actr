@@ -515,9 +515,6 @@ work back to `main`.
 Remaining ignored cases:
 
 - Recoverable:
-  - `tutorial-unit7-past-tense-warning`
-  - `tutorial-unit7-past-tense-no-reward-warning`
-  - `testing-child-slot`
   - `spacing-effect`
 - Source audit:
   - `tutorial-unit3-subitize-results` reads the missing
