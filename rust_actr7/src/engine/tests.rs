@@ -283,6 +283,26 @@ fn sgp_rejects_unknown_keys() {
 }
 
 #[test]
+fn runtime_production_redefinition_warns() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.apply_sgp(":MODEL-WARNINGS", &crate::sexpr::Sexp::Sym("T".into()))
+        .unwrap();
+    e.define_production_text("(p test =goal> ==> )").unwrap();
+    e.define_production_text("(p test =goal> ==> )").unwrap();
+    let out = e.output();
+    assert!(
+        out.contains("#|Warning: Production TEST already exists and it is being redefined. |#"),
+        "missing redefinition warning in output:\n{out}"
+    );
+}
+
+#[test]
 fn eval_user_defun() {
     use crate::model::UserDefun;
     use crate::sexpr::parse_all;

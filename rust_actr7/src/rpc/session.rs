@@ -167,6 +167,7 @@ pub const BUILTINS: &[&str] = &[
     "no-output",
     "pp",
     "p",
+    "delete-production",
     // Device / vision / motor.
     "add-visicon-features",
     "modify-visicon-features",
@@ -1940,6 +1941,13 @@ impl Session {
                     } else {
                         eng.penable(&names);
                     }
+                }
+                Ok(vec![Json::Null])
+            }
+            "delete-production" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or_default();
+                if let Some(eng) = &mut self.engine {
+                    eng.delete_production(name);
                 }
                 Ok(vec![Json::Null])
             }

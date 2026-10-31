@@ -423,6 +423,10 @@ pub struct Model {
     /// re-evaluates the model body on `reset`, so these are re-emitted then
     /// (not at load, where the warning monitor isn't installed yet).
     pub reset_warnings: Vec<String>,
+    /// `model-warning` lines from model-body evaluation (e.g. undefined
+    /// chunks created by `define-chunks`). Emitted on reset only when
+    /// `:model-warnings` is on.
+    pub model_warnings: Vec<String>,
 }
 
 impl Model {
@@ -2661,6 +2665,7 @@ fn parse_model(
         set_param_values: Vec::new(),
         window_origin: None,
         reset_warnings: Vec::new(),
+        model_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -2757,7 +2762,28 @@ fn parse_model(
                 // Anonymous `(isa TYPE ...)` entries are auto-named
                 // `TYPE{index}`, as ACT-R does.
                 for e in &items[1..] {
-                    define_chunk_table_entry(e, &mut model)?;
+                    let name = define_chunk_table_entry(e, &mut model)?;
+                    // `create-undefined-chunk` warns for bare slot values that
+                    // are not known chunks (`framework/chunks.lisp:852`).
+                    let mut known: Vec<String> = model
+                        .defined_chunks
+                        .iter()
+                        .map(|c| c.name.clone())
+                        .chain(model.chunks.iter().map(|c| c.name.clone()))
+                        .chain(model.chunk_types.iter().map(|ct| ct.name.clone()))
+                        .collect();
+                    if let Some(c) = model.defined_chunks.iter().find(|c| c.name == name) {
+                        for (_, v) in &c.slots {
+                            if let Pattern::Sym(s) = v {
+                                if is_undefined_chunk_value(s, &known) {
+                                    model
+                                        .model_warnings
+                                        .push(format!("Creating chunk {s} with no slots"));
+                                    known.push(s.clone());
+                                }
+                            }
+                        }
+                    }
                 }
             }
             "MERGE-CHUNKS" | "MERGE-CHUNKS-FCT" => {

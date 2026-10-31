@@ -729,6 +729,12 @@ impl Engine {
     /// `(module-request '<buffer> (define-chunk-spec))` for a driver step.
     /// The empty spec matches every chunk in the module.
     pub fn empty_module_request(&mut self, buffer: &str) -> Result<(), EngineError> {
+        if buffer.eq_ignore_ascii_case("RETRIEVAL") {
+            if self.retrieval_pending {
+                self.model_warning("A retrieval event has been aborted by a new request");
+            }
+            self.retrieval_pending = true;
+        }
         let spec = NewChunk::Spec {
             ctype: String::new(),
             slots: Vec::new(),

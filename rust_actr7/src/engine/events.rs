@@ -920,6 +920,7 @@ impl Engine {
                 }
             }
             Event::StartRetrieval { spec, var_slots } => {
+                self.retrieval_pending = false;
                 if show {
                     self.emit("DECLARATIVE", "start-retrieval".into());
                 }

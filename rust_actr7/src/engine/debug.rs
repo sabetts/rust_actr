@@ -1285,6 +1285,14 @@ impl Engine {
         }
     }
 
+    /// `model-warning`: like `emit_warning`, but suppressed unless the model
+    /// has `:model-warnings` on.
+    pub(super) fn model_warning(&mut self, msg: &str) {
+        if self.cfg.model_warnings {
+            self.emit_warning(msg);
+        }
+    }
+
     /// Runtime `(p name ...)`: parse a production and emit ACT-R's typed-slot
     /// warnings. The test-model drivers use this to exercise runtime
     /// production definition without a full command-layer macro expander.
@@ -1296,8 +1304,38 @@ impl Engine {
         for w in spec_warnings.iter().chain(prod_warnings.iter()) {
             self.emit_warning(w);
         }
+        if self.model.productions.iter().any(|q| q.name == p.name) {
+            // `(p name ...)` for an existing production is a redefinition;
+            // ACT-R keeps the last one and warns (`redefine-production`).
+            self.model_warning(&format!(
+                "Production {} already exists and it is being redefined.",
+                p.name
+            ));
+        }
         self.model.productions.retain(|q| q.name != p.name);
         self.model.productions.push(p);
+        self.rebuild_exec_prods();
+        self.changed();
+        Ok(())
+    }
+
+    /// `delete-production` (`procedural-cmds.lisp`): remove a named
+    /// production, keeping the exec table and utility vectors aligned.
+    pub fn delete_production(&mut self, name: &str) {
+        let name = name.to_uppercase();
+        self.model.productions.retain(|p| p.name != name);
+        self.utilities = self
+            .model
+            .productions
+            .iter()
+            .map(|p| p.utility.unwrap_or(self.cfg.iu))
+            .collect();
+        self.production_utility = vec![None; self.model.productions.len()];
+        self.rebuild_exec_prods();
+        self.changed();
+    }
+
+    fn rebuild_exec_prods(&mut self) {
         self.exec_prods = self
             .model
             .productions
@@ -1309,8 +1347,6 @@ impl Engine {
                 implicit_queries: implicit_queries(prod, &self.cfg.do_not_query),
             })
             .collect();
-        self.changed();
-        Ok(())
     }
 
     /// `(mod-focus slot value ...)`: schedule a goal modification at the

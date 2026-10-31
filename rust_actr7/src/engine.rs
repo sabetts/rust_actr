@@ -2395,6 +2395,9 @@ pub struct Engine {
     chunk_names: HashSet<String>,
     hist: Vec<History>,
     buffers: HashMap<String, Buffer>,
+    /// A task `module-request` for RETRIEVAL is queued but has not started;
+    /// a second request aborts it and emits ACT-R's model warning.
+    retrieval_pending: bool,
     queue: BinaryHeap<Queued>,
     seq: u64,
     /// Multi-model meta-process: the shared FIFO sequence allocator, so events
@@ -2957,6 +2960,7 @@ impl Engine {
             chunk_names: HashSet::new(),
             hist: Vec::new(),
             buffers: HashMap::new(),
+            retrieval_pending: false,
             queue: BinaryHeap::new(),
             seq: 0,
             shared_seq: None,
@@ -3572,6 +3576,7 @@ impl Engine {
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
+        self.retrieval_pending = false;
         // ACT-R re-evaluates the model body on reset, so the validator's
         // rejection warnings reappear here (the load-time ones are dropped).
         // Warnings honour the model body's `:v`, as `model-warning` does, but
@@ -3582,6 +3587,11 @@ impl Engine {
         self.trace_on = warning_trace;
         for w in self.model.reset_warnings.clone() {
             self.emit_warning(&w);
+        }
+        if self.cfg.model_warnings {
+            for w in self.model.model_warnings.clone() {
+                self.emit_warning(&w);
+            }
         }
         for w in self.implicit_query_style_warnings() {
             self.emit_warning(&w);

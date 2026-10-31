@@ -13,6 +13,10 @@ fn tutorial_unit5modeling_bad_isa_warning() -> Result<(), String> {
         .steps(vec![
             Step::Sgp(":MODEL-WARNINGS".into(), crate::sexp(r#"T"#)),
             Step::Command {
+                name: "delete-production".into(),
+                args: vec![actr_engine::sexpr::Sexp::Sym("P1".into())],
+            },
+            Step::Command {
                 name: "p".into(),
                 args: crate::sexps(r#"P1 ==> +RETRIEVAL> ISA SIMPLE-VALUE ARG1 NIL"#),
             },
