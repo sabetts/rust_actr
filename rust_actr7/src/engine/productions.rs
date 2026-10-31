@@ -3047,7 +3047,13 @@ impl Engine {
             ..
         } = &spec
         {
-            if !ctype.is_empty() {
+            if !ctype.is_empty()
+                && !self
+                    .model
+                    .chunk_types
+                    .iter()
+                    .any(|t| t.name.eq_ignore_ascii_case(ctype))
+            {
                 if let Some(chunk) = self
                     .dm
                     .iter()
@@ -3075,6 +3081,15 @@ impl Engine {
             }
             NewChunk::Spec { slots, neg, .. } => (slots.clone(), neg.clone()),
         };
+        if std::env::var_os("RETR_DEBUG").is_some() {
+            eprintln!(
+                "REQ ctype={:?} slots={want_slots:?} neg={want_neg:?}",
+                match &spec {
+                    NewChunk::Spec { ctype, .. } => ctype.clone(),
+                    _ => String::new(),
+                }
+            );
+        }
         // `isa TYPE` (`define-chunk-spec-fct`, chunk-spec.lisp:441): the
         // chunk-type's default slot tests are added for any slot not already
         // tested (`process-slots-specs`, chunk-spec.lisp:597) — e.g.

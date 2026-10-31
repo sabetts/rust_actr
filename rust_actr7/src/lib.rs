@@ -337,6 +337,8 @@ pub enum Step {
     AlDriver,
     /// One `past-tense-trials` trial for the warning regressions.
     PastTenseWarning { override_buffers: bool },
+    /// `testing-child-slot`: matching, retrieval, and imaginal production sets.
+    TestingChildSlot,
     /// Zbrodoff alpha-arithmetic experiment driver.
     Zbrodoff(ZbrodoffMode),
     /// `(zbrodoff-problem addend1 addend2 sum answer t)`: run one trial and
@@ -602,6 +604,7 @@ pub fn run_model_steps_with_hook(
             Step::PastTenseWarning { override_buffers } => {
                 eng.past_tense_warning_trial(*override_buffers)?
             }
+            Step::TestingChildSlot => eng.testing_child_slot()?,
             Step::Zbrodoff(mode) => eng.zbrodoff_driver(*mode)?,
             Step::ZbrodoffProblem {
                 addend1,

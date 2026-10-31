@@ -2426,6 +2426,14 @@ impl Engine {
                                 continue;
                             }
                             let slot = self.resolve_slot_name(&t.slot, &b);
+                            if !t.slot.starts_with('=')
+                                && !chunk.slots.iter().any(|(name, _)| name == &slot)
+                                && matches!((&t.op, &t.value), (SlotOp::Eq, Pattern::Var(_)))
+                            {
+                                return format!(
+                                    "The chunk in the {buffer} buffer does not have slot {slot}."
+                                );
+                            }
                             let got = chunk.get(&slot);
                             let mut ppm = Vec::new();
                             let ok = match t.op {
@@ -2445,6 +2453,12 @@ impl Engine {
                                 // so the reason names the resolved slot and the
                                 // variable.
                                 if t.slot.starts_with('=') {
+                                    if !chunk.slots.iter().any(|(name, _)| name == &slot) {
+                                        return format!(
+                                            "The chunk in the {buffer} buffer does not have a slot named {slot} (the value of the {} variable).",
+                                            t.slot
+                                        );
+                                    }
                                     return format!(
                                         "The value in the {slot} slot (the value of the {} variable) of the chunk of the {buffer} buffer does not satisfy the constraints.",
                                         t.slot

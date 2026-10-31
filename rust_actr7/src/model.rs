@@ -317,6 +317,7 @@ pub fn parse_defuns(src: &str) -> HashMap<String, UserDefun> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChunkType {
     pub name: String,
+    pub parents: Vec<String>,
     pub slots: Vec<String>,
     /// `(slot default)` declarations: slots with a default value applied
     /// when a chunk of this type is created.
@@ -1582,15 +1583,54 @@ fn undefined_slot_warnings(
 /// ACT-R's type-specific slot validation for a runtime production
 /// (`define-chunk-spec-fct` + `parse-conditions`/`parse-actions`). Returns the
 /// chunk-spec definition warnings first, then the production-level warnings.
+fn type_includes(
+    model: &Model,
+    child: &str,
+    parent: &str,
+    seen: &mut std::collections::HashSet<String>,
+) -> bool {
+    if child.eq_ignore_ascii_case(parent) {
+        return true;
+    }
+    if !seen.insert(child.to_uppercase()) {
+        return false;
+    }
+    model
+        .chunk_types
+        .iter()
+        .find(|t| t.name.eq_ignore_ascii_case(child))
+        .is_some_and(|t| {
+            t.parents
+                .iter()
+                .any(|p| type_includes(model, p, parent, seen))
+        })
+}
 pub fn production_type_warnings(p: &Production, model: &Model) -> (Vec<String>, Vec<String>) {
     let mut spec_warnings = Vec::new();
     let mut prod_warnings = Vec::new();
     let type_slots = |name: &str| -> Option<Vec<String>> {
-        model
+        if !model
             .chunk_types
             .iter()
-            .find(|t| t.name.eq_ignore_ascii_case(name))
-            .map(|t| t.slots.iter().map(|s| s.to_uppercase()).collect())
+            .any(|t| t.name.eq_ignore_ascii_case(name))
+        {
+            return None;
+        }
+        let mut slots: Vec<String> = Vec::new();
+        for t in &model.chunk_types {
+            let related = t.name.eq_ignore_ascii_case(name)
+                || type_includes(model, &t.name, name, &mut std::collections::HashSet::new())
+                || type_includes(model, name, &t.name, &mut std::collections::HashSet::new());
+            if related {
+                for slot in &t.slots {
+                    let slot = slot.to_uppercase();
+                    if !slots.contains(&slot) {
+                        slots.push(slot);
+                    }
+                }
+            }
+        }
+        Some(slots)
     };
     for item in &p.lhs {
         let LhsItem::Match { tests, .. } = item else {
@@ -1603,7 +1643,10 @@ pub fn production_type_warnings(p: &Production, model: &Model) -> (Vec<String>, 
             continue;
         };
         for test in tests {
-            if test.slot == "ISA" || slots.iter().any(|s| s == &test.slot) {
+            if test.slot == "ISA"
+                || test.slot.starts_with('=')
+                || slots.iter().any(|s| s == &test.slot)
+            {
                 continue;
             }
             spec_warnings.push(format!(
@@ -1634,7 +1677,7 @@ pub fn production_type_warnings(p: &Production, model: &Model) -> (Vec<String>, 
             continue;
         };
         for (slot, _) in slots.iter().chain(neg.iter()) {
-            if slot == "ISA" || type_slots.iter().any(|s| s == slot) {
+            if slot == "ISA" || slot.starts_with('=') || type_slots.iter().any(|s| s == slot) {
                 continue;
             }
             spec_warnings.push(format!(
@@ -2346,6 +2389,18 @@ pub fn parse_chunk_type_spec(items: &[Sexp]) -> Result<ChunkType, LoadError> {
         },
         got => return structural(format!("bad chunk-type name: {got:?}")),
     };
+    let mut parents = Vec::new();
+    if let Sexp::List(parts) = name_desc {
+        for part in &parts[1..] {
+            if let Sexp::List(pair) = part {
+                if pair.first().and_then(|x| x.as_sym()) == Some(":INCLUDE") {
+                    if let Some(parent) = pair.get(1).and_then(|x| x.as_sym()) {
+                        parents.push(parent.to_string());
+                    }
+                }
+            }
+        }
+    }
     let mut rest: Vec<&Sexp> = it.collect();
     // An optional documentation string follows the name.
     if matches!(rest.first(), Some(Sexp::Str(_))) {
@@ -2369,6 +2424,7 @@ pub fn parse_chunk_type_spec(items: &[Sexp]) -> Result<ChunkType, LoadError> {
     }
     Ok(ChunkType {
         name,
+        parents,
         slots: out,
         defaults,
     })
@@ -3171,6 +3227,10 @@ fn parse_model(
                     }
                 }
             }
+            // Task models may define local helper functions inside the
+            // `define-model` body. Their productions are loaded separately
+            // by the driver, so the loader only needs to ignore the defun.
+            "DEFUN" => {}
             got => return structural(format!("unknown model body form: {got}")),
         }
     }
@@ -3355,11 +3415,13 @@ mod tests {
             vec![
                 ChunkType {
                     name: "NUMBER".into(),
+                    parents: vec![],
                     slots: vec!["NUMBER".into(), "NEXT".into()],
                     defaults: vec![],
                 },
                 ChunkType {
                     name: "COUNT-FROM".into(),
+                    parents: vec![],
                     slots: vec!["START".into(), "END".into(), "COUNT".into()],
                     defaults: vec![],
                 },

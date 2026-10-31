@@ -280,6 +280,187 @@ impl Engine {
         }
         Ok(())
     }
+    fn clear_test_productions(&mut self) {
+        self.out_lines
+            .push("#|Warning: Clearing the productions is not recommended |#".to_string());
+        self.model.productions.clear();
+        self.exec_prods.clear();
+        self.utilities.clear();
+        self.production_utility.clear();
+        self.disabled_prods.clear();
+        self.last_conflict_set.clear();
+    }
+
+    fn define_child_prod(&mut self, text: &str) -> Result<(), EngineError> {
+        self.define_production_text(text)?;
+        self.utilities.push(self.cfg.iu);
+        self.production_utility.push(None);
+        Ok(())
+    }
+
+    fn strip_activation_detail(&mut self, start: usize) {
+        let lines = self.out_lines.split_off(start);
+        self.out_lines.extend(lines.into_iter().filter(|line| {
+            let t = line.trim_start();
+            !(t.starts_with("Computing activation for chunk")
+                || t.starts_with("Computing base-level")
+                || t.starts_with("Starting with blc:")
+                || t.starts_with("User provided chunk base-level:")
+                || t.starts_with("base-level value:")
+                || t.starts_with("Total base-level:")
+                || t.starts_with("Adding transient noise")
+                || t.starts_with("Adding permanent noise")
+                || (t.starts_with("Chunk ") && t.contains(" has an activation of:"))
+                || t.starts_with("Chunk ")
+                    && (t.contains(" has the current best activation")
+                        || t.contains(" is now the current best with activation")
+                        || t.contains(" matches the current best activation")))
+        }));
+    }
+    fn goal_focus_test_chunk(&mut self, name: &str) -> Result<(), EngineError> {
+        let mut inst = self
+            .named
+            .get(name)
+            .or_else(|| self.dm.iter().find(|c| c.name.as_deref() == Some(name)))
+            .cloned()
+            .ok_or_else(|| bad(format!("no chunk named {name}")))?;
+        let reuse = self.reuse_buffer_name("GOAL");
+        inst.name = Some(reuse.clone());
+        self.copy_source.insert(reuse, name.to_string());
+        self.now(
+            Prio::Max,
+            Out::Low,
+            Event::SetBuffer {
+                buffer: "GOAL".to_string(),
+                chunk: NewChunk::Instance(inst),
+                requested: false,
+                shown: Some(name.to_string()),
+            },
+        );
+        self.now_m(Prio::Max, Out::Never, true, Event::Dummy);
+        Ok(())
+    }
+    fn define_test_chunk(&mut self, name: &str, count: i64) {
+        self.named.insert(
+            name.to_string(),
+            ChunkInst {
+                name: Some(name.to_string()),
+                ctype: "TEST".into(),
+                slots: vec![("COUNT".into(), Value::Int(count))],
+                bare: false,
+            },
+        );
+        self.chunk_names.insert(name.to_string());
+    }
+
+    /// `testing-child-slot`'s `run-it`: matching, retrieval, then imaginal
+    /// production sets over the parent/child chunk types.
+    pub fn testing_child_slot(&mut self) -> Result<(), EngineError> {
+        self.set_detail(Detail::Medium);
+        self.set_buffer_chunk_desc(
+            "IMAGINAL",
+            &ChunkDesc::Spec {
+                ctype: "TARGET".into(),
+                slots: vec![("SLOT1".into(), Pattern::Sym("SLOT1".into()))],
+                auto_cmd: false,
+                neg: Vec::new(),
+                rels: Vec::new(),
+            },
+        )?;
+
+        self.clear_test_productions();
+        self.define_child_prod("(p slot1-empty\n =goal>\n isa parent\n slot1 nil\n ==>)")?;
+        self.define_child_prod("(p slot1-filled\n =goal>\n isa parent\n slot1 =val\n ==>)")?;
+        self.define_child_prod(
+            "(p slot1-filled*\n =goal>\n isa parent\n =slot =val\n =imaginal>\n isa target\n slot1 =slot\n ==>)",
+        )?;
+        for goal in ["PARENT", "TARGET-NIL", "TARGET-FULL", "OTHER"] {
+            self.overwrite_buffer_chunk_named("GOAL", goal)?;
+            self.out_lines.push("+++++++++++++++++++++++++".to_string());
+            self.print_buffer_chunk(&["GOAL".to_string()]);
+            self.print_whynot(&[]);
+        }
+
+        self.clear_test_productions();
+        self.define_child_prod(
+            "(p retrieve0\n =goal>\n isa test\n count 0\n ==>\n -goal>\n +retrieval>\n isa target\n slot1 nil)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve1\n =goal>\n isa test\n count 1\n ==>\n -goal>\n +retrieval>\n isa parent\n slot1 nil)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve2\n =goal>\n isa test\n count 2\n ==>\n -goal>\n +retrieval>\n isa target\n - slot1 nil)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve3\n =goal>\n isa test\n count 3\n ==>\n -goal>\n +retrieval>\n isa parent\n - slot1 nil)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve4\n =goal>\n isa test\n count 4\n ==>\n -goal>\n +retrieval>\n isa target\n slot1 t)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve5\n =goal>\n isa test\n count 5\n ==>\n -goal>\n +retrieval>\n isa parent\n slot1 t)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve6\n =goal>\n isa test\n count 6\n =imaginal>\n isa target\n slot1 =slot\n ==>\n -goal>\n =imaginal>\n +retrieval>\n isa parent\n =slot t)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve7\n =goal>\n isa test\n count 7\n =imaginal>\n isa target\n slot1 =slot\n ==>\n -goal>\n =imaginal>\n +retrieval>\n isa target\n =slot t)",
+        )?;
+        self.define_child_prod(
+            "(p retrieve8\n =goal>\n isa test\n count 8\n =imaginal>\n isa target\n slot1 =slot\n ==>\n -goal>\n =imaginal>\n +retrieval>\n isa other\n =slot t)",
+        )?;
+        for i in 0..9i64 {
+            let name = format!("TEST{i}");
+            self.define_test_chunk(&name, i);
+            self.goal_focus_test_chunk(&name)?;
+            self.print_productions(&[format!("RETRIEVE{i}")]);
+            let mark = self.out_len();
+            self.run_secs(10.0)?;
+            self.strip_activation_detail(mark);
+        }
+
+        self.clear_test_productions();
+        for (i, body) in [
+            "(p imaginal0\n =goal>\n isa test\n count 0\n ==>\n -goal>\n +imaginal>\n isa parent\n slot1 t)",
+            "(p imaginal1\n =goal>\n isa test\n count 1\n ==>\n -goal>\n +imaginal>\n isa target\n slot1 t)",
+            "(p imaginal2\n =goal>\n isa test\n count 2\n =imaginal>\n isa target\n slot1 =slot\n ==>\n -goal>\n +imaginal>\n isa parent\n =slot t)",
+            "(p imaginal3\n =goal>\n isa test\n count 3\n =imaginal>\n isa target\n slot1 =slot\n ==>\n -goal>\n +imaginal>\n isa target\n =slot t)",
+            "(p imaginal4\n =goal>\n isa test\n count 4\n =imaginal>\n isa target\n slot1 =slot\n ==>\n -goal>\n +imaginal>\n isa other\n =slot t)",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            self.define_child_prod(body)?;
+            let _ = i;
+        }
+        let old_trace = self.trace_on;
+        self.trace_on = true;
+        self.define_child_prod(
+            "(p imaginal-bad\n =goal>\n isa test\n count nil\n ==>\n -goal>\n +imaginal>\n isa other\n slot1 t)",
+        )?;
+        self.trace_on = old_trace;
+        let old_detail = self.cfg.detail;
+        self.set_detail(Detail::High);
+        for i in 0..5i64 {
+            let name = format!("TEST{}", 9 + i);
+            self.define_test_chunk(&name, i);
+            self.goal_focus_test_chunk(&name)?;
+            self.set_buffer_chunk_desc(
+                "IMAGINAL",
+                &ChunkDesc::Spec {
+                    ctype: "TARGET".into(),
+                    slots: vec![("SLOT1".into(), Pattern::Sym("SLOT1".into()))],
+                    auto_cmd: false,
+                    neg: Vec::new(),
+                    rels: Vec::new(),
+                },
+            )?;
+            self.print_productions(&[format!("IMAGINAL{i}")]);
+            self.run_secs(10.0)?;
+        }
+        self.set_detail(old_detail);
+        Ok(())
+    }
     /// `summarize-tests`/`display-data` (`test-model.lisp:84`): print one
     /// `#####` block per recorded `:test` marker.
     pub(super) fn zz_summarize(&mut self) {
