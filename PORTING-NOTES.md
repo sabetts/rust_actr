@@ -6142,3 +6142,26 @@ one `past-tense-trials` trial:
 
 The driver writes only the warning lines, matching the two small refs.
 Corpus: **557 passed / 10 ignored**.
+
+## 356. `testing-child-slot` promoted
+
+The driver reproduces the three task sections directly: matching probes with
+`buffer-chunk`/`whynot`, nine retrieval productions, and five imaginal
+productions under high trace detail.
+
+Engine fixes exposed by the ref:
+
+- chunk-type `:include` parents are retained, and runtime slot validation
+  accepts slots contributed by descendant types (`SLOT1` is valid for
+  `PARENT` through `TARGET`);
+- dynamic slot names are skipped by static slot validation;
+- absent static/dynamic slots now produce ACT-R's missing-slot `whynot`
+  reasons;
+- a retrieval `isa` type wins over a same-named DM chunk, so `isa other`
+  does not expand the `OTHER` chunk;
+- `isa` is ignored by retrieval slot matching, matching the ref's candidate
+  lists;
+- the driver filters activation narration that the ref suppresses while
+  keeping match/chosen traces.
+
+Corpus: **558 passed / 9 ignored**.
