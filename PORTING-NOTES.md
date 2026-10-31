@@ -6265,3 +6265,28 @@ single-float the way SBCL does it (`(sqrt 2)` is a single). The previous
 f64-then-cast form was one ulp off and changed the UAN row's last digit.
 
 Corpus: **559 passed / 8 ignored**, plus the two-parameter coverage suite.
+
+## 361. Full-detail differential harness and the `(100 0)` seed
+
+`tests/full_detail.rs` compares byte-exact SBCL traces captured with maximal
+narration (`:trace-detail high :act high :pct t`) for five small models:
+`noisy-count` (activation noise), `bll-count` (base level), `mp-test`
+(partial matching), `ul-test` (utility), and `attend` (vision). The models,
+task-setup sidecars, manifest, and regen script live under
+`fixtures/full-detail/`.
+
+The first run exposed a real bug: `Engine::new` only applied its `seed`
+argument when it was not `(100 0)`, because `(100 0)` is also the extractor's
+placeholder for a run seed it could not recover. But the API and every
+`Case`/`run_model` caller pass `(100 0)` as a *real* seed (the upstream
+model-tester re-applies `:starting-parameters (:seed (100 0))` on every
+test). The engine therefore ran those models on the default MT state; the
+first activation-noise draw made that visible. The seed is now always applied
+unless a model-body `:seed` overrides it; only `Step::RunFullTime`'s recorded
+mid-run placeholder is still skipped.
+
+The harness also found a stream divergence: Lisp's `:cst` uses
+`print-instantiation`, which writes through `command-output`, not the `:v`
+trace stream. The engine's `:cst` currently uses the trace stream, so it is
+excluded from the full-detail settings and noted for the warning/command
+oracle work.

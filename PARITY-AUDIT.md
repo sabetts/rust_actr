@@ -64,11 +64,17 @@ compilation-unit tests compare directly against Lisp traces.
    driver schedules the task's rehearsals and captures the five
    `(winner C1 C2 latency)` rows after each request; the literal rows are
    gone.
-3. **Full-detail differential harness.** For one representative model per
-   subsystem, run SBCL and Rust with maximal trace
-   (`:v t :act high :pct t :sact t :cst t :blt t`) and store the SBCL output
-   as a project-authored trace. This is the main way to expose numeric and
-   event-ordering drift the refs suppress.
+3. [x] **Full-detail differential harness.** `tests/full_detail.rs` compares
+   byte-exact SBCL traces captured with `:trace-detail high :act high :pct t`
+   for five small models (`fixtures/full-detail/`): noisy-count (activation
+   noise), bll-count (base level), mp-test (partial matching), ul-test
+   (utility), and attend (vision). The first run found two things:
+   - `Engine::new` skipped seeding when the seed was `(100 0)`, treating it
+     as the extractor placeholder. The API/driver paths now always apply the
+     seed; only `Step::RunFullTime`'s mid-run placeholder is skipped.
+   - `:cst` writes to the trace stream in Rust but to command output in Lisp
+     (`print-instantiation` → `command-output`), so `:cst t` is excluded from
+     these trace comparisons and belongs to item 5.
 4. **State/RNG instrumentation.** For a small sample, compare RNG draw
    sequences, reference merges, utility updates, and queue ordering between
    instrumented SBCL and Rust. Trace text alone can hide draws that never

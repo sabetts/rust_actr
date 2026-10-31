@@ -14,6 +14,7 @@ fixtures/
     specs/         only specs still read at test time: data-heavy experiments
     README.md
   extra-traces/    project-authored scenarios not covered upstream
+  full-detail/     SBCL maximal-detail traces (tests/full_detail.rs)
   units/           module latency / base-level tables (unit tests)
   errors/          err-*.lisp fixtures for the error-path tests
   manifest.lisp    model list for the extra traces (regen input)
@@ -67,6 +68,14 @@ captured from the Lisp system by `regen.sh` (+ `run-traces.lisp`,
 `manifest.lisp`) and compared byte-exact. The list is **frozen**: it is not
 expected to grow. The models are vendored under `fixtures/models/user-loads/`.
 See `tests/extra_traces.rs`.
+
+### full-detail/
+
+`manifest.lisp` + `regen-full.sh` capture `<name>.trace` with an optional
+settings plist applied after reset (`:trace-detail high :act high :pct t`).
+`tests/full_detail.rs` compares them byte-exact. Task-setup sidecars
+(similarities/reward/window) mirror the Lisp `task-setup` calls, as in
+`extra-traces/`.
 
 ### units/
 
