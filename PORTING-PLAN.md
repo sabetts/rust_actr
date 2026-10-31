@@ -484,7 +484,7 @@ mask the composition rule under test. Covered components:
 The engine port was completed on branch `resume/production-compilation`,
 created from `main`; the original `faithful-port-wip` branch remains as an
 archive. `production-compilation-dynamism` now matches the full 10,894-line
-ref and is promoted. The branch is green at **555 passed / 12 ignored**, plus
+ref and is promoted. `main` is green at **557 passed / 10 ignored**, plus
 **14 passed** component tests. `pcomp` remains **66/66**.
 
 Resolved along the way:

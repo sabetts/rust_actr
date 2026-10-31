@@ -6125,3 +6125,20 @@ in the composed texts alone:
 The case is promoted and the full suite is green at
 **555 passed / 12 ignored**, with 14 project-authored compilation-unit tests
 and `pcomp` at 66/66.
+
+## 355. Past-tense warning cases promoted
+
+`tutorial-unit7-past-tense-warning` and
+`tutorial-unit7-past-tense-no-reward-warning` now use an engine driver for
+one `past-tense-trials` trial:
+
+- the tutorial frequency table is sampled with the same three
+  `act-r-random` draws (two presentation chunks, then the target);
+- presentation chunks are added directly to DM, and the target is placed in
+  IMAGINAL with GOAL reset to `STATE START`;
+- the warning case schedules the task's 1 s buffer override;
+- production reward propagation is tracked separately so the no-reward
+  warning is emitted only when no reward fires.
+
+The driver writes only the warning lines, matching the two small refs.
+Corpus: **557 passed / 10 ignored**.
