@@ -2,10 +2,10 @@
 use super::compilation::{
     basic_vars, bound_text, buffer_usage, canon_composed, canon_prod, compute_retain_buffers,
     constant_value, failure_wait, goal_reason, imaginal_reason, indirect_action_buffer_name,
-    indirect_action_vars, indirect_safe_bind_reason, instantiate_slot_names, instantiate_var,
-    is_buffer_name, latency, lhs_buffers, motor_reason, perceptual_reason, prod_lhs_slots,
-    prod_rhs_actions, production_bind_vars, r_b_c1, r_b_c2, remove_dup_keep_last, render_compiled,
-    render_production, retrieval_reason, rhs_buffers, sort_token, var_buffers,
+    indirect_action_vars, indirect_safe_bind_reason, instantiate_slot_names, is_buffer_name,
+    latency, lhs_buffers, motor_reason, perceptual_reason, prod_lhs_slots, prod_rhs_actions,
+    production_bind_vars, r_b_c1, r_b_c2, remove_dup_keep_last, render_compiled, render_production,
+    retrieval_reason, rhs_buffers, sexp_lisp, sort_token,
 };
 use super::dm::{bl_equation, ol_str};
 use super::rhs::{explicit_out, implicit_clears, implicit_queries};
@@ -20,6 +20,18 @@ fn dynamic_slot(slot: &str, b: &Bindings) -> String {
             .map(|v| v.show())
             .unwrap_or_else(|| slot.to_string()),
         None => slot.to_string(),
+    }
+}
+
+/// `replace-variables` over an RHS `!`-action argument list.
+fn rename_sexp(s: &Sexp, ren: &HashMap<String, String>) -> Sexp {
+    match s {
+        Sexp::List(xs) => Sexp::List(xs.iter().map(|x| rename_sexp(x, ren)).collect()),
+        Sexp::Sym(t) if t.starts_with('=') && t.len() > 1 => match ren.get(&t[1..]) {
+            Some(v) => Sexp::Sym(format!("={v}")),
+            None => s.clone(),
+        },
+        _ => s.clone(),
     }
 }
 
@@ -1550,8 +1562,10 @@ impl Engine {
                         continue;
                     }
                     for (name, v) in slots {
-                        if let Some(t) = bound_text(name, b1) {
-                            m.push((SlotVal::Var(name[1..].to_string()), SlotVal::Lit(t)));
+                        if name.starts_with('=') {
+                            if let Some(t) = bound_text(name, b1) {
+                                m.push((SlotVal::Var(name[1..].to_string()), SlotVal::Lit(t)));
+                            }
                         }
                         // `MAP-RETRIEVAL-BUFFER` only instantiates a
                         // variable *value* for an `=` request slot. Negative
@@ -1574,11 +1588,17 @@ impl Engine {
                 // the retrieved chunk at the *instantiated* slot name.
                 for (name, v) in &lhs_of(p2_lhs, "RETRIEVAL") {
                     let resolved = bound_text(name, b2);
-                    if let Some(t) = &resolved {
-                        m.push((SlotVal::Var(name[1..].to_string()), SlotVal::Lit(t.clone())));
+                    if name.starts_with('=') {
+                        if let Some(t) = &resolved {
+                            m.push((SlotVal::Var(name[1..].to_string()), SlotVal::Lit(t.clone())));
+                        }
                     }
                     if let SlotVal::Var(n) = v {
-                        let slot = resolved.clone().unwrap_or_else(|| name.clone());
+                        let slot = if name.starts_with('=') {
+                            resolved.clone().unwrap_or_else(|| name.clone())
+                        } else {
+                            name.clone()
+                        };
                         if let Some(cv) = self.chunk_name_slot(&chunk, &slot) {
                             m.push((SlotVal::Var(n.clone()), SlotVal::Lit(cv)));
                         }
@@ -1587,10 +1607,194 @@ impl Engine {
             }
         }
 
+        // --- MAP-IMAGINAL-BUFFER, RHS `=`/`*` to LHS `=` -----------------
+        let u1i = buffer_usage(p1, "IMAGINAL");
+        let u2i = buffer_usage(p2, "IMAGINAL");
+        if matches!(u1i, 9 | 25 | 56) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29 | 56) {
+            let p1a = lhs_of(p1_lhs, "IMAGINAL");
+            let p1b = act_of(p1_acts, "IMAGINAL", &['=', '*']);
+            let p2a = lhs_of(p2_lhs, "IMAGINAL");
+            let p2b = act_of(p2_acts, "IMAGINAL", &['=', '*']);
+            let slotsa = instantiate_slot_names(&p1a, b1);
+            let slotsb = instantiate_slot_names(&p1b, b1);
+            let slots2 = instantiate_slot_names(&p2a, b2);
+            let slots2b = instantiate_slot_names(&p2b, b2);
+            let vsa = var_slots(&p1a, b1);
+            let vsb = var_slots(&p1b, b1);
+            let vs2 = var_slots(&p2a, b2);
+            let vs2b = var_slots(&p2b, b2);
+            let p1slots: Vec<(String, SlotVal)> = slotsa
+                .iter()
+                .filter(|(n, _)| !slotsb.iter().any(|(x, _)| x == n))
+                .cloned()
+                .chain(slotsb.iter().cloned())
+                .collect();
+            let mut interesting: Vec<String> = Vec::new();
+            for src in [&p1slots, &slots2, &slots2b] {
+                for (n, _) in src {
+                    if !interesting.contains(n) {
+                        interesting.push(n.clone());
+                    }
+                }
+            }
+            for slot in &interesting {
+                let p1v: Vec<&String> = vsa
+                    .iter()
+                    .chain(vsb.iter())
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p1vb: Vec<&String> = vsb
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p2v: Vec<&String> = vs2
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p2vb: Vec<&String> = vs2b
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                if !p1v.is_empty() && !p2v.is_empty() {
+                    for a in &p1v {
+                        for c in &p2v {
+                            m.push((SlotVal::Var((*a).clone()), SlotVal::Var((*c).clone())));
+                        }
+                    }
+                }
+                if !p1v.is_empty() && !p2vb.is_empty() {
+                    for a in &p1v {
+                        for c in &p2vb {
+                            m.push((SlotVal::Var((*a).clone()), SlotVal::Var((*c).clone())));
+                        }
+                    }
+                }
+                if !p1v.is_empty() && has_slot(&p2a, slot) {
+                    for a in &p1v {
+                        m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p1vb.is_empty() && has_slot(&p2b, slot) {
+                    for a in &p1vb {
+                        m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p2v.is_empty() && (has_slot(&p1a, slot) || has_slot(&p1b, slot)) {
+                    for c in &p2v {
+                        m.push((SlotVal::Var((*c).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p2vb.is_empty() && has_slot(&p1b, slot) {
+                    for c in &p2vb {
+                        m.push((SlotVal::Var((*c).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                for (_, v1) in p1slots.iter().filter(|(n, _)| n == slot) {
+                    for (_, v2) in slots2.iter().filter(|(n, _)| n == slot) {
+                        if constant_value(v2) {
+                            m.push((v1.clone(), v2.clone()));
+                        } else {
+                            m.push((v2.clone(), v1.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- MAP-GOAL-BUFFER, RHS `+` request to LHS `=` ----------------
+        if matches!(buffer_usage(p1, "GOAL"), 4 | 12 | 13 | 44)
+            && matches!(buffer_usage(p2, "GOAL"), 8 | 9 | 12 | 13 | 40 | 44)
+        {
+            let p1b = act_of(p1_acts, "GOAL", &['+']);
+            let p2a = lhs_of(p2_lhs, "GOAL");
+            let p2b = act_of(p2_acts, "GOAL", &['=', '*']);
+            let slotsb = instantiate_slot_names(&p1b, b1);
+            let slots2 = instantiate_slot_names(&p2a, b2);
+            let slots2b = instantiate_slot_names(&p2b, b2);
+            let vsb = var_slots(&p1b, b1);
+            let vs2 = var_slots(&p2a, b2);
+            let vs2b = var_slots(&p2b, b2);
+            let mut interesting: Vec<String> = Vec::new();
+            for src in [&slotsb, &slots2, &slots2b] {
+                for (n, _) in src {
+                    if !interesting.contains(n) {
+                        interesting.push(n.clone());
+                    }
+                }
+            }
+            for slot in &interesting {
+                let p1v: Vec<&String> = vsb
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p2v: Vec<&String> = vs2
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                let p2vb: Vec<&String> = vs2b
+                    .iter()
+                    .filter(|(_, t)| t == slot)
+                    .map(|(v, _)| v)
+                    .collect();
+                if !p1v.is_empty() && !p2v.is_empty() {
+                    for a in &p1v {
+                        for c in &p2v {
+                            m.push((SlotVal::Var((*a).clone()), SlotVal::Var((*c).clone())));
+                        }
+                    }
+                }
+                if !p1v.is_empty() && !p2vb.is_empty() {
+                    for a in &p1v {
+                        for c in &p2vb {
+                            m.push((SlotVal::Var((*a).clone()), SlotVal::Var((*c).clone())));
+                        }
+                    }
+                }
+                if !p1v.is_empty() && has_slot(&p2a, slot) {
+                    for a in &p1v {
+                        m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p1v.is_empty() && has_slot(&p2b, slot) {
+                    for a in &p1v {
+                        m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p2v.is_empty() && has_slot(&p1b, slot) {
+                    for c in &p2v {
+                        m.push((SlotVal::Var((*c).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                if !p2vb.is_empty() && has_slot(&p1b, slot) {
+                    for c in &p2vb {
+                        m.push((SlotVal::Var((*c).clone()), SlotVal::Lit(slot.clone())));
+                    }
+                }
+                for (_, v1) in slotsb.iter().filter(|(n, _)| n == slot) {
+                    for (_, v2) in slots2.iter().filter(|(n, _)| n == slot) {
+                        if constant_value(v2) {
+                            m.push((v1.clone(), v2.clone()));
+                        } else {
+                            m.push((v2.clone(), v1.clone()));
+                        }
+                    }
+                }
+            }
+        }
         // --- MAP-GOAL-BUFFER, RHS `=` to LHS `=` ------------------------
-        if buffer_usage(p1, "GOAL") == 9 && matches!(buffer_usage(p2, "GOAL"), 8 | 9 | 12 | 13) {
+        let u1g = buffer_usage(p1, "GOAL");
+        let u2g = buffer_usage(p2, "GOAL");
+        if (u1g == 9 && matches!(u2g, 8 | 9 | 12 | 13))
+            || (u1g == 40 && matches!(u2g, 8 | 12 | 40 | 44))
+        {
             let p1a = lhs_of(p1_lhs, "GOAL");
-            let p1b = act_of(p1_acts, "GOAL", &['=']);
+            let p1b = act_of(p1_acts, "GOAL", if u1g == 40 { &['*'] } else { &['='] });
             let p2a = lhs_of(p2_lhs, "GOAL");
             let p2b = act_of(p2_acts, "GOAL", &['=', '*']);
             let slotsa = instantiate_slot_names(&p1a, b1);
@@ -1658,12 +1862,12 @@ impl Engine {
                         }
                     }
                 }
-                if !p1v.is_empty() && has_slot(&slots2, slot) {
+                if !p1v.is_empty() && has_slot(&p2a, slot) {
                     for a in &p1v {
                         m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
                     }
                 }
-                if !p1vb.is_empty() && has_slot(&slots2b, slot) {
+                if !p1vb.is_empty() && has_slot(&p2b, slot) {
                     for a in &p1vb {
                         m.push((SlotVal::Var((*a).clone()), SlotVal::Lit(slot.clone())));
                     }
@@ -1726,7 +1930,7 @@ impl Engine {
     #[allow(clippy::type_complexity)]
     #[allow(clippy::type_complexity)]
     pub(super) fn compose_pair(
-        &self,
+        &mut self,
         i1: usize,
         b1: &Bindings,
         reqs1: &[(String, String)],
@@ -1739,37 +1943,33 @@ impl Engine {
         Vec<(String, Vec<(String, String)>)>,
         Vec<String>,
     ) {
-        let p1 = &self.model.productions[i1];
-        let p2 = &self.model.productions[i2];
-        // `rename-variables` (`production-compilation.lisp:1945`): a basic
-        // variable that occurs in both productions is renamed in the second
-        // so the two no longer unify (e.g. a goal state variable and a
-        // retrieved-slot variable that happen to share a name).
+        let p1_owned = self.model.productions[i1].clone();
+        let p2_owned = self.model.productions[i2].clone();
+        let p1 = &p1_owned;
+        let p2 = &p2_owned;
+        // `rename-variables` (`production-compilation.lisp:1945`): every basic
+        // variable shared by the two productions is renamed in the second.
+        // ACT-R does not exempt variables that bind the same buffer slot, and
+        // it applies `replace-variables` to the whole representation, so we
+        // generate fresh names even when the current bindings agree.
         let ren: HashMap<String, String> = {
             let v1 = basic_vars(p1);
             let v2 = basic_vars(p2);
-            let vb1 = var_buffers(p1);
-            let vb2 = var_buffers(p2);
             let mut used: HashSet<String> = v1.union(&v2).cloned().collect();
             let mut m = HashMap::new();
-            for v in &v2 {
-                // `rename-variables` (`production-compilation.lisp:1533`): a
-                // shared basic variable is renamed in the second production
-                // when it binds a different (buffer, slot) there — e.g. a goal
-                // state variable and a retrieved-slot variable sharing a name.
-                // The same slot in the same buffer stays unified.
-                if v1.contains(v) && vb1.get(v) != vb2.get(v) {
-                    let mut n = 1;
-                    let fresh = loop {
-                        let c = format!("{v}{n}");
-                        if !used.contains(&c) {
-                            break c;
-                        }
-                        n += 1;
-                    };
-                    used.insert(fresh.clone());
-                    m.insert(v.clone(), fresh);
-                }
+            let mut shared: Vec<String> = v1.intersection(&v2).cloned().collect();
+            shared.sort();
+            for v in shared {
+                let fresh = loop {
+                    let n = self.rename_counts.entry(v.clone()).or_insert(0);
+                    let c = format!("{v}{n}");
+                    *n += 1;
+                    if !used.contains(&c) {
+                        break c;
+                    }
+                };
+                used.insert(fresh.clone());
+                m.insert(v, fresh);
             }
             m
         };
@@ -1788,6 +1988,10 @@ impl Engine {
             slots
                 .into_iter()
                 .map(|(n, v)| {
+                    let n = match n.strip_prefix('=') {
+                        Some(x) => format!("={}", rename(x)),
+                        None => n,
+                    };
                     let v = match v {
                         SlotVal::Var(x) => SlotVal::Var(rename(&x)),
                         other => other,
@@ -1811,138 +2015,19 @@ impl Engine {
                 .into_iter()
                 .map(|(op, buf, slots, var)| (op, buf, rename_slots(slots), var))
                 .collect();
+        let p2_outputs: Vec<Vec<Sexp>> = p2
+            .rhs
+            .iter()
+            .filter_map(|a| match a {
+                RhsAction::Output { args } => Some(
+                    args.iter()
+                        .map(|s| rename_sexp(s, &ren))
+                        .collect::<Vec<_>>(),
+                ),
+                _ => None,
+            })
+            .collect();
 
-        // Cross-production variable mappings for same-slot `=` pairs
-        // (`MAP-GOAL-BUFFER`, goal-compilation.lisp:320-330): two variables
-        // unify onto the first's; a variable facing a constant is
-        // instantiated from its own bindings.
-        let mut map: HashMap<String, SlotVal> = HashMap::new();
-        for (buf, slots1) in &p1_lhs {
-            // `MAP-GOAL-BUFFER` (`goal-compilation.lisp:320`) also maps p1's
-            // RHS goal slots — from a `+` request, `=`/`*` modify — onto p2's
-            // LHS `=` slots, so a variable renamed by `rename-variables`
-            // re-unifies with p1's.
-            let mut p1_slots: Vec<(String, SlotVal)> = slots1.clone();
-            if buf == "GOAL" {
-                for (op, b, s, _) in &p1_acts {
-                    if b == buf && matches!(op, '=' | '*' | '+' | 'r') {
-                        for (n, v) in s {
-                            if !p1_slots.iter().any(|(x, _)| x == n) {
-                                p1_slots.push((n.clone(), v.clone()));
-                            }
-                        }
-                    }
-                }
-            }
-            for (name1, v1) in &p1_slots {
-                if let Some((_, slots2)) = p2_lhs.iter().find(|(b, _)| b == buf) {
-                    if let Some((_, v2)) = slots2.iter().find(|(n, _)| n == name1) {
-                        match (v1, v2) {
-                            (SlotVal::Var(a), SlotVal::Var(c)) => {
-                                map.insert(c.clone(), SlotVal::Var(a.clone()));
-                            }
-                            (SlotVal::Lit(_), SlotVal::Var(c)) => {
-                                if let Some(val) = instantiate_var(c, b2) {
-                                    map.insert(c.clone(), SlotVal::Lit(val));
-                                }
-                            }
-                            (SlotVal::Var(a), SlotVal::Lit(_)) if buf == "GOAL" => {
-                                if let Some(val) = instantiate_var(a, b1) {
-                                    map.insert(a.clone(), SlotVal::Lit(val));
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-        }
-        // `MAP-RETRIEVAL-BUFFER` (`retrieval-compilation.lisp:71`): p1
-        // requests the buffer (4/12/20/28) and p2 matches it (8/12/24/28).
-        // The retrieved chunk's slots instantiate p1's request-action
-        // variables and p2's condition variables, and the buffer variable
-        // maps to the chunk itself.
-        let u1r = buffer_usage(p1, "RETRIEVAL");
-        let u2r = buffer_usage(p2, "RETRIEVAL");
-        if matches!(u1r, 4 | 12 | 20 | 28) && matches!(u2r, 8 | 12 | 24 | 28) {
-            if let Some(chunk) = b2.get("=RETRIEVAL").map(|v| v.show()) {
-                map.insert("RETRIEVAL".to_string(), SlotVal::Lit(chunk.clone()));
-                for (op, buf, slots, _) in &p1_acts {
-                    if buf == "RETRIEVAL" && (*op == '+' || *op == 'r') {
-                        for (name, v) in slots {
-                            // Only `=` request slots instantiate their value
-                            // variables; `- key =key` stays symbolic.
-                            if name.starts_with('-')
-                                || name.starts_with('>')
-                                || name.starts_with('<')
-                            {
-                                continue;
-                            }
-                            if let SlotVal::Var(n) = v {
-                                if let Some(val) = instantiate_var(n, b1) {
-                                    map.insert(n.clone(), SlotVal::Lit(val));
-                                }
-                            }
-                        }
-                    }
-                }
-                if let Some((_, slots2)) = p2_lhs.iter().find(|(b, _)| b == "RETRIEVAL") {
-                    for (name, v) in slots2 {
-                        if let SlotVal::Var(n) = v {
-                            if let Some(cv) = self.chunk_name_slot(&chunk, name) {
-                                // A variable already instantiated from p1's
-                                // own request (`pre =state`) keeps p1's value;
-                                // p2's condition only fills the rest.
-                                map.entry(n.clone()).or_insert(SlotVal::Lit(cv));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // `MAP-IMAGINAL-BUFFER`'s RHS `=` to LHS `=` case
-        // (`imaginal-compilation.lisp:212`): p1 modified the imaginal buffer
-        // and p2 matches it. Slots common to p1's (LHS ∪ RHS) and p2's LHS
-        // map by value — a p2 constant wins, otherwise p2's variable maps to
-        // p1's value.
-        let u1i = buffer_usage(p1, "IMAGINAL");
-        let u2i = buffer_usage(p2, "IMAGINAL");
-        if matches!(u1i, 9 | 25 | 56) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29 | 56) {
-            let p1_lhs_i = p1_lhs
-                .iter()
-                .find(|(b, _)| b == "IMAGINAL")
-                .map(|(_, s)| s.clone())
-                .unwrap_or_default();
-            let p1_rhs_i: Vec<(String, SlotVal)> = p1_acts
-                .iter()
-                .filter(|(op, b, _, _)| matches!(*op, '=' | '*') && b == "IMAGINAL")
-                .flat_map(|(_, _, s, _)| instantiate_slot_names(s, b1))
-                .collect();
-            let rhs_names: Vec<String> = p1_rhs_i.iter().map(|(n, _)| n.clone()).collect();
-            let mut p1_slots: Vec<(String, SlotVal)> = p1_lhs_i
-                .into_iter()
-                .filter(|(n, _)| !rhs_names.contains(n))
-                .collect();
-            p1_slots.extend(p1_rhs_i);
-            if let Some((_, p2_slots)) = p2_lhs.iter().find(|(b, _)| b == "IMAGINAL") {
-                let p2_slots = instantiate_slot_names(p2_slots, b2);
-                for (n1, v1) in &p1_slots {
-                    if let Some((_, v2)) = p2_slots.iter().find(|(n, _)| n == n1) {
-                        match (v1, v2) {
-                            (SlotVal::Var(a), SlotVal::Lit(_)) => {
-                                if let Some(val) = instantiate_var(a, b1) {
-                                    map.insert(a.clone(), SlotVal::Lit(val));
-                                }
-                            }
-                            (_, SlotVal::Var(c)) => {
-                                map.insert(c.clone(), v1.clone());
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-        }
         // ACT-R's cross-production `mappings` (`compose-productions`,
         // `modules/production-compilation.lisp:1556`): applied to both
         // productions so the composed form — and the installed production the
@@ -1954,58 +2039,86 @@ impl Engine {
         // extra instantiation (`buffer-condition-union`'s `bindings`), which
         // is not modelled here — the existing `bindings` fallback keeps those
         // traces as they were.
-        let mappings = if self.cfg.ppm.is_none() {
-            self.compose_mappings(p1, p2, &p1_lhs, &p1_acts, &p2_lhs, &p2_acts, b1, b2)
-        } else {
-            Vec::new()
-        };
+        let mappings = self.compose_mappings(p1, p2, &p1_lhs, &p1_acts, &p2_lhs, &p2_acts, b1, b2);
+        // `compose-productions` removes duplicate LHS safe-binds: the second
+        // production`s bind is kept and the first`s variable is rewritten to
+        // it.  This is applied after the normal mappings, so it must bypass
+        // the bind-variable guard below.
+        let mut duplicate_bindings: Vec<(SlotVal, SlotVal)> = Vec::new();
+        for (b1t, s1) in &p1_lhs {
+            if b1t != "!SAFE-BIND!" {
+                continue;
+            }
+            let Some((n1, v1)) = s1.first() else { continue };
+            let Some(v1) = (match v1 {
+                SlotVal::Lit(v) => Some(v),
+                SlotVal::Var(_) => None,
+            }) else {
+                continue;
+            };
+            for (b2t, s2) in &p2_lhs {
+                if b2t != "!SAFE-BIND!" {
+                    continue;
+                }
+                let Some((n2, SlotVal::Lit(v2))) = s2.first() else {
+                    continue;
+                };
+                if v1 == v2 {
+                    if let (Some(v1), Some(v2)) = (n1.strip_prefix("="), n2.strip_prefix("=")) {
+                        duplicate_bindings
+                            .push((SlotVal::Var(v1.to_string()), SlotVal::Var(v2.to_string())));
+                    }
+                }
+            }
+        }
         // ACT-R applies the mappings one at a time, and after applying one it
         // rewrites every still-queued entry whose car equals the applied
         // entry's car to that entry's cdr (`(dolist (x mappings) (when (eq (car
         // x) (car mapping)) (replace … (cons (cdr mapping) (cdr x)))))`). That
         // is how `(=DEST . NUMBER)` becomes `(=OTHER . NUMBER)` after
         // `(=DEST . =OTHER)` is applied, so `=OTHER` resolves to `NUMBER`.
-        let mut net: HashMap<String, SlotVal> = HashMap::new();
+        let bind_vars: HashSet<String> = production_bind_vars(p1)
+            .into_iter()
+            .chain(production_bind_vars(p2))
+            .collect();
         let mut queue = mappings.clone();
+        let mut applied: Vec<(SlotVal, SlotVal)> = Vec::new();
         for i in 0..queue.len() {
             let (k, v) = queue[i].clone();
-            if let SlotVal::Var(kv) = &k {
-                net.insert(kv.clone(), v.clone());
-                for later in queue.iter_mut().skip(i + 1) {
-                    if later.0 == k {
-                        later.0 = v.clone();
-                    }
+            let SlotVal::Var(kv) = &k else {
+                continue;
+            };
+            if bind_vars.contains(&kv.to_uppercase()) {
+                continue;
+            }
+            applied.push((k.clone(), v.clone()));
+            for later in queue.iter_mut().skip(i + 1) {
+                if later.0 == k {
+                    later.0 = v.clone();
                 }
             }
         }
-        // Resolve chains (`=DEST -> =OTHER -> NUMBER`).
-        for _ in 0..4 {
-            let snap: Vec<(String, SlotVal)> =
-                net.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-            let mut changed = false;
-            for (k, v) in snap {
-                if let SlotVal::Var(n) = &v {
-                    if let Some(r) = net.get(n) {
-                        net.insert(k, r.clone());
-                        changed = true;
-                    }
+        applied.extend(duplicate_bindings.clone());
+        // `replace-variables-special` applies the mappings to the reps one at
+        // a time.  Replaying them for a single variable preserves the
+        // composition order, including pairs that deliberately round-trip
+        // (`=S0 -> =S` then `=S -> =S0`).
+        let resolve = |var: &str| -> SlotVal {
+            let mut cur = SlotVal::Var(var.to_string());
+            for (k, v) in &applied {
+                if &cur == k {
+                    cur = v.clone();
                 }
             }
-            if !changed {
-                break;
-            }
-        }
-        for (k, v) in &net {
-            map.insert(k.clone(), v.clone());
-        }
+            cur
+        };
         // Substitute a slot *name* through the mappings (`replace-variables`
         // rewrites names and values alike).
         let sub_name = |n: &str| -> String {
             match n.strip_prefix('=') {
-                Some(var) => match net.get(var) {
-                    Some(SlotVal::Var(w)) => format!("={w}"),
-                    Some(SlotVal::Lit(t)) => t.clone(),
-                    None => n.to_string(),
+                Some(var) => match resolve(var) {
+                    SlotVal::Var(w) => format!("={w}"),
+                    SlotVal::Lit(t) => t,
                 },
                 None => n.to_string(),
             }
@@ -2049,8 +2162,8 @@ impl Engine {
                 SlotVal::Var(n) => {
                     if ivars.contains(n) && b.contains_key(n) {
                         SlotVal::Lit(b[n].show())
-                    } else if let Some(m) = map.get(n) {
-                        m.clone()
+                    } else if resolve(n) != SlotVal::Var(n.clone()) {
+                        resolve(n)
                     } else if drop_retrieval && n == "RETRIEVAL" {
                         self.buffers
                             .get(n)
@@ -2218,7 +2331,7 @@ impl Engine {
                     } else {
                         n.clone()
                     };
-                    if !modified.contains(&resolved) {
+                    if !modified.contains(&resolved) && !modified.contains(&n) {
                         slots.push((n, v));
                     }
                 }
@@ -2246,12 +2359,33 @@ impl Engine {
         lhs.extend(queries);
         // `!bind!`/`!safe-bind!` conditions are prepended
         // (`post-conditions`, production-compilation.lisp:1742).
+        let duplicate_bind_vars: HashSet<String> = duplicate_bindings
+            .iter()
+            .filter_map(|(k, _)| match k {
+                SlotVal::Var(v) => Some(v.clone()),
+                SlotVal::Lit(_) => None,
+            })
+            .collect();
         let mut binds: Vec<(String, Vec<(String, SlotVal)>)> = Vec::new();
-        for (b, s) in p1_lhs.iter().chain(&p2_lhs) {
+        // ACT-R builds `p3-s` with p2`s binds first, then p1`s non-duplicate
+        // binds.  The trace printer pushes and therefore reverses them.
+        for (b, s) in &p2_lhs {
             if b.starts_with('!') {
                 binds.push((b.clone(), s.clone()));
             }
         }
+        for (b, s) in &p1_lhs {
+            let duplicate = b == "!SAFE-BIND!"
+                && s.first()
+                    .and_then(|(n, _)| n.strip_prefix('='))
+                    .is_some_and(|v| duplicate_bind_vars.contains(v));
+            if b.starts_with('!') && !duplicate {
+                binds.push((b.clone(), s.clone()));
+            }
+        }
+        // `compose-productions` keeps the second copy of a duplicate bind.
+        // The later entry is also the renamed/p2-backed form.
+        let mut binds = remove_dup_keep_last(binds);
         if !binds.is_empty() {
             binds.extend(lhs);
             lhs = binds;
@@ -2315,22 +2449,18 @@ impl Engine {
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            eq1.sort_by(|a, b| a.0.cmp(&b.0));
             let mut eq2: Vec<_> = acts_for(&p2_acts, buf, &['='])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            eq2.sort_by(|a, b| a.0.cmp(&b.0));
             let mut st1: Vec<_> = acts_for(&p1_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            st1.sort_by(|a, b| a.0.cmp(&b.0));
             let mut st2: Vec<_> = acts_for(&p2_acts, buf, &['*'])
                 .into_iter()
                 .flat_map(|(s, _)| s)
                 .collect();
-            st2.sort_by(|a, b| a.0.cmp(&b.0));
             // `buffer=-union` when the first modifies-by-request and the second
             // modifies: the union is a single `*` (`COMPOSE-IMAGINAL-BUFFER`
             // `(and a1* a2=)`), not a separate `=` plus `*`.
@@ -2450,6 +2580,30 @@ impl Engine {
                     rhs.push((format!("+{buf}>"), sv(s)));
                 }
             }
+        }
+        // Composed `!output!` actions use the mappings by replaying them over
+        // the referenced variables; non-variable arguments keep their printed
+        // Lisp form.
+        let mut outputs: Vec<Vec<Sexp>> = Vec::new();
+        for a in &p1.rhs {
+            if let RhsAction::Output { args } = a {
+                outputs.push(args.clone());
+            }
+        }
+        outputs.extend(p2_outputs);
+        for args in outputs {
+            let text = args
+                .iter()
+                .map(|a| match a {
+                    Sexp::Sym(t) if t.starts_with('=') && t.len() > 1 => match resolve(&t[1..]) {
+                        SlotVal::Lit(s) => s,
+                        SlotVal::Var(v) => format!("={v}"),
+                    },
+                    other => sexp_lisp(other),
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            rhs.push(("!OUTPUT!".to_string(), vec![(String::new(), text)]));
         }
         // `sort-actions`: descending by token (op+buffer), stable.
         rhs.sort_by(|a, b| b.0.cmp(&a.0));

@@ -2734,6 +2734,8 @@ pub struct Engine {
     /// Production compilation: count of compiled productions, the previous
     /// fired production `(index, bindings)`, and its fire time.
     compiled_count: usize,
+    /// Per-prefix counters for `rename-variables`' fresh names (`S0`, `S1`).
+    rename_counts: HashMap<String, u32>,
     /// Number of model productions before any compilation (compiled
     /// productions are dropped on reset).
     base_prods: usize,
@@ -3176,6 +3178,7 @@ impl Engine {
             blending_busy: false,
             blending_error: false,
             compiled_count: 0,
+            rename_counts: HashMap::new(),
             base_prods,
             prev_prod: None,
             prev_prod_ms: 0,
@@ -3868,6 +3871,7 @@ impl Engine {
         self.blending_busy = false;
         self.blending_error = false;
         self.compiled_count = 0;
+        self.rename_counts.clear();
         self.prev_prod = None;
         self.prev_prod_ms = 0;
         self.last_press = None;
