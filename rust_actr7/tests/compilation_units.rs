@@ -42,7 +42,6 @@ fn duplicate_safe_bind() {
 }
 
 #[test]
-#[ignore = "engine-divergence: self-composition duplicate detection"]
 fn self_composition() {
     if let Err(e) = run_case("self-composition") {
         panic!("{e}");

@@ -1787,6 +1787,91 @@ impl Engine {
                 }
             }
         }
+        // --- MAP-IMAGINAL-BUFFER, LHS `=` with null RHS to LHS `=` ------
+        if matches!(u1i, 8 | 24) && matches!(u2i, 8 | 9 | 12 | 13 | 24 | 25 | 28 | 29 | 40 | 56) {
+            let p1a = lhs_of(p1_lhs, "IMAGINAL");
+            let p2a = lhs_of(p2_lhs, "IMAGINAL");
+            let p1slots = instantiate_slot_names(&p1a, b1);
+            let p2slots = instantiate_slot_names(&p2a, b2);
+            let mut interesting: Vec<String> = Vec::new();
+            for (n, _) in &p1slots {
+                if p2slots.iter().any(|(n2, _)| n2 == n) && !interesting.contains(n) {
+                    interesting.push(n.clone());
+                }
+            }
+            for slot in &interesting {
+                for (_, v1) in p1slots.iter().filter(|(n, _)| n == slot) {
+                    for (_, v2) in p2slots.iter().filter(|(n, _)| n == slot) {
+                        if constant_value(v2) {
+                            if self.cfg.ppm.is_some() && !constant_value(v1) {
+                                if let SlotVal::Var(n) = v1 {
+                                    let bound = b1
+                                        .get(n)
+                                        .or_else(|| b1.get(&format!("={n}")))
+                                        .or_else(|| b2.get(n))
+                                        .or_else(|| b2.get(&format!("={n}")));
+                                    if let Some(val) = bound {
+                                        m.push((v1.clone(), SlotVal::Lit(val.show())));
+                                    }
+                                }
+                            } else {
+                                m.push((v1.clone(), v2.clone()));
+                            }
+                        } else {
+                            m.push((v2.clone(), v1.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        // --- MAP-PERCEPTUAL-BUFFER, LHS `=` to LHS `=` -------------------
+        for buf in [
+            "VISUAL-LOCATION",
+            "VISUAL",
+            "AURAL-LOCATION",
+            "AURAL",
+            "TEMPORAL",
+        ] {
+            let u1p = buffer_usage(p1, buf);
+            let u2p = buffer_usage(p2, buf);
+            if !matches!(u1p, 8 | 24) || !matches!(u2p, 8 | 12 | 24 | 28) {
+                continue;
+            }
+            let p1a = lhs_of(p1_lhs, buf);
+            let p2a = lhs_of(p2_lhs, buf);
+            let p1slots = instantiate_slot_names(&p1a, b1);
+            let p2slots = instantiate_slot_names(&p2a, b2);
+            let mut interesting: Vec<String> = Vec::new();
+            for (n, _) in &p1slots {
+                if p2slots.iter().any(|(n2, _)| n2 == n) && !interesting.contains(n) {
+                    interesting.push(n.clone());
+                }
+            }
+            for slot in &interesting {
+                for (_, v1) in p1slots.iter().filter(|(n, _)| n == slot) {
+                    for (_, v2) in p2slots.iter().filter(|(n, _)| n == slot) {
+                        if constant_value(v2) {
+                            if self.cfg.ppm.is_some() && !constant_value(v1) {
+                                if let SlotVal::Var(n) = v1 {
+                                    let bound = b1
+                                        .get(n)
+                                        .or_else(|| b1.get(&format!("={n}")))
+                                        .or_else(|| b2.get(n))
+                                        .or_else(|| b2.get(&format!("={n}")));
+                                    if let Some(val) = bound {
+                                        m.push((v1.clone(), SlotVal::Lit(val.show())));
+                                    }
+                                }
+                            } else {
+                                m.push((v1.clone(), v2.clone()));
+                            }
+                        } else {
+                            m.push((v2.clone(), v1.clone()));
+                        }
+                    }
+                }
+            }
+        }
         // --- MAP-GOAL-BUFFER, RHS `=` to LHS `=` ------------------------
         let u1g = buffer_usage(p1, "GOAL");
         let u2g = buffer_usage(p2, "GOAL");
@@ -1890,6 +1975,44 @@ impl Engine {
                             // own firing instead of mapping to p2's constant
                             // (`(push (find (spec-slot-value p1slots)
                             // bindings :key 'car))`).
+                            if self.cfg.ppm.is_some() && !constant_value(v1) {
+                                if let SlotVal::Var(n) = v1 {
+                                    let bound = b1
+                                        .get(n)
+                                        .or_else(|| b1.get(&format!("={n}")))
+                                        .or_else(|| b2.get(n))
+                                        .or_else(|| b2.get(&format!("={n}")));
+                                    if let Some(val) = bound {
+                                        m.push((v1.clone(), SlotVal::Lit(val.show())));
+                                    }
+                                }
+                            } else {
+                                m.push((v1.clone(), v2.clone()));
+                            }
+                        } else {
+                            m.push((v2.clone(), v1.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- MAP-GOAL-BUFFER, LHS `=` with null RHS to LHS `=` ----------
+        if u1g == 8 && matches!(u2g, 8 | 9 | 12 | 13 | 40 | 44) {
+            let p1a = lhs_of(p1_lhs, "GOAL");
+            let p2a = lhs_of(p2_lhs, "GOAL");
+            let p1slots = instantiate_slot_names(&p1a, b1);
+            let p2slots = instantiate_slot_names(&p2a, b2);
+            let mut interesting: Vec<String> = Vec::new();
+            for (n, _) in &p1slots {
+                if p2slots.iter().any(|(n2, _)| n2 == n) && !interesting.contains(n) {
+                    interesting.push(n.clone());
+                }
+            }
+            for slot in &interesting {
+                for (_, v1) in p1slots.iter().filter(|(n, _)| n == slot) {
+                    for (_, v2) in p2slots.iter().filter(|(n, _)| n == slot) {
+                        if constant_value(v2) {
                             if self.cfg.ppm.is_some() && !constant_value(v1) {
                                 if let SlotVal::Var(n) = v1 {
                                     let bound = b1
