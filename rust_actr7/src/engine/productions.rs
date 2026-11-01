@@ -2892,7 +2892,10 @@ impl Engine {
     pub(super) fn similarity(&self, a: &Value, b: &Value) -> f32 {
         // An embedder hook (the Python `:sim-hook`) gets the printed values.
         if let Some(hook) = &self.sim_hook_fn {
-            if let Some(v) = hook(&a.show(), &b.show()) {
+            if let Some(v) = hook(
+                &crate::engine::HookValue::from_value(a),
+                &crate::engine::HookValue::from_value(b),
+            ) {
                 return v;
             }
         }

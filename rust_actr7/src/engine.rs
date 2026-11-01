@@ -292,6 +292,31 @@ impl Value {
     }
 }
 
+/// A value passed to an embedder similarity hook.  Unlike the internal
+/// [`Value`], this is public so the Python binding can convert numbers,
+/// symbols and strings without exposing engine internals.
+#[derive(Debug, Clone, PartialEq)]
+pub enum HookValue {
+    Sym(String),
+    Int(i64),
+    Num(f64),
+    Str(String),
+    Nil,
+}
+
+impl HookValue {
+    fn from_value(value: &Value) -> HookValue {
+        match value {
+            Value::Sym(s) => HookValue::Sym(s.clone()),
+            Value::Int(i) => HookValue::Int(*i),
+            Value::Num(x) => HookValue::Num(*x),
+            Value::Str(s) => HookValue::Str(s.clone()),
+            Value::Nil => HookValue::Nil,
+            Value::List(_) => HookValue::Sym(value.show()),
+        }
+    }
+}
+
 type Bindings = HashMap<String, Value>;
 
 /// `(buffer, slot, requested, actual, similarity)` recorded by procedural
@@ -2472,7 +2497,7 @@ pub struct Engine {
     /// An embedder-provided `:sim-hook` (the Python callback).  It receives
     /// the two values' printed forms and returns a numeric similarity; `None`
     /// falls through to the Lisp hook/table.
-    sim_hook_fn: Option<Rc<dyn Fn(&str, &str) -> Option<f32>>>,
+    sim_hook_fn: Option<Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>>,
     /// An `imaginal-action` that names an embedder command; the host runs it
     /// between engine events and returns the resulting chunk.
     pending_host_action: Option<(String, Vec<String>, bool)>,

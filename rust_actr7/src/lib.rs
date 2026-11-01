@@ -36,8 +36,8 @@ pub mod wasm;
 
 pub use engine::params::{sgp_support, SgpSupport};
 pub use engine::{
-    DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, MultiEngine, PreResult,
-    Verdict,
+    DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, HookValue, MultiEngine,
+    PreResult, Verdict,
 };
 pub use model::{load_models, ChunkDesc, Model};
 
