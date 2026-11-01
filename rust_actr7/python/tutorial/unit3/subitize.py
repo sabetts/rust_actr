@@ -7,34 +7,36 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit3;subitize-model.lisp'
-MODEL_NAME = 'SUBITIZE'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = []
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('SUBITIZE', seed=seed)
-    m.sgp(':V', True)
-    m.sgp(':SHOW-FOCUS', True)
-    m.sgp(':VISUAL-NUM-FINSTS', 10)
-    m.sgp(':VISUAL-FINST-SPAN', 10)
-    m.chunk_type('COUNT', 'COUNT', 'STEP')
-    m.chunk_type('NUMBER', 'NUMBER', 'NEXT', 'VOCAL-REP')
-    m.add_chunk('ZERO', 'NUMBER', **{'NUMBER': 'ZERO', 'NEXT': 'ONE', 'VOCAL-REP': actr.String('zero')})
-    m.add_chunk('ONE', 'NUMBER', **{'NUMBER': 'ONE', 'NEXT': 'TWO', 'VOCAL-REP': actr.String('one')})
-    m.add_chunk('TWO', 'NUMBER', **{'NUMBER': 'TWO', 'NEXT': 'THREE', 'VOCAL-REP': actr.String('two')})
-    m.add_chunk('THREE', 'NUMBER', **{'NUMBER': 'THREE', 'NEXT': 'FOUR', 'VOCAL-REP': actr.String('three')})
-    m.add_chunk('FOUR', 'NUMBER', **{'NUMBER': 'FOUR', 'NEXT': 'FIVE', 'VOCAL-REP': actr.String('four')})
-    m.add_chunk('FIVE', 'NUMBER', **{'NUMBER': 'FIVE', 'NEXT': 'SIX', 'VOCAL-REP': actr.String('five')})
-    m.add_chunk('SIX', 'NUMBER', **{'NUMBER': 'SIX', 'NEXT': 'SEVEN', 'VOCAL-REP': actr.String('six')})
-    m.add_chunk('SEVEN', 'NUMBER', **{'NUMBER': 'SEVEN', 'NEXT': 'EIGHT', 'VOCAL-REP': actr.String('seven')})
-    m.add_chunk('EIGHT', 'NUMBER', **{'NUMBER': 'EIGHT', 'NEXT': 'NINE', 'VOCAL-REP': actr.String('eight')})
-    m.add_chunk('NINE', 'NUMBER', **{'NUMBER': 'NINE', 'NEXT': 'TEN', 'VOCAL-REP': actr.String('nine')})
-    m.add_chunk('TEN', 'NUMBER', **{'NUMBER': 'TEN', 'NEXT': 'ELEVEN', 'VOCAL-REP': actr.String('ten')})
-    m.add_chunk('ELEVEN', 'NUMBER', **{'NUMBER': 'ELEVEN'})
-    m.add_dm('START')
-    m.goal_focus(isa='COUNT', **{'STEP': 'START'})
+    m = actr.Model('subitize', seed=seed)
+
+    m.sgp(':v', True)
+    m.sgp(':show-focus', True)
+    m.sgp(':visual-num-finsts', 10)
+    m.sgp(':visual-finst-span', 10)
+
+    m.chunk_type('count', 'count', 'step')
+    m.chunk_type('number', 'number', 'next', 'vocal-rep')
+
+    m.add_chunk('zero', 'number', number='zero', next='one', vocal_rep=actr.String('zero'))
+    m.add_chunk('one', 'number', number='one', next='two', vocal_rep=actr.String('one'))
+    m.add_chunk('two', 'number', number='two', next='three', vocal_rep=actr.String('two'))
+    m.add_chunk('three', 'number', number='three', next='four', vocal_rep=actr.String('three'))
+    m.add_chunk('four', 'number', number='four', next='five', vocal_rep=actr.String('four'))
+    m.add_chunk('five', 'number', number='five', next='six', vocal_rep=actr.String('five'))
+    m.add_chunk('six', 'number', number='six', next='seven', vocal_rep=actr.String('six'))
+    m.add_chunk('seven', 'number', number='seven', next='eight', vocal_rep=actr.String('seven'))
+    m.add_chunk('eight', 'number', number='eight', next='nine', vocal_rep=actr.String('eight'))
+    m.add_chunk('nine', 'number', number='nine', next='ten', vocal_rep=actr.String('nine'))
+    m.add_chunk('ten', 'number', number='ten', next='eleven', vocal_rep=actr.String('ten'))
+    m.add_chunk('eleven', 'number', number='eleven')
+    m.add_dm('start')
+
+    m.goal_focus(isa='count', step='start')
     return m
 
 

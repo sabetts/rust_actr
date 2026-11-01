@@ -7,49 +7,93 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit7;past-tense-model.lisp'
-MODEL_NAME = 'PAST-TENSE'
 DEFAULT_FUNCTION = 'trials'
 DEFAULT_ARGS = [1]
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('PAST-TENSE', seed=seed)
-    m.sgp(':V', True)
-    m.sgp(':ESC', True)
-    m.sgp(':UL', True)
-    m.sgp(':OL', 6)
-    m.sgp(':BLL', 0.5)
-    m.sgp(':ANS', 0.1)
-    m.sgp(':EGS', 0.2)
-    m.sgp(':MAS', 3.5)
-    m.sgp(':LF', 0.5)
-    m.sgp(':RT', 0.5)
-    m.sgp(':EPL', True)
-    m.sgp(':ALPHA', 0.1)
-    m.sgp(':PCT', True)
-    m.sgp(':IU', 5)
-    m.sgp(':NCNAR', None)
-    m.sgp(':DO-NOT-HARVEST', 'IMAGINAL')
-    m.chunk_type('PAST-TENSE', 'VERB', 'STEM', 'SUFFIX')
-    m.chunk_type('GOAL', 'STATE')
-    m.define_chunks('START')
-    m.define_chunks('BLANK')
-    m.define_chunks('DONE')
-    m.declare_buffer_usage('GOAL', 'GOAL', 'STATE')
-    m.declare_buffer_usage('IMAGINAL', 'PAST-TENSE', ':ALL')
+    m = actr.Model('past-tense', seed=seed)
+
+    m.sgp(':v', True)
+    m.sgp(':esc', True)
+    m.sgp(':ul', True)
+    m.sgp(':ol', 6)
+    m.sgp(':bll', 0.5)
+    m.sgp(':ans', 0.1)
+    m.sgp(':egs', 0.2)
+    m.sgp(':mas', 3.5)
+    m.sgp(':lf', 0.5)
+    m.sgp(':rt', 0.5)
+    m.sgp(':epl', True)
+    m.sgp(':alpha', 0.1)
+    m.sgp(':pct', True)
+    m.sgp(':iu', 5)
+    m.sgp(':ncnar', None)
+    m.sgp(':do-not-harvest', 'imaginal')
+
+    m.chunk_type('past-tense', 'verb', 'stem', 'suffix')
+    m.chunk_type('goal', 'state')
+
+    m.define_chunks('start')
+    m.define_chunks('blank')
+    m.define_chunks('done')
+
+    m.declare_buffer_usage('goal', 'goal', 'state')
+    m.declare_buffer_usage('imaginal', 'past-tense', ':all')
+
     m.add_production(
-        '''(P PAST-TENSE-IRREGULAR =GOAL> ISA GOAL STATE DONE =IMAGINAL> ISA PAST-TENSE VERB =WORD STEM =PAST SUFFIX BLANK ==> =GOAL> STATE NIL)'''
+        '''
+        (p past-tense-irregular
+           =goal>
+             isa    goal
+             state  done
+           =imaginal>
+             isa    past-tense
+             verb   =word
+             stem   =past
+             suffix blank
+           ==>
+           =goal>
+             state  nil)
+        '''
     )
-    m.spp('PAST-TENSE-IRREGULAR', **{'REWARD': 5})
+    m.spp('past-tense-irregular', **{'reward': 5})
+
     m.add_production(
-        '''(P PAST-TENSE-REGULAR =GOAL> ISA GOAL STATE DONE =IMAGINAL> ISA PAST-TENSE VERB =STEM STEM =STEM SUFFIX =SUFFIX !SAFE-EVAL! (NOT (EQ =SUFFIX (QUOTE BLANK))) ==> =GOAL> STATE NIL)'''
+        '''
+        (p past-tense-regular
+           =goal>
+            isa     goal
+            state   done
+           =imaginal>
+             isa    past-tense
+             verb   =stem
+             stem   =stem
+             suffix =suffix
+           !safe-eval! (not (eq =suffix 'blank))
+          ==>
+           =goal>
+             state  nil)
+        '''
     )
-    m.spp('PAST-TENSE-REGULAR', **{'REWARD': 4.2})
+    m.spp('past-tense-regular', **{'reward': 4.2})
+
     m.add_production(
-        '''(P NO-PAST-TENSE-FORMED =GOAL> ISA GOAL STATE DONE =IMAGINAL> ISA PAST-TENSE STEM NIL SUFFIX NIL ==> =GOAL> STATE NIL)'''
+        '''
+        (p no-past-tense-formed
+           =goal>
+             isa    goal
+             state  done
+           =imaginal>
+             isa    past-tense
+             stem   nil
+             suffix nil
+          ==>
+           =goal>
+             state  nil)
+        '''
     )
-    m.spp('NO-PAST-TENSE-FORMED', **{'REWARD': 3.9})
+    m.spp('no-past-tense-formed', **{'reward': 3.9})
     return m
 
 

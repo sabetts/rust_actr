@@ -1,94 +1,194 @@
 """Python port of ACT-R:tutorial;unit5;declarative-issues.lisp."""
 
-from __future__ import annotations
+import rust_actr as actr
 
-import rust_actr.actr as actr
+m = actr.Model('declarative-issues')
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit5;declarative-issues.lisp'
-MODEL_NAME = 'DECLARATIVE-ISSUES'
-DEFAULT_RUN_TIME = 10.0
+m.sgp(':seed', [100, 1])
+m.sgp(':esc', True)
+m.sgp(':v', True)
+m.sgp(':bll', 0.5)
+m.sgp(':ans', 0.25)
+m.sgp(':mas', 2)
+m.sgp(':mp', 10)
 
+m.chunk_type('simple-value', 'result')
+m.chunk_type('simple-fact', 'item', 'attribute')
+m.chunk_type('task-state', 'state')
+m.chunk_type('number', 'visual-rep')
+m.chunk_type('math-fact', 'arg1', 'arg2', 'result', 'operator')
+m.chunk_type('context', 'val1', 'val2', 'val3', 'goal')
 
-def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('DECLARATIVE-ISSUES', seed=seed)
-    m.sgp(':SEED', [100, 1])
-    m.sgp(':ESC', True)
-    m.sgp(':V', True)
-    m.sgp(':BLL', 0.5)
-    m.sgp(':ANS', 0.25)
-    m.sgp(':MAS', 2)
-    m.sgp(':MP', 10)
-    m.chunk_type('SIMPLE-VALUE', 'RESULT')
-    m.chunk_type('SIMPLE-FACT', 'ITEM', 'ATTRIBUTE')
-    m.chunk_type('TASK-STATE', 'STATE')
-    m.chunk_type('NUMBER', 'VISUAL-REP')
-    m.chunk_type('MATH-FACT', 'ARG1', 'ARG2', 'RESULT', 'OPERATOR')
-    m.chunk_type('CONTEXT', 'VAL1', 'VAL2', 'VAL3', 'GOAL')
-    m.define_chunks(actr.Chunk('R2', 'CHUNK', {}))
-    m.define_chunks(actr.Chunk('R3', 'CHUNK', {}))
-    m.define_chunks(actr.Chunk('R4', 'CHUNK', {}))
-    m.define_chunks(actr.Chunk('R5', 'CHUNK', {}))
-    m.define_chunks(actr.Chunk('R6', 'CHUNK', {}))
-    m.define_chunks(actr.Chunk('R7', 'CHUNK', {}))
-    m.define_chunks(actr.Chunk('R8', 'CHUNK', {}))
-    m.add_chunk('ZERO', 'NUMBER', **{'VISUAL-REP': actr.String('0')})
-    m.add_chunk('ONE', 'NUMBER', **{'VISUAL-REP': actr.String('1')})
-    m.add_chunk('TWO', 'NUMBER', **{'VISUAL-REP': actr.String('2')})
-    m.add_chunk('THREE', 'NUMBER', **{'VISUAL-REP': actr.String('3')})
-    m.add_chunk('ADD', 'CHUNK', **{})
-    m.add_chunk('SUBTRACT', 'CHUNK', **{})
-    m.add_chunk('SKY', 'CHUNK', **{})
-    m.add_chunk('GRASS', 'CHUNK', **{})
-    m.add_chunk('ROSE', 'CHUNK', **{})
-    m.add_chunk('1-1=0', 'MATH-FACT', **{'ARG1': 'ONE', 'ARG2': 'ONE', 'RESULT': 'ZERO', 'OPERATOR': 'SUBTRACT'})
-    m.add_chunk('2-1=1', 'MATH-FACT', **{'ARG1': 'TWO', 'ARG2': 'ONE', 'RESULT': 'ONE', 'OPERATOR': 'SUBTRACT'})
-    m.add_chunk('3-2=1', 'MATH-FACT', **{'ARG1': 'THREE', 'ARG2': 'TWO', 'RESULT': 'ONE', 'OPERATOR': 'SUBTRACT'})
-    m.add_chunk('1+1=2', 'MATH-FACT', **{'ARG1': 'ONE', 'ARG2': 'ONE', 'RESULT': 'TWO', 'OPERATOR': 'ADD'})
-    m.add_chunk('1+2=3', 'MATH-FACT', **{'ARG1': 'ONE', 'ARG2': 'TWO', 'RESULT': 'THREE', 'OPERATOR': 'ADD'})
-    m.add_chunk('V1', 'SIMPLE-VALUE', **{'RESULT': actr.String('true')})
-    m.add_chunk('V2', 'SIMPLE-VALUE', **{'RESULT': actr.String('false')})
-    m.add_chunk('V3', 'SIMPLE-VALUE', **{'RESULT': None})
-    m.add_chunk('F1', 'SIMPLE-FACT', **{'ITEM': 'SKY', 'ATTRIBUTE': 'BLUE'})
-    m.add_chunk('F2', 'SIMPLE-FACT', **{'ITEM': 'ROSE', 'ATTRIBUTE': 'RED'})
-    m.add_chunk('F3', 'SIMPLE-FACT', **{'ITEM': 'GRASS', 'ATTRIBUTE': 'GREEN'})
-    m.add_chunk('G1', 'TASK-STATE', **{'STATE': 'R8'})
-    m.add_chunk('OLD-CONTEXT', 'CONTEXT', **{'VAL1': 'ONE', 'VAL2': 'TWO', 'VAL3': 'ADD', 'GOAL': 'G1'})
-    m.set_base_levels([('V1', 1, -1500), ('V2', 1, -1500), ('V3', 1, -1500)])
-    m.declare_buffer_usage('IMAGINAL', 'CONTEXT', ':ALL')
-    m.add_production(
-        '''(P P1 ?GOAL> BUFFER EMPTY ==> +GOAL> ISA TASK-STATE STATE R2 +RETRIEVAL> ISA SIMPLE-VALUE - RESULT NIL)'''
-    )
-    m.add_production(
-        '''(P P2 =GOAL> ISA TASK-STATE STATE R2 =RETRIEVAL> ==> =GOAL> STATE R3 +RETRIEVAL> ISA SIMPLE-VALUE)'''
-    )
-    m.add_production(
-        '''(P P3 =GOAL> ISA TASK-STATE STATE R3 =RETRIEVAL> ISA SIMPLE-VALUE ==> =GOAL> STATE R4 +RETRIEVAL> ISA SIMPLE-FACT ATTRIBUTE PINK)'''
-    )
-    m.add_production(
-        '''(P P4 =GOAL> ISA TASK-STATE STATE R4 ?RETRIEVAL> STATE FREE ==> =GOAL> STATE R5 +RETRIEVAL> ISA SIMPLE-FACT ATTRIBUTE BLACK)'''
-    )
-    m.add_production(
-        '''(P P5 =GOAL> ISA TASK-STATE STATE R5 ?IMAGINAL> STATE FREE =RETRIEVAL> ==> =GOAL> STATE R6 +IMAGINAL> ISA CONTEXT VAL1 ONE VAL2 TWO +RETRIEVAL> ISA MATH-FACT - ARG1 NIL - ARG2 NIL - RESULT NIL)'''
-    )
-    m.add_production(
-        '''(P P6 =GOAL> ISA TASK-STATE STATE R6 =IMAGINAL> ISA CONTEXT ==> +RETRIEVAL> ISA MATH-FACT - ARG1 NIL - ARG2 NIL - RESULT NIL =GOAL> STATE R7 =IMAGINAL> VAL3 ADD)'''
-    )
-    m.add_production(
-        '''(P P7 =GOAL> ISA TASK-STATE STATE R7 =IMAGINAL> =RETRIEVAL> ==> =GOAL> STATE R8 =IMAGINAL> GOAL =GOAL)'''
-    )
-    m.add_production(
-        '''(P P8 =GOAL> ISA TASK-STATE STATE R8 ==> +GOAL> -IMAGINAL>)'''
-    )
-    return m
+m.define_chunks(actr.Chunk('r2', 'chunk', {}))
+m.define_chunks(actr.Chunk('r3', 'chunk', {}))
+m.define_chunks(actr.Chunk('r4', 'chunk', {}))
+m.define_chunks(actr.Chunk('r5', 'chunk', {}))
+m.define_chunks(actr.Chunk('r6', 'chunk', {}))
+m.define_chunks(actr.Chunk('r7', 'chunk', {}))
+m.define_chunks(actr.Chunk('r8', 'chunk', {}))
+m.add_chunk('zero', 'number', visual_rep=actr.String('0'))
+m.add_chunk('one', 'number', visual_rep=actr.String('1'))
+m.add_chunk('two', 'number', visual_rep=actr.String('2'))
+m.add_chunk('three', 'number', visual_rep=actr.String('3'))
+m.add_chunk('add', 'chunk')
+m.add_chunk('subtract', 'chunk')
+m.add_chunk('sky', 'chunk')
+m.add_chunk('grass', 'chunk')
+m.add_chunk('rose', 'chunk')
+m.add_chunk('1-1=0', 'math-fact', arg1='one', arg2='one', result='zero', operator='subtract')
+m.add_chunk('2-1=1', 'math-fact', arg1='two', arg2='one', result='one', operator='subtract')
+m.add_chunk('3-2=1', 'math-fact', arg1='three', arg2='two', result='one', operator='subtract')
+m.add_chunk('1+1=2', 'math-fact', arg1='one', arg2='one', result='two', operator='add')
+m.add_chunk('1+2=3', 'math-fact', arg1='one', arg2='two', result='three', operator='add')
+m.add_chunk('v1', 'simple-value', result=actr.String('true'))
+m.add_chunk('v2', 'simple-value', result=actr.String('false'))
+m.add_chunk('v3', 'simple-value', result=None)
+m.add_chunk('f1', 'simple-fact', item='sky', attribute='blue')
+m.add_chunk('f2', 'simple-fact', item='rose', attribute='red')
+m.add_chunk('f3', 'simple-fact', item='grass', attribute='green')
+m.add_chunk('g1', 'task-state', state='r8')
+m.add_chunk('old-context', 'context', val1='one', val2='two', val3='add', goal='g1')
 
+m.set_base_levels([('v1', 1, -1500), ('v2', 1, -1500), ('v3', 1, -1500)])
+m.declare_buffer_usage('imaginal', 'context', ':all')
 
-def main(argv=None) -> None:
-    import sys
+m.add_production(
+    '''
+    (p p1
+       ?goal>
+         buffer empty
+     ==>
+       +goal>
+         isa task-state
+         state r2
+       +retrieval>
+         isa simple-value
+        - result nil)
+    '''
+)
 
-    argv = list(sys.argv[1:] if argv is None else argv)
-    seconds = float(argv[0]) if argv else DEFAULT_RUN_TIME
-    print(build().run(seconds), end="")
+m.add_production(
+    '''
+    (p p2
+       =goal>
+         isa task-state
+         state r2
+       =retrieval>
+     ==>
+       =goal>
+         state r3
+       +retrieval>
+         isa simple-value)
+    '''
+)
+
+m.add_production(
+    '''
+    (p p3
+       =goal>
+         isa task-state
+         state r3
+       =retrieval>
+         isa simple-value
+     ==>
+       =goal>
+         state r4
+       +retrieval>
+         isa simple-fact
+         attribute pink)
+    '''
+)
+
+m.add_production(
+    '''
+    (p p4
+       =goal>
+         isa task-state
+         state r4
+       ?retrieval>
+         state free
+     ==>
+       =goal>
+         state r5
+       +retrieval>
+         isa simple-fact
+         attribute black)
+    '''
+)
+
+m.add_production(
+    '''
+    (p p5
+       =goal>
+         isa task-state
+         state r5
+       ?imaginal>
+         state free
+       =retrieval>
+     ==>
+       =goal>
+         state r6
+       +imaginal>
+         isa context
+         val1 one
+         val2 two
+       +retrieval>
+         isa math-fact
+         - arg1 nil
+         - arg2 nil
+         - result nil)
+    '''
+)
+
+m.add_production(
+    '''
+    (p p6
+       =goal>
+         isa task-state
+         state r6
+       =imaginal>
+         isa context
+     ==>
+       +retrieval>
+         isa math-fact
+         - arg1 nil
+         - arg2 nil
+         - result nil
+       =goal>
+         state r7
+       =imaginal>
+         val3 add)
+    '''
+)
+
+m.add_production(
+    '''
+    (p p7
+       =goal>
+         isa task-state
+         state r7
+       =imaginal>
+       =retrieval>
+     ==>
+       =goal>
+         state r8
+       =imaginal>
+         goal =goal)
+    '''
+)
+
+m.add_production(
+    '''
+    (p p8
+       =goal>
+         isa task-state
+         state r8
+     ==>
+       +goal>
+       -imaginal>)
+    '''
+)
 
 
 if __name__ == "__main__":
-    main()
+    print(m.run(10.0), end="")

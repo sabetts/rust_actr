@@ -7,14 +7,13 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit6;choice-model.lisp'
-MODEL_NAME = 'CHOICE'
 DEFAULT_FUNCTION = None
 DEFAULT_ARGS = []
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('CHOICE', seed=seed)
+    m = actr.Model('choice', seed=seed)
+
     return m
 
 

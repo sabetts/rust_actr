@@ -6,8 +6,10 @@ The self-contained tutorial scripts call functions such as ``actr.run`` and
 
     import rust_actr.actr as actr
 
-    actr.use(actr.Model("count"))
-    print(actr.run(10))
+    m = actr.Model("count")
+    actr.use(m)
+    actr.run(10)
+    print(m.trace)
 """
 
 from __future__ import annotations

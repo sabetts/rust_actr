@@ -1,121 +1,284 @@
 """Python port of ACT-R:tutorial;unit8;semantic-dynamic-model.lisp."""
 
-from __future__ import annotations
+import rust_actr as actr
 
-import rust_actr.actr as actr
+m = actr.Model('semantic')
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit8;semantic-dynamic-model.lisp'
-MODEL_NAME = 'SEMANTIC'
-DEFAULT_RUN_TIME = 10.0
+m.sgp(':esc', True)
+m.sgp(':lf', 0.05)
 
+m.chunk_type('property', 'object', 'category', 'dangerous', 'locomotion', 'edible', 'breathe', 'moves', 'skin', 'color', 'sings', 'flies', 'height', 'wings')
+m.chunk_type('test-attribute', 'object', 'original', 'attribute', 'value', 'state', 'answer')
 
-def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('SEMANTIC', seed=seed)
-    m.sgp(':ESC', True)
-    m.sgp(':LF', 0.05)
-    m.chunk_type('PROPERTY', 'OBJECT', 'CATEGORY', 'DANGEROUS', 'LOCOMOTION', 'EDIBLE', 'BREATHE', 'MOVES', 'SKIN', 'COLOR', 'SINGS', 'FLIES', 'HEIGHT', 'WINGS')
-    m.chunk_type('TEST-ATTRIBUTE', 'OBJECT', 'ORIGINAL', 'ATTRIBUTE', 'VALUE', 'STATE', 'ANSWER')
-    m.define_chunks('SHARK')
-    m.define_chunks('SALMON')
-    m.define_chunks('FISH')
-    m.define_chunks('ANIMAL')
-    m.define_chunks('CANARY')
-    m.define_chunks('OSTRICH')
-    m.define_chunks('BIRD')
-    m.define_chunks('DANGEROUS')
-    m.define_chunks('LOCOMOTION')
-    m.define_chunks('CATEGORY')
-    m.define_chunks('EDIBLE')
-    m.define_chunks('BREATHE')
-    m.define_chunks('MOVES')
-    m.define_chunks('SKIN')
-    m.define_chunks('COLOR')
-    m.define_chunks('SINGS')
-    m.define_chunks('FLIES')
-    m.define_chunks('HEIGHT')
-    m.define_chunks('WINGS')
-    m.define_chunks('GILLS')
-    m.define_chunks('SWIMMING')
-    m.define_chunks('TALL')
-    m.define_chunks('FLYING')
-    m.define_chunks('TRUE')
-    m.define_chunks('FALSE')
-    m.define_chunks('YES')
-    m.define_chunks('NO')
-    m.define_chunks('DONT-KNOW')
-    m.define_chunks('ATTR-CHECK')
-    m.define_chunks('RECORD')
-    m.define_chunks('CREATE')
-    m.define_chunks('DONE')
-    m.define_chunks('CHECK-CATEGORY')
-    m.add_chunk('P1', 'PROPERTY', **{'OBJECT': 'SHARK', 'DANGEROUS': 'TRUE'})
-    m.add_chunk('P2', 'PROPERTY', **{'OBJECT': 'SHARK', 'LOCOMOTION': 'SWIMMING'})
-    m.add_chunk('P3', 'PROPERTY', **{'OBJECT': 'SHARK', 'CATEGORY': 'FISH'})
-    m.add_chunk('P4', 'PROPERTY', **{'OBJECT': 'SALMON', 'EDIBLE': 'TRUE'})
-    m.add_chunk('P5', 'PROPERTY', **{'OBJECT': 'SALMON', 'LOCOMOTION': 'SWIMMING'})
-    m.add_chunk('P6', 'PROPERTY', **{'OBJECT': 'SALMON', 'CATEGORY': 'FISH'})
-    m.add_chunk('P7', 'PROPERTY', **{'OBJECT': 'FISH', 'BREATHE': 'GILLS'})
-    m.add_chunk('P8', 'PROPERTY', **{'OBJECT': 'FISH', 'LOCOMOTION': 'SWIMMING'})
-    m.add_chunk('P9', 'PROPERTY', **{'OBJECT': 'FISH', 'CATEGORY': 'ANIMAL'})
-    m.add_chunk('P10', 'PROPERTY', **{'OBJECT': 'ANIMAL', 'MOVES': 'TRUE'})
-    m.add_chunk('P11', 'PROPERTY', **{'OBJECT': 'ANIMAL', 'SKIN': 'TRUE'})
-    m.add_chunk('P12', 'PROPERTY', **{'OBJECT': 'CANARY', 'COLOR': 'YELLOW'})
-    m.add_chunk('P13', 'PROPERTY', **{'OBJECT': 'CANARY', 'SINGS': 'TRUE'})
-    m.add_chunk('P14', 'PROPERTY', **{'OBJECT': 'CANARY', 'CATEGORY': 'BIRD'})
-    m.add_chunk('P15', 'PROPERTY', **{'OBJECT': 'OSTRICH', 'FLIES': 'FALSE'})
-    m.add_chunk('P16', 'PROPERTY', **{'OBJECT': 'OSTRICH', 'HEIGHT': 'TALL'})
-    m.add_chunk('P17', 'PROPERTY', **{'OBJECT': 'OSTRICH', 'CATEGORY': 'BIRD'})
-    m.add_chunk('P18', 'PROPERTY', **{'OBJECT': 'BIRD', 'WINGS': 'TRUE'})
-    m.add_chunk('P19', 'PROPERTY', **{'OBJECT': 'BIRD', 'LOCOMOTION': 'FLYING'})
-    m.add_chunk('P20', 'PROPERTY', **{'OBJECT': 'BIRD', 'CATEGORY': 'ANIMAL'})
-    m.add_chunk('P21', 'PROPERTY', **{'OBJECT': 'BIRD', 'FLIES': 'TRUE'})
-    m.define_chunks(actr.Chunk('G1', 'TEST-ATTRIBUTE', {'OBJECT': 'CANARY', 'ATTRIBUTE': 'CATEGORY', 'VALUE': 'BIRD'}))
-    m.define_chunks(actr.Chunk('G2', 'TEST-ATTRIBUTE', {'OBJECT': 'CANARY', 'ATTRIBUTE': 'WINGS', 'VALUE': 'TRUE'}))
-    m.define_chunks(actr.Chunk('G3', 'TEST-ATTRIBUTE', {'OBJECT': 'CANARY', 'ATTRIBUTE': 'DANGEROUS', 'VALUE': 'TRUE'}))
-    m.declare_buffer_usage('GOAL', 'TEST-ATTRIBUTE', ':ALL')
-    m.add_production(
-        '''(P RETRIEVE-ATTRIBUTE =GOAL> ISA TEST-ATTRIBUTE OBJECT =OBJ ATTRIBUTE =ATTR VALUE =VAL STATE NIL ==> =GOAL> STATE ATTR-CHECK +RETRIEVAL> ISA PROPERTY OBJECT =OBJ - =ATTR NIL)'''
-    )
-    m.add_production(
-        '''(P DIRECT-VERIFY =GOAL> ISA TEST-ATTRIBUTE ORIGINAL NIL OBJECT =OBJ ATTRIBUTE =ATTR VALUE =VAL STATE ATTR-CHECK =RETRIEVAL> ISA PROPERTY OBJECT =OBJ =ATTR =VAL ==> =GOAL> ANSWER YES STATE DONE)'''
-    )
-    m.add_production(
-        '''(P INDIRECT-VERIFY =GOAL> ISA TEST-ATTRIBUTE ORIGINAL =ORI OBJECT =OBJ ATTRIBUTE =ATTR VALUE =VAL STATE ATTR-CHECK =RETRIEVAL> ISA PROPERTY OBJECT =OBJ =ATTR =VAL ==> =GOAL> OBJECT =ORI ANSWER YES STATE RECORD)'''
-    )
-    m.add_production(
-        '''(P RECORD-RESULT =GOAL> ISA TEST-ATTRIBUTE OBJECT =OBJ ATTRIBUTE =ATTR VALUE =VAL STATE RECORD ?IMAGINAL> STATE FREE ==> +IMAGINAL> OBJECT =OBJ =ATTR =VAL =GOAL> ANSWER YES STATE CREATE)'''
-    )
-    m.add_production(
-        '''(P CREATE =GOAL> ISA TEST-ATTRIBUTE STATE CREATE ?IMAGINAL> STATE FREE BUFFER FULL ==> -IMAGINAL> =GOAL> STATE DONE)'''
-    )
-    m.add_production(
-        '''(P DISPROVE =GOAL> ISA TEST-ATTRIBUTE OBJECT =OBJ ATTRIBUTE =ATTR VALUE =VAL STATE ATTR-CHECK =RETRIEVAL> ISA PROPERTY OBJECT =OBJ - =ATTR =VAL ==> =GOAL> ANSWER NO STATE DONE)'''
-    )
-    m.add_production(
-        '''(P MISSING-ATTR =GOAL> ISA TEST-ATTRIBUTE OBJECT =OBJ STATE ATTR-CHECK ?RETRIEVAL> BUFFER FAILURE ==> =GOAL> STATE CHECK-CATEGORY +RETRIEVAL> ISA PROPERTY OBJECT =OBJ - CATEGORY NIL)'''
-    )
-    m.add_production(
-        '''(P CHAIN-FIRST-CATEGORY =GOAL> ISA TEST-ATTRIBUTE ORIGINAL NIL OBJECT =OBJ STATE CHECK-CATEGORY =RETRIEVAL> ISA PROPERTY OBJECT =OBJ CATEGORY =OBJ2 ==> =GOAL> ORIGINAL =OBJ OBJECT =OBJ2 STATE NIL)'''
-    )
-    m.add_production(
-        '''(P CHAIN-SUBSEQUENT-CATEGORY =GOAL> ISA TEST-ATTRIBUTE - ORIGINAL NIL OBJECT =OBJ STATE CHECK-CATEGORY =RETRIEVAL> ISA PROPERTY OBJECT =OBJ CATEGORY =OBJ2 ==> =GOAL> OBJECT =OBJ2 STATE NIL)'''
-    )
-    m.add_production(
-        '''(P FAILED-TO-FIND-CATEGORY =GOAL> ISA TEST-ATTRIBUTE STATE CHECK-CATEGORY ?RETRIEVAL> BUFFER FAILURE ==> =GOAL> ANSWER DONT-KNOW STATE DONE)'''
-    )
-    m.add_production(
-        '''(P RESPOND =GOAL> ISA TEST-ATTRIBUTE STATE DONE OBJECT =OBJ ATTRIBUTE =ATTR VALUE =VAL ANSWER =ANS ==> !OUTPUT! (=OBJ =ATTR =VAL ANSWER IS =ANS) -GOAL>)'''
-    )
-    return m
+m.define_chunks('shark')
+m.define_chunks('salmon')
+m.define_chunks('fish')
+m.define_chunks('animal')
+m.define_chunks('canary')
+m.define_chunks('ostrich')
+m.define_chunks('bird')
+m.define_chunks('dangerous')
+m.define_chunks('locomotion')
+m.define_chunks('category')
+m.define_chunks('edible')
+m.define_chunks('breathe')
+m.define_chunks('moves')
+m.define_chunks('skin')
+m.define_chunks('color')
+m.define_chunks('sings')
+m.define_chunks('flies')
+m.define_chunks('height')
+m.define_chunks('wings')
+m.define_chunks('gills')
+m.define_chunks('swimming')
+m.define_chunks('tall')
+m.define_chunks('flying')
+m.define_chunks('true')
+m.define_chunks('false')
+m.define_chunks('yes')
+m.define_chunks('no')
+m.define_chunks('dont-know')
+m.define_chunks('attr-check')
+m.define_chunks('record')
+m.define_chunks('create')
+m.define_chunks('done')
+m.define_chunks('check-category')
+m.add_chunk('p1', 'property', object='shark', dangerous='true')
+m.add_chunk('p2', 'property', object='shark', locomotion='swimming')
+m.add_chunk('p3', 'property', object='shark', category='fish')
+m.add_chunk('p4', 'property', object='salmon', edible='true')
+m.add_chunk('p5', 'property', object='salmon', locomotion='swimming')
+m.add_chunk('p6', 'property', object='salmon', category='fish')
+m.add_chunk('p7', 'property', object='fish', breathe='gills')
+m.add_chunk('p8', 'property', object='fish', locomotion='swimming')
+m.add_chunk('p9', 'property', object='fish', category='animal')
+m.add_chunk('p10', 'property', object='animal', moves='true')
+m.add_chunk('p11', 'property', object='animal', skin='true')
+m.add_chunk('p12', 'property', object='canary', color='yellow')
+m.add_chunk('p13', 'property', object='canary', sings='true')
+m.add_chunk('p14', 'property', object='canary', category='bird')
+m.add_chunk('p15', 'property', object='ostrich', flies='false')
+m.add_chunk('p16', 'property', object='ostrich', height='tall')
+m.add_chunk('p17', 'property', object='ostrich', category='bird')
+m.add_chunk('p18', 'property', object='bird', wings='true')
+m.add_chunk('p19', 'property', object='bird', locomotion='flying')
+m.add_chunk('p20', 'property', object='bird', category='animal')
+m.add_chunk('p21', 'property', object='bird', flies='true')
+m.define_chunks(actr.Chunk('g1', 'test-attribute', {'object': 'canary', 'attribute': 'category', 'value': 'bird'}))
+m.define_chunks(actr.Chunk('g2', 'test-attribute', {'object': 'canary', 'attribute': 'wings', 'value': 'true'}))
+m.define_chunks(actr.Chunk('g3', 'test-attribute', {'object': 'canary', 'attribute': 'dangerous', 'value': 'true'}))
 
+m.declare_buffer_usage('goal', 'test-attribute', ':all')
 
-def main(argv=None) -> None:
-    import sys
+m.add_production(
+    '''
+    (p retrieve-attribute
+       =goal>
+         isa         test-attribute
+         object      =obj
+         attribute   =attr
+         value       =val
+         state       nil
+      ==>
+       =goal>
+         state       attr-check
+       +retrieval>
+         isa         property
+         object      =obj
+         - =attr     nil)
+    '''
+)
 
-    argv = list(sys.argv[1:] if argv is None else argv)
-    seconds = float(argv[0]) if argv else DEFAULT_RUN_TIME
-    print(build().run(seconds), end="")
+m.add_production(
+    '''
+    (p direct-verify
+       =goal>
+         isa         test-attribute
+         original    nil
+         object      =obj
+         attribute   =attr
+         value       =val
+         state       attr-check
+       =retrieval>
+         isa         property
+         object      =obj
+         =attr       =val
+      ==>
+       =goal>
+         answer      yes
+         state       done)
+    '''
+)
+
+m.add_production(
+    '''
+    (p indirect-verify
+       =goal>
+         isa         test-attribute
+         original    =ori
+         object      =obj
+         attribute   =attr
+         value       =val
+         state       attr-check
+       =retrieval>
+         isa         property
+         object      =obj
+         =attr       =val
+    ==>
+       =goal>
+         object      =ori
+         answer      yes
+         state       record)
+    '''
+)
+
+m.add_production(
+    '''
+    (p record-result
+       =goal>
+         isa         test-attribute
+         object      =obj
+         attribute   =attr
+         value       =val
+         state       record
+       ?imaginal>
+         state       free
+      ==>
+       +imaginal>
+         object      =obj
+         =attr       =val
+       =goal>
+         answer      yes
+         state       create)
+    '''
+)
+
+m.add_production(
+    '''
+    (p create
+       =goal>
+         isa         test-attribute
+         state       create
+       ?imaginal>
+         state       free
+         buffer      full
+      ==>
+       -imaginal>
+       =goal>
+         state       done)
+    '''
+)
+
+m.add_production(
+    '''
+    (p disprove
+       =goal>
+         isa         test-attribute
+         object      =obj
+         attribute   =attr
+         value       =val
+         state       attr-check
+       =retrieval>
+         isa         property
+         object      =obj
+         - =attr     =val
+      ==>
+       =goal>
+         answer      no
+         state       done)
+    '''
+)
+
+m.add_production(
+    '''
+    (p missing-attr
+       =goal>
+         isa         test-attribute
+         object      =obj
+         state       attr-check
+       ?retrieval>
+         buffer      failure
+      ==>
+       =goal>
+         state       check-category
+       +retrieval>
+         isa         property
+         object      =obj
+         - category  nil
+    )
+    '''
+)
+
+m.add_production(
+    '''
+    (p chain-first-category
+       =goal>
+         isa         test-attribute
+         original    nil
+         object      =obj
+         state       check-category
+       =retrieval>
+         isa         property
+         object      =obj
+         category    =obj2
+      ==>
+       =goal>
+         original    =obj
+         object      =obj2
+         state       nil)
+    '''
+)
+
+m.add_production(
+    '''
+    (p chain-subsequent-category
+       =goal>
+         isa         test-attribute
+         - original  nil
+         object      =obj
+         state       check-category
+       =retrieval>
+         isa         property
+         object      =obj
+         category    =obj2
+      ==>
+       =goal>
+         object      =obj2
+         state       nil)
+    '''
+)
+
+m.add_production(
+    '''
+    (p failed-to-find-category
+      =goal>
+        isa         test-attribute
+        state       check-category
+       ?retrieval>
+        buffer      failure
+     ==>
+      =goal>
+        answer      dont-know
+        state       done)
+    '''
+)
+
+m.add_production(
+    '''
+    (p respond
+       =goal>
+         isa         test-attribute
+         state       done
+         object      =obj
+         attribute   =attr
+         value       =val
+         answer      =ans
+      ==>
+       !output! (=obj =attr =val answer is =ans)
+       -goal>)
+    '''
+)
 
 
 if __name__ == "__main__":
-    main()
+    print(m.run(10.0), end="")

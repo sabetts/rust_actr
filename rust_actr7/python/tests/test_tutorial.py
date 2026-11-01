@@ -26,10 +26,20 @@ class TutorialTests(unittest.TestCase):
         for path in scripts:
             with self.subTest(path=path.relative_to(TUTORIAL)):
                 namespace = runpy.run_path(str(path))
-                model = namespace.get("MODEL")
+                model = namespace.get("MODEL") or namespace.get("m")
                 if model is None:
                     model = namespace["build"]()
                 model._ensure_session()
+
+    def test_count_source_is_readable(self):
+        text = (TUTORIAL / "unit1" / "count.py").read_text(encoding="utf-8")
+        self.assertNotIn("def build", text)
+        self.assertNotIn("def main", text)
+        self.assertIn("m.add_production(\n", text)
+        self.assertIn("    (p start\n", text)
+        self.assertIn("isa         count-from", text)
+        self.assertNotIn("ISA ", text)
+        self.assertNotIn("COUNT-FROM", text)
 
     def test_count_cli_prints_trace(self):
         result = run_script("unit1/count.py")

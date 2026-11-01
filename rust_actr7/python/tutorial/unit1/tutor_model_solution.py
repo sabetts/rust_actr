@@ -1,54 +1,148 @@
 """Python port of ACT-R:tutorial;unit1;tutor-model-solution.lisp."""
 
-from __future__ import annotations
+import rust_actr as actr
 
-import rust_actr.actr as actr
+m = actr.Model('tutor-model')
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit1;tutor-model-solution.lisp'
-MODEL_NAME = 'TUTOR-MODEL'
-DEFAULT_RUN_TIME = 10.0
+m.sgp(':esc', True)
+m.sgp(':lf', 0.05)
+m.sgp(':trace-detail', 'medium')
 
+m.chunk_type('addition-fact', 'addend1', 'addend2', 'sum')
+m.chunk_type('add-pair', 'one1', 'ten1', 'one2', 'ten2', 'ten-ans', 'one-ans', 'carry')
 
-def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('TUTOR-MODEL', seed=seed)
-    m.sgp(':ESC', True)
-    m.sgp(':LF', 0.05)
-    m.sgp(':TRACE-DETAIL', 'MEDIUM')
-    m.chunk_type('ADDITION-FACT', 'ADDEND1', 'ADDEND2', 'SUM')
-    m.chunk_type('ADD-PAIR', 'ONE1', 'TEN1', 'ONE2', 'TEN2', 'TEN-ANS', 'ONE-ANS', 'CARRY')
-    m.add_chunk('FACT17', 'ADDITION-FACT', **{'ADDEND1': 1, 'ADDEND2': 7, 'SUM': 8})
-    m.add_chunk('FACT34', 'ADDITION-FACT', **{'ADDEND1': 3, 'ADDEND2': 4, 'SUM': 7})
-    m.add_chunk('FACT67', 'ADDITION-FACT', **{'ADDEND1': 6, 'ADDEND2': 7, 'SUM': 13})
-    m.add_chunk('FACT103', 'ADDITION-FACT', **{'ADDEND1': 10, 'ADDEND2': 3, 'SUM': 13})
-    m.add_production(
-        '''(P START-PAIR =GOAL> ISA ADD-PAIR ONE1 =NUM1 ONE2 =NUM2 ONE-ANS NIL ==> =GOAL> ONE-ANS BUSY +RETRIEVAL> ISA ADDITION-FACT ADDEND1 =NUM1 ADDEND2 =NUM2)'''
-    )
-    m.add_production(
-        '''(P ADD-ONES =GOAL> ISA ADD-PAIR ONE-ANS BUSY ONE1 =NUM1 ONE2 =NUM2 =RETRIEVAL> ISA ADDITION-FACT ADDEND1 =NUM1 ADDEND2 =NUM2 SUM =SUM ==> =GOAL> ONE-ANS =SUM CARRY BUSY +RETRIEVAL> ISA ADDITION-FACT ADDEND1 10 SUM =SUM)'''
-    )
-    m.add_production(
-        '''(P PROCESS-CARRY =GOAL> ISA ADD-PAIR TEN1 =NUM1 TEN2 =NUM2 CARRY BUSY ONE-ANS =ONES =RETRIEVAL> ISA ADDITION-FACT ADDEND1 10 SUM =ONES ADDEND2 =REMAINDER ==> =GOAL> CARRY 1 TEN-ANS BUSY ONE-ANS =REMAINDER +RETRIEVAL> ISA ADDITION-FACT ADDEND1 =NUM1 ADDEND2 =NUM2)'''
-    )
-    m.add_production(
-        '''(P NO-CARRY =GOAL> ISA ADD-PAIR TEN1 =NUM1 TEN2 =NUM2 CARRY BUSY ?RETRIEVAL> BUFFER FAILURE ==> =GOAL> CARRY NIL TEN-ANS BUSY +RETRIEVAL> ISA ADDITION-FACT ADDEND1 =NUM1 ADDEND2 =NUM2)'''
-    )
-    m.add_production(
-        '''(P ADD-TENS-DONE =GOAL> ISA ADD-PAIR TEN-ANS BUSY CARRY NIL =RETRIEVAL> ISA ADDITION-FACT SUM =SUM ==> =GOAL> TEN-ANS =SUM)'''
-    )
-    m.add_production(
-        '''(P ADD-TENS-CARRY =GOAL> ISA ADD-PAIR CARRY 1 TEN-ANS BUSY =RETRIEVAL> ISA ADDITION-FACT SUM =SUM ==> =GOAL> CARRY NIL +RETRIEVAL> ISA ADDITION-FACT ADDEND1 1 ADDEND2 =SUM)'''
-    )
-    m.goal_focus(isa='ADD-PAIR', **{'TEN1': 3, 'ONE1': 6, 'TEN2': 4, 'ONE2': 7})
-    return m
+m.add_chunk('fact17', 'addition-fact', addend1=1, addend2=7, sum=8)
+m.add_chunk('fact34', 'addition-fact', addend1=3, addend2=4, sum=7)
+m.add_chunk('fact67', 'addition-fact', addend1=6, addend2=7, sum=13)
+m.add_chunk('fact103', 'addition-fact', addend1=10, addend2=3, sum=13)
 
+m.add_production(
+    '''
+    (p start-pair
+      =goal>
+        isa add-pair
+        one1 =num1
+        one2 =num2
+        one-ans nil
+    ==>
+      =goal>
+        one-ans busy
+      +retrieval>
+        isa addition-fact
+        addend1 =num1
+        addend2 =num2)
+    '''
+)
 
-def main(argv=None) -> None:
-    import sys
+m.add_production(
+    '''
+    (p add-ones
+      =goal>
+        isa add-pair
+        one-ans busy
+        one1 =num1
+        one2 =num2
+      =retrieval>
+        isa addition-fact
+        addend1 =num1
+        addend2 =num2
+        sum =sum
+    ==>
+      =goal>
+        one-ans =sum
+        carry busy
+      +retrieval>
+        isa addition-fact
+        addend1 10
+        sum =sum)
+    '''
+)
 
-    argv = list(sys.argv[1:] if argv is None else argv)
-    seconds = float(argv[0]) if argv else DEFAULT_RUN_TIME
-    print(build().run(seconds), end="")
+m.add_production(
+    '''
+    (p process-carry
+      =goal>
+        isa add-pair
+        ten1 =num1
+        ten2 =num2
+        carry busy
+        one-ans =ones
+      =retrieval>
+        isa addition-fact
+        addend1 10
+        sum =ones
+        addend2 =remainder
+    ==>
+      =goal>
+        carry 1
+        ten-ans busy
+        one-ans =remainder
+      +retrieval>
+        isa addition-fact
+        addend1 =num1
+        addend2 =num2)
+    '''
+)
+
+m.add_production(
+    '''
+    (p no-carry
+      =goal>
+        isa add-pair
+        ten1 =num1
+        ten2 =num2
+        carry busy
+      ?retrieval>
+        buffer failure
+    ==>
+      =goal>
+        carry nil
+        ten-ans busy
+      +retrieval>
+        isa addition-fact
+        addend1 =num1
+        addend2 =num2)
+    '''
+)
+
+m.add_production(
+    '''
+    (p add-tens-done
+      =goal>
+        isa add-pair
+        ten-ans busy
+        carry nil
+      =retrieval>
+        isa addition-fact
+        sum =sum
+    ==>
+      =goal>
+        ten-ans =sum)
+    '''
+)
+
+m.add_production(
+    '''
+    (p add-tens-carry
+      =goal>
+        isa add-pair
+        carry 1
+        ten-ans busy
+      =retrieval>
+        isa addition-fact
+        sum =sum
+    ==>
+      =goal>
+        carry nil
+      +retrieval>
+        isa addition-fact
+        addend1 1
+        addend2 =sum)
+    '''
+)
+
+m.goal_focus(isa='add-pair', ten1=3, one1=6, ten2=4, one2=7)
 
 
 if __name__ == "__main__":
-    main()
+    print(m.run(10.0), end="")

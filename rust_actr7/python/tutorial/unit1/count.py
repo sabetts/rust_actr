@@ -1,46 +1,82 @@
 """Python port of ACT-R:tutorial;unit1;count.lisp."""
 
-from __future__ import annotations
+import rust_actr as actr
 
-import rust_actr.actr as actr
+m = actr.Model('count')
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit1;count.lisp'
-MODEL_NAME = 'COUNT'
-DEFAULT_RUN_TIME = 10.0
+m.sgp(':esc', True)
+m.sgp(':lf', 0.05)
+m.sgp(':trace-detail', 'high')
 
+m.chunk_type('number', 'number', 'next')
+m.chunk_type('count-from', 'start', 'end', 'count')
 
-def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('COUNT', seed=seed)
-    m.sgp(':ESC', True)
-    m.sgp(':LF', 0.05)
-    m.sgp(':TRACE-DETAIL', 'HIGH')
-    m.chunk_type('NUMBER', 'NUMBER', 'NEXT')
-    m.chunk_type('COUNT-FROM', 'START', 'END', 'COUNT')
-    m.add_chunk('ONE', 'NUMBER', **{'NUMBER': 'ONE', 'NEXT': 'TWO'})
-    m.add_chunk('TWO', 'NUMBER', **{'NUMBER': 'TWO', 'NEXT': 'THREE'})
-    m.add_chunk('THREE', 'NUMBER', **{'NUMBER': 'THREE', 'NEXT': 'FOUR'})
-    m.add_chunk('FOUR', 'NUMBER', **{'NUMBER': 'FOUR', 'NEXT': 'FIVE'})
-    m.add_chunk('FIVE', 'NUMBER', **{'NUMBER': 'FIVE'})
-    m.goal_focus(isa='COUNT-FROM', **{'START': 'TWO', 'END': 'FOUR'})
-    m.add_production(
-        '''(P START =GOAL> ISA COUNT-FROM START =NUM1 COUNT NIL ==> =GOAL> ISA COUNT-FROM COUNT =NUM1 +RETRIEVAL> ISA NUMBER NUMBER =NUM1)'''
-    )
-    m.add_production(
-        '''(P INCREMENT =GOAL> ISA COUNT-FROM COUNT =NUM1 - END =NUM1 =RETRIEVAL> ISA NUMBER NUMBER =NUM1 NEXT =NUM2 ==> =GOAL> ISA COUNT-FROM COUNT =NUM2 +RETRIEVAL> ISA NUMBER NUMBER =NUM2 !OUTPUT! (=NUM1))'''
-    )
-    m.add_production(
-        '''(P STOP =GOAL> ISA COUNT-FROM COUNT =NUM END =NUM =RETRIEVAL> ISA NUMBER NUMBER =NUM ==> -GOAL> !OUTPUT! (=NUM))'''
-    )
-    return m
+m.add_chunk('one', 'number', number='one', next='two')
+m.add_chunk('two', 'number', number='two', next='three')
+m.add_chunk('three', 'number', number='three', next='four')
+m.add_chunk('four', 'number', number='four', next='five')
+m.add_chunk('five', 'number', number='five')
 
+m.goal_focus(isa='count-from', start='two', end='four')
 
-def main(argv=None) -> None:
-    import sys
+m.add_production(
+    '''
+    (p start
+       =goal>
+          isa         count-from
+          start       =num1
+          count       nil
+     ==>
+       =goal>
+          isa         count-from
+          count       =num1
+       +retrieval>
+          isa         number
+          number      =num1
+       )
+    '''
+)
 
-    argv = list(sys.argv[1:] if argv is None else argv)
-    seconds = float(argv[0]) if argv else DEFAULT_RUN_TIME
-    print(build().run(seconds), end="")
+m.add_production(
+    '''
+    (p increment
+       =goal>
+          isa         count-from
+          count       =num1
+        - end         =num1
+       =retrieval>
+          isa         number
+          number      =num1
+          next        =num2
+     ==>
+       =goal>
+          isa         count-from
+          count       =num2
+       +retrieval>
+          isa         number
+          number      =num2
+       !output!       (=num1)
+       )
+    '''
+)
+
+m.add_production(
+    '''
+    (p stop
+       =goal>
+          isa         count-from
+          count       =num
+          end         =num
+       =retrieval>
+          isa         number
+          number      =num
+     ==>
+       -goal>
+       !output!       (=num)
+       )
+    '''
+)
 
 
 if __name__ == "__main__":
-    main()
+    print(m.run(10.0), end="")

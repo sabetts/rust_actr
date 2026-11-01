@@ -7,114 +7,516 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit8;bst-ppm-model.lisp'
-MODEL_NAME = 'BST-LEARN'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = [1]
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('BST-LEARN', seed=seed)
-    m.sgp(':V', None)
-    m.sgp(':ESC', True)
-    m.sgp(':EGS', 3)
-    m.sgp(':SHOW-FOCUS', True)
-    m.sgp(':TRACE-DETAIL', 'MEDIUM')
-    m.sgp(':UL', True)
-    m.sgp(':ULT', True)
-    m.sgp(':NEEDS-MOUSE', True)
-    m.sgp(':PPM', 40)
-    m.sgp(':SIM-HOOK', actr.String('bst-number-sims'))
-    m.sgp(':CACHE-SIM-HOOK-RESULTS', True)
-    m.chunk_type('TRY-STRATEGY', 'STRATEGY', 'STATE')
-    m.chunk_type('ENCODING', 'A-LOC', 'B-LOC', 'C-LOC', 'GOAL-LOC', 'LENGTH', 'GOAL-LENGTH', 'B-LEN', 'C-LEN', 'DIFFERENCE')
-    m.define_chunks('START')
-    m.define_chunks('FIND-LINE')
-    m.define_chunks('LOOKING')
-    m.define_chunks('ATTENDING')
-    m.define_chunks('CHOOSE-STRATEGY')
-    m.define_chunks('CONSIDER-NEXT')
-    m.define_chunks('CHECK-FOR-DONE')
-    m.define_chunks('READ-DONE')
-    m.define_chunks('EVALUATE-C')
-    m.define_chunks('PREPARE-MOUSE')
-    m.define_chunks('EVALUATE-A')
-    m.define_chunks('OVER')
-    m.define_chunks('UNDER')
-    m.define_chunks('MOVE-MOUSE')
-    m.define_chunks('WAIT-FOR-CLICK')
-    m.goal_focus(isa='TRY-STRATEGY', **{'STATE': 'START'})
-    m.declare_buffer_usage('IMAGINAL', 'ENCODING', 'DIFFERENCE', 'LENGTH')
+    m = actr.Model('bst-learn', seed=seed)
+
+    m.sgp(':v', None)
+    m.sgp(':esc', True)
+    m.sgp(':egs', 3)
+    m.sgp(':show-focus', True)
+    m.sgp(':trace-detail', 'medium')
+    m.sgp(':ul', True)
+    m.sgp(':ult', True)
+    m.sgp(':needs-mouse', True)
+    m.sgp(':ppm', 40)
+    m.sgp(':sim-hook', actr.String('bst-number-sims'))
+    m.sgp(':cache-sim-hook-results', True)
+
+    m.chunk_type('try-strategy', 'strategy', 'state')
+    m.chunk_type('encoding', 'a-loc', 'b-loc', 'c-loc', 'goal-loc', 'length', 'goal-length', 'b-len', 'c-len', 'difference')
+
+    m.define_chunks('start')
+    m.define_chunks('find-line')
+    m.define_chunks('looking')
+    m.define_chunks('attending')
+    m.define_chunks('choose-strategy')
+    m.define_chunks('consider-next')
+    m.define_chunks('check-for-done')
+    m.define_chunks('read-done')
+    m.define_chunks('evaluate-c')
+    m.define_chunks('prepare-mouse')
+    m.define_chunks('evaluate-a')
+    m.define_chunks('over')
+    m.define_chunks('under')
+    m.define_chunks('move-mouse')
+    m.define_chunks('wait-for-click')
+
+    m.goal_focus(isa='try-strategy', state='start')
+
+    m.declare_buffer_usage('imaginal', 'encoding', 'difference', 'length')
+
     m.add_production(
-        '''(P START-TRIAL =GOAL> ISA TRY-STRATEGY STATE START ?VISUAL-LOCATION> BUFFER UNREQUESTED ==> =GOAL> STATE FIND-LINE)'''
+        '''
+        (p start-trial
+            =goal>
+              isa    try-strategy
+              state  start
+            ?visual-location>
+              buffer unrequested
+           ==>
+            =goal>
+              state  find-line)
+        '''
     )
+
     m.add_production(
-        '''(P FIND-NEXT-LINE =GOAL> ISA TRY-STRATEGY STATE FIND-LINE ==> +VISUAL-LOCATION> ISA VISUAL-LOCATION :ATTENDED NIL KIND LINE SCREEN-Y LOWEST =GOAL> STATE LOOKING)'''
+        '''
+        (p find-next-line
+            =goal>
+              isa       try-strategy
+              state     find-line
+           ==>
+            +visual-location>
+              isa       visual-location
+              :attended nil
+              kind      line
+              screen-y  lowest
+            =goal>
+              state     looking)
+        '''
     )
+
     m.add_production(
-        '''(P ATTEND-LINE =GOAL> ISA TRY-STRATEGY STATE LOOKING =VISUAL-LOCATION> ?VISUAL> STATE FREE ==> =GOAL> STATE ATTENDING +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION)'''
+        '''
+        (p attend-line
+            =goal>
+              isa     try-strategy
+              state   looking
+            =visual-location>
+            ?visual>
+              state   free
+           ==>
+            =goal>
+              state      attending
+            +visual>
+              cmd        move-attention
+              screen-pos =visual-location)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-LINE-A =GOAL> ISA TRY-STRATEGY STATE ATTENDING =VISUAL> ISA LINE SCREEN-POS =POS ?IMAGINAL> BUFFER EMPTY STATE FREE ==> +IMAGINAL> ISA ENCODING A-LOC =POS =GOAL> STATE FIND-LINE)'''
+        '''
+        (p encode-line-a
+            =goal>
+              isa        try-strategy
+              state      attending
+            =visual>
+              isa        line
+              screen-pos =pos
+            ?imaginal>
+              buffer     empty
+              state      free
+           ==>
+            +imaginal>
+              isa      encoding
+              a-loc    =pos
+            =goal>
+              state    find-line)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-LINE-B =GOAL> ISA TRY-STRATEGY STATE ATTENDING =IMAGINAL> ISA ENCODING A-LOC =A B-LOC NIL =VISUAL> ISA LINE SCREEN-POS =POS WIDTH =B-LEN ==> =IMAGINAL> B-LOC =POS B-LEN =B-LEN =GOAL> STATE FIND-LINE)'''
+        '''
+        (p encode-line-b
+            =goal>
+              isa        try-strategy
+              state      attending
+            =imaginal>
+              isa        encoding
+              a-loc      =a
+              b-loc      nil
+            =visual>
+              isa        line
+              screen-pos =pos
+              width      =b-len
+           ==>
+            =imaginal>
+              b-loc    =pos
+              b-len    =b-len
+            =goal>
+              state    find-line)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-LINE-C =GOAL> ISA TRY-STRATEGY STATE ATTENDING =IMAGINAL> ISA ENCODING B-LOC =B C-LOC NIL =VISUAL> ISA LINE SCREEN-POS =POS WIDTH =C-LEN ==> =IMAGINAL> C-LOC =POS C-LEN =C-LEN =GOAL> STATE FIND-LINE)'''
+        '''
+        (p encode-line-c
+            =goal>
+              isa        try-strategy
+              state      attending
+            =imaginal>
+              isa        encoding
+              b-loc      =b
+              c-loc      nil
+            =visual>
+              isa        line
+              screen-pos =pos
+              width      =c-len
+           ==>
+            =imaginal>
+              c-loc    =pos
+              c-len    =c-len
+            =goal>
+              state    find-line)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-LINE-GOAL =GOAL> ISA TRY-STRATEGY STATE ATTENDING =IMAGINAL> ISA ENCODING C-LOC =C GOAL-LOC NIL =VISUAL> ISA LINE SCREEN-POS =POS WIDTH =LENGTH ?VISUAL> STATE FREE ==> =IMAGINAL> GOAL-LOC =POS GOAL-LENGTH =LENGTH =GOAL> STATE CHOOSE-STRATEGY)'''
+        '''
+        (p encode-line-goal
+            =goal>
+              isa        try-strategy
+              state      attending
+            =imaginal>
+              isa        encoding
+              c-loc      =c
+              goal-loc   nil
+            =visual>
+              isa        line
+              screen-pos =pos
+              width      =length
+            ?visual>
+              state      free
+           ==>
+            =imaginal>
+              goal-loc     =pos
+              goal-length  =length
+            =goal>
+              state        choose-strategy)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-LINE-CURRENT =GOAL> ISA TRY-STRATEGY STATE ATTENDING =IMAGINAL> ISA ENCODING GOAL-LOC =GOAL-LOC =VISUAL> ISA LINE WIDTH =CURRENT-LEN ?VISUAL> STATE FREE ?IMAGINAL-ACTION> STATE FREE ==> =IMAGINAL> LENGTH =CURRENT-LEN +IMAGINAL-ACTION> ACTION "bst-compute-difference" SIMPLE T =GOAL> STATE CONSIDER-NEXT +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =GOAL-LOC)'''
+        '''
+        (p encode-line-current
+            =goal>
+              isa      try-strategy
+              state    attending
+            =imaginal>
+              isa      encoding
+              goal-loc =goal-loc
+            =visual>
+              isa      line
+              width    =current-len
+            ?visual>
+              state    free
+            ?imaginal-action>
+              state    free
+          ==>
+            =imaginal>
+              length     =current-len
+            +imaginal-action>
+              action     "bst-compute-difference"
+              simple     t
+            =goal>
+              state      consider-next
+            +visual>
+              cmd        move-attention
+              screen-pos =goal-loc)
+        '''
     )
+
     m.add_production(
-        '''(P CHECK-FOR-DONE =GOAL> ISA TRY-STRATEGY STATE CONSIDER-NEXT =IMAGINAL> ISA ENCODING > DIFFERENCE -1 < DIFFERENCE 1 ?IMAGINAL> STATE FREE ==> =GOAL> STATE CHECK-FOR-DONE +VISUAL-LOCATION> ISA VISUAL-LOCATION VALUE "done")'''
+        '''
+        (p check-for-done
+            =goal>
+              isa         try-strategy
+              state       consider-next
+            =imaginal>
+              isa         encoding
+             > difference -1
+             < difference 1
+            ?imaginal>
+              state       free
+           ==>
+            =goal>
+              state     check-for-done
+            +visual-location>
+              isa       visual-location
+              value     "done")
+        '''
     )
+
     m.add_production(
-        '''(P FIND-DONE =GOAL> ISA TRY-STRATEGY STATE CHECK-FOR-DONE =VISUAL-LOCATION> ?VISUAL> STATE FREE ==> +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION =GOAL> STATE READ-DONE)'''
+        '''
+        (p find-done
+            =goal>
+              isa      try-strategy
+              state    check-for-done
+            =visual-location>
+            ?visual>
+              state    free
+           ==>
+            +visual>
+              cmd        move-attention
+              screen-pos =visual-location
+            =goal>
+              state      read-done)
+        '''
     )
+
     m.add_production(
-        '''(P READ-DONE =GOAL> ISA TRY-STRATEGY STATE READ-DONE =VISUAL> ISA TEXT VALUE "done" ==> +GOAL> ISA TRY-STRATEGY STATE START)'''
+        '''
+        (p read-done
+            =goal>
+              isa      try-strategy
+              state    read-done
+            =visual>
+              isa      text
+              value    "done"
+        ==>
+            +goal>
+              isa      try-strategy
+              state    start)
+        '''
     )
+
     m.add_production(
-        '''(P CONSIDER-C =GOAL> ISA TRY-STRATEGY STATE CONSIDER-NEXT =IMAGINAL> ISA ENCODING C-LOC =C-LOC - DIFFERENCE 0 ?IMAGINAL> STATE FREE ?VISUAL> STATE FREE ==> =IMAGINAL> =GOAL> STATE EVALUATE-C +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =C-LOC)'''
+        '''
+        (p consider-c
+            =goal>
+              isa         try-strategy
+              state       consider-next
+            =imaginal>
+              isa         encoding
+              c-loc       =c-loc
+             - difference 0
+            ?imaginal>
+             state        free
+            ?visual>
+               state      free
+           ==>
+            =imaginal>
+            =goal>
+              state      evaluate-c
+            +visual>
+              cmd        move-attention
+              screen-pos =c-loc)
+        '''
     )
+
     m.add_production(
-        '''(P CHOOSE-C =GOAL> ISA TRY-STRATEGY STATE EVALUATE-C =IMAGINAL> ISA ENCODING DIFFERENCE =DIFFERENCE =VISUAL> ISA LINE <= WIDTH =DIFFERENCE ==> =IMAGINAL> =GOAL> STATE PREPARE-MOUSE +VISUAL-LOCATION> ISA VISUAL-LOCATION KIND OVAL VALUE "c")'''
+        '''
+        (p choose-c
+            =goal>
+              isa        try-strategy
+              state      evaluate-c
+            =imaginal>
+              isa        encoding
+              difference =difference
+            =visual>
+              isa        line
+            <= width     =difference
+           ==>
+            =imaginal>
+            =goal>
+              state    prepare-mouse
+            +visual-location>
+              isa      visual-location
+              kind     oval
+              value    "c")
+        '''
     )
+
     m.add_production(
-        '''(P CONSIDER-A =GOAL> ISA TRY-STRATEGY STATE EVALUATE-C =IMAGINAL> ISA ENCODING A-LOC =A-LOC DIFFERENCE =DIFFERENCE =VISUAL> ISA LINE > WIDTH =DIFFERENCE ?VISUAL> STATE FREE ==> =IMAGINAL> =GOAL> STATE EVALUATE-A +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =A-LOC)'''
+        '''
+        (p consider-a
+            =goal>
+              isa        try-strategy
+              state      evaluate-c
+            =imaginal>
+              isa        encoding
+              a-loc      =a-loc
+              difference =difference
+            =visual>
+              isa        line
+            > width      =difference
+            ?visual>
+              state free
+           ==>
+            =imaginal>
+            =goal>
+              state      evaluate-a
+            +visual>
+              cmd        move-attention
+              screen-pos =a-loc)
+        '''
     )
+
     m.add_production(
-        '''(P CHOOSE-A =GOAL> ISA TRY-STRATEGY STATE EVALUATE-A =IMAGINAL> ISA ENCODING DIFFERENCE =DIFFERENCE =VISUAL> ISA LINE <= WIDTH =DIFFERENCE ==> =IMAGINAL> =GOAL> STATE PREPARE-MOUSE +VISUAL-LOCATION> ISA VISUAL-LOCATION KIND OVAL VALUE "a")'''
+        '''
+        (p choose-a
+            =goal>
+              isa        try-strategy
+              state      evaluate-a
+            =imaginal>
+              isa        encoding
+              difference =difference
+            =visual>
+              isa        line
+            <= width     =difference
+           ==>
+            =imaginal>
+            =goal>
+              state    prepare-mouse
+            +visual-location>
+              isa      visual-location
+              kind     oval
+              value    "a")
+        '''
     )
+
     m.add_production(
-        '''(P RESET =GOAL> ISA TRY-STRATEGY STATE EVALUATE-A =IMAGINAL> ISA ENCODING DIFFERENCE =DIFFERENCE =VISUAL> ISA LINE > WIDTH =DIFFERENCE ==> =IMAGINAL> =GOAL> STATE PREPARE-MOUSE +VISUAL-LOCATION> ISA VISUAL-LOCATION KIND OVAL VALUE "reset")'''
+        '''
+        (p reset
+            =goal>
+              isa        try-strategy
+              state      evaluate-a
+            =imaginal>
+              isa        encoding
+              difference =difference
+            =visual>
+              isa        line
+             > width     =difference
+           ==>
+            =imaginal>
+            =goal>
+              state    prepare-mouse
+            +visual-location>
+              isa      visual-location
+              kind     oval
+              value    "reset")
+        '''
     )
+
     m.add_production(
-        '''(P DECIDE-OVER =GOAL> ISA TRY-STRATEGY STATE CHOOSE-STRATEGY - STRATEGY OVER =IMAGINAL> ISA ENCODING GOAL-LENGTH =D B-LEN =D ==> =IMAGINAL> =GOAL> STATE PREPARE-MOUSE STRATEGY OVER +VISUAL-LOCATION> ISA VISUAL-LOCATION KIND OVAL VALUE "b")'''
+        '''
+        (p decide-over
+            =goal>
+              isa         try-strategy
+              state       choose-strategy
+             - strategy   over
+            =imaginal>
+              isa         encoding
+              goal-length =d
+              b-len       =d
+           ==>
+            =imaginal>
+            =goal>
+              state    prepare-mouse
+              strategy over
+            +visual-location>
+              isa      visual-location
+              kind     oval
+              value    "b")
+        '''
     )
+
     m.add_production(
-        '''(P DECIDE-UNDER =GOAL> ISA TRY-STRATEGY STATE CHOOSE-STRATEGY - STRATEGY UNDER =IMAGINAL> ISA ENCODING GOAL-LENGTH =D C-LEN =D ==> =IMAGINAL> =GOAL> STATE PREPARE-MOUSE STRATEGY UNDER +VISUAL-LOCATION> ISA VISUAL-LOCATION KIND OVAL VALUE "c")'''
+        '''
+        (p decide-under
+            =goal>
+              isa         try-strategy
+              state       choose-strategy
+            -  strategy   under
+            =imaginal>
+              isa         encoding
+              goal-length =d
+              c-len       =d
+           ==>
+            =imaginal>
+            =goal>
+              state    prepare-mouse
+              strategy under
+            +visual-location>
+              isa      visual-location
+              kind     oval
+              value    "c")
+        '''
     )
+
     m.add_production(
-        '''(P MOVE-MOUSE =GOAL> ISA TRY-STRATEGY STATE PREPARE-MOUSE =VISUAL-LOCATION> ?VISUAL> STATE FREE ?MANUAL> STATE FREE ==> +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION =GOAL> STATE MOVE-MOUSE +MANUAL> CMD MOVE-CURSOR LOC =VISUAL-LOCATION)'''
+        '''
+        (p move-mouse
+            =goal>
+              isa    try-strategy
+              state  prepare-mouse
+            =visual-location>
+            ?visual>
+              state  free
+            ?manual>
+              state  free
+           ==>
+            +visual>
+              cmd        move-attention
+              screen-pos =visual-location
+            =goal>
+              state      move-mouse
+            +manual>
+              cmd        move-cursor
+              loc        =visual-location)
+        '''
     )
+
     m.add_production(
-        '''(P CLICK-MOUSE =GOAL> ISA TRY-STRATEGY STATE MOVE-MOUSE ?MANUAL> STATE FREE ==> =GOAL> STATE WAIT-FOR-CLICK +MANUAL> CMD CLICK-MOUSE)'''
+        '''
+        (p click-mouse
+            =goal>
+              isa     try-strategy
+              state   move-mouse
+            ?manual>
+              state   free
+           ==>
+            =goal>
+              state   wait-for-click
+            +manual>
+              cmd     click-mouse)
+        '''
     )
+
     m.add_production(
-        '''(P LOOK-FOR-CURRENT =GOAL> ISA TRY-STRATEGY STATE WAIT-FOR-CLICK ?MANUAL> STATE FREE =VISUAL> - VALUE "reset" ==> +VISUAL-LOCATION> ISA VISUAL-LOCATION KIND LINE SCREEN-Y HIGHEST =GOAL> STATE LOOKING)'''
+        '''
+        (p look-for-current
+            =goal>
+              isa       try-strategy
+              state     wait-for-click
+            ?manual>
+              state     free
+            =visual>
+             - value "reset"
+           ==>
+            +visual-location>
+              isa       visual-location
+              kind      line
+              screen-y  highest
+            =goal>
+              state     looking)
+        '''
     )
+
     m.add_production(
-        '''(P PICK-ANOTHER-STRATEGY =GOAL> ISA TRY-STRATEGY STATE WAIT-FOR-CLICK ?MANUAL> STATE FREE =VISUAL> VALUE "reset" ==> =GOAL> STATE CHOOSE-STRATEGY)'''
+        '''
+        (p pick-another-strategy
+            =goal>
+              isa       try-strategy
+              state     wait-for-click
+            ?manual>
+              state     free
+            =visual>
+              value     "reset"
+           ==>
+            =goal>
+              state choose-strategy)
+        '''
     )
-    m.spp('DECIDE-OVER', **{'U': 10})
-    m.spp('DECIDE-UNDER', **{'U': 10})
-    m.spp('PICK-ANOTHER-STRATEGY', **{'REWARD': 0})
-    m.spp('READ-DONE', **{'REWARD': 20})
+    m.spp('decide-over', **{'u': 10})
+    m.spp('decide-under', **{'u': 10})
+    m.spp('pick-another-strategy', **{'reward': 0})
+    m.spp('read-done', **{'reward': 20})
     return m
 
 

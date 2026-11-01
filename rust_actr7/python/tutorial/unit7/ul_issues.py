@@ -7,41 +7,96 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit7;utility-learning-issues-model.lisp'
-MODEL_NAME = 'UTILITY-LEARNING-TEST'
 DEFAULT_FUNCTION = None
 DEFAULT_ARGS = []
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('UTILITY-LEARNING-TEST', seed=seed)
-    m.sgp(':SEED', [100, 2])
-    m.sgp(':ESC', True)
-    m.sgp(':UL', True)
-    m.sgp(':EGS', 0.5)
-    m.chunk_type('CHOOSE', 'CHOICE')
-    m.chunk_type('RESPONSE', 'ANSWER')
-    m.define_chunks('A')
-    m.define_chunks('B')
-    m.declare_buffer_usage('IMAGINAL', 'RESPONSE', 'ANSWER')
+    m = actr.Model('utility-learning-test', seed=seed)
+
+    m.sgp(':seed', [100, 2])
+    m.sgp(':esc', True)
+    m.sgp(':ul', True)
+    m.sgp(':egs', 0.5)
+
+    m.chunk_type('choose', 'choice')
+    m.chunk_type('response', 'answer')
+
+    m.define_chunks('a')
+    m.define_chunks('b')
+
+    m.declare_buffer_usage('imaginal', 'response', 'answer')
+
     m.add_production(
-        '''(P CHOOSE-A =GOAL> ISA CHOOSE CHOICE NIL ==> =GOAL> CHOICE A)'''
+        '''
+        (p choose-a
+           =goal>
+             isa choose
+             choice nil
+         ==>
+           =goal>
+             choice a)
+        '''
     )
+
     m.add_production(
-        '''(P CHOOSE-B =GOAL> ISA CHOOSE CHOICE NIL ==> =GOAL> CHOICE B)'''
+        '''
+        (p choose-b
+           =goal>
+             isa choose
+             choice nil
+         ==>
+           =goal>
+             choice b)
+        '''
     )
+
     m.add_production(
-        '''(P RESPONSE-MATCHES =GOAL> ISA CHOOSE CHOICE =CHOICE =IMAGINAL> ISA RESPONSE ANSWER =CHOICE ==> -GOAL>)'''
+        '''
+        (p response-matches
+           =goal>
+             isa choose
+             choice =choice
+           =imaginal>
+             isa response
+             answer =choice
+         ==>
+           -goal>)
+        '''
     )
+
     m.add_production(
-        '''(P RESPONSE-DOESNT-MATCH =GOAL> ISA CHOOSE CHOICE =CHOICE =IMAGINAL> ISA RESPONSE - ANSWER =CHOICE - ANSWER NIL ==> -GOAL>)'''
+        '''
+        (p response-doesnt-match
+           =goal>
+             isa choose
+             choice =choice
+           =imaginal>
+             isa response
+             - answer =choice
+             - answer nil
+         ==>
+           -goal>)
+        '''
     )
+
     m.add_production(
-        '''(P UNKNOWN-RESPONSE =GOAL> ISA CHOOSE CHOICE =CHOICE =IMAGINAL> ISA RESPONSE ANSWER NIL ==> -GOAL>)'''
+        '''
+        (p unknown-response
+           =goal>
+             isa choose
+             choice =choice
+           =imaginal>
+             isa response
+             answer nil
+         ==>
+           -goal>)
+        '''
     )
-    m.spp('RESPONSE-MATCHES', **{'REWARD': 4})
-    m.spp('RESPONSE-DOESNT-MATCH', **{'REWARD': 0})
-    m.form('(SCHEDULE-EVENT 0 "utility-learning-issues-choose" :OUTPUT (QUOTE MEDIUM))')
+    m.spp('response-matches', **{'reward': 4})
+    m.spp('response-doesnt-match', **{'reward': 0})
+
+    m.form('(schedule-event 0 "utility-learning-issues-choose" :output (quote medium))')
     return m
 
 

@@ -7,49 +7,165 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit4;paired-model.lisp'
-MODEL_NAME = 'PAIRED'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = [1]
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('PAIRED', seed=seed)
-    m.sgp(':V', True)
-    m.sgp(':ESC', True)
-    m.sgp(':RT', -2)
-    m.sgp(':LF', 0.4)
-    m.sgp(':ANS', 0.5)
-    m.sgp(':BLL', 0.5)
-    m.sgp(':ACT', None)
-    m.sgp(':NCNAR', None)
-    m.sgp(':SEED', [200, 4])
-    m.chunk_type('GOAL', 'STEP')
-    m.chunk_type('PAIR', 'PROBE', 'ANSWER')
-    m.add_chunk('START', 'CHUNK', **{})
-    m.add_chunk('ATTENDING-TARGET', 'CHUNK', **{})
-    m.add_chunk('ATTENDING-PROBE', 'CHUNK', **{})
-    m.add_chunk('TESTING', 'CHUNK', **{})
-    m.add_chunk('READ-STUDY-ITEM', 'CHUNK', **{})
+    m = actr.Model('paired', seed=seed)
+
+    m.sgp(':v', True)
+    m.sgp(':esc', True)
+    m.sgp(':rt', -2)
+    m.sgp(':lf', 0.4)
+    m.sgp(':ans', 0.5)
+    m.sgp(':bll', 0.5)
+    m.sgp(':act', None)
+    m.sgp(':ncnar', None)
+    m.sgp(':seed', [200, 4])
+
+    m.chunk_type('goal', 'step')
+    m.chunk_type('pair', 'probe', 'answer')
+
+    m.add_chunk('start', 'chunk')
+    m.add_chunk('attending-target', 'chunk')
+    m.add_chunk('attending-probe', 'chunk')
+    m.add_chunk('testing', 'chunk')
+    m.add_chunk('read-study-item', 'chunk')
+
     m.add_production(
-        '''(P ATTEND-PROBE =GOAL> ISA GOAL STEP START =VISUAL-LOCATION> ?VISUAL> STATE FREE ==> +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION =GOAL> STEP ATTENDING-PROBE)'''
+        '''
+        (p attend-probe
+            =goal>
+              isa      goal
+              step     start
+            =visual-location>
+            ?visual>
+             state     free
+           ==>
+            +visual>
+              cmd      move-attention
+              screen-pos =visual-location
+            =goal>
+              step     attending-probe
+        )
+        '''
     )
+
     m.add_production(
-        '''(P READ-PROBE =GOAL> ISA GOAL STEP ATTENDING-PROBE =VISUAL> ISA VISUAL-OBJECT VALUE =VAL ?IMAGINAL> STATE FREE ==> +IMAGINAL> ISA PAIR PROBE =VAL +RETRIEVAL> ISA PAIR PROBE =VAL =GOAL> STEP TESTING)'''
+        '''
+        (p read-probe
+            =goal>
+              isa      goal
+              step     attending-probe
+            =visual>
+              isa      visual-object
+              value    =val
+            ?imaginal>
+              state    free
+           ==>
+            +imaginal>
+              isa      pair
+              probe    =val
+            +retrieval>
+              isa      pair
+              probe    =val
+            =goal>
+              step     testing
+        )
+        '''
     )
+
     m.add_production(
-        '''(P RECALL =GOAL> ISA GOAL STEP TESTING =RETRIEVAL> ISA PAIR ANSWER =ANS ?MANUAL> STATE FREE ?VISUAL> STATE FREE ==> +MANUAL> CMD PRESS-KEY KEY =ANS =GOAL> STEP READ-STUDY-ITEM +VISUAL> CMD CLEAR)'''
+        '''
+        (p recall
+            =goal>
+              isa      goal
+              step     testing
+            =retrieval>
+              isa      pair
+              answer   =ans
+            ?manual>
+              state    free
+            ?visual>
+              state    free
+           ==>
+            +manual>
+              cmd      press-key
+              key      =ans
+            =goal>
+              step     read-study-item
+            +visual>
+              cmd      clear
+        )
+        '''
     )
+
     m.add_production(
-        '''(P CANNOT-RECALL =GOAL> ISA GOAL STEP TESTING ?RETRIEVAL> BUFFER FAILURE ?VISUAL> STATE FREE ==> =GOAL> STEP READ-STUDY-ITEM +VISUAL> CMD CLEAR)'''
+        '''
+        (p cannot-recall
+            =goal>
+              isa      goal
+              step     testing
+            ?retrieval>
+              buffer   failure
+            ?visual>
+              state    free
+           ==>
+            =goal>
+             step     read-study-item
+            +visual>
+             cmd      clear
+        )
+        '''
     )
+
     m.add_production(
-        '''(P DETECT-STUDY-ITEM =GOAL> ISA GOAL STEP READ-STUDY-ITEM =VISUAL-LOCATION> ?VISUAL> STATE FREE ==> +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION =GOAL> STEP ATTENDING-TARGET)'''
+        '''
+        (p detect-study-item
+            =goal>
+              isa      goal
+              step     read-study-item
+           =visual-location>
+           ?visual>
+              state    free
+           ==>
+           +visual>
+              cmd      move-attention
+              screen-pos =visual-location
+            =goal>
+              step     attending-target
+        )
+        '''
     )
+
     m.add_production(
-        '''(P ASSOCIATE =GOAL> ISA GOAL STEP ATTENDING-TARGET =VISUAL> ISA VISUAL-OBJECT VALUE =VAL =IMAGINAL> ISA PAIR PROBE =PROBE ?VISUAL> STATE FREE ==> =IMAGINAL> ANSWER =VAL -IMAGINAL> =GOAL> STEP START +VISUAL> CMD CLEAR)'''
+        '''
+        (p associate
+            =goal>
+              isa      goal
+              step     attending-target
+           =visual>
+              isa      visual-object
+              value    =val
+           =imaginal>
+              isa      pair
+              probe    =probe
+           ?visual>
+              state    free
+          ==>
+           =imaginal>
+              answer   =val
+           -imaginal>
+           =goal>
+              step     start
+           +visual>
+              cmd      clear
+        )
+        '''
     )
-    m.goal_focus(isa='GOAL', **{'STEP': 'START'})
+
+    m.goal_focus(isa='goal', step='start')
     return m
 
 

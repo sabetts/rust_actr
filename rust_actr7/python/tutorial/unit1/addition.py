@@ -1,54 +1,114 @@
 """Python port of ACT-R:tutorial;unit1;addition.lisp."""
 
-from __future__ import annotations
+import rust_actr as actr
 
-import rust_actr.actr as actr
+m = actr.Model('addition')
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit1;addition.lisp'
-MODEL_NAME = 'ADDITION'
-DEFAULT_RUN_TIME = 10.0
+m.sgp(':esc', True)
+m.sgp(':lf', 0.05)
 
+m.chunk_type('number', 'number', 'next')
+m.chunk_type('add', 'arg1', 'arg2', 'sum', 'count')
 
-def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('ADDITION', seed=seed)
-    m.sgp(':ESC', True)
-    m.sgp(':LF', 0.05)
-    m.chunk_type('NUMBER', 'NUMBER', 'NEXT')
-    m.chunk_type('ADD', 'ARG1', 'ARG2', 'SUM', 'COUNT')
-    m.add_chunk('ZERO', 'NUMBER', **{'NUMBER': 'ZERO', 'NEXT': 'ONE'})
-    m.add_chunk('ONE', 'NUMBER', **{'NUMBER': 'ONE', 'NEXT': 'TWO'})
-    m.add_chunk('TWO', 'NUMBER', **{'NUMBER': 'TWO', 'NEXT': 'THREE'})
-    m.add_chunk('THREE', 'NUMBER', **{'NUMBER': 'THREE', 'NEXT': 'FOUR'})
-    m.add_chunk('FOUR', 'NUMBER', **{'NUMBER': 'FOUR', 'NEXT': 'FIVE'})
-    m.add_chunk('FIVE', 'NUMBER', **{'NUMBER': 'FIVE', 'NEXT': 'SIX'})
-    m.add_chunk('SIX', 'NUMBER', **{'NUMBER': 'SIX', 'NEXT': 'SEVEN'})
-    m.add_chunk('SEVEN', 'NUMBER', **{'NUMBER': 'SEVEN', 'NEXT': 'EIGHT'})
-    m.add_chunk('EIGHT', 'NUMBER', **{'NUMBER': 'EIGHT', 'NEXT': 'NINE'})
-    m.add_chunk('NINE', 'NUMBER', **{'NUMBER': 'NINE', 'NEXT': 'TEN'})
-    m.add_chunk('TEN', 'NUMBER', **{'NUMBER': 'TEN'})
-    m.goal_focus(isa='ADD', **{'ARG1': 'FIVE', 'ARG2': 'TWO'})
-    m.add_production(
-        '''(P INITIALIZE-ADDITION =GOAL> ISA ADD ARG1 =NUM1 ARG2 =NUM2 SUM NIL ==> =GOAL> ISA ADD SUM =NUM1 COUNT ZERO +RETRIEVAL> ISA NUMBER NUMBER =NUM1)'''
+m.add_chunk('zero', 'number', number='zero', next='one')
+m.add_chunk('one', 'number', number='one', next='two')
+m.add_chunk('two', 'number', number='two', next='three')
+m.add_chunk('three', 'number', number='three', next='four')
+m.add_chunk('four', 'number', number='four', next='five')
+m.add_chunk('five', 'number', number='five', next='six')
+m.add_chunk('six', 'number', number='six', next='seven')
+m.add_chunk('seven', 'number', number='seven', next='eight')
+m.add_chunk('eight', 'number', number='eight', next='nine')
+m.add_chunk('nine', 'number', number='nine', next='ten')
+m.add_chunk('ten', 'number', number='ten')
+
+m.goal_focus(isa='add', arg1='five', arg2='two')
+
+m.add_production(
+    '''
+    (p initialize-addition
+       =goal>
+          isa         add
+          arg1        =num1
+          arg2        =num2
+          sum         nil
+      ==>
+       =goal>
+          isa         add
+          sum         =num1
+          count       zero
+       +retrieval>
+          isa         number
+          number      =num1
     )
-    m.add_production(
-        '''(P TERMINATE-ADDITION =GOAL> ISA ADD COUNT =NUM ARG2 =NUM SUM =ANSWER =RETRIEVAL> ISA NUMBER NUMBER =ANSWER ==> =GOAL> ISA ADD COUNT NIL !OUTPUT! (=ANSWER))'''
-    )
-    m.add_production(
-        '''(P INCREMENT-COUNT =GOAL> ISA ADD SUM =SUM COUNT =COUNT =RETRIEVAL> ISA NUMBER NUMBER =COUNT NEXT =NEWCOUNT ==> =GOAL> ISA ADD COUNT =NEWCOUNT +RETRIEVAL> ISA NUMBER NUMBER =SUM)'''
-    )
-    m.add_production(
-        '''(P INCREMENT-SUM =GOAL> ISA ADD SUM =SUM COUNT =COUNT - ARG2 =COUNT =RETRIEVAL> ISA NUMBER NUMBER =SUM NEXT =NEWSUM ==> =GOAL> ISA ADD SUM =NEWSUM +RETRIEVAL> ISA NUMBER NUMBER =COUNT)'''
-    )
-    return m
+    '''
+)
 
+m.add_production(
+    '''
+    (p terminate-addition
+       =goal>
+          isa         add
+          count       =num
+          arg2        =num
+          sum         =answer
+       =retrieval>
+          isa         number
+          number      =answer
+      ==>
+       =goal>
+          isa         add
+          count       nil
+       !output!       (=answer)
+    )
+    '''
+)
 
-def main(argv=None) -> None:
-    import sys
+m.add_production(
+    '''
+    (p increment-count
+       =goal>
+          isa         add
+          sum         =sum
+          count       =count
+       =retrieval>
+          isa         number
+          number      =count
+          next        =newcount
+      ==>
+       =goal>
+          isa         add
+          count       =newcount
+       +retrieval>
+          isa         number
+          number      =sum
+    )
+    '''
+)
 
-    argv = list(sys.argv[1:] if argv is None else argv)
-    seconds = float(argv[0]) if argv else DEFAULT_RUN_TIME
-    print(build().run(seconds), end="")
+m.add_production(
+    '''
+    (p increment-sum
+       =goal>
+          isa         add
+          sum         =sum
+          count       =count
+        - arg2        =count
+       =retrieval>
+          isa         number
+          number      =sum
+          next        =newsum
+      ==>
+       =goal>
+          isa         add
+          sum         =newsum
+       +retrieval>
+          isa         number
+          number      =count
+    )
+    '''
+)
 
 
 if __name__ == "__main__":
-    main()
+    print(m.run(10.0), end="")

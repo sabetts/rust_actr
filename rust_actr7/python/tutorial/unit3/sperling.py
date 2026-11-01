@@ -7,64 +7,245 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit3;sperling-model.lisp'
-MODEL_NAME = 'SPERLING'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = [1]
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('SPERLING', seed=seed)
-    m.sgp(':V', True)
-    m.sgp(':DECLARATIVE-FINST-SPAN', 10)
-    m.sgp(':SHOW-FOCUS', True)
-    m.sgp(':TRACE-DETAIL', 'LOW')
-    m.sgp(':SEED', [100, 0])
-    m.chunk_type('READ-LETTERS', 'LOCATION', 'TONE', 'STEP', 'UPPER-Y', 'LOWER-Y')
-    m.chunk_type('REPORT-ROW', 'ROW')
-    m.add_chunk('ATTENDING', 'CHUNK', **{})
-    m.add_chunk('MEDIUM', 'CHUNK', **{})
-    m.add_chunk('FIND', 'CHUNK', **{})
-    m.add_chunk('ENCODE', 'CHUNK', **{})
+    m = actr.Model('sperling', seed=seed)
+
+    m.sgp(':v', True)
+    m.sgp(':declarative-finst-span', 10)
+    m.sgp(':show-focus', True)
+    m.sgp(':trace-detail', 'low')
+    m.sgp(':seed', [100, 0])
+
+    m.chunk_type('read-letters', 'location', 'tone', 'step', 'upper-y', 'lower-y')
+    m.chunk_type('report-row', 'row')
+
+    m.add_chunk('attending', 'chunk')
+    m.add_chunk('medium', 'chunk')
+    m.add_chunk('find', 'chunk')
+    m.add_chunk('encode', 'chunk')
+
     m.add_production(
-        '''(P DETECTED-SOUND =AURAL-LOCATION> ?AURAL> STATE FREE ==> +AURAL> EVENT =AURAL-LOCATION)'''
+        '''
+        (p detected-sound
+           =aural-location>
+           ?aural>
+             state   free
+           ==>
+           +aural>
+             event   =aural-location)
+        '''
     )
+
     m.add_production(
-        '''(P SOUND-RESPOND-LOW =GOAL> ISA READ-LETTERS TONE NIL =AURAL> ISA SOUND CONTENT 500 ==> =GOAL> TONE LOW UPPER-Y 500 LOWER-Y 520)'''
+        '''
+        (p sound-respond-low
+           =goal>
+             isa      read-letters
+             tone     nil
+           =aural>
+             isa      sound
+             content  500
+        ==>
+           =goal>
+             tone     low
+             upper-y  500
+             lower-y  520)
+        '''
     )
+
     m.add_production(
-        '''(P SOUND-RESPOND-MEDIUM =GOAL> ISA READ-LETTERS TONE NIL =AURAL> ISA SOUND CONTENT 1000 ==> =GOAL> TONE MEDIUM UPPER-Y 450 LOWER-Y 470)'''
+        '''
+        (p sound-respond-medium
+           =goal>
+             isa      read-letters
+             tone     nil
+           =aural>
+             isa      sound
+             content  1000
+        ==>
+           =goal>
+             tone     medium
+             upper-y  450
+             lower-y  470)
+        '''
     )
+
     m.add_production(
-        '''(P SOUND-RESPOND-HIGH =GOAL> ISA READ-LETTERS TONE NIL =AURAL> ISA SOUND CONTENT 2000 ==> =GOAL> TONE HIGH UPPER-Y 400 LOWER-Y 420)'''
+        '''
+        (p sound-respond-high
+           =goal>
+             isa      read-letters
+             tone     nil
+           =aural>
+             isa      sound
+             content  2000
+        ==>
+           =goal>
+             tone     high
+             upper-y  400
+             lower-y  420)
+        '''
     )
+
     m.add_production(
-        '''(P ATTEND-LOW =GOAL> ISA READ-LETTERS STEP ATTENDING =VISUAL-LOCATION> ISA VISUAL-LOCATION > SCREEN-Y 500 < SCREEN-Y 520 ?VISUAL> STATE FREE ==> =GOAL> LOCATION LOW STEP ENCODE +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION)'''
+        '''
+        (p attend-low
+           =goal>
+             isa        read-letters
+             step       attending
+           =visual-location>
+             isa        visual-location
+           > screen-y   500
+           < screen-y   520
+
+           ?visual>
+             state      free
+           ==>
+           =goal>
+             location   low
+             step       encode
+           +visual>
+             cmd        move-attention
+             screen-pos =visual-location)
+        '''
     )
+
     m.add_production(
-        '''(P ATTEND-MEDIUM =GOAL> ISA READ-LETTERS STEP ATTENDING =VISUAL-LOCATION> ISA VISUAL-LOCATION > SCREEN-Y 450 < SCREEN-Y 470 ?VISUAL> STATE FREE ==> =GOAL> LOCATION MEDIUM STEP ENCODE +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION)'''
+        '''
+        (p attend-medium
+           =goal>
+             isa        read-letters
+             step       attending
+           =visual-location>
+             isa        visual-location
+           > screen-y   450
+           < screen-y   470
+
+           ?visual>
+             state      free
+        ==>
+           =goal>
+             location   medium
+             step       encode
+           +visual>
+             cmd        move-attention
+             screen-pos =visual-location)
+        '''
     )
+
     m.add_production(
-        '''(P ATTEND-HIGH =GOAL> ISA READ-LETTERS STEP ATTENDING =VISUAL-LOCATION> ISA VISUAL-LOCATION > SCREEN-Y 400 < SCREEN-Y 420 ?VISUAL> STATE FREE ==> =GOAL> LOCATION HIGH STEP ENCODE +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION)'''
+        '''
+        (p attend-high
+           =goal>
+             isa        read-letters
+             step       attending
+           =visual-location>
+             isa        visual-location
+           > screen-y   400
+           < screen-y   420
+
+           ?visual>
+             state      free
+        ==>
+           =goal>
+             location   high
+             step       encode
+           +visual>
+             cmd        move-attention
+             screen-pos =visual-location)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-ROW-AND-FIND =GOAL> ISA READ-LETTERS LOCATION =POS UPPER-Y =UY LOWER-Y =LY =VISUAL> ==> =VISUAL> STATUS =POS -VISUAL> =GOAL> LOCATION NIL STEP ATTENDING +VISUAL-LOCATION> :ATTENDED NIL > SCREEN-Y =UY < SCREEN-Y =LY)'''
+        '''
+        (p encode-row-and-find
+           =goal>
+             isa       read-letters
+             location  =pos
+             upper-y   =uy
+             lower-y   =ly
+           =visual>
+        ==>
+           =visual>
+             status    =pos
+           -visual>
+           =goal>
+             location  nil
+             step      attending
+           +visual-location>
+             :attended nil
+           > screen-y  =uy
+           < screen-y  =ly)
+        '''
     )
+
     m.add_production(
-        '''(P START-REPORT =GOAL> ISA READ-LETTERS TONE =TONE ?VISUAL> STATE FREE ==> +GOAL> ISA REPORT-ROW ROW =TONE +RETRIEVAL> STATUS =TONE)'''
+        '''
+        (p start-report
+           =goal>
+             isa     read-letters
+             tone    =tone
+           ?visual>
+             state   free
+           ==>
+           +goal>
+             isa     report-row
+             row     =tone
+           +retrieval>
+             status  =tone)
+        '''
     )
+
     m.add_production(
-        '''(P DO-REPORT =GOAL> ISA REPORT-ROW ROW =TONE =RETRIEVAL> STATUS =TONE VALUE =VAL ?MANUAL> STATE FREE ==> +MANUAL> CMD PRESS-KEY KEY =VAL +RETRIEVAL> STATUS =TONE :RECENTLY-RETRIEVED NIL)'''
+        '''
+        (p do-report
+           =goal>
+             isa      report-row
+             row      =tone
+           =retrieval>
+             status   =tone
+             value    =val
+           ?manual>
+             state    free
+           ==>
+           +manual>
+             cmd      press-key
+             key      =val
+           +retrieval>
+             status   =tone
+             :recently-retrieved  nil)
+        '''
     )
+
     m.add_production(
-        '''(P STOP-REPORT =GOAL> ISA REPORT-ROW ROW =ROW ?RETRIEVAL> BUFFER FAILURE ?MANUAL> STATE FREE ==> +MANUAL> CMD PRESS-KEY KEY SPACE -GOAL>)'''
+        '''
+        (p stop-report
+           =goal>
+             isa     report-row
+             row     =row
+           ?retrieval>
+             buffer  failure
+           ?manual>
+             state   free
+        ==>
+           +manual>
+             cmd     press-key
+             key     space
+           -goal>)
+        '''
     )
-    m.goal_focus(isa='READ-LETTERS', **{'STEP': 'ATTENDING', 'UPPER-Y': 400, 'LOWER-Y': 600})
-    m.spp('START-REPORT', **{'U': -2})
-    m.spp('DETECTED-SOUND', **{'U': 10})
-    m.spp('SOUND-RESPOND-LOW', **{'U': 10})
-    m.spp('SOUND-RESPOND-MEDIUM', **{'U': 10})
-    m.spp('SOUND-RESPOND-HIGH', **{'U': 10})
+
+    m.goal_focus(isa='read-letters', step='attending', upper_y=400, lower_y=600)
+
+    m.spp('start-report', **{'u': -2})
+    m.spp('detected-sound', **{'u': 10})
+    m.spp('sound-respond-low', **{'u': 10})
+    m.spp('sound-respond-medium', **{'u': 10})
+    m.spp('sound-respond-high', **{'u': 10})
     return m
 
 

@@ -7,37 +7,102 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit2;demo2-model.lisp'
-MODEL_NAME = 'DEMO2'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = []
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('DEMO2', seed=seed)
-    m.sgp(':SEED', [123456, 0])
-    m.sgp(':V', True)
-    m.sgp(':SHOW-FOCUS', True)
-    m.sgp(':TRACE-DETAIL', 'HIGH')
-    m.chunk_type('READ-LETTERS', 'STEP')
-    m.chunk_type('ARRAY', 'LETTER')
-    m.add_chunk('START', 'CHUNK', **{})
-    m.add_chunk('ATTEND', 'CHUNK', **{})
-    m.add_chunk('RESPOND', 'CHUNK', **{})
-    m.add_chunk('DONE', 'CHUNK', **{})
+    m = actr.Model('demo2', seed=seed)
+
+    m.sgp(':seed', [123456, 0])
+    m.sgp(':v', True)
+    m.sgp(':show-focus', True)
+    m.sgp(':trace-detail', 'high')
+
+    m.chunk_type('read-letters', 'step')
+    m.chunk_type('array', 'letter')
+
+    m.add_chunk('start', 'chunk')
+    m.add_chunk('attend', 'chunk')
+    m.add_chunk('respond', 'chunk')
+    m.add_chunk('done', 'chunk')
+
     m.add_production(
-        '''(P FIND-UNATTENDED-LETTER =GOAL> ISA READ-LETTERS STEP START ==> +VISUAL-LOCATION> :ATTENDED NIL =GOAL> STEP FIND-LOCATION)'''
+        '''
+        (p find-unattended-letter
+           =goal>
+              isa         read-letters
+              step        start
+         ==>
+           +visual-location>
+              :attended    nil
+           =goal>
+              step        find-location
+        )
+        '''
     )
+
     m.add_production(
-        '''(P ATTEND-LETTER =GOAL> ISA READ-LETTERS STEP FIND-LOCATION =VISUAL-LOCATION> ?VISUAL> STATE FREE ==> +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION =GOAL> STEP ATTEND)'''
+        '''
+        (p attend-letter
+           =goal>
+              isa         read-letters
+              step        find-location
+           =visual-location>
+           ?visual>
+              state       free
+        ==>
+           +visual>
+              cmd         move-attention
+              screen-pos  =visual-location
+           =goal>
+              step        attend
+        )
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-LETTER =GOAL> ISA READ-LETTERS STEP ATTEND =VISUAL> VALUE =LETTER ?IMAGINAL> STATE FREE ==> =GOAL> STEP RESPOND +IMAGINAL> ISA ARRAY LETTER =LETTER)'''
+        '''
+        (p encode-letter
+           =goal>
+              isa         read-letters
+              step        attend
+           =visual>
+              value       =letter
+           ?imaginal>
+              state       free
+        ==>
+           =goal>
+              step        respond
+           +imaginal>
+              isa         array
+              letter      =letter
+        )
+        '''
     )
+
     m.add_production(
-        '''(P RESPOND =GOAL> ISA READ-LETTERS STEP RESPOND =IMAGINAL> ISA ARRAY LETTER =LETTER ?MANUAL> STATE FREE ==> =GOAL> STEP DONE +MANUAL> CMD PRESS-KEY KEY =LETTER)'''
+        '''
+        (p respond
+           =goal>
+              isa         read-letters
+              step        respond
+           =imaginal>
+              isa         array
+              letter      =letter
+           ?manual>
+              state       free
+        ==>
+           =goal>
+              step        done
+           +manual>
+              cmd         press-key
+              key         =letter
+        )
+        '''
     )
-    m.goal_focus(isa='READ-LETTERS', **{'STEP': 'START'})
+
+    m.goal_focus(isa='read-letters', step='start')
     return m
 
 

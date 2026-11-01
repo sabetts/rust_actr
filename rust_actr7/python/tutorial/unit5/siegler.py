@@ -7,91 +7,186 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit5;siegler-model.lisp'
-MODEL_NAME = 'SIEGLER'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = [1]
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('SIEGLER', seed=seed)
-    m.sgp(':RT', -0.45)
-    m.sgp(':ESC', True)
-    m.sgp(':V', None)
-    m.sgp(':ACT', None)
-    m.sgp(':ANS', 0.5)
-    m.sgp(':MP', 16)
-    m.chunk_type('PLUS-FACT', 'ADDEND1', 'ADDEND2', 'SUM')
-    m.chunk_type('NUMBER', 'AURAL-REP', 'VOCAL-REP')
-    m.add_chunk('ZERO', 'NUMBER', **{'AURAL-REP': 0, 'VOCAL-REP': actr.String('zero')})
-    m.add_chunk('ONE', 'NUMBER', **{'AURAL-REP': 1, 'VOCAL-REP': actr.String('one')})
-    m.add_chunk('TWO', 'NUMBER', **{'AURAL-REP': 2, 'VOCAL-REP': actr.String('two')})
-    m.add_chunk('THREE', 'NUMBER', **{'AURAL-REP': 3, 'VOCAL-REP': actr.String('three')})
-    m.add_chunk('FOUR', 'NUMBER', **{'AURAL-REP': 4, 'VOCAL-REP': actr.String('four')})
-    m.add_chunk('FIVE', 'NUMBER', **{'AURAL-REP': 5, 'VOCAL-REP': actr.String('five')})
-    m.add_chunk('SIX', 'NUMBER', **{'AURAL-REP': 6, 'VOCAL-REP': actr.String('six')})
-    m.add_chunk('SEVEN', 'NUMBER', **{'AURAL-REP': 7, 'VOCAL-REP': actr.String('seven')})
-    m.add_chunk('EIGHT', 'NUMBER', **{'AURAL-REP': 8, 'VOCAL-REP': actr.String('eight')})
-    m.add_chunk('NINE', 'NUMBER', **{'AURAL-REP': 9, 'VOCAL-REP': actr.String('nine')})
-    m.add_chunk('F00', 'PLUS-FACT', **{'ADDEND1': 'ZERO', 'ADDEND2': 'ZERO', 'SUM': 'ZERO'})
-    m.add_chunk('F01', 'PLUS-FACT', **{'ADDEND1': 'ZERO', 'ADDEND2': 'ONE', 'SUM': 'ONE'})
-    m.add_chunk('F02', 'PLUS-FACT', **{'ADDEND1': 'ZERO', 'ADDEND2': 'TWO', 'SUM': 'TWO'})
-    m.add_chunk('F03', 'PLUS-FACT', **{'ADDEND1': 'ZERO', 'ADDEND2': 'THREE', 'SUM': 'THREE'})
-    m.add_chunk('F04', 'PLUS-FACT', **{'ADDEND1': 'ZERO', 'ADDEND2': 'FOUR', 'SUM': 'FOUR'})
-    m.add_chunk('F05', 'PLUS-FACT', **{'ADDEND1': 'ZERO', 'ADDEND2': 'FIVE', 'SUM': 'FIVE'})
-    m.add_chunk('F10', 'PLUS-FACT', **{'ADDEND1': 'ONE', 'ADDEND2': 'ZERO', 'SUM': 'ONE'})
-    m.add_chunk('F11', 'PLUS-FACT', **{'ADDEND1': 'ONE', 'ADDEND2': 'ONE', 'SUM': 'TWO'})
-    m.add_chunk('F12', 'PLUS-FACT', **{'ADDEND1': 'ONE', 'ADDEND2': 'TWO', 'SUM': 'THREE'})
-    m.add_chunk('F13', 'PLUS-FACT', **{'ADDEND1': 'ONE', 'ADDEND2': 'THREE', 'SUM': 'FOUR'})
-    m.add_chunk('F14', 'PLUS-FACT', **{'ADDEND1': 'ONE', 'ADDEND2': 'FOUR', 'SUM': 'FIVE'})
-    m.add_chunk('F15', 'PLUS-FACT', **{'ADDEND1': 'ONE', 'ADDEND2': 'FIVE', 'SUM': 'SIX'})
-    m.add_chunk('F20', 'PLUS-FACT', **{'ADDEND1': 'TWO', 'ADDEND2': 'ZERO', 'SUM': 'TWO'})
-    m.add_chunk('F21', 'PLUS-FACT', **{'ADDEND1': 'TWO', 'ADDEND2': 'ONE', 'SUM': 'THREE'})
-    m.add_chunk('F22', 'PLUS-FACT', **{'ADDEND1': 'TWO', 'ADDEND2': 'TWO', 'SUM': 'FOUR'})
-    m.add_chunk('F23', 'PLUS-FACT', **{'ADDEND1': 'TWO', 'ADDEND2': 'THREE', 'SUM': 'FIVE'})
-    m.add_chunk('F24', 'PLUS-FACT', **{'ADDEND1': 'TWO', 'ADDEND2': 'FOUR', 'SUM': 'SIX'})
-    m.add_chunk('F25', 'PLUS-FACT', **{'ADDEND1': 'TWO', 'ADDEND2': 'FIVE', 'SUM': 'SEVEN'})
-    m.add_chunk('F30', 'PLUS-FACT', **{'ADDEND1': 'THREE', 'ADDEND2': 'ZERO', 'SUM': 'THREE'})
-    m.add_chunk('F31', 'PLUS-FACT', **{'ADDEND1': 'THREE', 'ADDEND2': 'ONE', 'SUM': 'FOUR'})
-    m.add_chunk('F32', 'PLUS-FACT', **{'ADDEND1': 'THREE', 'ADDEND2': 'TWO', 'SUM': 'FIVE'})
-    m.add_chunk('F33', 'PLUS-FACT', **{'ADDEND1': 'THREE', 'ADDEND2': 'THREE', 'SUM': 'SIX'})
-    m.add_chunk('F34', 'PLUS-FACT', **{'ADDEND1': 'THREE', 'ADDEND2': 'FOUR', 'SUM': 'SEVEN'})
-    m.add_chunk('F35', 'PLUS-FACT', **{'ADDEND1': 'THREE', 'ADDEND2': 'FIVE', 'SUM': 'EIGHT'})
-    m.add_chunk('F40', 'PLUS-FACT', **{'ADDEND1': 'FOUR', 'ADDEND2': 'ZERO', 'SUM': 'FOUR'})
-    m.add_chunk('F41', 'PLUS-FACT', **{'ADDEND1': 'FOUR', 'ADDEND2': 'ONE', 'SUM': 'FIVE'})
-    m.add_chunk('F42', 'PLUS-FACT', **{'ADDEND1': 'FOUR', 'ADDEND2': 'TWO', 'SUM': 'SIX'})
-    m.add_chunk('F43', 'PLUS-FACT', **{'ADDEND1': 'FOUR', 'ADDEND2': 'THREE', 'SUM': 'SEVEN'})
-    m.add_chunk('F44', 'PLUS-FACT', **{'ADDEND1': 'FOUR', 'ADDEND2': 'FOUR', 'SUM': 'EIGHT'})
-    m.add_chunk('F45', 'PLUS-FACT', **{'ADDEND1': 'FOUR', 'ADDEND2': 'FIVE', 'SUM': 'NINE'})
-    m.add_chunk('F50', 'PLUS-FACT', **{'ADDEND1': 'FIVE', 'ADDEND2': 'ZERO', 'SUM': 'FIVE'})
-    m.add_chunk('F51', 'PLUS-FACT', **{'ADDEND1': 'FIVE', 'ADDEND2': 'ONE', 'SUM': 'SIX'})
-    m.add_chunk('F52', 'PLUS-FACT', **{'ADDEND1': 'FIVE', 'ADDEND2': 'TWO', 'SUM': 'SEVEN'})
-    m.add_chunk('F53', 'PLUS-FACT', **{'ADDEND1': 'FIVE', 'ADDEND2': 'THREE', 'SUM': 'EIGHT'})
-    m.add_chunk('F54', 'PLUS-FACT', **{'ADDEND1': 'FIVE', 'ADDEND2': 'FOUR', 'SUM': 'NINE'})
+    m = actr.Model('siegler', seed=seed)
+
+    m.sgp(':rt', -0.45)
+    m.sgp(':esc', True)
+    m.sgp(':v', None)
+    m.sgp(':act', None)
+    m.sgp(':ans', 0.5)
+    m.sgp(':mp', 16)
+
+    m.chunk_type('plus-fact', 'addend1', 'addend2', 'sum')
+    m.chunk_type('number', 'aural-rep', 'vocal-rep')
+
+    m.add_chunk('zero', 'number', aural_rep=0, vocal_rep=actr.String('zero'))
+    m.add_chunk('one', 'number', aural_rep=1, vocal_rep=actr.String('one'))
+    m.add_chunk('two', 'number', aural_rep=2, vocal_rep=actr.String('two'))
+    m.add_chunk('three', 'number', aural_rep=3, vocal_rep=actr.String('three'))
+    m.add_chunk('four', 'number', aural_rep=4, vocal_rep=actr.String('four'))
+    m.add_chunk('five', 'number', aural_rep=5, vocal_rep=actr.String('five'))
+    m.add_chunk('six', 'number', aural_rep=6, vocal_rep=actr.String('six'))
+    m.add_chunk('seven', 'number', aural_rep=7, vocal_rep=actr.String('seven'))
+    m.add_chunk('eight', 'number', aural_rep=8, vocal_rep=actr.String('eight'))
+    m.add_chunk('nine', 'number', aural_rep=9, vocal_rep=actr.String('nine'))
+    m.add_chunk('f00', 'plus-fact', addend1='zero', addend2='zero', sum='zero')
+    m.add_chunk('f01', 'plus-fact', addend1='zero', addend2='one', sum='one')
+    m.add_chunk('f02', 'plus-fact', addend1='zero', addend2='two', sum='two')
+    m.add_chunk('f03', 'plus-fact', addend1='zero', addend2='three', sum='three')
+    m.add_chunk('f04', 'plus-fact', addend1='zero', addend2='four', sum='four')
+    m.add_chunk('f05', 'plus-fact', addend1='zero', addend2='five', sum='five')
+    m.add_chunk('f10', 'plus-fact', addend1='one', addend2='zero', sum='one')
+    m.add_chunk('f11', 'plus-fact', addend1='one', addend2='one', sum='two')
+    m.add_chunk('f12', 'plus-fact', addend1='one', addend2='two', sum='three')
+    m.add_chunk('f13', 'plus-fact', addend1='one', addend2='three', sum='four')
+    m.add_chunk('f14', 'plus-fact', addend1='one', addend2='four', sum='five')
+    m.add_chunk('f15', 'plus-fact', addend1='one', addend2='five', sum='six')
+    m.add_chunk('f20', 'plus-fact', addend1='two', addend2='zero', sum='two')
+    m.add_chunk('f21', 'plus-fact', addend1='two', addend2='one', sum='three')
+    m.add_chunk('f22', 'plus-fact', addend1='two', addend2='two', sum='four')
+    m.add_chunk('f23', 'plus-fact', addend1='two', addend2='three', sum='five')
+    m.add_chunk('f24', 'plus-fact', addend1='two', addend2='four', sum='six')
+    m.add_chunk('f25', 'plus-fact', addend1='two', addend2='five', sum='seven')
+    m.add_chunk('f30', 'plus-fact', addend1='three', addend2='zero', sum='three')
+    m.add_chunk('f31', 'plus-fact', addend1='three', addend2='one', sum='four')
+    m.add_chunk('f32', 'plus-fact', addend1='three', addend2='two', sum='five')
+    m.add_chunk('f33', 'plus-fact', addend1='three', addend2='three', sum='six')
+    m.add_chunk('f34', 'plus-fact', addend1='three', addend2='four', sum='seven')
+    m.add_chunk('f35', 'plus-fact', addend1='three', addend2='five', sum='eight')
+    m.add_chunk('f40', 'plus-fact', addend1='four', addend2='zero', sum='four')
+    m.add_chunk('f41', 'plus-fact', addend1='four', addend2='one', sum='five')
+    m.add_chunk('f42', 'plus-fact', addend1='four', addend2='two', sum='six')
+    m.add_chunk('f43', 'plus-fact', addend1='four', addend2='three', sum='seven')
+    m.add_chunk('f44', 'plus-fact', addend1='four', addend2='four', sum='eight')
+    m.add_chunk('f45', 'plus-fact', addend1='four', addend2='five', sum='nine')
+    m.add_chunk('f50', 'plus-fact', addend1='five', addend2='zero', sum='five')
+    m.add_chunk('f51', 'plus-fact', addend1='five', addend2='one', sum='six')
+    m.add_chunk('f52', 'plus-fact', addend1='five', addend2='two', sum='seven')
+    m.add_chunk('f53', 'plus-fact', addend1='five', addend2='three', sum='eight')
+    m.add_chunk('f54', 'plus-fact', addend1='five', addend2='four', sum='nine')
+
     m.add_production(
-        '''(P HEAR-SOUND =AURAL-LOCATION> ISA AUDIO-EVENT LOCATION EXTERNAL ?AURAL> STATE FREE ==> +AURAL> EVENT =AURAL-LOCATION)'''
+        '''
+        (p hear-sound
+           =aural-location>
+             isa        audio-event
+             location   external
+           ?aural>
+             state      free
+          ==>
+           +aural>
+             event      =aural-location)
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-DIGIT =AURAL> ISA SOUND CONTENT =VAL ?RETRIEVAL> STATE FREE ==> +RETRIEVAL> ISA NUMBER AURAL-REP =VAL)'''
+        '''
+        (p encode-digit
+           =aural>
+             isa        sound
+             content    =val
+           ?retrieval>
+             state      free
+          ==>
+           +retrieval>
+             isa        number
+             aural-rep  =val)
+        '''
     )
+
     m.add_production(
-        '''(P HARVEST-ARG1 =RETRIEVAL> ?IMAGINAL> BUFFER EMPTY STATE FREE ==> +IMAGINAL> ISA PLUS-FACT ADDEND1 =RETRIEVAL)'''
+        '''
+        (p harvest-arg1
+           =retrieval>
+           ?imaginal>
+             buffer     empty
+             state      free
+          ==>
+           +imaginal>
+             isa        plus-fact
+             addend1    =retrieval)
+        '''
     )
+
     m.add_production(
-        '''(P HARVEST-ARG2 =RETRIEVAL> =IMAGINAL> ISA PLUS-FACT ADDEND2 NIL ?IMAGINAL> STATE FREE ==> *IMAGINAL> ADDEND2 =RETRIEVAL)'''
+        '''
+        (p harvest-arg2
+           =retrieval>
+           =imaginal>
+             isa          plus-fact
+             addend2      nil
+           ?imaginal>
+             state        free
+          ==>
+           *imaginal>
+             addend2      =retrieval)
+        '''
     )
+
     m.add_production(
-        '''(P RETRIEVE-ANSWER =IMAGINAL> ISA PLUS-FACT ADDEND1 =VAL1 ADDEND2 =VAL2 SUM NIL ?RETRIEVAL> STATE FREE BUFFER EMPTY ==> =IMAGINAL> +RETRIEVAL> ISA PLUS-FACT ADDEND1 =VAL1 ADDEND2 =VAL2)'''
+        '''
+        (p retrieve-answer
+           =imaginal>
+             isa          plus-fact
+             addend1      =val1
+             addend2      =val2
+             sum          nil
+           ?retrieval>
+             state        free
+             buffer       empty
+          ==>
+           =imaginal>
+
+           +retrieval>
+             isa          plus-fact
+             addend1      =val1
+             addend2      =val2)
+        '''
     )
+
     m.add_production(
-        '''(P HARVEST-ANSWER =RETRIEVAL> ISA PLUS-FACT SUM =NUMBER =IMAGINAL> ISA PLUS-FACT ?IMAGINAL> STATE FREE ==> *IMAGINAL> SUM =NUMBER +RETRIEVAL> =NUMBER)'''
+        '''
+        (p harvest-answer
+           =retrieval>
+              isa         plus-fact
+              sum         =number
+           =imaginal>
+              isa         plus-fact
+           ?imaginal>
+              state       free
+          ==>
+           *imaginal>
+              sum         =number
+           +retrieval>    =number)
+        '''
     )
+
     m.add_production(
-        '''(P RESPOND =IMAGINAL> ISA PLUS-FACT SUM =RESULT =RETRIEVAL> ISA NUMBER VOCAL-REP =NAME ?VOCAL> STATE FREE ==> +VOCAL> CMD SPEAK STRING =NAME)'''
+        '''
+        (p respond
+           =imaginal>
+             isa         plus-fact
+             sum         =result
+           =retrieval>
+             isa         number
+             vocal-rep   =name
+           ?vocal>
+             state       free
+          ==>
+           +vocal>
+             cmd         speak
+             string      =name)
+        '''
     )
-    m.set_base_levels([('ZERO', 10), ('ONE', 10), ('TWO', 10), ('THREE', 10), ('FOUR', 10), ('FIVE', 10), ('SIX', 10), ('SEVEN', 10), ('EIGHT', 10), ('NINE', 10)])
-    m.set_similarities([('ZERO', 'ONE', -0.1), ('ONE', 'TWO', -0.1), ('TWO', 'THREE', -0.1), ('THREE', 'FOUR', -0.1), ('FOUR', 'FIVE', -0.1), ('ZERO', 'TWO', -0.2), ('ONE', 'THREE', -0.2), ('TWO', 'FOUR', -0.2), ('THREE', 'FIVE', -0.2), ('ZERO', 'THREE', -0.3), ('ONE', 'FOUR', -0.3), ('TWO', 'FIVE', -0.3), ('ZERO', 'FOUR', -0.4), ('ONE', 'FIVE', -0.4), ('ZERO', 'FIVE', -0.5)])
-    m.set_base_levels([('F00', 0.65), ('F01', 0.65), ('F02', 0.65), ('F03', 0.65), ('F04', 0.65), ('F10', 0.65), ('F11', 0.65), ('F12', 0.65), ('F13', 0.65), ('F20', 0.65), ('F21', 0.65), ('F22', 0.65), ('F30', 0.65), ('F31', 0.65), ('F40', 0.65)])
+
+    m.set_base_levels([('zero', 10), ('one', 10), ('two', 10), ('three', 10), ('four', 10), ('five', 10), ('six', 10), ('seven', 10), ('eight', 10), ('nine', 10)])
+    m.set_similarities([('zero', 'one', -0.1), ('one', 'two', -0.1), ('two', 'three', -0.1), ('three', 'four', -0.1), ('four', 'five', -0.1), ('zero', 'two', -0.2), ('one', 'three', -0.2), ('two', 'four', -0.2), ('three', 'five', -0.2), ('zero', 'three', -0.3), ('one', 'four', -0.3), ('two', 'five', -0.3), ('zero', 'four', -0.4), ('one', 'five', -0.4), ('zero', 'five', -0.5)])
+    m.set_base_levels([('f00', 0.65), ('f01', 0.65), ('f02', 0.65), ('f03', 0.65), ('f04', 0.65), ('f10', 0.65), ('f11', 0.65), ('f12', 0.65), ('f13', 0.65), ('f20', 0.65), ('f21', 0.65), ('f22', 0.65), ('f30', 0.65), ('f31', 0.65), ('f40', 0.65)])
     return m
 
 

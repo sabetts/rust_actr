@@ -1,51 +1,94 @@
 """Python port of ACT-R:tutorial;unit8;simple-dynamic-model.lisp."""
 
-from __future__ import annotations
+import rust_actr as actr
 
-import rust_actr.actr as actr
+m = actr.Model('dynamic-introduction')
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit8;simple-dynamic-model.lisp'
-MODEL_NAME = 'DYNAMIC-INTRODUCTION'
-DEFAULT_RUN_TIME = 10.0
+m.sgp(':v', True)
+m.sgp(':trace-detail', 'high')
+m.sgp(':cst', True)
+m.sgp(':style-warnings', None)
 
+m.chunk_type('fact', 'context', 'data')
+m.chunk_type('step', 'step', 'destination')
+m.chunk_type('result', 'data1', 'data2')
 
-def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('DYNAMIC-INTRODUCTION', seed=seed)
-    m.sgp(':V', True)
-    m.sgp(':TRACE-DETAIL', 'HIGH')
-    m.sgp(':CST', True)
-    m.sgp(':STYLE-WARNINGS', None)
-    m.chunk_type('FACT', 'CONTEXT', 'DATA')
-    m.chunk_type('STEP', 'STEP', 'DESTINATION')
-    m.chunk_type('RESULT', 'DATA1', 'DATA2')
-    m.add_chunk('FIRST', 'CHUNK', **{})
-    m.add_chunk('SECOND', 'CHUNK', **{})
-    m.add_chunk('DESTINATION', 'CHUNK', **{})
-    m.add_chunk('DATA2', 'CHUNK', **{})
-    m.add_chunk('DATA3', 'CHUNK', **{})
-    m.add_chunk('DATA', 'CHUNK', **{})
-    m.add_chunk('A', 'STEP', **{'STEP': 'FIRST', 'DESTINATION': 'DATA2'})
-    m.add_chunk('B', 'STEP', **{'STEP': 'SECOND', 'DESTINATION': 'DATA3'})
-    m.goal_focus(isa='FACT', **{'CONTEXT': 'DATA', 'DATA': 10})
-    m.add_production(
-        '''(P START =GOAL> ISA FACT CONTEXT =CONTEXT =CONTEXT =X ?IMAGINAL> STATE FREE BUFFER EMPTY ==> =GOAL> CONTEXT DESTINATION +IMAGINAL> ISA RESULT DATA1 =X +RETRIEVAL> ISA STEP STEP FIRST)'''
-    )
-    m.add_production(
-        '''(P RETRIEVE-FIRST-STEP =GOAL> ISA FACT CONTEXT =SLOT DATA =X =IMAGINAL> ISA RESULT DATA1 =X =RETRIEVAL> ISA STEP =SLOT =TARGET STEP FIRST ==> =GOAL> DATA 11 =IMAGINAL> =TARGET =X +RETRIEVAL> ISA STEP STEP SECOND)'''
-    )
-    m.add_production(
-        '''(P RETRIEVE-SECOND-STEP =GOAL> ISA FACT CONTEXT =SLOT DATA =X =IMAGINAL> =RETRIEVAL> ISA STEP =SLOT =TARGET STEP SECOND ==> =IMAGINAL> =TARGET =X)'''
-    )
-    return m
+m.add_chunk('first', 'chunk')
+m.add_chunk('second', 'chunk')
+m.add_chunk('destination', 'chunk')
+m.add_chunk('data2', 'chunk')
+m.add_chunk('data3', 'chunk')
+m.add_chunk('data', 'chunk')
+m.add_chunk('a', 'step', step='first', destination='data2')
+m.add_chunk('b', 'step', step='second', destination='data3')
 
+m.goal_focus(isa='fact', context='data', data=10)
 
-def main(argv=None) -> None:
-    import sys
+m.add_production(
+    '''
+    (p start
+       =goal>
+         isa      fact
+         context  =context
+         =context =x
+       ?imaginal>
+         state    free
+         buffer   empty
+      ==>
+       =goal>
+         context  destination
+       +imaginal>
+         isa      result
+         data1    =x
+       +retrieval>
+         isa      step
+         step     first)
+    '''
+)
 
-    argv = list(sys.argv[1:] if argv is None else argv)
-    seconds = float(argv[0]) if argv else DEFAULT_RUN_TIME
-    print(build().run(seconds), end="")
+m.add_production(
+    '''
+    (p retrieve-first-step
+       =goal>
+         isa     fact
+         context =slot
+         data    =x
+       =imaginal>
+         isa     result
+         data1   =x
+       =retrieval>
+         isa     step
+         =slot   =target
+         step    first
+      ==>
+       =goal>
+         data    11
+       =imaginal>
+         =target =x
+       +retrieval>
+         isa     step
+         step    second)
+    '''
+)
+
+m.add_production(
+    '''
+    (p retrieve-second-step
+       =goal>
+         isa     fact
+         context =slot
+         data    =x
+       =imaginal>
+       =retrieval>
+         isa     step
+         =slot   =target
+         step    second
+      ==>
+       =imaginal>
+         =target =x)
+    '''
+)
 
 
 if __name__ == "__main__":
-    main()
+    print(m.run(10.0), end="")

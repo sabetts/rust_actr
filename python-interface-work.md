@@ -54,11 +54,13 @@ surface while reusing the engine's existing command parsing.
 - `rust_actr.actr` (`python/rust_actr/actr.py`) is a module-level façade that
   matches the tutorial `actr.py` client. `use(model)` binds the current model
   and replays pending commands; `clear_state()` drops both.
-- `rust_actr7/python/tutorial/unitN/` contains self-contained scripts. Each
-  has a `build(seed)` function plus, where the unit has one, the task code
-  (`MODEL = actr.use(build())`), and a `__main__` entry point.
+- `rust_actr7/python/tutorial/unitN/` contains self-contained scripts.
+  Model-only scripts build `m = actr.Model(...)` at module level and run it
+  under `if __name__ == "__main__":`; task scripts expose `build(seed)` plus
+  their task code (`MODEL = actr.use(build())`) and a small `main()`.
 - `python/tools/port_tutorial.py` regenerates the tree from the vendored Lisp
-  models and Python task scripts.
+  models and Python task scripts, lowercasing symbols and preserving each
+  production's original multi-line layout.
 
 ## 3. What works
 
@@ -223,7 +225,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **32 tests passing**. It covers:
+Current Python suite: **33 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices

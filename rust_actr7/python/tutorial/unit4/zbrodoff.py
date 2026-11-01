@@ -7,92 +7,399 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit4;zbrodoff-model.lisp'
-MODEL_NAME = 'ZBRODOFF'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = []
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('ZBRODOFF', seed=seed)
-    m.sgp(':V', None)
-    m.sgp(':ESC', True)
-    m.sgp(':LF', 0.4)
-    m.sgp(':BLL', 0.5)
-    m.sgp(':ANS', 0.5)
-    m.sgp(':RT', 0)
-    m.sgp(':NCNAR', None)
-    m.sgp(':HEAR-SELF', None)
-    m.sgp(':SHOW-FOCUS', True)
-    m.chunk_type('PROBLEM', 'ARG1', 'ARG2', 'RESULT')
-    m.chunk_type('GOAL', 'STATE', 'COUNT', 'TARGET', 'NEXT-LET', 'NEXT-NUM')
-    m.chunk_type('NUMBER', 'NUMBER', 'NEXT', 'VISUAL-REP', 'VOCAL-REP')
-    m.chunk_type('LETTER', 'LETTER', 'NEXT', 'VISUAL-REP', 'VOCAL-REP')
-    m.add_chunk('ZERO', 'NUMBER', **{'NUMBER': 'ZERO', 'NEXT': 'ONE', 'VISUAL-REP': actr.String('0'), 'VOCAL-REP': actr.String('zero')})
-    m.add_chunk('ONE', 'NUMBER', **{'NUMBER': 'ONE', 'NEXT': 'TWO', 'VISUAL-REP': actr.String('1'), 'VOCAL-REP': actr.String('one')})
-    m.add_chunk('TWO', 'NUMBER', **{'NUMBER': 'TWO', 'NEXT': 'THREE', 'VISUAL-REP': actr.String('2'), 'VOCAL-REP': actr.String('two')})
-    m.add_chunk('THREE', 'NUMBER', **{'NUMBER': 'THREE', 'NEXT': 'FOUR', 'VISUAL-REP': actr.String('3'), 'VOCAL-REP': actr.String('three')})
-    m.add_chunk('FOUR', 'NUMBER', **{'NUMBER': 'FOUR', 'NEXT': 'FIVE', 'VISUAL-REP': actr.String('4'), 'VOCAL-REP': actr.String('four')})
-    m.add_chunk('FIVE', 'NUMBER', **{'NUMBER': 'FIVE'})
-    m.add_chunk('A', 'LETTER', **{'LETTER': 'A', 'NEXT': 'B', 'VISUAL-REP': actr.String('a'), 'VOCAL-REP': actr.String('a')})
-    m.add_chunk('B', 'LETTER', **{'LETTER': 'B', 'NEXT': 'C', 'VISUAL-REP': actr.String('b'), 'VOCAL-REP': actr.String('b')})
-    m.add_chunk('C', 'LETTER', **{'LETTER': 'C', 'NEXT': 'D', 'VISUAL-REP': actr.String('c'), 'VOCAL-REP': actr.String('c')})
-    m.add_chunk('D', 'LETTER', **{'LETTER': 'D', 'NEXT': 'E', 'VISUAL-REP': actr.String('d'), 'VOCAL-REP': actr.String('d')})
-    m.add_chunk('E', 'LETTER', **{'LETTER': 'E', 'NEXT': 'F', 'VISUAL-REP': actr.String('e'), 'VOCAL-REP': actr.String('e')})
-    m.add_chunk('F', 'LETTER', **{'LETTER': 'F', 'NEXT': 'G', 'VISUAL-REP': actr.String('f'), 'VOCAL-REP': actr.String('f')})
-    m.add_chunk('G', 'LETTER', **{'LETTER': 'G', 'NEXT': 'H', 'VISUAL-REP': actr.String('g'), 'VOCAL-REP': actr.String('g')})
-    m.add_chunk('H', 'LETTER', **{'LETTER': 'H', 'NEXT': 'I', 'VISUAL-REP': actr.String('h'), 'VOCAL-REP': actr.String('h')})
-    m.add_chunk('I', 'LETTER', **{'LETTER': 'I', 'NEXT': 'J', 'VISUAL-REP': actr.String('i'), 'VOCAL-REP': actr.String('i')})
-    m.add_chunk('J', 'LETTER', **{'LETTER': 'J', 'NEXT': 'K', 'VISUAL-REP': actr.String('j'), 'VOCAL-REP': actr.String('j')})
-    m.add_chunk('K', 'LETTER', **{'LETTER': 'K', 'NEXT': 'L', 'VISUAL-REP': actr.String('k'), 'VOCAL-REP': actr.String('k')})
-    m.add_chunk('L', 'LETTER', **{'LETTER': 'L'})
-    m.add_dm('ATTENDING')
-    m.add_dm('READ')
-    m.add_dm('COUNT')
-    m.add_dm('COUNTING')
-    m.add_dm('ENCODE')
-    m.set_visloc_default(SCREEN_X='LOWEST')
+    m = actr.Model('zbrodoff', seed=seed)
+
+    m.sgp(':v', None)
+    m.sgp(':esc', True)
+    m.sgp(':lf', 0.4)
+    m.sgp(':bll', 0.5)
+    m.sgp(':ans', 0.5)
+    m.sgp(':rt', 0)
+    m.sgp(':ncnar', None)
+    m.sgp(':hear-self', None)
+    m.sgp(':show-focus', True)
+
+    m.chunk_type('problem', 'arg1', 'arg2', 'result')
+    m.chunk_type('goal', 'state', 'count', 'target', 'next-let', 'next-num')
+    m.chunk_type('number', 'number', 'next', 'visual-rep', 'vocal-rep')
+    m.chunk_type('letter', 'letter', 'next', 'visual-rep', 'vocal-rep')
+
+    m.add_chunk('zero', 'number', number='zero', next='one', visual_rep=actr.String('0'), vocal_rep=actr.String('zero'))
+    m.add_chunk('one', 'number', number='one', next='two', visual_rep=actr.String('1'), vocal_rep=actr.String('one'))
+    m.add_chunk('two', 'number', number='two', next='three', visual_rep=actr.String('2'), vocal_rep=actr.String('two'))
+    m.add_chunk('three', 'number', number='three', next='four', visual_rep=actr.String('3'), vocal_rep=actr.String('three'))
+    m.add_chunk('four', 'number', number='four', next='five', visual_rep=actr.String('4'), vocal_rep=actr.String('four'))
+    m.add_chunk('five', 'number', number='five')
+    m.add_chunk('a', 'letter', letter='a', next='b', visual_rep=actr.String('a'), vocal_rep=actr.String('a'))
+    m.add_chunk('b', 'letter', letter='b', next='c', visual_rep=actr.String('b'), vocal_rep=actr.String('b'))
+    m.add_chunk('c', 'letter', letter='c', next='d', visual_rep=actr.String('c'), vocal_rep=actr.String('c'))
+    m.add_chunk('d', 'letter', letter='d', next='e', visual_rep=actr.String('d'), vocal_rep=actr.String('d'))
+    m.add_chunk('e', 'letter', letter='e', next='f', visual_rep=actr.String('e'), vocal_rep=actr.String('e'))
+    m.add_chunk('f', 'letter', letter='f', next='g', visual_rep=actr.String('f'), vocal_rep=actr.String('f'))
+    m.add_chunk('g', 'letter', letter='g', next='h', visual_rep=actr.String('g'), vocal_rep=actr.String('g'))
+    m.add_chunk('h', 'letter', letter='h', next='i', visual_rep=actr.String('h'), vocal_rep=actr.String('h'))
+    m.add_chunk('i', 'letter', letter='i', next='j', visual_rep=actr.String('i'), vocal_rep=actr.String('i'))
+    m.add_chunk('j', 'letter', letter='j', next='k', visual_rep=actr.String('j'), vocal_rep=actr.String('j'))
+    m.add_chunk('k', 'letter', letter='k', next='l', visual_rep=actr.String('k'), vocal_rep=actr.String('k'))
+    m.add_chunk('l', 'letter', letter='l')
+    m.add_dm('attending')
+    m.add_dm('read')
+    m.add_dm('count')
+    m.add_dm('counting')
+    m.add_dm('encode')
+
+    m.set_visloc_default(screen_x='lowest')
+
     m.add_production(
-        '''(P ATTEND =GOAL> ISA GOAL STATE NIL =VISUAL-LOCATION> ?VISUAL> STATE FREE ==> =GOAL> STATE ATTENDING +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION)'''
+        '''
+        (p attend
+           =goal>
+              isa         goal
+              state       nil
+           =visual-location>
+           ?visual>
+               state      free
+        ==>
+           =goal>
+              state       attending
+           +visual>
+              cmd         move-attention
+              screen-pos  =visual-location
+           )
+        '''
     )
+
     m.add_production(
-        '''(P READ-FIRST =GOAL> ISA GOAL STATE ATTENDING =VISUAL> ISA VISUAL-OBJECT VALUE =CHAR ?IMAGINAL> BUFFER EMPTY STATE FREE ==> +IMAGINAL> +RETRIEVAL> ISA LETTER VISUAL-REP =CHAR =GOAL> STATE NIL +VISUAL-LOCATION> ISA VISUAL-LOCATION > SCREEN-X CURRENT SCREEN-X LOWEST - VALUE "+")'''
+        '''
+        (p read-first
+           =goal>
+             isa         goal
+             state       attending
+           =visual>
+             isa         visual-object
+             value       =char
+           ?imaginal>
+             buffer      empty
+             state       free
+        ==>
+           +imaginal>
+           +retrieval>
+             isa         letter
+             visual-rep  =char
+           =goal>
+             state       nil
+           +visual-location>
+             isa         visual-location
+           > screen-x    current
+             screen-x    lowest
+           - value       "+"
+           )
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-FIRST =GOAL> ISA GOAL STATE ATTENDING =RETRIEVAL> LETTER =LET VOCAL-REP =WORD =IMAGINAL> ARG1 NIL ?VOCAL> PREPARATION FREE ==> +VOCAL> CMD SUBVOCALIZE STRING =WORD =IMAGINAL> ARG1 =LET =GOAL> STATE READ)'''
+        '''
+        (p encode-first
+           =goal>
+             isa           goal
+             state         attending
+           =retrieval>
+             letter        =let
+             vocal-rep     =word
+           =imaginal>
+             arg1          nil
+           ?vocal>
+             preparation   free
+           ==>
+           +vocal>
+             cmd           subvocalize
+             string        =word
+           =imaginal>
+             arg1          =let
+           =goal>
+             state         read
+           )
+        '''
     )
+
     m.add_production(
-        '''(P READ-SECOND =GOAL> ISA GOAL STATE READ =VISUAL> ISA VISUAL-OBJECT VALUE =CHAR =IMAGINAL> ISA PROBLEM - ARG1 NIL ARG2 NIL ==> =IMAGINAL> +RETRIEVAL> ISA NUMBER VISUAL-REP =CHAR =GOAL> STATE NIL +VISUAL-LOCATION> ISA VISUAL-LOCATION SCREEN-X HIGHEST)'''
+        '''
+        (p read-second
+           =goal>
+             isa         goal
+             state       read
+           =visual>
+             isa         visual-object
+             value       =char
+           =imaginal>
+             isa         problem
+            - arg1       nil
+             arg2        nil
+           ==>
+           =imaginal>
+           +retrieval>
+             isa         number
+             visual-rep  =char
+
+           =goal>
+             state       nil
+
+           +visual-location>
+             isa         visual-location
+             screen-x    highest
+           )
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-SECOND =GOAL> ISA GOAL STATE ATTENDING =RETRIEVAL> NUMBER =NUM VOCAL-REP =WORD =IMAGINAL> - ARG1 NIL ARG2 NIL ?VOCAL> PREPARATION FREE ==> +VOCAL> CMD SUBVOCALIZE STRING =WORD =IMAGINAL> ARG2 =NUM =GOAL> STATE READ)'''
+        '''
+        (p encode-second
+           =goal>
+             isa          goal
+             state        attending
+           =retrieval>
+             number       =num
+             vocal-rep    =word
+           =imaginal>
+            - arg1        nil
+             arg2         nil
+           ?vocal>
+             preparation  free
+           ==>
+           +vocal>
+             cmd          subvocalize
+             string       =word
+           =imaginal>
+             arg2         =num
+           =goal>
+             state        read
+           )
+        '''
     )
+
     m.add_production(
-        '''(P READ-THIRD =GOAL> ISA GOAL STATE READ =IMAGINAL> ISA PROBLEM ARG1 =ARG1 ARG2 =ARG2 =VISUAL> ISA VISUAL-OBJECT VALUE =CHAR ?VISUAL> STATE FREE ==> =IMAGINAL> +RETRIEVAL> ISA LETTER VISUAL-REP =CHAR =GOAL> STATE ENCODE +VISUAL> CMD CLEAR)'''
+        '''
+        (p read-third
+           =goal>
+             isa         goal
+             state       read
+           =imaginal>
+             isa         problem
+             arg1        =arg1
+             arg2        =arg2
+           =visual>
+             isa         visual-object
+             value       =char
+           ?visual>
+             state       free
+        ==>
+           =imaginal>
+           +retrieval>
+             isa         letter
+             visual-rep  =char
+           =goal>
+             state       encode
+           +visual>
+             cmd         clear
+           )
+        '''
     )
+
     m.add_production(
-        '''(P ENCODE-THIRD =GOAL> ISA GOAL STATE ENCODE TARGET NIL =RETRIEVAL> LETTER =LET VOCAL-REP =WORD =IMAGINAL> ARG1 =A1 ARG2 =A2 ?VOCAL> PREPARATION FREE ==> +VOCAL> CMD SUBVOCALIZE STRING =WORD =GOAL> TARGET =LET STATE COUNT =IMAGINAL>)'''
+        '''
+        (p encode-third
+           =goal>
+             isa          goal
+             state        encode
+             target       nil
+           =retrieval>
+             letter       =let
+             vocal-rep    =word
+           =imaginal>
+             arg1         =a1
+             arg2         =a2
+           ?vocal>
+             preparation  free
+           ==>
+           +vocal>
+             cmd          subvocalize
+             string       =word
+           =goal>
+             target       =let
+             state        count
+           =imaginal>
+           )
+        '''
     )
+
     m.add_production(
-        '''(P START-COUNTING =GOAL> ISA GOAL STATE COUNT =IMAGINAL> ISA PROBLEM ARG1 =A ARG2 =VAL ==> =IMAGINAL> RESULT =A =GOAL> STATE COUNTING +RETRIEVAL> ISA LETTER LETTER =A)'''
+        '''
+        (p start-counting
+           =goal>
+             isa         goal
+             state       count
+           =imaginal>
+             isa         problem
+             arg1        =a
+             arg2        =val
+        ==>
+           =imaginal>
+             result      =a
+           =goal>
+             state       counting
+           +retrieval>
+             isa         letter
+             letter      =a
+           )
+        '''
     )
+
     m.add_production(
-        '''(P INITIALIZE-COUNTING =GOAL> ISA GOAL STATE COUNTING COUNT NIL =RETRIEVAL> ISA LETTER LETTER =L NEXT =NEW VOCAL-REP =T ?VOCAL> STATE FREE ==> +VOCAL> ISA SUBVOCALIZE STRING =T =GOAL> NEXT-NUM ONE NEXT-LET =NEW COUNT ZERO +RETRIEVAL> ISA LETTER LETTER =NEW)'''
+        '''
+        (p initialize-counting
+           =goal>
+             isa         goal
+             state       counting
+             count       nil
+           =retrieval>
+             isa         letter
+             letter      =l
+             next        =new
+             vocal-rep   =t
+           ?vocal>
+             state       free
+           ==>
+           +vocal>
+             isa         subvocalize
+             string      =t
+           =goal>
+             next-num    one
+             next-let    =new
+             count       zero
+           +retrieval>
+             isa         letter
+             letter      =new
+           )
+        '''
     )
+
     m.add_production(
-        '''(P UPDATE-RESULT =GOAL> ISA GOAL COUNT =VAL NEXT-LET =LET NEXT-NUM =N =IMAGINAL> ISA PROBLEM - ARG2 =VAL =RETRIEVAL> ISA LETTER LETTER =LET NEXT =NEW VOCAL-REP =TXT ?VOCAL> STATE FREE ==> =GOAL> NEXT-LET =NEW +VOCAL> CMD SUBVOCALIZE STRING =TXT =IMAGINAL> RESULT =LET +RETRIEVAL> ISA NUMBER NUMBER =N)'''
+        '''
+        (p update-result
+           =goal>
+             isa         goal
+             count       =val
+             next-let    =let
+             next-num    =n
+           =imaginal>
+             isa         problem
+            - arg2       =val
+           =retrieval>
+             isa         letter
+             letter      =let
+             next        =new
+             vocal-rep   =txt
+           ?vocal>
+             state       free
+           ==>
+           =goal>
+             next-let    =new
+           +vocal>
+             cmd         subvocalize
+             string      =txt
+           =imaginal>
+             result      =let
+           +retrieval>
+             isa         number
+             number      =n
+           )
+        '''
     )
+
     m.add_production(
-        '''(P UPDATE-COUNT =GOAL> ISA GOAL NEXT-LET =LET NEXT-NUM =N =RETRIEVAL> ISA NUMBER NUMBER =VAL NEXT =NEW VOCAL-REP =TXT ?VOCAL> PREPARATION FREE ==> +VOCAL> CMD SUBVOCALIZE STRING =TXT =GOAL> COUNT =VAL NEXT-NUM =NEW +RETRIEVAL> ISA LETTER LETTER =LET)'''
+        '''
+        (p update-count
+           =goal>
+             isa         goal
+             next-let    =let
+             next-num    =n
+           =retrieval>
+             isa         number
+             number      =val
+             next        =new
+             vocal-rep   =txt
+           ?vocal>
+             preparation free
+        ==>
+           +vocal>
+             cmd         subvocalize
+             string      =txt
+           =goal>
+             count       =val
+             next-num    =new
+           +retrieval>
+             isa         letter
+             letter      =let
+           )
+        '''
     )
+
     m.add_production(
-        '''(P FINAL-ANSWER-YES =GOAL> ISA GOAL TARGET =LET COUNT =VAL =IMAGINAL> ISA PROBLEM RESULT =LET ARG2 =VAL ?MANUAL> STATE FREE ==> +GOAL> +MANUAL> CMD PRESS-KEY KEY "k")'''
+        '''
+        (p final-answer-yes
+           =goal>
+             isa         goal
+             target      =let
+             count       =val
+           =imaginal>
+             isa         problem
+             result      =let
+             arg2        =val
+
+           ?manual>
+             state       free
+           ==>
+           +goal>
+
+           +manual>
+             cmd         press-key
+             key         "k"
+           )
+        '''
     )
+
     m.add_production(
-        '''(P FINAL-ANSWER-NO =GOAL> ISA GOAL COUNT =VAL - TARGET =LET =IMAGINAL> ISA PROBLEM RESULT =LET ARG2 =VAL ?MANUAL> STATE FREE ==> +GOAL> +MANUAL> CMD PRESS-KEY KEY "d")'''
+        '''
+        (p final-answer-no
+            =goal>
+             isa         goal
+             count       =val
+           - target      =let
+           =imaginal>
+             isa         problem
+             result      =let
+             arg2        =val
+
+           ?manual>
+             state       free
+           ==>
+           +goal>
+
+           +manual>
+             cmd         press-key
+             key         "d"
+           )
+        '''
     )
+
     m.set_all_base_levels(100000, -1000)
-    m.goal_focus(isa='GOAL', **{})
+
+    m.goal_focus(isa='goal')
     return m
 
 

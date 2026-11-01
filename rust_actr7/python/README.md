@@ -80,9 +80,10 @@ files are still out of scope.
 ## Tutorial scripts
 
 `tutorial/` contains self-contained Python ports of the models under
-`actr7.x/tutorial`: each module has a `build(seed)` function and, when the
-unit has a task script, that experiment code as well. Run them from
-`rust_actr7/python`:
+`actr7.x/tutorial`: model-only scripts build `m = actr.Model(...)` and run
+top to bottom, while task scripts keep a `build(seed)` function plus their
+experiment code. Model symbols are lowercase and productions keep the
+tutorial's multi-line layout. Run them from `rust_actr7/python`:
 
 ```powershell
 python tutorial/unit1/count.py
@@ -91,10 +92,10 @@ python tutorial/unit5/grouped.py
 python tutorial/unit5/onehit.py hands 2
 ```
 
-Model-only scripts build the model, run it for 10 seconds, and print the
-trace (the same shape as `cargo run -- run 'ACT-R:...'`). Task scripts call a
-per-file default entry point; pass a function name and arguments to override
-it. Arguments are parsed as JSON when possible.
+Model-only scripts print the 10-second trace (the same shape as
+`cargo run -- run 'ACT-R:...'`). Task scripts call a per-file default entry
+point; pass a function name and arguments to override it. Arguments are
+parsed as JSON when possible.
 
 Regenerate the tree from the vendored sources with:
 
@@ -109,10 +110,11 @@ a model yourself:
 
 ```python
 import rust_actr.actr as actr
-from tutorial.unit1.count import build
+from tutorial.unit1 import count
 
-actr.use(build())
-print(actr.run(10))
+actr.use(count.m)
+actr.run(10)
+print(count.m.trace)
 ```
 
 Port status:

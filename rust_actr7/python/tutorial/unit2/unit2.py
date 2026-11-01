@@ -7,20 +7,22 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit2;unit2-assignment-model.lisp'
-MODEL_NAME = 'UNIT2'
 DEFAULT_FUNCTION = 'experiment'
 DEFAULT_ARGS = []
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('UNIT2', seed=seed)
-    m.sgp(':V', True)
-    m.sgp(':SHOW-FOCUS', True)
-    m.chunk_type('READ-LETTERS', 'STEP')
-    m.chunk_type('ARRAY', 'LETTER1', 'LETTER2', 'LETTER3')
-    m.add_chunk('START', 'CHUNK', **{})
-    m.goal_focus(isa='READ-LETTERS', **{'STEP': 'START'})
+    m = actr.Model('unit2', seed=seed)
+
+    m.sgp(':v', True)
+    m.sgp(':show-focus', True)
+
+    m.chunk_type('read-letters', 'step')
+    m.chunk_type('array', 'letter1', 'letter2', 'letter3')
+
+    m.add_chunk('start', 'chunk')
+
+    m.goal_focus(isa='read-letters', step='start')
     return m
 
 

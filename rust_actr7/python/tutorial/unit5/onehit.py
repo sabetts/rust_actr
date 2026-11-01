@@ -7,53 +7,147 @@ import sys
 
 import rust_actr.actr as actr
 
-LOGICAL_PATH = 'ACT-R:tutorial;unit5;1hit-blackjack-model.lisp'
-MODEL_NAME = '1-HIT-MODEL'
 DEFAULT_FUNCTION = 'hands'
 DEFAULT_ARGS = [2]
 
 
 def build(seed=(100, 0)) -> actr.Model:
-    m = actr.Model('1-HIT-MODEL', seed=seed)
-    m.sgp(':ESC', True)
-    m.sgp(':BLL', 0.5)
-    m.sgp(':OL', True)
-    m.sgp(':SIM-HOOK', actr.String('1hit-bj-number-sims'))
-    m.sgp(':CACHE-SIM-HOOK-RESULTS', True)
-    m.sgp(':ER', True)
-    m.sgp(':LF', 0)
-    m.sgp(':V', None)
-    m.sgp(':ANS', 0.2)
-    m.sgp(':MP', 10.0)
-    m.sgp(':RT', -60)
-    m.chunk_type('GAME-STATE', 'MC1', 'MC2', 'MC3', 'MSTART', 'MTOT', 'MRESULT', 'OC1', 'OC2', 'OC3', 'OSTART', 'OTOT', 'ORESULT', 'STATE')
-    m.chunk_type('LEARNED-INFO', 'MC1', 'ACTION')
-    m.declare_buffer_usage('GOAL', 'GAME-STATE', ':ALL')
-    m.define_chunks('WIN')
-    m.define_chunks('LOSE')
-    m.define_chunks('BUST')
-    m.define_chunks('RETRIEVING')
-    m.define_chunks('START')
-    m.define_chunks('RESULTS')
-    m.form('(INSTALL-DEVICE (QUOTE ("motor" "keyboard")))')
+    m = actr.Model('1-hit-model', seed=seed)
+
+    m.sgp(':esc', True)
+    m.sgp(':bll', 0.5)
+    m.sgp(':ol', True)
+    m.sgp(':sim-hook', actr.String('1hit-bj-number-sims'))
+    m.sgp(':cache-sim-hook-results', True)
+    m.sgp(':er', True)
+    m.sgp(':lf', 0)
+    m.sgp(':v', None)
+    m.sgp(':ans', 0.2)
+    m.sgp(':mp', 10.0)
+    m.sgp(':rt', -60)
+
+    m.chunk_type('game-state', 'mc1', 'mc2', 'mc3', 'mstart', 'mtot', 'mresult', 'oc1', 'oc2', 'oc3', 'ostart', 'otot', 'oresult', 'state')
+    m.chunk_type('learned-info', 'mc1', 'action')
+
+    m.declare_buffer_usage('goal', 'game-state', ':all')
+
+    m.define_chunks('win')
+    m.define_chunks('lose')
+    m.define_chunks('bust')
+    m.define_chunks('retrieving')
+    m.define_chunks('start')
+    m.define_chunks('results')
+
+    m.form('(install-device (quote ("motor" "keyboard")))')
+
     m.add_production(
-        '''(P START =GOAL> ISA GAME-STATE STATE START MC1 =C ==> =GOAL> STATE RETRIEVING +RETRIEVAL> ISA LEARNED-INFO MC1 =C - ACTION NIL)'''
+        '''
+        (p start
+           =goal>
+             isa game-state
+             state start
+             mc1 =c
+          ==>
+           =goal>
+             state retrieving
+           +retrieval>
+             isa learned-info
+             mc1 =c
+           - action nil)
+        '''
     )
+
     m.add_production(
-        '''(P CANT-REMEMBER-GAME =GOAL> ISA GAME-STATE STATE RETRIEVING ?RETRIEVAL> BUFFER FAILURE ?MANUAL> STATE FREE ==> =GOAL> STATE NIL +MANUAL> CMD PRESS-KEY KEY "s")'''
+        '''
+        (p cant-remember-game
+           =goal>
+             isa game-state
+             state retrieving
+           ?retrieval>
+             buffer  failure
+           ?manual>
+             state free
+          ==>
+           =goal>
+             state nil
+           +manual>
+             cmd press-key
+             key "s")
+        '''
     )
+
     m.add_production(
-        '''(P REMEMBER-GAME =GOAL> ISA GAME-STATE STATE RETRIEVING =RETRIEVAL> ISA LEARNED-INFO ACTION =ACT ?MANUAL> STATE FREE ==> =GOAL> STATE NIL +MANUAL> CMD PRESS-KEY KEY =ACT @RETRIEVAL>)'''
+        '''
+        (p remember-game
+           =goal>
+             isa game-state
+             state retrieving
+           =retrieval>
+             isa learned-info
+             action =act
+           ?manual>
+             state free
+          ==>
+           =goal>
+             state nil
+           +manual>
+             cmd press-key
+             key =act
+
+           @retrieval>)
+        '''
     )
+
     m.add_production(
-        '''(P RESULTS-SHOULD-HIT =GOAL> ISA GAME-STATE STATE RESULTS MRESULT =OUTCOME MC1 =C ?IMAGINAL> STATE FREE ==> !OUTPUT! (I =OUTCOME) =GOAL> STATE NIL +IMAGINAL> MC1 =C ACTION "h")'''
+        '''
+        (p results-should-hit
+           =goal>
+             isa game-state
+             state results
+             mresult =outcome
+             mc1 =c
+           ?imaginal>
+             state free
+          ==>
+           !output! (i =outcome)
+           =goal>
+             state nil
+           +imaginal>
+             mc1 =c
+             action "h")
+        '''
     )
-    m.spp('RESULTS-SHOULD-HIT', **{'U': 10})
+    m.spp('results-should-hit', **{'u': 10})
+
     m.add_production(
-        '''(P RESULTS-SHOULD-STAY =GOAL> ISA GAME-STATE STATE RESULTS MRESULT =OUTCOME MC1 =C ?IMAGINAL> STATE FREE ==> !OUTPUT! (I =OUTCOME) =GOAL> STATE NIL +IMAGINAL> MC1 =C ACTION "s")'''
+        '''
+        (p results-should-stay
+           =goal>
+             isa game-state
+             state results
+             mresult =outcome
+             mc1 =c
+           ?imaginal>
+             state free
+          ==>
+           !output! (i =outcome)
+           =goal>
+             state nil
+           +imaginal>
+             mc1 =c
+             action "s")
+        '''
     )
+
     m.add_production(
-        '''(P CLEAR-NEW-IMAGINAL-CHUNK ?IMAGINAL> STATE FREE BUFFER FULL ==> -IMAGINAL>)'''
+        '''
+        (p clear-new-imaginal-chunk
+           ?imaginal>
+             state free
+             buffer full
+           ==>
+           -imaginal>)
+        '''
     )
     return m
 
