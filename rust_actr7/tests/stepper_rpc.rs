@@ -222,3 +222,67 @@ fn rpc_stepper_pauses_updates_and_resumes() {
     let stopped = client.eval("stop-stepper", None, vec![Json::Str(stepper_id)]);
     assert_eq!(stopped.first(), Some(&Json::Bool(true)));
 }
+
+#[test]
+fn rpc_load_notifies_the_current_model_menu_monitor() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind test server");
+    let addr = listener.local_addr().expect("listener address");
+    std::thread::spawn(move || {
+        let _ = serve_listener(listener, (100, 0));
+    });
+
+    let mut client = Client::connect(addr).expect("connect test server");
+    // Tcl's procedure name differs from the command name: the server must call
+    // the procedure from `add` params[1], not the local alias.
+    client.add_command("current-add", "create-current-model");
+    let monitor_id = client.send(
+        "monitor",
+        vec![
+            Json::Str("creating-model".into()),
+            Json::Str("current-add".into()),
+            Json::Str("simple".into()),
+        ],
+    );
+    loop {
+        let msg = client.read();
+        if Client::message_id(&msg) == Some(monitor_id) {
+            break;
+        }
+    }
+
+    let model = stepper_model();
+    let load_id = client.send(
+        "evaluate",
+        vec![
+            Json::Str("load-act-r-model".into()),
+            Json::Null,
+            Json::Str(model),
+        ],
+    );
+    let mut monitor_args = None;
+    loop {
+        let msg = client.read();
+        if msg.get("method").is_some() {
+            if let Some(Json::Arr(params)) = msg.get("params") {
+                if params.first().and_then(|p| p.as_str()) == Some("create-current-model") {
+                    monitor_args = Some(params.clone());
+                }
+            }
+            client.reply_callback(&msg);
+            continue;
+        }
+        if Client::message_id(&msg) == Some(load_id) {
+            parse_reply(&msg).expect("load reply");
+            break;
+        }
+    }
+    let params = monitor_args.expect("creating-model monitor callback");
+    assert_eq!(params.get(1), Some(&Json::Str("STEPPER-FIXTURE".into())));
+    assert_eq!(params.get(2), Some(&Json::Str("STEPPER-FIXTURE".into())));
+
+    let models = client.eval("mp-models", None, Vec::new());
+    assert_eq!(
+        models,
+        vec![Json::Arr(vec![Json::Str("STEPPER-FIXTURE".into())])]
+    );
+}
