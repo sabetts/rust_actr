@@ -860,9 +860,26 @@ impl Engine {
             .unwrap_or_else(|| ctype.eq_ignore_ascii_case("SIMPLE-ACTION"));
         // The action runs at request time, with the module marked busy.
         self.imag_busy = true;
+        let has_lisp = self.user_fns.contains_key(&name.to_uppercase());
         let result = self.call_action(&name, &extra);
-        if !simple {
+        if result.is_none() && !has_lisp && self.task_commands.contains(&name.to_uppercase()) {
+            // A Python-owned action: yield to the host between events.  The
+            // host runs the command, then calls `complete_host_action`.
+            self.pending_host_action = Some((
+                name.clone(),
+                extra.iter().map(Value::show).collect(),
+                simple,
+            ));
             return Ok(());
+        }
+        self.finish_imaginal_action(simple, result);
+        Ok(())
+    }
+
+    /// Finish an imaginal-action after the action result is known.
+    fn finish_imaginal_action(&mut self, simple: bool, result: Option<NewChunk>) {
+        if !simple {
+            return;
         }
         // simple action: clear the imaginal buffer now, place the result (or
         // the error state) after the delay.
@@ -897,7 +914,43 @@ impl Engine {
             }
             None => self.push(at, Prio::Num(0), Out::Never, Event::ImaginalError),
         }
+    }
+
+    /// Take a pending embedder `imaginal-action` request:
+    /// `(command, args, simple)`.
+    pub fn take_pending_host_action(&mut self) -> Option<(String, Vec<String>, bool)> {
+        self.pending_host_action.take()
+    }
+
+    /// Complete a pending embedder `imaginal-action`.  `result` is a chunk
+    /// name, a Lisp `(slot value …)` list, or empty/nil for an error.
+    pub fn complete_host_action(
+        &mut self,
+        result: Option<&str>,
+        simple: bool,
+    ) -> Result<(), EngineError> {
+        let chunk = result.and_then(Self::action_result);
+        self.finish_imaginal_action(simple, chunk);
         Ok(())
+    }
+
+    fn action_result(text: &str) -> Option<NewChunk> {
+        let text = text.trim();
+        if text.is_empty() || text.eq_ignore_ascii_case("nil") {
+            return None;
+        }
+        if text.starts_with('(') {
+            if let Ok(forms) = crate::sexpr::parse_all(text) {
+                if let Some(crate::sexpr::Sexp::List(items)) = forms.first() {
+                    if let Ok(desc) = crate::model::parse_chunk_desc(items) {
+                        if let Ok(chunk) = super::rhs::new_chunk(&desc) {
+                            return Some(chunk);
+                        }
+                    }
+                }
+            }
+        }
+        Some(NewChunk::Named(text.to_uppercase()))
     }
 
     /// Run an imaginal-action function with already-evaluated arguments and

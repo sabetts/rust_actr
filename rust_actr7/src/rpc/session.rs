@@ -434,6 +434,27 @@ impl Session {
             .unwrap_or_default()
     }
 
+    /// A pending embedder `imaginal-action` request, with its command,
+    /// rendered arguments, and whether it is a simple action.
+    pub fn take_pending_host_action(&mut self) -> Option<(String, Vec<String>, bool)> {
+        self.engine
+            .as_mut()
+            .and_then(|e| e.take_pending_host_action())
+    }
+
+    /// Complete a pending embedder `imaginal-action`.
+    pub fn complete_host_action(
+        &mut self,
+        result: Option<&str>,
+        simple: bool,
+    ) -> Result<(), String> {
+        self.engine
+            .as_mut()
+            .ok_or_else(|| "no model loaded".to_string())?
+            .complete_host_action(result, simple)
+            .map_err(|e| e.to_string())
+    }
+
     /// Take the trace lines emitted since the last call (the RPC server
     /// streams these to the `model-trace` monitors).
     pub fn take_trace(&mut self) -> Vec<String> {

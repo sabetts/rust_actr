@@ -2473,6 +2473,9 @@ pub struct Engine {
     /// the two values' printed forms and returns a numeric similarity; `None`
     /// falls through to the Lisp hook/table.
     sim_hook_fn: Option<Rc<dyn Fn(&str, &str) -> Option<f32>>>,
+    /// An `imaginal-action` that names an embedder command; the host runs it
+    /// between engine events and returns the resulting chunk.
+    pending_host_action: Option<(String, Vec<String>, bool)>,
     /// The model's possible slot names (`valid-slot-name`,
     /// `chunk-types.lisp:590`): the union of every chunk-type's slots, plus
     /// slots added at run time. A production's `=buffer>`/`*buffer>` mod that
@@ -3002,6 +3005,7 @@ impl Engine {
                 .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
                 .collect(),
             sim_hook_fn: None,
+            pending_host_action: None,
             valid_slots,
             pending_texts: {
                 let mut v = texts.clone();
@@ -5482,6 +5486,10 @@ impl Engine {
             self.event_silent = false;
             if !is_cr && !maintenance && !silent {
                 self.changed();
+            }
+            if self.pending_host_action.is_some() {
+                self.run_capped = true;
+                break;
             }
         }
         Ok(processed)
