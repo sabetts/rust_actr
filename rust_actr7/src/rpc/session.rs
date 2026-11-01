@@ -73,6 +73,9 @@ pub const BUILTINS: &[&str] = &[
     "get-system-parameter-value",
     "current-model",
     "set-current-model",
+    "mp-models",
+    "creating-model",
+    "deleting-model",
     "new-symbol",
     "mp-time",
     "mp-time-ms",
@@ -766,12 +769,21 @@ impl Session {
                 self.current_model = args.first().and_then(|a| a.as_str()).map(str::to_string);
                 Ok(vec![Json::Bool(true)])
             }
+            "mp-models" => Ok(vec![Json::Arr(
+                self.defs
+                    .iter()
+                    .map(|m| Json::Str(m.name.clone()))
+                    .collect(),
+            )]),
+            // `add-act-r-command ... nil` signals (`meta-process.lisp:424,
+            // :448`): they have no underlying function, only monitors.
+            "creating-model" | "deleting-model" => Ok(vec![Json::Bool(true)]),
             "load-act-r-model" | "load-act-r-code" => {
                 let path = args
                     .first()
                     .and_then(|a| a.as_str())
                     .ok_or("load-act-r-model requires a filesystem path")?;
-                self.load(path)?;
+                self.load(path, remote)?;
                 Ok(vec![Json::Bool(true)])
             }
             "add-act-r-command" | "remove-act-r-command" => {
@@ -2663,16 +2675,18 @@ impl Session {
 
     /// Load a model or task file from a filesystem path.  ACT-R logical names
     /// (`ACT-R:tutorial;unit1;count.lisp`) are deliberately unsupported.
-    fn load(&mut self, path: &str) -> Result<(), String> {
+    fn load(&mut self, path: &str, remote: &mut dyn Remote) -> Result<(), String> {
         let path = filesystem_path(path)?;
         if !path.is_file() {
             return Err(format!("no such file: {}", path.display()));
         }
+        let mut created = Vec::new();
         if crate::file_defines_model(&path) {
             let loaded = load_models(&path).map_err(|e| e.to_string())?;
             if loaded.len() > 1 {
                 self.multi_file = true;
             }
+            created.extend(loaded.iter().map(|m| m.name.clone()));
             self.defs.extend(loaded);
         }
         if let Ok(src) = std::fs::read_to_string(&path) {
@@ -2685,7 +2699,18 @@ impl Session {
             }
         }
         self.model_files.push(path.to_string_lossy().into_owned());
-        self.build_engine()
+        self.build_engine()?;
+        // `add-new-model` dispatches `creating-model` so the Environment's
+        // model menu updates (`meta-process.lisp:426`).
+        for name in created {
+            let _ = self.evaluate(
+                "creating-model",
+                Some(&name),
+                &[Json::Str(name.clone())],
+                remote,
+            );
+        }
+        Ok(())
     }
 
     /// `set-system-parameter-value` (`central-parameters.lisp:131`). Only
@@ -3622,6 +3647,55 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    /// A remote that records callbacks, for monitor registration tests.
+    #[derive(Default)]
+    struct ModelMonitor {
+        calls: Vec<(String, Option<String>, Vec<Json>)>,
+    }
+    impl Remote for ModelMonitor {
+        fn call(
+            &mut self,
+            name: &str,
+            model: Option<&str>,
+            args: Vec<Json>,
+        ) -> Result<Vec<Json>, String> {
+            self.calls
+                .push((name.to_string(), model.map(str::to_string), args));
+            Ok(vec![Json::Bool(true)])
+        }
+    }
+
+    #[test]
+    fn creating_model_monitor_and_mp_models_report_loaded_model() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = ModelMonitor::default();
+        s.add_remote("env-current-add", Some("env-current-add".into()), None);
+        s.add_monitor("creating-model", "env-current-add", MonitorWhen::Simple);
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        assert_eq!(
+            remote.calls,
+            vec![(
+                "env-current-add".to_string(),
+                Some("COUNT".to_string()),
+                vec![Json::Str("COUNT".into())],
+            )]
+        );
+        assert_eq!(
+            s.evaluate("mp-models", None, &[], &mut remote).unwrap(),
+            vec![Json::Arr(vec![Json::Str("COUNT".into())])]
+        );
     }
 
     /// A client-command handler that records the display ops it receives

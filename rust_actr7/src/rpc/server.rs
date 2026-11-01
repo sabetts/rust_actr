@@ -240,7 +240,17 @@ fn dispatch(
         }
         Method::Add => {
             let name = params.first().and_then(|p| p.as_str()).unwrap_or("");
-            let local = params.get(4).and_then(|p| p.as_str()).map(str::to_string);
+            // `add` params are (name underlying-function documentation
+            // single-instance local-name encoded) (`dispatcher.lisp:1700`).
+            // The client is called by its *underlying function* (the Tcl
+            // proc name), not the local ACT-R macro alias, so prefer
+            // params[1]. Fall back to params[4] for older/Python callers that
+            // only supplied the alias.
+            let local = params
+                .get(1)
+                .and_then(|p| p.as_str())
+                .or_else(|| params.get(4).and_then(|p| p.as_str()))
+                .map(str::to_string);
             session.add_remote(name, local, conn.name.clone());
             // `add-command` returns the command name (`actr.py:118` reads
             // `result[1]`).
