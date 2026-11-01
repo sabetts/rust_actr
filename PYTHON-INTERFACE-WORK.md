@@ -1,8 +1,8 @@
 # Rust ACT-R Python Interface — Current State
 
-Last updated: 2026-11-01  
-Branch: `main`  
-Latest relevant commit: `d97b58d engine: add word sounds and syllable-count speech support`
+Last updated: 2026-11-01
+Branch: `main`
+Latest relevant commit: `86a2b18 engine: let remove-syllable-count hide dictionary entries`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -256,8 +256,8 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **559 model-regression tests passed / 8 ignored**, plus
-**4 speech tests**. The 8 ignored cases are the protected/blocked upstream
+Current result: **682 passed / 9 ignored** across the engine and
+model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
 ## 8. Known limitations and next steps
@@ -300,3 +300,4 @@ solution sources and the environment-gated RPC test.
 - `261ae69` python: coerce numeric chunk slots and cover bst-ppm
 - `68cf2d9` python: bind tutorial task functions to their own models
 - `d97b58d` engine: add word sounds and syllable-count speech support
+- `86a2b18` engine: let remove-syllable-count hide dictionary entries
