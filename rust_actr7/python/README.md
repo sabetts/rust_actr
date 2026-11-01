@@ -111,7 +111,8 @@ Port status:
 
 - Working end-to-end: `count`, `addition`, `semantic`, `demo2`, `fan-no-pm`,
   `grouped`, `onehit` (hands/blocks/learning), `zbrodoff` (set/block/experiment),
-  `siegler`, and the dynamic models that do not need task-side hooks.
+  `sperling` (trial/experiment), `bst-ppm`, `siegler`, and the dynamic models
+  that do not need task-side hooks.
 - Python `:sim-hook` functions are wired for `1hit`, `bst-ppm`, and
   `categorize`. Python `imaginal-action` callbacks are also bridged through a
   host-yield step; `bst-ppm` still stops earlier in its live-window/mouse path.
@@ -119,8 +120,10 @@ Port status:
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
   to demonstrate load warnings) and is not ported.
-- Known gaps: the full `bst-ppm` live task traversal. `new-digit-sound` and
-  the speech-device `output-speech` callback now work for `siegler`.
+- Known gaps: cross-task module reuse in one long-lived process can leave
+  model/task state behind; use a fresh `load_act_r_model` (or a new process)
+  when switching tasks. Full `.ref` parity for every experiment summary is
+  still a test-suite expansion, not a missing runtime path.
 
 ## Tests
 
