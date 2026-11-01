@@ -1,8 +1,8 @@
 # Rust ACT-R Python Interface — Current State
 
-Last updated: 2026-10-31  
+Last updated: 2026-11-01  
 Branch: `main`  
-Latest relevant commit: `261ae69 python: coerce numeric chunk slots and cover bst-ppm`
+Latest relevant commit: `d97b58d engine: add word sounds and syllable-count speech support`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -102,8 +102,16 @@ the live session.
   between events (`pm-issues` uses this for its prompt).
 - `mod-chunk` and `copy-chunk` work; task-facing slot reads and copies use the
   live buffer chunk (including modifications made by the current production).
-- `new-digit-sound` schedules digit audio events, and installing a device makes
-  speech notify the host via `output-speech`.
+- Tutorial task modules bind their functions to their own model, so importing
+  several modules in one process no longer makes later calls use the last
+  model.
+- `new-word-sound` schedules `WORD` audio events using the speech articulation
+  time; tone and digit sounds remain supported.
+- `:syllable-rate`, `:char-per-syllable`, `:use-syllable-table`, and
+  `:split-vocal-strings` are runtime parameters. `register-articulation-time` /
+  `get-articulation-time` and the syllable-count commands are available, with
+  the CMU dictionary embedded in the engine.
+- Installing a device makes speech notify the host via `output-speech`.
 
 ### 3.3 Tutorial status
 
@@ -225,7 +233,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **36 tests passing**. It covers:
+Current Python suite: **38 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices
@@ -238,6 +246,8 @@ Current Python suite: **36 tests passing**. It covers:
 - `zbrodoff` 24-trial set
 - `bst-ppm` live task
 - tutorial script compilation and CLI smoke tests
+- multiple tutorial modules in one process
+- word sounds and articulation/syllable commands
 
 Rust suite (engine):
 
@@ -246,30 +256,30 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **559 passed / 8 ignored**. The 8 ignored cases are the
-protected/blocked upstream solution sources and the environment-gated RPC test.
+Current result: **559 model-regression tests passed / 8 ignored**, plus
+**4 speech tests**. The 8 ignored cases are the protected/blocked upstream
+solution sources and the environment-gated RPC test.
 
 ## 8. Known limitations and next steps
 
-1. **Cross-task reuse in one long-lived process.** Loading several tasks into
-   the same process can leave model/task state behind. Use a fresh
-   `load_act_r_model`/process when switching tasks.
-2. **Full `.ref` parity for every experiment summary.** The runtime paths now
+1. **Full `.ref` parity for every experiment summary.** The runtime paths now
    exist; expanding tests to compare every tutorial experiment against its
    vendored reference is the next verification step.
-3. **Task packaging.** The wheel contains the Python model ports but not the
-   vendored `actr7.x/tutorial/python` task scripts; `runner` currently requires
-   an `ACTR_DIR` checkout.
-4. **Arbitrary Lisp.** The engine supports the tutorial's bounded Lisp
+2. **Arbitrary Lisp.** The engine supports the tutorial's bounded Lisp
    evaluator, not arbitrary Lisp. Python callbacks cover the gaps.
-5. **Multiple models.** The in-process façade targets one current model.
-6. **Voice synthesis.** `new-word-sound` remains a no-op; `new-digit-sound` and
-   `new-tone-sound` are implemented.
-7. **Protected/starting models.** `choice` and the full `categorize` solution
+3. **Multiple models.** The Python façade binds tutorial modules to their own
+   models, but it still targets one current model at a time; multi-model files
+   remain out of scope.
+4. **Audio rendering.** Word/tone/digit sound events and speech articulation
+   are modeled, but no waveform/voice playback is produced.
+5. **Protected/starting models.** `choice` and the full `categorize` solution
    are not available upstream; `subitize`/unit2 assignment are starting models.
-8. **Performance.** The JSON command bridge and one-event stepping are chosen
+6. **Performance.** The JSON command bridge and one-event stepping are chosen
    for correctness; a typed bridge or batched stepping would be useful for
    large experiments.
+7. **Tutorial packaging (by design).** The tutorial tree is a checkout-only
+   learning resource, not wheel content. Its scripts build models from
+   in-memory source and do not require `ACTR_DIR`.
 
 ## 9. Milestone commits
 
@@ -288,3 +298,5 @@ protected/blocked upstream solution sources and the environment-gated RPC test.
 - `3212fc0` python: treat non-numeric hook results as no similarity and continue after host actions
 - `cdb4834` engine: read live buffer chunks for task slot reads and copies
 - `261ae69` python: coerce numeric chunk slots and cover bst-ppm
+- `68cf2d9` python: bind tutorial task functions to their own models
+- `d97b58d` engine: add word sounds and syllable-count speech support

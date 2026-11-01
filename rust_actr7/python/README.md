@@ -63,6 +63,11 @@ Slot names use Python underscores and are rendered as Lisp hyphens:
 Supported chunk values are `str`, `int`, `float`, `bool`, `None`, lists/tuples,
 and `actr.String`/`actr.LispString`.
 
+Speech timing uses `:syllable-rate` and `:char-per-syllable`; the syllable-count
+extension adds `:use-syllable-table`, `:split-vocal-strings`,
+`register_syllable_count`, and `get_syllable_count`. `new_word_sound` schedules
+a `WORD` sound using the same articulation-time calculation.
+
 ## Model lifecycle
 
 - Add chunk types, chunks, productions, and goal focus before the first
@@ -77,7 +82,8 @@ and `actr.String`/`actr.LispString`.
 
 The interface covers model construction, runtime buffer/DM commands, windows
 and devices, command monitors, mid-run task callbacks, Python similarity hooks,
-and `mod-chunk`/`copy-chunk`. Arbitrary Lisp evaluation and multiple-model
+`mod-chunk`/`copy-chunk`, word/tone/digit sounds, and the speech articulation
+and syllable-count commands. Arbitrary Lisp evaluation and multiple-model
 files are still out of scope.
 
 ## Tutorial scripts
@@ -108,6 +114,10 @@ python tools/port_tutorial.py
 
 The generated modules are checked in and can be edited after generation.
 
+The tutorial tree is a checkout-only learning resource; it is not installed in
+the wheel. The scripts build their models from in-memory source, so they do not
+need `ACTR_DIR` or an ACT-R checkout.
+
 `rust_actr.actr` is the module-level façade the scripts use. You can also bind
 a model yourself:
 
@@ -133,10 +143,10 @@ Port status:
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
   to demonstrate load warnings) and is not ported.
-- Known gaps: importing several tutorial modules in one long-lived process
-  rebinds the current model; run one script per process when switching tasks.
-  Full `.ref` parity for every experiment summary is still a test-suite
-  expansion, not a missing runtime path.
+- Tutorial task modules bind their functions to their own model, so several
+  modules can be imported in one process. Full `.ref` parity for every
+  experiment summary is still a test-suite expansion, not a missing runtime
+  path.
 
 ## Tests
 
