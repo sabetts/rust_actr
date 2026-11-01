@@ -4,9 +4,9 @@ import rust_actr as actr
 
 m = actr.Model('count')
 
-m.sgp(':esc', True)
-m.sgp(':lf', 0.05)
-m.sgp(':trace-detail', 'high')
+m.sgp('esc', True)
+m.sgp('lf', 0.05)
+m.sgp('trace_detail', 'high')
 
 m.chunk_type('number', 'number', 'next')
 m.chunk_type('count-from', 'start', 'end', 'count')

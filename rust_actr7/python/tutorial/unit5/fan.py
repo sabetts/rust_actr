@@ -14,12 +14,12 @@ DEFAULT_ARGS = []
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('fan', seed=seed)
 
-    m.sgp(':v', True)
-    m.sgp(':act', None)
-    m.sgp(':esc', True)
-    m.sgp(':lf', 0.63)
-    m.sgp(':mas', 1.6)
-    m.sgp(':style-warnings', None)
+    m.sgp('v', True)
+    m.sgp('act', None)
+    m.sgp('esc', True)
+    m.sgp('lf', 0.63)
+    m.sgp('mas', 1.6)
+    m.sgp('style_warnings', None)
 
     m.chunk_type('comprehend-sentence', 'relation', 'arg1', 'arg2')
     m.chunk_type('meaning', 'word')

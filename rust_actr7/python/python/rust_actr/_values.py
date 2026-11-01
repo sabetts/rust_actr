@@ -44,6 +44,14 @@ def render_slot_name(value: str) -> str:
     return render_symbol(value.replace("_", "-"), what="slot name")
 
 
+def render_param_key(value: str) -> str:
+    """Render a parameter name as a Lisp keyword (``lf`` -> ``:lf``)."""
+    if not isinstance(value, str) or not value:
+        raise TypeError("parameter key must be a non-empty string")
+    value = value.replace("_", "-")
+    return value if value.startswith(":") else ":" + value
+
+
 def _render_string(value: str) -> str:
     escaped = (
         value.replace("\\", "\\\\")

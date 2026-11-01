@@ -14,10 +14,10 @@ DEFAULT_ARGS = []
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('demo2', seed=seed)
 
-    m.sgp(':seed', [123456, 0])
-    m.sgp(':v', True)
-    m.sgp(':show-focus', True)
-    m.sgp(':trace-detail', 'high')
+    m.sgp('seed', [123456, 0])
+    m.sgp('v', True)
+    m.sgp('show_focus', True)
+    m.sgp('trace_detail', 'high')
 
     m.chunk_type('read-letters', 'step')
     m.chunk_type('array', 'letter')

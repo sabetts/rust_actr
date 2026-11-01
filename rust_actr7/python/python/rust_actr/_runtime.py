@@ -10,6 +10,8 @@ from __future__ import annotations
 import time as _time
 from typing import Any, Callable, Optional
 
+from ._values import render_param_key
+
 
 class RuntimeMixin:
     """Runtime command surface.  The host class supplies ``_eval``."""
@@ -226,16 +228,16 @@ class RuntimeMixin:
 
     # -- parameters ------------------------------------------------------
     def set_parameter_value(self, key: str, value: Any) -> Any:
-        return self._single("set-parameter-value", key, value)
+        return self._single("set-parameter-value", render_param_key(key), value)
 
     def get_parameter_value(self, key: str) -> Any:
-        return self._single("get-parameter-value", key)
+        return self._single("get-parameter-value", render_param_key(key))
 
     def set_system_parameter_value(self, key: str, value: Any) -> Any:
-        return self._single("set-system-parameter-value", key, value)
+        return self._single("set-system-parameter-value", render_param_key(key), value)
 
     def get_system_parameter_value(self, key: str) -> Any:
-        return self._single("get-system-parameter-value", key)
+        return self._single("get-system-parameter-value", render_param_key(key))
 
     def sdp(self, *params: Any) -> Any:
         return self._eval("sdp", *params)

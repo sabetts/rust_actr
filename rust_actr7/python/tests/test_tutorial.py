@@ -35,11 +35,19 @@ class TutorialTests(unittest.TestCase):
         text = (TUTORIAL / "unit1" / "count.py").read_text(encoding="utf-8")
         self.assertNotIn("def build", text)
         self.assertNotIn("def main", text)
+        self.assertIn("m.sgp('lf', 0.05)", text)
+        self.assertIn("m.sgp('trace_detail', 'high')", text)
+        self.assertNotIn("':lf'", text)
         self.assertIn("m.add_production(\n", text)
         self.assertIn("    (p start\n", text)
         self.assertIn("isa         count-from", text)
         self.assertNotIn("ISA ", text)
         self.assertNotIn("COUNT-FROM", text)
+
+    def test_declare_buffer_usage_all_slots_source(self):
+        text = (TUTORIAL / "unit5" / "onehit.py").read_text(encoding="utf-8")
+        self.assertIn("all_slots=True", text)
+        self.assertNotIn("':all'", text)
 
     def test_count_cli_prints_trace(self):
         result = run_script("unit1/count.py")

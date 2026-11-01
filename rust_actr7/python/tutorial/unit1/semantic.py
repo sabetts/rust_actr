@@ -4,8 +4,8 @@ import rust_actr as actr
 
 m = actr.Model('semantic')
 
-m.sgp(':esc', True)
-m.sgp(':lf', 0.05)
+m.sgp('esc', True)
+m.sgp('lf', 0.05)
 
 m.chunk_type('property', 'object', 'attribute', 'value')
 m.chunk_type('is-member', 'object', 'category', 'judgment')

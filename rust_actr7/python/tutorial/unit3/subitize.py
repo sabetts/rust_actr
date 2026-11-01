@@ -14,10 +14,10 @@ DEFAULT_ARGS = []
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('subitize', seed=seed)
 
-    m.sgp(':v', True)
-    m.sgp(':show-focus', True)
-    m.sgp(':visual-num-finsts', 10)
-    m.sgp(':visual-finst-span', 10)
+    m.sgp('v', True)
+    m.sgp('show_focus', True)
+    m.sgp('visual_num_finsts', 10)
+    m.sgp('visual_finst_span', 10)
 
     m.chunk_type('count', 'count', 'step')
     m.chunk_type('number', 'number', 'next', 'vocal-rep')

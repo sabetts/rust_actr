@@ -14,10 +14,10 @@ DEFAULT_ARGS = []
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('utility-learning-test', seed=seed)
 
-    m.sgp(':seed', [100, 2])
-    m.sgp(':esc', True)
-    m.sgp(':ul', True)
-    m.sgp(':egs', 0.5)
+    m.sgp('seed', [100, 2])
+    m.sgp('esc', True)
+    m.sgp('ul', True)
+    m.sgp('egs', 0.5)
 
     m.chunk_type('choose', 'choice')
     m.chunk_type('response', 'answer')

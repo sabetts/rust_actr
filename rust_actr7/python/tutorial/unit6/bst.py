@@ -14,13 +14,13 @@ DEFAULT_ARGS = [1]
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('bst', seed=seed)
 
-    m.sgp(':v', None)
-    m.sgp(':esc', True)
-    m.sgp(':egs', 3)
-    m.sgp(':show-focus', True)
-    m.sgp(':ul', True)
-    m.sgp(':ult', True)
-    m.sgp(':needs-mouse', True)
+    m.sgp('v', None)
+    m.sgp('esc', True)
+    m.sgp('egs', 3)
+    m.sgp('show_focus', True)
+    m.sgp('ul', True)
+    m.sgp('ult', True)
+    m.sgp('needs_mouse', True)
 
     m.chunk_type('try-strategy', 'strategy', 'state')
     m.chunk_type('encoding', 'a-loc', 'b-loc', 'c-loc', 'goal-loc', 'length', 'over', 'under')

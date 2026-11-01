@@ -14,19 +14,19 @@ DEFAULT_ARGS = [1]
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('categorize', seed=seed)
 
-    m.sgp(':v', True)
-    m.sgp(':act', True)
-    m.sgp(':esc', True)
-    m.sgp(':lf', 0.01)
-    m.sgp(':blc', 10)
-    m.sgp(':rt', -100)
-    m.sgp(':do-not-harvest', 'imaginal')
-    m.sgp(':sim-hook', actr.String('size-similarities'))
-    m.sgp(':cache-sim-hook-results', True)
-    m.sgp(':mp', 1)
-    m.sgp(':ppm', 1)
-    m.sgp(':egs', 0.25)
-    m.sgp(':ans', 0.25)
+    m.sgp('v', True)
+    m.sgp('act', True)
+    m.sgp('esc', True)
+    m.sgp('lf', 0.01)
+    m.sgp('blc', 10)
+    m.sgp('rt', -100)
+    m.sgp('do_not_harvest', 'imaginal')
+    m.sgp('sim_hook', actr.String('size-similarities'))
+    m.sgp('cache_sim_hook_results', True)
+    m.sgp('mp', 1)
+    m.sgp('ppm', 1)
+    m.sgp('egs', 0.25)
+    m.sgp('ans', 0.25)
 
     m.chunk_type('goal', 'state', 'name', 'value')
     m.chunk_type('example', 'category')
@@ -41,7 +41,7 @@ def build(seed=(100, 0)) -> actr.Model:
     m.call_act_r_command('create-example-memories')
     m.set_similarities([('small', 'medium', -0.4), ('medium', 'large', -0.4), ('small', 'large', -0.8)])
     m.form('(set-buffer-chunk (quote imaginal) (quote (category unknown)))')
-    m.declare_buffer_usage('goal', 'goal', ':all')
+    m.declare_buffer_usage('goal', 'goal', all_slots=True)
     return m
 
 

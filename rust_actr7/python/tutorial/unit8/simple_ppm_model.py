@@ -4,12 +4,12 @@ import rust_actr as actr
 
 m = actr.Model('test-ppm')
 
-m.sgp(':v', True)
-m.sgp(':trace-detail', 'high')
-m.sgp(':esc', True)
-m.sgp(':ppm', None)
-m.sgp(':egs', 0)
-m.sgp(':cst', True)
+m.sgp('v', True)
+m.sgp('trace_detail', 'high')
+m.sgp('esc', True)
+m.sgp('ppm', None)
+m.sgp('egs', 0)
+m.sgp('cst', True)
 
 m.add_chunk('small', 'chunk')
 m.add_chunk('medium', 'chunk')

@@ -4,13 +4,13 @@ import rust_actr as actr
 
 m = actr.Model('declarative-issues')
 
-m.sgp(':seed', [100, 1])
-m.sgp(':esc', True)
-m.sgp(':v', True)
-m.sgp(':bll', 0.5)
-m.sgp(':ans', 0.25)
-m.sgp(':mas', 2)
-m.sgp(':mp', 10)
+m.sgp('seed', [100, 1])
+m.sgp('esc', True)
+m.sgp('v', True)
+m.sgp('bll', 0.5)
+m.sgp('ans', 0.25)
+m.sgp('mas', 2)
+m.sgp('mp', 10)
 
 m.chunk_type('simple-value', 'result')
 m.chunk_type('simple-fact', 'item', 'attribute')
@@ -50,7 +50,7 @@ m.add_chunk('g1', 'task-state', state='r8')
 m.add_chunk('old-context', 'context', val1='one', val2='two', val3='add', goal='g1')
 
 m.set_base_levels([('v1', 1, -1500), ('v2', 1, -1500), ('v3', 1, -1500)])
-m.declare_buffer_usage('imaginal', 'context', ':all')
+m.declare_buffer_usage('imaginal', 'context', all_slots=True)
 
 m.add_production(
     '''

@@ -15,7 +15,14 @@ from typing import Any, Iterable, Optional, Sequence, Union
 
 from . import _native
 from ._runtime import RuntimeMixin
-from ._values import LispString, json_arg, render_slot_name, render_symbol, render_value
+from ._values import (
+    LispString,
+    json_arg,
+    render_param_key,
+    render_slot_name,
+    render_symbol,
+    render_value,
+)
 
 _PRODUCTION_HEAD = re.compile(r"^\(\s*p\s+([^\s()]+)", re.IGNORECASE)
 
@@ -86,13 +93,6 @@ class _ChunkType:
 class _Production:
     name: str
     text: str
-
-
-def _render_param_key(key: str) -> str:
-    if not isinstance(key, str) or not key:
-        raise TypeError("parameter key must be a non-empty string")
-    key = key.replace("_", "-")
-    return key if key.startswith(":") else ":" + key
 
 
 def _render_pairs(slots: dict[str, Any]) -> str:
@@ -287,8 +287,7 @@ class Model(RuntimeMixin):
 
     def sgp(self, key: str, value: Any) -> "Model":
         """Set a global parameter (``(sgp :key value)``)."""
-        if not isinstance(key, str) or not key.startswith(":"):
-            raise ValueError("sgp key must be a string beginning with ':'")
+        key = render_param_key(key)
         render_symbol(key, what="sgp key")
         self._sgp.append((key, value))
         if self._session is not None:
@@ -498,12 +497,12 @@ class Model(RuntimeMixin):
         if self._session is not None:
             flat: list[Any] = [name]
             for key, value in params.items():
-                flat.extend([_render_param_key(key), value])
+                flat.extend([render_param_key(key), value])
             self._eval("spp", *flat)
             return self
         self._check_mutable()
         rendered = " ".join(
-            f"{_render_param_key(key)} {render_value(value)}"
+            f"{render_param_key(key)} {render_value(value)}"
             for key, value in params.items()
         )
         self._emit(f"(spp {name} {rendered})")
@@ -544,14 +543,26 @@ class Model(RuntimeMixin):
         self._emit("(set-all-base-levels " + " ".join(args) + ")")
         return self
 
-    def declare_buffer_usage(self, buffer: str, chunk_type: str, *slots: str) -> "Model":
-        """Declare the chunk type a buffer is used with."""
+    def declare_buffer_usage(
+        self,
+        buffer: str,
+        chunk_type: str,
+        *slots: str,
+        all_slots: bool = False,
+    ) -> "Model":
+        """Declare the chunk type a buffer is used with.
+
+        Pass ``all_slots=True`` for ACT-R's ``:all`` keyword.
+        """
         self._check_mutable()
         buffer_name = render_symbol(buffer, what="buffer name")
         type_name = render_symbol(chunk_type, what="chunk type")
         self._buffer_types[buffer_name.upper()] = type_name.upper()
         parts = [buffer_name, type_name]
-        parts.extend(render_slot_name(slot) for slot in slots)
+        rendered_slots = [render_slot_name(slot) for slot in slots]
+        parts.extend(rendered_slots)
+        if all_slots and ":all" not in {slot.lower() for slot in rendered_slots}:
+            parts.append(":all")
         self._emit("(declare-buffer-usage " + " ".join(parts) + ")")
         return self
 

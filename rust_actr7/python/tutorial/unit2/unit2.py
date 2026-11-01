@@ -14,8 +14,8 @@ DEFAULT_ARGS = []
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('unit2', seed=seed)
 
-    m.sgp(':v', True)
-    m.sgp(':show-focus', True)
+    m.sgp('v', True)
+    m.sgp('show_focus', True)
 
     m.chunk_type('read-letters', 'step')
     m.chunk_type('array', 'letter1', 'letter2', 'letter3')

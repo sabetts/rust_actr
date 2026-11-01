@@ -4,10 +4,10 @@ import rust_actr as actr
 
 m = actr.Model('dynamic-introduction')
 
-m.sgp(':v', True)
-m.sgp(':trace-detail', 'high')
-m.sgp(':cst', True)
-m.sgp(':style-warnings', None)
+m.sgp('v', True)
+m.sgp('trace_detail', 'high')
+m.sgp('cst', True)
+m.sgp('style_warnings', None)
 
 m.chunk_type('fact', 'context', 'data')
 m.chunk_type('step', 'step', 'destination')

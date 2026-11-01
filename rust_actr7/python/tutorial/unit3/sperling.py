@@ -14,11 +14,11 @@ DEFAULT_ARGS = [1]
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('sperling', seed=seed)
 
-    m.sgp(':v', True)
-    m.sgp(':declarative-finst-span', 10)
-    m.sgp(':show-focus', True)
-    m.sgp(':trace-detail', 'low')
-    m.sgp(':seed', [100, 0])
+    m.sgp('v', True)
+    m.sgp('declarative_finst_span', 10)
+    m.sgp('show_focus', True)
+    m.sgp('trace_detail', 'low')
+    m.sgp('seed', [100, 0])
 
     m.chunk_type('read-letters', 'location', 'tone', 'step', 'upper-y', 'lower-y')
     m.chunk_type('report-row', 'row')

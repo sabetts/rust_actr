@@ -72,9 +72,9 @@ surface while reusing the engine's existing command parsing.
 - `add_chunk`, sparse `add_dm`, `define_chunks`
 - named and inline `goal_focus`
 - `add_production` (full Lisp production text)
-- `sgp`, `spp`
+- `sgp`, `spp`; parameter names accept `key` or `:key`, with `_` rendered as `-`
 - `set_similarities`, `set_base_levels`, `set_all_base_levels`
-- `declare_buffer_usage`, `set_visloc_default`
+- `declare_buffer_usage` (`all_slots=True` for `:all`), `set_visloc_default`
 - `call_act_r_command`
 - initial `set_initial_buffer`
 - model-body `install_device`
@@ -225,7 +225,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **33 tests passing**. It covers:
+Current Python suite: **36 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices

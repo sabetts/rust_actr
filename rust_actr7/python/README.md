@@ -55,7 +55,10 @@ m.add_chunk("zero", "number", vocal_rep=actr.String("zero"))
 ```
 
 Slot names use Python underscores and are rendered as Lisp hyphens:
-`next_let` becomes `next-let`.
+`next_let` becomes `next-let`. Parameter names also omit the Lisp colon:
+`m.sgp("trace_detail", "high")` renders `(sgp :trace-detail high)`;
+`":trace-detail"` is still accepted. Use
+`declare_buffer_usage(..., all_slots=True)` for ACT-R's `:all`.
 
 Supported chunk values are `str`, `int`, `float`, `bool`, `None`, lists/tuples,
 and `actr.String`/`actr.LispString`.

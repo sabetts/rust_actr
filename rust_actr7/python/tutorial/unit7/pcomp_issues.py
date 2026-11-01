@@ -14,14 +14,14 @@ DEFAULT_ARGS = [1]
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('compilation-test', seed=seed)
 
-    m.sgp(':esc', True)
-    m.sgp(':lf', 0.5)
-    m.sgp(':bll', 0.5)
-    m.sgp(':mp', 18)
-    m.sgp(':rt', -3)
-    m.sgp(':ans', 0.25)
-    m.sgp(':style-warnings', None)
-    m.sgp(':v', None)
+    m.sgp('esc', True)
+    m.sgp('lf', 0.5)
+    m.sgp('bll', 0.5)
+    m.sgp('mp', 18)
+    m.sgp('rt', -3)
+    m.sgp('ans', 0.25)
+    m.sgp('style_warnings', None)
+    m.sgp('v', None)
 
     m.chunk_type('task', 'state')
     m.chunk_type('number', 'visual-rep')

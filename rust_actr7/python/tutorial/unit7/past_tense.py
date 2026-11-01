@@ -14,22 +14,22 @@ DEFAULT_ARGS = [1]
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('past-tense', seed=seed)
 
-    m.sgp(':v', True)
-    m.sgp(':esc', True)
-    m.sgp(':ul', True)
-    m.sgp(':ol', 6)
-    m.sgp(':bll', 0.5)
-    m.sgp(':ans', 0.1)
-    m.sgp(':egs', 0.2)
-    m.sgp(':mas', 3.5)
-    m.sgp(':lf', 0.5)
-    m.sgp(':rt', 0.5)
-    m.sgp(':epl', True)
-    m.sgp(':alpha', 0.1)
-    m.sgp(':pct', True)
-    m.sgp(':iu', 5)
-    m.sgp(':ncnar', None)
-    m.sgp(':do-not-harvest', 'imaginal')
+    m.sgp('v', True)
+    m.sgp('esc', True)
+    m.sgp('ul', True)
+    m.sgp('ol', 6)
+    m.sgp('bll', 0.5)
+    m.sgp('ans', 0.1)
+    m.sgp('egs', 0.2)
+    m.sgp('mas', 3.5)
+    m.sgp('lf', 0.5)
+    m.sgp('rt', 0.5)
+    m.sgp('epl', True)
+    m.sgp('alpha', 0.1)
+    m.sgp('pct', True)
+    m.sgp('iu', 5)
+    m.sgp('ncnar', None)
+    m.sgp('do_not_harvest', 'imaginal')
 
     m.chunk_type('past-tense', 'verb', 'stem', 'suffix')
     m.chunk_type('goal', 'state')
@@ -39,7 +39,7 @@ def build(seed=(100, 0)) -> actr.Model:
     m.define_chunks('done')
 
     m.declare_buffer_usage('goal', 'goal', 'state')
-    m.declare_buffer_usage('imaginal', 'past-tense', ':all')
+    m.declare_buffer_usage('imaginal', 'past-tense', all_slots=True)
 
     m.add_production(
         '''

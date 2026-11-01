@@ -14,11 +14,11 @@ DEFAULT_ARGS = []
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('perceptual-motor-issues', seed=seed)
 
-    m.sgp(':seed', [101, 0])
-    m.sgp(':v', True)
-    m.sgp(':show-focus', True)
-    m.sgp(':trace-detail', 'medium')
-    m.sgp(':er', True)
+    m.sgp('seed', [101, 0])
+    m.sgp('v', True)
+    m.sgp('show_focus', True)
+    m.sgp('trace_detail', 'medium')
+    m.sgp('er', True)
 
     m.chunk_type('letter', 'name', 'next', 'previous')
     m.chunk_type('task', 'letter')

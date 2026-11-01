@@ -4,8 +4,8 @@ import rust_actr as actr
 
 m = actr.Model('semantic')
 
-m.sgp(':esc', True)
-m.sgp(':lf', 0.05)
+m.sgp('esc', True)
+m.sgp('lf', 0.05)
 
 m.chunk_type('property', 'object', 'category', 'dangerous', 'locomotion', 'edible', 'breathe', 'moves', 'skin', 'color', 'sings', 'flies', 'height', 'wings')
 m.chunk_type('test-attribute', 'object', 'original', 'attribute', 'value', 'state', 'answer')
@@ -68,7 +68,7 @@ m.define_chunks(actr.Chunk('g1', 'test-attribute', {'object': 'canary', 'attribu
 m.define_chunks(actr.Chunk('g2', 'test-attribute', {'object': 'canary', 'attribute': 'wings', 'value': 'true'}))
 m.define_chunks(actr.Chunk('g3', 'test-attribute', {'object': 'canary', 'attribute': 'dangerous', 'value': 'true'}))
 
-m.declare_buffer_usage('goal', 'test-attribute', ':all')
+m.declare_buffer_usage('goal', 'test-attribute', all_slots=True)
 
 m.add_production(
     '''

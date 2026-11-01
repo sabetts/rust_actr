@@ -4,9 +4,9 @@ import rust_actr as actr
 
 m = actr.Model('tutor-model')
 
-m.sgp(':esc', True)
-m.sgp(':lf', 0.05)
-m.sgp(':trace-detail', 'medium')
+m.sgp('esc', True)
+m.sgp('lf', 0.05)
+m.sgp('trace_detail', 'medium')
 
 m.chunk_type('addition-fact', 'addend1', 'addend2', 'sum')
 m.chunk_type('add-pair', 'one1', 'ten1', 'one2', 'ten2', 'ten-ans', 'one-ans', 'carry')

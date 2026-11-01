@@ -137,6 +137,7 @@ class ModelTests(unittest.TestCase):
         model.set_initial_buffer("imaginal", isa="chunk", category="unknown")
         model.install_device("Sentence Experiment", visible=False, width=600, height=300)
         model.add_production("(p p1 =goal> state start ==> =goal> state done)")
+        model.declare_buffer_usage("imaginal", "goal", all_slots=True)
 
         source = model.to_lisp()
         self.assertIn("(add-dm (shark))", source)
@@ -148,10 +149,25 @@ class ModelTests(unittest.TestCase):
         self.assertIn("(spp p1 :u -2 :reward 1.0)", source)
         self.assertIn("(set-visloc-default attended nil)", source)
         self.assertIn("(declare-buffer-usage goal goal state)", source)
+        self.assertIn("(declare-buffer-usage imaginal goal :all)", source)
         self.assertIn('(call-act-r-command "create-example-memories")', source)
         self.assertIn("(set-buffer-chunk 'imaginal '(isa chunk category unknown))", source)
         self.assertIn('"Sentence Experiment"', source)
         model.run(0.0)
+
+    def test_sgp_accepts_key_without_colon(self):
+        model = actr.Model("sgp-keys")
+        model.sgp("lf", 0.05)
+        model.sgp(":esc", True)
+        self.assertEqual(model._sgp, [(":lf", 0.05), (":esc", True)])
+
+    def test_runtime_parameter_key_without_colon(self):
+        model = self.make_model()
+        model.set_parameter_value("lf", 0.2)
+        self.assertAlmostEqual(float(model.get_parameter_value("lf")), 0.2)
+        self.assertEqual(
+            model.get_parameter_value("lf"), model.get_parameter_value(":lf")
+        )
 
     def test_runtime_callbacks(self):
         seen = []

@@ -14,12 +14,12 @@ DEFAULT_ARGS = [1]
 def build(seed=(100, 0)) -> actr.Model:
     m = actr.Model('siegler', seed=seed)
 
-    m.sgp(':rt', -0.45)
-    m.sgp(':esc', True)
-    m.sgp(':v', None)
-    m.sgp(':act', None)
-    m.sgp(':ans', 0.5)
-    m.sgp(':mp', 16)
+    m.sgp('rt', -0.45)
+    m.sgp('esc', True)
+    m.sgp('v', None)
+    m.sgp('act', None)
+    m.sgp('ans', 0.5)
+    m.sgp('mp', 16)
 
     m.chunk_type('plus-fact', 'addend1', 'addend2', 'sum')
     m.chunk_type('number', 'aural-rep', 'vocal-rep')

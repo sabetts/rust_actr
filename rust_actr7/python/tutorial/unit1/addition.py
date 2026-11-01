@@ -4,8 +4,8 @@ import rust_actr as actr
 
 m = actr.Model('addition')
 
-m.sgp(':esc', True)
-m.sgp(':lf', 0.05)
+m.sgp('esc', True)
+m.sgp('lf', 0.05)
 
 m.chunk_type('number', 'number', 'next')
 m.chunk_type('add', 'arg1', 'arg2', 'sum', 'count')

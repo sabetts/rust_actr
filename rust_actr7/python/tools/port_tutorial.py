@@ -320,7 +320,8 @@ def emit_form(form, lines: list[str], productions=None) -> None:
     if head == "SGP":
         pairs = form[1:]
         for i in range(0, len(pairs) - 1, 2):
-            lines.append(f"    m.sgp({str(pairs[i])!r}, {py(pairs[i + 1])})")
+            key = kw(str(pairs[i]).lstrip(":"))
+            lines.append(f"    m.sgp({key!r}, {py(pairs[i + 1])})")
     elif head == "CHUNK-TYPE":
         _emit_chunk_type(form, lines)
     elif head == "ADD-DM":
@@ -357,8 +358,17 @@ def emit_form(form, lines: list[str], productions=None) -> None:
         args = ", ".join(py(x) for x in form[1:])
         lines.append(f"    m.set_all_base_levels({args})")
     elif head == "DECLARE-BUFFER-USAGE":
-        args = ", ".join(py(x) for x in form[1:])
-        lines.append(f"    m.declare_buffer_usage({args})")
+        values = [str(x) for x in form[1:]]
+        all_slots = any(value.lstrip(":").lower() == "all" for value in values[2:])
+        slots = [
+            value
+            for value in values[2:]
+            if not (all_slots and value.lstrip(":").lower() == "all")
+        ]
+        args = [repr(values[0]), repr(values[1])] + [repr(slot) for slot in slots]
+        if all_slots:
+            args.append("all_slots=True")
+        lines.append(f"    m.declare_buffer_usage({', '.join(args)})")
     elif head == "SET-VISLOC-DEFAULT":
         slots = []
         for i in range(1, len(form) - 1, 2):
