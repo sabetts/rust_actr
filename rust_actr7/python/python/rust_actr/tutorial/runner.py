@@ -21,10 +21,10 @@ def find_tutorial_dir(actr_dir: str | os.PathLike[str] | None = None) -> Path:
     if root:
         candidates.append(Path(root) / "tutorial" / "python")
     here = Path(__file__).resolve()
-    for parent in here.parents:
-        candidates.append(parent / "actr7.x" / "tutorial" / "python")
-        candidates.append(parent / "tutorial" / "python")
-    candidates.append(Path.cwd() / "actr7.x" / "tutorial" / "python")
+    for base in (here, Path.cwd()):
+        for parent in (base, *base.parents):
+            candidates.append(parent / "actr7.x" / "tutorial" / "python")
+            candidates.append(parent / "tutorial" / "python")
     for candidate in candidates:
         if (candidate / "actr.py").is_file():
             return candidate
