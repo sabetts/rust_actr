@@ -458,6 +458,8 @@ def experiment(n):
 
     report_data(list(map(lambda x: x/n,results)))
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

@@ -317,6 +317,8 @@ actr.add_command("create-example-memories",create_example_memories,"Categorize t
 
 MODEL = actr.use(build())
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

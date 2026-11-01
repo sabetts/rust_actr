@@ -918,6 +918,8 @@ def experiment(n,human=False):
 def production_u_value(prod):
     return actr.no_output("spp",prod,":u")[0][0]
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

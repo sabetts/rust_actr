@@ -760,6 +760,8 @@ def create_set(block,visible):
 
     return list(map(lambda x: trial(block,*x,visible=visible), actr.permute_list(data_set)))
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

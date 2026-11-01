@@ -73,6 +73,8 @@ def model ():
 def data (n):
     None
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

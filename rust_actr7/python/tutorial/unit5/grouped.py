@@ -238,6 +238,8 @@ def record_response (item):
     global response
     response.append(item)
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

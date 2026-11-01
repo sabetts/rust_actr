@@ -224,6 +224,8 @@ def display_prompt(window,prompt):
     actr.clear_exp_window()
     actr.add_text_to_exp_window(window, prompt, x=125, y=150)
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

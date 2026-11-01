@@ -695,6 +695,8 @@ def game1():
 
 game0()
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

@@ -560,6 +560,8 @@ def analyze_results(output):
 
     return[r,t]
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

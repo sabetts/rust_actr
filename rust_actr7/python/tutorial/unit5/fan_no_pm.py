@@ -360,6 +360,8 @@ def output_person_location(data):
             print("%6.3f (%-5s)" % (data[j + ((i + 3) * 3)]),end="")
         print()
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

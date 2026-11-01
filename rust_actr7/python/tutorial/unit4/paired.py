@@ -379,6 +379,8 @@ def print_results(predicted,data,label):
         print('%8.3f' % i,end='')
     print()
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

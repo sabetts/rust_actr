@@ -839,6 +839,8 @@ actr.add_command("bst-compute-difference",compute_difference,"Imaginal action fu
 
 MODEL = actr.use(build())
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

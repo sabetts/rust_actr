@@ -14,6 +14,8 @@ The self-contained tutorial scripts call functions such as ``actr.run`` and
 
 from __future__ import annotations
 
+import functools
+import types
 from typing import Any, Optional
 
 from ._model import Chunk, Model
@@ -49,6 +51,41 @@ def use(model: Any) -> Any:
 
 def current_model() -> Optional[Any]:
     return _current
+
+
+def _bound(model: Any, function: Any) -> Any:
+    @functools.wraps(function)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        global _current
+        previous = _current
+        _current = model
+        try:
+            return function(*args, **kwargs)
+        finally:
+            _current = previous
+
+    return wrapper
+
+
+def bind_module(namespace: dict[str, Any], model: Any) -> Any:
+    """Bind this module's task functions to ``model``.
+
+    Tutorial task modules share the module-level ``actr`` façade, so switching
+    tasks in one process would otherwise leave their functions pointed at
+    whichever model was most recently used.  Wrapping the module's own
+    functions makes each call use its module's model and restores the previous
+    binding afterwards.
+    """
+    module_name = namespace.get("__name__")
+    for name, value in list(namespace.items()):
+        if name in {"build", "main"} or name.startswith("_"):
+            continue
+        if not isinstance(value, types.FunctionType):
+            continue
+        if value.__module__ != module_name:
+            continue
+        namespace[name] = _bound(model, value)
+    return model
 
 
 def add_command(

@@ -475,6 +475,8 @@ def trials(n,cont=False,v=False):
     actr.remove_command_monitor("trigger-reward","reward-check")
     actr.remove_command("reward-check")
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

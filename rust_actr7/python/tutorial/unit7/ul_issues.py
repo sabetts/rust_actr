@@ -136,6 +136,8 @@ def finished ():
 
 MODEL = actr.use(build())
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

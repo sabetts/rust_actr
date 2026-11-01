@@ -359,6 +359,8 @@ def display_results(results):
             print("%6.2f" % results[i][j],end="")
         print()
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

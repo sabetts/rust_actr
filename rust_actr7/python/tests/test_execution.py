@@ -165,6 +165,18 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(len(rts), 3)
         self.assertEqual(counts, [8, 8, 8])
 
+    def test_modules_keep_their_own_models(self):
+        grouped = load_tutorial("unit5/grouped.py")
+        first = grouped["recall"]()
+
+        bst = load_tutorial("unit8/bst_ppm.py")
+        choices = bst["bst_set"](False, False, bst["exp_stims"][:2])
+        self.assertEqual(len(choices), 2)
+
+        self.assertEqual(grouped["recall"](), first)
+        self.assertEqual(grouped["build"]().name, "grouped")
+        self.assertEqual(bst["build"]().name, "bst-learn")
+
 
 if __name__ == "__main__":
     unittest.main()

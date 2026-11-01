@@ -269,6 +269,8 @@ def record_model_speech (model,string):
     response_time = actr.get_time(True)
     response = string
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:

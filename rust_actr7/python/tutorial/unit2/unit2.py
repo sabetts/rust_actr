@@ -180,6 +180,8 @@ def experiment (human=False):
     else:
         return False
 
+actr.bind_module(globals(), MODEL)
+
 
 def _value(text):
     try:
