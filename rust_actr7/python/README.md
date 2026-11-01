@@ -76,6 +76,49 @@ The first release covers model construction, goal focus, running, resetting,
 and trace access. Devices, windows, task callbacks, arbitrary Lisp evaluation,
 runtime buffer mutation, and multiple models are not exposed yet.
 
+## Tutorial models
+
+`rust_actr.tutorial` contains Python ports of the model files under
+`actr7.x/tutorial`. They are generated from the vendored Lisp sources by
+`tools/port_tutorial_models.py` and can be edited after generation:
+
+```powershell
+python tools/port_tutorial_models.py
+python -m rust_actr.tutorial.run --list-models
+```
+
+`rust_actr.actr` is a module-level façade matching the tutorial client. It
+binds `load_act_r_model` to the Python registry, so the vendored task scripts
+run with their imports unchanged:
+
+```python
+from rust_actr.tutorial import runner
+
+runner.run_task("demo2", "experiment")
+runner.run_task("fan_no_pm", "experiment")
+```
+
+The runner needs an ACT-R checkout for the task scripts. Set `ACTR_DIR` or run
+from the repository root:
+
+```powershell
+$env:ACTR_DIR = "C:\path\to\actr7.x"
+python -m rust_actr.tutorial.run demo2 experiment
+```
+
+Port status:
+
+- Working end-to-end: `count`, `addition`, `semantic`, `demo2`, `fan-no-pm`,
+  `grouped`, `onehit` (hands/blocks/learning), `zbrodoff`, and the dynamic
+  models that do not need task-side hooks.
+- Starting models (no/partial productions by design): unit2 assignment,
+  `subitize`, `choice`, `categorize`.
+- Known gaps: Python `:sim-hook` functions (`1hit`, `bst-ppm`, `categorize`),
+  Python `imaginal-action` callbacks (`bst-ppm`), mid-run `output-key`
+  dispatch for window clears (`sperling`), and `new-digit-sound` /
+  `new-word-sound` (`siegler`). Those models build and run but do not yet
+  reproduce the tutorial summaries.
+
 ## Tests
 
 ```powershell

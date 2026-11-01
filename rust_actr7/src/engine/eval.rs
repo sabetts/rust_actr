@@ -1,5 +1,19 @@
 //! Bounded `!eval!`/`!bind!` evaluator.
 use super::*;
+
+/// Text passed to a task callback: strings and symbols lose their printed
+/// quoting (`grouped`'s `record-response` receives `"1"`'s content, not the
+/// quoted `~S` form).
+fn callback_text(value: &Value) -> String {
+    match value {
+        Value::Sym(s) | Value::Str(s) => s.clone(),
+        Value::Int(i) => i.to_string(),
+        Value::Num(x) => x.to_string(),
+        Value::Nil => "NIL".to_string(),
+        Value::List(_) => value.show(),
+    }
+}
+
 impl Engine {
     /// LHS/RHS `!eval!`/`!bind!` expressions, evaluated against bindings.
     pub(super) fn eval_expr(&self, e: &Sexp, b: &Bindings) -> Result<Value, String> {
@@ -354,7 +368,7 @@ impl Engine {
             .iter()
             .map(|a| {
                 self.eval_expr(a, b)
-                    .map(|v| v.show())
+                    .map(|v| callback_text(&v))
                     .unwrap_or_default()
             })
             .collect();

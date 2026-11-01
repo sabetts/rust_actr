@@ -1,0 +1,406 @@
+#!/usr/bin/env python3
+"""Port the ACT-R tutorial model files to Python ``rust_actr.Model`` source.
+
+The generated modules are checked in; edit them directly when a model needs a
+hand-written task hook.  Re-run this script after changing a vendored model.
+
+Usage:
+    python tools/port_tutorial_models.py [--actr DIR]
+"""
+
+from __future__ import annotations
+
+import argparse
+import pathlib
+import re
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+DEFAULT_ACTR = ROOT.parents[1] / "actr7.x"
+OUT = ROOT / "python" / "rust_actr" / "tutorial" / "models"
+
+
+# ---------------------------------------------------------------- reader
+class Sym(str):
+    pass
+
+
+class Str(str):
+    pass
+
+
+def parse(text: str):
+    tokens = _tokenize(text)
+    pos = 0
+
+    def read():
+        nonlocal pos
+        token = tokens[pos]
+        pos += 1
+        if token == "(":
+            out = []
+            while tokens[pos] != ")":
+                out.append(read())
+            pos += 1
+            return out
+        if token == ")":
+            raise SyntaxError("unexpected )")
+        if token in ("QUOTE", "BACKQUOTE"):
+            return [Sym(token), read()]
+        if token.startswith('"'):
+            return Str(_unescape(token[1:-1]))
+        if re.fullmatch(r"[+-]?\d+", token):
+            return int(token)
+        if re.fullmatch(r"[+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?", token):
+            return float(token)
+        return Sym(token.upper())
+
+    return read()
+
+
+def parse_all(text: str):
+    tokens = _tokenize(text)
+    forms = []
+    pos = 0
+
+    def read():
+        nonlocal pos
+        token = tokens[pos]
+        pos += 1
+        if token == "(":
+            out = []
+            while tokens[pos] != ")":
+                out.append(read())
+            pos += 1
+            return out
+        if token == ")":
+            raise SyntaxError("unexpected )")
+        if token in ("QUOTE", "BACKQUOTE"):
+            return [Sym(token), read()]
+        if token.startswith('"'):
+            return Str(_unescape(token[1:-1]))
+        if re.fullmatch(r"[+-]?\d+", token):
+            return int(token)
+        if re.fullmatch(r"[+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?", token):
+            return float(token)
+        return Sym(token.upper())
+
+    while pos < len(tokens):
+        forms.append(read())
+    return forms
+
+
+def _tokenize(text: str):
+    out = []
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if c in " \t\r\n":
+            i += 1
+        elif c == ";":
+            while i < len(text) and text[i] != "\n":
+                i += 1
+        elif c in "()":
+            out.append(c)
+            i += 1
+        elif c == '"':
+            j = i + 1
+            while j < len(text):
+                if text[j] == "\\":
+                    j += 2
+                elif text[j] == '"':
+                    break
+                else:
+                    j += 1
+            out.append(text[i : j + 1])
+            i = j + 1
+        elif c == "'":
+            out.append("QUOTE")
+            i += 1
+        elif c == "`":
+            out.append("BACKQUOTE")
+            i += 1
+        else:
+            j = i
+            while j < len(text) and text[j] not in " \t\r\n();":
+                j += 1
+            out.append(text[i:j])
+            i = j
+    return out
+
+
+def _unescape(text: str) -> str:
+    return (
+        text.replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace('\\"', '"')
+        .replace("\\\\", "\\")
+    )
+
+
+# ---------------------------------------------------------------- writer
+def lisp(value) -> str:
+    if isinstance(value, Str):
+        escaped = (
+            value.replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\n", "\\n")
+            .replace("\t", "\\t")
+        )
+        return f'"{escaped}"'
+    if isinstance(value, Sym):
+        return str(value)
+    if isinstance(value, bool):
+        return "t" if value else "nil"
+    if isinstance(value, list):
+        return "(" + " ".join(lisp(x) for x in value) + ")"
+    return str(value)
+
+
+def py(value):
+    if isinstance(value, Str):
+        return f'actr.String({str(value)!r})'
+    if isinstance(value, Sym):
+        if value == "NIL":
+            return "None"
+        if value == "T":
+            return "True"
+        return repr(str(value))
+    if isinstance(value, list):
+        return "[" + ", ".join(py(x) for x in value) + "]"
+    return repr(value)
+
+
+def kw(name: str) -> str:
+    return name.replace("-", "_")
+
+
+def emit_form(form, lines: list[str]) -> None:
+    if not isinstance(form, list) or not form:
+        return
+    head = str(form[0]).upper() if isinstance(form[0], Sym) else ""
+    if head == "SGP":
+        pairs = form[1:]
+        for i in range(0, len(pairs) - 1, 2):
+            lines.append(f"    m.sgp({str(pairs[i])!r}, {py(pairs[i + 1])})")
+    elif head == "CHUNK-TYPE":
+        _emit_chunk_type(form, lines)
+    elif head == "ADD-DM":
+        for entry in form[1:]:
+            _emit_dm(entry, lines, define=False)
+    elif head in ("DEFINE-CHUNKS", "DEFINE-CHUNKS-FCT"):
+        for entry in form[1:]:
+            _emit_dm(entry, lines, define=True)
+    elif head in ("GOAL-FOCUS", "GOAL-FOCUS-FCT"):
+        _emit_goal_focus(form[1], lines)
+    elif head in ("P", "P-FCT"):
+        source = lisp(form)
+        lines.append("    m.add_production(")
+        lines.append("        '''" + source.replace("'''", "\\'\\'\\'") + "'''")
+        lines.append("    )")
+    elif head == "SPP":
+        name = str(form[1])
+        pairs = []
+        i = 2
+        while i + 1 < len(form):
+            key = kw(str(form[i]).lstrip(":"))
+            pairs.append(f"{key!r}: {py(form[i + 1])}")
+            i += 2
+        lines.append(f"    m.spp({name!r}, **{{{', '.join(pairs)}}})")
+    elif head == "SET-SIMILARITIES":
+        entries = [f"({py(e[0])}, {py(e[1])}, {py(e[2])})" for e in form[1:]]
+        lines.append(f"    m.set_similarities([{', '.join(entries)}])")
+    elif head == "SET-BASE-LEVELS":
+        entries = ["(" + ", ".join(py(x) for x in e) + ")" for e in form[1:]]
+        lines.append(f"    m.set_base_levels([{', '.join(entries)}])")
+    elif head == "SET-ALL-BASE-LEVELS":
+        args = ", ".join(py(x) for x in form[1:])
+        lines.append(f"    m.set_all_base_levels({args})")
+    elif head == "DECLARE-BUFFER-USAGE":
+        args = ", ".join(py(x) for x in form[1:])
+        lines.append(f"    m.declare_buffer_usage({args})")
+    elif head == "SET-VISLOC-DEFAULT":
+        slots = []
+        for i in range(1, len(form) - 1, 2):
+            slots.append(f"{kw(str(form[i]).lstrip(':'))}={py(form[i + 1])}")
+        lines.append(f"    m.set_visloc_default({', '.join(slots)})")
+    elif head == "CALL-ACT-R-COMMAND":
+        name = str(form[1]) if len(form) > 1 else ""
+        args = ", ".join(py(x) for x in form[2:])
+        suffix = f", {args}" if args else ""
+        lines.append(f"    m.call_act_r_command({name!r}{suffix})")
+    elif head == "SET-BUFFER-CHUNK":
+        _emit_initial_buffer(form, lines)
+    elif head == "INSTALL-DEVICE":
+        _emit_install_device(form, lines)
+    else:
+        source = lisp(form)
+        lines.append(f"    m.form({source!r})")
+
+
+def _emit_chunk_type(form, lines: list[str]) -> None:
+    if len(form) < 2:
+        return
+    name = form[1]
+    if isinstance(name, list):
+        # (chunk-type (name (:include parent)) slot ...)
+        name = name[0]
+    slots = []
+    defaults = {}
+    includes = []
+    for slot in form[2:]:
+        if isinstance(slot, list):
+            if slot and str(slot[0]).upper() == ":INCLUDE":
+                includes.append(py(slot[1]))
+            elif len(slot) >= 2:
+                slots.append(str(slot[0]))
+                defaults[kw(str(slot[0]))] = slot[1]
+        else:
+            slots.append(str(slot))
+    parts = [repr(str(name))] + [repr(str(s)) for s in slots]
+    if defaults:
+        pairs = ", ".join(f"{repr(k)}: {py(v)}" for k, v in defaults.items())
+        parts.append(f"defaults={{{pairs}}}")
+    if includes:
+        parts.append(f"include={includes[0] if len(includes) == 1 else '[' + ', '.join(includes) + ']'}")
+    lines.append(f"    m.chunk_type({', '.join(parts)})")
+
+
+def _emit_dm(entry, lines: list[str], define: bool) -> None:
+    method = "define_chunks" if define else "add_dm"
+    if isinstance(entry, Sym):
+        lines.append(f"    m.{method}({str(entry)!r})")
+        return
+    if not isinstance(entry, list):
+        lines.append(f"    m.form({lisp(entry)!r})")
+        return
+    name = entry[0]
+    if len(entry) == 1:
+        lines.append(f"    m.{method}({str(name)!r})")
+        return
+    isa = None
+    rest = entry[1:]
+    if len(rest) >= 2 and isinstance(rest[0], Sym) and str(rest[0]).upper() == "ISA":
+        isa = str(rest[1])
+        rest = rest[2:]
+    if not isinstance(name, Sym) or len(rest) % 2:
+        lines.append(f"    m.form({lisp(entry)!r})")
+        return
+    kwargs = []
+    for i in range(0, len(rest), 2):
+        kwargs.append(f"{repr(str(rest[i]))}: {py(rest[i + 1])}")
+    if define:
+        ctor = f"actr.Chunk({str(name)!r}, {isa!r}, {{{', '.join(kwargs)}}})"
+        lines.append(f"    m.define_chunks({ctor})")
+    elif isa:
+        lines.append(f"    m.add_chunk({str(name)!r}, {isa!r}, **{{{', '.join(kwargs)}}})")
+    else:
+        lines.append(f"    m.add_chunk({str(name)!r}, **{{{', '.join(kwargs)}}})")
+
+
+def _emit_goal_focus(arg, lines: list[str]) -> None:
+    if isinstance(arg, Sym):
+        lines.append(f"    m.goal_focus({str(arg)!r})")
+    elif isinstance(arg, list) and arg and isinstance(arg[0], Sym) and str(arg[0]).upper() == "ISA":
+        typ = str(arg[1])
+        slots = []
+        for i in range(2, len(arg) - 1, 2):
+            slots.append(f"{repr(str(arg[i]))}: {py(arg[i + 1])}")
+        lines.append(f"    m.goal_focus(isa={typ!r}, **{{{', '.join(slots)}}})")
+    else:
+        lines.append(f"    m.form({lisp(['GOAL-FOCUS', arg])!r})")
+
+
+def _emit_initial_buffer(form, lines: list[str]) -> None:
+    buffer = form[1]
+    chunk = form[2]
+    if isinstance(chunk, Sym):
+        lines.append(f"    m.set_initial_buffer({str(buffer)!r}, {str(chunk)!r})")
+    elif isinstance(chunk, list) and chunk and isinstance(chunk[0], Sym) and str(chunk[0]).upper() == "ISA":
+        typ = str(chunk[1])
+        slots = []
+        for i in range(2, len(chunk) - 1, 2):
+            slots.append(f"{repr(str(chunk[i]))}: {py(chunk[i + 1])}")
+        lines.append(f"    m.set_initial_buffer({str(buffer)!r}, isa={typ!r}, **{{{', '.join(slots)}}})")
+    else:
+        lines.append(f"    m.form({lisp(form)!r})")
+
+
+def _emit_install_device(form, lines: list[str]) -> None:
+    arg = form[1] if len(form) > 1 else None
+    if isinstance(arg, list) and arg and isinstance(arg[0], Sym) and str(arg[0]).upper() == "OPEN-EXP-WINDOW":
+        title = arg[1] if len(arg) > 1 else Sym("WINDOW")
+        opts = []
+        i = 2
+        while i + 1 < len(arg):
+            key = str(arg[i]).lstrip(":").replace("-", "_")
+            opts.append(f"{key}={py(arg[i + 1])}")
+            i += 2
+        lines.append(f"    m.install_device({str(title)!r}{', ' + ', '.join(opts) if opts else ''})")
+    else:
+        lines.append(f"    m.form({lisp(form)!r})")
+
+
+def module_name(logical: str) -> str:
+    parts = logical.replace("ACT-R:", "").replace(";", "/").replace(".lisp", "")
+    return parts.replace("/", "_").replace("-", "_")
+
+
+def convert(path: pathlib.Path, logical: str) -> str | None:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    forms = parse_all(text)
+    define = None
+    for form in forms:
+        if isinstance(form, list) and form and isinstance(form[0], Sym) and str(form[0]).upper() in ("DEFINE-MODEL", "DEFINE-MODEL-FCT"):
+            define = form
+    if define is None:
+        return None
+    name = str(define[1])
+    body = define[2:]
+    lines = [
+        f'"""Python port of {logical}."""',
+        "",
+        "from __future__ import annotations",
+        "",
+        "import rust_actr as actr",
+        "",
+        f"LOGICAL_PATH = {logical!r}",
+        f"MODEL_NAME = {name!r}",
+        "",
+        "",
+        "def build(seed=(100, 0)) -> actr.Model:",
+        f"    m = actr.Model({name!r}, seed=seed)",
+    ]
+    for form in body:
+        emit_form(form, lines)
+    lines.append("    return m")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--actr", default=str(DEFAULT_ACTR))
+    args = ap.parse_args()
+    root = pathlib.Path(args.actr)
+    OUT.mkdir(parents=True, exist_ok=True)
+    written = []
+    for path in sorted(root.glob("tutorial/**/*.lisp")):
+        rel = path.relative_to(root).as_posix()
+        logical = "ACT-R:" + rel.replace("/", ";").replace(".lisp", ".lisp")
+        try:
+            source = convert(path, logical)
+        except Exception as exc:
+            print(f"skip {logical}: {exc}")
+            continue
+        if source is None:
+            continue
+        target = OUT / f"{module_name(logical)}.py"
+        target.write_text(source, encoding="utf-8")
+        written.append(target.name)
+    print(f"wrote {len(written)} modules to {OUT}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

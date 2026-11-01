@@ -146,17 +146,23 @@ class RuntimeMixin:
         return self._single("mean-deviation", results, data, output)
 
     def no_output(self, command: str, *params: Any) -> Any:
-        return self._eval("no-output", command, *params)
+        return self._first(self._eval("no-output", command, *params))
 
     # -- declarative memory and buffers ---------------------------------
     def buffer_read(self, buffer: str) -> Any:
-        return self._single("buffer-read", buffer)
+        value = self._single("buffer-read", buffer)
+        # A direct `set-buffer-chunk` spec is unnamed in the engine; the task
+        # client still needs a handle for `chunk-slot-value`.
+        return buffer if value is None else value
 
     def buffer_slot_value(self, buffer: str, slot: str) -> Any:
         return self._single("buffer-slot-value", buffer, slot)
 
     def chunk_slot_value(self, chunk: str, slot: str) -> Any:
-        return self._single("chunk-slot-value", chunk, slot)
+        value = self._single("chunk-slot-value", chunk, slot)
+        if value is None:
+            value = self._single("buffer-slot-value", chunk, slot)
+        return _unquote(value)
 
     def set_buffer_chunk(
         self,
@@ -166,6 +172,10 @@ class RuntimeMixin:
     ) -> Any:
         if isinstance(chunk, (list, tuple)):
             spec = list(chunk)
+            if spec and not any(str(item).lower() == "isa" for item in spec):
+                declared = getattr(self, "_buffer_types", {}).get(buffer.upper())
+                if declared:
+                    spec = ["isa", declared, *spec]
         else:
             spec = chunk
         return self._single("set-buffer-chunk", buffer, spec, requested)
@@ -498,6 +508,13 @@ class RuntimeMixin:
         precondition: Any = None,
     ) -> Any:
         return self._single("schedule-event-now", action, _event_options(params, output))
+
+
+def _unquote(value: Any) -> Any:
+    if isinstance(value, str) and len(value) >= 2 and value[0] == value[-1]:
+        if value[0] in ("'", '"'):
+            return value[1:-1]
+    return value
 
 
 def _event_options(params: Any, output: bool) -> dict[str, Any]:

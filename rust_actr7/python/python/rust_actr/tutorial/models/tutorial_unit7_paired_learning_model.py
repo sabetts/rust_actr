@@ -1,0 +1,94 @@
+"""Python port of ACT-R:tutorial;unit7;paired-learning-model.lisp."""
+
+from __future__ import annotations
+
+import rust_actr as actr
+
+LOGICAL_PATH = 'ACT-R:tutorial;unit7;paired-learning-model.lisp'
+MODEL_NAME = 'PAIRED-LEARNING'
+
+
+def build(seed=(100, 0)) -> actr.Model:
+    m = actr.Model('PAIRED-LEARNING', seed=seed)
+    m.sgp(':ESC', True)
+    m.sgp(':V', None)
+    m.sgp(':PCT', True)
+    m.sgp(':UL', True)
+    m.sgp(':EPL', True)
+    m.sgp(':RT', -1.7)
+    m.sgp(':LF', 0.2)
+    m.sgp(':ANS', 0.4)
+    m.sgp(':EGS', 0.1)
+    m.sgp(':BLL', 0.5)
+    m.sgp(':TRACE-DETAIL', 'LOW')
+    m.sgp(':IU', 5)
+    m.sgp(':ALPHA', 0.2)
+    m.sgp(':NCNAR', None)
+    m.chunk_type('OPERATOR', 'PRE', 'ACTION', 'ARG1', 'ARG2', 'POST')
+    m.chunk_type('TASK', 'STATE', 'STEP')
+    m.chunk_type('ARGS', 'ARG1', 'ARG2')
+    m.define_chunks('READY')
+    m.define_chunks('START')
+    m.define_chunks('STIMULUS-READ')
+    m.define_chunks('CREATE')
+    m.define_chunks('READ')
+    m.define_chunks('RECALLED')
+    m.define_chunks('FILL')
+    m.define_chunks('FILLED')
+    m.define_chunks('ASSOCIATE')
+    m.define_chunks('WAIT')
+    m.define_chunks('RESPOND')
+    m.define_chunks('TEST-ARG2')
+    m.define_chunks('RESPONSE')
+    m.define_chunks('TYPE')
+    m.define_chunks('NEW-TRIAL')
+    m.define_chunks('COMPLETE-TASK')
+    m.define_chunks('RETRIEVING-OPERATOR')
+    m.define_chunks('ATTENDING')
+    m.define_chunks('RETRIEVING-RESPONSE')
+    m.add_chunk('OP1', 'OPERATOR', **{'PRE': 'START', 'ACTION': 'READ', 'ARG1': 'CREATE', 'POST': 'STIMULUS-READ'})
+    m.add_chunk('OP2', 'OPERATOR', **{'PRE': 'STIMULUS-READ', 'ACTION': 'ASSOCIATE', 'ARG1': 'FILLED', 'ARG2': 'FILL', 'POST': 'RECALLED'})
+    m.add_chunk('OP3', 'OPERATOR', **{'PRE': 'RECALLED', 'ACTION': 'TEST-ARG2', 'ARG1': 'RESPOND', 'ARG2': 'WAIT'})
+    m.add_chunk('OP4', 'OPERATOR', **{'PRE': 'RESPOND', 'ACTION': 'TYPE', 'ARG2': 'RESPONSE', 'POST': 'WAIT'})
+    m.add_chunk('OP5', 'OPERATOR', **{'PRE': 'WAIT', 'ACTION': 'READ', 'ARG2': 'FILL', 'POST': 'NEW-TRIAL'})
+    m.add_chunk('OP6', 'OPERATOR', **{'PRE': 'NEW-TRIAL', 'ACTION': 'COMPLETE-TASK', 'POST': 'START'})
+    m.set_all_base_levels(1000)
+    m.add_production(
+        '''(P RETRIEVE-OPERATOR =GOAL> ISA TASK STATE =STATE STEP READY ==> +RETRIEVAL> ISA OPERATOR PRE =STATE =GOAL> STEP RETRIEVING-OPERATOR)'''
+    )
+    m.add_production(
+        '''(P READ-ARG1 =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =RETRIEVAL> ISA OPERATOR ACTION READ ARG1 CREATE POST =STATE =VISUAL-LOCATION> ?VISUAL> STATE FREE ?IMAGINAL> STATE FREE ==> +IMAGINAL> ISA ARGS ARG1 FILL +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION =GOAL> STEP ATTENDING STATE =STATE)'''
+    )
+    m.add_production(
+        '''(P ENCODE-ARG1 =GOAL> ISA TASK STEP ATTENDING =VISUAL> ISA TEXT VALUE =VAL =IMAGINAL> ISA ARGS ARG1 FILL ?IMAGINAL> STATE FREE ==> *IMAGINAL> ARG1 =VAL =GOAL> STEP READY)'''
+    )
+    m.add_production(
+        '''(P RETIREVE-ASSOCIATE =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =IMAGINAL> ISA ARGS ARG1 =STIMULUS =RETRIEVAL> ISA OPERATOR ACTION ASSOCIATE ARG1 FILLED ARG2 FILL POST =STATE ?IMAGINAL> STATE FREE ==> +RETRIEVAL> ISA ARGS ARG1 =STIMULUS *IMAGINAL> ARG2 FILL =GOAL> STEP RETRIEVING-RESPONSE STATE =STATE)'''
+    )
+    m.add_production(
+        '''(P RETRIEVAL-ARG2-UNSUCCESSFUL =GOAL> ISA TASK STEP RETRIEVING-RESPONSE =IMAGINAL> ISA ARGS ARG2 FILL ?RETRIEVAL> BUFFER FAILURE ?IMAGINAL> STATE FREE ==> *IMAGINAL> ARG2 NIL =GOAL> STEP READY)'''
+    )
+    m.add_production(
+        '''(P RETRIEVAL-ARG2-SUCCESSFUL =GOAL> ISA TASK STEP RETRIEVING-RESPONSE =IMAGINAL> ISA ARGS ARG2 FILL =RETRIEVAL> ISA ARGS ARG2 =VAL ?IMAGINAL> STATE FREE ==> *IMAGINAL> ARG2 =VAL =GOAL> STEP READY)'''
+    )
+    m.add_production(
+        '''(P RESPOND-TO-RETRIEVAL-FAILURE =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =IMAGINAL> ISA ARGS ARG2 NIL =RETRIEVAL> ISA OPERATOR ACTION TEST-ARG2 ARG2 =STATE ?IMAGINAL> STATE FREE ==> =IMAGINAL> =GOAL> STATE =STATE STEP READY)'''
+    )
+    m.add_production(
+        '''(P RESPOND-TO-RETRIEVAL-SUCCESS =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =IMAGINAL> ISA ARGS ARG2 =VAL =RETRIEVAL> ISA OPERATOR ACTION TEST-ARG2 ARG1 =STATE ?IMAGINAL> STATE FREE ==> =IMAGINAL> =GOAL> STATE =STATE STEP READY)'''
+    )
+    m.add_production(
+        '''(P TYPE-ARG2 =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =IMAGINAL> ISA ARGS ARG2 =VAL =RETRIEVAL> ISA OPERATOR ACTION TYPE ARG2 RESPONSE POST =STATE ?IMAGINAL> STATE FREE ?MANUAL> STATE FREE ==> =IMAGINAL> +MANUAL> CMD PRESS-KEY KEY =VAL =GOAL> STATE =STATE STEP READY)'''
+    )
+    m.add_production(
+        '''(P READ-ARG2 =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =IMAGINAL> =RETRIEVAL> ISA OPERATOR ACTION READ ARG2 FILL POST =STATE =VISUAL-LOCATION> ?VISUAL> STATE FREE ?IMAGINAL> STATE FREE ==> +VISUAL> CMD MOVE-ATTENTION SCREEN-POS =VISUAL-LOCATION *IMAGINAL> ARG2 FILL =GOAL> STEP ATTENDING STATE =STATE)'''
+    )
+    m.add_production(
+        '''(P ENCODE-ARG2 =GOAL> ISA TASK STEP ATTENDING =IMAGINAL> ISA ARGS ARG2 FILL =VISUAL> ISA TEXT VALUE =VAL ?IMAGINAL> STATE FREE ==> *IMAGINAL> ARG2 =VAL =GOAL> STEP READY)'''
+    )
+    m.add_production(
+        '''(P COMPLETE-TASK =GOAL> ISA TASK STEP RETRIEVING-OPERATOR =RETRIEVAL> ISA OPERATOR ACTION COMPLETE-TASK POST =STATE ==> +GOAL> ISA TASK STATE =STATE STEP READY)'''
+    )
+    m.spp('COMPLETE-TASK', **{'REWARD': 20})
+    m.goal_focus(isa='TASK', **{'STATE': 'START', 'STEP': 'READY'})
+    return m

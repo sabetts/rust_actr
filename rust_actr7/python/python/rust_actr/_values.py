@@ -86,7 +86,9 @@ def render_value(value: Any) -> str:
         return repr(value)
     if isinstance(value, str):
         return render_symbol(value, what="symbol value")
+    if isinstance(value, (list, tuple)):
+        return "(" + " ".join(render_value(item) for item in value) + ")"
     raise TypeError(
-        "chunk values must be str, int, float, bool, None, or LispString; "
+        "chunk values must be str, int, float, bool, None, list, tuple, or LispString; "
         f"got {type(value).__name__}"
     )

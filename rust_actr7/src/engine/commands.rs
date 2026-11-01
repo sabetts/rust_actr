@@ -138,6 +138,12 @@ impl Engine {
             self.changed();
             return Ok(());
         }
+        // A task may schedule a built-in command (`sperling` clears the
+        // window with `schedule-event-relative ... "clear-exp-window"`).
+        if key == "CLEAR-EXP-WINDOW" {
+            self.clear_window();
+            return Ok(());
+        }
         let def = self
             .user_fns
             .get(&key)

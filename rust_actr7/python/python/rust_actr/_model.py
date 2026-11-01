@@ -150,6 +150,7 @@ class Model(RuntimeMixin):
         self._monitors: dict[str, list[str]] = {}
         self._current_window: Optional[str] = None
         self._device_installed = False
+        self._buffer_types: dict[str, str] = {}
 
     def _check_mutable(self) -> None:
         if self._session is not None:
@@ -303,7 +304,7 @@ class Model(RuntimeMixin):
         :meth:`add_chunk` directly.
         """
         if self._session is not None:
-            for item in chunks:
+            for item in _runtime_chunk_items(chunks):
                 self._eval("add-dm", _chunk_json(item))
             return self
         self._check_mutable()
@@ -323,7 +324,7 @@ class Model(RuntimeMixin):
     def define_chunks(self, *chunks: Union[Chunk, str]) -> "Model":
         """Define named chunks without adding them to declarative memory."""
         if self._session is not None:
-            for item in chunks:
+            for item in _runtime_chunk_items(chunks):
                 self._eval("define-chunks", _chunk_json(item))
             return self
         self._check_mutable()
@@ -346,7 +347,7 @@ class Model(RuntimeMixin):
         Pass a :class:`Chunk`/name from declarative memory, or use
         ``m.goal_focus(isa="goal", state="start")`` for an inline chunk.
         """
-        if self._session is not None:
+        if self._session is not None or isinstance(chunk, (list, tuple)):
             if chunk is not None and slots:
                 raise TypeError("goal_focus accepts either a chunk or keyword slots, not both")
             if chunk is None:
@@ -358,6 +359,10 @@ class Model(RuntimeMixin):
                     spec.extend([render_slot_name(slot), value])
             elif isinstance(chunk, (list, tuple)):
                 spec = list(chunk)
+                if spec and not any(str(x).lower() == "isa" for x in spec):
+                    typ = self._buffer_types.get("GOAL")
+                    if typ:
+                        spec = ["isa", typ, *spec]
             elif isinstance(chunk, Chunk):
                 spec = chunk.name
             else:
@@ -458,10 +463,10 @@ class Model(RuntimeMixin):
     def declare_buffer_usage(self, buffer: str, chunk_type: str, *slots: str) -> "Model":
         """Declare the chunk type a buffer is used with."""
         self._check_mutable()
-        parts = [
-            render_symbol(buffer, what="buffer name"),
-            render_symbol(chunk_type, what="chunk type"),
-        ]
+        buffer_name = render_symbol(buffer, what="buffer name")
+        type_name = render_symbol(chunk_type, what="chunk type")
+        self._buffer_types[buffer_name.upper()] = type_name.upper()
+        parts = [buffer_name, type_name]
         parts.extend(render_slot_name(slot) for slot in slots)
         self._emit("(declare-buffer-usage " + " ".join(parts) + ")")
         return self
@@ -545,7 +550,20 @@ class Model(RuntimeMixin):
         lines.append(")")
         return "\n".join(lines) + "\n"
 
-def _chunk_json(chunk: Union[Chunk, str]) -> Any:
+def _runtime_chunk_items(chunks: Sequence[Any]) -> list[Any]:
+    """Flatten the two tutorial runtime shapes: ``f(x)`` and ``f([x, y])``."""
+    if len(chunks) == 1 and isinstance(chunks[0], (list, tuple)):
+        items = list(chunks[0])
+        if items and all(isinstance(item, (str, Chunk)) for item in items):
+            return items
+        if items and all(isinstance(item, (list, tuple, Chunk)) for item in items):
+            return items
+    return list(chunks)
+
+
+def _chunk_json(chunk: Union[Chunk, str, list, tuple]) -> Any:
+    if isinstance(chunk, (list, tuple)):
+        return list(chunk)
     if isinstance(chunk, str):
         return [render_symbol(chunk, what="chunk name")]
     if not isinstance(chunk, Chunk):
