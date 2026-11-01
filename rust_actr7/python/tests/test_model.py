@@ -113,6 +113,52 @@ class ModelTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             model.goal_focus("missing")
 
+    def test_inline_goal_focus(self):
+        model = actr.Model("inline")
+        model.chunk_type("goal", "state")
+        model.goal_focus(isa="goal", state="start")
+        self.assertIn("(goal-focus (isa goal state start))", model.to_lisp())
+        self.assertIn("SET-BUFFER-CHUNK GOAL (ISA GOAL STATE START)", model.run(0.0))
+
+    def test_tutorial_model_body_forms(self):
+        model = actr.Model("forms")
+        model.chunk_type("goal", "state")
+        model.add_chunk("shark")
+        model.add_dm("dangerous")
+        model.define_chunks("unknown")
+        model.set_similarities([("small", "medium", -0.4), ("medium", "large", -0.4)])
+        model.set_base_levels([("f00", 5), ("f01", 4, 1.0)])
+        model.set_all_base_levels(3)
+        model.spp("p1", u=-2, reward=1.0)
+        model.set_visloc_default(attended=False)
+        model.declare_buffer_usage("goal", "goal", "state")
+        model.call_act_r_command("create-example-memories")
+        model.set_initial_buffer("imaginal", isa="chunk", category="unknown")
+        model.install_device("Sentence Experiment", visible=False, width=600, height=300)
+        model.add_production("(p p1 =goal> state start ==> =goal> state done)")
+
+        source = model.to_lisp()
+        self.assertIn("(add-dm (shark))", source)
+        self.assertIn("(add-dm (dangerous))", source)
+        self.assertIn("(define-chunks (unknown))", source)
+        self.assertIn("(set-similarities (small medium -0.4) (medium large -0.4))", source)
+        self.assertIn("(set-base-levels (f00 5) (f01 4 1.0))", source)
+        self.assertIn("(set-all-base-levels 3)", source)
+        self.assertIn("(spp p1 :u -2 :reward 1.0)", source)
+        self.assertIn("(set-visloc-default attended nil)", source)
+        self.assertIn("(declare-buffer-usage goal goal state)", source)
+        self.assertIn('(call-act-r-command "create-example-memories")', source)
+        self.assertIn("(set-buffer-chunk 'imaginal '(isa chunk category unknown))", source)
+        self.assertIn('"Sentence Experiment"', source)
+        model.run(0.0)
+
+    def test_raw_form(self):
+        model = actr.Model("raw")
+        model.chunk_type("goal", "state")
+        model.form("(when t (add-dm (start isa chunk)))")
+        self.assertIn("(when t (add-dm (start isa chunk)))", model.to_lisp())
+        model.run(0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

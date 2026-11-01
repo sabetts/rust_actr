@@ -1,4 +1,10 @@
-"""A model-centric builder that renders an ACT-R ``define-model`` source."""
+"""A model-centric builder that renders an ACT-R ``define-model`` source.
+
+The builder keeps the forms in call order, so a Python model reads (and
+renders) like the corresponding ``.lisp`` model body.  Definition methods are
+frozen once the native session is created; runtime methods added by
+:class:`Model` become available at that point.
+"""
 
 from __future__ import annotations
 
@@ -7,21 +13,27 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional, Sequence, Union
 
 from . import _native
-from ._values import render_slot_name, render_symbol, render_value
+from ._values import LispString, render_slot_name, render_symbol, render_value
 
 _PRODUCTION_HEAD = re.compile(r"^\(\s*p\s+([^\s()]+)", re.IGNORECASE)
 
 
 @dataclass
 class Chunk:
-    """A named chunk in model declarative memory."""
+    """A named chunk.
+
+    ``type`` is optional so sparse chunks such as ``(shark)`` can be added
+    with :meth:`Model.add_dm`.
+    """
 
     name: str
-    type: str
+    type: Optional[str] = None
     slots: dict[str, Any] = field(default_factory=dict)
 
     def to_lisp(self) -> str:
-        parts = [render_symbol(self.name, what="chunk name"), "isa", render_symbol(self.type)]
+        parts = [render_symbol(self.name, what="chunk name")]
+        if self.type:
+            parts.extend(["isa", render_symbol(self.type, what="chunk type")])
         for slot, value in self.slots.items():
             parts.append(slot)
             parts.append(render_value(value))
@@ -29,7 +41,23 @@ class Chunk:
 
     def __repr__(self) -> str:
         args = ", ".join(f"{k}={v!r}" for k, v in self.slots.items())
-        return f"Chunk({self.name!r}, {self.type!r}{', ' + args if args else ''})"
+        type_part = f", {self.type!r}" if self.type else ""
+        return f"Chunk({self.name!r}{type_part}{', ' + args if args else ''})"
+
+
+@dataclass(frozen=True)
+class _InlineChunk:
+    """An unnamed chunk spec used by inline ``(goal-focus (isa ...))``."""
+
+    type: str
+    slots: dict[str, Any] = field(default_factory=dict)
+
+    def to_lisp(self) -> str:
+        parts = ["isa", render_symbol(self.type, what="chunk type")]
+        for slot, value in self.slots.items():
+            parts.append(slot)
+            parts.append(render_value(value))
+        return "(" + " ".join(parts) + ")"
 
 
 @dataclass(frozen=True)
@@ -58,11 +86,49 @@ class _Production:
     text: str
 
 
+def _render_param_key(key: str) -> str:
+    if not isinstance(key, str) or not key:
+        raise TypeError("parameter key must be a non-empty string")
+    key = key.replace("_", "-")
+    return key if key.startswith(":") else ":" + key
+
+
+def _render_pairs(slots: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for slot, value in slots.items():
+        parts.append(render_slot_name(slot))
+        parts.append(render_value(value))
+    return " ".join(parts)
+
+
+def _render_similarity(entry: Sequence[Any]) -> str:
+    if len(entry) != 3:
+        raise ValueError("similarity entries must be (chunk_a, chunk_b, value)")
+    a, b, value = entry
+    return (
+        f"({render_symbol(a, what='similar chunk')} "
+        f"{render_symbol(b, what='similar chunk')} {render_value(value)})"
+    )
+
+
+def _render_base_level(entry: Sequence[Any]) -> str:
+    if len(entry) not in (2, 3):
+        raise ValueError("base-level entries must be (chunk, level[, creation])")
+    parts = [
+        render_symbol(entry[0], what="chunk name"),
+        render_value(entry[1]),
+    ]
+    if len(entry) == 3 and entry[2] is not None:
+        parts.append(render_value(entry[2]))
+    return "(" + " ".join(parts) + ")"
+
+
 class Model:
     """Build and run an ACT-R model from Python.
 
-    Definitions must be added before the first run/reset. The generated Lisp
-    source is available through :meth:`to_lisp`.
+    Definitions are added before the first run/reset and rendered by
+    :meth:`to_lisp`.  The native session is created lazily on the first
+    runtime call.
     """
 
     def __init__(self, name: str, seed: Sequence[int] = (100, 0)) -> None:
@@ -70,9 +136,11 @@ class Model:
         self.seed = _check_seed(seed)
         self._chunk_types: list[_ChunkType] = []
         self._chunks: list[Chunk] = []
+        self._defined: list[Chunk] = []
         self._productions: list[_Production] = []
         self._goal_focuses: list[str] = []
         self._sgp: list[tuple[str, Any]] = []
+        self._body: list[str] = []
         self._engine: Optional[_native.Engine] = None
 
     def _check_mutable(self) -> None:
@@ -82,6 +150,9 @@ class Model:
                 "create a new Model to change them"
             )
 
+    def _emit(self, form: str) -> None:
+        self._body.append(form)
+
     def sgp(self, key: str, value: Any) -> "Model":
         """Add a global parameter setting (``(sgp :key value)``)."""
         self._check_mutable()
@@ -89,6 +160,7 @@ class Model:
             raise ValueError("sgp key must be a string beginning with ':'")
         render_symbol(key, what="sgp key")
         self._sgp.append((key, value))
+        self._emit(f"(sgp {key} {render_value(value)})")
         return self
 
     def chunk_type(
@@ -128,34 +200,98 @@ class Model:
         normalized_parents = tuple(
             render_symbol(parent, what="parent chunk type") for parent in parents
         )
-        self._chunk_types.append(
-            _ChunkType(
-                type_name,
-                tuple(normalized_slots),
-                default_items,
-                normalized_parents,
-            )
+        chunk_type = _ChunkType(
+            type_name,
+            tuple(normalized_slots),
+            default_items,
+            normalized_parents,
         )
+        self._chunk_types.append(chunk_type)
+        self._emit(chunk_type.to_lisp())
         return self
 
-    def add_chunk(self, name: str, type: str, **slots: Any) -> Chunk:
-        """Create a named chunk and add it to declarative memory."""
+    def add_chunk(
+        self,
+        name: str,
+        type: Optional[str] = None,
+        **slots: Any,
+    ) -> Chunk:
+        """Create a named chunk and add it to declarative memory.
+
+        ``type`` may be omitted for sparse chunks, e.g.
+        ``m.add_chunk("shark")`` renders ``(shark)``.
+        """
         self._check_mutable()
         chunk_name = render_symbol(name, what="chunk name")
         if any(c.name.casefold() == chunk_name.casefold() for c in self._chunks):
             raise ValueError(f"chunk already defined: {chunk_name}")
         rendered_slots = {render_slot_name(slot): value for slot, value in slots.items()}
-        chunk = Chunk(chunk_name, render_symbol(type, what="chunk type"), rendered_slots)
+        chunk = Chunk(chunk_name, render_symbol(type, what="chunk type") if type else None, rendered_slots)
         self._chunks.append(chunk)
+        self._emit("(add-dm " + chunk.to_lisp() + ")")
         return chunk
 
-    def goal_focus(self, chunk: Union[Chunk, str]) -> "Model":
-        """Set the initial goal buffer to a chunk defined with :meth:`add_chunk`."""
+    def add_dm(self, *chunks: Union[Chunk, str]) -> "Model":
+        """Add bare/sparse chunks to declarative memory.
+
+        Accepts named :class:`Chunk` objects or strings.  For typed chunks use
+        :meth:`add_chunk` directly.
+        """
         self._check_mutable()
+        for item in chunks:
+            if isinstance(item, Chunk):
+                chunk = item
+            elif isinstance(item, str):
+                chunk = Chunk(render_symbol(item, what="chunk name"))
+            else:
+                raise TypeError("add_dm accepts Chunk objects or chunk names")
+            if any(c.name.casefold() == chunk.name.casefold() for c in self._chunks):
+                raise ValueError(f"chunk already defined: {chunk.name}")
+            self._chunks.append(chunk)
+            self._emit("(add-dm " + chunk.to_lisp() + ")")
+        return self
+
+    def define_chunks(self, *chunks: Union[Chunk, str]) -> "Model":
+        """Define named chunks without adding them to declarative memory."""
+        self._check_mutable()
+        for item in chunks:
+            if isinstance(item, Chunk):
+                chunk = item
+            elif isinstance(item, str):
+                chunk = Chunk(render_symbol(item, what="chunk name"))
+            else:
+                raise TypeError("define_chunks accepts Chunk objects or chunk names")
+            if any(c.name.casefold() == chunk.name.casefold() for c in self._defined):
+                raise ValueError(f"chunk already defined: {chunk.name}")
+            self._defined.append(chunk)
+            self._emit("(define-chunks " + chunk.to_lisp() + ")")
+        return self
+
+    def goal_focus(self, chunk: Union[Chunk, str, None] = None, **slots: Any) -> "Model":
+        """Set the initial goal buffer.
+
+        Pass a :class:`Chunk`/name from declarative memory, or use
+        ``m.goal_focus(isa="goal", state="start")`` for an inline chunk.
+        """
+        self._check_mutable()
+        if chunk is not None and slots:
+            raise TypeError("goal_focus accepts either a chunk or keyword slots, not both")
+        if chunk is None:
+            isa = slots.pop("isa", None)
+            if isa is None:
+                raise TypeError("goal_focus requires a chunk or isa=...")
+            inline = _InlineChunk(
+                render_symbol(isa, what="chunk type"),
+                {render_slot_name(slot): value for slot, value in slots.items()},
+            )
+            self._goal_focuses.append(inline.to_lisp())
+            self._emit("(goal-focus " + inline.to_lisp() + ")")
+            return self
         name = chunk.name if isinstance(chunk, Chunk) else render_symbol(chunk, what="chunk name")
         if not any(c.name.casefold() == name.casefold() for c in self._chunks):
             raise ValueError(f"goal-focus chunk is not in declarative memory: {name}")
         self._goal_focuses.append(name)
+        self._emit(f"(goal-focus {name})")
         return self
 
     def add_production(self, text: str) -> "Model":
@@ -171,21 +307,135 @@ class Model:
         if any(p.name == prod_name for p in self._productions):
             raise ValueError(f"production already defined: {match.group(1)}")
         self._productions.append(_Production(prod_name, source))
+        self._emit(source)
+        return self
+
+    def spp(self, production: str, **params: Any) -> "Model":
+        """Set production parameters (``(spp <production> :key value)``)."""
+        self._check_mutable()
+        name = render_symbol(production, what="production name")
+        if not params:
+            raise ValueError("spp requires at least one parameter")
+        rendered = " ".join(
+            f"{_render_param_key(key)} {render_value(value)}"
+            for key, value in params.items()
+        )
+        self._emit(f"(spp {name} {rendered})")
+        return self
+
+    def set_similarities(self, *pairs: Sequence[Any]) -> "Model":
+        """Set explicit similarities between chunks.
+
+        Accepts ``(a, b, value)`` sequences or a single iterable of them.
+        """
+        self._check_mutable()
+        entries = _as_entries(pairs, 3, "similarity")
+        rendered = " ".join(_render_similarity(entry) for entry in entries)
+        self._emit(f"(set-similarities {rendered})")
+        return self
+
+    def set_base_levels(self, *pairs: Sequence[Any]) -> "Model":
+        """Set fixed base levels for named chunks."""
+        self._check_mutable()
+        entries = _as_entries(pairs, (2, 3), "base-level")
+        rendered = " ".join(_render_base_level(entry) for entry in entries)
+        self._emit(f"(set-base-levels {rendered})")
+        return self
+
+    def set_all_base_levels(self, level: Any, creation: Any = None) -> "Model":
+        """Set a fixed base level for every chunk in declarative memory."""
+        self._check_mutable()
+        args = [render_value(level)]
+        if creation is not None:
+            args.append(render_value(creation))
+        self._emit("(set-all-base-levels " + " ".join(args) + ")")
+        return self
+
+    def declare_buffer_usage(self, buffer: str, chunk_type: str, *slots: str) -> "Model":
+        """Declare the chunk type a buffer is used with."""
+        self._check_mutable()
+        parts = [
+            render_symbol(buffer, what="buffer name"),
+            render_symbol(chunk_type, what="chunk type"),
+        ]
+        parts.extend(render_slot_name(slot) for slot in slots)
+        self._emit("(declare-buffer-usage " + " ".join(parts) + ")")
+        return self
+
+    def set_visloc_default(self, **slots: Any) -> "Model":
+        """Set default constraints for an unconstrained visual-location request."""
+        self._check_mutable()
+        if not slots:
+            raise ValueError("set_visloc_default requires at least one slot")
+        self._emit("(set-visloc-default " + _render_pairs(slots) + ")")
+        return self
+
+    def call_act_r_command(self, name: str, *args: Any) -> "Model":
+        """Schedule a task command from the model body."""
+        self._check_mutable()
+        command = render_symbol(name, what="command name")
+        rendered = " ".join(render_value(arg) for arg in args)
+        suffix = f" {rendered}" if rendered else ""
+        self._emit(f'(call-act-r-command "{command}"{suffix})')
+        return self
+
+    def set_initial_buffer(
+        self,
+        buffer: str,
+        chunk: Union[Chunk, str, None] = None,
+        **slots: Any,
+    ) -> "Model":
+        """Set a buffer's initial chunk in the model body (re-applied on reset)."""
+        self._check_mutable()
+        buffer_name = render_symbol(buffer, what="buffer name")
+        if chunk is not None and slots:
+            raise TypeError("set_initial_buffer accepts either a chunk or keyword slots")
+        if chunk is None:
+            isa = slots.pop("isa", None)
+            if isa is None:
+                raise TypeError("set_initial_buffer requires a chunk or isa=...")
+            spec = _InlineChunk(
+                render_symbol(isa, what="chunk type"),
+                {render_slot_name(slot): value for slot, value in slots.items()},
+            ).to_lisp()
+        elif isinstance(chunk, Chunk):
+            spec = chunk.to_lisp()
+        else:
+            spec = render_symbol(chunk, what="chunk name")
+        self._emit(f"(set-buffer-chunk '{buffer_name} '{spec})")
+        return self
+
+    def install_device(
+        self,
+        window: Union[str, bool] = True,
+        **options: Any,
+    ) -> "Model":
+        """Install a device in the model body (before the first run).
+
+        ``window`` may be a window title or ``True`` for the default title.
+        """
+        self._check_mutable()
+        title = "window" if window is True else (window if isinstance(window, str) else None)
+        if title is None:
+            raise TypeError("install_device window must be a title or True")
+        opts = _render_window_options(options)
+        suffix = f" {opts}" if opts else ""
+        title_text = render_value(LispString(title))
+        self._emit(f"(install-device (open-exp-window {title_text}{suffix}))")
+        return self
+
+    def form(self, source: str) -> "Model":
+        """Append a raw model-body form."""
+        self._check_mutable()
+        if not isinstance(source, str) or not source.strip():
+            raise TypeError("form requires a non-empty Lisp source string")
+        self._emit(source.strip())
         return self
 
     def to_lisp(self) -> str:
         """Render the model as a complete ``define-model`` source."""
         lines = [f"(define-model {self.name}"]
-        for key, value in self._sgp:
-            lines.append(f"  (sgp {key} {render_value(value)})")
-        for chunk_type in self._chunk_types:
-            lines.append("  " + chunk_type.to_lisp())
-        for chunk in self._chunks:
-            lines.append("  (add-dm " + chunk.to_lisp() + ")")
-        for goal in self._goal_focuses:
-            lines.append(f"  (goal-focus {goal})")
-        for production in self._productions:
-            lines.append(production.text)
+        lines.extend("  " + form for form in self._body)
         lines.append(")")
         return "\n".join(lines) + "\n"
 
@@ -232,6 +482,37 @@ class Model:
     @property
     def compiled(self) -> bool:
         return self._engine is not None
+
+
+def _as_entries(
+    pairs: Sequence[Sequence[Any]],
+    width: Union[int, Sequence[int]],
+    what: str,
+) -> list[Sequence[Any]]:
+    """Normalize ``(a, b, v)`` args or a single iterable of entries."""
+    if not pairs:
+        raise ValueError(f"{what} requires at least one entry")
+    widths = (width,) if isinstance(width, int) else tuple(width)
+    if len(pairs) == 1 and isinstance(pairs[0], (list, tuple)):
+        candidate = pairs[0]
+        scalar_entry = len(candidate) in widths and all(
+            not isinstance(item, (list, tuple)) for item in candidate
+        )
+        entries = [candidate] if scalar_entry else list(candidate)
+    else:
+        entries = list(pairs)
+    for entry in entries:
+        if not isinstance(entry, (list, tuple)) or len(entry) not in widths:
+            raise ValueError(f"invalid {what} entry: {entry!r}")
+    return entries
+
+
+def _render_window_options(options: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key, value in options.items():
+        parts.append(":" + key.replace("_", "-"))
+        parts.append(render_value(value))
+    return " ".join(parts)
 
 
 def _check_seed(seed: Sequence[int]) -> tuple[int, int]:
