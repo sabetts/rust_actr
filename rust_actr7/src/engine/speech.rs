@@ -15,17 +15,17 @@ const SYLLABLE_DATA: &[u8] = include_bytes!("../data/syllable_table.bin");
 const MAGIC: &[u8; 8] = b"ACTRSYL1";
 
 static BUILTIN: OnceLock<HashMap<String, u8>> = OnceLock::new();
-static USER: OnceLock<Mutex<HashMap<String, u8>>> = OnceLock::new();
+static USER: OnceLock<Mutex<HashMap<String, Option<u8>>>> = OnceLock::new();
 
 fn builtin() -> &'static HashMap<String, u8> {
     BUILTIN.get_or_init(decode_table)
 }
 
-fn user() -> &'static Mutex<HashMap<String, u8>> {
+fn user() -> &'static Mutex<HashMap<String, Option<u8>>> {
     USER.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn lock_user() -> std::sync::MutexGuard<'static, HashMap<String, u8>> {
+fn lock_user() -> std::sync::MutexGuard<'static, HashMap<String, Option<u8>>> {
     user()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -64,18 +64,24 @@ fn decode_table() -> HashMap<String, u8> {
 
 pub(super) fn syllable_count(word: &str) -> Option<u8> {
     let key = word.to_uppercase();
-    if let Some(count) = lock_user().get(&key) {
-        return Some(*count);
+    match lock_user().get(&key) {
+        Some(Some(count)) => Some(*count),
+        Some(None) => None,
+        None => builtin().get(&key).copied(),
     }
-    builtin().get(&key).copied()
 }
 
 pub(super) fn register_syllable_count(word: &str, syllables: u8) {
-    lock_user().insert(word.to_uppercase(), syllables);
+    lock_user().insert(word.to_uppercase(), Some(syllables));
 }
 
 pub(super) fn remove_syllable_count(word: &str) -> bool {
-    lock_user().remove(&word.to_uppercase()).is_some()
+    let key = word.to_uppercase();
+    let existed = lock_user().contains_key(&key) || builtin().contains_key(&key);
+    if existed {
+        lock_user().insert(key, None);
+    }
+    existed
 }
 
 impl super::Engine {
