@@ -143,6 +143,11 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(calls, [True])
         self.assertIn("SET-BUFFER-CHUNK IMAGINAL RESULT", model.trace)
 
+    def test_siegler_digit_sounds_and_speech(self):
+        result = runner.run_task("siegler", "trial", 1, 1)
+        self.assertIsInstance(result, str)
+        self.assertNotEqual(result, "")
+
     def test_zbrodoff_set_runs_all_trials(self):
         result = runner.run_task("zbrodoff", "set")
         rts, counts = result

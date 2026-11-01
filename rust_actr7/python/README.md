@@ -111,7 +111,7 @@ Port status:
 
 - Working end-to-end: `count`, `addition`, `semantic`, `demo2`, `fan-no-pm`,
   `grouped`, `onehit` (hands/blocks/learning), `zbrodoff` (set/block/experiment),
-  and the dynamic models that do not need task-side hooks.
+  `siegler`, and the dynamic models that do not need task-side hooks.
 - Python `:sim-hook` functions are wired for `1hit`, `bst-ppm`, and
   `categorize`. Python `imaginal-action` callbacks are also bridged through a
   host-yield step; `bst-ppm` still stops earlier in its live-window/mouse path.
@@ -119,8 +119,8 @@ Port status:
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
   to demonstrate load warnings) and is not ported.
-- Known gaps: the full `bst-ppm` live task traversal, and
-  `new-digit-sound` / `new-word-sound` (`siegler`).
+- Known gaps: the full `bst-ppm` live task traversal. `new-digit-sound` and
+  the speech-device `output-speech` callback now work for `siegler`.
 
 ## Tests
 
