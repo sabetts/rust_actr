@@ -1,6 +1,7 @@
 import unittest
 
 import rust_actr as actr
+import rust_actr.actr as client
 
 
 class ModelTests(unittest.TestCase):
@@ -252,6 +253,45 @@ class ModelTests(unittest.TestCase):
         model.form("(when t (add-dm (start isa chunk)))")
         self.assertIn("(when t (add-dm (start isa chunk)))", model.to_lisp())
         model.run(0.0)
+
+
+    def test_use_flushes_pending_commands(self):
+        client.clear_state()
+        calls = []
+
+        client.add_command("py-pending", lambda: calls.append(True))
+        model = actr.Model("pending")
+        client.use(model)
+        model.call_command("py-pending")
+
+        self.assertEqual(calls, [True])
+        client.clear_state()
+
+    def test_use_binds_pending_sim_hook(self):
+        client.clear_state()
+        calls = []
+
+        class FakeModel:
+            sim_hook_name = "PY-HOOK"
+
+            def add_command(self, name, function):
+                calls.append(("add", name.upper()))
+
+            def monitor_command(self, original, monitor):
+                calls.append(("monitor", original.upper(), monitor.upper()))
+
+            def set_sim_hook(self, function):
+                calls.append(("hook", function))
+
+        def hook(a, b):
+            return 0.0
+
+        client.add_command("py-hook", hook)
+        client.use(FakeModel())
+
+        self.assertIn(("add", "PY-HOOK"), calls)
+        self.assertIn(("hook", hook), calls)
+        client.clear_state()
 
 
 if __name__ == "__main__":

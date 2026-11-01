@@ -144,6 +144,15 @@ impl Engine {
             self.clear_window();
             return Ok(());
         }
+        // A command registered by the embedder (`add-act-r-command`): record
+        // it for the Python side to dispatch after this event instead of
+        // trying to run it as a Lisp task defun.
+        if self.task_commands.contains(&key) {
+            self.fired_task_commands
+                .borrow_mut()
+                .push((key, params.iter().map(Value::show).collect()));
+            return Ok(());
+        }
         let def = self
             .user_fns
             .get(&key)

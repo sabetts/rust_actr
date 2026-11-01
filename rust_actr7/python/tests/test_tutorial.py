@@ -1,48 +1,58 @@
-import os
+import ast
 import pathlib
+import runpy
+import subprocess
+import sys
 import unittest
 
 HERE = pathlib.Path(__file__).resolve()
-REPO = HERE.parents[3]
-os.environ.setdefault("ACTR_DIR", str(REPO / "actr7.x"))
+TUTORIAL = HERE.parents[1] / "tutorial"
 
-import rust_actr.tutorial as tutorial  # noqa: E402
-from rust_actr.tutorial import runner  # noqa: E402
+
+def run_script(relative):
+    parts = relative.split()
+    return subprocess.run(
+        [sys.executable, str(TUTORIAL / parts[0]), *parts[1:]],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
 
 
 class TutorialTests(unittest.TestCase):
-    def test_all_models_compile(self):
-        self.assertGreaterEqual(len(tutorial.available()), 25)
-        for path in tutorial.available():
-            with self.subTest(path=path):
-                model = tutorial.build_model(path)
+    def test_all_scripts_compile(self):
+        scripts = sorted(TUTORIAL.glob("unit*/*.py"))
+        self.assertGreaterEqual(len(scripts), 30)
+        for path in scripts:
+            with self.subTest(path=path.relative_to(TUTORIAL)):
+                namespace = runpy.run_path(str(path))
+                model = namespace.get("MODEL")
+                if model is None:
+                    model = namespace["build"]()
                 model._ensure_session()
 
-    def test_count_runs(self):
-        import rust_actr.actr as actr
+    def test_count_cli_prints_trace(self):
+        result = run_script("unit1/count.py")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PRODUCTION-FIRED INCREMENT", result.stdout)
+        self.assertIn("PRODUCTION-FIRED STOP", result.stdout)
 
-        actr.load_act_r_model("ACT-R:tutorial;unit1;count.lisp")
-        actr.run(10)
-        self.assertIn("PRODUCTION-FIRED INCREMENT", actr.current_model().trace)
+    def test_demo2_cli(self):
+        result = run_script("unit2/demo2.py")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(result.stdout.strip().upper(), "BCDFGHJKLMNPQRSTVWXYZ")
 
-    def test_demo2_task(self):
-        result = runner.run_task("demo2", "experiment")
-        self.assertIn(result.upper(), "BCDFGHJKLMNPQRSTVWXYZ")
+    def test_grouped_cli(self):
+        result = run_script("unit5/grouped.py")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        recalled = ast.literal_eval(result.stdout.strip())
+        self.assertEqual(sorted(recalled), ["1", "2", "3", "4", "5", "6", "7", "8"])
 
-    def test_fan_no_pm_sentence(self):
-        module = runner.load_task("fan_no_pm")
-        seconds, correct = module.sentence("'lawyer'", "'store'", True, "person")
-        self.assertTrue(correct)
-        self.assertGreater(seconds, 0)
-
-    def test_grouped_recall(self):
-        result = runner.run_task("grouped", "recall")
-        self.assertEqual(len(result), 8)
-        self.assertEqual(sorted(result), ["1", "2", "3", "4", "5", "6", "7", "8"])
-
-    def test_onehit_hands(self):
-        result = runner.run_task("onehit", "hands", 2)
-        self.assertEqual(len(result), 4)
+    def test_onehit_cli(self):
+        result = run_script("unit5/onehit.py hands 2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        scores = ast.literal_eval(result.stdout.strip())
+        self.assertEqual(len(scores), 4)
 
 
 if __name__ == "__main__":

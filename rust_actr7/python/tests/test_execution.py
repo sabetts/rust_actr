@@ -1,13 +1,17 @@
-import os
 import pathlib
+import runpy
 import unittest
 
-HERE = pathlib.Path(__file__).resolve()
-REPO = HERE.parents[3]
-os.environ.setdefault("ACTR_DIR", str(REPO / "actr7.x"))
+import rust_actr as actr
+import rust_actr.actr as client
 
-import rust_actr as actr  # noqa: E402
-from rust_actr.tutorial import runner  # noqa: E402
+HERE = pathlib.Path(__file__).resolve()
+TUTORIAL = HERE.parents[1] / "tutorial"
+
+
+def load_tutorial(relative):
+    client.clear_state()
+    return runpy.run_path(str(TUTORIAL / relative))
 
 
 def device_model(name="device"):
@@ -144,19 +148,20 @@ class ExecutionTests(unittest.TestCase):
         self.assertIn("SET-BUFFER-CHUNK IMAGINAL RESULT", model.trace)
 
     def test_siegler_digit_sounds_and_speech(self):
-        result = runner.run_task("siegler", "trial", 1, 1)
+        module = load_tutorial("unit5/siegler.py")
+        result = module["trial"](1, 1)
         self.assertIsInstance(result, str)
         self.assertNotEqual(result, "")
 
     def test_bst_ppm_live_task(self):
-        module = runner.load_task("bst_ppm")
-        choices = module.bst_set(False, False, module.exp_stims[:3])
+        module = load_tutorial("unit8/bst_ppm.py")
+        choices = module["bst_set"](False, False, module["exp_stims"][:3])
         self.assertEqual(len(choices), 3)
         self.assertTrue(all(choice in ("over", "under") for choice in choices))
 
     def test_zbrodoff_set_runs_all_trials(self):
-        result = runner.run_task("zbrodoff", "set")
-        rts, counts = result
+        module = load_tutorial("unit4/zbrodoff.py")
+        rts, counts = module["set"]()
         self.assertEqual(len(rts), 3)
         self.assertEqual(counts, [8, 8, 8])
 

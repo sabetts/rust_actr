@@ -49,19 +49,16 @@ surface while reusing the engine's existing command parsing.
     scheduling, audio, history/introspection, RNG, statistics.
   - Runs through the native session; no Lisp runtime.
 
-### 2.3 Tutorial compatibility
+### 2.3 Tutorial scripts
 
 - `rust_actr.actr` (`python/rust_actr/actr.py`) is a module-level façade that
-  matches the tutorial `actr.py` client. It binds `load_act_r_model` to the
-  Python registry and proxies everything else to the current `Model`.
-- `rust_actr.tutorial` (`python/rust_actr/tutorial/`) contains:
-  - `models/` — Python ports of the tutorial `define-model` files.
-  - `__init__.py` — `LOGICAL_PATH -> build()` registry.
-  - `runner.py` — imports the vendored `actr7.x/tutorial/python` task scripts
-    with `sys.modules["actr"]` pointing at the local façade.
-  - `run.py` — CLI: list models/tasks and run a task function.
-- `python/tools/port_tutorial_models.py` regenerates the model ports from the
-  vendored Lisp sources.
+  matches the tutorial `actr.py` client. `use(model)` binds the current model
+  and replays pending commands; `clear_state()` drops both.
+- `rust_actr7/python/tutorial/unitN/` contains self-contained scripts. Each
+  has a `build(seed)` function plus, where the unit has one, the task code
+  (`MODEL = actr.use(build())`), and a `__main__` entry point.
+- `python/tools/port_tutorial.py` regenerates the tree from the vendored Lisp
+  models and Python task scripts.
 
 ## 3. What works
 
@@ -95,9 +92,12 @@ the live session.
 - Button `:action`s are surfaced to Python and dispatched.
 - Python `:sim-hook` functions are supported. They receive typed Python values
   (numbers as numbers, strings as strings), can return `None`/`False` for
-  "no similarity", and are auto-bound from `load_act_r_model`.
+  "no similarity", and are auto-bound by `actr.use()`.
 - Python `imaginal-action` callbacks use a host-yield step: the engine pauses,
   Python runs the action with model access, then the engine places the result.
+- Scheduled task commands (`schedule-event-relative` and friends) registered
+  with `actr.add_command` are recorded as fired task commands and dispatched
+  between events (`pm-issues` uses this for its prompt).
 - `mod-chunk` and `copy-chunk` work; task-facing slot reads and copies use the
   live buffer chunk (including modifications made by the current production).
 - `new-digit-sound` schedules digit audio events, and installing a device makes
@@ -114,6 +114,8 @@ Working end-to-end (verified by tests or direct runs):
 - `onehit` (hands/blocks/learning)
 - `zbrodoff` (set/block/experiment)
 - `sperling` (trial; experiment code path)
+- `pm-issues` (scheduled prompt command)
+- `paired`, `bst`, `past-tense`, `pcomp-issues` (one-trial/one-game runs)
 - `bst-ppm` (live multi-trial `bst_set`; `experiment(1)` produces choices and
   utility values)
 - `siegler` (digit sounds + `output-speech`)
@@ -148,7 +150,7 @@ ported.
 ### 4.2 Callback timing
 
 - `output-key`/`output-speech` callbacks run between engine events.
-- `!eval!` task commands carry evaluated arguments.
+- `!eval!` and scheduled task commands carry evaluated arguments.
 - Host actions (`imaginal-action`) and device actions can schedule new events;
   the stepping loop re-enters the engine after handling them.
 - Nested `run` from a callback is rejected; other commands are allowed.
@@ -176,12 +178,12 @@ semantics (which continue to use `chunk_name_slot`).
 | `rust_actr7/python/src/lib.rs` | PyO3 `Engine` and `Session` bindings |
 | `rust_actr7/python/python/rust_actr/_model.py` | builder + runtime host |
 | `rust_actr7/python/python/rust_actr/_runtime.py` | runtime command surface |
-| `rust_actr7/python/python/rust_actr/actr.py` | tutorial `actr` façade |
-| `rust_actr7/python/python/rust_actr/tutorial/` | registry, runner, CLI, model ports |
-| `rust_actr7/python/tools/port_tutorial_models.py` | Lisp-to-Python model port generator |
+| `rust_actr7/python/python/rust_actr/actr.py` | tutorial `actr` façade (`use`, `clear_state`) |
+| `rust_actr7/python/tutorial/` | self-contained tutorial model/task scripts |
+| `rust_actr7/python/tools/port_tutorial.py` | model/task port generator |
 | `rust_actr7/python/tests/test_model.py` | builder/runtime/device unit tests |
 | `rust_actr7/python/tests/test_execution.py` | stepping, callbacks, sim-hook, bst-ppm, siegler |
-| `rust_actr7/python/tests/test_tutorial.py` | registry, model compile, task smoke tests |
+| `rust_actr7/python/tests/test_tutorial.py` | model compile, CLI smoke tests |
 | `rust_actr7/src/engine/*` | engine changes for hooks, host actions, live reads, speech |
 
 ## 6. Build and run
@@ -192,31 +194,27 @@ python -m maturin build --release
 python -m pip install --force-reinstall --no-deps target/wheels/rust_actr-0.1.0-cp39-abi3-win_amd64.whl
 ```
 
-Run tutorial models/tasks:
+Run tutorial scripts:
 
 ```powershell
-$env:ACTR_DIR = "C:\path\to\actr7.x"
-python -m rust_actr.tutorial.run --list-models
-python -m rust_actr.tutorial.run --list-tasks
-python -m rust_actr.tutorial.run demo2 experiment
-python -m rust_actr.tutorial.run fan_no_pm sentence "'lawyer'" "'store'" true person
+python tutorial/unit1/count.py
+python tutorial/unit2/demo2.py
+python tutorial/unit5/grouped.py
+python tutorial/unit5/onehit.py hands 2
+python tutorial/unit8/bst_ppm.py experiment 1
 ```
 
 Direct Python:
 
 ```python
-from rust_actr.tutorial import runner
+import rust_actr.actr as actr
+from tutorial.unit5.grouped import build
 
-runner.run_task("demo2", "experiment")
-runner.run_task("fan_no_pm", "experiment")
-runner.run_task("zbrodoff", "set")
-
-module = runner.load_task("bst_ppm")
-module.experiment(1)
+actr.use(build())
+print(actr.run(20))
 ```
 
-The runner needs the `actr7.x/tutorial/python` task scripts. Set `ACTR_DIR` or
-run from the repository root.
+The scripts no longer need an ACT-R checkout; they import only `rust_actr`.
 
 ## 7. Tests
 
@@ -225,7 +223,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **31 tests passing**. It covers:
+Current Python suite: **32 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices
@@ -237,7 +235,7 @@ Current Python suite: **31 tests passing**. It covers:
 - `siegler` digit/speech
 - `zbrodoff` 24-trial set
 - `bst-ppm` live task
-- tutorial registry/model compilation and task smoke tests
+- tutorial script compilation and CLI smoke tests
 
 Rust suite (engine):
 

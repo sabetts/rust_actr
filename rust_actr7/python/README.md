@@ -77,42 +77,50 @@ and devices, command monitors, mid-run task callbacks, Python similarity hooks,
 and `mod-chunk`/`copy-chunk`. Arbitrary Lisp evaluation and multiple-model
 files are still out of scope.
 
-## Tutorial models
+## Tutorial scripts
 
-`rust_actr.tutorial` contains Python ports of the model files under
-`actr7.x/tutorial`. They are generated from the vendored Lisp sources by
-`tools/port_tutorial_models.py` and can be edited after generation:
+`tutorial/` contains self-contained Python ports of the models under
+`actr7.x/tutorial`: each module has a `build(seed)` function and, when the
+unit has a task script, that experiment code as well. Run them from
+`rust_actr7/python`:
 
 ```powershell
-python tools/port_tutorial_models.py
-python -m rust_actr.tutorial.run --list-models
+python tutorial/unit1/count.py
+python tutorial/unit2/demo2.py
+python tutorial/unit5/grouped.py
+python tutorial/unit5/onehit.py hands 2
 ```
 
-`rust_actr.actr` is a module-level façade matching the tutorial client. It
-binds `load_act_r_model` to the Python registry, so the vendored task scripts
-run with their imports unchanged:
+Model-only scripts build the model, run it for 10 seconds, and print the
+trace (the same shape as `cargo run -- run 'ACT-R:...'`). Task scripts call a
+per-file default entry point; pass a function name and arguments to override
+it. Arguments are parsed as JSON when possible.
+
+Regenerate the tree from the vendored sources with:
+
+```powershell
+python tools/port_tutorial.py
+```
+
+The generated modules are checked in and can be edited after generation.
+
+`rust_actr.actr` is the module-level façade the scripts use. You can also bind
+a model yourself:
 
 ```python
-from rust_actr.tutorial import runner
+import rust_actr.actr as actr
+from tutorial.unit1.count import build
 
-runner.run_task("demo2", "experiment")
-runner.run_task("fan_no_pm", "experiment")
-```
-
-The runner needs an ACT-R checkout for the task scripts. Set `ACTR_DIR` or run
-from the repository root:
-
-```powershell
-$env:ACTR_DIR = "C:\path\to\actr7.x"
-python -m rust_actr.tutorial.run demo2 experiment
+actr.use(build())
+print(actr.run(10))
 ```
 
 Port status:
 
 - Working end-to-end: `count`, `addition`, `semantic`, `demo2`, `fan-no-pm`,
   `grouped`, `onehit` (hands/blocks/learning), `zbrodoff` (set/block/experiment),
-  `sperling` (trial/experiment), `bst-ppm`, `siegler`, and the dynamic models
-  that do not need task-side hooks.
+  `sperling` (trial/experiment), `pm-issues`, `bst-ppm`, `siegler`, and the
+  dynamic models that do not need task-side hooks.
 - Python `:sim-hook` functions are wired for `1hit`, `bst-ppm`, and
   `categorize`. Python `imaginal-action` callbacks are also bridged through a
   host-yield step; `bst-ppm` still stops earlier in its live-window/mouse path.
@@ -120,10 +128,10 @@ Port status:
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
   to demonstrate load warnings) and is not ported.
-- Known gaps: cross-task module reuse in one long-lived process can leave
-  model/task state behind; use a fresh `load_act_r_model` (or a new process)
-  when switching tasks. Full `.ref` parity for every experiment summary is
-  still a test-suite expansion, not a missing runtime path.
+- Known gaps: importing several tutorial modules in one long-lived process
+  rebinds the current model; run one script per process when switching tasks.
+  Full `.ref` parity for every experiment summary is still a test-suite
+  expansion, not a missing runtime path.
 
 ## Tests
 

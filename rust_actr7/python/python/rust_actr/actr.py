@@ -1,14 +1,12 @@
 """A module-level façade matching the tutorial ``actr`` client.
 
-The vendored tutorial task scripts call functions such as ``actr.run`` and
-``actr.load_act_r_model``.  This module binds those calls to the current
-:class:`rust_actr.Model`; ``load_act_r_model`` resolves the logical path
-through :mod:`rust_actr.tutorial` instead of loading Lisp.
+The self-contained tutorial scripts call functions such as ``actr.run`` and
+``actr.add_command``.  This module binds those calls to the current
+:class:`rust_actr.Model`.  Build a model and make it current with ``use()``::
 
-Usage::
+    import rust_actr.actr as actr
 
-    from rust_actr import actr
-    actr.load_act_r_model("ACT-R:tutorial;unit1;count.lisp")
+    actr.use(actr.Model("count"))
     print(actr.run(10))
 """
 
@@ -16,34 +14,26 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .tutorial import REGISTRY, build_model
+from ._model import Chunk, Model
+from ._values import LispString, String
 
 _current: Optional[Any] = None
-_current_path: Optional[str] = None
 _pending_commands: dict[str, Any] = {}
 _pending_monitors: list[tuple[str, str]] = []
 
 
+def clear_state() -> None:
+    """Drop the current model and any commands queued before it was bound."""
+    global _current, _pending_commands, _pending_monitors
+    _current = None
+    _pending_commands = {}
+    _pending_monitors = []
+
+
 def use(model: Any) -> Any:
-    """Bind ``model`` as the current model."""
-    global _current, _current_path
+    """Bind ``model`` as the current model and replay pending commands."""
+    global _current
     _current = model
-    _current_path = None
-    return model
-
-
-def current_model() -> Optional[Any]:
-    return _current
-
-
-def load_act_r_model(path: str) -> Any:
-    """Build the Python model registered for ``path`` and make it current."""
-    global _current, _current_path
-    key = path.upper()
-    if key not in REGISTRY:
-        raise KeyError(f"no Python tutorial model for {path!r}")
-    _current = build_model(path)
-    _current_path = path
     for name, function in _pending_commands.items():
         _current.add_command(name, function)
     for original, monitor in _pending_monitors:
@@ -52,6 +42,10 @@ def load_act_r_model(path: str) -> Any:
     hook_fn = _pending_commands.get(hook.upper()) if hook else None
     if hook_fn is not None:
         _current.set_sim_hook(hook_fn)
+    return model
+
+
+def current_model() -> Optional[Any]:
     return _current
 
 
@@ -99,15 +93,9 @@ def remove_command_monitor(original: str, monitor: str) -> Any:
     return _current.remove_command_monitor(original, monitor)
 
 
-def reload(compile: bool = False) -> Any:
-    if _current is None or _current_path is None:
-        return _current
-    return load_act_r_model(_current_path)
-
-
 def _require():
     if _current is None:
-        raise RuntimeError("no current model; call actr.load_act_r_model(...) first")
+        raise RuntimeError("no current model; call actr.use(model) first")
     return _current
 
 
@@ -135,9 +123,14 @@ def __getattr__(name: str) -> Any:
         return lambda *args, **kwargs: None
     if name == "load_act_r_code":
         raise AttributeError("arbitrary Lisp source is not supported")
+    if name == "load_act_r_model":
+        raise AttributeError(
+            "load_act_r_model is not supported; import a tutorial module "
+            "and call actr.use(module.build())"
+        )
     if _current is None:
         raise AttributeError(
-            "no current model; call actr.load_act_r_model(...) or actr.use(model) first"
+            "no current model; call actr.use(model) first"
         )
     return getattr(_current, name)
 
