@@ -8,12 +8,14 @@ frozen once the native session is created; runtime methods added by
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional, Sequence, Union
 
 from . import _native
-from ._values import LispString, render_slot_name, render_symbol, render_value
+from ._runtime import RuntimeMixin
+from ._values import LispString, json_arg, render_slot_name, render_symbol, render_value
 
 _PRODUCTION_HEAD = re.compile(r"^\(\s*p\s+([^\s()]+)", re.IGNORECASE)
 
@@ -123,12 +125,13 @@ def _render_base_level(entry: Sequence[Any]) -> str:
     return "(" + " ".join(parts) + ")"
 
 
-class Model:
+class Model(RuntimeMixin):
     """Build and run an ACT-R model from Python.
 
     Definitions are added before the first run/reset and rendered by
     :meth:`to_lisp`.  The native session is created lazily on the first
-    runtime call.
+    runtime call; after that, definition methods raise and the runtime
+    methods inherited from :class:`RuntimeMixin` operate on the live model.
     """
 
     def __init__(self, name: str, seed: Sequence[int] = (100, 0)) -> None:
@@ -141,10 +144,15 @@ class Model:
         self._goal_focuses: list[str] = []
         self._sgp: list[tuple[str, Any]] = []
         self._body: list[str] = []
-        self._engine: Optional[_native.Engine] = None
+        self._session: Optional[_native.Session] = None
+        self._trace = ""
+        self._commands: dict[str, Any] = {}
+        self._monitors: dict[str, list[str]] = {}
+        self._current_window: Optional[str] = None
+        self._device_installed = False
 
     def _check_mutable(self) -> None:
-        if self._engine is not None:
+        if self._session is not None:
             raise RuntimeError(
                 "model definitions are frozen after the engine is created; "
                 "create a new Model to change them"
@@ -153,12 +161,69 @@ class Model:
     def _emit(self, form: str) -> None:
         self._body.append(form)
 
+    def _ensure_session(self) -> _native.Session:
+        if self._session is None:
+            source = self.to_lisp()
+            try:
+                self._session = _native.Session(source, self.seed[0], self.seed[1])
+            except Exception as exc:
+                raise RuntimeError(
+                    f"could not compile model {self.name!r}:\n{source}\n{exc}"
+                ) from exc
+        return self._session
+
+    def _eval(self, name: str, *args: Any) -> list[Any]:
+        session = self._ensure_session()
+        payload = json.dumps([json_arg(arg) for arg in args])
+        try:
+            raw = session.evaluate(name, payload)
+        except Exception as exc:
+            raise RuntimeError(f"command {name!r} failed: {exc}") from exc
+        result = json.loads(raw)
+        text = session.take_trace()
+        if text:
+            self._trace += text
+            self._deliver_trace(text)
+        self._dispatch_fired()
+        return result
+
+    def _dispatch_fired(self) -> None:
+        if self._session is None:
+            return
+        for command, model, key in self._session.take_fired_commands():
+            self._fire(command, [model, key])
+        for command, args in self._session.take_fired_task_commands():
+            values = list(args)
+            fn = self._commands.get(command.upper())
+            if fn is not None:
+                fn(*values)
+            self._fire(command, values)
+
+    def _fire(self, command: str, args: list[Any]) -> None:
+        for monitor in self._monitors.get(command.upper(), []):
+            fn = self._commands.get(monitor.upper())
+            if fn is not None:
+                fn(*args)
+
+    def _deliver_trace(self, text: str) -> None:
+        monitors = self._monitors.get("MODEL-TRACE", [])
+        if not monitors:
+            return
+        for monitor in monitors:
+            fn = self._commands.get(monitor.upper())
+            if fn is not None:
+                for line in text.splitlines():
+                    fn(line)
+
     def sgp(self, key: str, value: Any) -> "Model":
-        """Add a global parameter setting (``(sgp :key value)``)."""
-        self._check_mutable()
+        """Set a global parameter (``(sgp :key value)``)."""
         if not isinstance(key, str) or not key.startswith(":"):
             raise ValueError("sgp key must be a string beginning with ':'")
         render_symbol(key, what="sgp key")
+        if self._session is not None:
+            self._eval("sgp", key, value)
+            return self
+        self._check_mutable()
         self._sgp.append((key, value))
         self._emit(f"(sgp {key} {render_value(value)})")
         return self
@@ -237,6 +302,10 @@ class Model:
         Accepts named :class:`Chunk` objects or strings.  For typed chunks use
         :meth:`add_chunk` directly.
         """
+        if self._session is not None:
+            for item in chunks:
+                self._eval("add-dm", _chunk_json(item))
+            return self
         self._check_mutable()
         for item in chunks:
             if isinstance(item, Chunk):
@@ -253,6 +322,10 @@ class Model:
 
     def define_chunks(self, *chunks: Union[Chunk, str]) -> "Model":
         """Define named chunks without adding them to declarative memory."""
+        if self._session is not None:
+            for item in chunks:
+                self._eval("define-chunks", _chunk_json(item))
+            return self
         self._check_mutable()
         for item in chunks:
             if isinstance(item, Chunk):
@@ -273,6 +346,24 @@ class Model:
         Pass a :class:`Chunk`/name from declarative memory, or use
         ``m.goal_focus(isa="goal", state="start")`` for an inline chunk.
         """
+        if self._session is not None:
+            if chunk is not None and slots:
+                raise TypeError("goal_focus accepts either a chunk or keyword slots, not both")
+            if chunk is None:
+                isa = slots.pop("isa", None)
+                if isa is None:
+                    raise TypeError("goal_focus requires a chunk or isa=...")
+                spec: Any = ["isa", isa]
+                for slot, value in slots.items():
+                    spec.extend([render_slot_name(slot), value])
+            elif isinstance(chunk, (list, tuple)):
+                spec = list(chunk)
+            elif isinstance(chunk, Chunk):
+                spec = chunk.name
+            else:
+                spec = chunk
+            self._eval("goal-focus", spec)
+            return self
         self._check_mutable()
         if chunk is not None and slots:
             raise TypeError("goal_focus accepts either a chunk or keyword slots, not both")
@@ -312,10 +403,16 @@ class Model:
 
     def spp(self, production: str, **params: Any) -> "Model":
         """Set production parameters (``(spp <production> :key value)``)."""
-        self._check_mutable()
         name = render_symbol(production, what="production name")
         if not params:
             raise ValueError("spp requires at least one parameter")
+        if self._session is not None:
+            flat: list[Any] = [name]
+            for key, value in params.items():
+                flat.extend([_render_param_key(key), value])
+            self._eval("spp", *flat)
+            return self
+        self._check_mutable()
         rendered = " ".join(
             f"{_render_param_key(key)} {render_value(value)}"
             for key, value in params.items()
@@ -328,6 +425,8 @@ class Model:
 
         Accepts ``(a, b, value)`` sequences or a single iterable of them.
         """
+        if self._session is not None:
+            return RuntimeMixin.set_similarities(self, *pairs)  # type: ignore[return-value]
         self._check_mutable()
         entries = _as_entries(pairs, 3, "similarity")
         rendered = " ".join(_render_similarity(entry) for entry in entries)
@@ -336,6 +435,8 @@ class Model:
 
     def set_base_levels(self, *pairs: Sequence[Any]) -> "Model":
         """Set fixed base levels for named chunks."""
+        if self._session is not None:
+            return RuntimeMixin.set_base_levels(self, *pairs)  # type: ignore[return-value]
         self._check_mutable()
         entries = _as_entries(pairs, (2, 3), "base-level")
         rendered = " ".join(_render_base_level(entry) for entry in entries)
@@ -344,6 +445,9 @@ class Model:
 
     def set_all_base_levels(self, level: Any, creation: Any = None) -> "Model":
         """Set a fixed base level for every chunk in declarative memory."""
+        if self._session is not None:
+            RuntimeMixin.set_all_base_levels(self, level, creation)
+            return self
         self._check_mutable()
         args = [render_value(level)]
         if creation is not None:
@@ -414,6 +518,8 @@ class Model:
 
         ``window`` may be a window title or ``True`` for the default title.
         """
+        if self._session is not None:
+            return RuntimeMixin.install_device(self, window)
         self._check_mutable()
         title = "window" if window is True else (window if isinstance(window, str) else None)
         if title is None:
@@ -439,49 +545,17 @@ class Model:
         lines.append(")")
         return "\n".join(lines) + "\n"
 
-    def _ensure_engine(self) -> _native.Engine:
-        if self._engine is None:
-            source = self.to_lisp()
-            try:
-                self._engine = _native.Engine(source, self.seed[0], self.seed[1])
-            except Exception as exc:
-                raise RuntimeError(
-                    f"could not compile model {self.name!r}:\n{source}\n{exc}"
-                ) from exc
-        return self._engine
-
-    def run(self, seconds: float) -> str:
-        """Run for ``seconds`` of model time and return the new trace."""
-        return self._ensure_engine().run(seconds)
-
-    def run_until(self, time: float) -> str:
-        """Run to an absolute model time and return the new trace."""
-        return self._ensure_engine().run_until(time)
-
-    def reset(self) -> str:
-        """Reset the model and return the reset trace."""
-        return self._ensure_engine().reset()
-
-    @property
-    def trace(self) -> str:
-        """All trace emitted so far."""
-        return self._engine.trace() if self._engine is not None else ""
-
-    def take_trace(self) -> str:
-        """Return all trace and clear the engine's trace history."""
-        return self._ensure_engine().take_trace()
-
-    def clear_trace(self) -> None:
-        if self._engine is not None:
-            self._engine.clear_trace()
-
-    @property
-    def time(self) -> float:
-        return self._engine.time() if self._engine is not None else 0.0
-
-    @property
-    def compiled(self) -> bool:
-        return self._engine is not None
+def _chunk_json(chunk: Union[Chunk, str]) -> Any:
+    if isinstance(chunk, str):
+        return [render_symbol(chunk, what="chunk name")]
+    if not isinstance(chunk, Chunk):
+        raise TypeError("chunks must be Chunk objects or chunk names")
+    spec: list[Any] = [chunk.name]
+    if chunk.type:
+        spec.extend(["isa", chunk.type])
+    for slot, value in chunk.slots.items():
+        spec.extend([slot, json_arg(value)])
+    return spec
 
 
 def _as_entries(

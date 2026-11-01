@@ -424,6 +424,15 @@ impl Session {
             .unwrap_or_default()
     }
 
+    /// Task commands fired by `!eval!` since the last call, with their
+    /// evaluated arguments rendered as Lisp text.
+    pub fn take_fired_task_commands(&mut self) -> Vec<(String, Vec<String>)> {
+        self.engine
+            .as_mut()
+            .map(|e| e.take_fired_task_commands())
+            .unwrap_or_default()
+    }
+
     /// Take the trace lines emitted since the last call (the RPC server
     /// streams these to the `model-trace` monitors).
     pub fn take_trace(&mut self) -> Vec<String> {
@@ -2452,6 +2461,22 @@ impl Session {
     /// Events evaluated in the last `run`, for its second return value.
     pub fn run_events(&self) -> u64 {
         self.engine.as_ref().map(|e| e.run_events()).unwrap_or(0)
+    }
+
+    /// Load model definitions from in-memory Lisp source.
+    ///
+    /// This is the embedder entry point: a Python builder renders a
+    /// `define-model` source and hands it here instead of writing a file.
+    /// Task-file `defun`s are not parsed; Python callbacks are registered
+    /// through [`Session::add_remote`] and the fired-command bridge.
+    pub fn load_source(&mut self, source: &str) -> Result<(), String> {
+        let loaded = crate::model::load_models_from_str(source).map_err(|e| e.to_string())?;
+        if loaded.len() > 1 {
+            self.multi_file = true;
+        }
+        self.defs.extend(loaded);
+        self.model_files.push("<source>".to_string());
+        self.build_engine()
     }
 
     /// Load an ACT-R logical path (`ACT-R:tutorial;unit1;count.lisp`).

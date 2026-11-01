@@ -94,6 +94,13 @@ impl Engine {
         std::mem::take(&mut self.fired_commands)
     }
 
+    /// Take the task commands `!eval!`/`!safe-eval!` asked the engine to run
+    /// since the last call.  The engine records the name only; an embedder
+    /// (the Python callback facade) dispatches it after the event.
+    pub fn take_fired_task_commands(&mut self) -> Vec<(String, Vec<String>)> {
+        std::mem::take(&mut *self.fired_task_commands.borrow_mut())
+    }
+
     /// The trace lines emitted since index `start`.
     pub fn out_since(&self, start: usize) -> Vec<String> {
         self.out_lines.get(start..).unwrap_or(&[]).to_vec()
@@ -2896,7 +2903,7 @@ impl Engine {
                     .fired_task_commands
                     .borrow()
                     .iter()
-                    .any(|fired| fired.eq_ignore_ascii_case(cmd))
+                    .any(|(fired, _)| fired.eq_ignore_ascii_case(cmd))
                 {
                     break;
                 }

@@ -343,17 +343,25 @@ impl Engine {
     pub(super) fn eval_command(
         &self,
         name: &str,
-        _args: &[Sexp],
-        _b: &Bindings,
+        args: &[Sexp],
+        b: &Bindings,
     ) -> Result<Value, String> {
         // A registered task command (`add-act-r-command`): its side effects
         // (e.g. recording a response in the task's own variable) are not part
         // of the trace. A task driver may install the command's return value
         // (`nearest-vis-loc`'s `which-one`); otherwise it is a no-op.
+        let rendered: Vec<String> = args
+            .iter()
+            .map(|a| {
+                self.eval_expr(a, b)
+                    .map(|v| v.show())
+                    .unwrap_or_default()
+            })
+            .collect();
         if let Some(value) = self.task_command_values.get(&name.to_uppercase()) {
             self.fired_task_commands
                 .borrow_mut()
-                .push(name.to_uppercase());
+                .push((name.to_uppercase(), rendered));
             return Ok(value.clone());
         }
         if self.task_commands.contains(&name.to_uppercase())
@@ -361,7 +369,7 @@ impl Engine {
         {
             self.fired_task_commands
                 .borrow_mut()
-                .push(name.to_uppercase());
+                .push((name.to_uppercase(), rendered));
             return Ok(Value::Nil);
         }
         Err(format!("unsupported eval command \"{name}\""))

@@ -54,6 +54,22 @@ def _render_string(value: str) -> str:
     return f'"{escaped}"'
 
 
+def json_arg(value: Any) -> Any:
+    """Coerce a Python value into the JSON argument form commands expect."""
+    if isinstance(value, LispString):
+        return value.value
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [json_arg(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): json_arg(item) for key, item in value.items()}
+    raise TypeError(
+        "runtime command arguments must be str, int, float, bool, None, list, tuple, "
+        f"or dict; got {type(value).__name__}"
+    )
+
+
 def render_value(value: Any) -> str:
     """Render a Python value in the model-file Lisp dialect."""
     if isinstance(value, LispString):

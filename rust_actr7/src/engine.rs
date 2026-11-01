@@ -2866,7 +2866,7 @@ pub struct Engine {
     task_command_values: HashMap<String, Value>,
     /// Task commands fired through `!eval!` since the driver last read them
     /// (`v7-find-seed`'s `set-flag`).
-    fired_task_commands: RefCell<Vec<String>>,
+    fired_task_commands: RefCell<Vec<(String, Vec<String>)>>,
     /// Task-file `defparameter`/`defvar` values (upper-cased names).
     user_vars: HashMap<String, Value>,
 }

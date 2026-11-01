@@ -152,6 +152,100 @@ class ModelTests(unittest.TestCase):
         self.assertIn('"Sentence Experiment"', source)
         model.run(0.0)
 
+    def test_runtime_callbacks(self):
+        seen = []
+        model = actr.Model("callback", seed=(100, 0))
+        model.chunk_type("goal", "state")
+        model.goal_focus(isa="goal", state="start")
+        model.add_production(
+            """
+(p record
+   =goal> state start
+   ==>
+   =goal> state done
+   !eval! ("record" 42))
+"""
+        )
+        model.add_command("record", lambda value: seen.append(value))
+        model.run(1.0)
+
+        self.assertEqual(seen, ["42"])
+        self.assertEqual(model.buffer_slot_value("goal", "state"), "DONE")
+        self.assertIn("PRODUCTION-FIRED RECORD", model.trace)
+
+    def test_runtime_buffers_and_dm(self):
+        model = actr.Model("runtime", seed=(100, 0))
+        model.chunk_type("goal", "state")
+        model.chunk_type("note", "value")
+        model.goal_focus(isa="goal", state="start")
+        model.run(0.0)
+
+        model.add_dm(actr.Chunk("n1", "note", {"value": "hello"}))
+        model.set_buffer_chunk("goal", ["isa", "note", "value", "hello"])
+        self.assertEqual(model.buffer_slot_value("goal", "value"), "HELLO")
+        self.assertEqual(model.chunk_slot_value("n1", "value"), "HELLO")
+        model.goal_focus(isa="goal", state="restarted")
+        model.run(0.0)
+        self.assertEqual(model.buffer_slot_value("goal", "state"), "RESTARTED")
+
+    def test_device_and_output_key(self):
+        model = actr.Model("demo", seed=(100, 0))
+        model.sgp(":show-focus", True)
+        model.chunk_type("read-letters", "step")
+        model.chunk_type("array", "letter")
+        model.add_dm("start")
+        model.goal_focus(isa="read-letters", step="start")
+        model.add_production(
+            """
+(p find
+   =goal> ISA read-letters step start
+   ==>
+   +visual-location> :attended nil
+   =goal> step found)
+(p attend
+   =goal> ISA read-letters step found
+   =visual-location>
+   ?visual> state free
+   ==>
+   +visual> cmd move-attention screen-pos =visual-location
+   =goal> step attend)
+(p encode
+   =goal> ISA read-letters step attend
+   =visual> value =letter
+   ?imaginal> state free
+   ==>
+   =goal> step respond
+   +imaginal> isa array letter =letter)
+(p respond
+   =goal> ISA read-letters step respond
+   =imaginal> isa array letter =letter
+   ?manual> state free
+   ==>
+   =goal> step done
+   +manual> cmd press-key key =letter)
+"""
+        )
+        keys = []
+        model.add_command("key", lambda model_name, key: keys.append(key))
+        model.monitor_command("output-key", "key")
+        window = model.open_exp_window("test")
+        model.add_text_to_exp_window(window, "B", x=125, y=150)
+        model.install_device(window)
+        model.run(10.0)
+
+        self.assertEqual(keys, ["b"])
+        self.assertIn("PRODUCTION-FIRED RESPOND", model.trace)
+
+    def test_random_and_time(self):
+        model = actr.Model("random", seed=(100, 0))
+        model.chunk_type("goal", "state")
+        model.goal_focus(isa="goal", state="start")
+        model.run_full_time(0.25)
+
+        self.assertEqual(model.get_time(), 250)
+        self.assertIn(model.random(10), range(10))
+        self.assertCountEqual(model.permute_list([1, 2, 3]), [1, 2, 3])
+
     def test_raw_form(self):
         model = actr.Model("raw")
         model.chunk_type("goal", "state")
