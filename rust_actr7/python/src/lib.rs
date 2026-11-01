@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use actr_engine::engine::Engine as CoreEngine;
+use actr_engine::HookValue;
 use actr_engine::json::Json;
 use actr_engine::model::load_models_from_str;
 use actr_engine::rpc::session::{MonitorWhen, Remote, Session as CoreSession};
@@ -28,6 +29,15 @@ fn default_root() -> PathBuf {
     std::env::var("ACTR_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("actr7.x"))
+}
+
+fn hook_arg(py: Python<'_>, value: &HookValue) -> PyResult<Py<PyAny>> {
+    Ok(match value {
+        HookValue::Int(i) => i.into_pyobject(py)?.into_any().unbind(),
+        HookValue::Num(x) => x.into_pyobject(py)?.into_any().unbind(),
+        HookValue::Sym(s) | HookValue::Str(s) => s.into_pyobject(py)?.into_any().unbind(),
+        HookValue::Nil => py.None(),
+    })
 }
 
 fn parse_args(text: &str) -> PyResult<Vec<Json>> {
@@ -178,12 +188,14 @@ impl Session {
             .engine_mut()
             .ok_or_else(|| PyRuntimeError::new_err("no model loaded"))?;
         let hook = callable.map(|callable| {
-            Rc::new(move |a: &str, b: &str| {
+            Rc::new(move |a: &HookValue, b: &HookValue| {
                 Python::attach(|py| {
+                    let a = hook_arg(py, a).ok()?;
+                    let b = hook_arg(py, b).ok()?;
                     let result = callable.call1(py, (a, b)).ok()?;
                     result.bind(py).extract::<f32>().ok()
                 })
-            }) as Rc<dyn Fn(&str, &str) -> Option<f32>>
+            }) as Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>
         });
         engine.set_sim_hook(hook);
         Ok(())
@@ -227,6 +239,15 @@ impl Session {
     /// Task commands requested by `!eval!`/`!safe-eval!`, with rendered args.
     fn take_fired_task_commands(&mut self) -> Vec<(String, Vec<String>)> {
         self.inner.take_fired_task_commands()
+    }
+
+    /// Pending window-button device actions, as `(command, args-json)`.
+    fn take_pending_device_actions(&mut self) -> Vec<(String, String)> {
+        self.inner
+            .take_pending_device_actions()
+            .into_iter()
+            .map(|(name, args)| (name, Json::Arr(args).write()))
+            .collect()
     }
 
     /// A pending Python `imaginal-action`: `(command, args, simple)`.
