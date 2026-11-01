@@ -214,10 +214,10 @@ class Model(RuntimeMixin):
             while True:
                 more = session.run_chunk(limit, full, 1, None)
                 self._absorb_trace()
-                self._complete_host_action()
-                self._dispatch_device_actions()
+                handled = self._complete_host_action()
+                handled = self._dispatch_device_actions() or handled
                 self._dispatch_fired()
-                if not more:
+                if not more and not handled:
                     break
             return [session.time(), session.run_events(), None]
         finally:
@@ -229,20 +229,23 @@ class Model(RuntimeMixin):
             self._trace += text
             self._deliver_trace(text)
 
-    def _dispatch_device_actions(self) -> None:
+    def _dispatch_device_actions(self) -> bool:
         if self._session is None:
-            return
+            return False
+        handled = False
         for command, args_json in self._session.take_pending_device_actions():
             fn = self._commands.get(command.upper())
             if fn is not None:
                 fn(*json.loads(args_json))
+                handled = True
+        return handled
 
-    def _complete_host_action(self) -> None:
+    def _complete_host_action(self) -> bool:
         if self._session is None:
-            return
+            return False
         pending = self._session.take_pending_host_action()
         if pending is None:
-            return
+            return False
         name, args, simple = pending
         fn = self._commands.get(name.upper())
         result = None
@@ -252,6 +255,7 @@ class Model(RuntimeMixin):
             except Exception:
                 result = None
         self._session.complete_host_action(_action_result_text(result), simple)
+        return True
 
     def _dispatch_fired(self) -> None:
         if self._session is None:

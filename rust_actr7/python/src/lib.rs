@@ -193,7 +193,14 @@ impl Session {
                     let a = hook_arg(py, a).ok()?;
                     let b = hook_arg(py, b).ok()?;
                     let result = callable.call1(py, (a, b)).ok()?;
-                    result.bind(py).extract::<f32>().ok()
+                    let bound = result.bind(py);
+                    // The tutorial hooks return `False` for "not numeric";
+                    // treat it (and `None`) as no similarity rather than 0.0,
+                    // which would make PPM accept every mismatch.
+                    if bound.is_none() || bound.is_instance_of::<pyo3::types::PyBool>() {
+                        return None;
+                    }
+                    bound.extract::<f32>().ok()
                 })
             }) as Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>
         });

@@ -64,7 +64,7 @@ def add_command(
     encoded: bool = False,
 ) -> Any:
     if _current is None:
-        _pending_commands[name] = function
+        _pending_commands[name.upper()] = function
         return True
     result = _current.add_command(
         name, function, documentation, single, local_name, encoded
@@ -76,7 +76,7 @@ def add_command(
 
 
 def remove_command(name: str) -> Any:
-    _pending_commands.pop(name, None)
+    _pending_commands.pop(name.upper(), None)
     if _current is None:
         return True
     return _current.remove_command(name)
