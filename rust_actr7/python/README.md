@@ -113,6 +113,8 @@ Port status:
   models that do not need task-side hooks.
 - Starting models (no/partial productions by design): unit2 assignment,
   `subitize`, `choice`, `categorize`.
+- `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
+  to demonstrate load warnings) and is not ported.
 - Known gaps: Python `:sim-hook` functions (`1hit`, `bst-ppm`, `categorize`),
   Python `imaginal-action` callbacks (`bst-ppm`), mid-run `output-key`
   dispatch for window clears (`sperling`), and `new-digit-sound` /
