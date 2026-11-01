@@ -76,6 +76,37 @@ impl Engine {
         self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
     }
 
+    /// `new-word-sound` (`audio.lisp:901`): a `WORD` sound whose `content`
+    /// is the word itself.  Duration comes from the speech module's
+    /// articulation time; `word-sound-evt` recodes at
+    /// `max(duration/2, duration-150)` and detects after the digit delay.
+    pub(super) fn new_word_sound(&mut self, word: String, onset: i64, location: String) {
+        let n = self.word_seq;
+        self.word_seq += 1;
+        let en = self.audio_events;
+        self.audio_events += 1;
+        let duration = self.articulation_time_ms(&word);
+        let recode = (duration / 2).max(duration - 150);
+        self.sounds.push(Sound {
+            sname: format!("WORD{n}"),
+            ename: format!("AUDIO-EVENT{en}"),
+            kind: "WORD".to_string(),
+            content: Value::Str(word),
+            location: location.to_uppercase(),
+            onset,
+            offset: Some(onset + duration),
+            duration: Some(duration),
+            delay: 300,
+            recode,
+            pitch: "MIDDLE".to_string(),
+            attended: SoundAttended::Nil,
+            other_features: Vec::new(),
+        });
+        let idx = self.sounds.len() - 1;
+        self.sync_audio_chunks(idx);
+        self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+    }
+
     /// `new-ongoing-sound` (`audio.lisp:840`): a custom sound with no offset
     /// until `end-ongoing-sound`. Returns the command's id.
     pub fn new_ongoing_sound_rpc(

@@ -444,6 +444,23 @@ class RuntimeMixin:
     def visible_virtuals_available(self) -> Any:
         return self._single("visible-virtuals-available?")
 
+    def get_articulation_time(self, text: str, time_in_ms: bool = False) -> Any:
+        return self._single("get-articulation-time", text, time_in_ms)
+
+    def register_articulation_time(
+        self, text: str, time: Any, time_in_ms: bool = False
+    ) -> Any:
+        return self._single("register-articulation-time", text, time, time_in_ms)
+
+    def get_syllable_count(self, word: str) -> Any:
+        return self._single("get-syllable-count", word)
+
+    def register_syllable_count(self, word: str, syllables: int) -> Any:
+        return self._single("register-syllable-count", word, syllables)
+
+    def remove_syllable_count(self, word: str) -> Any:
+        return self._single("remove-syllable-count", word)
+
     def new_tone_sound(
         self,
         freq: Any,

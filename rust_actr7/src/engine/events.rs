@@ -204,9 +204,7 @@ impl Engine {
                 // finish at exec + articulation (`speech.lisp:281`/`285`).
                 // The hear-self sound onset equals the exec time.
                 let init = self.cfg.init_ms;
-                let art = (150.0f32)
-                    .max(150.0 * text.chars().count() as f32 / 3.0)
-                    .round() as i64;
+                let art = self.articulation_time_ms(&text);
                 // `maybe-execute-movement`: execution waits until the current
                 // utterance finishes, while preparation has already run.
                 let exec_start = self.time_ms.max(self.vocal_end_ms);

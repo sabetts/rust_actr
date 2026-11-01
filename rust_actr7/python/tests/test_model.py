@@ -169,6 +169,25 @@ class ModelTests(unittest.TestCase):
             model.get_parameter_value("lf"), model.get_parameter_value(":lf")
         )
 
+    def test_word_sound_and_articulation(self):
+        model = actr.Model("word", seed=(100, 0))
+        model.sgp("use_syllable_table", True)
+        model.chunk_type("goal", "state")
+        model.goal_focus(isa="goal", state="start")
+
+        self.assertAlmostEqual(model.get_articulation_time("through"), 0.15)
+        model.register_articulation_time("special", 0.333)
+        self.assertEqual(model.get_articulation_time("special", True), 333)
+        self.assertEqual(model.get_syllable_count("through"), 1)
+        model.register_syllable_count("zzzzzzz", 1)
+        self.assertEqual(model.get_syllable_count("zzzzzzz"), 1)
+        self.assertEqual(model.remove_syllable_count("zzzzzzz"), "zzzzzzz")
+
+        model.new_word_sound("hello", 0, time_in_ms=True)
+        model.run(1.0)
+        self.assertEqual(model.buffer_slot_value("aural-location", "kind"), "WORD")
+        self.assertEqual(model.chunk_slot_value("WORD0", "content"), "hello")
+
     def test_runtime_callbacks(self):
         seen = []
         model = actr.Model("callback", seed=(100, 0))

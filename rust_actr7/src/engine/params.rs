@@ -44,6 +44,8 @@ pub fn sgp_support(key: &str) -> Option<SgpSupport> {
         ":PCT" | ":PPM" | ":PPM-HOOK" | ":RANDOMIZE-TIME" => SgpSupport::Both,
         ":RECORD-TICKS" | ":RIR" | ":RT" | ":SACT" => SgpSupport::Both,
         ":SE-INTERCEPT" | ":SE-SCALE" | ":SEED" | ":SIM-HOOK" => SgpSupport::Both,
+        ":SYLLABLE-RATE" | ":CHAR-PER-SYLLABLE" => SgpSupport::Both,
+        ":USE-SYLLABLE-TABLE" | ":SPLIT-VOCAL-STRINGS" => SgpSupport::Both,
         ":TRACE-DETAIL" => SgpSupport::Both,
         ":TOUCH-DRAG-DELAY" | ":UAN" | ":UL" | ":ULT" | ":UNSTUFF-AURAL-LOCATION" => {
             SgpSupport::Both

@@ -1589,6 +1589,18 @@ impl Engine {
                 self.cfg.chunk_update = self.cfg.ncnar && self.cfg.dcnn;
             }
             ":AUDIO-MS-TIMES" => self.cfg.audio_ms_times = truthy,
+            ":SYLLABLE-RATE" => {
+                if let Some(x) = num(val) {
+                    self.cfg.syllable_rate_ms = (x * 1000.0).round() as i64;
+                }
+            }
+            ":CHAR-PER-SYLLABLE" => {
+                if let Some(x) = num(val).filter(|x| *x > 0.0) {
+                    self.cfg.char_per_syllable = x;
+                }
+            }
+            ":USE-SYLLABLE-TABLE" => self.cfg.use_syllable_table = truthy,
+            ":SPLIT-VOCAL-STRINGS" => self.cfg.split_vocal_strings = truthy,
             ":ENABLE-INHIBITION" => self.cfg.inhibition = truthy,
             ":INHIBITION-SCALE" => {
                 if let Some(x) = num(val) {
@@ -2450,6 +2462,10 @@ impl Engine {
             ":MD" => self.cfg.md.to_string(),
             ":MS" => self.cfg.ms.to_string(),
             ":SIM-HOOK" => self.cfg.sim_hook.clone().unwrap_or_else(|| "NIL".into()),
+            ":SYLLABLE-RATE" => format!("{}", self.cfg.syllable_rate_ms as f64 / 1000.0),
+            ":CHAR-PER-SYLLABLE" => self.cfg.char_per_syllable.to_string(),
+            ":USE-SYLLABLE-TABLE" => b(self.cfg.use_syllable_table),
+            ":SPLIT-VOCAL-STRINGS" => b(self.cfg.split_vocal_strings),
             ":ANS" => self.cfg.ans.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":BLL" => self.cfg.bll.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":EBLSE" => b(self.cfg.eblse),
@@ -3219,6 +3235,13 @@ impl Engine {
     pub fn new_digit_sound_rpc(&mut self, digit: i64, onset_ms: i64) {
         let at = self.time_ms().max(onset_ms);
         self.new_digit_sound(digit, at);
+    }
+
+    /// `new-word-sound <word> [onset] [location] [time-in-ms]`: schedule a
+    /// word sound whose duration is the word's articulation time.
+    pub fn new_word_sound_rpc(&mut self, word: String, onset_ms: i64, location: String) {
+        let at = self.time_ms().max(onset_ms);
+        self.new_word_sound(word, at, location);
     }
 
     /// `(pbreak <name>...)`: halt before firing the named production.

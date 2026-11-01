@@ -55,6 +55,7 @@ mod perception;
 mod productions;
 mod rhs;
 mod save_model;
+mod speech;
 
 #[cfg(test)]
 mod tests;
@@ -411,6 +412,14 @@ struct Config {
     /// `:audio-ms-times` (`audio.lisp:1543`): print/store audio-event onset,
     /// offset, and duration in milliseconds instead of seconds.
     audio_ms_times: bool,
+    /// Speech module `:syllable-rate` (`speech.lisp:203`), in ms per syllable.
+    syllable_rate_ms: i64,
+    /// Speech module `:char-per-syllable` (`speech.lisp:205`).
+    char_per_syllable: f32,
+    /// Syllable-count extension `:use-syllable-table` (default `t`).
+    use_syllable_table: bool,
+    /// Syllable-count extension `:split-vocal-strings` (default `nil`).
+    split_vocal_strings: bool,
     act_scale: f32,
     ans: Option<f32>,
     egs: f32,
@@ -1280,11 +1289,17 @@ fn sgp_str(params: &[(String, Sexp)], key: &str) -> Option<String> {
 }
 
 fn sgp_bool(params: &[(String, Sexp)], key: &str) -> bool {
+    sgp_bool_opt(params, key).unwrap_or(false)
+}
+
+/// Like [`sgp_bool`] but distinguishes an absent key (the caller supplies the
+/// default) from an explicit `nil`.
+fn sgp_bool_opt(params: &[(String, Sexp)], key: &str) -> Option<bool> {
     match params.iter().find(|(k, _)| k == key) {
         // `t` (any non-nil symbol) is true; explicit NIL is false.
-        Some((_, Sexp::Sym(s))) => s != "NIL",
-        Some(_) => true,
-        None => false,
+        Some((_, Sexp::Sym(s))) => Some(s != "NIL"),
+        Some(_) => Some(true),
+        None => None,
     }
 }
 
@@ -1539,6 +1554,19 @@ impl Config {
             inhibition_scale: sgp_single(&m.params, ":INHIBITION-SCALE")?.unwrap_or(5.0),
             inhibition_decay: sgp_single(&m.params, ":INHIBITION-DECAY")?.unwrap_or(1.0),
             audio_ms_times: sgp_bool(&m.params, ":AUDIO-MS-TIMES"),
+            syllable_rate_ms: (sgp_num(&m.params, ":SYLLABLE-RATE", 0.15)? * 1000.0).round() as i64,
+            char_per_syllable: sgp_num(&m.params, ":CHAR-PER-SYLLABLE", 3.0)? as f32,
+            // The extension's default is `t`, but only after
+            // `(require-extra "syllable-count")`; other models keep the base
+            // `:char-per-syllable` timing.
+            use_syllable_table: sgp_bool_opt(&m.params, ":USE-SYLLABLE-TABLE").unwrap_or_else(
+                || {
+                    m.required_extras
+                        .iter()
+                        .any(|e| e.eq_ignore_ascii_case("syllable-count"))
+                },
+            ),
+            split_vocal_strings: sgp_bool(&m.params, ":SPLIT-VOCAL-STRINGS"),
             act_scale,
             egs: sgp_single(&m.params, ":EGS")?.unwrap_or(0.0),
             dat_ms: (sgp_num(&m.params, ":DAT", 0.05)? * 1000.0).round() as i64,
@@ -2647,6 +2675,9 @@ pub struct Engine {
     /// End of the latest queued/active utterance. An earlier utterance's
     /// `VocalFree` must not clear the busy flag for a later one.
     vocal_end_ms: i64,
+    /// `register-articulation-time`: text -> duration in ms.  Per model, like
+    /// the speech module's `art-time-ht`.
+    articulation_times: HashMap<String, i64>,
     /// Audio module: sounds emitted so far (`AUDIO-EVENT{n}`).
     audio_events: u64,
     /// The `AUDIO-EVENT{n}` currently in the `AURAL-LOCATION` buffer, if any
@@ -2658,6 +2689,8 @@ pub struct Engine {
     tone_seq: u64,
     /// Audio module: next `DIGIT{n}` index (`new-name-fct "DIGIT"`).
     digit_seq: u64,
+    /// Audio module: next `WORD{n}` index (`new-name-fct "WORD"`).
+    word_seq: u64,
     /// Audio module: next `SOUND{n}` index (`new-name-fct "SOUND"`).
     sound_seq: u64,
     /// Audio module: ongoing-sound command id -> live sound index.
@@ -3179,11 +3212,13 @@ impl Engine {
             vocal_busy: false,
             vocal_prep_busy: false,
             vocal_end_ms: 0,
+            articulation_times: HashMap::new(),
             audio_events: 0,
             aural_loc_evt: None,
             sounds: Vec::new(),
             tone_seq: 0,
             digit_seq: 0,
+            word_seq: 0,
             sound_seq: 0,
             ongoing_sounds: HashMap::new(),
             ongoing_seq: 0,
@@ -3866,6 +3901,7 @@ impl Engine {
         self.sounds.clear();
         self.tone_seq = 0;
         self.digit_seq = 0;
+        self.word_seq = 0;
         self.sound_seq = 0;
         self.ongoing_sounds.clear();
         self.ongoing_seq = 0;

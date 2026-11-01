@@ -183,6 +183,11 @@ pub const BUILTINS: &[&str] = &[
     "print-audicon",
     "new-word-sound",
     "new-digit-sound",
+    "get-articulation-time",
+    "register-articulation-time",
+    "get-syllable-count",
+    "register-syllable-count",
+    "remove-syllable-count",
     "pbreak",
     "punbreak",
     "trigger-reward",
@@ -1981,9 +1986,99 @@ impl Session {
                 Ok(vec![Json::Null])
             }
             "new-word-sound" => {
-                // Speech synthesis is not modelled; the corpus's audio specs
-                // use tone and digit sounds.
+                // `new-word-sound <word> [onset] [location] [time-in-ms]`
+                // (`audio.lisp:901`): a WORD sound whose duration is the
+                // speech module's articulation time.
+                let word = args.first().map(json_to_text).unwrap_or_default();
+                let onset = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let location = args
+                    .get(2)
+                    .map(json_to_text)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or_else(|| "EXTERNAL".to_string());
+                let in_ms = args
+                    .get(3)
+                    .map(|a| matches!(a, Json::Bool(true)))
+                    .unwrap_or(false);
+                let onset_ms = if in_ms {
+                    onset as i64
+                } else {
+                    (onset * 1000.0).round() as i64
+                };
+                if !word.is_empty() {
+                    if let Some(eng) = &mut self.engine {
+                        eng.new_word_sound_rpc(word, onset_ms, location);
+                    }
+                }
                 Ok(vec![Json::Null])
+            }
+            "register-articulation-time" => {
+                // `register-articulation-time <string> <time> [time-in-ms]`.
+                let word = args.first().map(json_to_text).unwrap_or_default();
+                let time = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let in_ms = args
+                    .get(2)
+                    .map(|a| matches!(a, Json::Bool(true)))
+                    .unwrap_or(false);
+                let time_ms = if in_ms {
+                    time.round() as i64
+                } else {
+                    (time * 1000.0).round() as i64
+                };
+                if let Some(eng) = &mut self.engine {
+                    eng.register_articulation_time(word.clone(), time_ms);
+                }
+                Ok(vec![Json::Str(word)])
+            }
+            "get-articulation-time" => {
+                // `get-articulation-time <string> [time-in-ms]`.
+                let word = args.first().map(json_to_text).unwrap_or_default();
+                let in_ms = args
+                    .get(1)
+                    .map(|a| matches!(a, Json::Bool(true)))
+                    .unwrap_or(false);
+                let Some(eng) = &self.engine else {
+                    return Ok(vec![Json::Null]);
+                };
+                let time = eng.get_articulation_time(&word, in_ms);
+                Ok(vec![if in_ms {
+                    Json::Int(time as i64)
+                } else {
+                    Json::Float(time)
+                }])
+            }
+            "register-syllable-count" => {
+                // `register-syllable-count <word> <syllables>`.
+                let word = args.first().map(json_to_text).unwrap_or_default();
+                let syllables = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                if word.is_empty() || !(1..=255).contains(&syllables) {
+                    return Ok(vec![Json::Null]);
+                }
+                if let Some(eng) = &self.engine {
+                    eng.register_syllable_count(&word, syllables as u8);
+                }
+                Ok(vec![Json::Str(word)])
+            }
+            "get-syllable-count" => {
+                let word = args.first().map(json_to_text).unwrap_or_default();
+                let Some(eng) = &self.engine else {
+                    return Ok(vec![Json::Null]);
+                };
+                Ok(vec![match eng.get_syllable_count(&word) {
+                    Some(count) => Json::Int(count as i64),
+                    None => Json::Null,
+                }])
+            }
+            "remove-syllable-count" => {
+                let word = args.first().map(json_to_text).unwrap_or_default();
+                let Some(eng) = &self.engine else {
+                    return Ok(vec![Json::Null]);
+                };
+                Ok(vec![if eng.remove_syllable_count(&word) {
+                    Json::Str(word)
+                } else {
+                    Json::Null
+                }])
             }
             "new-digit-sound" => {
                 // `new-digit-sound <digit> [onset] [time-in-ms]`.
