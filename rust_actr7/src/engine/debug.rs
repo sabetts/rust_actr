@@ -2082,6 +2082,12 @@ impl Engine {
         self.chunk_name_slot(&name.to_uppercase(), &slot.to_uppercase())
     }
 
+    /// `chunk-slot-value` for the RPC/facade path: prefer the live buffer
+    /// chunk so a task callback sees a just-applied buffer modification.
+    pub fn chunk_slot_live_value(&self, name: &str, slot: &str) -> Option<String> {
+        self.chunk_slot_live(name, slot)
+    }
+
     /// `chunk-copied-from`: the source of a copied chunk, if any.
     pub fn chunk_copied_from(&self, name: &str) -> Option<String> {
         self.copy_source.get(&name.to_uppercase()).cloned()
@@ -2261,6 +2267,34 @@ impl Engine {
     /// `copy-chunk <chunk>`: a named copy `{name}-{k}` in the chunk table.
     pub fn copy_chunk_rpc(&mut self, name: &str) -> String {
         self.copy_chunk(&name.to_uppercase())
+    }
+
+    /// `copy-chunk` for the task/RPC path: copy the live buffer chunk when the
+    /// name refers to one, so modifications made by the current production are
+    /// included (the named-table entry can be the pre-modification source).
+    pub fn copy_chunk_live_rpc(&mut self, name: &str) -> String {
+        let target = name.to_uppercase();
+        let live = self.buffers.values().find_map(|b| {
+            b.chunk
+                .as_ref()
+                .filter(|c| c.name.as_deref() == Some(target.as_str()))
+                .cloned()
+        });
+        if let Some(chunk) = live {
+            let previous = self.named.insert(target.clone(), chunk);
+            let copy = self.copy_chunk(&target);
+            match previous {
+                Some(chunk) => {
+                    self.named.insert(target, chunk);
+                }
+                None => {
+                    self.named.remove(&target);
+                }
+            }
+            copy
+        } else {
+            self.copy_chunk(&target)
+        }
     }
 
     /// `mod-chunk <chunk> (slot value ...)`: modify a named chunk in the

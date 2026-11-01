@@ -489,6 +489,40 @@ impl Engine {
             Some(v.show())
         }
     }
+
+    /// The live value of a slot: a buffer-resident chunk wins over its named
+    /// source (a production's buffer modification lands before a task callback
+    /// reads it). RPC `chunk-slot-value` uses this; compilation/mapping use
+    /// [`Engine::chunk_name_slot`].
+    pub(super) fn chunk_slot_live(&self, chunk: &str, slot: &str) -> Option<String> {
+        let name = chunk.to_uppercase();
+        let c = self
+            .buffers
+            .values()
+            .find_map(|b| {
+                b.chunk
+                    .as_ref()
+                    .filter(|c| c.name.as_deref() == Some(name.as_str()))
+            })
+            .or_else(|| self.named.get(&name))
+            .or_else(|| {
+                let source = self
+                    .copy_source
+                    .get(&name)
+                    .map(|s| s.as_str())
+                    .unwrap_or(&name);
+                self.dm
+                    .iter()
+                    .find(|c| c.name.as_deref() == Some(source))
+                    .or_else(|| self.named.get(source))
+            })?;
+        let v = c.get(&slot.to_uppercase());
+        if v == Value::Nil {
+            None
+        } else {
+            Some(v.show())
+        }
+    }
     /// An exact miss may still pass when the value similarity is strictly
     /// greater than `:md`; the mismatch is recorded for the utility penalty
     /// (`test-slot`, procedural.lisp:1774).

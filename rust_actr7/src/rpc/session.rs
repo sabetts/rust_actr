@@ -1216,7 +1216,7 @@ impl Session {
                 let copy = self
                     .engine
                     .as_mut()
-                    .map(|e| e.copy_chunk_rpc(name))
+                    .map(|e| e.copy_chunk_live_rpc(name))
                     .unwrap_or_default();
                 Ok(vec![Json::Str(copy)])
             }
@@ -1316,7 +1316,10 @@ impl Session {
             "chunk-slot-value" => {
                 let n = args.first().and_then(|a| a.as_str()).unwrap_or("");
                 let s = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
-                let v = self.engine.as_ref().and_then(|e| e.chunk_slot(n, s));
+                let v = self
+                    .engine
+                    .as_ref()
+                    .and_then(|e| e.chunk_slot_live_value(n, s));
                 Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
             }
             "act-r-random" => {
