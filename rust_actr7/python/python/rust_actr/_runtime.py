@@ -25,6 +25,9 @@ class RuntimeMixin:
     def _eval(self, name: str, *args: Any) -> list[Any]:
         raise NotImplementedError
 
+    def _run_result(self, name: str, *args: Any) -> list[Any]:
+        raise NotImplementedError
+
     @staticmethod
     def _first(result: list[Any]) -> Any:
         return result[0] if result else None
@@ -35,7 +38,7 @@ class RuntimeMixin:
     # -- run/lifecycle ---------------------------------------------------
     def _run_cmd(self, name: str, *args: Any) -> str:
         before = len(self._trace)
-        self._eval(name, *args)
+        self._run_result(name, *args)
         return self._trace[before:]
 
     def run(self, seconds: float, real_time: bool = False) -> str:

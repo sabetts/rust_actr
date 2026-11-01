@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use actr_engine::engine::Engine as CoreEngine;
 use actr_engine::json::Json;
@@ -168,6 +169,26 @@ impl Session {
         self.inner.load_source(source).map_err(runtime_error)
     }
 
+    /// Install a Python `:sim-hook`.  The callable receives the two printed
+    /// values and returns a number (or `None` to fall through).  It must not
+    /// call back into the model.
+    fn set_sim_hook(&mut self, callable: Option<Py<PyAny>>) -> PyResult<()> {
+        let engine = self
+            .inner
+            .engine_mut()
+            .ok_or_else(|| PyRuntimeError::new_err("no model loaded"))?;
+        let hook = callable.map(|callable| {
+            Rc::new(move |a: &str, b: &str| {
+                Python::attach(|py| {
+                    let result = callable.call1(py, (a, b)).ok()?;
+                    result.bind(py).extract::<f32>().ok()
+                })
+            }) as Rc<dyn Fn(&str, &str) -> Option<f32>>
+        });
+        engine.set_sim_hook(hook);
+        Ok(())
+    }
+
     /// Evaluate a command.  `args_json` is a JSON array; the result is a JSON
     /// array (the same wire representation the RPC server uses).
     #[pyo3(signature = (name, args_json="[]"))]
@@ -230,6 +251,28 @@ impl Session {
     /// One slice of an interleaved run; `true` when it yielded.
     fn run_slice(&mut self, limit_ms: i64, full: bool) -> PyResult<bool> {
         self.inner.run_slice(limit_ms, full).map_err(runtime_error)
+    }
+
+    /// One bounded chunk of a run.  With `max_events=1` this lets a Python
+    /// caller dispatch task commands between engine events.  Returns `true`
+    /// while the run has more work (it was event-capped); `false` once the
+    /// run finished and emitted its stop terminator.
+    #[pyo3(signature = (limit_ms, full, max_events=None, soft_ms=None))]
+    fn run_chunk(
+        &mut self,
+        limit_ms: i64,
+        full: bool,
+        max_events: Option<u64>,
+        soft_ms: Option<i64>,
+    ) -> PyResult<bool> {
+        self.inner
+            .run_chunk(limit_ms, full, max_events, soft_ms)
+            .map_err(runtime_error)
+    }
+
+    /// Events evaluated in the last run (the `run` command's second value).
+    fn run_events(&self) -> u64 {
+        self.inner.run_events()
     }
 }
 

@@ -57,8 +57,8 @@ m.add_chunk("zero", "number", vocal_rep=actr.String("zero"))
 Slot names use Python underscores and are rendered as Lisp hyphens:
 `next_let` becomes `next-let`.
 
-Supported chunk values are `str`, `int`, `float`, `bool`, `None`, and
-`actr.String`/`actr.LispString`.
+Supported chunk values are `str`, `int`, `float`, `bool`, `None`, lists/tuples,
+and `actr.String`/`actr.LispString`.
 
 ## Model lifecycle
 
@@ -72,9 +72,10 @@ Supported chunk values are `str`, `int`, `float`, `bool`, `None`, and
 
 ## Current limits
 
-The first release covers model construction, goal focus, running, resetting,
-and trace access. Devices, windows, task callbacks, arbitrary Lisp evaluation,
-runtime buffer mutation, and multiple models are not exposed yet.
+The interface covers model construction, runtime buffer/DM commands, windows
+and devices, command monitors, mid-run task callbacks, Python similarity hooks,
+and `mod-chunk`/`copy-chunk`. Arbitrary Lisp evaluation and multiple-model
+files are still out of scope.
 
 ## Tutorial models
 
@@ -109,17 +110,17 @@ python -m rust_actr.tutorial.run demo2 experiment
 Port status:
 
 - Working end-to-end: `count`, `addition`, `semantic`, `demo2`, `fan-no-pm`,
-  `grouped`, `onehit` (hands/blocks/learning), `zbrodoff`, and the dynamic
-  models that do not need task-side hooks.
+  `grouped`, `onehit` (hands/blocks/learning), `zbrodoff` (set/block/experiment),
+  and the dynamic models that do not need task-side hooks.
+- Python `:sim-hook` functions are wired for `1hit`, `bst-ppm`, and
+  `categorize`; the remaining blockers for those models are task-level
+  actions (see below).
 - Starting models (no/partial productions by design): unit2 assignment,
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
   to demonstrate load warnings) and is not ported.
-- Known gaps: Python `:sim-hook` functions (`1hit`, `bst-ppm`, `categorize`),
-  Python `imaginal-action` callbacks (`bst-ppm`), mid-run `output-key`
-  dispatch for window clears (`sperling`), and `new-digit-sound` /
-  `new-word-sound` (`siegler`). Those models build and run but do not yet
-  reproduce the tutorial summaries.
+- Known gaps: Python `imaginal-action` callbacks (`bst-ppm`), and
+  `new-digit-sound` / `new-word-sound` (`siegler`).
 
 ## Tests
 

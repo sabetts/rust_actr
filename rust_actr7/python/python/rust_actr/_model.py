@@ -151,6 +151,7 @@ class Model(RuntimeMixin):
         self._current_window: Optional[str] = None
         self._device_installed = False
         self._buffer_types: dict[str, str] = {}
+        self._in_run = False
 
     def _check_mutable(self) -> None:
         if self._session is not None:
@@ -188,6 +189,44 @@ class Model(RuntimeMixin):
         self._dispatch_fired()
         return result
 
+    def _needs_stepping(self) -> bool:
+        """Whether a run must yield to Python between engine events."""
+        return bool(self._monitors or self._commands)
+
+    def _run_result(self, name: str, *args: Any) -> list[Any]:
+        if (
+            name in ("run", "run-full-time", "run-until-time")
+            and args
+            and self._needs_stepping()
+        ):
+            return self._run_stepped_result(name, args[0])
+        return self._eval(name, *args)
+
+    def _run_stepped_result(self, name: str, value: Any) -> list[Any]:
+        session = self._ensure_session()
+        if self._in_run:
+            raise RuntimeError("run() cannot be called from inside a task callback")
+        self._in_run = True
+        try:
+            limit, full, should_run = session.run_begin(name, value)
+            if not should_run:
+                return [session.time(), session.run_events(), None]
+            while True:
+                more = session.run_chunk(limit, full, 1, None)
+                self._absorb_trace()
+                self._dispatch_fired()
+                if not more:
+                    break
+            return [session.time(), session.run_events(), None]
+        finally:
+            self._in_run = False
+
+    def _absorb_trace(self) -> None:
+        text = self._session.take_trace() if self._session is not None else ""
+        if text:
+            self._trace += text
+            self._deliver_trace(text)
+
     def _dispatch_fired(self) -> None:
         if self._session is None:
             return
@@ -221,12 +260,27 @@ class Model(RuntimeMixin):
         if not isinstance(key, str) or not key.startswith(":"):
             raise ValueError("sgp key must be a string beginning with ':'")
         render_symbol(key, what="sgp key")
+        self._sgp.append((key, value))
         if self._session is not None:
             self._eval("sgp", key, value)
             return self
         self._check_mutable()
-        self._sgp.append((key, value))
         self._emit(f"(sgp {key} {render_value(value)})")
+        return self
+
+    @property
+    def sim_hook_name(self) -> Optional[str]:
+        """The model's ``:sim-hook`` function name, if any."""
+        for key, value in self._sgp:
+            if key.upper() == ":SIM-HOOK":
+                if isinstance(value, LispString):
+                    return value.value
+                return str(value)
+        return None
+
+    def set_sim_hook(self, callable: Any) -> "Model":
+        """Install a pure Python similarity hook for this model."""
+        self._ensure_session().set_sim_hook(callable)
         return self
 
     def chunk_type(

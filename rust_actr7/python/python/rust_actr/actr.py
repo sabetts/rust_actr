@@ -48,6 +48,10 @@ def load_act_r_model(path: str) -> Any:
         _current.add_command(name, function)
     for original, monitor in _pending_monitors:
         _current.monitor_command(original, monitor)
+    hook = getattr(_current, "sim_hook_name", None)
+    hook_fn = _pending_commands.get(hook.upper()) if hook else None
+    if hook_fn is not None:
+        _current.set_sim_hook(hook_fn)
     return _current
 
 
@@ -62,9 +66,13 @@ def add_command(
     if _current is None:
         _pending_commands[name] = function
         return True
-    return _current.add_command(
+    result = _current.add_command(
         name, function, documentation, single, local_name, encoded
     )
+    hook = getattr(_current, "sim_hook_name", None)
+    if function is not None and hook and name.upper() == hook.upper():
+        _current.set_sim_hook(function)
+    return result
 
 
 def remove_command(name: str) -> Any:
@@ -105,19 +113,19 @@ def _require():
 
 def run(time: float, real_time: bool = False) -> Any:
     """Run like the tutorial client: returns ``[time, events, break]``."""
-    return _require()._eval("run", time)
+    return _require()._run_result("run", time)
 
 
 def run_full_time(time: float, real_time: bool = False) -> Any:
-    return _require()._eval("run-full-time", time)
+    return _require()._run_result("run-full-time", time)
 
 
 def run_until_time(time: float, real_time: bool = False) -> Any:
-    return _require()._eval("run-until-time", time)
+    return _require()._run_result("run-until-time", time)
 
 
 def run_n_events(count: int, real_time: bool = False) -> Any:
-    return _require()._eval("run-n-events", count)
+    return _require()._run_result("run-n-events", count)
 
 
 def __getattr__(name: str) -> Any:
