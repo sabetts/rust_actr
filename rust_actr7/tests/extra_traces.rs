@@ -14,13 +14,14 @@
 //! The cases are a static list of `#[test]`s, one per scenario.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use actr_engine::run_model;
 
 mod common;
 use common::{
-    crate_dir, first_diff, load_device, meta_value, models_dir, normalize_eol, parse_seed_str,
+    crate_dir, first_diff, fixture_model, load_device, meta_value, models_dir, normalize_eol,
+    parse_seed_str,
 };
 
 macro_rules! trace_case {
@@ -59,14 +60,14 @@ fn run_case(name: &str) -> Result<(), String> {
     let meta_path = trace_path.with_extension("meta");
     let meta =
         fs::read_to_string(&meta_path).map_err(|e| format!("{}: {e}", meta_path.display()))?;
-    let model = meta_value(&meta, "model")?;
+    let model = fixture_model(&meta_value(&meta, "model")?);
     let seed = parse_seed_str(&meta_value(&meta, "seed")?)?;
     let run_time: f64 = meta_value(&meta, "run")?
         .parse()
         .map_err(|_| format!("{name}: bad run time"))?;
 
     let device = load_device(&trace_path)?;
-    let actual = run_model(&root, &model, seed, run_time, &device)
+    let actual = run_model(&model, seed, run_time, &device)
         .map_err(|e| format!("{name}: engine error: {e}"))?;
 
     if normalize_eol(&actual) == normalize_eol(&expected) {

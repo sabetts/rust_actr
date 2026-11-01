@@ -23,7 +23,8 @@ use actr_engine::rpc::session::Session;
 use actr_engine::{run_model_steps_with_hook, EventHook, EventView, PreResult, Step};
 
 use super::{
-    apply_session_step, first_diff, load_spec_device, models_dir, normalize, refs_dir, NoRemote,
+    apply_session_step, first_diff, fixture_model, load_spec_device, models_dir, normalize,
+    refs_dir, NoRemote,
 };
 
 // --------------------------------------------------------------- predicates
@@ -227,6 +228,7 @@ impl HookCase {
             no_device,
             hook_swaps,
         } = self;
+        let models: Vec<String> = models.iter().map(|m| fixture_model(m)).collect();
         let device = if no_device {
             actr_engine::DeviceSetup::default()
         } else {
@@ -239,9 +241,9 @@ impl HookCase {
             _ => false,
         });
         if needs_session {
-            run_session_hook(&root, &models, seed, &steps, &device, hook, hook_swaps)
+            run_session_hook(&models, seed, &steps, &device, hook, hook_swaps)
         } else if hook_swaps.is_empty() {
-            run_model_steps_with_hook(&root, &models, seed, &steps, &device, Some(hook))
+            run_model_steps_with_hook(&models, seed, &steps, &device, Some(hook))
                 .map_err(|e| format!("{case}: engine error: {e}"))
         } else {
             Err(format!(
@@ -270,7 +272,6 @@ fn compare(case: &str, actual: Vec<String>) -> Result<(), String> {
 /// Drive a command-bearing or `:STARTING-PARAMETERS` driver through the RPC
 /// [`Session`], installing the hook on the engine before the steps run.
 fn run_session_hook(
-    root: &std::path::Path,
     models: &[String],
     seed: (u64, u64),
     steps: &[Step],
@@ -278,7 +279,7 @@ fn run_session_hook(
     hook: Box<dyn EventHook>,
     hook_swaps: Vec<(usize, Box<dyn EventHook>)>,
 ) -> Result<String, String> {
-    let mut session = Session::new(root.to_path_buf(), seed);
+    let mut session = Session::new(seed);
     let mut remote = NoRemote;
     for m in models {
         session

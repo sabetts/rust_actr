@@ -105,7 +105,8 @@ fn color(name: &str) -> egui::Color32 {
 
 pub struct App {
     backend: Box<dyn EnvBackend>,
-    /// Where the file dialog opens (the ACT-R root; `None` in client mode).
+    /// Where the file dialog opens (the current directory; `None` in client
+    /// mode).
     start_dir: Option<PathBuf>,
     trace: String,
     command: String,

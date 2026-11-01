@@ -12,7 +12,7 @@
 //! Lisp-side quirks in `PORTING-NOTES.md`.
 //!
 //! Contract (mirrors `fixtures/run-traces.lisp`):
-//! 1. Read the model file at `<actr_root>/<subpath with ';' as separator>`.
+//! 1. Read the model file from a filesystem path.
 //! 2. Seed the RNG with `seed` (equivalent of `(sgp :seed (S C))`).
 //! 3. Reset and run the model for `run_time` seconds of model time.
 //! 4. Return the trace bytes that Lisp would write via `(sgp :v ...)`:
@@ -42,15 +42,12 @@ pub use engine::{
 pub use model::{load_models, ChunkDesc, Model};
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Run one model and return its trace as exact bytes.
 ///
-/// * `actr_root` — filesystem path of the `actr7.x` checkout.
-/// * `model` — model location in manifest form, e.g.
-///   `"tutorial;unit1;count.lisp"` (`;` separates directories, as in the
-///   ACT-R logical host `ACT-R:tutorial;unit1;count.lisp`). Task setup
-///   files (which load a model plus build device state) work too.
+/// * `model` — filesystem path to a model or task file. Task setup files
+///   (which load a model plus build device state) work too.
 /// * `seed` — `(sgp :seed ...)` value: initial seed + advance count.
 ///   Applied to the Lisp-identical MT stream ([`rand::Mt`]); draws happen
 ///   for activation noise (`:ans`), utility noise (`:egs`), and `:er`
@@ -61,20 +58,12 @@ use std::path::Path;
 ///   times), mirroring what a task file builds with `open-exp-window` /
 ///   `add-text-to-exp-window` after install.
 pub fn run_model(
-    actr_root: &Path,
     model: &str,
     seed: (u64, u64),
     run_time: f64,
     device: &DeviceSetup,
 ) -> Result<String, EngineError> {
-    run_model_with(
-        actr_root,
-        model,
-        seed,
-        run_time,
-        device,
-        trace::MODULE_WIDTH,
-    )
+    run_model_with(model, seed, run_time, device, trace::MODULE_WIDTH)
 }
 
 /// Like [`run_model`], but with an explicit trace module-column width.
@@ -82,16 +71,14 @@ pub fn run_model(
 /// may override (e.g. `tutorial-unit1-count-trace` pins 13); the spec corpus
 /// captures the value per run.
 pub fn run_model_with(
-    actr_root: &Path,
     model: &str,
     seed: (u64, u64),
     run_time: f64,
     device: &DeviceSetup,
     module_width: usize,
 ) -> Result<String, EngineError> {
-    let rel = model.replace(';', std::path::MAIN_SEPARATOR_STR);
-    let path = actr_root.join(rel);
-    let models = load_models(&path)?;
+    reject_logical_path(model)?;
+    let models = load_models(Path::new(model))?;
     let def = models
         .last()
         .ok_or_else(|| EngineError::Model(format!("no define-model in {model}")))?;
@@ -442,6 +429,16 @@ pub enum Step {
     },
 }
 
+fn reject_logical_path(model: &str) -> Result<(), EngineError> {
+    let trimmed = model.trim_start();
+    if trimmed.to_ascii_uppercase().starts_with("ACT-R:") || trimmed.contains(';') {
+        return Err(EngineError::Model(format!(
+            "ACT-R logical paths are not supported: {model:?}; pass a filesystem path"
+        )));
+    }
+    Ok(())
+}
+
 /// Run a scripted sequence of steps over one or more model files (the
 /// test-model driver form: repeated `run` bounded relative to the current
 /// model time, `goal-focus` between runs). Returns the concatenated trace.
@@ -450,20 +447,18 @@ pub enum Step {
 /// `(run ...)` does not reseed, and none of the current PURE/MULTI specs
 /// change `:seed` mid-driver.
 pub fn run_model_steps(
-    actr_root: &Path,
     models: &[String],
     seed: (u64, u64),
     steps: &[Step],
     device: &DeviceSetup,
 ) -> Result<String, EngineError> {
-    run_model_steps_with_hook(actr_root, models, seed, steps, device, None)
+    run_model_steps_with_hook(models, seed, steps, device, None)
 }
 
 /// Like [`run_model_steps`], but installs an [`EventHook`] on the engine
 /// before the driver steps run (the hook is what the `:SCOPE :HOOK` cases use
 /// to reproduce ACT-R's `add-pre/post-event-hook` filters).
 pub fn run_model_steps_with_hook(
-    actr_root: &Path,
     models: &[String],
     seed: (u64, u64),
     steps: &[Step],
@@ -475,8 +470,8 @@ pub fn run_model_steps_with_hook(
     let mut user_vars = HashMap::new();
     let mut commands: HashMap<String, String> = HashMap::new();
     for m in models {
-        let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
-        let path = actr_root.join(rel);
+        reject_logical_path(m)?;
+        let path = PathBuf::from(m);
         // Test-model stubs load a task file (defuns, experiment code) that
         // in turn loads the actual model. Only files that define a model are
         // fed to the strict loader.

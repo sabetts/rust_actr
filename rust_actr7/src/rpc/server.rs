@@ -16,19 +16,19 @@ use crate::rpc::{
     callback, parse_reply, parse_request, read_message, reply_err, reply_ok, write_message, Method,
 };
 
-/// Serve clients on `addr` (TCP). `root` is the ACT-R checkout.
+/// Serve clients on `addr` (TCP).  Model and task files are loaded from
+/// filesystem paths supplied by the client.
 ///
 /// Each connection is handled on its own thread so a second client (the
 /// Python `actr.connection()` a test may open alongside the driver) is
 /// answered immediately instead of blocking behind the first — the Lisp
 /// server accepts clients concurrently too.
-pub fn serve(addr: &str, root: std::path::PathBuf, seed: (u64, u64)) -> std::io::Result<()> {
+pub fn serve(addr: &str, seed: (u64, u64)) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr)?;
     for stream in listener.incoming() {
         let stream = stream?;
-        let root = root.clone();
         std::thread::spawn(move || {
-            let mut session = Session::new(root, seed);
+            let mut session = Session::new(seed);
             if let Err(e) = handle(&mut session, stream) {
                 eprintln!("rpc: connection ended: {e}");
             }

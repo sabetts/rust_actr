@@ -24,6 +24,29 @@ sys.path.insert(0, os.path.join(ACTR, "test-models"))
 import actr  # noqa: E402  (auto-connects from ~/act-r-port-num.txt)
 
 
+def _runtime_path(path):
+    """The Rust runtime accepts filesystem paths, not ACT-R logical names."""
+    if path.startswith("ACT-R:"):
+        return os.path.join(ACTR, path[len("ACT-R:") :].replace(";", os.sep))
+    return path
+
+
+_orig_load_model = actr.load_act_r_model
+_orig_load_code = actr.load_act_r_code
+
+
+def _load_model(path):
+    return _orig_load_model(_runtime_path(path))
+
+
+def _load_code(path):
+    return _orig_load_code(_runtime_path(path))
+
+
+actr.load_act_r_model = _load_model
+actr.load_act_r_code = _load_code
+
+
 def all_tests():
     d = os.path.join(ACTR, "test-models")
     names = []

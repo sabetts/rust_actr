@@ -19,15 +19,12 @@ pub use backend::EnvBackend;
 pub use client::Client;
 pub use inproc::InProc;
 
-use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::json::Json;
 
 /// Parsed `actr env` options.
 pub struct EnvArgs {
-    /// The `actr7.x` checkout (in-process mode).
-    pub actr_root: PathBuf,
     /// RPC host (client mode).
     pub host: String,
     /// RPC port (client mode).
@@ -51,14 +48,14 @@ pub fn run(args: EnvArgs) -> ExitCode {
             }
         }
     } else {
-        Box::new(InProc::new(args.actr_root.clone(), args.seed))
+        Box::new(InProc::new(args.seed))
     };
-    // The file dialog opens at the ACT-R root in-process; there is no local
-    // root in client mode.
+    // The in-process file dialog starts in the current directory; client mode
+    // has no local file dialog.
     let start_dir = if args.connect {
         None
     } else {
-        Some(args.actr_root.clone())
+        std::env::current_dir().ok()
     };
 
     if let Some(model) = &args.model {
@@ -93,32 +90,24 @@ pub fn run(args: EnvArgs) -> ExitCode {
 mod tests {
     use super::*;
 
-    fn actr_dir() -> PathBuf {
-        std::env::var("ACTR_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("..")
-                    .join("actr7.x")
-            })
+    fn count_model() -> String {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("models")
+            .join("tutorial")
+            .join("unit1")
+            .join("count.lisp")
+            .to_string_lossy()
+            .into_owned()
     }
 
     /// The in-process backend loads, runs, and drains a trace headlessly —
     /// the plumbing the GUI panels sit on.
     #[test]
     fn inproc_loads_runs_and_drains_trace() {
-        let root = actr_dir();
-        if !root.is_dir() {
-            eprintln!("skipping: no ACT-R checkout at {}", root.display());
-            return;
-        }
-        let mut b = InProc::new(root, (100, 0));
-        b.evaluate(
-            "load-act-r-model",
-            None,
-            vec![Json::Str("tutorial;unit1;count.lisp".into())],
-        )
-        .expect("load-act-r-model");
+        let mut b = InProc::new((100, 0));
+        b.evaluate("load-act-r-model", None, vec![Json::Str(count_model())])
+            .expect("load-act-r-model");
         assert_eq!(b.current_model().as_deref(), Some("COUNT"));
         b.evaluate("run", None, vec![Json::Float(10.0)])
             .expect("run");
@@ -146,18 +135,9 @@ mod tests {
     /// engine pushes to the registered handler.
     #[test]
     fn inproc_collects_window_ops() {
-        let root = actr_dir();
-        if !root.is_dir() {
-            eprintln!("skipping: no ACT-R checkout at {}", root.display());
-            return;
-        }
-        let mut b = InProc::new(root, (100, 0));
-        b.evaluate(
-            "load-act-r-model",
-            None,
-            vec![Json::Str("tutorial;unit1;count.lisp".into())],
-        )
-        .expect("load-act-r-model");
+        let mut b = InProc::new((100, 0));
+        b.evaluate("load-act-r-model", None, vec![Json::Str(count_model())])
+            .expect("load-act-r-model");
         b.register_window_handler("env-vv-handler");
         b.evaluate(
             "add-virtual-window-handler",
@@ -200,19 +180,10 @@ mod tests {
     /// trace, driven one chunk per `poll_run` as the GUI does.
     #[test]
     fn inproc_chunked_run_completes() {
-        let root = actr_dir();
-        if !root.is_dir() {
-            eprintln!("skipping: no ACT-R checkout at {}", root.display());
-            return;
-        }
-        let mut b = InProc::new(root, (100, 0));
+        let mut b = InProc::new((100, 0));
         b.set_real_time(false);
-        b.evaluate(
-            "load-act-r-model",
-            None,
-            vec![Json::Str("tutorial;unit1;count.lisp".into())],
-        )
-        .expect("load-act-r-model");
+        b.evaluate("load-act-r-model", None, vec![Json::Str(count_model())])
+            .expect("load-act-r-model");
         assert!(b.begin_run(10.0, false));
         let mut chunks = 0;
         while b.is_running() {

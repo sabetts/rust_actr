@@ -16,7 +16,7 @@ use actr_engine::{run_model_steps, Step};
 
 mod common;
 use common::{
-    crate_dir, first_diff, load_device, meta_value, models_dir, normalize_eol, parse_seed_str,
+    crate_dir, first_diff, fixture_model, load_device, meta_value, normalize_eol, parse_seed_str,
 };
 
 macro_rules! full_case {
@@ -50,7 +50,7 @@ fn run_case(name: &str) -> Result<(), String> {
     let meta_path = trace_path.with_extension("meta");
     let meta =
         fs::read_to_string(&meta_path).map_err(|e| format!("{}: {e}", meta_path.display()))?;
-    let model = meta_value(&meta, "model")?;
+    let model = fixture_model(&meta_value(&meta, "model")?);
     let seed = parse_seed_str(&meta_value(&meta, "seed")?)?;
     let run_time: f64 = meta_value(&meta, "run")?
         .parse()
@@ -84,7 +84,7 @@ fn run_case(name: &str) -> Result<(), String> {
     });
 
     let device = load_device(&trace_path)?;
-    let actual = run_model_steps(&models_dir(), &[model], seed, &steps, &device)
+    let actual = run_model_steps(&[model], seed, &steps, &device)
         .map_err(|e| format!("{name}: engine error: {e}"))?;
 
     if normalize_eol(&actual) == normalize_eol(&expected) {

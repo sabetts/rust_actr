@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::rc::Rc;
 
 use actr_engine::engine::Engine as CoreEngine;
@@ -23,12 +22,6 @@ fn take_since(engine: &CoreEngine, start: usize) -> String {
     let mut text = lines.join("\n");
     text.push('\n');
     text
-}
-
-fn default_root() -> PathBuf {
-    std::env::var("ACTR_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("actr7.x"))
 }
 
 fn hook_arg(py: Python<'_>, value: &HookValue) -> PyResult<Py<PyAny>> {
@@ -159,15 +152,9 @@ struct Session {
 #[pymethods]
 impl Session {
     #[new]
-    #[pyo3(signature = (source=None, seed0=100, seed1=0, root=None))]
-    fn new(
-        source: Option<&str>,
-        seed0: u64,
-        seed1: u64,
-        root: Option<&str>,
-    ) -> PyResult<Self> {
-        let root = root.map(PathBuf::from).unwrap_or_else(default_root);
-        let mut inner = CoreSession::new(root, (seed0, seed1));
+    #[pyo3(signature = (source=None, seed0=100, seed1=0))]
+    fn new(source: Option<&str>, seed0: u64, seed1: u64) -> PyResult<Self> {
+        let mut inner = CoreSession::new((seed0, seed1));
         if let Some(src) = source {
             inner.load_source(src).map_err(runtime_error)?;
         }

@@ -28,14 +28,14 @@ pub fn models_dir() -> PathBuf {
     crate_dir().join("fixtures").join("models")
 }
 
-/// The `actr7.x` checkout, used only by regeneration/dev tools. `ACTR_DIR`
-/// overrides the default (`<crate>/../actr7.x`); the default test run uses
-/// [`models_dir`] instead.
+/// Resolve a fixture manifest name (`tutorial;unit1;count.lisp`) to the
+/// vendored filesystem path the runtime expects.
 #[allow(dead_code)]
-pub fn actr_dir() -> PathBuf {
-    std::env::var("ACTR_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| crate_dir().join("..").join("actr7.x"))
+pub fn fixture_model(name: &str) -> String {
+    models_dir()
+        .join(name.replace(';', std::path::MAIN_SEPARATOR_STR))
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// Normalize the newline convention only (CRLF -> LF). Content stays exact.

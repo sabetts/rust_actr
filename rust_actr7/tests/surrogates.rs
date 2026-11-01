@@ -15,7 +15,7 @@ use actr_engine::rpc::session::{Remote, Session};
 use actr_engine::{DeviceSetup, DeviceText};
 
 mod common;
-use common::{crate_dir, first_diff, models_dir, normalize_eol};
+use common::{crate_dir, first_diff, fixture_model, normalize_eol};
 
 struct NoRemote;
 
@@ -46,7 +46,7 @@ fn load(session: &mut Session, remote: &mut dyn Remote, path: &str) -> Result<()
         session,
         remote,
         "load-act-r-model",
-        &[Json::Str(path.into())],
+        &[Json::Str(fixture_model(path))],
     )?;
     Ok(())
 }
@@ -95,8 +95,7 @@ fn run_case_with_device(
     let trace_path = traces_dir().join(format!("{name}.trace"));
     let expected =
         fs::read_to_string(&trace_path).map_err(|e| format!("{}: {e}", trace_path.display()))?;
-    let root = models_dir();
-    let mut session = Session::new(root, (100, 0));
+    let mut session = Session::new((100, 0));
     session.set_device(device)?;
     let mut remote = NoRemote;
     f(&mut session, &mut remote)?;

@@ -5,7 +5,6 @@
 //! exercised; trace is drained from the session's `out_lines`, and visible
 //! window display ops are collected from the client handler's `Remote`.
 
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -68,9 +67,9 @@ pub struct InProc {
 }
 
 impl InProc {
-    pub fn new(root: PathBuf, seed: (u64, u64)) -> InProc {
+    pub fn new(seed: (u64, u64)) -> InProc {
         InProc {
-            session: Session::new(root, seed),
+            session: Session::new(seed),
             handler: String::new(),
             ops: Arc::new(Mutex::new(Vec::new())),
             run: None,

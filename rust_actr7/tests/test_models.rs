@@ -32,7 +32,7 @@ use actr_engine::{load_models, run_model_steps, ChunkDesc, DeviceSetup, DeviceTe
 
 mod common;
 mod hooks;
-use common::{crate_dir, first_diff, models_dir};
+use common::{crate_dir, first_diff, fixture_model, models_dir};
 
 // ---------------------------------------------------------------- spec model
 
@@ -698,10 +698,11 @@ fn parse_device_op(
     Ok(())
 }
 
-fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
+fn run_spec(spec: &Spec) -> Result<Vec<String>, String> {
     // A command-only spec has no run; the seed is unused, so any default
     // works (`(100 0)` is the corpus's canonical placeholder).
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
+    let models: Vec<String> = spec.models.iter().map(|m| fixture_model(m)).collect();
     let device = if spec.no_device {
         actr_engine::DeviceSetup::default()
     } else {
@@ -716,9 +717,8 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
     // and `fan` rely on `trace-fan-run` turning `:act` on for every run).
     // A file with more than one `define-model` needs the session's
     // multi-model meta-process (the model-name trace column).
-    let multi_model = spec.models.iter().any(|m| {
-        let rel = m.replace(';', std::path::MAIN_SEPARATOR_STR);
-        load_models(&root.join(rel))
+    let multi_model = models.iter().any(|m| {
+        load_models(Path::new(m))
             .map(|defs| defs.len() > 1)
             .unwrap_or(false)
     });
@@ -729,9 +729,9 @@ fn run_spec(root: &Path, spec: &Spec) -> Result<Vec<String>, String> {
             _ => false,
         });
     let actual = if needs_session {
-        run_spec_session(root, spec, &device)?
+        run_spec_session(&models, spec, &device)?
     } else {
-        run_model_steps(root, &spec.models, seed, &spec.steps, &device)
+        run_model_steps(&models, seed, &spec.steps, &device)
             .map_err(|e| format!("engine error: {e}"))?
     };
     Ok(normalize(&actual))
@@ -750,11 +750,15 @@ impl Remote for NoRemote {
 /// Drive a spec through a [`Session`]: load the model chain, then apply each
 /// step — commands via `evaluate`, the rest at the engine level, mirroring
 /// `run_model_steps` so the two drivers cannot diverge on trace shape.
-fn run_spec_session(root: &Path, spec: &Spec, device: &DeviceSetup) -> Result<String, String> {
+fn run_spec_session(
+    models: &[String],
+    spec: &Spec,
+    device: &DeviceSetup,
+) -> Result<String, String> {
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
-    let mut session = Session::new(root.to_path_buf(), seed);
+    let mut session = Session::new(seed);
     let mut remote = NoRemote;
-    for m in &spec.models {
+    for m in models {
         session
             .evaluate(
                 "load-act-r-model",
@@ -1324,7 +1328,7 @@ impl Case {
                 root.display()
             ));
         }
-        run_spec(&root, &self.to_spec())
+        run_spec(&self.to_spec())
     }
 
     /// Run the driver and compare with the case's `.ref` under ACT-R's own
@@ -1406,9 +1410,9 @@ impl SourceCase {
     }
 }
 
-/// Read one vendored source file by its ACT-R logical path (`;` separated).
+/// Read one vendored source file by its fixture manifest name (`;` separated).
 pub fn source_text(logical: &str) -> Result<String, String> {
-    let path = models_dir().join(logical.replace(';', std::path::MAIN_SEPARATOR_STR));
+    let path = PathBuf::from(fixture_model(logical));
     fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))
 }
 

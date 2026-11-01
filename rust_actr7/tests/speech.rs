@@ -1,7 +1,5 @@
 //! Speech articulation times, the syllable-count extension, and word sounds.
 
-use std::path::PathBuf;
-
 use actr_engine::json::Json;
 use actr_engine::rpc::session::{Remote, Session};
 
@@ -19,10 +17,7 @@ impl Remote for NoRemote {
 }
 
 fn session() -> Session {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("actr7.x");
-    let mut session = Session::new(root, (100, 0));
+    let mut session = Session::new((100, 0));
     session
         .load_source(
             "(require-extra \"syllable-count\")\n\

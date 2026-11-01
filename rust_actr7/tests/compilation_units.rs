@@ -12,7 +12,9 @@ use std::path::PathBuf;
 use actr_engine::{run_model, DeviceSetup};
 
 mod common;
-use common::{crate_dir, first_diff, meta_value, models_dir, normalize_eol, parse_seed_str};
+use common::{
+    crate_dir, first_diff, fixture_model, meta_value, models_dir, normalize_eol, parse_seed_str,
+};
 
 macro_rules! unit_case {
     ($ident:ident, $name:literal) => {
@@ -77,13 +79,13 @@ fn run_case_selected(name: &str, selected_doc: Option<&str>) -> Result<(), Strin
     let meta_path = trace_path.with_extension("meta");
     let meta =
         fs::read_to_string(&meta_path).map_err(|e| format!("{}: {e}", meta_path.display()))?;
-    let model = meta_value(&meta, "model")?;
+    let model = fixture_model(&meta_value(&meta, "model")?);
     let seed = parse_seed_str(&meta_value(&meta, "seed")?)?;
     let run_time: f64 = meta_value(&meta, "run")?
         .parse()
         .map_err(|_| format!("{name}: bad run time"))?;
 
-    let actual = run_model(&root, &model, seed, run_time, &DeviceSetup::default())
+    let actual = run_model(&model, seed, run_time, &DeviceSetup::default())
         .map_err(|e| format!("{name}: engine error: {e}"))?;
 
     let expected_blocks = select_blocks(composition_blocks(&expected), selected_doc);

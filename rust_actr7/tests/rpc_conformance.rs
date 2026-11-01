@@ -6,9 +6,9 @@
 //!   cargo test --test rpc_conformance -- --ignored --nocapture
 //!
 //! Requires Python 3 and an ACT-R checkout; `cargo test` (non-ignored) never
-//! invokes it, so the default build stays free of both. Verified with
-//! `cargo test --test rpc_conformance -- --ignored --nocapture` (20 expected
-//! Python test-models pass).
+//! invokes it, so the default build stays free of both.  The fixture driver
+//! translates the upstream client's `ACT-R:` names to absolute filesystem
+//! paths before they reach the server; the server itself is path-only.
 
 use std::path::PathBuf;
 use std::process::Command;

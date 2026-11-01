@@ -3,7 +3,8 @@
 # and compare against the shared `.ref` files.
 #
 # Requires: a built `actr` binary (`actr server`), Python 3, and the ACT-R
-# checkout.
+# checkout.  The Python driver translates the client's ACT-R logical names to
+# absolute filesystem paths; the server itself is path-only.
 # Usage: rpc-conformance.sh [--expect|--all|<test>...]
 set -euo pipefail
 
@@ -19,7 +20,7 @@ cargo build --manifest-path "$CRATE/Cargo.toml" --bins >/dev/null
 
 # The vendored client auto-connects from `~/act-r-port-num.txt`, so let the
 # server write it (do not pass --no-port-file).
-"$CRATE/target/debug/actr" server --port "$PORT" --actr "$ACTR_DIR" \
+"$CRATE/target/debug/actr" server --port "$PORT" \
   >/dev/null 2>&1 &
 SERVER=$!
 # Wait for the listener.

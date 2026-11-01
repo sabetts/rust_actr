@@ -237,7 +237,6 @@ pub trait Remote {
 
 /// A live RPC session: loaded model(s) plus the running engine.
 pub struct Session {
-    pub root: PathBuf,
     model_files: Vec<String>,
     defs: Vec<Model>,
     user_fns: std::collections::HashMap<String, UserDefun>,
@@ -301,14 +300,14 @@ struct VisWindow {
 }
 
 impl Session {
-    /// A fresh session rooted at an ACT-R checkout (`actr7.x`).
-    pub fn new(root: PathBuf, seed: (u64, u64)) -> Session {
+    /// A fresh session.  Model and task files are loaded from filesystem
+    /// paths; the session has no ACT-R checkout root.
+    pub fn new(seed: (u64, u64)) -> Session {
         let mut commands = BTreeMap::new();
         for name in BUILTINS {
             commands.insert((*name).to_string(), Command::builtin());
         }
         Session {
-            root,
             model_files: Vec::new(),
             defs: Vec::new(),
             user_fns: Default::default(),
@@ -768,11 +767,11 @@ impl Session {
                 Ok(vec![Json::Bool(true)])
             }
             "load-act-r-model" | "load-act-r-code" => {
-                let logical = args
+                let path = args
                     .first()
                     .and_then(|a| a.as_str())
-                    .ok_or("load-act-r-model requires a path")?;
-                self.load(logical)?;
+                    .ok_or("load-act-r-model requires a filesystem path")?;
+                self.load(path)?;
                 Ok(vec![Json::Bool(true)])
             }
             "add-act-r-command" | "remove-act-r-command" => {
@@ -2662,9 +2661,10 @@ impl Session {
         self.build_engine()
     }
 
-    /// Load an ACT-R logical path (`ACT-R:tutorial;unit1;count.lisp`).
-    fn load(&mut self, logical: &str) -> Result<(), String> {
-        let path = logical_to_path(&self.root, logical);
+    /// Load a model or task file from a filesystem path.  ACT-R logical names
+    /// (`ACT-R:tutorial;unit1;count.lisp`) are deliberately unsupported.
+    fn load(&mut self, path: &str) -> Result<(), String> {
+        let path = filesystem_path(path)?;
         if !path.is_file() {
             return Err(format!("no such file: {}", path.display()));
         }
@@ -2684,7 +2684,7 @@ impl Session {
                 }
             }
         }
-        self.model_files.push(logical.to_string());
+        self.model_files.push(path.to_string_lossy().into_owned());
         self.build_engine()
     }
 
@@ -2947,36 +2947,16 @@ pub enum MonitorWhen {
     Simple,
 }
 
-/// `logical-to-path`: `ACT-R:tutorial;unit1;count.lisp` →
-/// `<root>/tutorial/unit1/count.lisp`. The host prefix up to the first `:`
-/// (`ACT-R:`) is dropped, then `;` becomes the path separator.
-pub fn logical_to_path(root: &std::path::Path, logical: &str) -> PathBuf {
-    // A real filesystem path (Windows `C:\…`, UNC `\\…`, or a rooted path) is
-    // used verbatim; only ACT-R logical hosts (`ACT-R:tutorial;…`) and
-    // root-relative paths resolve under `root`. Without this a client-supplied
-    // absolute path is mangled (`C:\x` → `<root>/x`).
-    if is_filesystem_path(logical) {
-        return PathBuf::from(logical);
+/// Runtime model paths are filesystem paths.  ACT-R's logical names are a
+/// fixture/tooling concern, not part of the Rust runtime.
+fn filesystem_path(path: &str) -> Result<PathBuf, String> {
+    let trimmed = path.trim_start();
+    if trimmed.to_ascii_uppercase().starts_with("ACT-R:") || trimmed.contains(';') {
+        return Err(format!(
+            "ACT-R logical paths are not supported: {path:?}; pass a filesystem path"
+        ));
     }
-    let after_host = match logical.find(':') {
-        Some(i) => &logical[i + 1..],
-        None => logical,
-    };
-    let rel = after_host.replace(';', std::path::MAIN_SEPARATOR_STR);
-    let rel = rel.trim_start_matches(std::path::MAIN_SEPARATOR);
-    root.join(rel)
-}
-
-/// Whether `s` is a real filesystem path rather than an ACT-R logical name.
-fn is_filesystem_path(s: &str) -> bool {
-    let b = s.as_bytes();
-    // Windows drive-absolute: `C:\…` / `C:/…`.
-    if b.len() >= 3 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/')
-    {
-        return true;
-    }
-    // UNC (`\\server\share`) or a rooted (`/…`, `\…`) path.
-    s.starts_with("\\\\") || s.starts_with('/') || s.starts_with('\\')
+    Ok(PathBuf::from(path))
 }
 
 /// JSON → the engine's `Sexp`. Strings become symbols (the Python client
@@ -3571,44 +3551,41 @@ mod tests {
         }
     }
 
-    fn root() -> PathBuf {
+    fn fixture_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join("actr7.x")
+            .join("fixtures")
+            .join("models")
+    }
+
+    fn fixture_model(name: &str) -> String {
+        fixture_root()
+            .join(name.replace(';', std::path::MAIN_SEPARATOR_STR))
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    #[test]
+    fn logical_model_paths_are_rejected() {
+        assert!(filesystem_path("ACT-R:tutorial;unit1;count.lisp").is_err());
+        assert!(filesystem_path("tutorial;unit1;count.lisp").is_err());
+        assert_eq!(
+            filesystem_path("models/count.lisp").unwrap(),
+            PathBuf::from("models/count.lisp")
+        );
+        assert_eq!(
+            filesystem_path("C:\\models\\count.lisp").unwrap(),
+            PathBuf::from("C:\\models\\count.lisp")
+        );
     }
 
     #[test]
     fn start_pipe_connection_declines_socket_fallback() {
-        let mut s = Session::new(PathBuf::from("."), (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         let v = s
             .evaluate("start-pipe-connection", None, &[], &mut remote)
             .unwrap();
         assert_eq!(v, vec![Json::Bool(false)]);
-    }
-
-    #[test]
-    fn logical_paths_resolve() {
-        let p = logical_to_path(
-            std::path::Path::new("/actr"),
-            "ACT-R:tutorial;unit1;count.lisp",
-        );
-        assert_eq!(p, std::path::Path::new("/actr/tutorial/unit1/count.lisp"));
-    }
-
-    #[test]
-    fn absolute_paths_pass_through() {
-        let root = std::path::Path::new("/actr");
-        assert_eq!(
-            logical_to_path(root, "/abs/model.lisp"),
-            std::path::Path::new("/abs/model.lisp")
-        );
-        if cfg!(windows) {
-            assert_eq!(
-                logical_to_path(root, "C:\\models\\m.lisp"),
-                std::path::Path::new("C:\\models\\m.lisp")
-            );
-        }
     }
 
     #[test]
@@ -3622,16 +3599,16 @@ mod tests {
 
     #[test]
     fn loads_runs_and_streams_a_trace() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -3669,16 +3646,16 @@ mod tests {
     /// ops, dispatched to the client handler.
     #[test]
     fn visible_window_protocol() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = VvRemote::default();
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -3737,16 +3714,16 @@ mod tests {
     /// incremental protocol streams it back in JSON chunks.
     #[test]
     fn trace_history_incremental() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -3802,16 +3779,16 @@ mod tests {
     /// Environment's record shape.
     #[test]
     fn retrieval_history_records() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -3884,16 +3861,16 @@ mod tests {
     /// Environment's segment/row shape.
     #[test]
     fn buffer_history_records() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -3952,11 +3929,11 @@ mod tests {
     #[test]
     fn visicon_history_records() {
         use crate::engine::{DeviceSetup, DeviceText};
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.set_device(DeviceSetup {
             texts: vec![DeviceText {
@@ -3973,7 +3950,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4024,16 +4001,16 @@ mod tests {
     /// timeline in the Environment's summary shape.
     #[test]
     fn buffer_trace_records() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4092,16 +4069,16 @@ mod tests {
     /// The graphic traces are processors over `buffer-trace`.
     #[test]
     fn graphic_trace_processes_buffer_trace() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4149,16 +4126,16 @@ mod tests {
     /// the `production-grid` processor reduces them per production.
     #[test]
     fn production_history_records() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4223,16 +4200,16 @@ mod tests {
     /// `step-once` executes one event without a stop terminator.
     #[test]
     fn single_step_executes_one_event() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4256,16 +4233,16 @@ mod tests {
     /// The BOLD predictions are processors over `buffer-trace`.
     #[test]
     fn bold_prediction_processes_buffer_trace() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4309,16 +4286,16 @@ mod tests {
     /// `production-graph` returns `[nodes, edges]` from production-history.
     #[test]
     fn production_graph_command() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut r = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut r,
         )
         .unwrap();
@@ -4345,16 +4322,16 @@ mod tests {
     /// buffers and DM chunks.
     #[test]
     fn environment_viewer_commands() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -4432,16 +4409,16 @@ mod tests {
 
     #[test]
     fn pdisable_and_penable_toggle_productions() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -4491,18 +4468,18 @@ mod tests {
 
     #[test]
     fn pp_prints_production_text() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
-            return; // ACT-R checkout not available
+            return; // vendored fixtures not available
         }
-        let mut s = Session::new(root.clone(), (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(
-                "ACT-R:test-models;models;safe-queries.lisp".into(),
-            )],
+            &[Json::Str(fixture_model(
+                "test-models;models;safe-queries.lisp",
+            ))],
             &mut remote,
         )
         .unwrap();
@@ -4512,8 +4489,13 @@ mod tests {
 
         // `safe-queries.ref` records two `(pp)` blocks; the first is the plain
         // definition order, which is what a fresh `pp` prints.
-        let ref_txt = std::fs::read_to_string(root.join("test-models").join("safe-queries.ref"))
-            .expect("safe-queries.ref");
+        let ref_txt = std::fs::read_to_string(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("tests")
+                .join("cases")
+                .join("safe-queries.ref"),
+        )
+        .expect("safe-queries.ref");
         let norm = |lines: Vec<String>| -> Vec<String> {
             lines
                 .into_iter()
@@ -4548,18 +4530,18 @@ mod tests {
 
     #[test]
     fn remote_monitor_receives_the_trace() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
             return;
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = Collecting::default();
         s.add_remote("sink", None, Some("me".into()));
         s.add_monitor("model-trace", "sink", MonitorWhen::Simple);
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -4594,16 +4576,16 @@ mod tests {
 
     #[test]
     fn dm_and_sdm_print_and_return_names() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
             return;
         }
-        let mut s = Session::new(root.clone(), (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;addition.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -4616,13 +4598,13 @@ mod tests {
         assert_eq!(names[0], Json::Str("TEN".into()));
         assert_eq!(names[10], Json::Str("ZERO".into()));
         // `sdm '- addend1 1'` excludes the chunk whose addend1 is 1.
-        let mut s = Session::new(root.clone(), (100, 0));
+        let mut s = Session::new((100, 0));
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(
-                "ACT-R:tutorial;unit1;tutor-model-solution.lisp".into(),
-            )],
+            &[Json::Str(fixture_model(
+                "tutorial;unit1;tutor-model-solution.lisp",
+            ))],
             &mut remote,
         )
         .unwrap();
@@ -4650,16 +4632,16 @@ mod tests {
 
     #[test]
     fn chunk_queries_and_add_dm() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
             return;
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;count.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -4693,16 +4675,16 @@ mod tests {
 
     #[test]
     fn goal_focus_accepts_a_spec_list() {
-        let root = root();
+        let root = fixture_root();
         if !root.is_dir() {
             return;
         }
-        let mut s = Session::new(root, (100, 0));
+        let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str("ACT-R:tutorial;unit1;semantic.lisp".into())],
+            &[Json::Str(fixture_model("tutorial;unit1;semantic.lisp"))],
             &mut remote,
         )
         .unwrap();
