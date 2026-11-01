@@ -7,10 +7,14 @@
 //! command the *client* owns (`actr.add_command`) is a `Remote` entry the
 //! server invokes by sending an `evaluate` callback back over the wire.
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
-use crate::engine::{DeviceSetup, Engine, EngineError, MultiEngine};
+use crate::engine::{
+    DeviceSetup, Engine, EngineError, EventHook, EventView, MultiEngine, PreResult, StepperSnapshot,
+};
 use crate::json::Json;
 use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
 use crate::sexpr::Sexp;
@@ -76,6 +80,13 @@ pub const BUILTINS: &[&str] = &[
     "mp-models",
     "creating-model",
     "deleting-model",
+    "start-stepper",
+    "stop-stepper",
+    "step-stepper",
+    "update-stepper",
+    "set-stepper-ready",
+    "set-stepper-tutoring",
+    "set-stepper-step-all",
     "new-symbol",
     "mp-time",
     "mp-time-ms",
@@ -263,6 +274,8 @@ pub struct Session {
     /// A `:testing-function` that lives on the client, deferred to the
     /// connection layer (`model-tester.cl:485`). See `invoke_testing_fn`.
     pending_testing_fn: Option<String>,
+    /// The Environment stepper session, if one is open.
+    stepper: Option<Stepper>,
     /// The scripted device the engine is built with (empty by default).
     device: DeviceSetup,
     /// Client commands registered to display visible-virtual windows
@@ -302,9 +315,123 @@ struct VisWindow {
     items: Vec<String>,
 }
 
+/// Mutable state shared between a [`Session`] and its installed event hook.
+#[derive(Default)]
+struct StepperShared {
+    ready: bool,
+    step_all: bool,
+    tutoring: bool,
+    skip_type: Option<String>,
+    skip_value: Option<String>,
+    skip_time_ms: Option<i64>,
+    /// The paused event is allowed to execute (the user pressed Step).
+    approved: bool,
+    /// The approved event is the next one the engine executes.
+    stepped_pending: bool,
+    paused: Option<EventView>,
+    pause_reported: bool,
+    pause_desc: Option<String>,
+    pending_step_desc: Option<String>,
+    stepped: Option<EventView>,
+    last_step_desc: Option<String>,
+    update_ready: bool,
+    yielded: bool,
+    abort_run: bool,
+}
+
+impl StepperShared {
+    fn should_pause(&self, ev: &EventView) -> bool {
+        if self.step_all {
+            return true;
+        }
+        if let Some(kind) = &self.skip_type {
+            if !(ev.shown && ev.trace_on) {
+                return false;
+            }
+            return match kind.as_str() {
+                "production" => {
+                    (ev.action == "production-selected" || ev.action == "production-fired")
+                        && self.skip_value.as_deref().is_some_and(|v| {
+                            ev.production
+                                .as_deref()
+                                .is_some_and(|p| p.eq_ignore_ascii_case(v))
+                        })
+                }
+                "time" => self.skip_time_ms.is_some_and(|t| ev.time_ms >= t),
+                "module" => self
+                    .skip_value
+                    .as_deref()
+                    .is_some_and(|v| ev.module.eq_ignore_ascii_case(v)),
+                _ => false,
+            };
+        }
+        (ev.shown && ev.trace_on)
+            || (self.tutoring
+                && matches!(
+                    ev.action.as_str(),
+                    "production-selected" | "conflict-resolution" | "start-retrieval"
+                ))
+    }
+}
+
+struct StepperHook {
+    shared: Rc<RefCell<StepperShared>>,
+}
+
+impl EventHook for StepperHook {
+    fn pre(&mut self, ev: &EventView) -> PreResult {
+        let mut s = self.shared.borrow_mut();
+        if s.approved {
+            s.approved = false;
+            s.stepped_pending = true;
+            return PreResult::CONTINUE;
+        }
+        if s.should_pause(ev) {
+            s.paused = Some(ev.clone());
+            s.pause_reported = false;
+            return PreResult::BREAK;
+        }
+        PreResult::CONTINUE
+    }
+
+    fn post(&mut self, _line: &str, ev: &EventView) {
+        let mut s = self.shared.borrow_mut();
+        if s.stepped_pending {
+            s.stepped_pending = false;
+            s.stepped = Some(ev.clone());
+            s.last_step_desc = s.pending_step_desc.take();
+            s.update_ready = true;
+            s.yielded = true;
+        }
+    }
+
+    fn take_yield(&mut self) -> bool {
+        let mut s = self.shared.borrow_mut();
+        let y = s.yielded;
+        s.yielded = false;
+        y
+    }
+}
+
+struct Stepper {
+    id: String,
+    next_cmd: String,
+    update_cmd: String,
+    shared: Rc<RefCell<StepperShared>>,
+    snapshot: Option<StepperSnapshot>,
+    last_action: String,
+}
+
+/// Why one [`Session::run_slice_reason`] call returned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStop {
+    Finished,
+    DeviceAction,
+    StepperPause,
+    StepperUpdate,
+}
+
 impl Session {
-    /// A fresh session.  Model and task files are loaded from filesystem
-    /// paths; the session has no ACT-R checkout root.
     pub fn new(seed: (u64, u64)) -> Session {
         let mut commands = BTreeMap::new();
         for name in BUILTINS {
@@ -325,6 +452,7 @@ impl Session {
             symbol_count: 0,
             system_params: Default::default(),
             pending_testing_fn: None,
+            stepper: None,
             device: DeviceSetup::default(),
             vwin_handlers: Vec::new(),
             vwin: None,
@@ -778,6 +906,13 @@ impl Session {
             // `add-act-r-command ... nil` signals (`meta-process.lisp:424,
             // :448`): they have no underlying function, only monitors.
             "creating-model" | "deleting-model" => Ok(vec![Json::Bool(true)]),
+            "start-stepper" => self.start_stepper(args),
+            "stop-stepper" => self.stop_stepper(args),
+            "step-stepper" => self.step_stepper(args),
+            "update-stepper" => self.update_stepper(args),
+            "set-stepper-ready" => self.set_stepper_ready(args),
+            "set-stepper-tutoring" => self.set_stepper_tutoring(args),
+            "set-stepper-step-all" => self.set_stepper_step_all(args),
             "load-act-r-model" | "load-act-r-code" => {
                 let path = args
                     .first()
@@ -2595,6 +2730,391 @@ impl Session {
         ])
     }
 
+    fn stepper_id_matches(&self, id: &str) -> bool {
+        self.stepper
+            .as_ref()
+            .is_some_and(|s| s.id.eq_ignore_ascii_case(id))
+    }
+
+    fn start_stepper(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        if self.stepper.is_some() {
+            return Ok(vec![
+                Json::Bool(false),
+                Json::Str("There is already a stepper open".into()),
+            ]);
+        }
+        let step_all = matches!(args.first(), Some(Json::Bool(true)));
+        let tutoring = matches!(args.get(1), Some(Json::Bool(true)));
+        let next_cmd = args
+            .get(2)
+            .and_then(|a| a.as_str())
+            .unwrap_or("")
+            .to_string();
+        let update_cmd = args
+            .get(3)
+            .and_then(|a| a.as_str())
+            .unwrap_or("")
+            .to_string();
+        if !self.has_command(&next_cmd) {
+            return Ok(vec![
+                Json::Bool(false),
+                Json::Str(format!(
+                    "The next-event-fn given {next_cmd:?} did not name a valid command."
+                )),
+            ]);
+        }
+        if !self.has_command(&update_cmd) {
+            return Ok(vec![
+                Json::Bool(false),
+                Json::Str(format!(
+                    "The update-fn given {update_cmd:?} did not name a valid command."
+                )),
+            ]);
+        }
+        if !step_all {
+            let trace_off = self
+                .engine
+                .as_ref()
+                .map(|e| e.get_param(":V").as_deref() == Some("NIL"))
+                .unwrap_or(true);
+            if trace_off {
+                return Ok(vec![
+                    Json::Bool(false),
+                    Json::Str("Step-all not enabled and all models have :v set to nil.".into()),
+                ]);
+            }
+        }
+        self.symbol_count += 1;
+        let id = format!("STEPPER{}", self.symbol_count);
+        let shared = Rc::new(RefCell::new(StepperShared {
+            step_all,
+            tutoring,
+            ..StepperShared::default()
+        }));
+        if let Some(eng) = &mut self.engine {
+            eng.set_event_hook(Some(Box::new(StepperHook {
+                shared: shared.clone(),
+            })));
+        }
+        self.stepper = Some(Stepper {
+            id: id.clone(),
+            next_cmd,
+            update_cmd,
+            shared,
+            snapshot: None,
+            last_action: String::new(),
+        });
+        Ok(vec![Json::Bool(true), Json::Str(id)])
+    }
+
+    fn stop_stepper(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let id = args.first().and_then(|a| a.as_str()).unwrap_or("");
+        if self.stepper_id_matches(id) {
+            self.stepper = None;
+            if let Some(eng) = &mut self.engine {
+                eng.set_event_hook(None);
+            }
+            Ok(vec![Json::Bool(true)])
+        } else {
+            Ok(vec![Json::Bool(false)])
+        }
+    }
+
+    fn step_stepper(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let id = args.first().and_then(|a| a.as_str()).unwrap_or("");
+        if !self.stepper_id_matches(id) {
+            return Ok(vec![
+                Json::Bool(false),
+                Json::Str("Invalid id provided to stepper-step".into()),
+            ]);
+        }
+        let stop = matches!(args.get(1), Some(Json::Bool(true)));
+        if stop {
+            let stepper = self.stepper.as_ref().unwrap();
+            let mut s = stepper.shared.borrow_mut();
+            s.abort_run = true;
+            s.paused = None;
+            s.pause_reported = false;
+            s.approved = false;
+            return Ok(vec![Json::Bool(true), Json::Str(String::new())]);
+        }
+        let kind = args
+            .get(2)
+            .and_then(|a| a.as_str())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_ascii_lowercase());
+        let value = args.get(3);
+        let mut skip_type = None;
+        let mut skip_value = None;
+        let mut skip_time_ms = None;
+        if let Some(kind) = &kind {
+            match kind.as_str() {
+                "production" => {
+                    let val = value.and_then(|v| v.as_str()).unwrap_or("");
+                    let found = self.engine.as_ref().is_some_and(|e| {
+                        e.all_production_names()
+                            .iter()
+                            .any(|n| n.eq_ignore_ascii_case(val))
+                    });
+                    if val.is_empty() || !found {
+                        return Ok(vec![
+                            Json::Bool(false),
+                            Json::Str(
+                                "Step type Production requires a valid production name.".into(),
+                            ),
+                        ]);
+                    }
+                    skip_type = Some("production".to_string());
+                    skip_value = Some(val.to_uppercase());
+                }
+                "time" => {
+                    let secs = value.and_then(|v| v.as_f64().or_else(|| v.as_str()?.parse().ok()));
+                    let now = self.time_secs();
+                    match secs {
+                        Some(t) if t > now => {
+                            skip_type = Some("time".to_string());
+                            skip_time_ms = Some((t * 1000.0).round() as i64);
+                        }
+                        Some(_) => {
+                            return Ok(vec![
+                                Json::Bool(false),
+                                Json::Str(
+                                    "Step type Time given a time that has already occurred.".into(),
+                                ),
+                            ])
+                        }
+                        None => {
+                            return Ok(vec![
+                                Json::Bool(false),
+                                Json::Str("Step type Time requires a number in seconds.".into()),
+                            ])
+                        }
+                    }
+                }
+                "module" => {
+                    let val = value.and_then(|v| v.as_str()).unwrap_or("");
+                    let found = self.engine.as_ref().is_some_and(|e| {
+                        e.module_parameters()
+                            .iter()
+                            .any(|(m, _)| m.eq_ignore_ascii_case(val))
+                    });
+                    if !found {
+                        return Ok(vec![
+                            Json::Bool(false),
+                            Json::Str("Step type Module requires a valid module name.".into()),
+                        ]);
+                    }
+                    skip_type = Some("module".to_string());
+                    skip_value = Some(val.to_uppercase());
+                }
+                other => {
+                    return Ok(vec![
+                        Json::Bool(false),
+                        Json::Str(format!("Step type {other:?} not a valid type.")),
+                    ])
+                }
+            }
+        }
+        let stepper = self.stepper.as_ref().unwrap();
+        let mut s = stepper.shared.borrow_mut();
+        let was_paused = s.paused.is_some();
+        s.skip_type = skip_type;
+        s.skip_value = skip_value;
+        s.skip_time_ms = skip_time_ms;
+        s.abort_run = false;
+        if was_paused {
+            s.approved = true;
+            s.paused = None;
+            s.pause_reported = false;
+            s.pending_step_desc = s.pause_desc.take();
+        }
+        Ok(vec![Json::Bool(true), Json::Str(String::new())])
+    }
+
+    fn update_stepper(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let item = args.first().and_then(|a| a.as_str());
+        let (snapshot, action, tutoring) = match &self.stepper {
+            Some(st) => (
+                st.snapshot.clone(),
+                st.last_action.clone(),
+                st.shared.borrow().tutoring,
+            ),
+            None => (None, String::new(), false),
+        };
+        let Some(snapshot) = snapshot else {
+            return Ok(if item.is_some() {
+                vec![
+                    Json::Str(String::new()),
+                    Json::Str(String::new()),
+                    Json::Str(String::new()),
+                    Json::Null,
+                ]
+            } else {
+                vec![Json::Null]
+            });
+        };
+        if let Some(item) = item {
+            let Some(d) = snapshot
+                .details
+                .iter()
+                .find(|d| d.name.eq_ignore_ascii_case(item))
+            else {
+                return Ok(vec![
+                    Json::Str(String::new()),
+                    Json::Str(String::new()),
+                    Json::Str(String::new()),
+                    Json::Null,
+                ]);
+            };
+            let production = snapshot
+                .labels
+                .first()
+                .is_some_and(|l| l == "Possible Productions");
+            if production {
+                let display = if action == "production-selected" || tutoring {
+                    d.printed.clone()
+                } else {
+                    d.instantiation.clone()
+                };
+                let rows: Vec<Json> = d
+                    .binding_details
+                    .iter()
+                    .map(|(var, val, is_buf)| {
+                        Json::Arr(vec![
+                            Json::Str(var.clone()),
+                            Json::Str(val.clone()),
+                            Json::Bool(*is_buf),
+                        ])
+                    })
+                    .collect();
+                Ok(vec![
+                    Json::Str(d.params.clone()),
+                    Json::Str(d.bindings.clone()),
+                    Json::Str(display),
+                    Json::Arr(rows),
+                ])
+            } else {
+                Ok(vec![
+                    Json::Str(d.params.clone()),
+                    Json::Str(d.bindings.clone()),
+                    Json::Str(d.printed.clone()),
+                    Json::Null,
+                ])
+            }
+        } else {
+            Ok(vec![snapshot.tutoring])
+        }
+    }
+
+    fn set_stepper_ready(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let id = args.first().and_then(|a| a.as_str()).unwrap_or("");
+        if let Some(st) = &self.stepper {
+            if st.id.eq_ignore_ascii_case(id) {
+                st.shared.borrow_mut().ready = true;
+                return Ok(vec![Json::Bool(true)]);
+            }
+        }
+        Ok(vec![Json::Bool(false)])
+    }
+
+    fn set_stepper_tutoring(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let id = args.first().and_then(|a| a.as_str()).unwrap_or("");
+        let value = matches!(args.get(1), Some(Json::Bool(true)));
+        if let Some(st) = &self.stepper {
+            if st.id.eq_ignore_ascii_case(id) {
+                st.shared.borrow_mut().tutoring = value;
+                return Ok(vec![Json::Bool(true)]);
+            }
+        }
+        Ok(vec![Json::Bool(false)])
+    }
+
+    fn set_stepper_step_all(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let id = args.first().and_then(|a| a.as_str()).unwrap_or("");
+        let value = matches!(args.get(1), Some(Json::Bool(true)));
+        if let Some(st) = &self.stepper {
+            if st.id.eq_ignore_ascii_case(id) {
+                st.shared.borrow_mut().step_all = value;
+                return Ok(vec![Json::Bool(true)]);
+            }
+        }
+        Ok(vec![Json::Bool(false)])
+    }
+
+    /// True while a stepper is paused waiting for `step-stepper`.
+    pub fn stepper_paused(&self) -> bool {
+        self.stepper
+            .as_ref()
+            .is_some_and(|s| s.shared.borrow().paused.is_some())
+    }
+
+    /// Consume the `step-stepper` Stop button's request to abort the run.
+    pub fn take_stepper_abort(&self) -> bool {
+        match &self.stepper {
+            Some(s) => {
+                let mut shared = s.shared.borrow_mut();
+                let abort = shared.abort_run;
+                shared.abort_run = false;
+                abort
+            }
+            None => false,
+        }
+    }
+
+    /// Return the next-event callback and its formatted event argument once
+    /// per paused event.
+    pub fn take_stepper_pause(&mut self) -> Option<(String, Vec<Json>)> {
+        let (next_cmd, shared) = {
+            let st = self.stepper.as_ref()?;
+            (st.next_cmd.clone(), st.shared.clone())
+        };
+        {
+            let mut s = shared.borrow_mut();
+            if s.paused.is_none() || s.pause_reported {
+                return None;
+            }
+            s.pause_reported = true;
+        }
+        let (_, description) = self.engine.as_mut()?.next_event()?;
+        shared.borrow_mut().pause_desc = Some(description.clone());
+        Some((next_cmd, vec![Json::Str(description)]))
+    }
+
+    /// Return the update callback and its seven arguments once the approved
+    /// event has executed.
+    pub fn take_stepper_update(&mut self) -> Option<(String, Vec<Json>)> {
+        let (update_cmd, view, description) = {
+            let st = self.stepper.as_ref()?;
+            let shared = st.shared.clone();
+            let mut s = shared.borrow_mut();
+            if !s.update_ready {
+                return None;
+            }
+            s.update_ready = false;
+            let view = s.stepped.take()?;
+            let description = s.last_step_desc.take().unwrap_or_default();
+            (st.update_cmd.clone(), view, description)
+        };
+        let snapshot = self.engine.as_mut()?.stepper_snapshot(&view);
+        let items = if snapshot.items.is_empty() {
+            Json::Null
+        } else {
+            Json::Arr(snapshot.items.iter().cloned().map(Json::Str).collect())
+        };
+        let tutorable = snapshot
+            .tutorable
+            .clone()
+            .map(Json::Str)
+            .unwrap_or(Json::Null);
+        let mut args = vec![Json::Str(description), items, tutorable];
+        args.extend(snapshot.labels.iter().cloned().map(Json::Str));
+        if let Some(st) = self.stepper.as_mut() {
+            st.snapshot = Some(snapshot);
+            st.last_action = view.action.clone();
+        }
+        Some((update_cmd, args))
+    }
+
     /// Interleaved-run support for the server: prepare the absolute limit and
     /// the hidden dummy (`run_begin`), then drive the run in slices so a click
     /// can dispatch its client-owned `:action`.
@@ -2605,13 +3125,37 @@ impl Session {
             .unwrap_or((0, false, false))
     }
 
-    /// One run slice; `true` when it yielded for a pending device action.
-    pub fn run_slice(&mut self, limit_ms: i64, full: bool) -> Result<bool, String> {
-        self.engine
+    /// One run slice, reporting why it returned.
+    pub fn run_slice_reason(&mut self, limit_ms: i64, full: bool) -> Result<RunStop, String> {
+        let device = self
+            .engine
             .as_mut()
             .ok_or_else(|| "no model loaded".to_string())?
             .run_slice(limit_ms, full)
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+        if device {
+            return Ok(RunStop::DeviceAction);
+        }
+        if self.stepper_paused() {
+            return Ok(RunStop::StepperPause);
+        }
+        let update = self
+            .stepper
+            .as_ref()
+            .is_some_and(|s| s.shared.borrow().update_ready);
+        if update {
+            Ok(RunStop::StepperUpdate)
+        } else {
+            Ok(RunStop::Finished)
+        }
+    }
+
+    /// One run slice; `true` when it yielded for a pending device action.
+    pub fn run_slice(&mut self, limit_ms: i64, full: bool) -> Result<bool, String> {
+        Ok(matches!(
+            self.run_slice_reason(limit_ms, full)?,
+            RunStop::DeviceAction
+        ))
     }
 
     /// One chunk of an interactive run (Environment): process toward
@@ -2932,6 +3476,14 @@ impl Session {
         eng.set_user_vars(self.user_vars.clone());
         eng.apply_model_commands().map_err(|e| e.to_string())?;
         self.engine = Some(eng);
+        if let Some(st) = &self.stepper {
+            self.engine
+                .as_mut()
+                .unwrap()
+                .set_event_hook(Some(Box::new(StepperHook {
+                    shared: st.shared.clone(),
+                })));
+        }
         self.multi = if self.multi_file {
             Some(
                 MultiEngine::new(
@@ -3647,6 +4199,178 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    fn stepper_fixture() -> String {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("stepper")
+            .join("stepper-model.lisp")
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    #[test]
+    fn stepper_pauses_before_and_updates_after_an_event() {
+        let model = stepper_fixture();
+        if !PathBuf::from(&model).is_file() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("next-event", Some("next-event".into()), None);
+        s.add_remote("update-event", Some("update-event".into()), None);
+        s.evaluate("load-act-r-model", None, &[Json::Str(model)], &mut remote)
+            .unwrap();
+        let started = s
+            .evaluate(
+                "start-stepper",
+                None,
+                &[
+                    Json::Bool(false),
+                    Json::Bool(false),
+                    Json::Str("next-event".into()),
+                    Json::Str("update-event".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(started[0], Json::Bool(true));
+        let id = started[1].as_str().unwrap().to_string();
+        s.evaluate(
+            "set-stepper-ready",
+            None,
+            &[Json::Str(id.clone())],
+            &mut remote,
+        )
+        .unwrap();
+
+        let (limit, full, should_run) = s.run_begin("run", 10.0);
+        assert!(should_run);
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperPause
+        );
+        let (cmd, args) = s.take_stepper_pause().unwrap();
+        assert_eq!(cmd, "next-event");
+        assert!(args[0].as_str().unwrap().contains("SET-BUFFER-CHUNK GOAL"));
+
+        s.evaluate("step-stepper", None, &[Json::Str(id.clone())], &mut remote)
+            .unwrap();
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperUpdate
+        );
+        let (cmd, args) = s.take_stepper_update().unwrap();
+        assert_eq!(cmd, "update-event");
+        assert_eq!(args.len(), 7);
+        assert!(args[0].as_str().unwrap().contains("SET-BUFFER-CHUNK GOAL"));
+
+        s.evaluate("stop-stepper", None, &[Json::Str(id)], &mut remote)
+            .unwrap();
+    }
+
+    fn started_stepper(step_all: bool) -> (Session, String) {
+        let model = stepper_fixture();
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("next-event", Some("next-event".into()), None);
+        s.add_remote("update-event", Some("update-event".into()), None);
+        s.evaluate("load-act-r-model", None, &[Json::Str(model)], &mut remote)
+            .unwrap();
+        let started = s
+            .evaluate(
+                "start-stepper",
+                None,
+                &[
+                    Json::Bool(step_all),
+                    Json::Bool(false),
+                    Json::Str("next-event".into()),
+                    Json::Str("update-event".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        let id = started[1].as_str().unwrap().to_string();
+        s.evaluate(
+            "set-stepper-ready",
+            None,
+            &[Json::Str(id.clone())],
+            &mut remote,
+        )
+        .unwrap();
+        (s, id)
+    }
+
+    #[test]
+    fn stepper_production_constraint_and_update_details() {
+        let model = stepper_fixture();
+        if !PathBuf::from(&model).is_file() {
+            return;
+        }
+        let (mut s, id) = started_stepper(false);
+        let mut remote = NoRemote;
+        let (limit, full, _) = s.run_begin("run", 10.0);
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperPause
+        );
+        let _ = s.take_stepper_pause().unwrap();
+        let stepped = s
+            .evaluate(
+                "step-stepper",
+                None,
+                &[
+                    Json::Str(id.clone()),
+                    Json::Bool(false),
+                    Json::Str("production".into()),
+                    Json::Str("GOT-HIT".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(stepped[0], Json::Bool(true));
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperUpdate
+        );
+        let _ = s.take_stepper_update().unwrap();
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperPause
+        );
+        let (_, args) = s.take_stepper_pause().unwrap();
+        assert!(args[0]
+            .as_str()
+            .unwrap()
+            .contains("PRODUCTION-SELECTED GOT-HIT"));
+
+        s.evaluate("step-stepper", None, &[Json::Str(id.clone())], &mut remote)
+            .unwrap();
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperUpdate
+        );
+        let (_, args) = s.take_stepper_update().unwrap();
+        assert_eq!(args[2], Json::Str("production-selected".into()));
+        let detail = s
+            .evaluate(
+                "update-stepper",
+                None,
+                &[Json::Str("GOT-HIT".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(detail.len(), 4);
+        assert!(detail[0]
+            .as_str()
+            .unwrap()
+            .contains("Parameters for production GOT-HIT"));
+        assert!(detail[1].as_str().unwrap().contains("VALUE: ONE"));
+        assert!(detail[2].as_str().unwrap().contains("(P GOT-HIT"));
+        assert!(matches!(detail[3], Json::Arr(_)));
+        s.evaluate("stop-stepper", None, &[Json::Str(id)], &mut remote)
+            .unwrap();
     }
 
     /// A remote that records callbacks, for monitor registration tests.

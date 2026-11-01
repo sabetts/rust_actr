@@ -90,9 +90,39 @@ pub struct EventView {
     pub production: Option<String>,
     pub out: Out,
     pub shown: bool,
+    /// Whether the model's trace (`:v`) is enabled at the event.
+    pub trace_on: bool,
     /// Non-empty buffers at the event's pre-execution state. Hooks use this
     /// for `(buffer-read <name>)`-style predicates.
     pub buffers: HashSet<String>,
+}
+
+/// One item in the Environment stepper's detail pane.
+#[derive(Debug, Clone, Default)]
+pub struct StepperItem {
+    pub name: String,
+    /// `spp`/`sdp` output for the item.
+    pub params: String,
+    /// Production bindings or retrieval request text.
+    pub bindings: String,
+    /// `(p …)` text, or the chunk's printed form.
+    pub printed: String,
+    /// `(p …)` text with the current bindings substituted.
+    pub instantiation: String,
+    /// `(variable, encoded-value, is-buffer)` rows for tutor mode.
+    pub binding_details: Vec<(String, String, bool)>,
+}
+
+/// The data behind one `update-stepper` call, captured after a stepped event.
+#[derive(Debug, Clone, Default)]
+pub struct StepperSnapshot {
+    pub items: Vec<String>,
+    pub tutorable: Option<String>,
+    pub labels: [String; 4],
+    pub details: Vec<StepperItem>,
+    /// `update-stepper nil` payload for tutor mode (conflict resolution or
+    /// retrieval choice).
+    pub tutoring: Json,
 }
 
 impl EventView {
@@ -173,6 +203,13 @@ pub trait EventHook {
     /// so existing projection/trace-window hooks need no changes.
     fn take_effects(&mut self) -> Vec<HookEffect> {
         Vec::new()
+    }
+
+    /// Ask the run loop to yield immediately after the current event without
+    /// emitting a terminator. The stepper uses this to deliver its update
+    /// callback before the run continues.
+    fn take_yield(&mut self) -> bool {
+        false
     }
 }
 
@@ -2855,6 +2892,9 @@ pub struct Engine {
     /// `(index, bindings, whole-chunk requests)` at the previous fire.
     prev_prod: Option<(usize, Bindings, Vec<(String, String)>)>,
     prev_prod_ms: i64,
+    /// `(production, bindings)` of the last selected/fired production, for
+    /// the Environment stepper's detail pane.
+    last_event_bindings: Option<(String, Bindings)>,
     /// Last press-key `(key, hand, finger, r, theta)`, for preparation
     /// differences (style is recovered from the key).
     last_press: Option<(String, String, String, f32, f32)>,
@@ -3307,6 +3347,7 @@ impl Engine {
             base_prods,
             prev_prod: None,
             prev_prod_ms: 0,
+            last_event_bindings: None,
             last_press: None,
             last_speech: None,
             fan_runs: Vec::new(),
@@ -4012,6 +4053,7 @@ impl Engine {
         self.rename_counts.clear();
         self.prev_prod = None;
         self.prev_prod_ms = 0;
+        self.last_event_bindings = None;
         self.last_press = None;
         self.last_speech = None;
         self.touch_hands = [false, false];
@@ -4709,6 +4751,7 @@ impl Engine {
             production,
             out,
             shown,
+            trace_on: self.trace_on,
             buffers,
         }
     }
@@ -5139,6 +5182,18 @@ impl Engine {
         self.shared_seq = Some(shared);
     }
 
+    /// The next queued event's view and formatted trace text, without
+    /// executing it. Used by the Environment stepper's pre-event callback.
+    pub fn next_event(&mut self) -> Option<(EventView, String)> {
+        self.skip_unnecessary_events();
+        let q = self.queue.peek()?;
+        let show = self.cfg.detail.shows(q.out);
+        let view = self.event_view(&q.event, q.out, show);
+        let (module, details) = self.queue_event(&q.event);
+        let line = format_line(q.time_ms, &module, &details, self.cfg.module_width);
+        Some((view, line))
+    }
+
     /// The next queued event's global ordering key: `(time_ms, priority,
     /// sequence)`. Higher priority sorts first; lower sequence wins ties.
     /// This is only for the multi-model meta-process, which interleaves
@@ -5523,12 +5578,21 @@ impl Engine {
                 let lines = std::mem::take(&mut self.current_lines);
                 self.post_event_hook(view, &lines)?;
             }
+            let hook_yield = self
+                .event_hook
+                .as_mut()
+                .map(|h| h.take_yield())
+                .unwrap_or(false);
             self.bh_record(bh_info);
             self.bt_post(bt_info);
             self.bold_record();
             processed = true;
             self.run_events += 1;
             chunk_events += 1;
+            if hook_yield {
+                self.run_capped = true;
+                break;
+            }
             if yield_on_action && !self.pending_device_actions.is_empty() {
                 self.device_action_yield = true;
                 break;

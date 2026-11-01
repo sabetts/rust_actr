@@ -21,6 +21,12 @@ pub enum Json {
     Obj(Vec<(String, Json)>),
 }
 
+impl Default for Json {
+    fn default() -> Self {
+        Json::Null
+    }
+}
+
 impl Json {
     /// A JSON array of `items`.
     pub fn arr(items: Vec<Json>) -> Json {

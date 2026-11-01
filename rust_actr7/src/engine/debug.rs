@@ -4435,6 +4435,259 @@ impl Engine {
         ))
     }
 
+    /// Capture `(spp <name>)` output without leaving it in the trace.
+    fn capture_spp_text(&mut self, name: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_prod_params_by_name(name);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+
+    /// Capture `(sdp <name>)` output without leaving it in the trace.
+    fn capture_sdp_text(&mut self, name: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_sdp_chunks(&[name.to_string()]);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+
+    /// Capture one production's `whynot` report without leaving it in the
+    /// trace.
+    fn capture_whynot_text(&mut self, name: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_whynot(&[name.to_string()]);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+
+    /// Build the stepper's production detail row:
+    /// `(name spp-text binding-text printed printed-instantiation rows)`.
+    fn stepper_production_item(
+        &mut self,
+        name: &str,
+        bindings: &Bindings,
+        mism: &[PpmMismatch],
+    ) -> StepperItem {
+        let params = self.capture_spp_text(name);
+        let printed = self.printed_production(name).unwrap_or_default();
+        let idx = self
+            .model
+            .productions
+            .iter()
+            .position(|p| p.name.eq_ignore_ascii_case(name));
+        let instantiation = match idx {
+            Some(idx) => {
+                let prod = &self.model.productions[idx];
+                let implicit = pp_implicit_queries(prod, &self.cfg.do_not_query);
+                super::compilation::render_production(
+                    prod,
+                    bindings,
+                    mism,
+                    &implicit,
+                    &self.model.chunk_types,
+                )
+            }
+            None => printed.clone(),
+        };
+        let mut keys: Vec<String> = bindings.keys().cloned().collect();
+        keys.sort();
+        let binding_text: String = keys
+            .iter()
+            .map(|k| format!("{k}: {}\n", bindings[k].show()))
+            .collect();
+        let binding_details: Vec<(String, String, bool)> = keys
+            .iter()
+            .map(|k| {
+                let encoded = match &bindings[k] {
+                    Value::Str(v) => format!("'{v}'"),
+                    v => v.show(),
+                };
+                let var = k.trim_start_matches('=');
+                let is_buffer = idx.is_some_and(|idx| {
+                    self.model.productions[idx]
+                        .lhs
+                        .iter()
+                        .any(|item| match item {
+                            LhsItem::Match { buffer, .. } | LhsItem::Query { buffer, .. } => {
+                                buffer.eq_ignore_ascii_case(var)
+                            }
+                            _ => false,
+                        })
+                });
+                (k.clone(), encoded, is_buffer)
+            })
+            .collect();
+        StepperItem {
+            name: name.to_string(),
+            params,
+            bindings: binding_text,
+            printed,
+            instantiation,
+            binding_details,
+        }
+    }
+
+    /// The detail data behind `update-stepper` for the event the stepper just
+    /// stopped on.
+    pub fn stepper_snapshot(&mut self, ev: &EventView) -> StepperSnapshot {
+        let production_labels = [
+            "Possible Productions".to_string(),
+            "Production Parameters".to_string(),
+            "Bindings".to_string(),
+            "Production".to_string(),
+        ];
+        let chunk_labels = [
+            "Possible Chunks".to_string(),
+            "Chunk Parameters".to_string(),
+            "Retrieval Request".to_string(),
+            "Chunk".to_string(),
+        ];
+        match ev.action.as_str() {
+            "production-selected" => {
+                let matches: Vec<(String, Bindings, Vec<PpmMismatch>)> = self
+                    .pmatches()
+                    .into_iter()
+                    .map(|(idx, bindings, mism)| {
+                        (self.model.productions[idx].name.clone(), bindings, mism)
+                    })
+                    .collect();
+                let matches = if matches.is_empty() {
+                    ev.production
+                        .clone()
+                        .map(|name| {
+                            let bindings = self
+                                .last_event_bindings
+                                .as_ref()
+                                .filter(|(n, _)| n.eq_ignore_ascii_case(&name))
+                                .map(|(_, b)| b.clone())
+                                .unwrap_or_default();
+                            vec![(name, bindings, Vec::new())]
+                        })
+                        .unwrap_or_default()
+                } else {
+                    matches
+                };
+                let mut details = Vec::new();
+                let mut items = Vec::new();
+                for (name, bindings, mism) in &matches {
+                    items.push(name.clone());
+                    details.push(self.stepper_production_item(name, bindings, mism));
+                }
+                StepperSnapshot {
+                    items,
+                    tutorable: Some("production-selected".into()),
+                    labels: production_labels,
+                    details,
+                    tutoring: Json::Null,
+                }
+            }
+            "production-fired" => {
+                let name = ev
+                    .production
+                    .clone()
+                    .or_else(|| self.last_event_bindings.as_ref().map(|(n, _)| n.clone()))
+                    .unwrap_or_default();
+                let bindings = self
+                    .last_event_bindings
+                    .as_ref()
+                    .filter(|(n, _)| n.eq_ignore_ascii_case(&name))
+                    .map(|(_, b)| b.clone())
+                    .unwrap_or_default();
+                let item = self.stepper_production_item(&name, &bindings, &[]);
+                StepperSnapshot {
+                    items: if name.is_empty() {
+                        Vec::new()
+                    } else {
+                        vec![name]
+                    },
+                    tutorable: None,
+                    labels: production_labels,
+                    details: vec![item],
+                    tutoring: Json::Null,
+                }
+            }
+            "retrieved-chunk" | "retrieval-failure" => {
+                let (request, names) = match &self.last_request {
+                    Some(last) => (last.request_lines.join("\n"), last.matches.clone()),
+                    None => (String::new(), Vec::new()),
+                };
+                let mut details = Vec::new();
+                for name in &names {
+                    details.push(StepperItem {
+                        name: name.clone(),
+                        params: self.capture_sdp_text(name),
+                        bindings: request.clone(),
+                        printed: self.printed_chunk(name).unwrap_or_default(),
+                        instantiation: String::new(),
+                        binding_details: Vec::new(),
+                    });
+                }
+                StepperSnapshot {
+                    items: names,
+                    tutorable: None,
+                    labels: chunk_labels,
+                    details,
+                    tutoring: Json::Null,
+                }
+            }
+            "conflict-resolution" => {
+                let names: Vec<String> = self
+                    .pmatches()
+                    .into_iter()
+                    .map(|(idx, _, _)| self.model.productions[idx].name.clone())
+                    .collect();
+                let mut rows = Vec::new();
+                for name in names {
+                    let printed = self.printed_production(&name).unwrap_or_default();
+                    let why = self.capture_whynot_text(&name);
+                    rows.push(Json::Arr(vec![Json::Str(printed), Json::Str(why)]));
+                }
+                StepperSnapshot {
+                    items: Vec::new(),
+                    tutorable: Some("conflict-resolution".into()),
+                    labels: std::array::from_fn(|_| String::new()),
+                    details: Vec::new(),
+                    tutoring: Json::Arr(rows),
+                }
+            }
+            "start-retrieval" => {
+                let (request, matching) = match &self.last_request {
+                    Some(last) => (last.request_lines.join("\n"), last.matches.clone()),
+                    None => (String::new(), Vec::new()),
+                };
+                let mut rows = Vec::new();
+                for name in self.dm_chunk_names() {
+                    let printed = self.printed_chunk(&name).unwrap_or_default();
+                    let text = printed.lines().skip(1).collect::<Vec<_>>().join("\n");
+                    let matched = matching.iter().any(|n| n == &name);
+                    rows.push(Json::Arr(vec![
+                        Json::Str(text),
+                        if matched {
+                            Json::Bool(true)
+                        } else {
+                            Json::Null
+                        },
+                    ]));
+                }
+                StepperSnapshot {
+                    items: Vec::new(),
+                    tutorable: Some("start-retrieval".into()),
+                    labels: std::array::from_fn(|_| String::new()),
+                    details: Vec::new(),
+                    tutoring: Json::Arr(vec![Json::Str(request), Json::Arr(rows)]),
+                }
+            }
+            _ => StepperSnapshot {
+                labels: std::array::from_fn(|_| String::new()),
+                tutoring: Json::Null,
+                ..StepperSnapshot::default()
+            },
+        }
+    }
+
     /// The output text pushed since `mark` (ACT-R's `capture-command-output`).
     pub fn out_text_since(&self, mark: usize) -> String {
         self.out_lines[mark.min(self.out_lines.len())..].join("\n")
@@ -4538,7 +4791,7 @@ impl Engine {
         }
     }
 
-    fn queue_event(&self, event: &Event) -> (String, String) {
+    pub(super) fn queue_event(&self, event: &Event) -> (String, String) {
         match event {
             Event::SetBuffer { buffer, .. } => (
                 Self::module_of_buffer(buffer).to_string(),

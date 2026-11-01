@@ -11,7 +11,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 
 use crate::json::Json;
-use crate::rpc::session::{MonitorWhen, Owner, Remote, Session};
+use crate::rpc::session::{MonitorWhen, Owner, Remote, RunStop, Session};
 use crate::rpc::{
     callback, parse_reply, parse_request, read_message, reply_err, reply_ok, write_message, Method,
 };
@@ -25,6 +25,12 @@ use crate::rpc::{
 /// server accepts clients concurrently too.
 pub fn serve(addr: &str, seed: (u64, u64)) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr)?;
+    serve_listener(listener, seed)
+}
+
+/// Serve an already-bound listener. Tests use this with port 0 so they can
+/// read the assigned address without racing a spawned process.
+pub fn serve_listener(listener: TcpListener, seed: (u64, u64)) -> std::io::Result<()> {
     for stream in listener.incoming() {
         let stream = stream?;
         std::thread::spawn(move || {
@@ -161,11 +167,53 @@ fn drain(session: &mut Session, conn: &mut Conn) {
     }
 }
 
+/// Deliver stepper update callbacks until none are pending.
+fn drain_stepper_updates(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
+    while let Some((cmd, args)) = session.take_stepper_update() {
+        call_remote_reentrant(session, conn, &cmd, None, args)?;
+        drain(session, conn);
+    }
+    Ok(())
+}
+
+/// While a stepper is paused before an event, keep servicing client requests
+/// (Step / Stop / Update / Set-*) without answering the pending `run` request.
+fn pump_stepper(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
+    while session.stepper_paused() {
+        let Some(msg) = crate::rpc::read_message(&mut conn.stream)? else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "connection closed while the stepper was paused",
+            ));
+        };
+        let (method, params, id) = match crate::rpc::parse_request(&msg) {
+            Ok(x) => x,
+            Err(e) => {
+                crate::rpc::write_message(&mut conn.stream, &reply_err(None, &e))?;
+                continue;
+            }
+        };
+        if method == Method::Close {
+            return Ok(());
+        }
+        let reply = dispatch(session, conn, method, &params, id.as_ref());
+        crate::rpc::write_message(&mut conn.stream, &reply)?;
+        drain(session, conn);
+        drain_stepper_updates(session, conn)?;
+    }
+    Ok(())
+}
+
 /// A `run`/`run-full-time`/`run-until-time` driven in slices. The engine stops
 /// as soon as a click queues a client-owned device action (a window button's
 /// `:action`, e.g. `bst`'s `bst-button-pressed`); the server calls it back,
 /// services the window commands it issues, and resumes the run. Without this a
 /// task's button handler never ran and its display never changed.
+///
+/// The same loop services the Environment stepper: a pre-event pause is
+/// delivered through the client's `next-event` callback, then client requests
+/// are pumped until `step-stepper` resumes the run. Post-event updates use the
+/// `update-event` callback and yield before the run continues.
 fn run_interleaved(
     session: &mut Session,
     conn: &mut Conn,
@@ -186,21 +234,45 @@ fn run_interleaved(
         );
     }
     loop {
-        match session.run_slice(limit, full) {
-            Ok(yielded) => {
-                drain(session, conn);
-                if !yielded {
-                    break;
+        let stop = match session.run_slice_reason(limit, full) {
+            Ok(stop) => stop,
+            Err(e) => return reply_err(id, &e),
+        };
+        drain(session, conn);
+        if let Err(e) = drain_stepper_updates(session, conn) {
+            return reply_err(id, &e.to_string());
+        }
+
+        if stop == RunStop::StepperPause || session.stepper_paused() {
+            if let Some((cmd, a)) = session.take_stepper_pause() {
+                if let Err(e) = call_remote_reentrant(session, conn, &cmd, None, a) {
+                    return reply_err(id, &e.to_string());
                 }
             }
-            Err(e) => return reply_err(id, &e),
-        }
-        let actions = session.take_pending_device_actions();
-        for (cmd, a) in actions {
-            if let Err(e) = call_remote_reentrant(session, conn, &cmd, None, a) {
+            if let Err(e) = pump_stepper(session, conn) {
                 return reply_err(id, &e.to_string());
             }
+            if session.take_stepper_abort() {
+                break;
+            }
+            continue;
         }
+
+        if stop == RunStop::StepperUpdate {
+            continue;
+        }
+
+        if stop == RunStop::DeviceAction {
+            let actions = session.take_pending_device_actions();
+            for (cmd, a) in actions {
+                if let Err(e) = call_remote_reentrant(session, conn, &cmd, None, a) {
+                    return reply_err(id, &e.to_string());
+                }
+            }
+            continue;
+        }
+
+        break;
     }
     reply_ok(
         id,

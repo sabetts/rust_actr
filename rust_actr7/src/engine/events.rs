@@ -1031,6 +1031,7 @@ impl Engine {
             }
             Event::ProductionSelected { prod, bindings } => {
                 let name = self.model.productions[prod].name.clone();
+                self.last_event_bindings = Some((name.clone(), bindings.clone()));
                 if show {
                     self.emit("PROCEDURAL", format!("PRODUCTION-SELECTED {name}"));
                 }
@@ -1112,6 +1113,7 @@ impl Engine {
             }
             Event::ProductionFired { prod, bindings } => {
                 let name = self.model.productions[prod].name.clone();
+                self.last_event_bindings = Some((name.clone(), bindings.clone()));
                 if show {
                     self.emit("PROCEDURAL", format!("PRODUCTION-FIRED {name}"));
                 }
