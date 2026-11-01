@@ -3181,6 +3181,12 @@ impl Engine {
         self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
     }
 
+    /// `new-digit-sound <digit> [onset] [time-in-ms]`: schedule a digit sound.
+    pub fn new_digit_sound_rpc(&mut self, digit: i64, onset_ms: i64) {
+        let at = self.time_ms().max(onset_ms);
+        self.new_digit_sound(digit, at);
+    }
+
     /// `(pbreak <name>...)`: halt before firing the named production.
     pub fn pbreak(&mut self, names: &[String]) {
         self.zz_break_quiet = false;

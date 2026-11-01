@@ -248,11 +248,16 @@ impl Engine {
                 // render as `SPEAK <text>`. With a device the module notifies
                 // it instead (no trace), and `subvocalize` only notifies when
                 // `:notify-subvocalize` is on (off by default).
-                if style == SpeechStyle::Speak
-                    && !self.speech_device
-                    && self.cfg.detail.shows(Out::Medium)
-                {
-                    self.emit("SPEECH", format!("{} {text}", style.trace()));
+                if style == SpeechStyle::Speak {
+                    if self.speech_device {
+                        self.fired_commands.push((
+                            "output-speech".to_string(),
+                            self.model.name.clone(),
+                            text.clone(),
+                        ));
+                    } else if self.cfg.detail.shows(Out::Medium) {
+                        self.emit("SPEECH", format!("{} {text}", style.trace()));
+                    }
                 }
             }
             Event::NewSound { evt, offset } => {

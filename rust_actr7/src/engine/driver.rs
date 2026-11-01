@@ -108,6 +108,12 @@ impl Engine {
         self.sim_hook_fn = hook;
     }
 
+    /// Mark a speech/microphone device as installed: speech notifications go
+    /// to the host (`output-speech`) instead of a traced `SPEAK` line.
+    pub fn set_speech_device(&mut self, enabled: bool) {
+        self.speech_device = enabled;
+    }
+
     /// The trace lines emitted since index `start`.
     pub fn out_since(&self, start: usize) -> Vec<String> {
         self.out_lines.get(start..).unwrap_or(&[]).to_vec()

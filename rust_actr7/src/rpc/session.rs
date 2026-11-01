@@ -1977,9 +1977,27 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
-            "new-word-sound" | "new-digit-sound" => {
-                // A speech-like sound: hold the vocal buffer busy, then
-                // release. The corpus's audio specs use tone sounds.
+            "new-word-sound" => {
+                // Speech synthesis is not modelled; the corpus's audio specs
+                // use tone and digit sounds.
+                Ok(vec![Json::Null])
+            }
+            "new-digit-sound" => {
+                // `new-digit-sound <digit> [onset] [time-in-ms]`.
+                let digit = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
+                let onset = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let in_ms = args
+                    .get(2)
+                    .map(|a| matches!(a, Json::Bool(true)))
+                    .unwrap_or(false);
+                let onset_ms = if in_ms {
+                    onset as i64
+                } else {
+                    (onset * 1000.0).round() as i64
+                };
+                if let Some(eng) = &mut self.engine {
+                    eng.new_digit_sound_rpc(digit, onset_ms);
+                }
                 Ok(vec![Json::Null])
             }
             "trigger-reward" => {
@@ -2323,7 +2341,14 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
-            "install-device" => Ok(vec![Json::Null]),
+            "install-device" => {
+                // Any installed device receives speech notifications; the
+                // Python tutorial uses this for `output-speech` monitors.
+                if let Some(eng) = &mut self.engine {
+                    eng.set_speech_device(true);
+                }
+                Ok(vec![Json::Null])
+            }
             "visible-virtuals-available?" => Ok(vec![Json::Bool(!self.vwin_handlers.is_empty())]),
             "start-hand-at-mouse" | "process-events" => Ok(vec![Json::Null]),
             "correlation" | "mean-deviation" => {
