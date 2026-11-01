@@ -165,7 +165,16 @@ class RuntimeMixin:
         value = self._single("chunk-slot-value", chunk, slot)
         if value is None:
             value = self._single("buffer-slot-value", chunk, slot)
-        return _unquote(value)
+        value = _unquote(value)
+        # The command layer sends slot values as printed text; tutorial code
+        # does arithmetic on numeric slots.
+        if isinstance(value, str):
+            try:
+                number = float(value)
+            except ValueError:
+                return value
+            return int(number) if number.is_integer() else number
+        return value
 
     def set_buffer_chunk(
         self,

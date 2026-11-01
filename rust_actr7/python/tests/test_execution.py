@@ -148,6 +148,12 @@ class ExecutionTests(unittest.TestCase):
         self.assertIsInstance(result, str)
         self.assertNotEqual(result, "")
 
+    def test_bst_ppm_live_task(self):
+        module = runner.load_task("bst_ppm")
+        choices = module.bst_set(False, False, module.exp_stims[:3])
+        self.assertEqual(len(choices), 3)
+        self.assertTrue(all(choice in ("over", "under") for choice in choices))
+
     def test_zbrodoff_set_runs_all_trials(self):
         result = runner.run_task("zbrodoff", "set")
         rts, counts = result
