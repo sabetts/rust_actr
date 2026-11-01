@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.9,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "rust-actr"
+version = "0.1.0"
+description = "Build and run ACT-R models with the Rust ACT-R engine"
+requires-python = ">=3.9"
+readme = "README.md"
+
+[tool.maturin]
+module-name = "rust_actr._native"
+python-source = "python"

@@ -15,6 +15,7 @@ that arbitrary Lisp cannot be executed.
 | `rust_actr7/tests/` | integration suites (below) |
 | `rust_actr7/fixtures/` | test oracles + regen scripts — see `fixtures/README.md` |
 | `rust_actr7/web/` | browser (wasm) build — see `web/README.md` |
+| `rust_actr7/python/` | in-process Python interface (`import rust_actr`) — see `python/README.md` |
 | `actr7.x/` | upstream Lisp ACT-R sources (reference/regen; tests use vendored copies) |
 | `contrib/` | local unpacked GUI crate sources (untracked, not part of the engine) |
 | `PORTING-NOTES.md` | non-obvious ACT-R/Lisp behaviors the port must match |
@@ -28,6 +29,28 @@ cargo run -- run <model.lisp>
 cargo run -- server              # RPC dispatcher
 cargo run --features env -- env  # native GUI
 ```
+
+## Python interface
+
+`rust_actr7/python` provides an in-process PyO3 binding:
+
+```python
+import rust_actr as actr
+
+m = actr.Model("count")
+m.chunk_type("goal", "state")
+start = m.add_chunk("start", "goal", state="start")
+m.add_production("""
+(p finish
+   =goal> state start
+   ==>
+   =goal> state done)
+""")
+m.goal_focus(start)
+print(m.run(1.0))
+```
+
+Build and install it with maturin; see `rust_actr7/python/README.md`.
 
 ## Tests
 
