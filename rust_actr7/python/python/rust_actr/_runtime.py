@@ -324,7 +324,9 @@ class RuntimeMixin:
         result = self._single(
             "open-exp-window",
             title,
-            {"visible": visible, "width": width, "height": height, "x": x, "y": y},
+            _pairs(
+                visible=visible, width=width, height=height, x=x, y=y
+            ),
         )
         self._current_window = result if isinstance(result, str) else title
         return result
@@ -347,14 +349,14 @@ class RuntimeMixin:
             "add-text-to-exp-window",
             window or self._current_window,
             text,
-            {
-                "x": x,
-                "y": y,
-                "color": color,
-                "height": height,
-                "width": width,
-                "font-size": font_size,
-            },
+            _pairs(
+                x=x,
+                y=y,
+                color=color,
+                height=height,
+                width=width,
+                **{"font-size": font_size},
+            ),
         )
 
     def add_line_to_exp_window(
@@ -379,16 +381,11 @@ class RuntimeMixin:
         width: int = 75,
         color: str = "gray",
     ) -> Any:
-        options = {
-            "text": text,
-            "x": x,
-            "y": y,
-            "height": height,
-            "width": width,
-            "color": color,
-        }
+        options = _pairs(
+            text=text, x=x, y=y, height=height, width=width, color=color
+        )
         if action is not None:
-            options["action"] = action
+            options.append(["action", action])
         return self._single(
             "add-button-to-exp-window", window or self._current_window, options
         )
@@ -415,11 +412,11 @@ class RuntimeMixin:
         x: Optional[int] = None,
         y: Optional[int] = None,
     ) -> Any:
-        options: dict[str, Any] = {}
+        options: list[list[Any]] = []
         if x is not None:
-            options["x"] = x
+            options.append(["x", x])
         if y is not None:
-            options["y"] = y
+            options.append(["y", y])
         return self._single("modify-text-for-exp-window", item, options)
 
     def install_device(self, window: Any = None) -> Any:
@@ -511,6 +508,11 @@ class RuntimeMixin:
         precondition: Any = None,
     ) -> Any:
         return self._single("schedule-event-now", action, _event_options(params, output))
+
+
+def _pairs(**options: Any) -> list[list[Any]]:
+    """The Python client's window-option shape: `[[key, value], ...]`."""
+    return [[key, value] for key, value in options.items()]
 
 
 def _unquote(value: Any) -> Any:
