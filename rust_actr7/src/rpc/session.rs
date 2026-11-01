@@ -64,6 +64,7 @@ pub const BUILTINS: &[&str] = &[
     "load-act-r-code",
     "add-act-r-command",
     "remove-act-r-command",
+    "start-pipe-connection",
     "goal-focus",
     "mod-focus",
     "set-parameter-value",
@@ -712,6 +713,10 @@ impl Session {
         remote: &mut dyn Remote,
     ) -> Result<Vec<Json>, String> {
         match name {
+            // The Rust server has no pipe transport. Returning false makes the
+            // tutorial client keep using its socket, just as it does when the
+            // Lisp server reports that pipes are unavailable.
+            "start-pipe-connection" => Ok(vec![Json::Bool(false)]),
             "new-symbol" => {
                 self.symbol_count += 1;
                 let base = args.first().and_then(|a| a.as_str()).unwrap_or("SYMBOL");
@@ -3362,6 +3367,16 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
             .join("actr7.x")
+    }
+
+    #[test]
+    fn start_pipe_connection_declines_socket_fallback() {
+        let mut s = Session::new(PathBuf::from("."), (100, 0));
+        let mut remote = NoRemote;
+        let v = s
+            .evaluate("start-pipe-connection", None, &[], &mut remote)
+            .unwrap();
+        assert_eq!(v, vec![Json::Bool(false)]);
     }
 
     #[test]

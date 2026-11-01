@@ -8,6 +8,7 @@
 
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
+use std::path::PathBuf;
 
 use crate::json::Json;
 use crate::rpc::session::{MonitorWhen, Owner, Remote, Session};
@@ -38,12 +39,13 @@ pub fn serve(addr: &str, root: std::path::PathBuf, seed: (u64, u64)) -> std::io:
 
 /// Write the ACT-R port/host files the Python client looks for
 /// (`tutorial/python/actr.py:190`).
-pub fn write_port_file(port: u16) -> std::io::Result<()> {
+pub fn write_port_file(host: &str, port: u16) -> std::io::Result<()> {
     // `actr.py` does `int(f.readline())` for the port (newline-tolerant) but
     // uses the host line verbatim, so neither may carry a trailing newline.
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    std::fs::write(format!("{home}/act-r-port-num.txt"), format!("{port}"))?;
-    std::fs::write(format!("{home}/act-r-address.txt"), "127.0.0.1")?;
+    // `home_dir` matches Python's `expanduser("~")` on both Unix and Windows.
+    let home = std::env::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    std::fs::write(home.join("act-r-port-num.txt"), port.to_string())?;
+    std::fs::write(home.join("act-r-address.txt"), host)?;
     Ok(())
 }
 

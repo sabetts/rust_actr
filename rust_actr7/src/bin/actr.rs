@@ -218,7 +218,7 @@ fn cmd_server(args: &[String]) -> ExitCode {
 
     let addr = format!("{host}:{port}");
     if port_file {
-        if let Err(e) = write_port_file(port) {
+        if let Err(e) = write_port_file(&host, port) {
             eprintln!("actr server: could not write port file: {e}");
         }
     }
