@@ -2469,6 +2469,10 @@ pub struct Engine {
     /// Chunk similarities, as given (lookup tries both orders;
     /// mirrors set-similarities).
     sims: HashMap<(String, String), f32>,
+    /// An embedder-provided `:sim-hook` (the Python callback).  It receives
+    /// the two values' printed forms and returns a numeric similarity; `None`
+    /// falls through to the Lisp hook/table.
+    sim_hook_fn: Option<Rc<dyn Fn(&str, &str) -> Option<f32>>>,
     /// The model's possible slot names (`valid-slot-name`,
     /// `chunk-types.lisp:590`): the union of every chunk-type's slots, plus
     /// slots added at run time. A production's `=buffer>`/`*buffer>` mod that
@@ -2997,6 +3001,7 @@ impl Engine {
                 .iter()
                 .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
                 .collect(),
+            sim_hook_fn: None,
             valid_slots,
             pending_texts: {
                 let mut v = texts.clone();

@@ -101,6 +101,13 @@ impl Engine {
         std::mem::take(&mut *self.fired_task_commands.borrow_mut())
     }
 
+    /// Install an embedder similarity hook.  The callback receives the two
+    /// values' printed forms; a numeric result overrides the Lisp `:sim-hook`
+    /// and the similarity table.
+    pub fn set_sim_hook(&mut self, hook: Option<std::rc::Rc<dyn Fn(&str, &str) -> Option<f32>>>) {
+        self.sim_hook_fn = hook;
+    }
+
     /// The trace lines emitted since index `start`.
     pub fn out_since(&self, start: usize) -> Vec<String> {
         self.out_lines.get(start..).unwrap_or(&[]).to_vec()

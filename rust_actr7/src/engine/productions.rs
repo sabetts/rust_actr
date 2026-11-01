@@ -2890,6 +2890,12 @@ impl Engine {
     }
 
     pub(super) fn similarity(&self, a: &Value, b: &Value) -> f32 {
+        // An embedder hook (the Python `:sim-hook`) gets the printed values.
+        if let Some(hook) = &self.sim_hook_fn {
+            if let Some(v) = hook(&a.show(), &b.show()) {
+                return v;
+            }
+        }
         // `:sim-hook` (`declarative-memory.lisp:2218`): a task function's
         // numeric result overrides the similarity table and `:ms`/`:md`
         // (`chunks-similarity`, `declarative-memory.lisp:2628`). A non-number

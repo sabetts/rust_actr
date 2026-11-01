@@ -2,6 +2,18 @@
 use super::compilation::bold_values;
 use super::*;
 
+fn apply_chunk_mods(chunk: &mut ChunkInst, mods: &[(String, Sexp)]) -> Result<(), EngineError> {
+    for (name, value) in mods {
+        let value = Value::from_sexp(value)?;
+        let name = name.to_uppercase();
+        match chunk.slots.iter_mut().find(|(k, _)| k == &name) {
+            Some((_, old)) => *old = value,
+            None => chunk.slots.push((name, value)),
+        }
+    }
+    Ok(())
+}
+
 /// The implicit queries `pp` prints for a production: one `?buffer> state
 /// free` per requested buffer (`+` request or `*` modify-request) that has no
 /// explicit `?buffer>` condition and is not exempt (`:do-not-query`). ACT-R's
@@ -2243,6 +2255,38 @@ impl Engine {
         }
         self.buffer_mut(&bname).modified = true;
         self.changed();
+        Ok(())
+    }
+
+    /// `copy-chunk <chunk>`: a named copy `{name}-{k}` in the chunk table.
+    pub fn copy_chunk_rpc(&mut self, name: &str) -> String {
+        self.copy_chunk(&name.to_uppercase())
+    }
+
+    /// `mod-chunk <chunk> (slot value ...)`: modify a named chunk in the
+    /// chunk table or declarative memory (`commands/chunks.lisp`).
+    pub fn mod_chunk_rpc(
+        &mut self,
+        name: &str,
+        mods: &[(String, Sexp)],
+    ) -> Result<(), EngineError> {
+        let target = name.to_uppercase();
+        let mut found = false;
+        if let Some(chunk) = self.named.get_mut(&target) {
+            apply_chunk_mods(chunk, mods)?;
+            found = true;
+        }
+        for chunk in self
+            .dm
+            .iter_mut()
+            .filter(|c| c.name.as_deref() == Some(target.as_str()))
+        {
+            apply_chunk_mods(chunk, mods)?;
+            found = true;
+        }
+        if !found {
+            return Err(bad(format!("mod-chunk: no chunk named {name}")));
+        }
         Ok(())
     }
 

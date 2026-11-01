@@ -86,6 +86,7 @@ pub const BUILTINS: &[&str] = &[
     "buffer-slot-value",
     "clear-buffer",
     "set-buffer-chunk",
+    "mod-chunk",
     "mod-buffer-chunk",
     "extend-possible-slots",
     "schedule-event-relative",
@@ -1183,6 +1184,44 @@ impl Session {
                 if let Some(eng) = &mut self.engine {
                     eng.mod_buffer_chunk_rpc(buffer, &mods)
                         .map_err(|e| e.to_string())?;
+                }
+                Ok(vec![Json::Null])
+            }
+            "copy-chunk" => {
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("copy-chunk needs a chunk name")?;
+                let copy = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.copy_chunk_rpc(name))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(copy)])
+            }
+            "mod-chunk" => {
+                // `(mod-chunk <name> <slot value> ???)`: modify a named chunk
+                // in the chunk table or DM.
+                let name = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("mod-chunk needs a chunk name")?;
+                let items: Vec<Json> = match args.get(1) {
+                    Some(Json::Arr(a)) => a.clone(),
+                    Some(_) => args[1..].to_vec(),
+                    None => Vec::new(),
+                };
+                let mut mods = Vec::new();
+                for pair in items.chunks(2) {
+                    let slot = pair.first().map(json_to_text).unwrap_or_default();
+                    let value = pair
+                        .get(1)
+                        .map(json_to_sexp)
+                        .unwrap_or(Sexp::Sym("NIL".into()));
+                    mods.push((slot, value));
+                }
+                if let Some(eng) = &mut self.engine {
+                    eng.mod_chunk_rpc(name, &mods).map_err(|e| e.to_string())?;
                 }
                 Ok(vec![Json::Null])
             }
