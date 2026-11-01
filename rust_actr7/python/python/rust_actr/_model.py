@@ -214,6 +214,7 @@ class Model(RuntimeMixin):
             while True:
                 more = session.run_chunk(limit, full, 1, None)
                 self._absorb_trace()
+                self._complete_host_action()
                 self._dispatch_fired()
                 if not more:
                     break
@@ -226,6 +227,22 @@ class Model(RuntimeMixin):
         if text:
             self._trace += text
             self._deliver_trace(text)
+
+    def _complete_host_action(self) -> None:
+        if self._session is None:
+            return
+        pending = self._session.take_pending_host_action()
+        if pending is None:
+            return
+        name, args, simple = pending
+        fn = self._commands.get(name.upper())
+        result = None
+        if fn is not None:
+            try:
+                result = fn(*args)
+            except Exception:
+                result = None
+        self._session.complete_host_action(_action_result_text(result), simple)
 
     def _dispatch_fired(self) -> None:
         if self._session is None:
@@ -603,6 +620,16 @@ class Model(RuntimeMixin):
         lines.extend("  " + form for form in self._body)
         lines.append(")")
         return "\n".join(lines) + "\n"
+
+def _action_result_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (list, tuple)):
+        return "(" + " ".join(str(item) for item in value) + ")"
+    return str(value)
+
 
 def _runtime_chunk_items(chunks: Sequence[Any]) -> list[Any]:
     """Flatten the two tutorial runtime shapes: ``f(x)`` and ``f([x, y])``."""

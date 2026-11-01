@@ -115,6 +115,34 @@ class ExecutionTests(unittest.TestCase):
         model.set_buffer_chunk("imaginal", copy)
         self.assertEqual(model.buffer_slot_value("imaginal", "value"), "5")
 
+    def test_python_imaginal_action(self):
+        model = actr.Model("action", seed=(100, 0))
+        model.chunk_type("goal", "state")
+        model.chunk_type("enc", "value")
+        model.define_chunks("result")
+        model.goal_focus(isa="goal", state="start")
+        model.add_production(
+            """
+(p act
+   =goal> state start
+   ?imaginal-action> state free
+   ==>
+   =goal> state done
+   +imaginal-action> action "py-action" simple t)
+"""
+        )
+        calls = []
+
+        def action():
+            calls.append(True)
+            return "result"
+
+        model.add_command("py-action", action)
+        model.run(1.0)
+
+        self.assertEqual(calls, [True])
+        self.assertIn("SET-BUFFER-CHUNK IMAGINAL RESULT", model.trace)
+
     def test_zbrodoff_set_runs_all_trials(self):
         result = runner.run_task("zbrodoff", "set")
         rts, counts = result

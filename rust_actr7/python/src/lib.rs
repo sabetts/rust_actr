@@ -229,6 +229,19 @@ impl Session {
         self.inner.take_fired_task_commands()
     }
 
+    /// A pending Python `imaginal-action`: `(command, args, simple)`.
+    fn take_pending_host_action(&mut self) -> Option<(String, Vec<String>, bool)> {
+        self.inner.take_pending_host_action()
+    }
+
+    /// Complete a pending Python `imaginal-action` with a chunk name, a Lisp
+    /// slot list, or `None` for an error.
+    fn complete_host_action(&mut self, result: Option<&str>, simple: bool) -> PyResult<()> {
+        self.inner
+            .complete_host_action(result, simple)
+            .map_err(runtime_error)
+    }
+
     /// New trace since the previous call.
     fn take_trace(&mut self) -> String {
         self.inner.take_trace_output()
