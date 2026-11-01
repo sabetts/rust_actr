@@ -83,8 +83,8 @@ a `WORD` sound using the same articulation-time calculation.
 The interface covers model construction, runtime buffer/DM commands, windows
 and devices, command monitors, mid-run task callbacks, Python similarity hooks,
 `mod-chunk`/`copy-chunk`, word/tone/digit sounds, and the speech articulation
-and syllable-count commands. Arbitrary Lisp evaluation and multiple-model
-files are still out of scope.
+and syllable-count commands. Runtime model loading uses filesystem paths only;
+arbitrary Lisp evaluation and multiple-model files are still out of scope.
 
 ## Tutorial scripts
 
@@ -102,7 +102,7 @@ python tutorial/unit5/onehit.py hands 2
 ```
 
 Model-only scripts print the 10-second trace (the same shape as
-`cargo run -- run 'ACT-R:...'`). Task scripts call a per-file default entry
+`actr run path/to/model.lisp`). Task scripts call a per-file default entry
 point; pass a function name and arguments to override it. Arguments are
 parsed as JSON when possible.
 
@@ -117,6 +117,9 @@ The generated modules are checked in and can be edited after generation.
 The tutorial tree is a checkout-only learning resource; it is not installed in
 the wheel. The scripts build their models from in-memory source, so they do not
 need `ACTR_DIR` or an ACT-R checkout.
+
+The Rust runtime, CLI, server, and GUI accept filesystem paths only.
+`ACT-R:` logical names are a fixture/regeneration-tooling concept.
 
 `rust_actr.actr` is the module-level façade the scripts use. You can also bind
 a model yourself:

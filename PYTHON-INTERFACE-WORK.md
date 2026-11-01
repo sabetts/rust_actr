@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-01
 Branch: `main`
-Latest relevant commit: `86a2b18 engine: let remove-syllable-count hide dictionary entries`
+Latest relevant commit: `c392fee engine: make model loading filesystem-path-only`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -102,6 +102,8 @@ the live session.
   between events (`pm-issues` uses this for its prompt).
 - `mod-chunk` and `copy-chunk` work; task-facing slot reads and copies use the
   live buffer chunk (including modifications made by the current production).
+- Runtime model/task loading is filesystem-path-only. `ACT-R:` logical names
+  and `ACTR_DIR` are fixture/regeneration-tooling concepts, not runtime API.
 - Tutorial task modules bind their functions to their own model, so importing
   several modules in one process no longer makes later calls use the last
   model.
@@ -256,7 +258,7 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **682 passed / 9 ignored** across the engine and
+Current result: **683 passed / 9 ignored** across the engine and
 model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
@@ -301,3 +303,4 @@ solution sources and the environment-gated RPC test.
 - `68cf2d9` python: bind tutorial task functions to their own models
 - `d97b58d` engine: add word sounds and syllable-count speech support
 - `86a2b18` engine: let remove-syllable-count hide dictionary entries
+- `c392fee` engine: make model loading filesystem-path-only
