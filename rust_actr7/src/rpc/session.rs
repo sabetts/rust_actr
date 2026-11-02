@@ -263,6 +263,9 @@ pub struct Session {
     multi: Option<MultiEngine>,
     /// A single loaded file defined more than one model.
     multi_file: bool,
+    /// RPC/Python sessions are single-model; only the engine regression
+    /// harness opts in to `MultiEngine`.
+    allow_multi_model: bool,
     current_model: Option<String>,
     trace_pos: usize,
     seed: (u64, u64),
@@ -446,6 +449,7 @@ impl Session {
             engine: None,
             multi: None,
             multi_file: false,
+            allow_multi_model: false,
             current_model: None,
             trace_pos: 0,
             seed,
@@ -461,6 +465,31 @@ impl Session {
             hist_jobs: Default::default(),
             hist_next_id: 0,
         }
+    }
+
+    /// Allow the engine regression harness to load the multi-model fixture.
+    /// The RPC server and Python binding never enable this.
+    pub fn set_multi_model_allowed(&mut self, allowed: bool) {
+        self.allow_multi_model = allowed;
+    }
+
+    fn check_model_load(&self, adding: usize) -> Result<(), String> {
+        if self.allow_multi_model || adding == 0 {
+            return Ok(());
+        }
+        if adding > 1 {
+            return Err(
+                "Multiple models are not supported by the Environment yet; load one model."
+                    .to_string(),
+            );
+        }
+        if !self.defs.is_empty() {
+            return Err(
+                "Multiple models are not supported by the Environment yet; one model is already loaded."
+                    .to_string(),
+            );
+        }
+        Ok(())
     }
 
     /// The command registry (for `check`/`list-commands`/`add`/`remove`).
@@ -894,7 +923,21 @@ impl Session {
                 .map(Json::Str)
                 .unwrap_or(Json::Null)]),
             "set-current-model" => {
-                self.current_model = args.first().and_then(|a| a.as_str()).map(str::to_string);
+                let name = args.first().and_then(|a| a.as_str()).map(str::to_string);
+                if !self.allow_multi_model {
+                    if let Some(n) = &name {
+                        let matches = self
+                            .current_model
+                            .as_deref()
+                            .is_some_and(|cur| cur.eq_ignore_ascii_case(n));
+                        if !matches {
+                            return Err(format!(
+                                "Model {n:?} is not loaded; multiple models are not supported by the Environment yet."
+                            ));
+                        }
+                    }
+                }
+                self.current_model = name;
                 Ok(vec![Json::Bool(true)])
             }
             "mp-models" => Ok(vec![Json::Arr(
@@ -3209,6 +3252,7 @@ impl Session {
     /// through [`Session::add_remote`] and the fired-command bridge.
     pub fn load_source(&mut self, source: &str) -> Result<(), String> {
         let loaded = crate::model::load_models_from_str(source).map_err(|e| e.to_string())?;
+        self.check_model_load(loaded.len())?;
         if loaded.len() > 1 {
             self.multi_file = true;
         }
@@ -3227,6 +3271,7 @@ impl Session {
         let mut created = Vec::new();
         if crate::file_defines_model(&path) {
             let loaded = load_models(&path).map_err(|e| e.to_string())?;
+            self.check_model_load(loaded.len())?;
             if loaded.len() > 1 {
                 self.multi_file = true;
             }
@@ -3465,6 +3510,12 @@ impl Session {
     }
 
     fn build_engine(&mut self) -> Result<(), String> {
+        if !self.allow_multi_model && self.defs.len() > 1 {
+            return Err(
+                "Multiple models are not supported by the Environment yet; load one model."
+                    .to_string(),
+            );
+        }
         let def = match self.defs.last() {
             Some(d) => d.clone(),
             None => return Ok(()),
@@ -4419,6 +4470,46 @@ mod tests {
         assert_eq!(
             s.evaluate("mp-models", None, &[], &mut remote).unwrap(),
             vec![Json::Arr(vec![Json::Str("COUNT".into())])]
+        );
+    }
+
+    #[test]
+    fn environment_sessions_reject_a_second_model() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        let err = s
+            .evaluate(
+                "load-act-r-model",
+                None,
+                &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+                &mut r,
+            )
+            .unwrap_err();
+        assert!(err.contains("Multiple models are not supported"), "{err}");
+        assert_eq!(
+            s.evaluate("mp-models", None, &[], &mut r).unwrap(),
+            vec![Json::Arr(vec![Json::Str("COUNT".into())])]
+        );
+        assert_eq!(
+            s.evaluate(
+                "set-current-model",
+                None,
+                &[Json::Str("ADDITION".into())],
+                &mut r,
+            )
+            .unwrap_err(),
+            "Model \"ADDITION\" is not loaded; multiple models are not supported by the Environment yet."
         );
     }
 
