@@ -30,7 +30,7 @@ Milestones 1 and 2 are complete and committed:
 
 Last verified results:
 
-- Rust: **698 passed / 9 ignored**
+- Rust: **701 passed / 9 ignored**
 - Python: **38 passed**
 - `cargo test --features env --quiet --lib env::tests`: **3 passed**
 - `cargo fmt --check`: clean
@@ -52,6 +52,42 @@ Only the pre-existing untracked
   unrunnable.
 - Structured history/BOLD records must match the Tcl parser; plain text
   formatting is functional parity, not byte-identical parity.
+
+## Milestone 3 progress
+
+Completed in the working tree and committed:
+
+- `bfcbf56` rpc: support multiple loaded models
+- `73edb78` rpc: cover model-scoped histories and multi-model loading
+
+Implemented so far:
+
+- Ordered model set with a selected engine and inactive engines.
+- Multiple models from separate files and from one file.
+- `mp-models` returns load order.
+- `current-model` and `set-current-model` switch the selected engine.
+- Explicit RPC `model` arguments switch command context and restore it after
+  model-scoped commands.
+- Multi-model `run` interleaves all engines on the shared clock and emits the
+  model-name trace column.
+- Multi-model `reset` resets every engine.
+- `clear-all` removes every engine and model.
+- Reload replaces the last model file's group while retaining unrelated
+  models.
+- Per-model viewer and history commands work through the selected model.
+- Stepper hooks know which model paused/stepped, and pause/update callbacks
+  carry the model name.
+- Multi-model command tests and multi-model Tcl trace/clear-all tests pass.
+- Regression harnesses retain their historical last-model loading semantics
+  via `set_load_replaces_models`.
+
+Still to finish:
+
+- Multi-model device/window association and callback routing.
+- Full server-level fake-Tcl multi-model stepper test (the session-level
+  multi-model stepper path is implemented and tested).
+- Broader per-model device/window tests.
+- Final full-suite count and documentation refresh.
 
 ## What currently exists
 

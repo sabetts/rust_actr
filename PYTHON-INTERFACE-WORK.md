@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-01
 Branch: `main`
-Latest relevant commit: `d1e5b85 tests: cover stepper tutoring conflict payload`
+Latest relevant commit: `73edb78 rpc: cover model-scoped histories and multi-model loading`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -258,7 +258,7 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **698 passed / 9 ignored** across the engine and
+Current result: **701 passed / 9 ignored** across the engine and
 model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
@@ -316,3 +316,6 @@ solution sources and the environment-gated RPC test.
 - `bd311e4` rpc: expose command docs and connection counters
 - `37b69a6` rpc: expose multi-buffer goal chunks
 - `d1e5b85` tests: cover stepper tutoring conflict payload
+- `d1e5b85` tests: cover stepper tutoring conflict payload
+- `bfcbf56` rpc: support multiple loaded models
+- `73edb78` rpc: cover model-scoped histories and multi-model loading
