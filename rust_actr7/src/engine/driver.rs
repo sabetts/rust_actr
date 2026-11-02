@@ -93,6 +93,11 @@ impl Engine {
         self.out_lines.kinds_since(start)
     }
 
+    /// The output/detail levels for lines emitted since `start`.
+    pub fn out_levels_since(&self, start: usize) -> Vec<Out> {
+        self.out_lines.levels_since(start)
+    }
+
     /// Drop the trace lines from `len` on (`no-output` binds the output
     /// stream to nothing in ACT-R, so the suppressed command's lines never
     /// exist; this is the equivalent).

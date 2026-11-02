@@ -150,6 +150,7 @@ pub(crate) fn run_models(
     time_ms: &mut i64,
     trace: &mut Vec<String>,
     kinds: &mut Vec<TraceKind>,
+    levels: &mut Vec<Out>,
 ) -> Result<u64, EngineError> {
     let start = *time_ms;
     let limit = start + (secs * 1000.0).round() as i64;
@@ -188,9 +189,11 @@ pub(crate) fn run_models(
         events += 1;
         let lines = engine.out_since(mark);
         let line_kinds = engine.out_kinds_since(mark);
+        let line_levels = engine.out_levels_since(mark);
         for (i, line) in lines.into_iter().enumerate() {
             trace.push(with_model_column(&line, name));
             kinds.push(line_kinds.get(i).copied().unwrap_or(TraceKind::Model));
+            levels.push(line_levels.get(i).copied().unwrap_or(Out::Low));
         }
     }
     let stop = if beyond_limit {
@@ -214,6 +217,7 @@ pub(crate) fn run_models(
     let raw = format_line(stop, "------", reason, width);
     trace.push(with_model_column(&raw, "-"));
     kinds.push(TraceKind::Model);
+    levels.push(Out::Low);
     Ok(events)
 }
 

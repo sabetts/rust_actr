@@ -14,8 +14,9 @@
 /// Visibility rule from `filter-test`
 /// (`actr7.x/framework/printing.lisp:436`): `low` shows at any detail,
 /// `medium` at medium/high, `t` (Always) only at high.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Out {
+    #[default]
     Low,
     Medium,
     /// `:output t` — shown only at `:trace-detail high`.

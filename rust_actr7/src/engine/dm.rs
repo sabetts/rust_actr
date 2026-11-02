@@ -621,11 +621,15 @@ impl Engine {
         // Per-slot blending. `results` keeps blended-slots order.
         let mut results: Vec<(String, Option<Value>)> =
             blended_slots.iter().map(|s| (s.clone(), None)).collect();
+        // The Environment's blending-history trace keeps the slot detail that
+        // `history-to-blending-trace` prints, even when `:blt` is off.
+        let mut slot_trace = String::new();
 
         for slot in &blended_slots {
             if self.cfg.blt {
                 self.out(format!("Finding blended value for slot: {slot}"));
             }
+            slot_trace.push_str(&format!("\n Finding blended value for slot: {slot}\n"));
             // possible-values: (name, value, prob, magnitude) for each
             // activation chunk with a non-nil slot value; magnitude is
             // `:value->mag` (default identity).
@@ -653,6 +657,14 @@ impl Engine {
                     show_values(&mags)
                 ));
             }
+            slot_trace.push_str(&format!(
+                " Matched chunks' slots contain: {}\n",
+                show_values(&slot_vals)
+            ));
+            slot_trace.push_str(&format!(
+                " Magnitude values for those items: {}\n",
+                show_values(&mags)
+            ));
 
             let true_mags: Vec<Value> =
                 mags.iter().filter(|m| **m != Value::Nil).cloned().collect();
@@ -664,6 +676,9 @@ impl Engine {
                             .to_string(),
                     );
                 }
+                slot_trace.push_str(
+                    " When all magnitudes are nil there's nothing to blend and the slot is ignored\n",
+                );
                 results.retain(|(s, _)| s != slot);
                 continue;
             }
@@ -672,6 +687,7 @@ impl Engine {
                 if self.cfg.blt {
                     self.out("With numeric magnitudes blending by weighted average".to_string());
                 }
+                slot_trace.push_str(" With numeric magnitudes blending by weighted average\n");
                 let mut sum = 0.0f32;
                 for (name, _v, p, m) in &possible {
                     if *m == Value::Nil {
@@ -689,11 +705,19 @@ impl Engine {
                             lisp_s_f32(sum)
                         ));
                     }
+                    slot_trace.push_str(&format!(
+                        "  Chunk {name} with probability {} times magnitude {} = {} cumulative result: {}\n",
+                        lisp_s_f32(*p),
+                        lisp_s_f32(mag),
+                        lisp_s_f32(inc),
+                        lisp_s_f32(sum)
+                    ));
                 }
                 set_result(&mut results, slot, Value::Num(sum as f64));
                 if self.cfg.blt {
                     self.out(format!(" Final result: {}", lisp_s_f32(sum)));
                 }
+                slot_trace.push_str(&format!(" Final result: {}\n", lisp_s_f32(sum)));
                 continue;
             }
 
@@ -712,6 +736,16 @@ impl Engine {
                         show_values(&true_mags)
                     ));
                 }
+            }
+            if which_chunks {
+                slot_trace.push_str(
+                    " When all magnitudes are chunks blending based on similarities to all related chunks\n",
+                );
+            } else {
+                slot_trace.push_str(&format!(
+                    " When not all magnitudes are numbers or chunks blending based on similarities using those unique values: {}\n",
+                    show_values(&true_mags)
+                ));
             }
             let chunks: Vec<Value> = if which_chunks {
                 // Intersection of the magnitudes' filled-slot sets.
@@ -734,6 +768,7 @@ impl Engine {
                             "No intersecting slots found all chunks will be tested".to_string(),
                         );
                     }
+                    slot_trace.push_str(" No intersecting slots found all chunks will be tested\n");
                     self.dm_alist_order()
                         .into_iter()
                         .map(|i| Value::Sym(self.dm[i].name.clone().unwrap_or_default()))
@@ -745,6 +780,10 @@ impl Engine {
                             Self::names_by_index(&inter, &idx_map).join(" ")
                         ));
                     }
+                    slot_trace.push_str(&format!(
+                        " Intersection of slots for values is: ({})\n",
+                        Self::names_by_index(&inter, &idx_map).join(" ")
+                    ));
                     let list: Vec<Value> = self
                         .dm_alist_order()
                         .into_iter()
@@ -760,6 +799,10 @@ impl Engine {
                             show_values(&list)
                         ));
                     }
+                    slot_trace.push_str(&format!(
+                        " Chunks from DM with those slots: {}\n",
+                        show_values(&list)
+                    ));
                     list
                 }
             } else {
@@ -776,6 +819,7 @@ impl Engine {
                 if self.cfg.blt {
                     self.out(format!(" Only one possible value {}", chunks[0].show()));
                 }
+                slot_trace.push_str(&format!("  Only one possible value {}\n", chunks[0].show()));
                 chunks[0].clone()
             } else {
                 let mut best_val: Option<Value> = None;
@@ -784,6 +828,7 @@ impl Engine {
                     if self.cfg.blt {
                         self.out(format!(" Comparing value {}", val.show()));
                     }
+                    slot_trace.push_str(&format!("  Comparing value {}\n", val.show()));
                     let mut sum = 0.0f32;
                     for (name, v, p, m) in &possible {
                         let sim = self.similarity(val, m);
@@ -797,6 +842,13 @@ impl Engine {
                                 lisp_s_f32(sum)
                             ));
                         }
+                        slot_trace.push_str(&format!(
+                            "   Chunk {name} with probability {} slot value {} similarity: {} cumulative result: {}\n",
+                            lisp_s_f32(*p),
+                            v.show(),
+                            lisp_s_f32(sim),
+                            lisp_s_f32(sum)
+                        ));
                     }
                     if best_mag.is_none() || sum < best_mag.unwrap() {
                         best_mag = Some(sum);
@@ -808,6 +860,7 @@ impl Engine {
             if self.cfg.blt {
                 self.out(format!(" Final result: {}", best.show()));
             }
+            slot_trace.push_str(&format!(" Final result: {}\n", best.show()));
             set_result(&mut results, slot, best);
         }
 
@@ -890,8 +943,9 @@ impl Engine {
                 lisp_s_f32(*p)
             ));
         }
+        history_trace.push_str(&slot_trace);
         history_trace.push_str(&format!(
-            "This is the definition of the blended chunk:\n{result_text}\nActivation for blended chunk is: {}\n",
+            "\nThis is the definition of the blended chunk:\n{result_text}\nActivation for blended chunk is: {}\n",
             lisp_s_f32(act)
         ));
         if act < self.cfg.rt {

@@ -254,7 +254,7 @@ impl Engine {
                             text.clone(),
                         ));
                     } else if self.cfg.detail.shows(Out::Medium) {
-                        self.emit("SPEECH", format!("{} {text}", style.trace()));
+                        self.emit_at(Out::Medium, "SPEECH", format!("{} {text}", style.trace()));
                     }
                 }
             }
@@ -311,7 +311,11 @@ impl Engine {
                     // `(sgp :trace-detail high)`. The `mod-buffer-chunk` that
                     // follows is `medium` and appears in all of them.
                     if self.cfg.detail.shows(Out::Always) {
-                        self.emit("AUDIO", format!("AUDIO-EVENT-ENDED AUDIO-EVENT{evt}"));
+                        self.emit_at(
+                            Out::Always,
+                            "AUDIO",
+                            format!("AUDIO-EVENT-ENDED AUDIO-EVENT{evt}"),
+                        );
                     }
                     self.emit("AUDIO", "MOD-BUFFER-CHUNK AURAL-LOCATION".to_string());
                     self.changed();
@@ -535,7 +539,7 @@ impl Engine {
                     buf.busy = true;
                 }
                 if self.cfg.detail.shows(Out::Medium) {
-                    self.emit("AUDIO", format!("ATTEND-SOUND {display}"));
+                    self.emit_at(Out::Medium, "AUDIO", format!("ATTEND-SOUND {display}"));
                 }
                 self.push(
                     self.time_ms + s.recode,
@@ -555,7 +559,11 @@ impl Engine {
                     buf.busy = false;
                 }
                 if self.cfg.detail.shows(Out::Always) {
-                    self.emit("AUDIO", format!("AUDIO-ENCODING-COMPLETE {}", s.ename));
+                    self.emit_at(
+                        Out::Always,
+                        "AUDIO",
+                        format!("AUDIO-ENCODING-COMPLETE {}", s.ename),
+                    );
                 }
                 let chunk = sound_chunk(&s);
                 self.now(

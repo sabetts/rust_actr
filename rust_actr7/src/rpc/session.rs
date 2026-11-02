@@ -18,6 +18,7 @@ use crate::engine::{
 use crate::json::Json;
 use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
 use crate::sexpr::Sexp;
+use crate::trace::Out;
 
 /// Where a command's underlying function lives.
 #[derive(Debug, Clone, PartialEq)]
@@ -288,6 +289,7 @@ pub struct Session {
     shared_seq: Rc<Cell<u64>>,
     global_trace: Vec<String>,
     global_trace_kinds: Vec<TraceKind>,
+    global_trace_levels: Vec<Out>,
     global_trace_pos: usize,
     global_time_ms: i64,
     global_run_events: u64,
@@ -318,11 +320,19 @@ pub struct Session {
     /// Names passed to `record-history` (uppercased); `TRACE-HISTORY` makes
     /// [`Session::take_trace`] also accumulate lines for the history stream.
     hist_recording: std::collections::BTreeSet<String>,
-    /// Trace lines recorded while `trace-history` is enabled.
-    hist_trace: Vec<String>,
+    /// Trace lines recorded while `trace-history` is enabled, with the detail
+    /// level and model needed by the Environment's history filter.
+    hist_trace: Vec<TraceHistoryRecord>,
     /// In-progress `start-incremental-history-data` jobs.
     hist_jobs: std::collections::HashMap<u64, HistJob>,
     hist_next_id: u64,
+}
+
+#[derive(Debug, Clone)]
+struct TraceHistoryRecord {
+    line: String,
+    level: Out,
+    model: String,
 }
 
 /// An incremental-history transfer: the JSON chunks still to hand out.
@@ -491,6 +501,7 @@ impl Session {
             shared_seq: Rc::new(Cell::new(0)),
             global_trace: Vec::new(),
             global_trace_kinds: Vec::new(),
+            global_trace_levels: Vec::new(),
             global_trace_pos: 0,
             global_time_ms: 0,
             global_run_events: 0,
@@ -647,6 +658,7 @@ impl Session {
     fn rebuild_global_trace(&mut self) {
         self.global_trace.clear();
         self.global_trace_kinds.clear();
+        self.global_trace_levels.clear();
         if self.model_order.len() <= 1 {
             self.global_trace_pos = 0;
             return;
@@ -655,11 +667,14 @@ impl Session {
             if let Some(eng) = self.engine_for(name) {
                 let lines = eng.out_since(0);
                 let kinds = eng.out_kinds_since(0);
+                let levels = eng.out_levels_since(0);
                 for (i, line) in lines.into_iter().enumerate() {
                     self.global_trace
                         .push(crate::engine::multi::with_model_column(&line, name));
                     self.global_trace_kinds
                         .push(kinds.get(i).copied().unwrap_or(TraceKind::Model));
+                    self.global_trace_levels
+                        .push(levels.get(i).copied().unwrap_or(Out::Low));
                 }
             }
         }
@@ -827,25 +842,45 @@ impl Session {
 
     /// Take the trace lines and their streams since the last call.
     pub fn take_trace_events(&mut self) -> Vec<(String, TraceKind)> {
-        let events = if self.model_order.len() > 1 {
+        let fallback_model = self.current_model.clone().unwrap_or_default();
+        let collected: Vec<(String, TraceKind, Out, String)> = if self.model_order.len() > 1 {
             let pos = self.global_trace_pos;
             let lines = self.global_trace[pos.min(self.global_trace.len())..].to_vec();
             let kinds = self.global_trace_kinds[pos.min(self.global_trace_kinds.len())..].to_vec();
+            let levels =
+                self.global_trace_levels[pos.min(self.global_trace_levels.len())..].to_vec();
             self.global_trace_pos = self.global_trace.len();
             lines
                 .into_iter()
                 .enumerate()
-                .map(|(i, line)| (line, kinds.get(i).copied().unwrap_or(TraceKind::Model)))
+                .map(|(i, line)| {
+                    let model =
+                        trace_model_from_line(&line).unwrap_or_else(|| fallback_model.clone());
+                    (
+                        line,
+                        kinds.get(i).copied().unwrap_or(TraceKind::Model),
+                        levels.get(i).copied().unwrap_or(Out::Low),
+                        model,
+                    )
+                })
                 .collect()
         } else if let Some(eng) = &self.engine {
             let pos = self.trace_pos;
             let lines = eng.out_since(pos);
             let kinds = eng.out_kinds_since(pos);
+            let levels = eng.out_levels_since(pos);
             self.trace_pos = eng.out_len();
             lines
                 .into_iter()
                 .enumerate()
-                .map(|(i, line)| (line, kinds.get(i).copied().unwrap_or(TraceKind::Model)))
+                .map(|(i, line)| {
+                    (
+                        line,
+                        kinds.get(i).copied().unwrap_or(TraceKind::Model),
+                        levels.get(i).copied().unwrap_or(Out::Low),
+                        fallback_model.clone(),
+                    )
+                })
                 .collect()
         } else {
             Vec::new()
@@ -853,9 +888,20 @@ impl Session {
         // `record-history "trace-history"` captures the complete stream.
         if self.hist_recording.contains("TRACE-HISTORY") {
             self.hist_trace
-                .extend(events.iter().map(|(line, _)| line.clone()));
+                .extend(
+                    collected
+                        .iter()
+                        .map(|(line, _, level, model)| TraceHistoryRecord {
+                            line: line.clone(),
+                            level: *level,
+                            model: model.clone(),
+                        }),
+                );
         }
-        events
+        collected
+            .into_iter()
+            .map(|(line, kind, _, _)| (line, kind))
+            .collect()
     }
 
     /// Take just the trace text since the last call.
@@ -870,7 +916,7 @@ impl Session {
     /// is not supported.
     fn history_records(&self, name: &str) -> Option<Vec<String>> {
         match name {
-            "TRACE-HISTORY" => Some(self.hist_trace.iter().map(|l| trace_record(l)).collect()),
+            "TRACE-HISTORY" => Some(self.hist_trace.iter().map(trace_record).collect()),
             "RETRIEVAL-HISTORY" => Some(
                 self.engine
                     .as_ref()
@@ -1005,6 +1051,7 @@ impl Session {
         }
         let mut trace_lines = std::mem::take(&mut self.global_trace);
         let mut kinds = std::mem::take(&mut self.global_trace_kinds);
+        let mut levels = std::mem::take(&mut self.global_trace_levels);
         let mut time = self.global_time_ms;
         let events = {
             let mut refs: Vec<(&str, &mut Engine)> = Vec::new();
@@ -1021,11 +1068,13 @@ impl Session {
                 &mut time,
                 &mut trace_lines,
                 &mut kinds,
+                &mut levels,
             )
             .map_err(|e| e.to_string())?
         };
         self.global_trace = trace_lines;
         self.global_trace_kinds = kinds;
+        self.global_trace_levels = levels;
         self.global_time_ms = time;
         self.global_run_events += events;
         Ok(())
@@ -1465,6 +1514,7 @@ impl Session {
                 self.last_model_file = None;
                 self.global_trace.clear();
                 self.global_trace_kinds.clear();
+                self.global_trace_levels.clear();
                 self.global_trace_pos = 0;
                 self.global_time_ms = 0;
                 self.global_run_events = 0;
@@ -2033,9 +2083,12 @@ impl Session {
                     .and_then(|a| a.as_str())
                     .unwrap_or("")
                     .to_uppercase();
+                let detail = (name == "TRACE-HISTORY").then(|| args.get(3)).flatten();
                 let any = self
                     .history_records(&name)
-                    .map(|r| !filter_history_records(r, args.get(1), args.get(2)).is_empty())
+                    .map(|r| {
+                        !filter_history_records(r, args.get(1), args.get(2), detail).is_empty()
+                    })
                     .unwrap_or(false);
                 Ok(vec![Json::Bool(any)])
             }
@@ -2082,7 +2135,8 @@ impl Session {
                         _ => return Ok(vec![Json::Null]),
                     }
                 };
-                let records = filter_history_records(records, args.get(3), args.get(4));
+                let detail = (name == "TRACE-HISTORY").then(|| args.get(5)).flatten();
+                let records = filter_history_records(records, args.get(3), args.get(4), detail);
                 if records.is_empty() {
                     return Ok(vec![Json::Null]);
                 }
@@ -2127,6 +2181,8 @@ impl Session {
                 let Some(records) = self.history_records(&name) else {
                     return Ok(vec![Json::Bool(false)]);
                 };
+                let detail = (name == "TRACE-HISTORY").then(|| args.get(5)).flatten();
+                let records = filter_history_records(records, args.get(3), args.get(4), detail);
                 if records.is_empty() || file.is_empty() {
                     return Ok(vec![Json::Bool(false)]);
                 }
@@ -3861,6 +3917,7 @@ impl Session {
                 self.global_trace
                     .push(crate::engine::multi::with_model_column(&raw, "-"));
                 self.global_trace_kinds.push(TraceKind::Model);
+                self.global_trace_levels.push(Out::Low);
                 return Ok(RunStop::Finished);
             };
             let model_name = if idx == 0 {
@@ -3868,7 +3925,7 @@ impl Session {
             } else {
                 self.inactive[idx - 1].name.clone()
             };
-            let (time, lines, kinds) = if idx == 0 {
+            let (time, lines, kinds, levels) = if idx == 0 {
                 let eng = self.engine.as_mut().ok_or("no model loaded")?;
                 let mark = eng.out_len();
                 if !eng.run_one_event().map_err(|e| e.to_string())? {
@@ -3878,6 +3935,7 @@ impl Session {
                     eng.time_ms(),
                     eng.out_since(mark),
                     eng.out_kinds_since(mark),
+                    eng.out_levels_since(mark),
                 )
             } else {
                 let eng = &mut self.inactive[idx - 1].engine;
@@ -3889,6 +3947,7 @@ impl Session {
                     eng.time_ms(),
                     eng.out_since(mark),
                     eng.out_kinds_since(mark),
+                    eng.out_levels_since(mark),
                 )
             };
             for (i, line) in lines.into_iter().enumerate() {
@@ -3896,6 +3955,8 @@ impl Session {
                     .push(crate::engine::multi::with_model_column(&line, &model_name));
                 self.global_trace_kinds
                     .push(kinds.get(i).copied().unwrap_or(TraceKind::Model));
+                self.global_trace_levels
+                    .push(levels.get(i).copied().unwrap_or(Out::Low));
             }
             self.global_time_ms = self.global_time_ms.max(time);
             self.global_run_events += 1;
@@ -4469,10 +4530,25 @@ pub fn json_to_text(j: &Json) -> String {
     }
 }
 
+/// The Environment's multi-model trace column starts at byte 12.
+fn trace_model_from_line(line: &str) -> Option<String> {
+    let model = line.get(12..22)?.trim();
+    (!model.is_empty()).then(|| model.to_string())
+}
+
+fn trace_detail_name(level: Out) -> &'static str {
+    match level {
+        Out::Low => "low",
+        Out::Medium => "medium",
+        Out::Always | Out::Never => "high",
+    }
+}
+
 /// One `trace-history` record: `[time, detail, model, text]`. The
 /// Environment's text-trace window reads index 3 (`61-trace-history.tcl`).
-fn trace_record(line: &str) -> String {
-    let time = line
+fn trace_record(record: &TraceHistoryRecord) -> String {
+    let time = record
+        .line
         .split_whitespace()
         .next()
         .and_then(|s| s.parse::<f64>().ok())
@@ -4480,9 +4556,9 @@ fn trace_record(line: &str) -> String {
         .unwrap_or(0);
     Json::Arr(vec![
         Json::Int(time),
-        Json::Str("medium".into()),
-        Json::Str(String::new()),
-        Json::Str(line.to_string()),
+        Json::Str(trace_detail_name(record.level).into()),
+        Json::Str(record.model.clone()),
+        Json::Str(record.line.clone()),
     ])
     .write()
 }
@@ -4503,19 +4579,53 @@ fn record_time_ms(record: &str) -> Option<i64> {
         .map(|t| t.round() as i64)
 }
 
+fn trace_detail_allows(record: &str, requested: &str) -> bool {
+    let requested = requested.trim().to_ascii_lowercase();
+    if requested.is_empty()
+        || requested == "nil"
+        || requested == "null"
+        || requested == "t"
+        || requested == "true"
+        || requested == "all"
+    {
+        return true;
+    }
+    let Ok(Json::Arr(items)) = crate::json::parse(record) else {
+        return true;
+    };
+    let detail = items
+        .get(1)
+        .and_then(|v| v.as_str())
+        .unwrap_or("low")
+        .to_ascii_lowercase();
+    match requested.as_str() {
+        "low" => detail == "low",
+        "medium" => matches!(detail.as_str(), "low" | "medium"),
+        "high" => true,
+        _ => true,
+    }
+}
+
 fn filter_history_records(
     records: Vec<String>,
     start: Option<&Json>,
     end: Option<&Json>,
+    detail: Option<&Json>,
 ) -> Vec<String> {
     let start = history_time_arg(start);
     let end = history_time_arg(end);
-    if start.is_none() && end.is_none() {
+    let detail = detail.and_then(|v| v.as_str());
+    if start.is_none() && end.is_none() && detail.is_none() {
         return records;
     }
     records
         .into_iter()
         .filter(|r| {
+            if let Some(detail) = detail {
+                if !trace_detail_allows(r, detail) {
+                    return false;
+                }
+            }
             let Some(t) = record_time_ms(r) else {
                 return true;
             };
@@ -5495,6 +5605,68 @@ mod tests {
         );
     }
 
+    #[test]
+    fn retrieval_history_is_per_model() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            Some("COUNT"),
+            &[Json::Str("retrieval-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            Some("ADDITION"),
+            &[Json::Str("retrieval-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        s.evaluate(
+            "set-current-model",
+            None,
+            &[Json::Str("COUNT".into())],
+            &mut r,
+        )
+        .unwrap();
+        let count = s.history_records("RETRIEVAL-HISTORY").unwrap();
+        assert!(!count.is_empty(), "COUNT produced no retrieval history");
+        s.evaluate(
+            "set-current-model",
+            None,
+            &[Json::Str("ADDITION".into())],
+            &mut r,
+        )
+        .unwrap();
+        let addition = s.history_records("RETRIEVAL-HISTORY").unwrap();
+        assert!(
+            !addition.is_empty(),
+            "ADDITION produced no retrieval history"
+        );
+        assert_ne!(count, addition, "model histories were mixed");
+    }
+
     /// A client-command handler that records the display ops it receives
     /// (`visible-virtual-window` protocol) and accepts every `check`.
     #[derive(Default)]
@@ -6072,6 +6244,17 @@ mod tests {
         assert_eq!(first.len(), 5);
         assert!(first[1].as_str().is_some_and(|s| !s.is_empty()));
         assert!(first[2].as_str().is_some_and(|s| !s.is_empty()));
+        let Json::Arr(chunks) = &first[3] else {
+            panic!("blending chunks are not an array");
+        };
+        assert!(!chunks.is_empty());
+        let trace = first[4].as_str().expect("blending trace");
+        assert!(trace.contains("Finding blended value for slot"), "{trace}");
+        assert!(trace.contains(" Final result:"), "{trace}");
+        assert!(
+            trace.contains("This is the definition of the blended chunk"),
+            "{trace}"
+        );
     }
 
     #[test]
@@ -6146,6 +6329,78 @@ mod tests {
             panic!("saved trace data is not an array");
         };
         assert!(!records.is_empty());
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn trace_history_save_filters_detail_and_time() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("trace-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let _ = s.take_trace();
+        let path = std::env::temp_dir().join(format!(
+            "actr-trace-filter-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let file = path.to_string_lossy().into_owned();
+        let saved = s
+            .evaluate(
+                "save-history-data",
+                None,
+                &[
+                    Json::Str("trace-history".into()),
+                    Json::Str(file),
+                    Json::Str("filtered".into()),
+                    Json::Float(0.0),
+                    Json::Float(10.0),
+                    Json::Str("low".into()),
+                ],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(saved[0], Json::Bool(true));
+        let Json::Obj(envelope) =
+            crate::json::parse(&std::fs::read_to_string(&path).unwrap()).unwrap()
+        else {
+            panic!("saved history is not an object");
+        };
+        let data = envelope
+            .iter()
+            .find(|(k, _)| k == "data")
+            .map(|(_, v)| v)
+            .expect("history data");
+        let Json::Arr(records) = data else {
+            panic!("history data is not an array");
+        };
+        assert!(!records.is_empty());
+        for rec in records {
+            let Json::Arr(fields) = rec else {
+                panic!("trace record is not an array");
+            };
+            assert_eq!(fields[1].as_str(), Some("low"));
+        }
         let _ = std::fs::remove_file(path);
     }
 
@@ -7026,6 +7281,129 @@ mod tests {
         .unwrap();
         assert!(s.has_command("run"));
         assert!(!s.has_command("nope"));
+    }
+
+    #[test]
+    fn trace_history_records_carry_detail_and_model() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("trace-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let _ = s.take_trace();
+
+        let all = s.history_records("TRACE-HISTORY").unwrap();
+        let low_req = Json::Str("low".into());
+        let low = filter_history_records(all.clone(), None, None, Some(&low_req));
+        assert!(!low.is_empty());
+        for rec in &low {
+            let Json::Arr(fields) = crate::json::parse(rec).unwrap() else {
+                panic!("low trace record is not an array");
+            };
+            assert_eq!(fields[1].as_str(), Some("low"));
+        }
+        let med_req = Json::Str("medium".into());
+        let medium = filter_history_records(all.clone(), None, None, Some(&med_req));
+        assert!(medium.len() >= low.len());
+        for rec in &medium {
+            let Json::Arr(fields) = crate::json::parse(rec).unwrap() else {
+                panic!("medium trace record is not an array");
+            };
+            assert!(matches!(fields[1].as_str(), Some("low" | "medium")));
+        }
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("trace-history".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let Json::Arr(records) = crate::json::parse(chunk[0].as_str().unwrap()).unwrap() else {
+            panic!("trace history is not an array");
+        };
+        assert!(!records.is_empty());
+        let mut saw_low = false;
+        let mut saw_medium = false;
+        for rec in records {
+            let Json::Arr(fields) = rec else {
+                panic!("trace record is not an array");
+            };
+            assert_eq!(fields.len(), 4);
+            let detail = fields[1].as_str().expect("trace detail");
+            assert!(matches!(detail, "low" | "medium" | "high"));
+            assert_eq!(fields[2].as_str(), Some("COUNT"));
+            assert!(fields[3].as_str().is_some_and(|s| !s.is_empty()));
+            saw_low |= detail == "low";
+            saw_medium |= detail == "medium";
+        }
+        assert!(saw_low, "count trace should contain low-detail lines");
+        assert!(saw_medium, "count trace should contain medium-detail lines");
+    }
+
+    #[test]
+    fn multi_model_trace_history_carries_each_model_name() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("trace-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let _ = s.take_trace();
+
+        let records = s.history_records("TRACE-HISTORY").unwrap();
+        let mut models = std::collections::BTreeSet::new();
+        for rec in records {
+            let Json::Arr(fields) = crate::json::parse(&rec).unwrap() else {
+                panic!("trace record is not an array");
+            };
+            models.insert(fields[2].as_str().unwrap_or("").to_string());
+        }
+        assert!(models.contains("COUNT"), "{models:?}");
+        assert!(models.contains("ADDITION"), "{models:?}");
     }
 }
 

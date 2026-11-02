@@ -2505,18 +2505,24 @@ pub enum TraceKind {
 pub struct OutLines {
     lines: Vec<String>,
     kinds: Vec<TraceKind>,
+    levels: Vec<Out>,
     current: TraceKind,
+    current_level: Out,
 }
 
 impl OutLines {
     pub fn push(&mut self, line: String) {
-        self.lines.push(line);
-        self.kinds.push(self.current);
+        self.push_with(self.current, self.current_level, line);
     }
 
     pub fn push_kind(&mut self, kind: TraceKind, line: String) {
+        self.push_with(kind, self.current_level, line);
+    }
+
+    pub fn push_with(&mut self, kind: TraceKind, level: Out, line: String) {
         self.lines.push(line);
         self.kinds.push(kind);
+        self.levels.push(level);
     }
 
     pub fn extend<I: IntoIterator<Item = String>>(&mut self, iter: I) {
@@ -2528,15 +2534,18 @@ impl OutLines {
     pub fn truncate(&mut self, len: usize) {
         self.lines.truncate(len);
         self.kinds.truncate(len);
+        self.levels.truncate(len);
     }
 
     pub fn clear(&mut self) {
         self.lines.clear();
         self.kinds.clear();
+        self.levels.clear();
     }
 
     pub fn pop(&mut self) -> Option<String> {
         self.kinds.pop();
+        self.levels.pop();
         self.lines.pop()
     }
 
@@ -2562,11 +2571,13 @@ impl OutLines {
 
     pub fn split_off(&mut self, at: usize) -> Vec<String> {
         self.kinds.truncate(at);
+        self.levels.truncate(at);
         self.lines.split_off(at)
     }
 
     pub fn set_lines(&mut self, lines: Vec<String>) {
         self.kinds = vec![TraceKind::Model; lines.len()];
+        self.levels = vec![Out::Low; lines.len()];
         self.lines = lines;
     }
 
@@ -2574,12 +2585,24 @@ impl OutLines {
         self.current = kind;
     }
 
+    pub fn set_current_level(&mut self, level: Out) {
+        self.current_level = level;
+    }
+
     pub fn current_kind(&self) -> TraceKind {
         self.current
     }
 
+    pub fn current_level(&self) -> Out {
+        self.current_level
+    }
+
     pub fn kinds_since(&self, start: usize) -> Vec<TraceKind> {
         self.kinds[start.min(self.kinds.len())..].to_vec()
+    }
+
+    pub fn levels_since(&self, start: usize) -> Vec<Out> {
+        self.levels[start.min(self.levels.len())..].to_vec()
     }
 }
 
@@ -2635,6 +2658,9 @@ pub struct Engine {
     /// event can emit several lines (e.g. `encoding-complete` then
     /// `No visual-object found`), so `post` is called per line.
     current_lines: Vec<String>,
+    /// Output level of the event being executed, tagged onto every trace line
+    /// it emits so trace-history can filter low/medium/high later.
+    current_out: Out,
     /// Commands the model itself fired during a run (`output-key`, …), as
     /// `(name, model, key)`. ACT-R calls these *inside* the run, so their
     /// monitors see them; the RPC session dispatches them to the client's
@@ -3207,6 +3233,7 @@ impl Engine {
             out_lines: OutLines::default(),
             event_hook: None,
             current_lines: Vec::new(),
+            current_out: Out::Low,
             fired_commands: Vec::new(),
             exec_prods: Vec::new(),
             disabled_prods: HashSet::new(),
@@ -4663,18 +4690,23 @@ impl Engine {
     }
 
     fn emit(&mut self, module: &str, details: String) {
+        self.emit_at(self.current_out, module, details);
+    }
+
+    /// Emit a line whose output level is known more precisely than the
+    /// executing event's level (e.g. a high-detail-only branch).
+    fn emit_at(&mut self, out: Out, module: &str, details: String) {
         // Capture before the `:v` gate: a pre-hook may turn tracing off
         // (`sgp :v nil`) yet still project the line.
         self.capture_line(module, &details);
         if !self.trace_on {
             return;
         }
-        self.out_lines.push(format_line(
-            self.time_ms,
-            module,
-            &details,
-            self.cfg.module_width,
-        ));
+        self.out_lines.push_with(
+            TraceKind::Model,
+            out,
+            format_line(self.time_ms, module, &details, self.cfg.module_width),
+        );
     }
 
     /// The module column an event renders under: buffer-owning module for a
@@ -5267,6 +5299,7 @@ impl Engine {
         };
         let is_cr = matches!(next.event, Event::ConflictResolution);
         let maintenance = next.maintenance;
+        self.current_out = next.out;
         self.current_lines.clear();
         self.exec(next.event, show)?;
         if self.bst_collect {
@@ -5371,6 +5404,7 @@ impl Engine {
         };
         let is_cr = matches!(next.event, Event::ConflictResolution);
         let maintenance = next.maintenance;
+        self.current_out = next.out;
         self.current_lines.clear();
         self.exec(next.event, show)?;
         if let Some(view) = hook_view.as_ref() {
@@ -5526,6 +5560,7 @@ impl Engine {
             };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
+            self.current_out = next.out;
             self.current_lines.clear();
             self.exec(next.event, show)?;
             if self.bst_collect {
@@ -5710,6 +5745,7 @@ impl Engine {
             };
             let is_cr = matches!(next.event, Event::ConflictResolution);
             let maintenance = next.maintenance;
+            self.current_out = next.out;
             self.current_lines.clear();
             self.exec(next.event, show)?;
             if self.bst_collect {
