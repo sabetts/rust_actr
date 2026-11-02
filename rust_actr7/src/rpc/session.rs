@@ -64,6 +64,7 @@ pub const BUILTINS: &[&str] = &[
     "step-once",
     "reset",
     "reload",
+    "clear-all",
     "load-act-r-model",
     "load-act-r-code",
     "add-act-r-command",
@@ -258,6 +259,8 @@ pub trait Remote {
 /// A live RPC session: loaded model(s) plus the running engine.
 pub struct Session {
     model_files: Vec<String>,
+    /// The last file that defined a model, for the Environment's Reload.
+    last_model_file: Option<String>,
     defs: Vec<Model>,
     user_fns: std::collections::HashMap<String, UserDefun>,
     user_vars: std::collections::HashMap<String, Sexp>,
@@ -451,6 +454,7 @@ impl Session {
         }
         Session {
             model_files: Vec::new(),
+            last_model_file: None,
             defs: Vec::new(),
             user_fns: Default::default(),
             user_vars: Default::default(),
@@ -1084,8 +1088,40 @@ impl Session {
                     .cloned()
                     .unwrap_or(Json::Null)])
             }
+            "clear-all" => {
+                self.queue_signal("clear-all-start", Vec::new());
+                if let Some(old) = self.current_model.clone() {
+                    self.queue_signal("deleting-model", vec![Json::Str(old)]);
+                }
+                self.defs.clear();
+                self.engine = None;
+                self.multi = None;
+                self.multi_file = false;
+                self.current_model = None;
+                self.model_files.clear();
+                self.last_model_file = None;
+                self.trace_pos = 0;
+                Ok(vec![Json::Bool(true)])
+            }
             "reload" => {
-                self.build_engine()?;
+                let path = self
+                    .last_model_file
+                    .clone()
+                    .ok_or_else(|| "No model file recorded to reload.".to_string())?;
+                if let Some(old) = self.current_model.clone() {
+                    self.queue_signal("deleting-model", vec![Json::Str(old)]);
+                }
+                self.defs.clear();
+                self.engine = None;
+                self.multi = None;
+                self.multi_file = false;
+                self.current_model = None;
+                self.model_files.clear();
+                self.trace_pos = 0;
+                let created = self.load_file(&path, remote, false)?;
+                for name in created {
+                    self.queue_signal("creating-model", vec![Json::Str(name)]);
+                }
                 Ok(vec![Json::Bool(true)])
             }
             // `(sgp :key …)`: a getter when every arg is a keyword, else a
@@ -3305,6 +3341,17 @@ impl Session {
     /// Load a model or task file from a filesystem path.  ACT-R logical names
     /// (`ACT-R:tutorial;unit1;count.lisp`) are deliberately unsupported.
     fn load(&mut self, path: &str, remote: &mut dyn Remote) -> Result<(), String> {
+        self.load_file(path, remote, true).map(|_| ())
+    }
+
+    /// Load a file and optionally dispatch its `creating-model` signal. Reload
+    /// suppresses the immediate signal so it can emit delete/create in order.
+    fn load_file(
+        &mut self,
+        path: &str,
+        remote: &mut dyn Remote,
+        notify: bool,
+    ) -> Result<Vec<String>, String> {
         let path = filesystem_path(path)?;
         if !path.is_file() {
             return Err(format!("no such file: {}", path.display()));
@@ -3318,6 +3365,7 @@ impl Session {
             }
             created.extend(loaded.iter().map(|m| m.name.clone()));
             self.defs.extend(loaded);
+            self.last_model_file = Some(path.to_string_lossy().into_owned());
         }
         if let Ok(src) = std::fs::read_to_string(&path) {
             self.user_fns.extend(model::parse_defuns(&src));
@@ -3332,15 +3380,17 @@ impl Session {
         self.build_engine()?;
         // `add-new-model` dispatches `creating-model` so the Environment's
         // model menu updates (`meta-process.lisp:426`).
-        for name in created {
-            let _ = self.evaluate(
-                "creating-model",
-                Some(&name),
-                &[Json::Str(name.clone())],
-                remote,
-            );
+        if notify {
+            for name in &created {
+                let _ = self.evaluate(
+                    "creating-model",
+                    Some(name),
+                    &[Json::Str(name.clone())],
+                    remote,
+                );
+            }
         }
-        Ok(())
+        Ok(created)
     }
 
     /// `set-system-parameter-value` (`central-parameters.lisp:131`). Only
