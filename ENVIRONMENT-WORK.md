@@ -1,7 +1,7 @@
 # ACT-R Environment Work
 
 This document is the handoff for the Rust ACT-R Environment work. It records
-the completed multi-model milestones and the remaining Environment limits.
+the completed environment milestones and the remaining Environment limits.
 
 The target is the **upstream Tcl/Tk ACT-R Environment** in
 `actr7.x/environment/`, connecting to `actr server` over the RPC socket. The
@@ -9,7 +9,7 @@ native `actr env` GUI is a separate, deferred project.
 
 ## Current status
 
-Milestones 1-4 are complete and committed:
+Milestones 1-5 are complete and committed:
 
 - `9d923d8` docs: document filesystem-only runtime paths
 - `c392fee` engine: make model loading filesystem-path-only
@@ -30,10 +30,11 @@ Milestones 1-4 are complete and committed:
 - `73edb78` rpc: cover model-scoped histories and multi-model loading
 - `865019a` tests: cover multi-model stepper callbacks
 - `858ad0d` rpc: route multi-model windows and device actions
+- `fc8fa75` history: preserve trace detail and expand blending history
 
 Last verified results:
 
-- Rust: **706 passed / 9 ignored**
+- Rust: **710 passed / 9 ignored**
 - Python: **38 passed**
 - `cargo test --features env --quiet --lib env::tests`: **3 passed**
 - `cargo fmt --check`: clean
@@ -101,8 +102,30 @@ Implemented:
   windows. Upstream Tcl does not register experiment windows for deletion, so
   the Rust session explicitly sends `close`.
 
-No Milestone 3 or 4 work remains outstanding. The remaining limits are listed
-below.
+No Milestone 3 or 4 work remains outstanding.
+
+## Milestone 5 progress: viewer and history fidelity
+
+Completed and committed:
+
+- `fc8fa75` history: preserve trace detail and expand blending history
+
+Implemented:
+
+- Trace lines retain their output level and model alongside the rendered text.
+- `trace-history` records now contain `[time, detail, model, text]` with real
+  low/medium/high metadata.
+- Trace-history availability, incremental transfer, and save honor the Tcl
+  detail-level filter together with time bounds.
+- Multi-model trace history carries each event's model name.
+- The blending history trace now includes the slot-by-slot details the
+  Environment viewer displays: matched values, magnitudes, method, numeric
+  accumulation, chunk comparisons, and final results.
+- Per-model retrieval histories are verified to remain independent.
+- Unknown trace details fail safe by remaining visible rather than being
+  silently dropped.
+
+Remaining known limits are listed below.
 
 ## What currently exists
 
@@ -124,10 +147,11 @@ below.
 - Disk-backed reload and clear-all.
 - Time filters for histories.
 - Command documentation and connection sent/received counters.
-- Standard viewers and histories, including audicon and a simplified blending
-  history.
+- Standard viewers and histories, including audicon and a detailed blending
+  history trace.
+- Trace-history detail-level filtering and per-event model metadata.
 - Lisp-compatible history save/load envelopes and comment-first incremental
-  transfer.
+  transfer, including time/detail filters.
 - Multi-buffer `GOAL` access for the threads extra.
 - Stepper core behavior and tutoring/conflict payload coverage.
 - Per-model experiment-window metadata, item ids, and display callbacks.
@@ -138,6 +162,8 @@ below.
 
 - `rust_actr7/tests/environment_rpc.rs` is the fake-Tcl conformance harness,
   including per-model windows, clicks, device actions, and lifecycle closes.
+- Session tests cover trace detail/model metadata, detail-filtered
+  availability/save, full blending trace text, and per-model histories.
 - `rust_actr7/tests/stepper_rpc.rs` drives the stepper over a real socket.
 - `rust_actr7/fixtures/stepper/stepper-model.lisp` is the stepper fixture.
 - `rust_actr7/tests/test_models.rs` and `tests/hooks/mod.rs` opt into
@@ -157,6 +183,12 @@ below.
 - Upstream Tcl does not register experiment windows in its per-model window
   map, so Rust closes those windows explicitly on model replacement, reload,
   and clear-all. This is documented rather than patched upstream.
+- Viewer text remains functionally compatible rather than byte-identical for
+  every pane.
+- Blending history exposes the complete viewer-facing trace and chunk data,
+  but not the raw Lisp SBLT structure.
+- BOLD records are shape-verified; real Tk graph/brain rendering is still a
+  manual check.
 - Per-model viewer/history commands work by switching command context; those
   state stores are not yet independently modeled for every device family.
 - Python remains intentionally single-model.
@@ -454,6 +486,9 @@ cargo test --test rpc_conformance -- --ignored --nocapture
 - The Tcl model menu lists both and switches the selected model.
 - Global run/reset/clear-all behave like Lisp.
 - Viewers and histories follow the selected model.
+- Trace-history records carry real detail/model metadata and honor the Tcl
+  low/medium/high filter.
+- Blending history includes the viewer's full slot-detail trace.
 - Each model has an independent experiment-window record, and window
   commands/clicks follow the owning model.
 - Device actions are dispatched with the owning model during multi-model and

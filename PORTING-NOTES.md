@@ -6430,3 +6430,23 @@ is emitted; text viewer formatting is functional rather than byte-identical;
 the simplified blending history keeps the Tcl view fields but not the full
 SBLT slot-detail structure. Multi-model, native `actr env`, and `999-*`
 remain deferred.
+
+## 370. Multi-model environment and history fidelity
+
+The RPC Environment now supports multiple models with per-model command
+context, experiment-window metadata, viewer/history data, and stepper
+callbacks. Device actions carry their owning model through single- and
+multi-model runs. Experiment windows are closed explicitly when models are
+replaced, reloaded, or cleared because upstream Tcl does not register those
+windows for deletion.
+
+Trace history now retains each line's output level and model. Records use
+`[time, detail, model, text]`, and the Environment's low/medium/high filter is
+applied to availability, incremental transfer, and save. Blending history
+includes the slot-by-slot trace used by the viewer: matched values/magnitudes,
+numeric accumulation, chunk comparisons, and final results.
+
+Remaining limits: one experiment window per model, Tcl's global window-title
+namespace, viewer text that is functionally but not byte-identical, no raw
+SBLT structure in the Rust blending record, native `actr env`, and `999-*`
+overlays.

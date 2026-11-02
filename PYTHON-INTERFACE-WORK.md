@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-01
 Branch: `main`
-Latest relevant commit: `858ad0d rpc: route multi-model windows and device actions`
+Latest relevant commit: `fc8fa75 history: preserve trace detail and expand blending history`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -258,7 +258,7 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **706 passed / 9 ignored** across the engine and
+Current result: **710 passed / 9 ignored** across the engine and
 model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
@@ -320,3 +320,4 @@ solution sources and the environment-gated RPC test.
 - `73edb78` rpc: cover model-scoped histories and multi-model loading
 - `865019a` tests: cover multi-model stepper callbacks
 - `858ad0d` rpc: route multi-model windows and device actions
+- `fc8fa75` history: preserve trace detail and expand blending history
