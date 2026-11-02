@@ -4330,6 +4330,23 @@ impl Engine {
         v
     }
 
+    /// `multi-buffer-p`: the threads extra makes GOAL a searchable
+    /// multi-buffer.
+    pub fn is_multi_buffer(&self, buffer: &str) -> bool {
+        self.cfg.threads && buffer.eq_ignore_ascii_case("GOAL")
+    }
+
+    /// `get-m-buffer-chunks`: the ordered goals held by a multi-buffer.
+    pub fn multi_buffer_chunks(&self, buffer: &str) -> Vec<String> {
+        if !self.is_multi_buffer(buffer) {
+            return Vec::new();
+        }
+        self.goal_set
+            .iter()
+            .filter_map(|c| c.name.clone())
+            .collect()
+    }
+
     /// `chunks`: the declarative-memory chunk names.
     pub fn dm_chunk_names(&self) -> Vec<String> {
         self.dm.iter().filter_map(|c| c.name.clone()).collect()
