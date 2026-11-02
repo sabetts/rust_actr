@@ -341,6 +341,11 @@ fn multi_model_run_emits_both_model_columns() {
         .collect();
     assert!(lines.iter().any(|l| l.contains("COUNT")), "{lines:?}");
     assert!(lines.iter().any(|l| l.contains("ADDITION")), "{lines:?}");
+    c.eval_ok("clear-all", None, Vec::new());
+    assert_eq!(
+        strings(&c.eval_ok("mp-models", None, Vec::new())),
+        Vec::<String>::new()
+    );
 }
 
 #[test]

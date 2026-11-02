@@ -6495,6 +6495,50 @@ mod tests {
             .unwrap();
         assert!(matches!(count_prods.first(), Some(Json::Arr(a)) if !a.is_empty()));
         assert!(matches!(addition_prods.first(), Some(Json::Arr(a)) if !a.is_empty()));
+        let count_chunks = s
+            .evaluate(
+                "filter-dm-chunks",
+                Some("COUNT"),
+                &[Json::Str("_none_".into())],
+                &mut r,
+            )
+            .unwrap();
+        let addition_chunks = s
+            .evaluate(
+                "filter-dm-chunks",
+                Some("ADDITION"),
+                &[Json::Str("_none_".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_ne!(count_chunks, addition_chunks);
+        s.evaluate("reset", None, &[], &mut r).unwrap();
+        s.evaluate(
+            "record-history",
+            Some("COUNT"),
+            &[Json::Str("retrieval-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(2)], &mut r).unwrap();
+        let count_history = s
+            .evaluate(
+                "history-data-available",
+                Some("COUNT"),
+                &[Json::Str("retrieval-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        let addition_history = s
+            .evaluate(
+                "history-data-available",
+                Some("ADDITION"),
+                &[Json::Str("retrieval-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(count_history[0], Json::Bool(true));
+        assert_eq!(addition_history[0], Json::Bool(false));
         assert_eq!(
             s.evaluate("current-model", None, &[], &mut r).unwrap(),
             vec![Json::Str("ADDITION".into())]
