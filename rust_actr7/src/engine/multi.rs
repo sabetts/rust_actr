@@ -140,7 +140,84 @@ impl MultiEngine {
     }
 }
 
-fn with_model_column(line: &str, model: &str) -> String {
+/// Run a set of already-created engines on the shared clock. The RPC session
+/// owns the selected engine separately from its inactive models, so it appends
+/// to its own global trace buffer instead of constructing a `MultiEngine`.
+pub(crate) fn run_models(
+    engines: &mut [(&str, &mut Engine)],
+    secs: f64,
+    width: usize,
+    time_ms: &mut i64,
+    trace: &mut Vec<String>,
+    kinds: &mut Vec<TraceKind>,
+) -> Result<u64, EngineError> {
+    let start = *time_ms;
+    let limit = start + (secs * 1000.0).round() as i64;
+    for (_, engine) in engines.iter_mut() {
+        engine.set_time_ms(start);
+        engine.set_module_width(width);
+    }
+    let mut beyond_limit = false;
+    let mut events = 0u64;
+    loop {
+        let mut best: Option<(i64, Reverse<i64>, u64, usize)> = None;
+        for (index, (_, engine)) in engines.iter_mut().enumerate() {
+            let Some((time, priority, seq)) = engine.next_event_key() else {
+                continue;
+            };
+            if time > limit {
+                beyond_limit = true;
+                continue;
+            }
+            let key = (time, Reverse(priority), seq, index);
+            if best
+                .as_ref()
+                .map_or(true, |b| (key.0, key.1, key.2) < (b.0, b.1, b.2))
+            {
+                best = Some(key);
+            }
+        }
+        let Some((_, _, _, index)) = best else {
+            break;
+        };
+        let (name, engine) = &mut engines[index];
+        let mark = engine.out_len();
+        if !engine.run_one_event()? {
+            break;
+        }
+        events += 1;
+        let lines = engine.out_since(mark);
+        let line_kinds = engine.out_kinds_since(mark);
+        for (i, line) in lines.into_iter().enumerate() {
+            trace.push(with_model_column(&line, name));
+            kinds.push(line_kinds.get(i).copied().unwrap_or(TraceKind::Model));
+        }
+    }
+    let stop = if beyond_limit {
+        limit
+    } else {
+        engines
+            .iter()
+            .map(|(_, e)| e.time_ms())
+            .max()
+            .unwrap_or(start)
+    };
+    *time_ms = stop;
+    for (_, engine) in engines.iter_mut() {
+        engine.set_time_ms(stop);
+    }
+    let reason = if beyond_limit {
+        "Stopped because time limit reached"
+    } else {
+        "Stopped because no events left to process"
+    };
+    let raw = format_line(stop, "------", reason, width);
+    trace.push(with_model_column(&raw, "-"));
+    kinds.push(TraceKind::Model);
+    Ok(events)
+}
+
+pub(crate) fn with_model_column(line: &str, model: &str) -> String {
     // A trace line is `     0.000   MODULE ...`; raw `model-output` lines have
     // no timestamp and stay unmodified.
     if line.len() <= 13 || line.as_bytes().get(6) != Some(&b'.') {

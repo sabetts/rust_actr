@@ -260,7 +260,7 @@ fn control_panel_signals_event_queue_and_clear_all() {
 }
 
 #[test]
-fn reload_reads_the_file_from_disk_and_multi_model_is_rejected() {
+fn reload_reads_the_file_from_disk_and_loads_another_model() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
     let path = std::env::temp_dir().join(format!(
@@ -295,15 +295,52 @@ fn reload_reads_the_file_from_disk_and_multi_model_is_rejected() {
         vec!["COUNT3"]
     );
 
-    let err = c
-        .eval(
-            "load-act-r-model",
-            None,
-            vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
-        )
-        .unwrap_err();
-    assert!(err.contains("Multiple models are not supported"), "{err}");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    assert_eq!(
+        strings(&c.eval_ok("mp-models", None, Vec::new())),
+        vec!["COUNT3", "ADDITION"]
+    );
+    assert_eq!(
+        c.eval_ok("current-model", None, Vec::new()),
+        vec![Json::Str("ADDITION".into())]
+    );
+    c.eval_ok("set-current-model", None, vec![Json::Str("COUNT3".into())]);
+    assert_eq!(
+        c.eval_ok("current-model", None, Vec::new()),
+        vec![Json::Str("COUNT3".into())]
+    );
     let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn multi_model_run_emits_both_model_columns() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.add_command("on-trace", "on-trace");
+    c.monitor("model-trace", "on-trace");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    c.eval_ok("run", None, vec![Json::Float(2.0)]);
+    let lines: Vec<&str> = c
+        .callbacks
+        .iter()
+        .filter(|(n, _, _)| n == "on-trace")
+        .filter_map(|(_, _, args)| args.first().and_then(|a| a.as_str()))
+        .collect();
+    assert!(lines.iter().any(|l| l.contains("COUNT")), "{lines:?}");
+    assert!(lines.iter().any(|l| l.contains("ADDITION")), "{lines:?}");
 }
 
 #[test]

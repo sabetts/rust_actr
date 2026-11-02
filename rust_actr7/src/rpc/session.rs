@@ -7,14 +7,13 @@
 //! command the *client* owns (`actr.add_command`) is a `Remote` entry the
 //! server invokes by sending an `evaluate` callback back over the wire.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::engine::{
-    DeviceSetup, Engine, EngineError, EventHook, EventView, MultiEngine, PreResult,
-    StepperSnapshot, TraceKind,
+    DeviceSetup, Engine, EngineError, EventHook, EventView, PreResult, StepperSnapshot, TraceKind,
 };
 use crate::json::Json;
 use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
@@ -260,25 +259,38 @@ pub trait Remote {
     ) -> Result<Vec<Json>, String>;
 }
 
-/// A live RPC session: loaded model(s) plus the running engine.
+/// An inactive model engine owned by the session.
+struct NamedEngine {
+    name: String,
+    engine: Engine,
+}
+
+/// A live RPC session: the selected model plus the other loaded models.
 pub struct Session {
     model_files: Vec<String>,
     /// The last file that defined a model, for the Environment's Reload.
     last_model_file: Option<String>,
     defs: Vec<Model>,
+    /// Source path for each entry of `defs` (None for in-memory builds).
+    def_sources: Vec<Option<String>>,
     user_fns: std::collections::HashMap<String, UserDefun>,
     user_vars: std::collections::HashMap<String, Sexp>,
     commands: BTreeMap<String, Command>,
+    /// The selected model's live engine.
     engine: Option<Engine>,
-    /// A multi-model file (`unit-1-together-1-mp`) runs all models on a
-    /// shared clock; the single `engine` above remains the last model for
-    /// command compatibility.
-    multi: Option<MultiEngine>,
-    /// A single loaded file defined more than one model.
-    multi_file: bool,
-    /// RPC/Python sessions are single-model; only the engine regression
-    /// harness opts in to `MultiEngine`.
-    allow_multi_model: bool,
+    /// All non-selected model engines, in load order.
+    inactive: Vec<NamedEngine>,
+    /// Model order for `mp-models` and the Environment menu.
+    model_order: Vec<String>,
+    /// Regression-harness compatibility: each model-bearing file replaces the
+    /// previously loaded model set.
+    load_replaces_models: bool,
+    shared_seq: Rc<Cell<u64>>,
+    global_trace: Vec<String>,
+    global_trace_kinds: Vec<TraceKind>,
+    global_trace_pos: usize,
+    global_time_ms: i64,
+    global_run_events: u64,
     current_model: Option<String>,
     trace_pos: usize,
     seed: (u64, u64),
@@ -351,10 +363,12 @@ struct StepperShared {
     /// The approved event is the next one the engine executes.
     stepped_pending: bool,
     paused: Option<EventView>,
+    paused_model: Option<String>,
     pause_reported: bool,
     pause_desc: Option<String>,
     pending_step_desc: Option<String>,
     stepped: Option<EventView>,
+    stepped_model: Option<String>,
     last_step_desc: Option<String>,
     update_ready: bool,
     yielded: bool,
@@ -398,6 +412,7 @@ impl StepperShared {
 
 struct StepperHook {
     shared: Rc<RefCell<StepperShared>>,
+    model: String,
 }
 
 impl EventHook for StepperHook {
@@ -410,6 +425,7 @@ impl EventHook for StepperHook {
         }
         if s.should_pause(ev) {
             s.paused = Some(ev.clone());
+            s.paused_model = Some(self.model.clone());
             s.pause_reported = false;
             return PreResult::BREAK;
         }
@@ -421,6 +437,7 @@ impl EventHook for StepperHook {
         if s.stepped_pending {
             s.stepped_pending = false;
             s.stepped = Some(ev.clone());
+            s.stepped_model = Some(self.model.clone());
             s.last_step_desc = s.pending_step_desc.take();
             s.update_ready = true;
             s.yielded = true;
@@ -463,13 +480,20 @@ impl Session {
             model_files: Vec::new(),
             last_model_file: None,
             defs: Vec::new(),
+            def_sources: Vec::new(),
             user_fns: Default::default(),
             user_vars: Default::default(),
             commands,
             engine: None,
-            multi: None,
-            multi_file: false,
-            allow_multi_model: false,
+            inactive: Vec::new(),
+            model_order: Vec::new(),
+            load_replaces_models: false,
+            shared_seq: Rc::new(Cell::new(0)),
+            global_trace: Vec::new(),
+            global_trace_kinds: Vec::new(),
+            global_trace_pos: 0,
+            global_time_ms: 0,
+            global_run_events: 0,
             current_model: None,
             trace_pos: 0,
             seed,
@@ -488,29 +512,181 @@ impl Session {
         }
     }
 
-    /// Allow the engine regression harness to load the multi-model fixture.
-    /// The RPC server and Python binding never enable this.
-    pub fn set_multi_model_allowed(&mut self, allowed: bool) {
-        self.allow_multi_model = allowed;
+    /// Kept for the regression harness call sites; multi-model is now allowed.
+    pub fn set_multi_model_allowed(&mut self, _allowed: bool) {}
+
+    pub fn set_load_replaces_models(&mut self, replace: bool) {
+        self.load_replaces_models = replace;
     }
 
-    fn check_model_load(&self, adding: usize) -> Result<(), String> {
-        if self.allow_multi_model || adding == 0 {
+    fn prepare_model_load(&mut self) {
+        if !self.load_replaces_models || self.model_order.is_empty() {
+            return;
+        }
+        for name in self.model_order.clone() {
+            self.remove_model(&name);
+        }
+        self.rebuild_global_trace();
+    }
+
+    fn engine_for(&self, name: &str) -> Option<&Engine> {
+        if self.current_model.as_deref() == Some(name) {
+            self.engine.as_ref()
+        } else {
+            self.inactive
+                .iter()
+                .find(|m| m.name.eq_ignore_ascii_case(name))
+                .map(|m| &m.engine)
+        }
+    }
+
+    fn engine_mut_for(&mut self, name: &str) -> Option<&mut Engine> {
+        if self
+            .current_model
+            .as_deref()
+            .is_some_and(|n| n.eq_ignore_ascii_case(name))
+        {
+            self.engine.as_mut()
+        } else {
+            self.inactive
+                .iter_mut()
+                .find(|m| m.name.eq_ignore_ascii_case(name))
+                .map(|m| &mut m.engine)
+        }
+    }
+
+    fn current_def_mut(&mut self) -> Option<&mut Model> {
+        let name = self.current_model.clone()?;
+        self.defs
+            .iter_mut()
+            .find(|d| d.name.eq_ignore_ascii_case(&name))
+    }
+
+    fn make_engine(&self, def: &Model) -> Result<Engine, String> {
+        let mut eng = Engine::new(def.clone(), self.seed, 0.0, self.device.clone())
+            .map_err(|e| e.to_string())?;
+        eng.set_user_fns(self.user_fns.clone());
+        eng.set_user_vars(self.user_vars.clone());
+        eng.use_shared_sequence(self.shared_seq.clone());
+        eng.apply_model_commands().map_err(|e| e.to_string())?;
+        if let Some(st) = &self.stepper {
+            eng.set_event_hook(Some(Box::new(StepperHook {
+                shared: st.shared.clone(),
+                model: def.name.clone(),
+            })));
+        }
+        Ok(eng)
+    }
+
+    fn install_stepper_hook(&mut self, name: &str, eng: &mut Engine) {
+        if let Some(st) = &self.stepper {
+            eng.set_event_hook(Some(Box::new(StepperHook {
+                shared: st.shared.clone(),
+                model: name.to_string(),
+            })));
+        }
+    }
+
+    /// Add one model definition and make it the current model. Existing models
+    /// are retained, which is the multi-model load behavior.
+    fn add_model_definition(&mut self, def: Model, source: Option<String>) -> Result<(), String> {
+        let name = def.name.clone();
+        if self
+            .model_order
+            .iter()
+            .any(|n| n.eq_ignore_ascii_case(&name))
+        {
+            self.remove_model(&name);
+        }
+        let mut eng = self.make_engine(&def)?;
+        self.install_stepper_hook(&name, &mut eng);
+        self.defs.push(def);
+        self.def_sources.push(source);
+        self.model_order.push(name.clone());
+        if let Some(old) = self.engine.take() {
+            if let Some(old_name) = self.current_model.take() {
+                self.inactive.push(NamedEngine {
+                    name: old_name,
+                    engine: old,
+                });
+            }
+        }
+        self.engine = Some(eng);
+        self.current_model = Some(name);
+        self.rebuild_global_trace();
+        Ok(())
+    }
+
+    fn activate_model(&mut self, name: &str) -> Result<(), String> {
+        if self.current_model.as_deref() == Some(name) {
             return Ok(());
         }
-        if adding > 1 {
-            return Err(
-                "Multiple models are not supported by the Environment yet; load one model."
-                    .to_string(),
-            );
+        let Some(pos) = self
+            .inactive
+            .iter()
+            .position(|m| m.name.eq_ignore_ascii_case(name))
+        else {
+            return Err(format!(
+                "Model {name:?} is not loaded; multiple models are supported, but this name is unknown."
+            ));
+        };
+        let target = self.inactive.remove(pos);
+        let old = self.engine.take();
+        let old_name = self.current_model.take();
+        if let (Some(old), Some(old_name)) = (old, old_name) {
+            self.inactive.push(NamedEngine {
+                name: old_name,
+                engine: old,
+            });
         }
-        if !self.defs.is_empty() {
-            return Err(
-                "Multiple models are not supported by the Environment yet; one model is already loaded."
-                    .to_string(),
-            );
-        }
+        self.current_model = Some(target.name);
+        self.engine = Some(target.engine);
         Ok(())
+    }
+
+    fn rebuild_global_trace(&mut self) {
+        self.global_trace.clear();
+        self.global_trace_kinds.clear();
+        if self.model_order.len() <= 1 {
+            self.global_trace_pos = 0;
+            return;
+        }
+        for name in &self.model_order {
+            if let Some(eng) = self.engine_for(name) {
+                let lines = eng.out_since(0);
+                let kinds = eng.out_kinds_since(0);
+                for (i, line) in lines.into_iter().enumerate() {
+                    self.global_trace
+                        .push(crate::engine::multi::with_model_column(&line, name));
+                    self.global_trace_kinds
+                        .push(kinds.get(i).copied().unwrap_or(TraceKind::Model));
+                }
+            }
+        }
+        self.global_trace_pos = 0;
+    }
+
+    fn remove_model(&mut self, name: &str) {
+        if let Some(idx) = self
+            .defs
+            .iter()
+            .position(|d| d.name.eq_ignore_ascii_case(name))
+        {
+            self.defs.remove(idx);
+            if idx < self.def_sources.len() {
+                self.def_sources.remove(idx);
+            }
+        }
+        self.model_order.retain(|n| !n.eq_ignore_ascii_case(name));
+        if self
+            .current_model
+            .as_deref()
+            .is_some_and(|n| n.eq_ignore_ascii_case(name))
+        {
+            self.engine = None;
+            self.current_model = None;
+        }
+        self.inactive.retain(|m| !m.name.eq_ignore_ascii_case(name));
     }
 
     /// The command registry (for `check`/`list-commands`/`add`/`remove`).
@@ -649,13 +825,15 @@ impl Session {
 
     /// Take the trace lines and their streams since the last call.
     pub fn take_trace_events(&mut self) -> Vec<(String, TraceKind)> {
-        let events = if let Some(multi) = &self.multi {
-            let pos = self.trace_pos;
-            let lines = multi.out_since(pos);
-            self.trace_pos = multi.out_len();
+        let events = if self.model_order.len() > 1 {
+            let pos = self.global_trace_pos;
+            let lines = self.global_trace[pos.min(self.global_trace.len())..].to_vec();
+            let kinds = self.global_trace_kinds[pos.min(self.global_trace_kinds.len())..].to_vec();
+            self.global_trace_pos = self.global_trace.len();
             lines
                 .into_iter()
-                .map(|line| (line, TraceKind::Model))
+                .enumerate()
+                .map(|(i, line)| (line, kinds.get(i).copied().unwrap_or(TraceKind::Model)))
                 .collect()
         } else if let Some(eng) = &self.engine {
             let pos = self.trace_pos;
@@ -801,17 +979,54 @@ impl Session {
         self.engine.as_mut()
     }
 
-    /// Whether the loaded file defined more than one model.
+    /// Whether more than one model is loaded.
     pub fn is_multi(&self) -> bool {
-        self.multi.is_some()
+        self.model_order.len() > 1
     }
 
     /// Drive all loaded models on the shared meta-process clock.
     pub fn run_multi_secs(&mut self, secs: f64, trace: bool, width: usize) -> Result<(), String> {
-        let multi = self.multi.as_mut().ok_or("no multi-model engine")?;
-        multi.set_trace(trace);
-        multi.set_module_width(width);
-        multi.run_secs(secs).map_err(|e| e.to_string())
+        if !self.is_multi() {
+            return self
+                .engine
+                .as_mut()
+                .ok_or_else(|| "no model loaded".to_string())?
+                .run_secs(secs)
+                .map_err(|e| e.to_string());
+        }
+        for eng in self
+            .engine
+            .iter_mut()
+            .chain(self.inactive.iter_mut().map(|m| &mut m.engine))
+        {
+            eng.set_trace(trace);
+        }
+        let mut trace_lines = std::mem::take(&mut self.global_trace);
+        let mut kinds = std::mem::take(&mut self.global_trace_kinds);
+        let mut time = self.global_time_ms;
+        let events = {
+            let mut refs: Vec<(&str, &mut Engine)> = Vec::new();
+            if let (Some(name), Some(eng)) = (self.current_model.as_deref(), self.engine.as_mut()) {
+                refs.push((name, eng));
+            }
+            for m in &mut self.inactive {
+                refs.push((m.name.as_str(), &mut m.engine));
+            }
+            crate::engine::multi::run_models(
+                &mut refs,
+                secs,
+                width,
+                &mut time,
+                &mut trace_lines,
+                &mut kinds,
+            )
+            .map_err(|e| e.to_string())?
+        };
+        self.global_trace = trace_lines;
+        self.global_trace_kinds = kinds;
+        self.global_time_ms = time;
+        self.global_run_events += events;
+        Ok(())
     }
 
     /// Install a scripted device and rebuild the engine around it (the spec
@@ -822,7 +1037,11 @@ impl Session {
     }
 
     pub fn set_current_model(&mut self, name: Option<String>) {
-        self.current_model = name;
+        if let Some(name) = name {
+            let _ = self.activate_model(&name);
+        } else {
+            self.current_model = None;
+        }
     }
 
     /// `evaluate <name> <args>`: run the underlying handler plus its
@@ -838,6 +1057,17 @@ impl Session {
         let c = self.commands.get(name).cloned().ok_or_else(|| {
             format!("Command {name:?} not found in the table and cannot be executed.")
         })?;
+        let original_model = self.current_model.clone();
+        let switched = if let Some(target) = model {
+            if self.current_model.as_deref() != Some(target) {
+                self.activate_model(target)?;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
         for m in c.before.clone() {
             if let Err(e) = self.eval_command(&m, model, args, remote) {
                 self.warn(&format!(
@@ -865,6 +1095,11 @@ impl Session {
                 self.warn(&format!(
                     "Error while calling {m:?} as a monitor for {name:?}: {e}"
                 ));
+            }
+        }
+        if switched && !name.eq_ignore_ascii_case("set-current-model") {
+            if let Some(original) = original_model {
+                let _ = self.activate_model(&original);
             }
         }
         result
@@ -1010,27 +1245,15 @@ impl Session {
                 .unwrap_or(Json::Null)]),
             "set-current-model" => {
                 let name = args.first().and_then(|a| a.as_str()).map(str::to_string);
-                if !self.allow_multi_model {
-                    if let Some(n) = &name {
-                        let matches = self
-                            .current_model
-                            .as_deref()
-                            .is_some_and(|cur| cur.eq_ignore_ascii_case(n));
-                        if !matches {
-                            return Err(format!(
-                                "Model {n:?} is not loaded; multiple models are not supported by the Environment yet."
-                            ));
-                        }
-                    }
+                if let Some(n) = &name {
+                    self.activate_model(n)?;
+                } else {
+                    self.current_model = None;
                 }
-                self.current_model = name;
                 Ok(vec![Json::Bool(true)])
             }
             "mp-models" => Ok(vec![Json::Arr(
-                self.defs
-                    .iter()
-                    .map(|m| Json::Str(m.name.clone()))
-                    .collect(),
+                self.model_order.iter().cloned().map(Json::Str).collect(),
             )]),
             // `add-act-r-command ... nil` signals (`meta-process.lisp:424,
             // :448`): they have no underlying function, only monitors.
@@ -1069,6 +1292,14 @@ impl Session {
                 self.queue_signal("reset-start", Vec::new());
                 if let Some(eng) = &mut self.engine {
                     eng.reset().map_err(|e| e.to_string())?;
+                }
+                for model in &mut self.inactive {
+                    model.engine.reset().map_err(|e| e.to_string())?;
+                }
+                if self.is_multi() {
+                    self.global_time_ms = 0;
+                    self.global_run_events = 0;
+                    self.rebuild_global_trace();
                 }
                 self.queue_signal("reset-step1", Vec::new());
                 // ACT-R's `:testing-module` reset hook fires after the model
@@ -1154,16 +1385,22 @@ impl Session {
             }
             "clear-all" => {
                 self.queue_signal("clear-all-start", Vec::new());
-                if let Some(old) = self.current_model.clone() {
-                    self.queue_signal("deleting-model", vec![Json::Str(old)]);
+                for name in self.model_order.clone() {
+                    self.queue_signal("deleting-model", vec![Json::Str(name)]);
                 }
                 self.defs.clear();
+                self.def_sources.clear();
                 self.engine = None;
-                self.multi = None;
-                self.multi_file = false;
+                self.inactive.clear();
+                self.model_order.clear();
                 self.current_model = None;
                 self.model_files.clear();
                 self.last_model_file = None;
+                self.global_trace.clear();
+                self.global_trace_kinds.clear();
+                self.global_trace_pos = 0;
+                self.global_time_ms = 0;
+                self.global_run_events = 0;
                 self.trace_pos = 0;
                 Ok(vec![Json::Bool(true)])
             }
@@ -1172,16 +1409,20 @@ impl Session {
                     .last_model_file
                     .clone()
                     .ok_or_else(|| "No model file recorded to reload.".to_string())?;
-                if let Some(old) = self.current_model.clone() {
-                    self.queue_signal("deleting-model", vec![Json::Str(old)]);
+                let replace: Vec<String> = self
+                    .def_sources
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, src)| {
+                        (src.as_deref() == Some(path.as_str()))
+                            .then(|| self.defs.get(i).map(|d| d.name.clone()))
+                            .flatten()
+                    })
+                    .collect();
+                for name in &replace {
+                    self.queue_signal("deleting-model", vec![Json::Str(name.clone())]);
+                    self.remove_model(name);
                 }
-                self.defs.clear();
-                self.engine = None;
-                self.multi = None;
-                self.multi_file = false;
-                self.current_model = None;
-                self.model_files.clear();
-                self.trace_pos = 0;
                 let created = self.load_file(&path, remote, false)?;
                 for name in created {
                     self.queue_signal("creating-model", vec![Json::Str(name)]);
@@ -1372,7 +1613,7 @@ impl Session {
                 };
                 let mut extended = Vec::new();
                 let mut warnings = Vec::new();
-                if let Some(m) = self.defs.last_mut() {
+                if let Some(m) = self.current_def_mut() {
                     for c in &chunks {
                         let Json::Arr(items) = c else { continue };
                         let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();
@@ -1434,7 +1675,7 @@ impl Session {
                 let forms: Vec<Sexp> = args.iter().map(json_to_sexp).collect();
                 let ct = model::parse_chunk_type_spec(&forms).map_err(|e| e.to_string())?;
                 let name = ct.name.clone();
-                if let Some(m) = self.defs.last_mut() {
+                if let Some(m) = self.current_def_mut() {
                     // ACT-R forbids redefinition (it warns); the engine keeps
                     // the latest, as with production redefinition.
                     m.chunk_types
@@ -2963,15 +3204,19 @@ impl Session {
         if name == "step-once" {
             return self.step_once().map(|b| vec![Json::Bool(b)]);
         }
-        let eng = self.engine.as_mut().ok_or("no model loaded")?;
-        let r = match name {
-            "run" => eng.run_secs(secs),
-            "run-full-time" => eng.run_full_time(secs),
-            "run-until-time" => eng.run_until(secs),
-            "run-n-events" => eng.run_n_events(secs.max(0.0) as u64),
-            _ => unreachable!(),
-        };
-        r.map_err(|e: EngineError| e.to_string())?;
+        if self.is_multi() && name == "run" {
+            self.run_multi_secs(secs, true, crate::trace::MODULE_WIDTH)?;
+        } else {
+            let eng = self.engine.as_mut().ok_or("no model loaded")?;
+            let r = match name {
+                "run" => eng.run_secs(secs),
+                "run-full-time" => eng.run_full_time(secs),
+                "run-until-time" => eng.run_until(secs),
+                "run-n-events" => eng.run_n_events(secs.max(0.0) as u64),
+                _ => unreachable!(),
+            };
+            r.map_err(|e: EngineError| e.to_string())?;
+        }
         // `run` returns `(values seconds events break)` in ACT-R; the first is
         // the model time reached and the second the event count
         // (`scheduling.lisp:877`), which `tutorial_unit2code_initial` prints.
@@ -3024,11 +3269,12 @@ impl Session {
             ]);
         }
         if !step_all {
-            let trace_off = self
+            let trace_on = self
                 .engine
-                .as_ref()
-                .map(|e| e.get_param(":V").as_deref() == Some("NIL"))
-                .unwrap_or(true);
+                .iter()
+                .chain(self.inactive.iter().map(|m| &m.engine))
+                .any(|e| e.get_param(":V").as_deref() != Some("NIL"));
+            let trace_off = !trace_on;
             if trace_off {
                 return Ok(vec![
                     Json::Bool(false),
@@ -3046,6 +3292,13 @@ impl Session {
         if let Some(eng) = &mut self.engine {
             eng.set_event_hook(Some(Box::new(StepperHook {
                 shared: shared.clone(),
+                model: self.current_model.clone().unwrap_or_default(),
+            })));
+        }
+        for model in &mut self.inactive {
+            model.engine.set_event_hook(Some(Box::new(StepperHook {
+                shared: shared.clone(),
+                model: model.name.clone(),
             })));
         }
         self.stepper = Some(Stepper {
@@ -3065,6 +3318,9 @@ impl Session {
             self.stepper = None;
             if let Some(eng) = &mut self.engine {
                 eng.set_event_hook(None);
+            }
+            for model in &mut self.inactive {
+                model.engine.set_event_hook(None);
             }
             Ok(vec![Json::Bool(true)])
         } else {
@@ -3313,27 +3569,30 @@ impl Session {
 
     /// Return the next-event callback and its formatted event argument once
     /// per paused event.
-    pub fn take_stepper_pause(&mut self) -> Option<(String, Vec<Json>)> {
+    pub fn take_stepper_pause(&mut self) -> Option<(String, Option<String>, Vec<Json>)> {
         let (next_cmd, shared) = {
             let st = self.stepper.as_ref()?;
             (st.next_cmd.clone(), st.shared.clone())
         };
-        {
+        let model = {
             let mut s = shared.borrow_mut();
             if s.paused.is_none() || s.pause_reported {
                 return None;
             }
             s.pause_reported = true;
-        }
-        let (_, description) = self.engine.as_mut()?.next_event()?;
+            s.paused_model.clone()
+        };
+        let (_, description) = self
+            .engine_mut_for(model.as_deref().unwrap_or(""))?
+            .next_event()?;
         shared.borrow_mut().pause_desc = Some(description.clone());
-        Some((next_cmd, vec![Json::Str(description)]))
+        Some((next_cmd, model, vec![Json::Str(description)]))
     }
 
     /// Return the update callback and its seven arguments once the approved
     /// event has executed.
-    pub fn take_stepper_update(&mut self) -> Option<(String, Vec<Json>)> {
-        let (update_cmd, view, description) = {
+    pub fn take_stepper_update(&mut self) -> Option<(String, Option<String>, Vec<Json>)> {
+        let (update_cmd, model, view, description) = {
             let st = self.stepper.as_ref()?;
             let shared = st.shared.clone();
             let mut s = shared.borrow_mut();
@@ -3342,10 +3601,13 @@ impl Session {
             }
             s.update_ready = false;
             let view = s.stepped.take()?;
+            let model = s.stepped_model.clone();
             let description = s.last_step_desc.take().unwrap_or_default();
-            (st.update_cmd.clone(), view, description)
+            (st.update_cmd.clone(), model, view, description)
         };
-        let snapshot = self.engine.as_mut()?.stepper_snapshot(&view);
+        let snapshot = self
+            .engine_mut_for(model.as_deref().unwrap_or(""))?
+            .stepper_snapshot(&view);
         let items = if snapshot.items.is_empty() {
             Json::Null
         } else {
@@ -3362,13 +3624,26 @@ impl Session {
             st.snapshot = Some(snapshot);
             st.last_action = view.action.clone();
         }
-        Some((update_cmd, args))
+        Some((update_cmd, model, args))
     }
 
     /// Interleaved-run support for the server: prepare the absolute limit and
     /// the hidden dummy (`run_begin`), then drive the run in slices so a click
     /// can dispatch its client-owned `:action`.
     pub fn run_begin(&mut self, name: &str, secs: f64) -> (i64, bool, bool) {
+        if self.is_multi() {
+            let limit = self.global_time_ms + (secs * 1000.0).round() as i64;
+            let any = self
+                .engine
+                .as_mut()
+                .and_then(|e| e.next_event_key())
+                .is_some()
+                || self
+                    .inactive
+                    .iter_mut()
+                    .any(|m| m.engine.next_event_key().is_some());
+            return (limit, false, any);
+        }
         self.engine
             .as_mut()
             .map(|e| e.run_begin(name, secs))
@@ -3377,6 +3652,9 @@ impl Session {
 
     /// One run slice, reporting why it returned.
     pub fn run_slice_reason(&mut self, limit_ms: i64, full: bool) -> Result<RunStop, String> {
+        if self.is_multi() {
+            return self.run_multi_slice(limit_ms);
+        }
         let device = self
             .engine
             .as_mut()
@@ -3397,6 +3675,102 @@ impl Session {
             Ok(RunStop::StepperUpdate)
         } else {
             Ok(RunStop::Finished)
+        }
+    }
+
+    fn stepper_update_ready(&self) -> bool {
+        self.stepper
+            .as_ref()
+            .is_some_and(|s| s.shared.borrow().update_ready)
+    }
+
+    pub fn stepper_active(&self) -> bool {
+        self.stepper.is_some()
+    }
+
+    fn run_multi_slice(&mut self, limit_ms: i64) -> Result<RunStop, String> {
+        loop {
+            if self.stepper_paused() {
+                return Ok(RunStop::StepperPause);
+            }
+            if self.stepper_update_ready() {
+                return Ok(RunStop::StepperUpdate);
+            }
+            let mut best: Option<(i64, i64, u64, usize)> = None;
+            let mut beyond_limit = false;
+            if let Some((time, priority, seq)) =
+                self.engine.as_mut().and_then(|e| e.next_event_key())
+            {
+                if time > limit_ms {
+                    beyond_limit = true;
+                } else {
+                    best = Some((time, priority, seq, 0));
+                }
+            }
+            for (i, model) in self.inactive.iter_mut().enumerate() {
+                if let Some((time, priority, seq)) = model.engine.next_event_key() {
+                    if time > limit_ms {
+                        beyond_limit = true;
+                        continue;
+                    }
+                    let key = (time, priority, seq, i + 1);
+                    if best.map_or(true, |b| {
+                        (key.0, std::cmp::Reverse(key.1), key.2)
+                            < (b.0, std::cmp::Reverse(b.1), b.2)
+                    }) {
+                        best = Some(key);
+                    }
+                }
+            }
+            let Some((_, _, _, idx)) = best else {
+                if beyond_limit {
+                    self.global_time_ms = limit_ms;
+                    for engine in self
+                        .engine
+                        .iter_mut()
+                        .chain(self.inactive.iter_mut().map(|m| &mut m.engine))
+                    {
+                        engine.set_time_ms(limit_ms);
+                    }
+                }
+                return Ok(RunStop::Finished);
+            };
+            let model_name = if idx == 0 {
+                self.current_model.clone().unwrap_or_default()
+            } else {
+                self.inactive[idx - 1].name.clone()
+            };
+            let (time, lines, kinds) = if idx == 0 {
+                let eng = self.engine.as_mut().ok_or("no model loaded")?;
+                let mark = eng.out_len();
+                if !eng.run_one_event().map_err(|e| e.to_string())? {
+                    return Ok(RunStop::StepperPause);
+                }
+                (
+                    eng.time_ms(),
+                    eng.out_since(mark),
+                    eng.out_kinds_since(mark),
+                )
+            } else {
+                let eng = &mut self.inactive[idx - 1].engine;
+                let mark = eng.out_len();
+                if !eng.run_one_event().map_err(|e| e.to_string())? {
+                    return Ok(RunStop::StepperPause);
+                }
+                (
+                    eng.time_ms(),
+                    eng.out_since(mark),
+                    eng.out_kinds_since(mark),
+                )
+            };
+            for (i, line) in lines.into_iter().enumerate() {
+                self.global_trace
+                    .push(crate::engine::multi::with_model_column(&line, &model_name));
+                self.global_trace_kinds
+                    .push(kinds.get(i).copied().unwrap_or(TraceKind::Model));
+            }
+            self.global_time_ms = self.global_time_ms.max(time);
+            self.global_run_events += 1;
         }
     }
 
@@ -3443,12 +3817,20 @@ impl Session {
 
     /// The model time in seconds, for `run`'s first return value.
     pub fn time_secs(&self) -> f64 {
-        self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0)
+        if self.is_multi() {
+            self.global_time_ms as f64 / 1000.0
+        } else {
+            self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0)
+        }
     }
 
     /// Events evaluated in the last `run`, for its second return value.
     pub fn run_events(&self) -> u64 {
-        self.engine.as_ref().map(|e| e.run_events()).unwrap_or(0)
+        if self.is_multi() {
+            self.global_run_events
+        } else {
+            self.engine.as_ref().map(|e| e.run_events()).unwrap_or(0)
+        }
     }
 
     /// Load model definitions from in-memory Lisp source.
@@ -3459,13 +3841,12 @@ impl Session {
     /// through [`Session::add_remote`] and the fired-command bridge.
     pub fn load_source(&mut self, source: &str) -> Result<(), String> {
         let loaded = crate::model::load_models_from_str(source).map_err(|e| e.to_string())?;
-        self.check_model_load(loaded.len())?;
-        if loaded.len() > 1 {
-            self.multi_file = true;
+        self.prepare_model_load();
+        for def in loaded {
+            self.add_model_definition(def, None)?;
         }
-        self.defs.extend(loaded);
         self.model_files.push("<source>".to_string());
-        self.build_engine()
+        Ok(())
     }
 
     /// Load a model or task file from a filesystem path.  ACT-R logical names
@@ -3487,16 +3868,6 @@ impl Session {
             return Err(format!("no such file: {}", path.display()));
         }
         let mut created = Vec::new();
-        if crate::file_defines_model(&path) {
-            let loaded = load_models(&path).map_err(|e| e.to_string())?;
-            self.check_model_load(loaded.len())?;
-            if loaded.len() > 1 {
-                self.multi_file = true;
-            }
-            created.extend(loaded.iter().map(|m| m.name.clone()));
-            self.defs.extend(loaded);
-            self.last_model_file = Some(path.to_string_lossy().into_owned());
-        }
         if let Ok(src) = std::fs::read_to_string(&path) {
             self.user_fns.extend(model::parse_defuns(&src));
             self.user_vars.extend(model::parse_task_globals(&src));
@@ -3506,8 +3877,16 @@ impl Session {
                 }
             }
         }
+        if crate::file_defines_model(&path) {
+            self.prepare_model_load();
+            let loaded = load_models(&path).map_err(|e| e.to_string())?;
+            for def in loaded {
+                created.push(def.name.clone());
+                self.add_model_definition(def, Some(path.to_string_lossy().into_owned()))?;
+            }
+            self.last_model_file = Some(path.to_string_lossy().into_owned());
+        }
         self.model_files.push(path.to_string_lossy().into_owned());
-        self.build_engine()?;
         // `add-new-model` dispatches `creating-model` so the Environment's
         // model menu updates (`meta-process.lisp:426`).
         if notify {
@@ -3738,48 +4117,26 @@ impl Session {
             eng.set_device_run(run);
             eng.set_out_lines(trace);
         }
+        self.rebuild_global_trace();
         Ok(())
     }
 
     fn build_engine(&mut self) -> Result<(), String> {
-        if !self.allow_multi_model && self.defs.len() > 1 {
-            return Err(
-                "Multiple models are not supported by the Environment yet; load one model."
-                    .to_string(),
-            );
-        }
-        let def = match self.defs.last() {
-            Some(d) => d.clone(),
-            None => return Ok(()),
+        let def = if let Some(name) = self.current_model.as_deref() {
+            self.defs
+                .iter()
+                .find(|d| d.name.eq_ignore_ascii_case(name))
+                .cloned()
+        } else {
+            self.defs.last().cloned()
+        };
+        let Some(def) = def else {
+            return Ok(());
         };
         self.current_model = Some(def.name.clone());
-        let mut eng =
-            Engine::new(def, self.seed, 0.0, self.device.clone()).map_err(|e| e.to_string())?;
-        eng.set_user_fns(self.user_fns.clone());
-        eng.set_user_vars(self.user_vars.clone());
-        eng.apply_model_commands().map_err(|e| e.to_string())?;
+        let eng = self.make_engine(&def)?;
         self.engine = Some(eng);
-        if let Some(st) = &self.stepper {
-            self.engine
-                .as_mut()
-                .unwrap()
-                .set_event_hook(Some(Box::new(StepperHook {
-                    shared: st.shared.clone(),
-                })));
-        }
-        self.multi = if self.multi_file {
-            Some(
-                MultiEngine::new(
-                    self.defs.clone(),
-                    self.seed,
-                    self.device.clone(),
-                    crate::trace::MODULE_WIDTH,
-                )
-                .map_err(|e| e.to_string())?,
-            )
-        } else {
-            None
-        };
+        self.rebuild_global_trace();
         self.trace_pos = 0;
         // `set-system-parameter-value` settings are global in ACT-R and
         // survive a model (re)load — `:starting-parameters` is re-applied by
@@ -4653,7 +5010,7 @@ mod tests {
             s.run_slice_reason(limit, full).unwrap(),
             RunStop::StepperPause
         );
-        let (cmd, args) = s.take_stepper_pause().unwrap();
+        let (cmd, _model, args) = s.take_stepper_pause().unwrap();
         assert_eq!(cmd, "next-event");
         assert!(args[0].as_str().unwrap().contains("SET-BUFFER-CHUNK GOAL"));
 
@@ -4663,11 +5020,68 @@ mod tests {
             s.run_slice_reason(limit, full).unwrap(),
             RunStop::StepperUpdate
         );
-        let (cmd, args) = s.take_stepper_update().unwrap();
+        let (cmd, _model, args) = s.take_stepper_update().unwrap();
         assert_eq!(cmd, "update-event");
         assert_eq!(args.len(), 7);
         assert!(args[0].as_str().unwrap().contains("SET-BUFFER-CHUNK GOAL"));
 
+        s.evaluate("stop-stepper", None, &[Json::Str(id)], &mut remote)
+            .unwrap();
+    }
+
+    #[test]
+    fn multi_model_stepper_reports_the_paused_model() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("next-event", Some("next-event".into()), None);
+        s.add_remote("update-event", Some("update-event".into()), None);
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        let started = s
+            .evaluate(
+                "start-stepper",
+                None,
+                &[
+                    Json::Bool(false),
+                    Json::Bool(false),
+                    Json::Str("next-event".into()),
+                    Json::Str("update-event".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        let id = started[1].as_str().unwrap().to_string();
+        s.evaluate(
+            "set-stepper-ready",
+            None,
+            &[Json::Str(id.clone())],
+            &mut remote,
+        )
+        .unwrap();
+        let (limit, full, should_run) = s.run_begin("run", 1.0);
+        assert!(should_run);
+        assert_eq!(
+            s.run_slice_reason(limit, full).unwrap(),
+            RunStop::StepperPause
+        );
+        let (_, model, _) = s.take_stepper_pause().unwrap();
+        assert!(model.is_some());
         s.evaluate("stop-stepper", None, &[Json::Str(id)], &mut remote)
             .unwrap();
     }
@@ -4715,7 +5129,7 @@ mod tests {
                         .unwrap();
                 }
                 RunStop::StepperUpdate => {
-                    let (_, args) = s.take_stepper_update().unwrap();
+                    let (_, _model, args) = s.take_stepper_update().unwrap();
                     if args.get(2).and_then(|v| v.as_str()) == Some("conflict-resolution") {
                         let data = s
                             .evaluate("update-stepper", None, &[Json::Bool(false)], &mut remote)
@@ -4803,7 +5217,7 @@ mod tests {
             s.run_slice_reason(limit, full).unwrap(),
             RunStop::StepperPause
         );
-        let (_, args) = s.take_stepper_pause().unwrap();
+        let (_, _model, args) = s.take_stepper_pause().unwrap();
         assert!(args[0]
             .as_str()
             .unwrap()
@@ -4815,7 +5229,7 @@ mod tests {
             s.run_slice_reason(limit, full).unwrap(),
             RunStop::StepperUpdate
         );
-        let (_, args) = s.take_stepper_update().unwrap();
+        let (_, _model, args) = s.take_stepper_update().unwrap();
         assert_eq!(args[2], Json::Str("production-selected".into()));
         let detail = s
             .evaluate(
@@ -4887,7 +5301,7 @@ mod tests {
     }
 
     #[test]
-    fn environment_sessions_reject_a_second_model() {
+    fn environment_sessions_load_and_switch_models() {
         let root = fixture_root();
         if !root.is_dir() {
             return;
@@ -4901,28 +5315,34 @@ mod tests {
             &mut r,
         )
         .unwrap();
-        let err = s
-            .evaluate(
-                "load-act-r-model",
-                None,
-                &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
-                &mut r,
-            )
-            .unwrap_err();
-        assert!(err.contains("Multiple models are not supported"), "{err}");
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut r,
+        )
+        .unwrap();
         assert_eq!(
             s.evaluate("mp-models", None, &[], &mut r).unwrap(),
-            vec![Json::Arr(vec![Json::Str("COUNT".into())])]
+            vec![Json::Arr(vec![
+                Json::Str("COUNT".into()),
+                Json::Str("ADDITION".into())
+            ])]
         );
         assert_eq!(
-            s.evaluate(
-                "set-current-model",
-                None,
-                &[Json::Str("ADDITION".into())],
-                &mut r,
-            )
-            .unwrap_err(),
-            "Model \"ADDITION\" is not loaded; multiple models are not supported by the Environment yet."
+            s.evaluate("current-model", None, &[], &mut r).unwrap(),
+            vec![Json::Str("ADDITION".into())]
+        );
+        s.evaluate(
+            "set-current-model",
+            None,
+            &[Json::Str("COUNT".into())],
+            &mut r,
+        )
+        .unwrap();
+        assert_eq!(
+            s.evaluate("current-model", None, &[], &mut r).unwrap(),
+            vec![Json::Str("COUNT".into())]
         );
     }
 
@@ -6031,6 +6451,53 @@ mod tests {
         assert!(
             matches!(prod_detail.first(), Some(Json::Str(s)) if s.contains("Parameters for production") && s.contains(&prod)),
             "production detail omitted spp or text: {prod_detail:?}"
+        );
+    }
+
+    #[test]
+    fn multi_model_run_interleaves_and_switches_viewers() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(2)], &mut r).unwrap();
+        let trace = s.take_trace();
+        assert!(
+            trace.iter().any(|l| l.contains("COUNT")),
+            "count model missing from multi trace"
+        );
+        assert!(
+            trace.iter().any(|l| l.contains("ADDITION")),
+            "addition model missing from multi trace"
+        );
+
+        let count_prods = s
+            .evaluate("all-productions", Some("COUNT"), &[], &mut r)
+            .unwrap();
+        let addition_prods = s
+            .evaluate("all-productions", Some("ADDITION"), &[], &mut r)
+            .unwrap();
+        assert!(matches!(count_prods.first(), Some(Json::Arr(a)) if !a.is_empty()));
+        assert!(matches!(addition_prods.first(), Some(Json::Arr(a)) if !a.is_empty()));
+        assert_eq!(
+            s.evaluate("current-model", None, &[], &mut r).unwrap(),
+            vec![Json::Str("ADDITION".into())]
         );
     }
 

@@ -760,6 +760,7 @@ fn run_spec_session(
     // The regression harness predates the Environment's single-model policy
     // and loads models across several files; it explicitly opts in.
     session.set_multi_model_allowed(true);
+    session.set_load_replaces_models(true);
     let mut remote = NoRemote;
     for m in models {
         session

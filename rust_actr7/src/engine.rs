@@ -49,7 +49,7 @@ mod driver;
 mod eval;
 mod events;
 mod motor;
-mod multi;
+pub(crate) mod multi;
 pub mod params;
 mod perception;
 mod productions;

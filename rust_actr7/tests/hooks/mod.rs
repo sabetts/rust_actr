@@ -282,6 +282,7 @@ fn run_session_hook(
     let mut session = Session::new(seed);
     // Hook cases may load one model from several files.
     session.set_multi_model_allowed(true);
+    session.set_load_replaces_models(true);
     let mut remote = NoRemote;
     for m in models {
         session

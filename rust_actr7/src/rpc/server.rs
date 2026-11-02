@@ -210,8 +210,8 @@ fn drain_pending_signals(session: &mut Session, conn: &mut Conn) -> std::io::Res
 
 /// Deliver stepper update callbacks until none are pending.
 fn drain_stepper_updates(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
-    while let Some((cmd, args)) = session.take_stepper_update() {
-        call_remote_reentrant(session, conn, &cmd, None, args)?;
+    while let Some((cmd, model, args)) = session.take_stepper_update() {
+        call_remote_reentrant(session, conn, &cmd, model.as_deref(), args)?;
         drain(session, conn);
     }
     Ok(())
@@ -247,6 +247,42 @@ fn pump_stepper(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
         drain_pending_signals(session, conn)?;
     }
     Ok(())
+}
+
+/// The multi-model `run`: all models advance on the shared clock.
+fn run_multi(session: &mut Session, conn: &mut Conn, args: &[Json], id: Option<&Json>) -> Json {
+    let secs = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+    let model = session.current_model().map(str::to_string);
+    if let Err(e) = fire_signal(
+        session,
+        conn,
+        "run-start",
+        model.as_deref(),
+        vec![Json::Float(session.time_secs())],
+    ) {
+        return reply_err(id, &e.to_string());
+    }
+    if let Err(e) = session.run_multi_secs(secs, true, crate::trace::MODULE_WIDTH) {
+        return reply_err(id, &e);
+    }
+    drain(session, conn);
+    if let Err(e) = fire_signal(
+        session,
+        conn,
+        "run-stop",
+        model.as_deref(),
+        vec![Json::Float(session.time_secs())],
+    ) {
+        return reply_err(id, &e.to_string());
+    }
+    reply_ok(
+        id,
+        Json::Arr(vec![
+            Json::Float(session.time_secs()),
+            Json::Int(session.run_events() as i64),
+            Json::Null,
+        ]),
+    )
 }
 
 /// A `run`/`run-full-time`/`run-until-time` driven in slices. The engine stops
@@ -299,8 +335,8 @@ fn run_interleaved(
         }
 
         if stop == RunStop::StepperPause || session.stepper_paused() {
-            if let Some((cmd, a)) = session.take_stepper_pause() {
-                if let Err(e) = call_remote_reentrant(session, conn, &cmd, None, a) {
+            if let Some((cmd, model, a)) = session.take_stepper_pause() {
+                if let Err(e) = call_remote_reentrant(session, conn, &cmd, model.as_deref(), a) {
                     return reply_err(id, &e.to_string());
                 }
             }
@@ -474,6 +510,9 @@ fn dispatch(
                 Vec::new()
             };
             let result = if matches!(name.as_str(), "run" | "run-full-time" | "run-until-time") {
+                if name == "run" && session.is_multi() && !session.stepper_active() {
+                    return run_multi(session, conn, &args, id);
+                }
                 return run_interleaved(session, conn, &name, &args, id);
             } else {
                 session.evaluate(&name, model, &args, conn)
