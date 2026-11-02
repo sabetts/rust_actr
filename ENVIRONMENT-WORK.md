@@ -203,29 +203,18 @@ upstream Tcl or Lisp:
 
 ### Ordered model store
 
-Replace the `engine` + `multi` split with one ordered model store:
+The session keeps one ordered model set rather than a separate `ModelStore`
+type:
 
-```text
-ModelStore
-  models: Vec<ModelRuntime>       // order = model menu order
-  current: Option<ModelName>
-  shared clock
-  shared event sequence
-  global trace with optional model column
-```
+- `engine` is the selected live engine
+- `inactive` holds the remaining engines in load order
+- `model_order` supplies the model-menu order
+- `windows` maps model names to their experiment-window metadata
+- clock, event sequence, and trace are session-global
 
-Each `ModelRuntime` owns:
-
-- model definition
-- live `Engine`
-- source file/group
-- per-model histories
-- per-model device/window state
-- task functions/variables
-
-`MultiEngine` should become the runner over this store, or be refactored into
-a thin regression adapter over it. Keep a single source of truth for the live
-engines.
+Each model's definition, live engine, histories, and window contents stay
+together on that model's runtime state. `MultiEngine` remains the regression
+runner over independent engines.
 
 ### Command routing
 
