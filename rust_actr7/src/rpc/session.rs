@@ -2032,7 +2032,16 @@ impl Session {
             }
             // The parameter viewer: modules, their parameters, and each
             // parameter's current value (see `Engine::module_parameters`).
-            "sorted-module-names" | "modules-with-parameters" => {
+            "sorted-module-names" => {
+                let mut modules: Vec<String> = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.module_names().iter().map(|m| m.to_string()).collect())
+                    .unwrap_or_default();
+                modules.sort();
+                Ok(vec![Json::Arr(strings(Some(modules)))])
+            }
+            "modules-with-parameters" => {
                 let mut modules: Vec<String> = self
                     .engine
                     .as_ref()
@@ -3014,9 +3023,7 @@ impl Session {
                 "module" => {
                     let val = value.and_then(|v| v.as_str()).unwrap_or("");
                     let found = self.engine.as_ref().is_some_and(|e| {
-                        e.module_parameters()
-                            .iter()
-                            .any(|(m, _)| m.eq_ignore_ascii_case(val))
+                        e.module_names().iter().any(|m| m.eq_ignore_ascii_case(val))
                     });
                     if !found {
                         return Ok(vec![

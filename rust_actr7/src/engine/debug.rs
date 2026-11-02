@@ -4242,6 +4242,24 @@ impl Engine {
         }
     }
 
+    /// The active module names shown by the Environment. The Rust engine
+    /// always provides this core set; module-specific parameters are exposed
+    /// separately by [`Self::module_parameters`].
+    pub fn module_names(&self) -> Vec<&'static str> {
+        vec![
+            "AUDIO",
+            "BLENDING",
+            "DECLARATIVE",
+            "GOAL",
+            "IMAGINAL",
+            "MOTOR",
+            "PROCEDURAL",
+            "RETRIEVAL",
+            "SPEECH",
+            "VISION",
+        ]
+    }
+
     /// The parameter groups the Environment's viewer shows, keyed by module
     /// name. ACT-R owns each parameter through its module table; the Rust
     /// engine keeps them in `Config`, so this groups the keys `get_param` can
