@@ -313,6 +313,9 @@ pub struct Session {
 struct HistJob {
     chunks: Vec<String>,
     next: usize,
+    /// A saved file's metadata comment, JSON-encoded and returned by the
+    /// first `get-incremental-history-data` call (the Tcl load path).
+    comment: Option<String>,
 }
 
 /// A visible-virtual window the Environment is displaying.
@@ -689,6 +692,17 @@ impl Session {
                     })
                     .unwrap_or_default(),
             ),
+            "AUDICON-HISTORY" => Some(
+                self.engine
+                    .as_ref()
+                    .map(|e| {
+                        e.audicon_history()
+                            .iter()
+                            .map(|(t, items)| visicon_history_record(*t, items))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            ),
             "BUFFER-TRACE" => Some(
                 self.engine
                     .as_ref()
@@ -707,6 +721,15 @@ impl Session {
                     let now_ms = (e.time_secs() * 1000.0).round() as i64;
                     graphic_trace_items(&e.buffer_trace(), vertical, now_ms)
                 })
+            }
+            "BLENDING-TRACE" => Some(blending_trace_records(
+                self.engine
+                    .as_ref()
+                    .map(|e| e.blending_history())
+                    .unwrap_or(&[]),
+            )),
+            "BLENDING-ENVIRONMENT-HISTORY" => {
+                self.engine.as_ref().map(blending_environment_records)
             }
             "PRODUCTION-HISTORY" => self.engine.as_ref().map(production_history_records),
             // `production-grid` is a processor over `production-history`.
@@ -1693,22 +1716,35 @@ impl Session {
                     }
                     _ => None,
                 };
-                let chunks = if let Some(f) = file {
+                let (comment, records) = if let Some(f) = file {
                     let text = std::fs::read_to_string(&f)
                         .map_err(|e| format!("start-incremental-history-data: {e}"))?;
                     if text.trim().is_empty() {
                         return Ok(vec![Json::Null]);
                     }
-                    vec![text]
+                    match parse_saved_history(&text) {
+                        Some((comment, records)) if !records.is_empty() => {
+                            (Some(comment.unwrap_or_default()), records)
+                        }
+                        _ => return Ok(vec![Json::Null]),
+                    }
                 } else {
                     match self.history_records(&name) {
-                        Some(r) if !r.is_empty() => chunk_records(&r, size),
+                        Some(r) if !r.is_empty() => (None, r),
                         _ => return Ok(vec![Json::Null]),
                     }
                 };
+                let comment = comment.map(|c| Json::Str(c).write());
                 self.hist_next_id += 1;
                 let id = self.hist_next_id;
-                self.hist_jobs.insert(id, HistJob { chunks, next: 0 });
+                self.hist_jobs.insert(
+                    id,
+                    HistJob {
+                        chunks: chunk_records(&records, size),
+                        next: 0,
+                        comment,
+                    },
+                );
                 Ok(vec![Json::Int(id as i64)])
             }
             // The next chunk of an incremental transfer (empty string when
@@ -1716,6 +1752,9 @@ impl Session {
             "get-incremental-history-data" => {
                 let id = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as u64;
                 if let Some(job) = self.hist_jobs.get_mut(&id) {
+                    if let Some(comment) = job.comment.take() {
+                        return Ok(vec![Json::Str(comment)]);
+                    }
                     if job.next < job.chunks.len() {
                         let chunk = job.chunks[job.next].clone();
                         job.next += 1;
@@ -1739,8 +1778,26 @@ impl Session {
                 if records.is_empty() || file.is_empty() {
                     return Ok(vec![Json::Bool(false)]);
                 }
-                let data = format!("[{}]", records.join(","));
-                match std::fs::write(file, data) {
+                let data = crate::json::parse(&format!("[{}]", records.join(",")))
+                    .unwrap_or_else(|_| Json::Arr(Vec::new()));
+                let comment = args
+                    .get(2)
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let version = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.act_r_version())
+                    .unwrap_or_default();
+                let payload = Json::Obj(vec![
+                    ("name".into(), Json::Str(name.clone())),
+                    ("date".into(), Json::Str("unknown".into())),
+                    ("version".into(), Json::Str(version)),
+                    ("comment".into(), Json::Str(comment)),
+                    ("data".into(), data),
+                ]);
+                match std::fs::write(file, payload.write()) {
                     Ok(()) => Ok(vec![Json::Bool(true)]),
                     Err(e) => Err(format!("save-history-data: {e}")),
                 }
@@ -1929,28 +1986,36 @@ impl Session {
                     .unwrap_or_default();
                 Ok(vec![Json::Arr(strings(Some(names)))])
             }
-            // The chunk's printed representation (ACT-R shows `sdp` +
-            // `printed-chunk`; the sub-symbolic block is not modelled here).
+            // `dm-chunk-details` (`environment-cmds.lisp`): the chunk's
+            // declarative parameter block followed by its printed form.
             "dm-chunk-details" => {
+                let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let text = self.engine.as_mut().map(|e| {
+                    let sdp = e.capture_sdp_text(name);
+                    let chunk = e.printed_chunk(name).unwrap_or_default();
+                    format!("{sdp}\n{chunk}")
+                });
+                Ok(vec![Json::Str(text.unwrap_or_default())])
+            }
+            "dm-whynot-text" => {
                 let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
                 let text = self
                     .engine
-                    .as_ref()
-                    .and_then(|e| e.printed_chunk(name))
+                    .as_mut()
+                    .map(|e| e.capture_whynot_dm_text(name))
                     .unwrap_or_default();
                 Ok(vec![Json::Str(text)])
             }
-            "dm-whynot-text" => Ok(vec![Json::Str(String::new())]),
-            // `spp` + the printed production text (the per-production
-            // parameter store is not modelled, so only the text is shown).
+            // `production-details` (`environment-cmds.lisp`): `spp` followed
+            // by the printed production.
             "production-details" => {
                 let name = args.first().and_then(|a| a.as_str()).unwrap_or("");
-                let text = self
-                    .engine
-                    .as_ref()
-                    .and_then(|e| e.printed_production(name))
-                    .unwrap_or_default();
-                Ok(vec![Json::Str(text)])
+                let text = self.engine.as_mut().map(|e| {
+                    let spp = e.capture_spp_text(name);
+                    let prod = e.printed_production(name).unwrap_or_default();
+                    format!("{spp}\n{prod}")
+                });
+                Ok(vec![Json::Str(text.unwrap_or_default())])
             }
             // "Time: T" then the `whynot` report (suppressed from the trace).
             "whynot-text" => {
@@ -2076,12 +2141,12 @@ impl Session {
             }
             "printed-parameter-details" => {
                 let param = args.first().and_then(|a| a.as_str()).unwrap_or("");
-                let value = self
+                let text = self
                     .engine
-                    .as_ref()
-                    .and_then(|e| e.get_param(param))
-                    .unwrap_or_else(|| "NIL".to_string());
-                Ok(vec![Json::Str(format!("{param}: {value}"))])
+                    .as_mut()
+                    .map(|e| e.capture_parameter_details(param))
+                    .unwrap_or_default();
+                Ok(vec![Json::Str(text)])
             }
             // --- R4 device / vision / motor ---------------------------------
             // Each feature arg is a flat `[slot, value, …]` list.
@@ -4175,6 +4240,70 @@ fn production_grid_records(e: &crate::engine::Engine) -> Vec<String> {
     out
 }
 
+/// Parse the Lisp history envelope (`{name, date, version, comment, data}`),
+/// accepting the old bare-array form too.
+fn parse_saved_history(text: &str) -> Option<(Option<String>, Vec<String>)> {
+    let v = crate::json::parse(text).ok()?;
+    match v {
+        Json::Arr(records) => Some((None, records.iter().map(Json::write).collect())),
+        Json::Obj(_) => {
+            let data = v.get("data")?;
+            let Json::Arr(records) = data else {
+                return None;
+            };
+            let comment = v
+                .get("comment")
+                .and_then(|c| c.as_str())
+                .map(str::to_string);
+            Some((comment, records.iter().map(Json::write).collect()))
+        }
+        _ => None,
+    }
+}
+
+fn blending_trace_records(records: &[crate::engine::BlendingRecord]) -> Vec<String> {
+    records
+        .iter()
+        .map(|r| {
+            Json::Arr(vec![
+                Json::Int(r.time_ms),
+                Json::Str(r.request.clone()),
+                Json::Str(r.result.clone()),
+                Json::Str(r.trace.clone()),
+            ])
+            .write()
+        })
+        .collect()
+}
+
+fn blending_environment_records(e: &crate::engine::Engine) -> Vec<String> {
+    e.blending_history()
+        .iter()
+        .map(|r| {
+            let chunks: Vec<Json> = r
+                .chunks
+                .iter()
+                .map(|(name, act, p)| {
+                    Json::Arr(vec![
+                        Json::Str(name.clone()),
+                        Json::Float(*act as f64),
+                        Json::Float(*p as f64),
+                        Json::Str(e.printed_chunk(name).unwrap_or_default()),
+                    ])
+                })
+                .collect();
+            Json::Arr(vec![
+                Json::Int(r.time_ms),
+                Json::Str(r.request.clone()),
+                Json::Str(r.result.clone()),
+                Json::Arr(chunks),
+                Json::Str(r.trace.clone()),
+            ])
+            .write()
+        })
+        .collect()
+}
+
 /// Group record JSON strings into array chunks of ~`size` bytes (each chunk a
 /// valid array, so the client can decode it independently).
 fn chunk_records(records: &[String], size: usize) -> Vec<String> {
@@ -4995,6 +5124,203 @@ mod tests {
         assert!(entry.len() >= 2, "entry has at least one snapshot");
     }
 
+    #[test]
+    fn audicon_history_records() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("audicon-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "new-tone-sound",
+            None,
+            &[
+                Json::Int(1000),
+                Json::Float(0.1),
+                Json::Float(0.0),
+                Json::Bool(true),
+            ],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(1)], &mut r).unwrap();
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("audicon-history".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[Json::Str("audicon-history".into()), Json::Int(16000)],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let Json::Arr(entries) = crate::json::parse(chunk[0].as_str().unwrap()).unwrap() else {
+            panic!("audicon-history payload is not an array");
+        };
+        assert!(!entries.is_empty());
+    }
+
+    #[test]
+    fn blending_history_records() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((1, 1));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model(
+                "extras;blending;blending-test-7.lisp",
+            ))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("blending-trace".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(5)], &mut r).unwrap();
+        let avail = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[Json::Str("blending-trace".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(avail[0], Json::Bool(true));
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[
+                    Json::Str("blending-environment-history".into()),
+                    Json::Int(16000),
+                ],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let Json::Arr(records) = crate::json::parse(chunk[0].as_str().unwrap()).unwrap() else {
+            panic!("blending history payload is not an array");
+        };
+        let Json::Arr(first) = &records[0] else {
+            panic!("blending record is not an array");
+        };
+        assert_eq!(first.len(), 5);
+        assert!(first[1].as_str().is_some_and(|s| !s.is_empty()));
+        assert!(first[2].as_str().is_some_and(|s| !s.is_empty()));
+    }
+
+    #[test]
+    fn history_save_load_uses_the_lisp_envelope() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("trace-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let _ = s.take_trace();
+        let path = std::env::temp_dir().join(format!(
+            "actr-history-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let file = path.to_string_lossy().into_owned();
+        let saved = s
+            .evaluate(
+                "save-history-data",
+                None,
+                &[
+                    Json::Str("trace-history".into()),
+                    Json::Str(file.clone()),
+                    Json::Str("round trip".into()),
+                ],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(saved[0], Json::Bool(true));
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("\"comment\":\"round trip\""), "{text}");
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[
+                    Json::Str("trace-history".into()),
+                    Json::Int(16000),
+                    Json::Str(file),
+                ],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let comment = s
+            .evaluate("get-incremental-history-data", None, &[id.clone()], &mut r)
+            .unwrap();
+        assert_eq!(comment[0].as_str(), Some("\"round trip\""));
+        let data = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let Json::Arr(records) = crate::json::parse(data[0].as_str().unwrap()).unwrap() else {
+            panic!("saved trace data is not an array");
+        };
+        assert!(!records.is_empty());
+        let _ = std::fs::remove_file(path);
+    }
+
     /// `record-history "buffer-trace"` + a buffer name records the buffer
     /// timeline in the Environment's summary shape.
     #[test]
@@ -5402,7 +5728,43 @@ mod tests {
                 &mut remote,
             )
             .unwrap();
-        assert!(matches!(detail.first(), Some(Json::Str(s)) if s.starts_with(":RT:")));
+        assert!(matches!(detail.first(), Some(Json::Str(s)) if s.starts_with(":RT ")));
+
+        let modules = s
+            .evaluate("sorted-module-names", None, &[], &mut remote)
+            .unwrap();
+        assert!(
+            names(&modules).iter().any(|m| m == "BLENDING"),
+            "blending module missing: {modules:?}"
+        );
+
+        let chunk = names(&chunks).first().cloned().unwrap_or_default();
+        let dm_detail = s
+            .evaluate(
+                "dm-chunk-details",
+                None,
+                &[Json::Str(chunk.clone())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(
+            matches!(dm_detail.first(), Some(Json::Str(s)) if s.contains("Declarative parameters") && s.contains(&chunk)),
+            "DM detail omitted sdp or chunk: {dm_detail:?}"
+        );
+
+        let prod = names(&prods).first().cloned().unwrap_or_default();
+        let prod_detail = s
+            .evaluate(
+                "production-details",
+                None,
+                &[Json::Str(prod.clone())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(
+            matches!(prod_detail.first(), Some(Json::Str(s)) if s.contains("Parameters for production") && s.contains(&prod)),
+            "production detail omitted spp or text: {prod_detail:?}"
+        );
     }
 
     #[test]

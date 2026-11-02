@@ -439,6 +439,7 @@ impl Engine {
             _ => return Err(bad("blending request must be a chunk spec".to_string())),
         };
         let idx_map = self.slot_index_map();
+        let request_text = super::productions::render_request_spec(spec);
 
         // Request signature (`add-slot-spec-to-chunk-spec`): `= V` (V
         // non-nil) and `- nil` are filled; `= nil` is empty.
@@ -572,6 +573,13 @@ impl Engine {
                 self.out("No matching chunks found.".to_string());
                 self.out("Blending request fails.".to_string());
             }
+            self.record_blending_snapshot(BlendingRecord {
+                time_ms: self.time_ms,
+                request: request_text.clone(),
+                result: String::new(),
+                chunks: Vec::new(),
+                trace: "No matching chunks found.\nBlending request fails.".to_string(),
+            });
             let wait = failure_wait(&self.cfg, self.cfg.rt);
             self.push(
                 self.time_ms + wait,
@@ -847,6 +855,55 @@ impl Engine {
                 lisp_s_f32(act)
             ));
         }
+
+        let result_text = format!(
+            "({})",
+            new_slots
+                .iter()
+                .flat_map(|(s, v)| [s.clone(), v.show()])
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
+        let chunks: Vec<(String, f32, f32)> = act_list
+            .iter()
+            .zip(probs.iter())
+            .map(|((a, _, name), p)| (name.clone(), *a, *p))
+            .collect();
+        let mut history_trace = format!(
+            "Blending request for chunks {request_text}\nBlending temperature is: {}\n",
+            lisp_s_f32(temperature)
+        );
+        if !filled_names.is_empty() {
+            history_trace.push_str(&format!("with slots ({})\n", filled_names.join(" ")));
+        }
+        if !empty_names.is_empty() {
+            history_trace.push_str(&format!("without slots ({})\n", empty_names.join(" ")));
+        }
+        history_trace.push_str(&format!(
+            "Slots to be blended: ({})\n",
+            blended_slots.join(" ")
+        ));
+        for (name, a, p) in &chunks {
+            history_trace.push_str(&format!(
+                "Chunk {name} matches blending request\n  Activation {}\n  Probability of recall {}\n",
+                lisp_s_f32(*a),
+                lisp_s_f32(*p)
+            ));
+        }
+        history_trace.push_str(&format!(
+            "This is the definition of the blended chunk:\n{result_text}\nActivation for blended chunk is: {}\n",
+            lisp_s_f32(act)
+        ));
+        if act < self.cfg.rt {
+            history_trace.push_str("Not above threshold so blending failed");
+        }
+        self.record_blending_snapshot(BlendingRecord {
+            time_ms: self.time_ms,
+            request: request_text,
+            result: result_text,
+            chunks,
+            trace: history_trace,
+        });
 
         let blended = NewChunk::Spec {
             ctype: String::new(),

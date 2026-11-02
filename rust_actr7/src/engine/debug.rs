@@ -4130,8 +4130,12 @@ impl Engine {
                 self.set_buffer_history(true);
             } else if n.eq_ignore_ascii_case("visicon-history") {
                 self.set_visicon_history(true);
+            } else if n.eq_ignore_ascii_case("audicon-history") {
+                self.set_audicon_history(true);
             } else if n.eq_ignore_ascii_case("buffer-trace") {
                 self.set_buffer_trace(true);
+            } else if n.eq_ignore_ascii_case("blending-trace") {
+                self.set_blending_history(true);
             } else if n.eq_ignore_ascii_case("production-history") {
                 self.set_production_history(true);
             } else if self.is_buffer(n) {
@@ -4149,8 +4153,12 @@ impl Engine {
                 self.set_buffer_history(false);
             } else if n.eq_ignore_ascii_case("visicon-history") {
                 self.set_visicon_history(false);
+            } else if n.eq_ignore_ascii_case("audicon-history") {
+                self.set_audicon_history(false);
             } else if n.eq_ignore_ascii_case("buffer-trace") {
                 self.set_buffer_trace(false);
+            } else if n.eq_ignore_ascii_case("blending-trace") {
+                self.set_blending_history(false);
             } else if n.eq_ignore_ascii_case("production-history") {
                 self.set_production_history(false);
             } else if self.is_buffer(n) {
@@ -4267,7 +4275,10 @@ impl Engine {
     /// placeholder.
     pub fn module_parameters(&self) -> Vec<(&'static str, Vec<&'static str>)> {
         vec![
-            ("central", vec![":V", ":TRACE-DETAIL", ":SEED"]),
+            (
+                "central",
+                vec![":V", ":TRACE-DETAIL", ":SEED", ":SE-INTERCEPT", ":SE-SCALE"],
+            ),
             (
                 "declarative",
                 vec![
@@ -4283,11 +4294,21 @@ impl Engine {
                     ":ALPHA",
                     ":SIM-HOOK",
                     ":ESC",
+                    ":EBLSE",
                 ],
             ),
             (
                 "procedural",
                 vec![":EPL", ":PCT", ":IU", ":UL", ":ULT", ":CIA", ":RIR"],
+            ),
+            (
+                "speech",
+                vec![
+                    ":SYLLABLE-RATE",
+                    ":CHAR-PER-SYLLABLE",
+                    ":USE-SYLLABLE-TABLE",
+                    ":SPLIT-VOCAL-STRINGS",
+                ],
             ),
         ]
     }
@@ -4454,7 +4475,7 @@ impl Engine {
     }
 
     /// Capture `(spp <name>)` output without leaving it in the trace.
-    fn capture_spp_text(&mut self, name: &str) -> String {
+    pub fn capture_spp_text(&mut self, name: &str) -> String {
         let mark = self.out_lines.len();
         self.print_prod_params_by_name(name);
         let text = self.out_lines[mark..].join("\n");
@@ -4463,7 +4484,7 @@ impl Engine {
     }
 
     /// Capture `(sdp <name>)` output without leaving it in the trace.
-    fn capture_sdp_text(&mut self, name: &str) -> String {
+    pub fn capture_sdp_text(&mut self, name: &str) -> String {
         let mark = self.out_lines.len();
         self.print_sdp_chunks(&[name.to_string()]);
         let text = self.out_lines[mark..].join("\n");
@@ -4473,12 +4494,37 @@ impl Engine {
 
     /// Capture one production's `whynot` report without leaving it in the
     /// trace.
-    fn capture_whynot_text(&mut self, name: &str) -> String {
+    pub fn capture_whynot_text(&mut self, name: &str) -> String {
         let mark = self.out_lines.len();
         self.print_whynot(&[name.to_string()]);
         let text = self.out_lines[mark..].join("\n");
         self.out_lines.truncate(mark);
         text
+    }
+
+    /// Capture `whynot-dm` for one chunk without leaving it in the trace.
+    pub fn capture_whynot_dm_text(&mut self, name: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_whynot_dm(&[name.to_string()]);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        text
+    }
+
+    /// Capture one parameter's `sgp` line, falling back to a value line when
+    /// the full ACT-R description is not available in the registry.
+    pub fn capture_parameter_details(&mut self, key: &str) -> String {
+        let mark = self.out_lines.len();
+        self.print_sgp_get(key);
+        let text = self.out_lines[mark..].join("\n");
+        self.out_lines.truncate(mark);
+        if text.is_empty() {
+            self.get_param(key)
+                .map(|v| format!("{key} {v}"))
+                .unwrap_or_default()
+        } else {
+            text
+        }
     }
 
     /// Build the stepper's production detail row:
@@ -5016,6 +5062,37 @@ impl Engine {
         &self.visicon_history.data
     }
 
+    /// Enable/disable `audicon-history` recording.
+    pub fn set_audicon_history(&mut self, on: bool) {
+        self.audicon_history.enabled = on;
+    }
+
+    /// The recorded `audicon-history` entries `(time_ms, snapshots)`.
+    pub fn audicon_history(&self) -> &[(i64, Vec<String>)] {
+        &self.audicon_history.data
+    }
+
+    /// `perceptual-history-update` for the audicon: record the printed audicon
+    /// when it differs from the last snapshot.
+    pub(super) fn record_audicon_snapshot(&mut self) {
+        if !self.audicon_history.enabled {
+            return;
+        }
+        let current = self.printed_audicon().join("\n");
+        if current == self.audicon_history.last_item {
+            return;
+        }
+        self.audicon_history.last_item = current.clone();
+        let t = self.time_ms;
+        if let Some((lt, items)) = self.audicon_history.data.last_mut() {
+            if *lt == t {
+                items.push(current);
+                return;
+            }
+        }
+        self.audicon_history.data.push((t, vec![current]));
+    }
+
     /// `perceptual-history-update`: record the printed visicon when it differs
     /// from the last snapshot, appending to the entry at the same time.
     pub(super) fn record_visicon_snapshot(&mut self) {
@@ -5035,6 +5112,23 @@ impl Engine {
             }
         }
         self.visicon_history.data.push((t, vec![current]));
+    }
+}
+
+/// `blending-trace` recording for the Environment's Blending History view.
+impl Engine {
+    pub fn set_blending_history(&mut self, on: bool) {
+        self.blending_history.enabled = on;
+    }
+
+    pub fn blending_history(&self) -> &[crate::engine::BlendingRecord] {
+        &self.blending_history.records
+    }
+
+    pub(super) fn record_blending_snapshot(&mut self, record: crate::engine::BlendingRecord) {
+        if self.blending_history.enabled {
+            self.blending_history.records.push(record);
+        }
     }
 }
 

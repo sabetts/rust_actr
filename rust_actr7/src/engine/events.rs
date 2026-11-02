@@ -262,6 +262,7 @@ impl Engine {
                 if show {
                     self.emit("AUDIO", "new-sound".to_string());
                 }
+                self.record_audicon_snapshot();
                 // `stuff-sound-buffer` only sets AURAL-LOCATION while the
                 // buffer is empty (`audio.lisp:716`); later sounds leave the
                 // first location in place. Aural detection/recode delay.
@@ -327,6 +328,7 @@ impl Engine {
                 if show {
                     self.emit("AUDIO", "new-sound".to_string());
                 }
+                self.record_audicon_snapshot();
                 let s = self.sounds[idx].clone();
                 self.push_m(
                     s.onset + s.delay,

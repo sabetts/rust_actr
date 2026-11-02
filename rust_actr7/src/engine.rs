@@ -940,6 +940,25 @@ struct PerceptualHistory {
     last_item: String,
 }
 
+/// One Environment `blending-trace` record. The Rust engine does not retain
+/// the full SBLT structure, so this keeps the fields the Tcl viewer consumes:
+/// the request, the blended chunk, the candidate activations/probabilities,
+/// and a readable trace.
+#[derive(Debug, Clone, Default)]
+pub struct BlendingRecord {
+    pub time_ms: i64,
+    pub request: String,
+    pub result: String,
+    pub chunks: Vec<(String, f32, f32)>,
+    pub trace: String,
+}
+
+#[derive(Debug, Clone, Default)]
+struct BlendingHistory {
+    enabled: bool,
+    records: Vec<BlendingRecord>,
+}
+
 /// `buffer-history` state (`other-files/buffer-history.lisp`): buffer-change
 /// rows grouped by the time segment they occurred in.
 #[derive(Debug, Clone, Default)]
@@ -2538,8 +2557,12 @@ pub struct Engine {
     buffer_history: BufferHistory,
     /// `visicon-history` state (`record-history "visicon-history"`).
     visicon_history: PerceptualHistory,
+    /// `audicon-history` state (same snapshot shape as the visicon history).
+    audicon_history: PerceptualHistory,
     /// `buffer-trace` state (`record-history "buffer-trace"` + buffer names).
     buffer_trace: BufferTrace,
+    /// `blending-trace` state for the Environment's Blending History view.
+    blending_history: BlendingHistory,
     /// `production-history` state (`record-history "production-history"`).
     production_history: ProductionHistory,
     /// Set when a production reward propagates; task drivers that monitor
@@ -3089,7 +3112,9 @@ impl Engine {
                 ..Default::default()
             },
             visicon_history: PerceptualHistory::default(),
+            audicon_history: PerceptualHistory::default(),
             buffer_trace: BufferTrace::default(),
+            blending_history: BlendingHistory::default(),
             production_history: ProductionHistory::default(),
             reward_seen: false,
             cr_armed: false,
@@ -3724,8 +3749,10 @@ impl Engine {
         };
         // `reset-perceptual-history`: clear and disable.
         self.visicon_history = PerceptualHistory::default();
+        self.audicon_history = PerceptualHistory::default();
         // `reset-buffer-trace-module`: clear and disable.
         self.buffer_trace = BufferTrace::default();
+        self.blending_history = BlendingHistory::default();
         // `reset-p-history-module`: clear the history and why-not list.
         self.production_history.records.clear();
         self.production_history.why_not.clear();

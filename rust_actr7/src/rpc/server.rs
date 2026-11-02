@@ -56,10 +56,15 @@ pub fn write_port_file(host: &str, port: u16) -> std::io::Result<()> {
 }
 
 fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
+    let peer = stream
+        .peer_addr()
+        .map(|a| a.to_string())
+        .unwrap_or_default();
     let mut conn = Conn {
         stream,
         next_id: 1,
         name: None,
+        peer,
     };
     loop {
         let msg = match crate::rpc::read_message(&mut conn.stream)? {
@@ -419,7 +424,26 @@ fn dispatch(
                 .collect();
             reply_ok(id, Json::Arr(vec![Json::Arr(items)]))
         }
-        Method::ListConnections => reply_ok(id, Json::Arr(vec![Json::Arr(vec![])])),
+        Method::ListConnections => {
+            let commands: Vec<Json> = session
+                .commands()
+                .iter()
+                .filter(|(_, c)| {
+                    c.connection.is_some()
+                        && conn.name.is_some()
+                        && c.connection.as_deref() == conn.name.as_deref()
+                })
+                .map(|(n, _)| Json::Str(n.clone()))
+                .collect();
+            let entry = Json::Arr(vec![
+                Json::Str(conn.name.clone().unwrap_or_else(|| conn.peer.clone())),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Arr(commands),
+            ]);
+            reply_ok(id, Json::Arr(vec![Json::Arr(vec![entry])]))
+        }
         Method::SetName => {
             conn.name = params.first().and_then(|p| p.as_str()).map(str::to_string);
             reply_ok(id, Json::Arr(vec![Json::Bool(true)]))
@@ -461,6 +485,7 @@ struct Conn {
     stream: TcpStream,
     next_id: i64,
     name: Option<String>,
+    peer: String,
 }
 
 impl Remote for Conn {
