@@ -4672,6 +4672,68 @@ mod tests {
             .unwrap();
     }
 
+    #[test]
+    fn stepper_tutoring_conflict_payload() {
+        let model = stepper_fixture();
+        if !PathBuf::from(&model).is_file() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("next-event", Some("next-event".into()), None);
+        s.add_remote("update-event", Some("update-event".into()), None);
+        s.evaluate("load-act-r-model", None, &[Json::Str(model)], &mut remote)
+            .unwrap();
+        let started = s
+            .evaluate(
+                "start-stepper",
+                None,
+                &[
+                    Json::Bool(false),
+                    Json::Bool(true),
+                    Json::Str("next-event".into()),
+                    Json::Str("update-event".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        let id = started[1].as_str().unwrap().to_string();
+        s.evaluate(
+            "set-stepper-ready",
+            None,
+            &[Json::Str(id.clone())],
+            &mut remote,
+        )
+        .unwrap();
+        let (limit, full, _) = s.run_begin("run", 10.0);
+        let mut found = false;
+        for _ in 0..40 {
+            match s.run_slice_reason(limit, full).unwrap() {
+                RunStop::StepperPause => {
+                    let _ = s.take_stepper_pause();
+                    s.evaluate("step-stepper", None, &[Json::Str(id.clone())], &mut remote)
+                        .unwrap();
+                }
+                RunStop::StepperUpdate => {
+                    let (_, args) = s.take_stepper_update().unwrap();
+                    if args.get(2).and_then(|v| v.as_str()) == Some("conflict-resolution") {
+                        let data = s
+                            .evaluate("update-stepper", None, &[Json::Bool(false)], &mut remote)
+                            .unwrap();
+                        assert!(matches!(data.first(), Some(Json::Arr(rows)) if !rows.is_empty()));
+                        found = true;
+                        break;
+                    }
+                }
+                RunStop::DeviceAction => continue,
+                RunStop::Finished => break,
+            }
+        }
+        assert!(found, "never reached conflict-resolution tutoring");
+        s.evaluate("stop-stepper", None, &[Json::Str(id)], &mut remote)
+            .unwrap();
+    }
+
     fn started_stepper(step_all: bool) -> (Session, String) {
         let model = stepper_fixture();
         let mut s = Session::new((100, 0));
