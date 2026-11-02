@@ -1074,10 +1074,17 @@ impl Session {
                 }
                 Ok(vec![Json::Bool(true)])
             }
-            "model-output" | "command-output" | "print-warning" | "act-r-output" => {
+            "model-output" | "command-output" | "act-r-output" => {
                 if let Some(engine) = &mut self.engine {
                     let text = args.iter().map(json_to_text).collect::<Vec<_>>().join(" ");
                     engine.model_output(&text);
+                }
+                Ok(vec![Json::Null])
+            }
+            "print-warning" => {
+                if let Some(engine) = &mut self.engine {
+                    let text = args.iter().map(json_to_text).collect::<Vec<_>>().join(" ");
+                    engine.emit_warning(&text);
                 }
                 Ok(vec![Json::Null])
             }

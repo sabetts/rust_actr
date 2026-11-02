@@ -186,6 +186,15 @@ fn control_panel_signals_event_queue_and_clear_all() {
     );
     assert_eq!(loaded.first(), Some(&Json::Bool(true)));
 
+    c.add_command("on-warning", "on-warning");
+    c.monitor("warning-trace", "on-warning");
+    c.eval_ok("print-warning", None, vec![Json::Str("rpc warning".into())]);
+    assert!(
+        c.callbacks.iter().any(|(n, _, _)| n == "on-warning"),
+        "warning-trace monitor did not run: {:?}",
+        c.callbacks
+    );
+
     let queue = c.eval_ok("mp-queue-text", None, Vec::new());
     assert!(
         queue
