@@ -38,6 +38,8 @@ pub struct Command {
     pub before: Vec<String>,
     pub after: Vec<String>,
     pub simple: Vec<String>,
+    /// The documentation string supplied by `add`.
+    pub doc: String,
     /// The connection name that added it (`add`, `set-name`), if any.
     pub connection: Option<String>,
 }
@@ -49,6 +51,7 @@ impl Command {
             before: Vec::new(),
             after: Vec::new(),
             simple: Vec::new(),
+            doc: String::new(),
             connection: None,
         }
     }
@@ -527,9 +530,16 @@ impl Session {
             before: Vec::new(),
             after: Vec::new(),
             simple: Vec::new(),
+            doc: String::new(),
             connection,
         };
         self.commands.insert(name.to_string(), c);
+    }
+
+    pub fn set_command_doc(&mut self, name: &str, doc: &str) {
+        if let Some(c) = self.commands.get_mut(name) {
+            c.doc = doc.to_string();
+        }
     }
 
     /// Remove a command (only client-added ones may be removed).
@@ -1968,8 +1978,23 @@ impl Session {
             "chunks" => Ok(vec![Json::Arr(strings(
                 self.engine.as_ref().map(|e| e.dm_chunk_names()),
             ))]),
-            // Multi-buffer goals (the `threads` extra) are not modelled yet.
-            "multi-buffer-p" | "get-m-buffer-chunks" => Ok(vec![Json::Null]),
+            "multi-buffer-p" => {
+                let buffer = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let multi = self
+                    .engine
+                    .as_ref()
+                    .is_some_and(|e| e.is_multi_buffer(buffer));
+                Ok(vec![Json::Bool(multi)])
+            }
+            "get-m-buffer-chunks" => {
+                let buffer = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let names = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.multi_buffer_chunks(buffer))
+                    .unwrap_or_default();
+                Ok(vec![Json::Arr(strings(Some(names)))])
+            }
             "used-production-buffers" => Ok(vec![Json::Arr(strings(
                 self.engine.as_ref().map(|e| e.used_production_buffers()),
             ))]),
@@ -5777,6 +5802,14 @@ mod tests {
             panic!("time header is not an array");
         };
         assert_eq!(header[0].as_str(), Some("time"));
+        for row in &items[1..] {
+            let Json::Arr(row) = row else {
+                panic!("BOLD buffer row is not an array");
+            };
+            assert!(row[0].as_str().is_some_and(|s| !s.is_empty()));
+            assert_eq!(row.len(), header.len());
+            assert!(row[1..].iter().all(|v| v.as_f64().is_some()));
+        }
     }
 
     /// `production-graph` returns `[nodes, edges]` from production-history.
@@ -5937,6 +5970,41 @@ mod tests {
             matches!(prod_detail.first(), Some(Json::Str(s)) if s.contains("Parameters for production") && s.contains(&prod)),
             "production detail omitted spp or text: {prod_detail:?}"
         );
+    }
+
+    #[test]
+    fn multi_buffer_goal_chunks_are_exposed() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("extras;threads;sample.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        let multi = s
+            .evaluate(
+                "multi-buffer-p",
+                None,
+                &[Json::Str("GOAL".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(multi[0], Json::Bool(true));
+        let chunks = s
+            .evaluate(
+                "get-m-buffer-chunks",
+                None,
+                &[Json::Str("GOAL".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(matches!(chunks.first(), Some(Json::Arr(a)) if !a.is_empty()));
     }
 
     #[test]

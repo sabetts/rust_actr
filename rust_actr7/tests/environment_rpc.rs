@@ -93,11 +93,24 @@ impl Client {
     }
 
     fn add_command(&mut self, name: &str, local: &str) {
+        self.add_command_doc(name, local, "");
+    }
+
+    fn add_command_doc(&mut self, name: &str, local: &str, doc: &str) {
         let id = self.send(
             Method::Add,
-            vec![Json::Str(name.into()), Json::Str(local.into())],
+            vec![
+                Json::Str(name.into()),
+                Json::Str(local.into()),
+                Json::Str(doc.into()),
+            ],
         );
         self.wait(id).expect("add command");
+    }
+
+    fn check(&mut self, name: &str) -> Vec<Json> {
+        let id = self.send(Method::Check, vec![Json::Str(name.into())]);
+        self.wait(id).expect("check")
     }
 
     fn monitor(&mut self, target: &str, monitor: &str) {
@@ -298,7 +311,12 @@ fn viewers_connections_and_history_round_trip() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
     c.set_name("ACT-R Environment");
-    c.add_command("env-probe", "env-probe");
+    c.add_command_doc("env-probe", "env-probe", "probe documentation");
+    let checked = c.check("env-probe");
+    assert_eq!(
+        checked.get(2).and_then(|v| v.as_str()),
+        Some("probe documentation")
+    );
     c.eval_ok(
         "load-act-r-model",
         None,
@@ -339,6 +357,14 @@ fn viewers_connections_and_history_round_trip() {
         panic!("no connection entry: {conns:?}");
     };
     assert_eq!(first[0].as_str(), Some("ACT-R Environment"));
+    assert!(
+        first[2].as_f64().is_some_and(|v| v > 0.0),
+        "sent counter: {first:?}"
+    );
+    assert!(
+        first[3].as_f64().is_some_and(|v| v > 0.0),
+        "received counter: {first:?}"
+    );
     let Some(Json::Arr(cmds)) = first.get(4) else {
         panic!("connection commands missing: {first:?}");
     };

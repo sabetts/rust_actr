@@ -65,15 +65,19 @@ fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
         next_id: 1,
         name: None,
         peer,
+        sent: 0,
+        received: 0,
     };
     loop {
         let msg = match crate::rpc::read_message(&mut conn.stream)? {
             Some(m) => m,
             None => return Ok(()),
         };
+        conn.received += 1;
         let (method, params, id) = match parse_request(&msg) {
             Ok(x) => x,
             Err(e) => {
+                conn.sent += 1;
                 write_message(&mut conn.stream, &reply_err(None, &e))?;
                 continue;
             }
@@ -96,6 +100,7 @@ fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
         if let Some(name) = session.take_pending_testing_fn() {
             call_remote_reentrant(session, &mut conn, &name, None, Vec::new())?;
         }
+        conn.sent += 1;
         write_message(&mut conn.stream, &reply)?;
     }
 }
@@ -118,12 +123,14 @@ fn call_remote_reentrant(
     let id = conn.next_id;
     conn.next_id += 1;
     let msg = callback(name, model, args, id);
+    conn.sent += 1;
     write_message(&mut conn.stream, &msg)?;
     loop {
         let reply = match read_message(&mut conn.stream)? {
             Some(m) => m,
             None => return Ok(()),
         };
+        conn.received += 1;
         let rid = reply.get("id").and_then(|i| match i {
             Json::Int(n) => Some(*n),
             _ => None,
@@ -135,6 +142,7 @@ fn call_remote_reentrant(
         // A request the client made from inside the callback: dispatch it.
         if let Ok((method, params, nid)) = parse_request(&reply) {
             let out = dispatch(session, conn, method, &params, nid.as_ref());
+            conn.sent += 1;
             write_message(&mut conn.stream, &out)?;
             drain_pending_signals(session, conn)?;
         }
@@ -219,9 +227,11 @@ fn pump_stepper(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
                 "connection closed while the stepper was paused",
             ));
         };
+        conn.received += 1;
         let (method, params, id) = match crate::rpc::parse_request(&msg) {
             Ok(x) => x,
             Err(e) => {
+                conn.sent += 1;
                 crate::rpc::write_message(&mut conn.stream, &reply_err(None, &e))?;
                 continue;
             }
@@ -230,6 +240,7 @@ fn pump_stepper(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
             return Ok(());
         }
         let reply = dispatch(session, conn, method, &params, id.as_ref());
+        conn.sent += 1;
         crate::rpc::write_message(&mut conn.stream, &reply)?;
         drain(session, conn);
         drain_stepper_updates(session, conn)?;
@@ -356,7 +367,7 @@ fn dispatch(
                     Json::Arr(vec![
                         Json::Bool(true),
                         Json::Bool(owned),
-                        Json::Str("".into()),
+                        Json::Str(c.doc.clone()),
                     ])
                 }
                 None => Json::Arr(vec![Json::Null]),
@@ -377,6 +388,9 @@ fn dispatch(
                 .or_else(|| params.get(4).and_then(|p| p.as_str()))
                 .map(str::to_string);
             session.add_remote(name, local, conn.name.clone());
+            if let Some(doc) = params.get(2).and_then(|p| p.as_str()) {
+                session.set_command_doc(name, doc);
+            }
             // `add-command` returns the command name (`actr.py:118` reads
             // `result[1]`).
             reply_ok(
@@ -438,8 +452,8 @@ fn dispatch(
             let entry = Json::Arr(vec![
                 Json::Str(conn.name.clone().unwrap_or_else(|| conn.peer.clone())),
                 Json::Int(0),
-                Json::Int(0),
-                Json::Int(0),
+                Json::Int(conn.sent as i64),
+                Json::Int(conn.received as i64),
                 Json::Arr(commands),
             ]);
             reply_ok(id, Json::Arr(vec![Json::Arr(vec![entry])]))
@@ -486,6 +500,8 @@ struct Conn {
     next_id: i64,
     name: Option<String>,
     peer: String,
+    sent: u64,
+    received: u64,
 }
 
 impl Remote for Conn {
@@ -498,6 +514,7 @@ impl Remote for Conn {
         let id = self.next_id;
         self.next_id += 1;
         let msg = callback(name, model, args, id);
+        self.sent += 1;
         write_message(&mut self.stream, &msg).map_err(|e| e.to_string())?;
         // Read until the matching reply (the client may interleave nothing
         // else while it is running our callback).
@@ -505,6 +522,7 @@ impl Remote for Conn {
             let reply = read_message(&mut self.stream)
                 .map_err(|e| e.to_string())?
                 .ok_or_else(|| "connection closed waiting for a command reply".to_string())?;
+            self.received += 1;
             let rid = reply.get("id").and_then(|i| match i {
                 Json::Int(n) => Some(*n),
                 _ => None,
