@@ -30,7 +30,7 @@ Milestones 1 and 2 are complete and committed:
 
 Last verified results:
 
-- Rust: **701 passed / 9 ignored**
+- Rust: **702 passed / 9 ignored**
 - Python: **38 passed**
 - `cargo test --features env --quiet --lib env::tests`: **3 passed**
 - `cargo fmt --check`: clean
@@ -59,6 +59,7 @@ Completed in the working tree and committed:
 
 - `bfcbf56` rpc: support multiple loaded models
 - `73edb78` rpc: cover model-scoped histories and multi-model loading
+- `865019a` tests: cover multi-model stepper callbacks
 
 Implemented so far:
 
@@ -77,6 +78,7 @@ Implemented so far:
 - Per-model viewer and history commands work through the selected model.
 - Stepper hooks know which model paused/stepped, and pause/update callbacks
   carry the model name.
+- Server-level fake-Tcl stepper callbacks are tested across two models.
 - Multi-model command tests and multi-model Tcl trace/clear-all tests pass.
 - Regression harnesses retain their historical last-model loading semantics
   via `set_load_replaces_models`.
@@ -84,10 +86,7 @@ Implemented so far:
 Still to finish:
 
 - Multi-model device/window association and callback routing.
-- Full server-level fake-Tcl multi-model stepper test (the session-level
-  multi-model stepper path is implemented and tested).
 - Broader per-model device/window tests.
-- Final full-suite count and documentation refresh.
 
 ## What currently exists
 
@@ -97,7 +96,7 @@ Still to finish:
 
 - `\x04`-framed JSON RPC with command registry, monitors, callbacks, check,
   set-name, list-commands, list-connections, and close.
-- Single-model policy for RPC/Python sessions.
+- Multi-model RPC sessions; Python remains single-model.
 - `run-start` / `run-stop`, `reset-start` / `reset-step1`,
   `clear-all-start`, creating/deleting model signals.
 - Stream-tagged trace output:
@@ -127,19 +126,15 @@ Still to finish:
   `examples;multiple-models;unit-1-together-1-mp.lisp`, exercised by
   `rust_actr7/tests/cases/unit_1_together_1_mp.rs`.
 
-## Current limitation
+## Remaining limitations
 
-The engine has a partial `MultiEngine` in
-`rust_actr7/src/engine/multi.rs`, but it is only a trace runner:
-
-- `Session.engine` is the last model and serves all commands.
-- `Session.multi` exists only for a same-file multi-model case.
-- The RPC `model` argument is mostly ignored by command handlers.
-- Histories, devices, visible windows, and stepper state are session-global.
-- `Session::set_multi_model_allowed` is a test-only opt-in.
-- RPC/Python sessions reject a second model or a multi-model file.
-
-Milestone 3 is an architecture change, not merely removing that guard.
+- Device and visible-window state is still session-global; per-model device
+  and window routing remains to finish.
+- Per-model viewer/history commands work by switching command context; those
+  state stores are not yet independently modeled for every device family.
+- Python remains intentionally single-model.
+- Advanced Lisp-task examples remain blocked by the lack of `with-model-eval`
+  and arbitrary Lisp execution.
 
 ## Milestone 3 objective
 
