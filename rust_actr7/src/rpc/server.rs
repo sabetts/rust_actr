@@ -85,6 +85,7 @@ fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
             return Ok(());
         }
         let reply = dispatch(session, &mut conn, method, &params, id.as_ref());
+        drain_pending_signals(session, &mut conn)?;
         // A `reset` defers a client-owned `:testing-function` to here
         // (`model-tester.cl:485`); run it with the session borrow released.
         if let Some(name) = session.take_pending_testing_fn() {
@@ -130,6 +131,7 @@ fn call_remote_reentrant(
         if let Ok((method, params, nid)) = parse_request(&reply) {
             let out = dispatch(session, conn, method, &params, nid.as_ref());
             write_message(&mut conn.stream, &out)?;
+            drain_pending_signals(session, conn)?;
         }
     }
 }
@@ -167,6 +169,32 @@ fn drain(session: &mut Session, conn: &mut Conn) {
     }
 }
 
+/// Deliver a signal (`run-start`, `reset-step1`, ...) to its simple monitors.
+fn fire_signal(
+    session: &mut Session,
+    conn: &mut Conn,
+    name: &str,
+    model: Option<&str>,
+    args: Vec<Json>,
+) -> std::io::Result<()> {
+    for (monitor, remote) in session.simple_monitors(name) {
+        if remote {
+            call_remote_reentrant(session, conn, &monitor, model, args.clone())?;
+        } else {
+            let _ = session.evaluate(&monitor, model, &args, conn);
+        }
+    }
+    drain(session, conn);
+    Ok(())
+}
+
+fn drain_pending_signals(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
+    for (name, model, args) in session.take_pending_signals() {
+        fire_signal(session, conn, &name, model.as_deref(), args)?;
+    }
+    Ok(())
+}
+
 /// Deliver stepper update callbacks until none are pending.
 fn drain_stepper_updates(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
     while let Some((cmd, args)) = session.take_stepper_update() {
@@ -200,6 +228,7 @@ fn pump_stepper(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
         crate::rpc::write_message(&mut conn.stream, &reply)?;
         drain(session, conn);
         drain_stepper_updates(session, conn)?;
+        drain_pending_signals(session, conn)?;
     }
     Ok(())
 }
@@ -232,6 +261,16 @@ fn run_interleaved(
                 Json::Null,
             ]),
         );
+    }
+    let model = session.current_model().map(str::to_string);
+    if let Err(e) = fire_signal(
+        session,
+        conn,
+        "run-start",
+        model.as_deref(),
+        vec![Json::Float(session.time_secs())],
+    ) {
+        return reply_err(id, &e.to_string());
     }
     loop {
         let stop = match session.run_slice_reason(limit, full) {
@@ -273,6 +312,15 @@ fn run_interleaved(
         }
 
         break;
+    }
+    if let Err(e) = fire_signal(
+        session,
+        conn,
+        "run-stop",
+        model.as_deref(),
+        vec![Json::Float(session.time_secs())],
+    ) {
+        return reply_err(id, &e.to_string());
     }
     reply_ok(
         id,
