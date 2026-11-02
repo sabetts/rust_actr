@@ -87,6 +87,18 @@ impl Client {
         }
     }
 
+    fn read(&mut self) -> Json {
+        read_message(&mut self.stream)
+            .expect("read message")
+            .expect("connection stayed open")
+    }
+
+    fn reply_callback(&mut self, msg: &Json) {
+        let id = msg.get("id").cloned().unwrap_or(Json::Null);
+        let reply = reply_ok(Some(&id), Json::Arr(vec![Json::Bool(true)]));
+        write_message(&mut self.stream, &reply).expect("send callback reply");
+    }
+
     fn set_name(&mut self, name: &str) {
         let id = self.send(Method::SetName, vec![Json::Str(name.into())]);
         self.wait(id).expect("set-name");
@@ -438,4 +450,94 @@ fn viewers_connections_and_history_round_trip() {
         }
     }
     assert!(!chunks.is_empty(), "trace-history produced no chunks");
+}
+#[test]
+fn multi_model_stepper_callbacks_include_the_model() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.add_command("next-event", "next-event");
+    c.add_command("update-event", "update-event");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    let started = c
+        .eval(
+            "start-stepper",
+            None,
+            vec![
+                Json::Bool(false),
+                Json::Bool(false),
+                Json::Str("next-event".into()),
+                Json::Str("update-event".into()),
+            ],
+        )
+        .expect("start stepper");
+    let stepper_id = started[1].as_str().expect("stepper id").to_string();
+    c.eval_ok(
+        "set-stepper-ready",
+        None,
+        vec![Json::Str(stepper_id.clone())],
+    );
+
+    let run_id = c.send(
+        Method::Evaluate,
+        vec![Json::Str("run".into()), Json::Null, Json::Float(2.0)],
+    );
+    let mut paused_models = Vec::new();
+    let mut updates = 0;
+    let mut steps = 0;
+    loop {
+        let msg = c.read();
+        if msg.get("method").is_some() {
+            let params = match msg.get("params") {
+                Some(Json::Arr(a)) => a.clone(),
+                _ => Vec::new(),
+            };
+            let callback = params.first().and_then(|p| p.as_str()).unwrap_or("");
+            let model = params.get(1).and_then(|p| p.as_str()).map(str::to_string);
+            c.reply_callback(&msg);
+            match callback {
+                "next-event" => {
+                    paused_models.push(model);
+                    if steps < 3 {
+                        c.eval_ok("step-stepper", None, vec![Json::Str(stepper_id.clone())]);
+                        steps += 1;
+                    } else {
+                        c.eval_ok(
+                            "step-stepper",
+                            None,
+                            vec![Json::Str(stepper_id.clone()), Json::Bool(true)],
+                        );
+                    }
+                }
+                "update-event" => updates += 1,
+                _ => {}
+            }
+            continue;
+        }
+        let rid = msg.get("id").and_then(|i| match i {
+            Json::Int(n) => Some(*n),
+            _ => None,
+        });
+        if rid == Some(run_id) {
+            parse_reply(&msg).expect("run reply");
+            break;
+        }
+    }
+    assert!(!paused_models.is_empty(), "no stepper pauses");
+    assert!(
+        paused_models
+            .iter()
+            .flatten()
+            .all(|m| m == "COUNT" || m == "ADDITION"),
+        "{paused_models:?}"
+    );
+    assert!(updates > 0, "no stepper updates");
 }
