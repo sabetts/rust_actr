@@ -729,7 +729,7 @@ fn run_spec(spec: &Spec) -> Result<Vec<String>, String> {
             _ => false,
         });
     let actual = if needs_session {
-        run_spec_session(&models, spec, &device, multi_model)?
+        run_spec_session(&models, spec, &device)?
     } else {
         run_model_steps(&models, seed, &spec.steps, &device)
             .map_err(|e| format!("engine error: {e}"))?
@@ -754,11 +754,12 @@ fn run_spec_session(
     models: &[String],
     spec: &Spec,
     device: &DeviceSetup,
-    allow_multi_model: bool,
 ) -> Result<String, String> {
     let seed = spec.run_seeds.first().copied().unwrap_or((100, 0));
     let mut session = Session::new(seed);
-    session.set_multi_model_allowed(allow_multi_model);
+    // The regression harness predates the Environment's single-model policy
+    // and loads models across several files; it explicitly opts in.
+    session.set_multi_model_allowed(true);
     let mut remote = NoRemote;
     for m in models {
         session

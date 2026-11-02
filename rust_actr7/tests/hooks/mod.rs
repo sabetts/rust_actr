@@ -280,6 +280,8 @@ fn run_session_hook(
     hook_swaps: Vec<(usize, Box<dyn EventHook>)>,
 ) -> Result<String, String> {
     let mut session = Session::new(seed);
+    // Hook cases may load one model from several files.
+    session.set_multi_model_allowed(true);
     let mut remote = NoRemote;
     for m in models {
         session
