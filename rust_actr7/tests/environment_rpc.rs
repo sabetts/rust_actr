@@ -275,6 +275,7 @@ fn control_panel_signals_event_queue_and_clear_all() {
 fn reload_reads_the_file_from_disk_and_loads_another_model() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
     let path = std::env::temp_dir().join(format!(
         "actr-reload-{}-{}.lisp",
         std::process::id(),
@@ -296,6 +297,11 @@ fn reload_reads_the_file_from_disk_and_loads_another_model() {
         strings(&c.eval_ok("mp-models", None, Vec::new())),
         vec!["COUNT2"]
     );
+    c.eval_ok(
+        "open-exp-window",
+        None,
+        vec![Json::Str("COUNT2-WIN".into()), Json::Null],
+    );
 
     let edited = std::fs::read_to_string(&path)
         .unwrap()
@@ -306,6 +312,11 @@ fn reload_reads_the_file_from_disk_and_loads_another_model() {
         strings(&c.eval_ok("mp-models", None, Vec::new())),
         vec!["COUNT3"]
     );
+    let closes = window_ops(&c, "close");
+    assert!(closes.iter().any(|(model, args)| {
+        model.as_deref() == Some("COUNT2")
+            && args.get(1).and_then(|x| x.as_str()) == Some("COUNT2-WIN")
+    }));
 
     c.eval_ok(
         "load-act-r-model",
@@ -353,6 +364,12 @@ fn multi_model_run_emits_both_model_columns() {
         .collect();
     assert!(lines.iter().any(|l| l.contains("COUNT")), "{lines:?}");
     assert!(lines.iter().any(|l| l.contains("ADDITION")), "{lines:?}");
+    let stops: Vec<_> = lines
+        .iter()
+        .filter(|l| l.contains("Stopped because"))
+        .collect();
+    assert_eq!(stops.len(), 1, "{lines:?}");
+    assert!(stops[0].contains(" - "), "{lines:?}");
     c.eval_ok("clear-all", None, Vec::new());
     assert_eq!(
         strings(&c.eval_ok("mp-models", None, Vec::new())),
@@ -540,4 +557,251 @@ fn multi_model_stepper_callbacks_include_the_model() {
         "{paused_models:?}"
     );
     assert!(updates > 0, "no stepper updates");
+}
+
+fn options(pairs: Vec<(&str, Json)>) -> Json {
+    Json::Arr(
+        pairs
+            .into_iter()
+            .map(|(k, v)| Json::Arr(vec![Json::Str(k.into()), v]))
+            .collect(),
+    )
+}
+
+fn window_ops(c: &Client, op: &str) -> Vec<(Option<String>, Vec<Json>)> {
+    c.callbacks
+        .iter()
+        .filter(|(name, _, _)| name == "env-vv")
+        .filter_map(|(_, model, args)| {
+            (args.first().and_then(|a| a.as_str()) == Some(op))
+                .then(|| (model.clone(), args.clone()))
+        })
+        .collect()
+}
+
+fn add_window_handler(c: &mut Client) {
+    c.add_command("env-vv", "env-vv");
+    c.eval_ok(
+        "add-virtual-window-handler",
+        None,
+        vec![Json::Str("env-vv".into())],
+    );
+}
+
+#[test]
+fn multi_model_windows_are_scoped_by_model() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+
+    c.eval_ok(
+        "open-exp-window",
+        Some("COUNT"),
+        vec![Json::Str("COUNT-WIN".into()), Json::Null],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        Some("ADDITION"),
+        vec![Json::Str("ADDITION-WIN".into()), Json::Null],
+    );
+
+    let count_key = c
+        .eval_ok(
+            "add-text-to-exp-window",
+            Some("COUNT"),
+            vec![Json::Str("COUNT-WIN".into()), Json::Str("A".into())],
+        )
+        .first()
+        .and_then(|j| j.as_str())
+        .expect("count text key")
+        .to_string();
+    let addition_key = c
+        .eval_ok(
+            "add-text-to-exp-window",
+            Some("ADDITION"),
+            vec![Json::Str("ADDITION-WIN".into()), Json::Str("B".into())],
+        )
+        .first()
+        .and_then(|j| j.as_str())
+        .expect("addition text key")
+        .to_string();
+
+    let opens = window_ops(&c, "open");
+    assert!(opens.iter().any(|(m, a)| m.as_deref() == Some("COUNT")
+        && a.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")));
+    assert!(opens.iter().any(|(m, a)| m.as_deref() == Some("ADDITION")
+        && a.get(1).and_then(|x| x.as_str()) == Some("ADDITION-WIN")));
+
+    let texts = window_ops(&c, "text");
+    assert!(texts.iter().any(|(m, a)| m.as_deref() == Some("COUNT")
+        && a.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")
+        && a.get(2).and_then(|x| x.as_str()) == Some(count_key.as_str())));
+    assert!(texts.iter().any(|(m, a)| m.as_deref() == Some("ADDITION")
+        && a.get(1).and_then(|x| x.as_str()) == Some("ADDITION-WIN")
+        && a.get(2).and_then(|x| x.as_str()) == Some(addition_key.as_str())));
+
+    c.eval_ok(
+        "close-exp-window",
+        Some("COUNT"),
+        vec![Json::Str("COUNT-WIN".into())],
+    );
+    let closes = window_ops(&c, "close");
+    assert!(closes.iter().any(|(m, a)| m.as_deref() == Some("COUNT")
+        && a.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")));
+    assert!(!closes.iter().any(|(m, a)| m.as_deref() == Some("ADDITION")
+        && a.get(1).and_then(|x| x.as_str()) == Some("ADDITION-WIN")));
+
+    c.eval_ok(
+        "add-text-to-exp-window",
+        Some("ADDITION"),
+        vec![Json::Str("ADDITION-WIN".into()), Json::Str("C".into())],
+    );
+    let texts = window_ops(&c, "text");
+    assert!(texts.iter().any(|(m, a)| m.as_deref() == Some("ADDITION")
+        && a.get(1).and_then(|x| x.as_str()) == Some("ADDITION-WIN")));
+
+    c.eval_ok(
+        "close-exp-window",
+        Some("ADDITION"),
+        vec![Json::Str("ADDITION-WIN".into())],
+    );
+}
+
+#[test]
+fn multi_model_clear_all_closes_each_model_window() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        Some("COUNT"),
+        vec![Json::Str("COUNT-WIN".into()), Json::Null],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        Some("ADDITION"),
+        vec![Json::Str("ADDITION-WIN".into()), Json::Null],
+    );
+
+    c.eval_ok("clear-all", None, Vec::new());
+    let closes = window_ops(&c, "close");
+    assert!(closes.iter().any(|(m, _)| m.as_deref() == Some("COUNT")));
+    assert!(closes.iter().any(|(m, _)| m.as_deref() == Some("ADDITION")));
+}
+
+#[test]
+fn multi_model_window_click_queues_the_owning_models_action() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.add_command("clicked", "clicked");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        Some("COUNT"),
+        vec![Json::Str("COUNT-WIN".into()), Json::Null],
+    );
+    c.eval_ok(
+        "add-button-to-exp-window",
+        Some("COUNT"),
+        vec![
+            Json::Str("COUNT-WIN".into()),
+            options(vec![
+                ("text", Json::Str("A".into())),
+                ("x", Json::Int(0)),
+                ("y", Json::Int(0)),
+                ("width", Json::Int(75)),
+                ("height", Json::Int(20)),
+                ("action", Json::Str("clicked".into())),
+            ]),
+        ],
+    );
+    assert_eq!(
+        c.eval_ok("current-model", None, Vec::new()),
+        vec![Json::Str("ADDITION".into())]
+    );
+
+    c.eval_ok(
+        "visible-virtual-window-mouse-click",
+        None,
+        vec![Json::Str("COUNT-WIN".into()), Json::Int(37), Json::Int(9)],
+    );
+    c.eval_ok("run", None, vec![Json::Float(2.0)]);
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, model, _)| { name == "clicked" && model.as_deref() == Some("COUNT") }),
+        "click action did not target COUNT: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
+fn single_model_window_uses_the_current_model() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        None,
+        vec![Json::Str("COUNT-WIN".into()), Json::Null],
+    );
+    c.eval_ok(
+        "add-text-to-exp-window",
+        None,
+        vec![Json::Str("COUNT-WIN".into()), Json::Str("A".into())],
+    );
+
+    assert!(window_ops(&c, "open")
+        .iter()
+        .any(|(model, args)| model.as_deref() == Some("COUNT")
+            && args.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")));
+    assert!(window_ops(&c, "text")
+        .iter()
+        .any(|(model, args)| model.as_deref() == Some("COUNT")
+            && args.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")));
+
+    c.eval_ok(
+        "close-exp-window",
+        None,
+        vec![Json::Str("COUNT-WIN".into())],
+    );
+    assert!(window_ops(&c, "close")
+        .iter()
+        .any(|(model, args)| model.as_deref() == Some("COUNT")
+            && args.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")));
 }

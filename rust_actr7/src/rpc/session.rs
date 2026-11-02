@@ -8,7 +8,7 @@
 //! server invokes by sending an `evaluate` callback back over the wire.
 
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -312,9 +312,9 @@ pub struct Session {
     /// Client commands registered to display visible-virtual windows
     /// (`add-virtual-window-handler`, `tools/visible-virtual.lisp:469`).
     vwin_handlers: Vec<String>,
-    /// The currently displayed window: title, `(x, y, width, height)`, whether
-    /// a client accepted it (`check`), and its item ids in add order.
-    vwin: Option<VisWindow>,
+    /// Experiment windows currently displayed, keyed by model name. A model
+    /// has at most one live window; the engine owns the window contents.
+    windows: HashMap<String, VisWindow>,
     /// Names passed to `record-history` (uppercased); `TRACE-HISTORY` makes
     /// [`Session::take_trace`] also accumulate lines for the history stream.
     hist_recording: std::collections::BTreeSet<String>,
@@ -504,7 +504,7 @@ impl Session {
             stepper: None,
             device: DeviceSetup::default(),
             vwin_handlers: Vec::new(),
-            vwin: None,
+            windows: HashMap::new(),
             hist_recording: Default::default(),
             hist_trace: Vec::new(),
             hist_jobs: Default::default(),
@@ -687,6 +687,8 @@ impl Session {
             self.current_model = None;
         }
         self.inactive.retain(|m| !m.name.eq_ignore_ascii_case(name));
+        self.windows
+            .retain(|window_model, _| !window_model.eq_ignore_ascii_case(name));
     }
 
     /// The command registry (for `check`/`list-commands`/`add`/`remove`).
@@ -1203,22 +1205,86 @@ impl Session {
         display
     }
 
-    /// Send a display op to the current window's handlers.
-    fn vwin_send(&mut self, op: &[Json], remote: &mut dyn Remote) {
-        let Some(w) = self.vwin.clone() else {
+    /// The visible window owned by `model`, if one is open.
+    fn window_for(&self, model: &str) -> Option<&VisWindow> {
+        self.windows
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(model))
+            .map(|(_, window)| window)
+    }
+
+    /// The visible window owned by the selected model.
+    fn current_window(&self) -> Option<&VisWindow> {
+        self.current_model
+            .as_deref()
+            .and_then(|name| self.window_for(name))
+    }
+
+    fn current_window_mut(&mut self) -> Option<&mut VisWindow> {
+        let name = self.current_model.clone()?;
+        self.windows
+            .iter_mut()
+            .find(|(key, _)| key.eq_ignore_ascii_case(&name))
+            .map(|(_, window)| window)
+    }
+
+    /// Find the model that owns a displayed window title. The selected model
+    /// wins when titles collide; otherwise model order makes the result stable.
+    fn window_owner_by_title(&self, title: &str) -> Option<String> {
+        if self
+            .current_model
+            .as_deref()
+            .and_then(|name| self.window_for(name))
+            .is_some_and(|window| window.title == title)
+        {
+            return self.current_model.clone();
+        }
+        self.model_order
+            .iter()
+            .find(|name| {
+                self.window_for(name)
+                    .is_some_and(|window| window.title == title)
+            })
+            .cloned()
+    }
+
+    /// Send a display op to one model's window handlers.
+    fn vwin_send_to(&mut self, model: &str, op: &[Json], remote: &mut dyn Remote) {
+        let Some(w) = self.window_for(model).cloned() else {
             return;
         };
         for h in w.handlers {
-            let _ = self.evaluate(&h, None, op, remote);
+            let _ = self.evaluate(&h, Some(model), op, remote);
         }
     }
 
-    /// The current visible window's title (or empty).
+    /// The selected model's visible window title (or empty).
     fn vwin_title(&self) -> String {
-        self.vwin
-            .as_ref()
+        self.current_window()
             .map(|w| w.title.clone())
             .unwrap_or_default()
+    }
+
+    /// Close and forget one model's visible window.
+    fn close_model_window(&mut self, model: &str, remote: &mut dyn Remote) {
+        let Some(window) = self.window_for(model).cloned() else {
+            return;
+        };
+        self.vwin_send_to(
+            model,
+            &[Json::Str("close".into()), Json::Str(window.title)],
+            remote,
+        );
+        self.windows
+            .retain(|name, _| !name.eq_ignore_ascii_case(model));
+    }
+
+    /// Close every visible experiment window (clear-all / reload).
+    fn close_all_windows(&mut self, remote: &mut dyn Remote) {
+        let models: Vec<String> = self.windows.keys().cloned().collect();
+        for model in models {
+            self.close_model_window(&model, remote);
+        }
     }
 
     /// The underlying handler for a built-in command.
@@ -1388,6 +1454,7 @@ impl Session {
                 for name in self.model_order.clone() {
                     self.queue_signal("deleting-model", vec![Json::Str(name)]);
                 }
+                self.close_all_windows(remote);
                 self.defs.clear();
                 self.def_sources.clear();
                 self.engine = None;
@@ -1421,6 +1488,7 @@ impl Session {
                     .collect();
                 for name in &replace {
                     self.queue_signal("deleting-model", vec![Json::Str(name.clone())]);
+                    self.close_model_window(name, remote);
                     self.remove_model(name);
                 }
                 let created = self.load_file(&path, remote, false)?;
@@ -2826,25 +2894,33 @@ impl Session {
                 let width = opt_i(opts, "width", 300);
                 let height = opt_i(opts, "height", 300);
                 let visible = opt_bool(opts, "visible", true);
+                let model = self.current_model.clone().unwrap_or_default();
+                // One live experiment window per model; a second open replaces
+                // the first. The engine owns the window contents, while the
+                // session tracks display metadata and item ids.
+                self.close_model_window(&model, remote);
                 if let Some(eng) = &mut self.engine {
                     eng.open_window(x, y);
                 }
                 // `open-exp-window` builds a visible-virtual window when a
                 // client handler accepts it (`check`), else a headless one.
-                self.vwin = None;
                 if visible {
                     let handlers = self.vwin_check(remote);
                     if !handlers.is_empty() {
-                        self.vwin = Some(VisWindow {
-                            title: title.clone(),
-                            x,
-                            y,
-                            width,
-                            height,
-                            handlers,
-                            items: Vec::new(),
-                        });
-                        self.vwin_send(
+                        self.windows.insert(
+                            model.clone(),
+                            VisWindow {
+                                title: title.clone(),
+                                x,
+                                y,
+                                width,
+                                height,
+                                handlers,
+                                items: Vec::new(),
+                            },
+                        );
+                        self.vwin_send_to(
+                            &model,
                             &[
                                 Json::Str("open".into()),
                                 Json::Str(title),
@@ -2860,17 +2936,21 @@ impl Session {
                 Ok(vec![Json::Str("window".into())])
             }
             "close-exp-window" => {
-                let title = self.vwin_title();
-                if !title.is_empty() {
-                    self.vwin_send(&[Json::Str("close".into()), Json::Str(title)], remote);
+                if let Some(model) = self.current_model.clone() {
+                    self.close_model_window(&model, remote);
                 }
-                self.vwin = None;
                 Ok(vec![Json::Bool(true)])
             }
             "select-exp-window" => {
                 let title = self.vwin_title();
-                if !title.is_empty() {
-                    self.vwin_send(&[Json::Str("select".into()), Json::Str(title)], remote);
+                if let Some(model) = self.current_model.clone() {
+                    if !title.is_empty() {
+                        self.vwin_send_to(
+                            &model,
+                            &[Json::Str("select".into()), Json::Str(title)],
+                            remote,
+                        );
+                    }
                 }
                 Ok(vec![Json::Bool(true)])
             }
@@ -2893,25 +2973,28 @@ impl Session {
                 let x = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
                 let y = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
                 // Window-relative → global coordinates (`x-pos`/`y-pos`).
-                let (ox, oy) = self
-                    .vwin
-                    .as_ref()
-                    .filter(|w| w.title == title)
+                let owner = self.window_owner_by_title(title);
+                let (ox, oy) = owner
+                    .as_deref()
+                    .and_then(|model| self.window_for(model))
                     .map(|w| (w.x, w.y))
                     .unwrap_or((0, 0));
-                if let Some(eng) = &mut self.engine {
+                let target = owner.or_else(|| self.current_model.clone());
+                if let Some(eng) = target.as_deref().and_then(|m| self.engine_mut_for(m)) {
                     eng.click_window(ox + x, oy + y);
                 }
                 Ok(vec![Json::Null])
             }
             "clear-exp-window" => {
+                let model = self.current_model.clone().unwrap_or_default();
                 if let Some(eng) = &mut self.engine {
                     eng.clear_window();
                 }
                 let title = self.vwin_title();
-                if let Some(w) = self.vwin.clone() {
+                if let Some(w) = self.window_for(&model).cloned() {
                     for key in &w.items {
-                        self.vwin_send(
+                        self.vwin_send_to(
+                            &model,
                             &[
                                 Json::Str("remove".into()),
                                 Json::Str(title.clone()),
@@ -2921,7 +3004,7 @@ impl Session {
                         );
                     }
                 }
-                if let Some(w) = &mut self.vwin {
+                if let Some(w) = self.current_window_mut() {
                     w.items.clear();
                 }
                 Ok(vec![Json::Null])
@@ -2939,11 +3022,13 @@ impl Session {
                     .map(|e| e.add_window_text_styled(text, x, y, w, h, font, &color))
                     .unwrap_or_default();
                 if !key.is_empty() {
+                    let model = self.current_model.clone().unwrap_or_default();
                     let title = self.vwin_title();
-                    if let Some(win) = &mut self.vwin {
+                    if let Some(win) = self.current_window_mut() {
                         win.items.push(key.clone());
                     }
-                    self.vwin_send(
+                    self.vwin_send_to(
+                        &model,
                         &[
                             Json::Str("text".into()),
                             Json::Str(title),
@@ -2969,11 +3054,13 @@ impl Session {
                     .map(|e| e.add_window_line(start, end, color))
                     .unwrap_or_default();
                 if !key.is_empty() {
+                    let model = self.current_model.clone().unwrap_or_default();
                     let title = self.vwin_title();
-                    if let Some(win) = &mut self.vwin {
+                    if let Some(win) = self.current_window_mut() {
                         win.items.push(key.clone());
                     }
-                    self.vwin_send(
+                    self.vwin_send_to(
+                        &model,
                         &[
                             Json::Str("line".into()),
                             Json::Str(title),
@@ -3002,11 +3089,13 @@ impl Session {
                     .map(|e| e.add_window_button(&text, x, y, w, h, &color, action))
                     .unwrap_or_default();
                 if !key.is_empty() {
+                    let model = self.current_model.clone().unwrap_or_default();
                     let title = self.vwin_title();
-                    if let Some(win) = &mut self.vwin {
+                    if let Some(win) = self.current_window_mut() {
                         win.items.push(key.clone());
                     }
-                    self.vwin_send(
+                    self.vwin_send_to(
+                        &model,
                         &[
                             Json::Str("button".into()),
                             Json::Str(title),
@@ -3026,12 +3115,14 @@ impl Session {
             "remove-items-from-exp-window" => {
                 let keys: Vec<String> =
                     args[1.min(args.len())..].iter().map(json_to_text).collect();
+                let model = self.current_model.clone().unwrap_or_default();
                 if let Some(eng) = &mut self.engine {
                     eng.remove_window_items(&keys);
                 }
                 let title = self.vwin_title();
                 for key in &keys {
-                    self.vwin_send(
+                    self.vwin_send_to(
+                        &model,
                         &[
                             Json::Str("remove".into()),
                             Json::Str(title.clone()),
@@ -3040,7 +3131,7 @@ impl Session {
                         remote,
                     );
                 }
-                if let Some(w) = &mut self.vwin {
+                if let Some(w) = self.current_window_mut() {
                     w.items.retain(|k| !keys.contains(k));
                 }
                 Ok(vec![Json::Null])
@@ -3655,6 +3746,13 @@ impl Session {
         if self.is_multi() {
             return self.run_multi_slice(limit_ms);
         }
+        if self
+            .engine
+            .as_ref()
+            .is_some_and(Engine::has_pending_device_actions)
+        {
+            return Ok(RunStop::DeviceAction);
+        }
         let device = self
             .engine
             .as_mut()
@@ -3690,6 +3788,17 @@ impl Session {
 
     fn run_multi_slice(&mut self, limit_ms: i64) -> Result<RunStop, String> {
         loop {
+            let pending_action = self
+                .engine
+                .as_ref()
+                .is_some_and(Engine::has_pending_device_actions)
+                || self
+                    .inactive
+                    .iter()
+                    .any(|m| m.engine.has_pending_device_actions());
+            if pending_action {
+                return Ok(RunStop::DeviceAction);
+            }
             if self.stepper_paused() {
                 return Ok(RunStop::StepperPause);
             }
@@ -3723,16 +3832,35 @@ impl Session {
                 }
             }
             let Some((_, _, _, idx)) = best else {
-                if beyond_limit {
-                    self.global_time_ms = limit_ms;
-                    for engine in self
-                        .engine
-                        .iter_mut()
-                        .chain(self.inactive.iter_mut().map(|m| &mut m.engine))
-                    {
-                        engine.set_time_ms(limit_ms);
-                    }
+                let stop = if beyond_limit {
+                    limit_ms
+                } else {
+                    self.engine
+                        .as_ref()
+                        .map(Engine::time_ms)
+                        .into_iter()
+                        .chain(self.inactive.iter().map(|m| m.engine.time_ms()))
+                        .max()
+                        .unwrap_or(self.global_time_ms)
+                };
+                self.global_time_ms = stop;
+                for engine in self
+                    .engine
+                    .iter_mut()
+                    .chain(self.inactive.iter_mut().map(|m| &mut m.engine))
+                {
+                    engine.set_time_ms(stop);
                 }
+                let reason = if beyond_limit {
+                    "Stopped because time limit reached"
+                } else {
+                    "Stopped because no events left to process"
+                };
+                let raw =
+                    crate::trace::format_line(stop, "------", reason, crate::trace::MODULE_WIDTH);
+                self.global_trace
+                    .push(crate::engine::multi::with_model_column(&raw, "-"));
+                self.global_trace_kinds.push(TraceKind::Model);
                 return Ok(RunStop::Finished);
             };
             let model_name = if idx == 0 {
@@ -3807,12 +3935,31 @@ impl Session {
             .unwrap_or(Ok(false))
     }
 
-    /// Drain the device actions a click queued, for the server to dispatch.
+    /// Drain the selected model's device actions, for the Python bridge.
     pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
         self.engine
             .as_mut()
             .map(|e| e.take_pending_device_actions())
             .unwrap_or_default()
+    }
+
+    /// Drain device actions from every model, tagging each with its owner.
+    pub fn take_pending_device_actions_with_models(
+        &mut self,
+    ) -> Vec<(Option<String>, String, Vec<Json>)> {
+        let mut actions = Vec::new();
+        if let Some(engine) = &mut self.engine {
+            let model = self.current_model.clone();
+            for (command, args) in engine.take_pending_device_actions() {
+                actions.push((model.clone(), command, args));
+            }
+        }
+        for model in &mut self.inactive {
+            for (command, args) in model.engine.take_pending_device_actions() {
+                actions.push((Some(model.name.clone()), command, args));
+            }
+        }
+        actions
     }
 
     /// The model time in seconds, for `run`'s first return value.
@@ -3881,7 +4028,9 @@ impl Session {
             self.prepare_model_load();
             let loaded = load_models(&path).map_err(|e| e.to_string())?;
             for def in loaded {
-                created.push(def.name.clone());
+                let name = def.name.clone();
+                self.close_model_window(&name, remote);
+                created.push(name);
                 self.add_model_definition(def, Some(path.to_string_lossy().into_owned()))?;
             }
             self.last_model_file = Some(path.to_string_lossy().into_owned());

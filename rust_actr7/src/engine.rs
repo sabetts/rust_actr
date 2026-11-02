@@ -5287,6 +5287,11 @@ impl Engine {
         Ok(true)
     }
 
+    /// Whether a click has queued a device action for the server.
+    pub fn has_pending_device_actions(&self) -> bool {
+        !self.pending_device_actions.is_empty()
+    }
+
     /// Drain the device actions a click queued, for the server to dispatch.
     pub fn take_pending_device_actions(&mut self) -> Vec<(String, Vec<Json>)> {
         std::mem::take(&mut self.pending_device_actions)
