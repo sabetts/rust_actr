@@ -1,8 +1,7 @@
 # ACT-R Environment Work
 
 This document is the handoff for the Rust ACT-R Environment work. It records
-what has been completed and the agreed implementation plan for Milestone 3
-(multi-model support).
+the completed multi-model milestones and the remaining Environment limits.
 
 The target is the **upstream Tcl/Tk ACT-R Environment** in
 `actr7.x/environment/`, connecting to `actr server` over the RPC socket. The
@@ -10,7 +9,7 @@ native `actr env` GUI is a separate, deferred project.
 
 ## Current status
 
-Milestones 1 and 2 are complete and committed:
+Milestones 1-4 are complete and committed:
 
 - `9d923d8` docs: document filesystem-only runtime paths
 - `c392fee` engine: make model loading filesystem-path-only
@@ -27,10 +26,14 @@ Milestones 1 and 2 are complete and committed:
 - `37b69a6` rpc: expose multi-buffer goal chunks
 - `d1e5b85` tests: cover stepper tutoring conflict payload
 - `cc2d36b` docs: record environment parity hardening
+- `bfcbf56` rpc: support multiple loaded models
+- `73edb78` rpc: cover model-scoped histories and multi-model loading
+- `865019a` tests: cover multi-model stepper callbacks
+- `858ad0d` rpc: route multi-model windows and device actions
 
 Last verified results:
 
-- Rust: **702 passed / 9 ignored**
+- Rust: **706 passed / 9 ignored**
 - Python: **38 passed**
 - `cargo test --features env --quiet --lib env::tests`: **3 passed**
 - `cargo fmt --check`: clean
@@ -52,16 +55,21 @@ Only the pre-existing untracked
   unrunnable.
 - Structured history/BOLD records must match the Tcl parser; plain text
   formatting is functional parity, not byte-identical parity.
+- Environment code changes stay Rust-only. Upstream Tcl and Lisp ACT-R are not
+  modified; Tcl-side bugs are documented or worked around in Rust.
+- One experiment window per model. Multiple simultaneous windows inside one
+  model remain unsupported.
 
-## Milestone 3 progress
+## Milestone 3 and 4 progress
 
-Completed in the working tree and committed:
+Completed and committed:
 
 - `bfcbf56` rpc: support multiple loaded models
 - `73edb78` rpc: cover model-scoped histories and multi-model loading
 - `865019a` tests: cover multi-model stepper callbacks
+- `858ad0d` rpc: route multi-model windows and device actions
 
-Implemented so far:
+Implemented:
 
 - Ordered model set with a selected engine and inactive engines.
 - Multiple models from separate files and from one file.
@@ -82,11 +90,19 @@ Implemented so far:
 - Multi-model command tests and multi-model Tcl trace/clear-all tests pass.
 - Regression harnesses retain their historical last-model loading semantics
   via `set_load_replaces_models`.
+- Experiment windows are tracked per model; opening/clearing/closing one
+  model's window does not disturb another's.
+- Window display callbacks and mouse clicks resolve the owning model.
+- Device actions are tagged with their model and dispatched during single- and
+  multi-model runs, including stepper runs.
+- Multi-model `run` uses the interleaved runner and emits one global run
+  terminator with the `-` model column.
+- Reload, clear-all, and model replacement close the affected experiment
+  windows. Upstream Tcl does not register experiment windows for deletion, so
+  the Rust session explicitly sends `close`.
 
-Still to finish:
-
-- Multi-model device/window association and callback routing.
-- Broader per-model device/window tests.
+No Milestone 3 or 4 work remains outstanding. The remaining limits are listed
+below.
 
 ## What currently exists
 
@@ -114,10 +130,14 @@ Still to finish:
   transfer.
 - Multi-buffer `GOAL` access for the threads extra.
 - Stepper core behavior and tutoring/conflict payload coverage.
+- Per-model experiment-window metadata, item ids, and display callbacks.
+- Model-qualified device actions dispatched from single- and multi-model runs.
+- Lifecycle cleanup that closes replaced/reloaded/cleared model windows.
 
 ### Tests and fixtures
 
-- `rust_actr7/tests/environment_rpc.rs` is the fake-Tcl conformance harness.
+- `rust_actr7/tests/environment_rpc.rs` is the fake-Tcl conformance harness,
+  including per-model windows, clicks, device actions, and lifecycle closes.
 - `rust_actr7/tests/stepper_rpc.rs` drives the stepper over a real socket.
 - `rust_actr7/fixtures/stepper/stepper-model.lisp` is the stepper fixture.
 - `rust_actr7/tests/test_models.rs` and `tests/hooks/mod.rs` opt into
@@ -128,8 +148,15 @@ Still to finish:
 
 ## Remaining limitations
 
-- Device and visible-window state is still session-global; per-model device
-  and window routing remains to finish.
+- One experiment window per model; multiple windows within one model are not
+  supported by the current engine/session model.
+- Window titles are still Environment-global identifiers because Tcl keys
+  windows by title. Duplicate visible titles across models are resolved
+  deterministically, with the selected model winning, but cannot be made fully
+  independent without upstream Tcl changes.
+- Upstream Tcl does not register experiment windows in its per-model window
+  map, so Rust closes those windows explicitly on model replacement, reload,
+  and clear-all. This is documented rather than patched upstream.
 - Per-model viewer/history commands work by switching command context; those
   state stores are not yet independently modeled for every device family.
 - Python remains intentionally single-model.
@@ -158,6 +185,19 @@ Support multiple models in the Rust RPC server and Tcl Environment:
 - native `actr env`
 - full threads task-language work beyond existing engine support
 - byte-identical text formatting for all viewer panes
+
+## Milestone 4 objective (completed)
+
+Make experiment windows and device actions model-owned without changing
+upstream Tcl or Lisp:
+
+- one live experiment window per model
+- model-scoped window metadata and display callbacks
+- clicks routed to the model that owns the window title
+- device actions tagged with the model and dispatched during runs
+- multi-model runs use the interleaved runner and stop for device actions
+- reload/clear-all/replacement close only the affected windows
+- Rust-side workaround for Tcl's missing experiment-window registration
 
 ## Target architecture
 
@@ -372,30 +412,26 @@ Reference Lisp files:
 - `actr7.x/examples/multiple-models/unit-1-together-1-mp.lisp`
 - `actr7.x/examples/multiple-models/multi-model-talking-models.lisp`
 
-## Known risks
+## Known risks and limits
 
-1. Most command handlers currently use `self.engine`; this is the largest
-   refactor.
-2. Histories currently live in one session-level table.
-3. Device and visible-window state currently assumes one active model.
-4. The stepper assumes one event stream and one snapshot.
-5. Advanced Lisp-task examples remain blocked even after multi-model runtime
+1. One model has one live experiment window; multi-window models still need
+   engine work.
+2. Tcl uses window titles as global identifiers, so duplicate visible titles
+   across models cannot be fully isolated without upstream Tcl changes.
+3. Upstream Tcl does not register experiment windows for deletion; Rust sends
+   explicit `close` operations instead.
+4. Advanced Lisp-task examples remain blocked even after multi-model runtime
    support.
-6. Running all models must preserve the current exact trace ordering used by
-   `unit-1-together-1-mp`.
+5. Running all models must preserve the exact trace ordering used by
+   `unit-1-together-1-mp`, including the global `-` terminator.
+6. Real Tk manual smoke testing is still separate from the fake-Tcl harness.
 
-## Recommended commit points
+## Completed multi-model commit sequence
 
-1. `rpc: introduce the model store`
-2. `rpc: load and switch multiple models`
-3. `rpc: run and reset all models`
-4. `rpc: route commands and viewers by model`
-5. `rpc: make histories model-scoped`
-6. `stepper: step across the model store`
-7. `tests: cover the multi-model environment`
-8. `docs: record multi-model semantics and limits`
-
-Each commit should keep `cargo test` green.
+1. `bfcbf56` rpc: support multiple loaded models
+2. `73edb78` rpc: cover model-scoped histories and multi-model loading
+3. `865019a` tests: cover multi-model stepper callbacks
+4. `858ad0d` rpc: route multi-model windows and device actions
 
 ## Verification commands
 
@@ -429,6 +465,11 @@ cargo test --test rpc_conformance -- --ignored --nocapture
 - The Tcl model menu lists both and switches the selected model.
 - Global run/reset/clear-all behave like Lisp.
 - Viewers and histories follow the selected model.
+- Each model has an independent experiment-window record, and window
+  commands/clicks follow the owning model.
+- Device actions are dispatched with the owning model during multi-model and
+  stepper runs.
+- Reload, clear-all, and replacement close only the affected model windows.
 - The stepper pauses and steps across models with correct model callbacks.
 - `unit-1-together-1-mp` remains green.
 - Single-model Tcl behavior remains green.

@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-01
 Branch: `main`
-Latest relevant commit: `865019a tests: cover multi-model stepper callbacks`
+Latest relevant commit: `858ad0d rpc: route multi-model windows and device actions`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -258,7 +258,7 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **702 passed / 9 ignored** across the engine and
+Current result: **706 passed / 9 ignored** across the engine and
 model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
@@ -319,3 +319,4 @@ solution sources and the environment-gated RPC test.
 - `bfcbf56` rpc: support multiple loaded models
 - `73edb78` rpc: cover model-scoped histories and multi-model loading
 - `865019a` tests: cover multi-model stepper callbacks
+- `858ad0d` rpc: route multi-model windows and device actions
