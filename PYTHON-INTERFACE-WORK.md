@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-01
 Branch: `main`
-Latest relevant commit: `c392fee engine: make model loading filesystem-path-only`
+Latest relevant commit: `74502b6 tests: opt regression harnesses into multi-model loading`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -258,7 +258,7 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **683 passed / 9 ignored** across the engine and
+Current result: **695 passed / 9 ignored** across the engine and
 model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
@@ -304,3 +304,10 @@ solution sources and the environment-gated RPC test.
 - `d97b58d` engine: add word sounds and syllable-count speech support
 - `86a2b18` engine: let remove-syllable-count hide dictionary entries
 - `c392fee` engine: make model loading filesystem-path-only
+- `c95627d` rpc: enforce single-model environment sessions
+- `091ef11` rpc: emit environment run and reset signals
+- `0d85d73` rpc: reload models from disk and clear all
+- `fbff262` rpc: expose environment module names to the stepper
+- `13e3d43` rpc: complete environment viewers and standard histories
+- `c94b3c8` tests: add a fake-tcl environment rpc harness
+- `74502b6` tests: opt regression harnesses into multi-model loading

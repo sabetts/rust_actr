@@ -6369,3 +6369,36 @@ algorithm references, modernized to the current API. The Zbrodoff surrogate
 uses low trace detail (production firing, retrieval, keypress) so module
 scheduling noise does not dominate the oracle; the categorize surrogate uses
 high detail with `:ans nil`/`:egs 0` to keep activation exact.
+
+## 368. Single-model Tcl Environment milestone
+
+The RPC server now has an explicit single-model policy for the upstream Tcl
+Environment. `Session::set_multi_model_allowed` is an engine-regression-harness
+opt-in only; RPC and Python sessions reject a multi-model file or a second
+model load with a clear error. `mp-models` therefore reports at most one model,
+and `set-current-model` rejects another name.
+
+Environment lifecycle support added:
+
+- `run-start` / `run-stop` fire around interleaved runs.
+- `reset-start` / `reset-step1` are queued by `reset` and delivered by the
+  server after the session borrow is released; `clear-all-start` also exists.
+- `clear-all` tears down the single model and signals the stepper.
+- `Reload` now re-reads the recorded model file from disk and emits
+  delete/create model signals.
+- Warning lines route to `warning-trace` when that stream has a monitor, so
+  the Run/Reset/Load warning dialogs work without duplicating lines.
+- `mp-queue-text` backs the Event Queue dialog.
+
+Viewer/history support added or completed:
+
+- Declarative/procedural detail blocks and parameter details.
+- Full module names for the parameter viewer and stepper module targeting.
+- Connection/command status for the dispatcher viewer.
+- Audicon history and a simplified blending history.
+- Lisp-compatible history save/load envelopes and the comment-first
+  incremental protocol.
+
+The native `actr env` GUI and the `999-*` AGI extension overlays
+(EMMA eye spot, images, touch fingers) remain out of scope for this milestone.
+`tests/environment_rpc.rs` is the self-contained fake-Tcl conformance harness.
