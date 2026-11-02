@@ -2488,6 +2488,115 @@ struct PairedRun {
     probe: String,
 }
 
+/// The ACT-R trace stream a line belongs to. The Rust engine writes one
+/// ordered sink; this tag lets the RPC server deliver each line to the
+/// corresponding Environment monitor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TraceKind {
+    #[default]
+    Model,
+    Command,
+    Warning,
+    General,
+}
+
+/// Ordered trace output plus the stream tag for each line.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct OutLines {
+    lines: Vec<String>,
+    kinds: Vec<TraceKind>,
+    current: TraceKind,
+}
+
+impl OutLines {
+    pub fn push(&mut self, line: String) {
+        self.lines.push(line);
+        self.kinds.push(self.current);
+    }
+
+    pub fn push_kind(&mut self, kind: TraceKind, line: String) {
+        self.lines.push(line);
+        self.kinds.push(kind);
+    }
+
+    pub fn extend<I: IntoIterator<Item = String>>(&mut self, iter: I) {
+        for line in iter {
+            self.push(line);
+        }
+    }
+
+    pub fn truncate(&mut self, len: usize) {
+        self.lines.truncate(len);
+        self.kinds.truncate(len);
+    }
+
+    pub fn clear(&mut self) {
+        self.lines.clear();
+        self.kinds.clear();
+    }
+
+    pub fn pop(&mut self) -> Option<String> {
+        self.kinds.pop();
+        self.lines.pop()
+    }
+
+    pub fn last(&self) -> Option<&String> {
+        self.lines.last()
+    }
+
+    pub fn len(&self) -> usize {
+        self.lines.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.lines.is_empty()
+    }
+
+    pub fn join(&self, sep: &str) -> String {
+        self.lines.join(sep)
+    }
+
+    pub fn get(&self, range: std::ops::RangeFrom<usize>) -> Option<&[String]> {
+        self.lines.get(range)
+    }
+
+    pub fn split_off(&mut self, at: usize) -> Vec<String> {
+        self.kinds.truncate(at);
+        self.lines.split_off(at)
+    }
+
+    pub fn set_lines(&mut self, lines: Vec<String>) {
+        self.kinds = vec![TraceKind::Model; lines.len()];
+        self.lines = lines;
+    }
+
+    pub fn set_current_kind(&mut self, kind: TraceKind) {
+        self.current = kind;
+    }
+
+    pub fn current_kind(&self) -> TraceKind {
+        self.current
+    }
+
+    pub fn kinds_since(&self, start: usize) -> Vec<TraceKind> {
+        self.kinds[start.min(self.kinds.len())..].to_vec()
+    }
+}
+
+impl std::ops::Index<std::ops::RangeFrom<usize>> for OutLines {
+    type Output = [String];
+
+    fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
+        &self.lines[index]
+    }
+}
+
+impl PartialEq<Vec<String>> for OutLines {
+    fn eq(&self, other: &Vec<String>) -> bool {
+        self.lines == *other
+    }
+}
+
 pub struct Engine {
     model: Model,
     cfg: Config,
@@ -2518,7 +2627,7 @@ pub struct Engine {
     /// (`run-sched-queue`, `scheduling.lisp:627`), the second value of
     /// `(run time)`'s `(values seconds events break)`.
     run_events: u64,
-    out_lines: Vec<String>,
+    out_lines: OutLines,
     /// Optional two-phase event hook (tests only; see [`EventHook`]).
     event_hook: Option<Box<dyn EventHook>>,
     /// The trace line(s) the event currently executing emitted, captured by
@@ -3095,7 +3204,7 @@ impl Engine {
             time_ms: 0,
             limit_ms: (run_secs * 1000.0).round() as i64,
             run_events: 0,
-            out_lines: Vec::new(),
+            out_lines: OutLines::default(),
             event_hook: None,
             current_lines: Vec::new(),
             fired_commands: Vec::new(),

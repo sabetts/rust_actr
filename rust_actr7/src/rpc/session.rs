@@ -13,7 +13,8 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::engine::{
-    DeviceSetup, Engine, EngineError, EventHook, EventView, MultiEngine, PreResult, StepperSnapshot,
+    DeviceSetup, Engine, EngineError, EventHook, EventView, MultiEngine, PreResult,
+    StepperSnapshot, TraceKind,
 };
 use crate::json::Json;
 use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
@@ -636,27 +637,43 @@ impl Session {
             .map_err(|e| e.to_string())
     }
 
-    /// Take the trace lines emitted since the last call (the RPC server
-    /// streams these to the `model-trace` monitors).
-    pub fn take_trace(&mut self) -> Vec<String> {
-        let lines = if let Some(multi) = &self.multi {
+    /// Take the trace lines and their streams since the last call.
+    pub fn take_trace_events(&mut self) -> Vec<(String, TraceKind)> {
+        let events = if let Some(multi) = &self.multi {
             let pos = self.trace_pos;
             let lines = multi.out_since(pos);
             self.trace_pos = multi.out_len();
             lines
+                .into_iter()
+                .map(|line| (line, TraceKind::Model))
+                .collect()
         } else if let Some(eng) = &self.engine {
             let pos = self.trace_pos;
             let lines = eng.out_since(pos);
+            let kinds = eng.out_kinds_since(pos);
             self.trace_pos = eng.out_len();
             lines
+                .into_iter()
+                .enumerate()
+                .map(|(i, line)| (line, kinds.get(i).copied().unwrap_or(TraceKind::Model)))
+                .collect()
         } else {
             Vec::new()
         };
-        // `record-history "trace-history"` captures the trace stream.
+        // `record-history "trace-history"` captures the complete stream.
         if self.hist_recording.contains("TRACE-HISTORY") {
-            self.hist_trace.extend(lines.iter().cloned());
+            self.hist_trace
+                .extend(events.iter().map(|(line, _)| line.clone()));
         }
-        lines
+        events
+    }
+
+    /// Take just the trace text since the last call.
+    pub fn take_trace(&mut self) -> Vec<String> {
+        self.take_trace_events()
+            .into_iter()
+            .map(|(line, _)| line)
+            .collect()
     }
 
     /// The record JSON strings for a history stream, or `None` if the stream
@@ -867,7 +884,17 @@ impl Session {
         remote: &mut dyn Remote,
     ) -> Result<Vec<Json>, String> {
         match &c.owner {
-            Owner::Builtin => self.invoke(name, args, remote),
+            Owner::Builtin => {
+                let previous = self.engine.as_ref().map(|e| e.output_kind());
+                if let Some(eng) = &mut self.engine {
+                    eng.set_output_kind(command_trace_kind(name));
+                }
+                let result = self.invoke(name, args, remote);
+                if let (Some(eng), Some(previous)) = (&mut self.engine, previous) {
+                    eng.set_output_kind(previous);
+                }
+                result
+            }
             Owner::None => Ok(vec![Json::Bool(true)]),
             Owner::Remote { local_name } => {
                 let call = local_name.clone().unwrap_or_else(|| name.to_string());
@@ -876,21 +903,18 @@ impl Session {
         }
     }
 
-    /// Route a trace line to a trace command's monitors
-    /// (`model-trace`/`command-trace`/…). The engine already formatted it, so
-    /// the underlying function is a no-op.
-    /// Route a trace line to the `model-trace` command's monitors.
-    ///
-    /// The engine's `out_lines` interleaves model, command and general output
-    /// (the four Lisp streams share one sink in the model-tester). Warnings are
-    /// recognizable from the `#|Warning...|#` envelope and go to
-    /// `warning-trace` when that stream has a monitor; everything else goes to
-    /// `model-trace`. Sending a warning to both would duplicate it in the
-    /// Environment's Load/Reload dialogs, which monitor both streams.
-    pub fn deliver_trace(&mut self, line: &str, remote: &mut dyn Remote) {
-        let warning = line.trim_start().starts_with("#|Warning");
-        let target = if warning && self.has_trace_monitor("warning-trace") {
-            "warning-trace"
+    /// Route a tagged trace line to its Environment monitor. If the matching
+    /// stream has no monitor (older clients often monitor only `model-trace`),
+    /// fall back to `model-trace` so that client still sees the output.
+    pub fn deliver_trace(&mut self, line: &str, kind: TraceKind, remote: &mut dyn Remote) {
+        let desired = match kind {
+            TraceKind::Model => "model-trace",
+            TraceKind::Command => "command-trace",
+            TraceKind::Warning => "warning-trace",
+            TraceKind::General => "general-trace",
+        };
+        let target = if self.has_trace_monitor(desired) {
+            desired
         } else {
             "model-trace"
         };
@@ -3756,6 +3780,18 @@ pub enum MonitorWhen {
     Simple,
 }
 
+/// The trace stream a command's own output belongs to.
+fn command_trace_kind(name: &str) -> TraceKind {
+    match name {
+        "run" | "run-full-time" | "run-until-time" | "run-n-events" | "step-once" | "reset"
+        | "reload" | "load-act-r-model" | "load-act-r-code" | "clear-all" => TraceKind::Model,
+        "print-warning" => TraceKind::Warning,
+        "act-r-output" => TraceKind::General,
+        "model-output" => TraceKind::Model,
+        _ => TraceKind::Command,
+    }
+}
+
 /// Runtime model paths are filesystem paths.  ACT-R's logical names are a
 /// fixture/tooling concern, not part of the Rust runtime.
 fn filesystem_path(path: &str) -> Result<PathBuf, String> {
@@ -5925,9 +5961,9 @@ mod tests {
         );
         s.evaluate("run", None, &[Json::Int(10)], &mut remote)
             .unwrap();
-        let lines = s.take_trace();
-        for l in lines {
-            s.deliver_trace(&l, &mut remote);
+        let lines = s.take_trace_events();
+        for (l, kind) in lines {
+            s.deliver_trace(&l, kind, &mut remote);
         }
         assert!(
             remote

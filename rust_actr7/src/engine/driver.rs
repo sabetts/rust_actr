@@ -76,7 +76,21 @@ impl Engine {
     /// Replace the trace history (`build_engine` restores it after an
     /// in-place rebuild, which otherwise starts from an empty engine).
     pub fn set_out_lines(&mut self, lines: Vec<String>) {
-        self.out_lines = lines;
+        self.out_lines.set_lines(lines);
+    }
+
+    /// Set the stream tag used by subsequent trace lines.
+    pub fn set_output_kind(&mut self, kind: TraceKind) {
+        self.out_lines.set_current_kind(kind);
+    }
+
+    pub fn output_kind(&self) -> TraceKind {
+        self.out_lines.current_kind()
+    }
+
+    /// The stream tags for lines emitted since `start`.
+    pub fn out_kinds_since(&self, start: usize) -> Vec<TraceKind> {
+        self.out_lines.kinds_since(start)
     }
 
     /// Drop the trace lines from `len` on (`no-output` binds the output

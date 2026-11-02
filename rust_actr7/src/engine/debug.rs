@@ -1293,7 +1293,8 @@ impl Engine {
     /// stub's "Installing a default touch device���?���" banner.
     pub fn emit_warning(&mut self, msg: &str) {
         if self.trace_on {
-            self.out_lines.push(format!("#|Warning: {msg} |#"));
+            self.out_lines
+                .push_kind(TraceKind::Warning, format!("#|Warning: {msg} |#"));
         }
     }
 

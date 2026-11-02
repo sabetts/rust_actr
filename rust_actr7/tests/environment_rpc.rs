@@ -195,6 +195,17 @@ fn control_panel_signals_event_queue_and_clear_all() {
         c.callbacks
     );
 
+    c.add_command("on-command", "on-command");
+    c.add_command("on-general", "on-general");
+    c.monitor("command-trace", "on-command");
+    c.monitor("general-trace", "on-general");
+    c.eval_ok("command-output", None, vec![Json::Str("cmd line".into())]);
+    c.eval_ok("act-r-output", None, vec![Json::Str("general line".into())]);
+    assert!(c.callbacks.iter().any(|(n, _, args)| n == "on-command"
+        && args.first().and_then(|a| a.as_str()) == Some("cmd line")));
+    assert!(c.callbacks.iter().any(|(n, _, args)| n == "on-general"
+        && args.first().and_then(|a| a.as_str()) == Some("general line")));
+
     let queue = c.eval_ok("mp-queue-text", None, Vec::new());
     assert!(
         queue

@@ -507,7 +507,7 @@ fn hook_effects_apply_sgp_and_output() {
     assert!(!e.trace_on);
     e.apply_hook_effect(HookEffect::ModelOutput("hook output".into()))
         .unwrap();
-    assert_eq!(e.out_lines, vec!["hook output"]);
+    assert_eq!(e.out_lines, vec!["hook output".to_string()]);
 }
 
 #[test]

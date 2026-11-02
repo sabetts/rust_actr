@@ -147,9 +147,9 @@ fn call_remote_reentrant(
 /// until both are quiet.
 fn drain(session: &mut Session, conn: &mut Conn) {
     for _ in 0..32 {
-        let lines = session.take_trace();
-        for line in lines {
-            session.deliver_trace(&line, conn);
+        let lines = session.take_trace_events();
+        for (line, kind) in lines {
+            session.deliver_trace(&line, kind, conn);
         }
         let fired = session.take_fired_commands();
         if fired.is_empty() {
