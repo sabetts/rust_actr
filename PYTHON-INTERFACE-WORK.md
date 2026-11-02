@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-01
 Branch: `main`
-Latest relevant commit: `74502b6 tests: opt regression harnesses into multi-model loading`
+Latest relevant commit: `d1e5b85 tests: cover stepper tutoring conflict payload`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -258,7 +258,7 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **695 passed / 9 ignored** across the engine and
+Current result: **698 passed / 9 ignored** across the engine and
 model-regression suites. The ignored cases are the protected/blocked upstream
 solution sources and the environment-gated RPC test.
 
@@ -311,3 +311,8 @@ solution sources and the environment-gated RPC test.
 - `13e3d43` rpc: complete environment viewers and standard histories
 - `c94b3c8` tests: add a fake-tcl environment rpc harness
 - `74502b6` tests: opt regression harnesses into multi-model loading
+- `508b637` rpc: tag trace output by stream
+- `802212d` rpc: filter histories by start and end time
+- `bd311e4` rpc: expose command docs and connection counters
+- `37b69a6` rpc: expose multi-buffer goal chunks
+- `d1e5b85` tests: cover stepper tutoring conflict payload

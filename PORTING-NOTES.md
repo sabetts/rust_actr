@@ -6402,3 +6402,31 @@ Viewer/history support added or completed:
 The native `actr env` GUI and the `999-*` AGI extension overlays
 (EMMA eye spot, images, touch fingers) remain out of scope for this milestone.
 `tests/environment_rpc.rs` is the self-contained fake-Tcl conformance harness.
+
+## 369. Environment parity hardening
+
+The ordered engine trace now carries a stream tag (`Model`, `Command`,
+`Warning`, `General`) beside each line. The RPC server routes tagged lines to
+their matching `*-trace` monitors and falls back to `model-trace` for older
+clients that only monitor that stream. Command output, warnings, and the
+general `act-r-output` stream no longer have to be inferred from text.
+
+Other parity work in this pass:
+
+- Histories honor the Environment's start/end times in both
+  `history-data-available` and `start-incremental-history-data`.
+- Trace-history records carry the parsed timestamp from the trace line.
+- `add` stores the supplied documentation and `check` returns it; connection
+  status reports sent/received counters.
+- `multi-buffer-p` and `get-m-buffer-chunks` expose the threads extra's GOAL
+  multi-buffer from the engine's ordered goal set.
+- BOLD prediction records are checked for header/row shape and numeric values.
+- Stepper tutoring is covered through the conflict-resolution
+  `update-stepper nil` payload.
+
+Remaining accepted limits: trace-history detail-level filtering is still
+recorded-only because the engine does not retain per-line detail once a line
+is emitted; text viewer formatting is functional rather than byte-identical;
+the simplified blending history keeps the Tcl view fields but not the full
+SBLT slot-detail structure. Multi-model, native `actr env`, and `999-*`
+remain deferred.
