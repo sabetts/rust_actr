@@ -1708,8 +1708,6 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
-            // Whether a history stream has data. Only `trace-history` is
-            // recorded by this engine so far.
             "history-data-available" => {
                 let name = args
                     .first()
@@ -1718,7 +1716,7 @@ impl Session {
                     .to_uppercase();
                 let any = self
                     .history_records(&name)
-                    .map(|r| !r.is_empty())
+                    .map(|r| !filter_history_records(r, args.get(1), args.get(2)).is_empty())
                     .unwrap_or(false);
                 Ok(vec![Json::Bool(any)])
             }
@@ -1765,6 +1763,10 @@ impl Session {
                         _ => return Ok(vec![Json::Null]),
                     }
                 };
+                let records = filter_history_records(records, args.get(3), args.get(4));
+                if records.is_empty() {
+                    return Ok(vec![Json::Null]);
+                }
                 let comment = comment.map(|c| Json::Str(c).write());
                 self.hist_next_id += 1;
                 let id = self.hist_next_id;
@@ -3936,16 +3938,59 @@ pub fn json_to_text(j: &Json) -> String {
     }
 }
 
-/// One `trace-history` record: `[time, model, module, text]`. The
+/// One `trace-history` record: `[time, detail, model, text]`. The
 /// Environment's text-trace window reads index 3 (`61-trace-history.tcl`).
 fn trace_record(line: &str) -> String {
+    let time = line
+        .split_whitespace()
+        .next()
+        .and_then(|s| s.parse::<f64>().ok())
+        .map(|s| (s * 1000.0).round() as i64)
+        .unwrap_or(0);
     Json::Arr(vec![
-        Json::Int(0),
-        Json::Str(String::new()),
+        Json::Int(time),
+        Json::Str("medium".into()),
         Json::Str(String::new()),
         Json::Str(line.to_string()),
     ])
     .write()
+}
+
+fn history_time_arg(arg: Option<&Json>) -> Option<i64> {
+    arg.and_then(|a| a.as_f64())
+        .map(|s| (s * 1000.0).round() as i64)
+}
+
+fn record_time_ms(record: &str) -> Option<i64> {
+    let v = crate::json::parse(record).ok()?;
+    let Json::Arr(items) = v else {
+        return None;
+    };
+    items
+        .first()
+        .and_then(|t| t.as_f64())
+        .map(|t| t.round() as i64)
+}
+
+fn filter_history_records(
+    records: Vec<String>,
+    start: Option<&Json>,
+    end: Option<&Json>,
+) -> Vec<String> {
+    let start = history_time_arg(start);
+    let end = history_time_arg(end);
+    if start.is_none() && end.is_none() {
+        return records;
+    }
+    records
+        .into_iter()
+        .filter(|r| {
+            let Some(t) = record_time_ms(r) else {
+                return true;
+            };
+            start.map_or(true, |s| t >= s) && end.map_or(true, |e| t <= e)
+        })
+        .collect()
 }
 
 /// One `retrieval-history` record as JSON:
@@ -4943,6 +4988,90 @@ mod tests {
             assert!(chunks < 1000, "incremental stream did not terminate");
         }
         assert!(chunks >= 1, "expected at least one chunk");
+    }
+
+    #[test]
+    fn history_start_and_end_filters() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("trace-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+        let _ = s.take_trace();
+
+        let none = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[
+                    Json::Str("trace-history".into()),
+                    Json::Int(100),
+                    Json::Int(200),
+                ],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(none[0], Json::Bool(false));
+
+        let some = s
+            .evaluate(
+                "history-data-available",
+                None,
+                &[
+                    Json::Str("trace-history".into()),
+                    Json::Float(0.0),
+                    Json::Float(1.0),
+                ],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(some[0], Json::Bool(true));
+
+        let id = s
+            .evaluate(
+                "start-incremental-history-data",
+                None,
+                &[
+                    Json::Str("trace-history".into()),
+                    Json::Int(16000),
+                    Json::Null,
+                    Json::Float(0.0),
+                    Json::Float(0.2),
+                ],
+                &mut r,
+            )
+            .unwrap()[0]
+            .clone();
+        let chunk = s
+            .evaluate("get-incremental-history-data", None, &[id], &mut r)
+            .unwrap();
+        let Json::Arr(records) = crate::json::parse(chunk[0].as_str().unwrap()).unwrap() else {
+            panic!("filtered trace is not an array");
+        };
+        assert!(!records.is_empty());
+        for rec in records {
+            let Json::Arr(fields) = rec else {
+                panic!("trace record is not an array");
+            };
+            let t = fields[0].as_f64().unwrap();
+            assert!((0.0..=200.0).contains(&t), "record outside range: {t}");
+        }
     }
 
     /// `record-history "retrieval-history"` records DM retrievals in the
