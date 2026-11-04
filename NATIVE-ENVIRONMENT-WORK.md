@@ -25,8 +25,26 @@ now owns the native GUI program.
   - **in-process**: the GUI owns `Session`;
   - **client** (`--connect`): the GUI speaks the RPC protocol to `actr server`.
 
-## Current status
+## Program status
 
+Milestones M1-M7 now have initial implementations:
+
+- M1 shell/backends, M2 inspectors, M3 histories, M4 graphs/BOLD, M5 stepper,
+  M6 window overlays/keys, and M7 editor.
+- Remaining work is concentrated in the per-milestone follow-ups: multi-pane
+  history layouts, layered production-graph processors, full tutor interaction
+  UIs, engine-emitted image/eye/finger ops, multiple experiment windows per
+  model, and editor paren matching.
+
+Last full verification:
+
+- `cargo test`: 559 passed / 8 ignored.
+- `cargo test --features env --quiet --lib env::`: 18 passed.
+- `environment_rpc`: 10 passed.
+- `stepper_rpc`: 2 passed.
+- `cargo fmt --check`: clean.
+
+## Current status
 The native GUI is an early subset of the Tcl Environment. It already has:
 
 - in-process and RPC-client backends;
