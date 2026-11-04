@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use eframe::egui;
 
+use crate::engine::{ProductionGraph, ProductionGraphMode};
 use crate::json::Json;
 
 use super::backend::{result_text, BackendEvent, EnvBackend, TraceStream};
@@ -271,9 +272,15 @@ struct ToolWindow {
     grid_scale: f32,
     grid_detail_title: String,
     grid_detail: String,
+    graphic_scale: f32,
+    graphic_hide_text: bool,
+    graphic_hide_grid: bool,
     graph_hide_unused: bool,
-    graph_nodes: Vec<String>,
-    graph_edges: Vec<(String, String, u32)>,
+    graph_data: Option<ProductionGraph>,
+    graph_mode: ProductionGraphMode,
+    graph_page: u32,
+    graph_detail_title: String,
+    graph_detail: String,
 }
 
 impl ToolWindow {
@@ -330,9 +337,15 @@ impl ToolWindow {
             grid_scale: 1.0,
             grid_detail_title: String::new(),
             grid_detail: String::new(),
+            graphic_scale: 1.0,
+            graphic_hide_text: false,
+            graphic_hide_grid: false,
             graph_hide_unused: false,
-            graph_nodes: Vec::new(),
-            graph_edges: Vec::new(),
+            graph_data: None,
+            graph_mode: ProductionGraphMode::All,
+            graph_page: 0,
+            graph_detail_title: String::new(),
+            graph_detail: String::new(),
         }
     }
 }
@@ -767,9 +780,11 @@ impl App {
                 tool.refresh_pending = false;
             }
             ToolKind::ProductionGraph => {
-                let (n, e) = self.fetch_graph(model);
-                tool.graph_nodes = n;
-                tool.graph_edges = e;
+                tool.graph_data = self.fetch_graph(model, tool.graph_mode);
+                if let Some(data) = &tool.graph_data {
+                    let pages = data.pages.len().max(1) as u32;
+                    tool.graph_page = tool.graph_page.min(pages - 1);
+                }
             }
             ToolKind::EventQueue => {
                 tool.text = self
@@ -920,57 +935,74 @@ impl App {
         }
     }
 
-    /// Fetch the production transition graph from the backend.
-    fn fetch_graph(&mut self, model: Option<String>) -> (Vec<String>, Vec<(String, String, u32)>) {
-        let v = match self.eval_for(model, "production-graph", Vec::new()) {
-            Some(v) => v,
-            None => return (Vec::new(), Vec::new()),
-        };
-        let arr = match v.into_iter().next() {
-            Some(Json::Arr(a)) => a,
-            _ => return (Vec::new(), Vec::new()),
-        };
-        let nodes = match arr.first() {
-            Some(Json::Arr(a)) => a
-                .iter()
-                .filter_map(|x| x.as_str().map(str::to_string))
-                .collect(),
-            _ => Vec::new(),
-        };
-        let edges = match arr.get(1) {
-            Some(Json::Arr(a)) => a
-                .iter()
-                .filter_map(|x| match x {
-                    Json::Arr(f) => Some((
-                        f.first()?.as_str()?.to_string(),
-                        f.get(1)?.as_str()?.to_string(),
-                        f.get(2)?.as_f64()? as u32,
-                    )),
-                    _ => None,
-                })
-                .collect(),
-            _ => Vec::new(),
-        };
-        (nodes, edges)
+    fn fetch_graph(
+        &mut self,
+        model: Option<String>,
+        mode: ProductionGraphMode,
+    ) -> Option<ProductionGraph> {
+        let v = self.eval_for(model, mode.command(), Vec::new())?;
+        ProductionGraph::from_json(v.first()?)
     }
 
     fn graph_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
-        if tool.graph_nodes.is_empty() {
+        ui.horizontal_wrapped(|ui| {
+            let mut mode = tool.graph_mode;
+            for choice in [
+                ProductionGraphMode::All,
+                ProductionGraphMode::Frequencies,
+                ProductionGraphMode::Cycles,
+                ProductionGraphMode::UniqueCycles,
+                ProductionGraphMode::Runs,
+                ProductionGraphMode::UniqueRuns,
+                ProductionGraphMode::Utilities,
+            ] {
+                ui.selectable_value(&mut mode, choice, choice.label());
+            }
+            if mode != tool.graph_mode {
+                tool.graph_mode = mode;
+                tool.graph_page = 0;
+                tool.graph_data = self.fetch_graph(tool.model.clone(), mode);
+            }
+            ui.checkbox(&mut tool.graph_hide_unused, "hide unused productions");
+        });
+        ui.separator();
+        let Some(data) = &tool.graph_data else {
             ui.label("No production-history graph yet. Record \"production-history\", run, then Refresh.");
             return;
-        }
+        };
+        let pages = data.pages.len().max(1) as u32;
+        tool.graph_page = tool.graph_page.min(pages - 1);
         ui.horizontal(|ui| {
-            ui.checkbox(&mut tool.graph_hide_unused, "hide unused productions");
+            if ui
+                .add_enabled(tool.graph_page > 0, egui::Button::new("←"))
+                .clicked()
+            {
+                tool.graph_page -= 1;
+            }
+            ui.label(format!("{} / {}", tool.graph_page + 1, pages));
+            if ui
+                .add_enabled(tool.graph_page + 1 < pages, egui::Button::new("→"))
+                .clicked()
+            {
+                tool.graph_page += 1;
+            }
+            if let Some(page) = data.pages.get(tool.graph_page as usize) {
+                if let (Some(start), Some(end)) = (page.start_ms, page.end_ms) {
+                    ui.label(format!(
+                        "Time {:.3} - {:.3}",
+                        start as f64 / 1000.0,
+                        end as f64 / 1000.0
+                    ));
+                }
+            }
+        });
+        let layout = export::layout_graph_page(data, tool.graph_page, tool.graph_hide_unused);
+        ui.horizontal(|ui| {
             if ui.button("Save .eps").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("Encapsulated PostScript", &["eps"])
                     .save_file()
                 {
-                    let layout = export::layout_graph(
-                        &tool.graph_nodes,
-                        &tool.graph_edges,
-                        tool.graph_hide_unused,
-                    );
                     if let Err(e) = std::fs::write(&path, export::graph_eps(&layout)) {
                         self.error = Some(format!("save {}: {e}", path.display()));
                     }
@@ -981,68 +1013,166 @@ impl App {
                     .add_filter("DOT graph", &["dot"])
                     .save_file()
                 {
-                    let layout = export::layout_graph(
-                        &tool.graph_nodes,
-                        &tool.graph_edges,
-                        tool.graph_hide_unused,
-                    );
                     if let Err(e) = std::fs::write(&path, export::graph_dot(&layout)) {
                         self.error = Some(format!("save {}: {e}", path.display()));
                     }
                 }
             }
         });
-        ui.separator();
-        let layout =
-            export::layout_graph(&tool.graph_nodes, &tool.graph_edges, tool.graph_hide_unused);
+        if layout.nodes.is_empty() {
+            ui.label("No nodes on this graph page.");
+            return;
+        }
+        let selected = hex_color(&self.settings.p_selected);
+        let mismatched = hex_color(&self.settings.p_mismatched);
         let box_w = export::GRAPH_BOX_W;
         let box_h = export::GRAPH_BOX_H;
+        let group_colors = [
+            egui::Color32::BLACK,
+            egui::Color32::from_rgb(204, 26, 26),
+            egui::Color32::from_rgb(26, 77, 217),
+            egui::Color32::from_rgb(26, 153, 51),
+            egui::Color32::from_rgb(230, 115, 13),
+            egui::Color32::from_rgb(140, 26, 166),
+            egui::Color32::from_rgb(0, 140, 153),
+            egui::Color32::from_rgb(140, 102, 13),
+        ];
         egui::ScrollArea::both()
             .id_salt(("prod-graph", tool.id))
             .show(ui, |ui| {
-                let (rect, _resp) = ui.allocate_exact_size(
+                let (rect, _) = ui.allocate_exact_size(
                     egui::vec2(layout.width, layout.height),
                     egui::Sense::hover(),
                 );
                 let p = ui.painter_at(rect);
-                for (a, b, count) in &layout.edges {
-                    if let (Some(&(ax, ay)), Some(&(bx, by))) =
-                        (layout.positions.get(a), layout.positions.get(b))
-                    {
-                        let from = rect.min + egui::vec2(ax + box_w / 2.0, ay + box_h);
-                        let to = rect.min + egui::vec2(bx + box_w / 2.0, by);
-                        let w = 1.0 + (*count as f32).min(6.0);
-                        p.line_segment([from, to], egui::Stroke::new(w, egui::Color32::GRAY));
-                    }
-                }
-                for name in &layout.nodes {
-                    if let Some(&(x, y)) = layout.positions.get(name) {
+                for edge in &layout.edges {
+                    let (Some(&(ax, ay)), Some(&(bx, by))) = (
+                        layout.positions.get(&edge.from),
+                        layout.positions.get(&edge.to),
+                    ) else {
+                        continue;
+                    };
+                    let from = rect.min + egui::vec2(ax + box_w / 2.0, ay + box_h);
+                    let to = rect.min + egui::vec2(bx + box_w / 2.0, by);
+                    let color = if edge.dashed {
+                        egui::Color32::GRAY
+                    } else {
+                        group_colors[edge.group.unwrap_or(0) as usize % group_colors.len()]
+                    };
+                    let width = 1.0 + (edge.count.saturating_sub(1) as f32).min(5.0);
+                    if edge.dashed {
+                        for shape in egui::Shape::dashed_line(
+                            &[from, to],
+                            egui::Stroke::new(1.0, color),
+                            4.0,
+                            3.0,
+                        ) {
+                            p.add(shape);
+                        }
+                    } else if edge.from == edge.to {
                         let r = egui::Rect::from_min_size(
-                            rect.min + egui::vec2(x, y),
-                            egui::vec2(box_w, box_h),
-                        );
-                        p.rect_filled(
-                            r,
-                            egui::CornerRadius::ZERO,
-                            egui::Color32::from_rgb(230, 230, 230),
+                            rect.min + egui::vec2(ax + box_w - 8.0, ay - 24.0),
+                            egui::vec2(32.0, 24.0),
                         );
                         p.rect_stroke(
                             r,
-                            egui::CornerRadius::ZERO,
-                            egui::Stroke::new(1.0, egui::Color32::BLACK),
-                            egui::StrokeKind::Inside,
+                            6.0,
+                            egui::Stroke::new(width, color),
+                            egui::StrokeKind::Middle,
                         );
-                        p.text(
-                            r.center(),
-                            egui::Align2::CENTER_CENTER,
-                            name,
-                            egui::FontId::proportional(12.0),
-                            egui::Color32::BLACK,
+                    } else {
+                        p.line_segment([from, to], egui::Stroke::new(width, color));
+                    }
+                }
+                for node in &layout.nodes {
+                    let Some(&(x, y)) = layout.positions.get(&node.name) else {
+                        continue;
+                    };
+                    let r = egui::Rect::from_min_size(
+                        rect.min + egui::vec2(x, y),
+                        egui::vec2(box_w, box_h),
+                    );
+                    p.rect_filled(
+                        r,
+                        egui::CornerRadius::ZERO,
+                        egui::Color32::from_rgb(230, 230, 230),
+                    );
+                    let border = if node.start {
+                        selected
+                    } else if node.end {
+                        mismatched
+                    } else if !node.used {
+                        egui::Color32::GRAY
+                    } else {
+                        egui::Color32::BLACK
+                    };
+                    p.rect_stroke(
+                        r,
+                        egui::CornerRadius::ZERO,
+                        egui::Stroke::new(if node.start || node.end { 2.0 } else { 1.0 }, border),
+                        egui::StrokeKind::Inside,
+                    );
+                    p.text(
+                        r.center(),
+                        egui::Align2::CENTER_CENTER,
+                        &node.name,
+                        egui::FontId::proportional(12.0),
+                        if node.used {
+                            egui::Color32::BLACK
+                        } else {
+                            egui::Color32::GRAY
+                        },
+                    );
+                    if let (Some(value), Some(min), Some(max)) =
+                        (node.utility, layout.utility_min, layout.utility_max)
+                    {
+                        let frac = if max == min {
+                            1.0
+                        } else {
+                            ((value - min) / (max - min)).clamp(0.0, 1.0) as f32
+                        };
+                        let bar = egui::Rect::from_min_size(
+                            r.min + egui::vec2(4.0, box_h + 2.0),
+                            egui::vec2((box_w - 8.0) * frac, 4.0),
                         );
+                        p.rect_filled(bar, 0.0, egui::Color32::from_rgb(26, 77, 217));
+                    }
+                    let response = ui.interact(
+                        r,
+                        ui.make_persistent_id(("graph-node", tool.id, &node.name, layout.page)),
+                        egui::Sense::click(),
+                    );
+                    if !node.text.is_empty() {
+                        response.clone().on_hover_text(&node.text);
+                    }
+                    if response.clicked() {
+                        tool.graph_detail_title = node.name.clone();
+                        tool.graph_detail = node.text.clone();
                     }
                 }
             });
+        if !tool.graph_detail.is_empty() {
+            let mut open = true;
+            egui::Window::new(format!(
+                "{}##graph-detail{}",
+                tool.graph_detail_title, tool.id
+            ))
+            .open(&mut open)
+            .default_width(420.0)
+            .show(ui.ctx(), |ui| {
+                egui::ScrollArea::both()
+                    .id_salt(("graph-detail", tool.id))
+                    .show(ui, |ui| {
+                        ui.monospace(&tool.graph_detail);
+                    });
+            });
+            if !open {
+                tool.graph_detail.clear();
+                tool.graph_detail_title.clear();
+            }
+        }
     }
+
     /// Fetch the recorded `trace-history` via the incremental protocol.
     fn history_target(kind: HistoryKind, model: Option<String>) -> Option<String> {
         if kind == HistoryKind::Trace {
@@ -3432,96 +3562,182 @@ impl App {
         }
     }
     fn graphic_trace_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
-        let horizontal = tool.kind == ToolKind::HorizontalGraphicTrace;
-        let mut max_time = 0.0f64;
-        let mut labels: Vec<(String, f64, usize)> = Vec::new();
-        let mut rects: Vec<(f64, f64, f64, f64, usize, String, String)> = Vec::new();
-        for record in &tool.history_records {
-            let Json::Arr(f) = record else { continue };
-            match f.first().and_then(|x| x.as_str()) {
-                Some("size") => max_time = f.get(1).and_then(|x| x.as_f64()).unwrap_or(max_time),
-                Some("label") => labels.push((
-                    history_text(f.get(1)),
-                    f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0),
-                    f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0) as usize,
-                )),
-                Some("rectangle") => rects.push((
-                    f.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0),
-                    f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0),
-                    f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0),
-                    f.get(4).and_then(|x| x.as_f64()).unwrap_or(0.0),
-                    f.get(5).and_then(|x| x.as_f64()).unwrap_or(0.0) as usize,
-                    history_text(f.get(9)),
-                    history_text(f.get(10)),
-                )),
-                _ => {}
-            }
-        }
-        if rects.is_empty() {
+        let vertical = tool.kind == ToolKind::VerticalGraphicTrace;
+        let data = export::GraphicTraceData::parse(&tool.history_records, vertical);
+        if data.rects.is_empty() {
             ui.label("No graphic-trace data yet. Record buffer-trace, run, then Refresh.");
             return;
         }
-        let scale = if horizontal { 0.20 } else { 0.15 };
-        let width = if horizontal {
-            ((max_time * scale) as f32 + 200.0).max(900.0)
-        } else {
-            (labels.len() as f32 * 90.0 + 80.0).max(600.0)
-        };
-        let height = if horizontal {
-            (labels.len() as f32 * 34.0 + 40.0).max(200.0)
-        } else {
-            ((max_time * scale) as f32 + 80.0).max(900.0)
-        };
+        ui.horizontal_wrapped(|ui| {
+            if ui.small_button("−").clicked() {
+                tool.graphic_scale = (tool.graphic_scale * 0.5).max(0.05);
+            }
+            if ui.small_button("+").clicked() {
+                tool.graphic_scale = (tool.graphic_scale * 2.0).min(16.0);
+            }
+            ui.checkbox(&mut tool.graphic_hide_text, "Hide text");
+            ui.checkbox(&mut tool.graphic_hide_grid, "Hide grid");
+            if ui.button("Refresh").clicked() {
+                tool.refresh_pending = true;
+            }
+            if ui.button("Save .eps").clicked() {
+                let layout = export::layout_graphic_trace(&data, vertical, tool.graphic_scale);
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Encapsulated PostScript", &["eps"])
+                    .save_file()
+                {
+                    let text = export::graphic_trace_eps(
+                        &layout,
+                        tool.graphic_hide_text,
+                        tool.graphic_hide_grid,
+                    );
+                    if let Err(e) = std::fs::write(&path, text) {
+                        self.error = Some(format!("save {}: {e}", path.display()));
+                    }
+                }
+            }
+            if ui.button("Save .ps").clicked() {
+                let layout = export::layout_graphic_trace(&data, vertical, tool.graphic_scale);
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("PostScript", &["ps"])
+                    .save_file()
+                {
+                    let text = export::graphic_trace_ps(
+                        &layout,
+                        tool.graphic_hide_text,
+                        tool.graphic_hide_grid,
+                    );
+                    if let Err(e) = std::fs::write(&path, text) {
+                        self.error = Some(format!("save {}: {e}", path.display()));
+                    }
+                }
+            }
+        });
+        let layout = export::layout_graphic_trace(&data, vertical, tool.graphic_scale);
+        let mut hovered = None;
         egui::ScrollArea::both()
             .id_salt(("graphic-trace", tool.id))
             .show(ui, |ui| {
-                let (rect, _) =
-                    ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+                let (rect, _) = ui.allocate_exact_size(
+                    egui::vec2(layout.width, layout.height),
+                    egui::Sense::hover(),
+                );
                 let p = ui.painter_at(rect);
-                for (name, pos, color) in &labels {
-                    let at = if horizontal {
-                        rect.min + egui::vec2(4.0, *pos as f32)
-                    } else {
-                        rect.min + egui::vec2(*pos as f32 + 60.0, 8.0)
-                    };
+                if !tool.graphic_hide_grid {
+                    let mut t = 0.0f64;
+                    while t <= layout.max_time {
+                        let pos = (t * layout.time_scale as f64) as f32;
+                        if vertical {
+                            let y = rect.min.y + pos + 40.0;
+                            p.line_segment(
+                                [egui::pos2(rect.min.x, y), egui::pos2(rect.max.x, y)],
+                                egui::Stroke::new(0.5, egui::Color32::GRAY),
+                            );
+                            p.text(
+                                egui::pos2(rect.min.x + 6.0, y - 2.0),
+                                egui::Align2::LEFT_BOTTOM,
+                                format!("{:.3}", t / 1000.0),
+                                egui::FontId::monospace(9.0),
+                                egui::Color32::DARK_GRAY,
+                            );
+                        } else {
+                            let x = rect.min.x + pos + 150.0;
+                            p.line_segment(
+                                [egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)],
+                                egui::Stroke::new(0.5, egui::Color32::GRAY),
+                            );
+                            p.text(
+                                egui::pos2(x, rect.max.y - 2.0),
+                                egui::Align2::LEFT_BOTTOM,
+                                format!("{:.3}", t / 1000.0),
+                                egui::FontId::monospace(9.0),
+                                egui::Color32::DARK_GRAY,
+                            );
+                        }
+                        t += 50.0;
+                    }
+                }
+                for label in &layout.labels {
+                    let (r, g, b) = export::graphic_trace_color(label.index);
                     p.text(
-                        at,
+                        rect.min + egui::vec2(label.x, label.y),
                         egui::Align2::LEFT_TOP,
-                        name,
+                        &label.name,
                         egui::FontId::monospace(11.0),
-                        palette(*color),
+                        egui::Color32::from_rgb(r, g, b),
                     );
                 }
-                for (x1, y1, x2, y2, color, text, _buffer) in &rects {
-                    let r = if horizontal {
-                        egui::Rect::from_min_max(
-                            rect.min + egui::vec2((*x1 * scale) as f32 + 150.0, *y1 as f32),
-                            rect.min + egui::vec2((*x2 * scale) as f32 + 150.0, *y2 as f32),
-                        )
-                    } else {
-                        egui::Rect::from_min_max(
-                            rect.min + egui::vec2(*x1 as f32 + 60.0, (*y1 * scale) as f32 + 40.0),
-                            rect.min + egui::vec2(*x2 as f32 + 60.0, (*y2 * scale) as f32 + 40.0),
-                        )
-                    };
-                    p.rect_filled(r, 0.0, palette(*color).gamma_multiply(0.55));
+                for (i, item) in layout.boxes.iter().enumerate() {
+                    let (r, g, b) = export::graphic_trace_color(item.index);
+                    let color = egui::Color32::from_rgb(r, g, b);
+                    let box_rect = egui::Rect::from_min_max(
+                        rect.min + egui::vec2(item.x1, item.y1),
+                        rect.min + egui::vec2(item.x2, item.y2),
+                    );
+                    p.rect_filled(box_rect, 0.0, color.gamma_multiply(0.55));
                     p.rect_stroke(
-                        r,
+                        box_rect,
                         0.0,
-                        egui::Stroke::new(1.0, palette(*color)),
+                        egui::Stroke::new(1.0, color),
                         egui::StrokeKind::Inside,
                     );
-                    if r.width() > 40.0 {
+                    if !tool.graphic_hide_text && !item.text.is_empty() && box_rect.width() > 20.0 {
                         p.text(
-                            r.min + egui::vec2(2.0, 2.0),
+                            box_rect.min + egui::vec2(2.0, 2.0),
                             egui::Align2::LEFT_TOP,
-                            text,
+                            &item.text,
                             egui::FontId::monospace(10.0),
                             egui::Color32::BLACK,
                         );
                     }
+                    let response = ui.interact(
+                        box_rect,
+                        ui.make_persistent_id(("gt-box", tool.id, i)),
+                        egui::Sense::hover(),
+                    );
+                    if response.hovered() {
+                        hovered = Some(i);
+                    }
                 }
             });
+        if let Some(i) = hovered {
+            if let Some(item) = layout.boxes.get(i) {
+                ui.separator();
+                ui.horizontal_wrapped(|ui| {
+                    ui.strong("Request:");
+                    ui.monospace(if item.request.is_empty() {
+                        "-"
+                    } else {
+                        &item.request
+                    });
+                    ui.separator();
+                    ui.strong("Chunk:");
+                    ui.monospace(if item.chunk.is_empty() {
+                        "-"
+                    } else {
+                        &item.chunk
+                    });
+                    ui.separator();
+                    ui.strong("Notes:");
+                    ui.monospace(if item.notes.is_empty() {
+                        "-"
+                    } else {
+                        &item.notes
+                    });
+                });
+                ui.horizontal(|ui| {
+                    ui.strong("Time:");
+                    ui.monospace(format!(
+                        "{:.3} - {:.3}",
+                        item.time_start / 1000.0,
+                        item.time_end / 1000.0
+                    ));
+                    ui.separator();
+                    ui.strong("Duration:");
+                    ui.monospace(format!("{:.3}", (item.time_end - item.time_start) / 1000.0));
+                });
+            }
+        }
     }
 
     fn bold_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
