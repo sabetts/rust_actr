@@ -52,6 +52,7 @@ mod motor;
 pub(crate) mod multi;
 pub mod params;
 mod perception;
+mod production_graph;
 mod productions;
 mod rhs;
 mod save_model;
@@ -62,6 +63,10 @@ mod tests;
 
 use motor::even_references;
 pub use multi::MultiEngine;
+pub use production_graph::{
+    ProductionGraph, ProductionGraphEdge, ProductionGraphMode, ProductionGraphNode,
+    ProductionGraphPage,
+};
 use rhs::{chunk_inst, implicit_clears, implicit_queries, new_chunk};
 
 // ---------------------------------------------------------------- event hooks

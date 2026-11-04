@@ -13,7 +13,8 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::engine::{
-    DeviceSetup, Engine, EngineError, EventHook, EventView, PreResult, StepperSnapshot, TraceKind,
+    DeviceSetup, Engine, EngineError, EventHook, EventView, PreResult, ProductionGraphMode,
+    StepperSnapshot, TraceKind,
 };
 use crate::json::Json;
 use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
@@ -157,6 +158,13 @@ pub const BUILTINS: &[&str] = &[
     "printed-buffer-chunk",
     "printed-buffer-status",
     "production-graph",
+    "production-graph-all",
+    "production-graph-freq",
+    "production-graph-cycles",
+    "production-graph-u-cycles",
+    "production-graph-runs",
+    "production-graph-u-runs",
+    "production-graph-utility",
     "sorted-module-names",
     "modules-with-parameters",
     "modules-parameters",
@@ -2515,6 +2523,29 @@ impl Session {
                     .map(|e| e.printed_audicon().join("\n"))
                     .unwrap_or_default();
                 Ok(vec![Json::Str(out)])
+            }
+            "production-graph-all"
+            | "production-graph-freq"
+            | "production-graph-cycles"
+            | "production-graph-u-cycles"
+            | "production-graph-runs"
+            | "production-graph-u-runs"
+            | "production-graph-utility" => {
+                let mode = match name {
+                    "production-graph-freq" => ProductionGraphMode::Frequencies,
+                    "production-graph-cycles" => ProductionGraphMode::Cycles,
+                    "production-graph-u-cycles" => ProductionGraphMode::UniqueCycles,
+                    "production-graph-runs" => ProductionGraphMode::Runs,
+                    "production-graph-u-runs" => ProductionGraphMode::UniqueRuns,
+                    "production-graph-utility" => ProductionGraphMode::Utilities,
+                    _ => ProductionGraphMode::All,
+                };
+                let data = self
+                    .engine
+                    .as_ref()
+                    .map(|e| e.production_graph_data(mode).to_json())
+                    .unwrap_or(Json::Null);
+                Ok(vec![data])
             }
             // The production transition graph (nodes + counted edges) for the
             // Environment's Production Graph view.
@@ -6862,6 +6893,21 @@ mod tests {
         };
         assert!(!nodes.is_empty());
         assert!(matches!(parts.get(1), Some(Json::Arr(_))));
+        for command in [
+            "production-graph-all",
+            "production-graph-freq",
+            "production-graph-cycles",
+            "production-graph-u-cycles",
+            "production-graph-runs",
+            "production-graph-u-runs",
+            "production-graph-utility",
+        ] {
+            let v = s.evaluate(command, None, &[], &mut r).unwrap();
+            let data = &v[0];
+            assert!(data.get("nodes").is_some(), "{command}");
+            assert!(data.get("edges").is_some(), "{command}");
+            assert!(data.get("pages").is_some(), "{command}");
+        }
     }
 
     /// The Environment viewer commands return the model's productions,
