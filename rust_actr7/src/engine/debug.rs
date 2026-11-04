@@ -1164,6 +1164,24 @@ impl Engine {
         self.bold_buffers = buffers.iter().map(|b| b.to_uppercase()).collect();
     }
 
+    /// Add buffers to the BOLD trace set. The Tcl Buffer Picker records one
+    /// buffer per `record-history` call, so repeated calls accumulate rather
+    /// than replacing the set.
+    pub fn add_bold_buffers(&mut self, buffers: &[String]) {
+        for buffer in buffers {
+            let name = buffer.to_uppercase();
+            if !self.bold_buffers.iter().any(|b| b == &name) {
+                self.bold_buffers.push(name);
+            }
+        }
+    }
+
+    /// Remove buffers from the BOLD trace set.
+    pub fn remove_bold_buffers(&mut self, buffers: &[String]) {
+        self.bold_buffers
+            .retain(|b| !buffers.iter().any(|n| n.eq_ignore_ascii_case(b)));
+    }
+
     /// BOLD demand recorder: at each event note each traced buffer's busy
     /// state and open/close a demand period on a transition (the buffer-trace
     /// recorder snapshots per event; `parse-trace-lists-for-bold`,
@@ -4122,7 +4140,14 @@ impl Engine {
     /// enables `:sact` as Lisp's `enable-retrieval-history` does, so the
     /// recorded chunks carry their activation narration.
     pub fn record_history_names(&mut self, names: &[String]) {
-        self.set_bold_buffers(names);
+        let buffers: Vec<String> = names
+            .iter()
+            .filter(|n| self.is_buffer(n))
+            .cloned()
+            .collect();
+        if !buffers.is_empty() {
+            self.add_bold_buffers(&buffers);
+        }
         for n in names {
             if n.eq_ignore_ascii_case("retrieval-history") {
                 self.set_retrieval_history(true);
@@ -4164,6 +4189,7 @@ impl Engine {
                 self.set_production_history(false);
             } else if self.is_buffer(n) {
                 self.trace_buffer(n, false);
+                self.remove_bold_buffers(std::slice::from_ref(n));
             }
         }
     }

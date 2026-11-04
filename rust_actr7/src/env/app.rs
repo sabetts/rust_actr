@@ -31,6 +31,13 @@ enum ToolKind {
     VisiconHistory,
     AudiconHistory,
     ProductionGraph,
+    ProductionGrid,
+    HorizontalGraphicTrace,
+    VerticalGraphicTrace,
+    BoldGraph,
+    Bold2D,
+    Bold3D,
+    BufferPicker,
     EventQueue,
     Connections,
     About,
@@ -55,6 +62,13 @@ impl ToolKind {
             ToolKind::VisiconHistory => "Visicon History",
             ToolKind::AudiconHistory => "Audicon History",
             ToolKind::ProductionGraph => "Production Graph",
+            ToolKind::ProductionGrid => "Production Grid",
+            ToolKind::HorizontalGraphicTrace => "Graphic Trace (Horizontal)",
+            ToolKind::VerticalGraphicTrace => "Graphic Trace (Vertical)",
+            ToolKind::BoldGraph => "BOLD Graph",
+            ToolKind::Bold2D => "BOLD 2D Brain",
+            ToolKind::Bold3D => "BOLD 3D Brain",
+            ToolKind::BufferPicker => "Select Buffers",
             ToolKind::EventQueue => "Event Queue",
             ToolKind::Connections => "Connections & Commands",
             ToolKind::About => "About ACT-R",
@@ -79,6 +93,13 @@ impl ToolKind {
                 | ToolKind::VisiconHistory
                 | ToolKind::AudiconHistory
                 | ToolKind::ProductionGraph
+                | ToolKind::ProductionGrid
+                | ToolKind::HorizontalGraphicTrace
+                | ToolKind::VerticalGraphicTrace
+                | ToolKind::BoldGraph
+                | ToolKind::Bold2D
+                | ToolKind::Bold3D
+                | ToolKind::BufferPicker
         )
     }
 
@@ -90,6 +111,12 @@ impl ToolKind {
             ToolKind::BufferHistory => Some(HistoryKind::Buffer),
             ToolKind::VisiconHistory => Some(HistoryKind::Visicon),
             ToolKind::AudiconHistory => Some(HistoryKind::Audicon),
+            ToolKind::ProductionGrid => Some(HistoryKind::ProductionGrid),
+            ToolKind::HorizontalGraphicTrace => Some(HistoryKind::GraphicHorizontal),
+            ToolKind::VerticalGraphicTrace => Some(HistoryKind::GraphicVertical),
+            ToolKind::BoldGraph => Some(HistoryKind::BoldGraph),
+            ToolKind::Bold2D => Some(HistoryKind::Bold2D),
+            ToolKind::Bold3D => Some(HistoryKind::Bold3D),
             _ => None,
         }
     }
@@ -104,6 +131,12 @@ enum HistoryKind {
     Buffer,
     Visicon,
     Audicon,
+    ProductionGrid,
+    GraphicHorizontal,
+    GraphicVertical,
+    BoldGraph,
+    Bold2D,
+    Bold3D,
 }
 
 impl HistoryKind {
@@ -115,6 +148,12 @@ impl HistoryKind {
             HistoryKind::Buffer => "buffer-history",
             HistoryKind::Visicon => "visicon-history",
             HistoryKind::Audicon => "audicon-history",
+            HistoryKind::ProductionGrid => "production-history",
+            HistoryKind::GraphicHorizontal
+            | HistoryKind::GraphicVertical
+            | HistoryKind::BoldGraph
+            | HistoryKind::Bold2D
+            | HistoryKind::Bold3D => "buffer-trace",
         }
     }
 
@@ -126,6 +165,11 @@ impl HistoryKind {
             HistoryKind::Buffer => "buffer-history",
             HistoryKind::Visicon => "visicon-history",
             HistoryKind::Audicon => "audicon-history",
+            HistoryKind::ProductionGrid => "production-grid",
+            HistoryKind::GraphicHorizontal => "horizontal-graphic-trace",
+            HistoryKind::GraphicVertical => "vertical-graphic-trace",
+            HistoryKind::BoldGraph => "bold-prediction-with-time",
+            HistoryKind::Bold2D | HistoryKind::Bold3D => "bold-prediction-with-time-scaled",
         }
     }
 
@@ -137,6 +181,9 @@ impl HistoryKind {
             HistoryKind::Buffer => "Buffer",
             HistoryKind::Visicon => "Visicon",
             HistoryKind::Audicon => "Audicon",
+            HistoryKind::ProductionGrid => "Production",
+            HistoryKind::GraphicHorizontal | HistoryKind::GraphicVertical => "Graphic Trace",
+            HistoryKind::BoldGraph | HistoryKind::Bold2D | HistoryKind::Bold3D => "BOLD",
         }
     }
 }
@@ -197,6 +244,11 @@ struct ToolWindow {
     history_end: String,
     history_detail: String,
     history_recording: bool,
+    history_records: Vec<Json>,
+    picker_selected: Vec<bool>,
+    bold_scan: usize,
+    bold_scale: usize,
+    grid_hide_empty: bool,
     graph_nodes: Vec<String>,
     graph_edges: Vec<(String, String, u32)>,
 }
@@ -243,10 +295,44 @@ impl ToolWindow {
             history_end: String::new(),
             history_detail: "low".to_string(),
             history_recording: false,
+            history_records: Vec::new(),
+            picker_selected: Vec::new(),
+            bold_scan: 0,
+            bold_scale: 0,
+            grid_hide_empty: false,
             graph_nodes: Vec::new(),
             graph_edges: Vec::new(),
         }
     }
+}
+
+fn hex_color(text: &str) -> egui::Color32 {
+    let text = text.trim().trim_start_matches('#');
+    if text.len() != 6 {
+        return egui::Color32::GRAY;
+    }
+    let parse = |i: usize| u8::from_str_radix(&text[i..i + 2], 16).unwrap_or(128);
+    egui::Color32::from_rgb(parse(0), parse(2), parse(4))
+}
+
+fn palette(i: usize) -> egui::Color32 {
+    const COLORS: [egui::Color32; 14] = [
+        egui::Color32::from_rgb(0xff, 0x00, 0x00),
+        egui::Color32::from_rgb(0x80, 0x80, 0xff),
+        egui::Color32::from_rgb(0x00, 0x80, 0x00),
+        egui::Color32::from_rgb(0xff, 0x80, 0x00),
+        egui::Color32::from_rgb(0x7f, 0x7f, 0x7f),
+        egui::Color32::from_rgb(0xff, 0x00, 0xff),
+        egui::Color32::from_rgb(0xff, 0xff, 0x00),
+        egui::Color32::from_rgb(0xc0, 0x80, 0x00),
+        egui::Color32::from_rgb(0xf0, 0xf0, 0xf0),
+        egui::Color32::from_rgb(0xc0, 0x00, 0xc0),
+        egui::Color32::from_rgb(0x00, 0xc0, 0x50),
+        egui::Color32::from_rgb(0xf0, 0xc0, 0xff),
+        egui::Color32::from_rgb(0xc0, 0x58, 0x50),
+        egui::Color32::from_rgb(0x50, 0xff, 0x25),
+    ];
+    COLORS[i % COLORS.len()]
 }
 
 /// A visible experiment window the engine is displaying, with its items.
@@ -519,7 +605,43 @@ impl App {
             | ToolKind::BlendingHistory
             | ToolKind::BufferHistory
             | ToolKind::VisiconHistory
-            | ToolKind::AudiconHistory => self.fetch_history(tool),
+            | ToolKind::AudiconHistory
+            | ToolKind::ProductionGrid
+            | ToolKind::HorizontalGraphicTrace
+            | ToolKind::VerticalGraphicTrace
+            | ToolKind::BoldGraph
+            | ToolKind::Bold2D
+            | ToolKind::Bold3D => self.fetch_history(tool),
+            ToolKind::BufferPicker => {
+                tool.buffers = self.list_for(model.clone(), "model-buffers", Vec::new());
+                if self.settings.sort_lists {
+                    tool.buffers.sort();
+                }
+                let used = self.list_for(model.clone(), "used-production-buffers", Vec::new());
+                let first = tool.picker_selected.is_empty();
+                if first {
+                    tool.picker_selected = tool
+                        .buffers
+                        .iter()
+                        .map(|b| used.iter().any(|u| u.eq_ignore_ascii_case(b)))
+                        .collect();
+                } else {
+                    tool.picker_selected.resize(tool.buffers.len(), false);
+                }
+                if first {
+                    let selected: Vec<String> = tool
+                        .buffers
+                        .iter()
+                        .zip(tool.picker_selected.iter())
+                        .filter(|(_, on)| **on)
+                        .map(|(b, _)| b.clone())
+                        .collect();
+                    for buffer in selected {
+                        self.eval_for(model.clone(), "record-history", vec![Json::Str(buffer)]);
+                    }
+                }
+                tool.refresh_pending = false;
+            }
             ToolKind::ProductionGraph => {
                 let (n, e) = self.fetch_graph(model);
                 tool.graph_nodes = n;
@@ -639,6 +761,12 @@ impl App {
             | ToolKind::BufferHistory
             | ToolKind::VisiconHistory
             | ToolKind::AudiconHistory => self.history_panel(tool, ui),
+            ToolKind::ProductionGrid => self.production_grid_panel(tool, ui),
+            ToolKind::HorizontalGraphicTrace | ToolKind::VerticalGraphicTrace => {
+                self.graphic_trace_panel(tool, ui)
+            }
+            ToolKind::BoldGraph | ToolKind::Bold2D | ToolKind::Bold3D => self.bold_panel(tool, ui),
+            ToolKind::BufferPicker => self.buffer_picker_panel(tool, ui),
             ToolKind::ProductionGraph => self.graph_panel(tool, ui),
             ToolKind::Stepper => {
                 ui.label("Stepper tools arrive in M5.");
@@ -878,6 +1006,7 @@ impl App {
             );
         }
         tool.history_text = render_history(kind, &records);
+        tool.history_records = records;
     }
 
     fn save_history(&mut self, tool: &ToolWindow, path: &std::path::Path) {
@@ -933,6 +1062,7 @@ impl App {
             tool.history_comment = c;
         }
         tool.history_text = render_history(kind, &records);
+        tool.history_records = records;
     }
 
     fn set_history_recording(&mut self, tool: &mut ToolWindow, on: bool) {
@@ -1503,8 +1633,29 @@ impl App {
             if ui.button("Audicon History").clicked() {
                 self.open_tool(ToolKind::AudiconHistory);
             }
+            if ui.button("Production Grid").clicked() {
+                self.open_tool(ToolKind::ProductionGrid);
+            }
             if ui.button("Production Graph").clicked() {
                 self.open_tool(ToolKind::ProductionGraph);
+            }
+            if ui.button("Graphic Trace →").clicked() {
+                self.open_tool(ToolKind::HorizontalGraphicTrace);
+            }
+            if ui.button("Graphic Trace ↓").clicked() {
+                self.open_tool(ToolKind::VerticalGraphicTrace);
+            }
+            if ui.button("BOLD Graph").clicked() {
+                self.open_tool(ToolKind::BoldGraph);
+            }
+            if ui.button("BOLD 2D").clicked() {
+                self.open_tool(ToolKind::Bold2D);
+            }
+            if ui.button("BOLD 3D").clicked() {
+                self.open_tool(ToolKind::Bold3D);
+            }
+            if ui.button("Select Buffers").clicked() {
+                self.open_tool(ToolKind::BufferPicker);
             }
         });
         ui.separator();
@@ -1964,8 +2115,395 @@ impl App {
             };
         }
     }
-}
+    fn buffer_picker_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let buffers = tool.buffers.clone();
+        let mut change = None;
+        for (i, name) in buffers.iter().enumerate() {
+            let mut on = tool.picker_selected.get(i).copied().unwrap_or(false);
+            if ui.checkbox(&mut on, name).changed() {
+                if i < tool.picker_selected.len() {
+                    tool.picker_selected[i] = on;
+                }
+                change = Some((name.clone(), on));
+            }
+        }
+        if let Some((name, on)) = change {
+            let cmd = if on {
+                "record-history"
+            } else {
+                "stop-recording-history"
+            };
+            self.eval_for(tool.model.clone(), cmd, vec![Json::Str(name)]);
+        }
+    }
 
+    fn production_grid_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let mut names: Vec<String> = Vec::new();
+        let mut decisions: Vec<Json> = Vec::new();
+        for record in &tool.history_records {
+            let Json::Arr(fields) = record else {
+                continue;
+            };
+            match fields.get(1).and_then(|x| x.as_str()) {
+                Some("info") => {
+                    for prod in history_items(fields.get(3)) {
+                        if let Json::Arr(p) = prod {
+                            if let Some(n) = p.first().and_then(|x| x.as_str()) {
+                                names.push(n.to_string());
+                            }
+                        }
+                    }
+                }
+                Some("conflict-resolution") => {
+                    if let Some(row) = fields.get(3) {
+                        decisions.push(row.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+        ui.horizontal(|ui| {
+            ui.label(format!("{} decisions", decisions.len()));
+            ui.checkbox(&mut tool.grid_hide_empty, "hide unselected columns");
+        });
+        ui.separator();
+        if names.is_empty() || decisions.is_empty() {
+            ui.label("No production-history grid data yet.");
+            return;
+        }
+        let selected = hex_color(&self.settings.p_selected);
+        let matched = hex_color(&self.settings.p_matched);
+        let mismatched = hex_color(&self.settings.p_mismatched);
+        egui::ScrollArea::both()
+            .id_salt(("production-grid", tool.id))
+            .show(ui, |ui| {
+                egui::Grid::new(("production-grid-cells", tool.id))
+                    .striped(true)
+                    .show(ui, |ui| {
+                        ui.label("");
+                        for decision in &decisions {
+                            let Json::Arr(f) = decision else { continue };
+                            let time = history_ms(f.first());
+                            let chosen = matches!(f.get(2), Some(Json::Bool(true)));
+                            if tool.grid_hide_empty && !chosen {
+                                continue;
+                            }
+                            ui.label(time);
+                        }
+                        ui.end_row();
+                        for (r, name) in names.iter().enumerate() {
+                            ui.label(name);
+                            for decision in &decisions {
+                                let Json::Arr(f) = decision else { continue };
+                                let chosen = matches!(f.get(2), Some(Json::Bool(true)));
+                                if tool.grid_hide_empty && !chosen {
+                                    continue;
+                                }
+                                let cell = history_items(f.get(3)).get(r);
+                                let (color, label) = match cell {
+                                    Some(Json::Arr(c)) => {
+                                        match c.first().and_then(|x| x.as_f64()) {
+                                            Some(0.0) => (selected, history_text(c.get(1))),
+                                            Some(1.0) => (matched, history_text(c.get(1))),
+                                            Some(2.0) => (mismatched, history_text(c.get(1))),
+                                            _ => (egui::Color32::TRANSPARENT, String::new()),
+                                        }
+                                    }
+                                    _ => (egui::Color32::TRANSPARENT, String::new()),
+                                };
+                                let (rect, resp) = ui.allocate_exact_size(
+                                    egui::vec2(34.0, 18.0),
+                                    egui::Sense::hover(),
+                                );
+                                let label_for_hover = label.clone();
+                                if color != egui::Color32::TRANSPARENT {
+                                    ui.painter().rect_filled(rect, 0.0, color);
+                                    ui.painter().text(
+                                        rect.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        label,
+                                        egui::FontId::proportional(10.0),
+                                        egui::Color32::BLACK,
+                                    );
+                                }
+                                resp.on_hover_text(format!(
+                                    "{name} @ {}\n{label_for_hover}",
+                                    history_ms(f.first())
+                                ));
+                            }
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
+
+    fn graphic_trace_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let horizontal = tool.kind == ToolKind::HorizontalGraphicTrace;
+        let mut max_time = 0.0f64;
+        let mut labels: Vec<(String, f64, usize)> = Vec::new();
+        let mut rects: Vec<(f64, f64, f64, f64, usize, String, String)> = Vec::new();
+        for record in &tool.history_records {
+            let Json::Arr(f) = record else { continue };
+            match f.first().and_then(|x| x.as_str()) {
+                Some("size") => max_time = f.get(1).and_then(|x| x.as_f64()).unwrap_or(max_time),
+                Some("label") => labels.push((
+                    history_text(f.get(1)),
+                    f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0),
+                    f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0) as usize,
+                )),
+                Some("rectangle") => rects.push((
+                    f.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0),
+                    f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0),
+                    f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0),
+                    f.get(4).and_then(|x| x.as_f64()).unwrap_or(0.0),
+                    f.get(5).and_then(|x| x.as_f64()).unwrap_or(0.0) as usize,
+                    history_text(f.get(9)),
+                    history_text(f.get(10)),
+                )),
+                _ => {}
+            }
+        }
+        if rects.is_empty() {
+            ui.label("No graphic-trace data yet. Record buffer-trace, run, then Refresh.");
+            return;
+        }
+        let scale = if horizontal { 0.20 } else { 0.15 };
+        let width = if horizontal {
+            ((max_time * scale) as f32 + 200.0).max(900.0)
+        } else {
+            (labels.len() as f32 * 90.0 + 80.0).max(600.0)
+        };
+        let height = if horizontal {
+            (labels.len() as f32 * 34.0 + 40.0).max(200.0)
+        } else {
+            ((max_time * scale) as f32 + 80.0).max(900.0)
+        };
+        egui::ScrollArea::both()
+            .id_salt(("graphic-trace", tool.id))
+            .show(ui, |ui| {
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+                let p = ui.painter_at(rect);
+                for (name, pos, color) in &labels {
+                    let at = if horizontal {
+                        rect.min + egui::vec2(4.0, *pos as f32)
+                    } else {
+                        rect.min + egui::vec2(*pos as f32 + 60.0, 8.0)
+                    };
+                    p.text(
+                        at,
+                        egui::Align2::LEFT_TOP,
+                        name,
+                        egui::FontId::monospace(11.0),
+                        palette(*color),
+                    );
+                }
+                for (x1, y1, x2, y2, color, text, _buffer) in &rects {
+                    let r = if horizontal {
+                        egui::Rect::from_min_max(
+                            rect.min + egui::vec2((*x1 * scale) as f32 + 150.0, *y1 as f32),
+                            rect.min + egui::vec2((*x2 * scale) as f32 + 150.0, *y2 as f32),
+                        )
+                    } else {
+                        egui::Rect::from_min_max(
+                            rect.min + egui::vec2(*x1 as f32 + 60.0, (*y1 * scale) as f32 + 40.0),
+                            rect.min + egui::vec2(*x2 as f32 + 60.0, (*y2 * scale) as f32 + 40.0),
+                        )
+                    };
+                    p.rect_filled(r, 0.0, palette(*color).gamma_multiply(0.55));
+                    p.rect_stroke(
+                        r,
+                        0.0,
+                        egui::Stroke::new(1.0, palette(*color)),
+                        egui::StrokeKind::Inside,
+                    );
+                    if r.width() > 40.0 {
+                        p.text(
+                            r.min + egui::vec2(2.0, 2.0),
+                            egui::Align2::LEFT_TOP,
+                            text,
+                            egui::FontId::monospace(10.0),
+                            egui::Color32::BLACK,
+                        );
+                    }
+                }
+            });
+    }
+
+    fn bold_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let mut times: Vec<f64> = Vec::new();
+        let mut rows: Vec<(String, Vec<f64>)> = Vec::new();
+        for record in &tool.history_records {
+            let Json::Arr(f) = record else { continue };
+            let name = f.first().and_then(|x| x.as_str()).unwrap_or("");
+            let values: Vec<f64> = f.iter().skip(1).filter_map(|x| x.as_f64()).collect();
+            if name.eq_ignore_ascii_case("time") {
+                times = values;
+            } else {
+                rows.push((name.to_string(), values));
+            }
+        }
+        if times.is_empty() || rows.is_empty() {
+            ui.label("No BOLD data yet. Record BOLD buffers or buffer-trace, run, then Refresh.");
+            return;
+        }
+        if tool.kind == ToolKind::BoldGraph {
+            ui.horizontal(|ui| {
+                ui.label("Scale:");
+                egui::ComboBox::from_id_salt(("bold-scale", tool.id))
+                    .selected_text(["Raw", "Each", "All"][tool.bold_scale.min(2)])
+                    .show_ui(ui, |ui| {
+                        for (i, label) in ["Raw", "Each", "All"].iter().enumerate() {
+                            if ui.selectable_label(tool.bold_scale == i, *label).clicked() {
+                                tool.bold_scale = i;
+                            }
+                        }
+                    });
+            });
+            self.draw_bold_graph(ui, tool, &times, &rows);
+        } else {
+            let max_scan = times.len().saturating_sub(1);
+            if tool.bold_scan > max_scan {
+                tool.bold_scan = max_scan;
+            }
+            ui.add(egui::Slider::new(&mut tool.bold_scan, 0..=max_scan).text("Scan #"));
+            ui.separator();
+            self.draw_bold_brain(ui, tool, &times, &rows);
+        }
+    }
+
+    fn draw_bold_graph(
+        &self,
+        ui: &mut egui::Ui,
+        tool: &ToolWindow,
+        times: &[f64],
+        rows: &[(String, Vec<f64>)],
+    ) {
+        let global_max = rows
+            .iter()
+            .flat_map(|(_, v)| v.iter())
+            .fold(0.0f64, |m, v| m.max(v.abs()))
+            .max(1e-6);
+        let width = (times.len() as f32 * 60.0).max(600.0);
+        let height = 280.0;
+        egui::ScrollArea::horizontal()
+            .id_salt(("bold-graph", tool.id))
+            .show(ui, |ui| {
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+                let p = ui.painter_at(rect);
+                let base = rect.center().y;
+                p.line_segment(
+                    [
+                        rect.min + egui::vec2(30.0, base - rect.min.y),
+                        rect.min + egui::vec2(rect.width() - 10.0, base - rect.min.y),
+                    ],
+                    egui::Stroke::new(1.0, egui::Color32::GRAY),
+                );
+                let x_at = |i: usize| {
+                    rect.min.x + 40.0 + i as f32 * (rect.width() - 60.0) / times.len().max(1) as f32
+                };
+                let y_at = |v: f64, scale: f64| (base - (v / scale) as f32 * (height * 0.4)) as f32;
+                for (i, t) in times.iter().enumerate() {
+                    if i % 5 == 0 {
+                        p.text(
+                            egui::pos2(x_at(i), rect.max.y - 16.0),
+                            egui::Align2::CENTER_TOP,
+                            format!("{t:.1}"),
+                            egui::FontId::monospace(9.0),
+                            egui::Color32::BLACK,
+                        );
+                    }
+                }
+                for (r, (name, values)) in rows.iter().enumerate() {
+                    let row_max = values.iter().fold(0.0f64, |m, v| m.max(v.abs())).max(1e-6);
+                    let scale = match tool.bold_scale {
+                        1 => row_max,
+                        2 => global_max,
+                        _ => 1.0,
+                    };
+                    let color = palette(r);
+                    let mut last = None;
+                    for (i, value) in values.iter().enumerate().take(times.len()) {
+                        let point = egui::pos2(x_at(i), y_at(*value, scale));
+                        if let Some(prev) = last {
+                            p.line_segment([prev, point], egui::Stroke::new(1.5, color));
+                        }
+                        last = Some(point);
+                    }
+                    p.text(
+                        egui::pos2(rect.min.x + 4.0, rect.min.y + 8.0 + r as f32 * 13.0),
+                        egui::Align2::LEFT_TOP,
+                        name,
+                        egui::FontId::monospace(10.0),
+                        color,
+                    );
+                }
+            });
+    }
+
+    fn draw_bold_brain(
+        &self,
+        ui: &mut egui::Ui,
+        tool: &ToolWindow,
+        _times: &[f64],
+        rows: &[(String, Vec<f64>)],
+    ) {
+        const MODULES: [&str; 8] = [
+            "manual",
+            "goal",
+            "vocal",
+            "imaginal",
+            "retrieval",
+            "procedural",
+            "aural",
+            "visual",
+        ];
+        let colors = [
+            egui::Color32::RED,
+            egui::Color32::GREEN,
+            egui::Color32::BLUE,
+            egui::Color32::YELLOW,
+            egui::Color32::MAGENTA,
+            egui::Color32::MAGENTA,
+            egui::Color32::GREEN,
+            egui::Color32::BLUE,
+        ];
+        let scan = tool.bold_scan;
+        ui.label(if tool.kind == ToolKind::Bold3D {
+            "Simplified 3D brain view (scan values as voxel grid)"
+        } else {
+            "2D brain view"
+        });
+        egui::Grid::new(("bold-brain", tool.id))
+            .num_columns(4)
+            .show(ui, |ui| {
+                for (i, module) in MODULES.iter().enumerate() {
+                    let value = rows
+                        .iter()
+                        .find(|(n, _)| n.eq_ignore_ascii_case(module))
+                        .and_then(|(_, v)| v.get(scan))
+                        .copied()
+                        .unwrap_or(0.0);
+                    let shade = value.clamp(0.0, 1.0);
+                    let color = colors[i].gamma_multiply(0.25 + 0.75 * shade as f32);
+                    let (rect, _) =
+                        ui.allocate_exact_size(egui::vec2(120.0, 54.0), egui::Sense::hover());
+                    ui.painter().rect_filled(rect, 4.0, color);
+                    ui.painter().text(
+                        rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        format!("{module}\n{value:.2}"),
+                        egui::FontId::proportional(11.0),
+                        egui::Color32::BLACK,
+                    );
+                    if i % 4 == 3 {
+                        ui.end_row();
+                    }
+                }
+            });
+    }
+}
 fn parse_seconds(text: &str) -> Option<f64> {
     let text = text.trim();
     if text.is_empty() {
@@ -2077,6 +2615,15 @@ fn render_history(kind: HistoryKind, records: &[Json]) -> String {
                     out.push_str(&history_text(Some(value)));
                     out.push('\n');
                 }
+            }
+            HistoryKind::ProductionGrid
+            | HistoryKind::GraphicHorizontal
+            | HistoryKind::GraphicVertical
+            | HistoryKind::BoldGraph
+            | HistoryKind::Bold2D
+            | HistoryKind::Bold3D => {
+                out.push_str(&history_text(Some(record)));
+                out.push('\n');
             }
         }
         if kind != HistoryKind::Trace {
@@ -2307,6 +2854,18 @@ mod tests {
         load_count(&mut app);
         let detail = app.buffer_detail(Some("COUNT".to_string()), "goal", BufferMode::Contents);
         assert!(!detail.is_empty(), "goal buffer detail is empty");
+    }
+    #[test]
+    fn production_color_hex_parsing() {
+        assert_eq!(
+            hex_color("#44da22"),
+            egui::Color32::from_rgb(0x44, 0xda, 0x22)
+        );
+        assert_eq!(
+            hex_color("fca31d"),
+            egui::Color32::from_rgb(0xfc, 0xa3, 0x1d)
+        );
+        assert_eq!(hex_color("bad"), egui::Color32::GRAY);
     }
     #[test]
     fn history_renderers_cover_the_tcl_shapes() {

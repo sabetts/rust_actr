@@ -176,11 +176,39 @@ Known follow-ups (M3 polish): the multi-pane split layouts (separate
 Times/Chunks/Details/Request/Activation panes) are currently combined into a
 single scrollable text pane; production history/grid/graph are M4.
 
-### M4 — Graphs and BOLD parity
+### M4 — Graphs and BOLD parity (initial)
 
 Production grid; the seven `production-graph-*` processors; horizontal and
 vertical buffer graphic traces; buffer picker; BOLD graph, 2D brain, 3D brain;
 EPS/PS/DOT export where practical.
+
+Completed:
+
+- Buffer Picker: per-buffer `record-history` / `stop-recording-history`,
+  initialised from `used-production-buffers`; BOLD recording accumulates
+  buffers instead of replacing them.
+- Production Grid: production-history `production-grid` processor rendered as
+  a colored decision grid, with unselected-column hiding and hover times.
+- Horizontal and vertical buffer graphic traces rendered from the existing
+  `horizontal-graphic-trace` / `vertical-graphic-trace` processors.
+- BOLD graph (raw / scale-each / scale-all), BOLD 2D module view, and a
+  simplified BOLD 3D voxel-grid view with a scan slider.
+- Production colors come from persisted settings.
+
+Verified: env tests 14 passed; `cargo test --lib` 86 passed; `environment_rpc`
+10 passed; `stepper_rpc` 2 passed; `cargo fmt --check` clean.
+
+Follow-ups (M4 polish):
+
+- The seven layered `production-graph-*` processors are not ported yet; the
+  Production Graph tool still uses the existing simplified `production-graph`
+  transition graph.
+- Production grid lacks the Tcl EPS/PS export, zoom, empty-column hiding on
+  selected flags, and per-cell production/why-not popups.
+- Graphic traces lack zoom, hide-text/hide-grid, hover readouts, and EPS/PS
+  export.
+- BOLD 3D is a scan-driven module grid, not the Tcl voxel mesh with rotation.
+- Multi-pane history splits remain combined text.
 
 ### M5 — Stepper parity
 
