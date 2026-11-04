@@ -39,21 +39,21 @@ The native GUI is an early subset of the Tcl Environment. It already has:
 
 Known gaps versus the Tcl Environment:
 
-| Area | Tcl Environment | Native today |
+| Area | Tcl Environment | Native after M1 |
 |---|---|---|
-| Model lifecycle | model menu, load code, reload, creating/deleting monitors | single model load, no menu/reload |
-| Run control | run/reset/reload/stop, running indicator, event queue | run/reset/step/stop; client run blocks UI |
-| Inspectors | DM + why-not, chunk tree, procedural matches/why-not, buffers, visicon, audicon, parameters | basic DM/procedural/buffers/parameters |
+| Model lifecycle | model menu, load code, reload, creating/deleting monitors | model menu, load code/model, reload, monitors/events |
+| Run control | run/reset/reload/stop, running indicator, event queue | run/reset/reload/stop, indicator, event queue; client runs are non-blocking |
+| Inspectors | DM + why-not, chunk tree, procedural matches/why-not, buffers, visicon, audicon, parameters | basic DM/procedural/buffers/parameters as floating tools |
 | Histories | trace (detail/time), retrieval, blending, buffer, visicon, audicon, production | trace only |
 | Graphs/BOLD | production grid + 7 graph processors, 2 graphic traces, BOLD graph/2D/3D | one simple graph |
-| Stepper | full stepper + tutoring | none |
+| Stepper | full stepper + tutoring | placeholder tool |
 | Experiment windows | text/button/line/image, attention/cursor/eye/finger, keys+clicks, multiple titles | text/button/line/attention/cursor, clicks |
-| Options/tools | 10 options, geometry/colors, event queue, connections, editor, about | 2 options, main size, debug evaluate |
-| Multi-model UI | client-side model menu | backend support only |
+| Options/tools | 10 options, geometry/colors, event queue, connections, editor, about | all 10 options, tool geometry/colors, event queue, connections, about |
+| Multi-model UI | client-side model menu | client-side model menu |
 
 ## Milestone program
 
-### M1 — Shell, events, and run-control parity (in progress)
+### M1 — Shell, events, and run-control parity (complete)
 
 Objective: match the Tcl control panel and event plumbing so later tools have
 a stable foundation.
@@ -102,6 +102,31 @@ M1 exit criteria:
 - existing viewers are floating tool windows with persisted geometry;
 - `cargo test` is green.
 
+Completed and verified:
+
+- Backend events cover tagged trace, model create/delete, run start/stop,
+  window ops, status, and stepper callbacks in both backends.
+- `schedule-break` / `schedule-break-relative` exist; the server services
+  ordinary requests between capped run slices, so Stop works on the same
+  connection; client-mode runs no longer block the UI.
+- Control panel: model menu, load code/model, reload, reset, run duration,
+  run/run-full-time/step, Stop, running indicator, options.
+- Tools: Declarative, Buffers, Procedural, Parameters, Text Trace, Production
+  Graph, Event Queue, Connections, About; floating windows with persisted
+  geometry.
+- Settings: all Tcl options, production colors, tool geometry.
+- Tests: `cargo test` 559 passed / 8 ignored; env tests 8 passed;
+  `environment_rpc` 10 passed; `stepper_rpc` 2 passed; `cargo fmt --check`
+  clean.
+
+Known M1 follow-ups (moved into M2):
+
+- Viewer tools currently share one instance/state per kind; per-model tool
+  instances and per-window focus refresh come with the M2 viewer work.
+- Reload still uses the server default compile behavior; Load honors
+  `use_smart_load`.
+- Connections shows command names but not the `check` documentation pane yet.
+- Clear All has no control-panel button, matching the Tcl Environment.
 ### M2 — Inspectors parity
 
 DM why-not, chunk tree, procedural match markers and why-not, buffers
