@@ -25,6 +25,11 @@ enum ToolKind {
     Visicon,
     Audicon,
     TextTrace,
+    RetrievalHistory,
+    BlendingHistory,
+    BufferHistory,
+    VisiconHistory,
+    AudiconHistory,
     ProductionGraph,
     EventQueue,
     Connections,
@@ -44,6 +49,11 @@ impl ToolKind {
             ToolKind::Visicon => "Visicon",
             ToolKind::Audicon => "Audicon",
             ToolKind::TextTrace => "Text Trace",
+            ToolKind::RetrievalHistory => "Retrieval History",
+            ToolKind::BlendingHistory => "Blending History",
+            ToolKind::BufferHistory => "Buffer History",
+            ToolKind::VisiconHistory => "Visicon History",
+            ToolKind::AudiconHistory => "Audicon History",
             ToolKind::ProductionGraph => "Production Graph",
             ToolKind::EventQueue => "Event Queue",
             ToolKind::Connections => "Connections & Commands",
@@ -63,8 +73,71 @@ impl ToolKind {
                 | ToolKind::Parameters
                 | ToolKind::Visicon
                 | ToolKind::Audicon
+                | ToolKind::RetrievalHistory
+                | ToolKind::BlendingHistory
+                | ToolKind::BufferHistory
+                | ToolKind::VisiconHistory
+                | ToolKind::AudiconHistory
                 | ToolKind::ProductionGraph
         )
+    }
+
+    fn history(self) -> Option<HistoryKind> {
+        match self {
+            ToolKind::TextTrace => Some(HistoryKind::Trace),
+            ToolKind::RetrievalHistory => Some(HistoryKind::Retrieval),
+            ToolKind::BlendingHistory => Some(HistoryKind::Blending),
+            ToolKind::BufferHistory => Some(HistoryKind::Buffer),
+            ToolKind::VisiconHistory => Some(HistoryKind::Visicon),
+            ToolKind::AudiconHistory => Some(HistoryKind::Audicon),
+            _ => None,
+        }
+    }
+}
+
+/// A Tcl Environment history viewer backed by an ACT-R history stream.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum HistoryKind {
+    Trace,
+    Retrieval,
+    Blending,
+    Buffer,
+    Visicon,
+    Audicon,
+}
+
+impl HistoryKind {
+    fn source(self) -> &'static str {
+        match self {
+            HistoryKind::Trace => "trace-history",
+            HistoryKind::Retrieval => "retrieval-history",
+            HistoryKind::Blending => "blending-trace",
+            HistoryKind::Buffer => "buffer-history",
+            HistoryKind::Visicon => "visicon-history",
+            HistoryKind::Audicon => "audicon-history",
+        }
+    }
+
+    fn processor(self) -> &'static str {
+        match self {
+            HistoryKind::Trace => "trace-history",
+            HistoryKind::Retrieval => "retrieval-history",
+            HistoryKind::Blending => "blending-environment-history",
+            HistoryKind::Buffer => "buffer-history",
+            HistoryKind::Visicon => "visicon-history",
+            HistoryKind::Audicon => "audicon-history",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            HistoryKind::Trace => "Trace",
+            HistoryKind::Retrieval => "Retrieval",
+            HistoryKind::Blending => "Blending",
+            HistoryKind::Buffer => "Buffer",
+            HistoryKind::Visicon => "Visicon",
+            HistoryKind::Audicon => "Audicon",
+        }
     }
 }
 
@@ -117,8 +190,13 @@ struct ToolWindow {
     param_sel: Option<usize>,
     param_detail: String,
 
-    // Text trace / production graph.
+    // Histories / production graph.
     history_text: String,
+    history_comment: String,
+    history_start: String,
+    history_end: String,
+    history_detail: String,
+    history_recording: bool,
     graph_nodes: Vec<String>,
     graph_edges: Vec<(String, String, u32)>,
 }
@@ -160,6 +238,11 @@ impl ToolWindow {
             param_sel: None,
             param_detail: String::new(),
             history_text: String::new(),
+            history_comment: String::new(),
+            history_start: String::new(),
+            history_end: String::new(),
+            history_detail: "low".to_string(),
+            history_recording: false,
             graph_nodes: Vec::new(),
             graph_edges: Vec::new(),
         }
@@ -342,7 +425,11 @@ impl App {
         }
         let id = self.next_tool_id;
         self.next_tool_id += 1;
-        self.tools.push(ToolWindow::new(id, kind, model));
+        let mut tool = ToolWindow::new(id, kind, model);
+        if tool.kind.history().is_some() {
+            self.set_history_recording(&mut tool, true);
+        }
+        self.tools.push(tool);
     }
     /// Refresh one tool's data using the tool's own model.
     fn refresh_tool(&mut self, tool: &mut ToolWindow) {
@@ -427,9 +514,12 @@ impl App {
                     .and_then(|x| x.as_str().map(str::to_string))
                     .unwrap_or_default();
             }
-            ToolKind::TextTrace => {
-                tool.history_text = self.fetch_trace_history();
-            }
+            ToolKind::TextTrace
+            | ToolKind::RetrievalHistory
+            | ToolKind::BlendingHistory
+            | ToolKind::BufferHistory
+            | ToolKind::VisiconHistory
+            | ToolKind::AudiconHistory => self.fetch_history(tool),
             ToolKind::ProductionGraph => {
                 let (n, e) = self.fetch_graph(model);
                 tool.graph_nodes = n;
@@ -484,6 +574,8 @@ impl App {
             if open {
                 self.tools.insert(i, tool);
                 i += 1;
+            } else if tool.history_recording {
+                self.set_history_recording(&mut tool, false);
             }
         }
     }
@@ -541,7 +633,12 @@ impl App {
                         ui.monospace(&tool.text);
                     });
             }
-            ToolKind::TextTrace => self.history_panel(tool, ui),
+            ToolKind::TextTrace
+            | ToolKind::RetrievalHistory
+            | ToolKind::BlendingHistory
+            | ToolKind::BufferHistory
+            | ToolKind::VisiconHistory
+            | ToolKind::AudiconHistory => self.history_panel(tool, ui),
             ToolKind::ProductionGraph => self.graph_panel(tool, ui),
             ToolKind::Stepper => {
                 ui.label("Stepper tools arrive in M5.");
@@ -677,68 +774,243 @@ impl App {
             });
     }
     /// Fetch the recorded `trace-history` via the incremental protocol.
-    fn fetch_trace_history(&mut self) -> String {
-        let id = match self.eval(
-            "start-incremental-history-data",
-            vec![Json::Str("trace-history".into()), Json::Int(16000)],
-        ) {
-            Some(v) => v.into_iter().next(),
-            None => None,
-        };
-        let Some(Json::Int(id)) = id else {
-            return String::new();
-        };
-        let mut out = String::new();
-        loop {
-            let chunk = match self.eval("get-incremental-history-data", vec![Json::Int(id)]) {
-                Some(v) => v
-                    .into_iter()
-                    .next()
-                    .and_then(|x| x.as_str().map(str::to_string)),
-                None => None,
-            };
-            let Some(c) = chunk else { break };
-            if c.is_empty() {
-                break;
-            }
-            if let Ok(Json::Arr(recs)) = crate::json::parse(&c) {
-                for r in recs {
-                    if let Json::Arr(fields) = r {
-                        if let Some(Json::Str(line)) = fields.get(3) {
-                            out.push_str(line);
-                            if !line.ends_with('\n') {
-                                out.push('\n');
-                            }
-                        }
-                    }
-                }
-            }
+    fn history_target(kind: HistoryKind, model: Option<String>) -> Option<String> {
+        if kind == HistoryKind::Trace {
+            None
+        } else {
+            model
         }
-        out
     }
 
+    fn history_start_args(&self, tool: &ToolWindow) -> Vec<Json> {
+        let kind = tool.kind.history().expect("history tool");
+        let mut args = vec![
+            Json::Str(kind.processor().into()),
+            Json::Int(16000),
+            Json::Bool(false),
+        ];
+        if kind == HistoryKind::Trace {
+            args.push(
+                parse_seconds(&tool.history_start)
+                    .map(Json::Float)
+                    .unwrap_or(Json::Null),
+            );
+            args.push(
+                parse_seconds(&tool.history_end)
+                    .map(Json::Float)
+                    .unwrap_or(Json::Null),
+            );
+            args.push(Json::Str(
+                if tool.history_detail.eq_ignore_ascii_case("all") {
+                    "t".into()
+                } else {
+                    tool.history_detail.clone()
+                },
+            ));
+        }
+        args
+    }
+
+    fn collect_history(&mut self, id: i64) -> (Option<String>, Vec<Json>) {
+        let mut comment = None;
+        let mut records = Vec::new();
+        loop {
+            let chunk = self
+                .eval("get-incremental-history-data", vec![Json::Int(id)])
+                .and_then(|v| v.into_iter().next())
+                .and_then(|x| x.as_str().map(str::to_string));
+            let Some(chunk) = chunk else { break };
+            if chunk.is_empty() {
+                break;
+            }
+            match crate::json::parse(&chunk) {
+                Ok(Json::Arr(mut a)) => records.append(&mut a),
+                Ok(Json::Str(s)) => comment = Some(s),
+                _ => {}
+            }
+        }
+        (comment, records)
+    }
+
+    fn fetch_history(&mut self, tool: &mut ToolWindow) {
+        let kind = tool.kind.history().expect("history tool");
+        let target = Self::history_target(kind, tool.model.clone());
+        let available_args = if kind == HistoryKind::Trace {
+            vec![
+                Json::Str(kind.source().into()),
+                Json::Null,
+                Json::Null,
+                Json::Str(tool.history_detail.clone()),
+            ]
+        } else {
+            vec![Json::Str(kind.source().into())]
+        };
+        let available = self
+            .eval_for(target.clone(), "history-data-available", available_args)
+            .and_then(|v| v.into_iter().next());
+        let any = match available {
+            Some(Json::Bool(b)) => b,
+            Some(Json::Null) | None => false,
+            _ => true,
+        };
+        if !any {
+            tool.history_text = "No Data available".into();
+            tool.history_comment.clear();
+            return;
+        }
+        let args = self.history_start_args(tool);
+        let id = self
+            .eval_for(target, "start-incremental-history-data", args)
+            .and_then(|v| v.into_iter().next());
+        let Some(Json::Int(id)) = id else {
+            tool.history_text = "No Data available".into();
+            return;
+        };
+        let (comment, records) = self.collect_history(id);
+        if let Some(c) = comment {
+            tool.history_comment = c;
+        }
+        if tool.history_comment.is_empty() {
+            tool.history_comment = format!(
+                "{} history data for {}",
+                kind.label(),
+                tool.model.as_deref().unwrap_or("model")
+            );
+        }
+        tool.history_text = render_history(kind, &records);
+    }
+
+    fn save_history(&mut self, tool: &ToolWindow, path: &std::path::Path) {
+        let kind = tool.kind.history().expect("history tool");
+        let target = Self::history_target(kind, tool.model.clone());
+        let mut args = vec![
+            Json::Str(kind.processor().into()),
+            Json::Str(path.to_string_lossy().into_owned()),
+            Json::Str(format!(
+                "Data saved from the {} History window",
+                kind.label()
+            )),
+        ];
+        if kind == HistoryKind::Trace {
+            args.push(
+                parse_seconds(&tool.history_start)
+                    .map(Json::Float)
+                    .unwrap_or(Json::Null),
+            );
+            args.push(
+                parse_seconds(&tool.history_end)
+                    .map(Json::Float)
+                    .unwrap_or(Json::Null),
+            );
+            args.push(Json::Str(
+                if tool.history_detail.eq_ignore_ascii_case("all") {
+                    "t".into()
+                } else {
+                    tool.history_detail.clone()
+                },
+            ));
+        }
+        self.eval_for(target, "save-history-data", args);
+    }
+
+    fn load_history(&mut self, tool: &mut ToolWindow, path: &std::path::Path) {
+        let kind = tool.kind.history().expect("history tool");
+        let target = Self::history_target(kind, tool.model.clone());
+        let args = vec![
+            Json::Str(kind.processor().into()),
+            Json::Int(16000),
+            Json::Str(path.to_string_lossy().into_owned()),
+        ];
+        let id = self
+            .eval_for(target, "start-incremental-history-data", args)
+            .and_then(|v| v.into_iter().next());
+        let Some(Json::Int(id)) = id else {
+            tool.history_text = "No Data available".into();
+            return;
+        };
+        let (comment, records) = self.collect_history(id);
+        if let Some(c) = comment {
+            tool.history_comment = c;
+        }
+        tool.history_text = render_history(kind, &records);
+    }
+
+    fn set_history_recording(&mut self, tool: &mut ToolWindow, on: bool) {
+        let Some(kind) = tool.kind.history() else {
+            return;
+        };
+        let target = Self::history_target(kind, tool.model.clone());
+        let name = if on {
+            "record-history"
+        } else {
+            "stop-recording-history"
+        };
+        self.eval_for(target, name, vec![Json::Str(kind.source().into())]);
+        tool.history_recording = on;
+    }
     fn history_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let kind = tool.kind.history().expect("history tool");
         ui.horizontal(|ui| {
             if ui.button("Refresh").clicked() {
                 tool.refresh_pending = true;
             }
             if ui.button("Save…").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
-                    .add_filter("Text", &["txt", "log"])
+                    .add_filter("History", &["txt", "log", "json"])
                     .save_file()
                 {
-                    self.eval(
-                        "save-history-data",
-                        vec![
-                            Json::Str("trace-history".into()),
-                            Json::Str(path.to_string_lossy().into_owned()),
-                            Json::Str("Data saved from the ACT-R Environment".into()),
-                        ],
-                    );
+                    self.save_history(tool, &path);
                 }
             }
+            if ui.button("Load…").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("History", &["txt", "log", "json"])
+                    .pick_file()
+                {
+                    self.load_history(tool, &path);
+                }
+            }
+            if tool.history_recording {
+                ui.colored_label(egui::Color32::from_rgb(0, 128, 0), "recording");
+            }
         });
-        egui::ScrollArea::vertical()
+        if kind == HistoryKind::Trace {
+            ui.horizontal(|ui| {
+                ui.label("Detail:");
+                egui::ComboBox::from_id_salt(("history-detail", tool.id))
+                    .selected_text(tool.history_detail.clone())
+                    .show_ui(ui, |ui| {
+                        for level in ["low", "medium", "high", "all"] {
+                            if ui
+                                .selectable_label(
+                                    tool.history_detail.eq_ignore_ascii_case(level),
+                                    level,
+                                )
+                                .clicked()
+                            {
+                                tool.history_detail = level.to_string();
+                            }
+                        }
+                    });
+                ui.label("Start:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut tool.history_start)
+                        .desired_width(60.0)
+                        .hint_text("s"),
+                );
+                ui.label("End:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut tool.history_end)
+                        .desired_width(60.0)
+                        .hint_text("s"),
+                );
+            });
+        }
+        if !tool.history_comment.is_empty() {
+            ui.label(&tool.history_comment);
+        }
+        ui.separator();
+        egui::ScrollArea::both()
             .id_salt(("history", tool.id))
             .show(ui, |ui| {
                 ui.monospace(&tool.history_text);
@@ -1216,6 +1488,21 @@ impl App {
             if ui.button("Text Trace").clicked() {
                 self.open_tool(ToolKind::TextTrace);
             }
+            if ui.button("Retrieval").clicked() {
+                self.open_tool(ToolKind::RetrievalHistory);
+            }
+            if ui.button("Blending").clicked() {
+                self.open_tool(ToolKind::BlendingHistory);
+            }
+            if ui.button("Buffer").clicked() {
+                self.open_tool(ToolKind::BufferHistory);
+            }
+            if ui.button("Visicon History").clicked() {
+                self.open_tool(ToolKind::VisiconHistory);
+            }
+            if ui.button("Audicon History").clicked() {
+                self.open_tool(ToolKind::AudiconHistory);
+            }
             if ui.button("Production Graph").clicked() {
                 self.open_tool(ToolKind::ProductionGraph);
             }
@@ -1679,6 +1966,125 @@ impl App {
     }
 }
 
+fn parse_seconds(text: &str) -> Option<f64> {
+    let text = text.trim();
+    if text.is_empty() {
+        None
+    } else {
+        text.parse().ok()
+    }
+}
+
+fn history_ms(value: Option<&Json>) -> String {
+    value
+        .and_then(|x| x.as_f64())
+        .map(|ms| format!("{:.3}", ms / 1000.0))
+        .unwrap_or_default()
+}
+
+fn history_text(value: Option<&Json>) -> String {
+    value
+        .map(crate::rpc::session::json_to_text)
+        .unwrap_or_default()
+}
+
+fn history_items(value: Option<&Json>) -> &[Json] {
+    match value {
+        Some(Json::Arr(items)) => items,
+        _ => &[],
+    }
+}
+
+fn render_history(kind: HistoryKind, records: &[Json]) -> String {
+    let mut out = String::new();
+    for record in records {
+        let Json::Arr(fields) = record else {
+            continue;
+        };
+        if kind != HistoryKind::Trace {
+            out.push_str(&format!("Time {}\n", history_ms(fields.first())));
+        }
+        match kind {
+            HistoryKind::Trace => {
+                if let Some(Json::Str(line)) = fields.get(3) {
+                    out.push_str(line);
+                    if !line.ends_with('\n') {
+                        out.push('\n');
+                    }
+                }
+            }
+            HistoryKind::Retrieval => {
+                out.push_str(&format!("Request: {}\n", history_text(fields.get(1))));
+                for chunk in history_items(fields.get(2)) {
+                    if let Json::Arr(c) = chunk {
+                        out.push_str(&format!(
+                            "  {} {}\n",
+                            history_text(c.first()),
+                            history_text(c.get(1))
+                        ));
+                        if !history_text(c.get(2)).is_empty() {
+                            out.push_str(&format!("    {}\n", history_text(c.get(2))));
+                        }
+                        if !history_text(c.get(3)).is_empty() {
+                            out.push_str(&format!("    {}\n", history_text(c.get(3))));
+                        }
+                    }
+                }
+            }
+            HistoryKind::Blending => {
+                out.push_str(&format!("Request: {}\n", history_text(fields.get(1))));
+                out.push_str(&format!("Result: {}\n", history_text(fields.get(2))));
+                for chunk in history_items(fields.get(3)) {
+                    if let Json::Arr(c) = chunk {
+                        out.push_str(&format!(
+                            "  {} act={} p={}\n",
+                            history_text(c.first()),
+                            history_text(c.get(1)),
+                            history_text(c.get(2))
+                        ));
+                        if !history_text(c.get(3)).is_empty() {
+                            out.push_str(&format!("    {}\n", history_text(c.get(3))));
+                        }
+                    }
+                }
+                let trace = history_text(fields.get(4));
+                if !trace.is_empty() {
+                    out.push_str(&trace);
+                    if !trace.ends_with('\n') {
+                        out.push('\n');
+                    }
+                }
+            }
+            HistoryKind::Buffer => {
+                for action in history_items(fields.get(1)) {
+                    if let Json::Arr(a) = action {
+                        out.push_str(&format!(
+                            "{} {}\n  chunk: {}\n  after: {}\n  before: {} {}\n  after:  {} {}\n",
+                            history_text(a.first()),
+                            history_text(a.get(1)),
+                            history_text(a.get(2)),
+                            history_text(a.get(3)),
+                            history_text(a.get(4)),
+                            history_text(a.get(5)),
+                            history_text(a.get(6)),
+                            history_text(a.get(7)),
+                        ));
+                    }
+                }
+            }
+            HistoryKind::Visicon | HistoryKind::Audicon => {
+                for value in fields.iter().skip(1) {
+                    out.push_str(&history_text(Some(value)));
+                    out.push('\n');
+                }
+            }
+        }
+        if kind != HistoryKind::Trace {
+            out.push('\n');
+        }
+    }
+    out
+}
 /// Replace an item with the same id, or append it.
 fn upsert(items: &mut Vec<WinItem>, item: WinItem) {
     if let Some(slot) = items.iter_mut().find(|it| it.id() == item.id()) {
@@ -1901,6 +2307,73 @@ mod tests {
         load_count(&mut app);
         let detail = app.buffer_detail(Some("COUNT".to_string()), "goal", BufferMode::Contents);
         assert!(!detail.is_empty(), "goal buffer detail is empty");
+    }
+    #[test]
+    fn history_renderers_cover_the_tcl_shapes() {
+        let trace = Json::Arr(vec![
+            Json::Int(100),
+            Json::Str("low".into()),
+            Json::Null,
+            Json::Str("chunk line\n".into()),
+        ]);
+        assert_eq!(render_history(HistoryKind::Trace, &[trace]), "chunk line\n");
+
+        let retrieval = Json::Arr(vec![
+            Json::Int(250),
+            Json::Str("+retrieval>".into()),
+            Json::Arr(vec![Json::Arr(vec![
+                Json::Str("CHUNK0".into()),
+                Json::Str("chunk text".into()),
+                Json::Str("params".into()),
+                Json::Str("activation".into()),
+            ])]),
+        ]);
+        let text = render_history(HistoryKind::Retrieval, &[retrieval]);
+        assert!(text.contains("Time 0.250"), "retrieval: {text}");
+        assert!(text.contains("chunk text"), "retrieval: {text}");
+
+        let blending = Json::Arr(vec![
+            Json::Int(300),
+            Json::Str("+blending>".into()),
+            Json::Str("result".into()),
+            Json::Arr(vec![Json::Arr(vec![
+                Json::Str("CHUNK0".into()),
+                Json::Float(1.5),
+                Json::Float(0.5),
+                Json::Str("printed".into()),
+            ])]),
+            Json::Str("blend trace\n".into()),
+        ]);
+        let text = render_history(HistoryKind::Blending, &[blending]);
+        assert!(text.contains("blend trace"), "blending: {text}");
+
+        let buffer = Json::Arr(vec![
+            Json::Int(400),
+            Json::Arr(vec![Json::Arr(vec![
+                Json::Str("goal".into()),
+                Json::Str("set-buffer-chunk".into()),
+                Json::Str("chunk".into()),
+                Json::Str("free".into()),
+                Json::Str("old".into()),
+                Json::Str("free".into()),
+                Json::Str("new".into()),
+                Json::Str("busy".into()),
+            ])]),
+        ]);
+        let text = render_history(HistoryKind::Buffer, &[buffer]);
+        assert!(text.contains("set-buffer-chunk"), "buffer: {text}");
+
+        let visicon = Json::Arr(vec![Json::Int(500), Json::Str("TEXT0".into())]);
+        assert!(render_history(HistoryKind::Visicon, &[visicon]).contains("TEXT0"));
+    }
+
+    #[test]
+    fn opening_a_history_tool_starts_recording() {
+        let mut app = test_app();
+        load_count(&mut app);
+        app.open_tool(ToolKind::RetrievalHistory);
+        assert_eq!(app.tools.len(), 1);
+        assert!(app.tools[0].history_recording);
     }
     #[test]
     fn tool_windows_reuse_and_title_by_model() {

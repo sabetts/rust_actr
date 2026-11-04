@@ -150,11 +150,31 @@ Completed:
 Verified: env tests 11 passed; `environment_rpc` 10 passed; `stepper_rpc`
 2 passed; `cargo fmt --check` clean.
 
-### M3 — Histories parity
+### M3 — Histories parity (complete)
 
 Generic record/get/save/load/incremental framework with warning capture, time
 filters, detail levels, and saved-file comments. Trace, retrieval, blending,
 buffer, visicon, audicon histories. Production history raw stream.
+
+Completed:
+
+- Generic history tool framework: open starts `record-history`, close sends
+  `stop-recording-history`, Refresh uses `history-data-available` and
+  `start-incremental-history-data`, Save/Load use `save-history-data` and the
+  file-load path, and saved comments are shown.
+- Trace history with low/medium/high/ALL detail filtering and start/end time
+  filters.
+- Retrieval, blending, buffer, visicon, and audicon history viewers with
+  Tcl-shaped record rendering and per-model targeting.
+- History tools are one per kind per model and refresh from the tool's model.
+- Unit tests cover every history record shape and recording-on-open.
+
+Verified: env tests 13 passed; `environment_rpc` 10 passed; `stepper_rpc`
+2 passed; `cargo fmt --check` clean.
+
+Known follow-ups (M3 polish): the multi-pane split layouts (separate
+Times/Chunks/Details/Request/Activation panes) are currently combined into a
+single scrollable text pane; production history/grid/graph are M4.
 
 ### M4 — Graphs and BOLD parity
 
