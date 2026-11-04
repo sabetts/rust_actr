@@ -220,4 +220,86 @@ mod tests {
             "expected a terminator: {trace:?}"
         );
     }
+
+    /// The in-process backend reports model and run signals as events.
+    #[test]
+    fn inproc_emits_model_and_run_events() {
+        let mut b = InProc::new((100, 0));
+        b.evaluate("load-act-r-model", None, vec![Json::Str(count_model())])
+            .expect("load-act-r-model");
+        let events = b.take_events();
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, BackendEvent::ModelCreated(n) if n == "COUNT")),
+            "missing ModelCreated: {events:?}"
+        );
+
+        b.set_real_time(false);
+        assert!(b.begin_run(10.0, false));
+        let started = b.take_events();
+        assert!(
+            started
+                .iter()
+                .any(|e| matches!(e, BackendEvent::RunStarted { .. })),
+            "missing RunStarted: {started:?}"
+        );
+        while b.is_running() && b.poll_run().expect("poll_run") {}
+        let finished = b.take_events();
+        assert!(
+            finished
+                .iter()
+                .any(|e| matches!(e, BackendEvent::RunStopped { .. })),
+            "missing RunStopped: {finished:?}"
+        );
+    }
+
+    /// The RPC-client backend emits the same model/run events as in-process.
+    #[test]
+    fn client_backend_emits_model_and_run_events() {
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        std::thread::spawn(move || {
+            let _ = crate::rpc::server::serve_listener(listener, (100, 0));
+        });
+        let mut c = Client::connect("127.0.0.1", addr.port()).expect("connect");
+        c.evaluate("load-act-r-model", None, vec![Json::Str(count_model())])
+            .expect("load");
+        let events = c.take_events();
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, BackendEvent::ModelCreated(n) if n == "COUNT")),
+            "missing client ModelCreated: {events:?}"
+        );
+
+        c.set_real_time(false);
+        assert!(c.begin_run(10.0, false));
+        let mut started = false;
+        let mut stopped = false;
+        while c.is_running() {
+            for event in c.take_events() {
+                match event {
+                    BackendEvent::RunStarted { .. } => started = true,
+                    BackendEvent::RunStopped { .. } => stopped = true,
+                    _ => {}
+                }
+            }
+            if !c.poll_run().expect("poll_run") {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        for event in c.take_events() {
+            match event {
+                BackendEvent::RunStarted { .. } => started = true,
+                BackendEvent::RunStopped { .. } => stopped = true,
+                _ => {}
+            }
+        }
+        assert!(started, "missing client RunStarted");
+        assert!(stopped, "missing client RunStopped");
+    }
 }

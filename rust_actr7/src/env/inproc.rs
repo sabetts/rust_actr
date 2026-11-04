@@ -67,6 +67,8 @@ pub struct InProc {
     real_time: bool,
     /// Events waiting for the UI thread.
     events: Vec<BackendEvent>,
+    /// Last model list, so load/clear changes become model events.
+    known_models: Vec<String>,
 }
 
 impl InProc {
@@ -79,6 +81,7 @@ impl InProc {
             stop: false,
             real_time: true,
             events: Vec::new(),
+            known_models: Vec::new(),
         }
     }
 
@@ -102,22 +105,26 @@ impl InProc {
             };
             self.events.push(BackendEvent::Trace { stream, line });
         }
-        for (name, model, args) in self.session.take_pending_signals() {
+        // The session reports load/reload/clear changes through the model
+        // table. Diff it so in-process mode emits the same create/delete
+        // events the RPC monitors would.
+        let current = self.session.models();
+        for name in &current {
+            if !self.known_models.contains(name) {
+                self.events.push(BackendEvent::ModelCreated(name.clone()));
+            }
+        }
+        for name in &self.known_models {
+            if !current.contains(name) {
+                self.events.push(BackendEvent::ModelDeleted(name.clone()));
+            }
+        }
+        self.known_models = current;
+        for (name, model, _args) in self.session.take_pending_signals() {
             match name.as_str() {
-                "creating-model" => {
-                    if let Some(name) = args.first().and_then(|a| a.as_str()) {
-                        self.events
-                            .push(BackendEvent::ModelCreated(name.to_string()));
-                    }
-                }
-                "deleting-model" => {
-                    if let Some(name) = args.first().and_then(|a| a.as_str()) {
-                        self.events
-                            .push(BackendEvent::ModelDeleted(name.to_string()));
-                    }
-                }
-                // Run signals are synthesized around begin_run/poll_run.
-                "run-start" | "run-stop" => {}
+                // Run signals are synthesized around begin_run/poll_run; model
+                // changes are diffed above.
+                "creating-model" | "deleting-model" | "run-start" | "run-stop" => {}
                 other => self
                     .events
                     .push(BackendEvent::Status(format!("signal: {other} {model:?}"))),

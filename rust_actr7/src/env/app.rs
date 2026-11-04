@@ -2,6 +2,7 @@
 //! read-only inspectors (declarative, buffers, procedural).
 
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::PathBuf;
 
 use eframe::egui;
@@ -12,15 +13,60 @@ use super::backend::{result_text, BackendEvent, EnvBackend};
 use super::settings::{self, Settings};
 
 /// The central-area views.
-#[derive(PartialEq, Eq, Clone, Copy)]
-enum Tab {
-    Trace,
+/// A floating tool window (the Rust equivalent of a Tcl dialog).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ToolKind {
     Declarative,
     Buffers,
     Procedural,
     Parameters,
-    History,
-    Graph,
+    TextTrace,
+    ProductionGraph,
+    EventQueue,
+    Connections,
+    About,
+    Stepper,
+}
+
+impl ToolKind {
+    fn title(self) -> &'static str {
+        match self {
+            ToolKind::Declarative => "Declarative",
+            ToolKind::Buffers => "Buffers",
+            ToolKind::Procedural => "Procedural",
+            ToolKind::Parameters => "Parameters",
+            ToolKind::TextTrace => "Text Trace",
+            ToolKind::ProductionGraph => "Production Graph",
+            ToolKind::EventQueue => "Event Queue",
+            ToolKind::Connections => "Connections & Commands",
+            ToolKind::About => "About ACT-R",
+            ToolKind::Stepper => "Stepper",
+        }
+    }
+
+    fn model_scoped(self) -> bool {
+        matches!(
+            self,
+            ToolKind::Declarative
+                | ToolKind::Buffers
+                | ToolKind::Procedural
+                | ToolKind::Parameters
+                | ToolKind::TextTrace
+                | ToolKind::ProductionGraph
+        )
+    }
+}
+
+/// One open floating tool and its transient UI state.
+struct ToolWindow {
+    id: u64,
+    kind: ToolKind,
+    title: String,
+    model: Option<String>,
+    open: bool,
+    text: String,
+    connections: Vec<crate::env::backend::ConnectionInfo>,
+    refresh_pending: bool,
 }
 
 /// A visible experiment window the engine is displaying, with its items.
@@ -74,7 +120,7 @@ impl WinItem {
     }
 }
 
-/// An ACT-R colour name → egui colour (`color->name`, `misc-utils.lisp`).
+/// An ACT-R colour name â†’ egui colour (`color->name`, `misc-utils.lisp`).
 fn color(name: &str) -> egui::Color32 {
     use egui::Color32 as C;
     match name.to_lowercase().as_str() {
@@ -118,6 +164,8 @@ pub struct App {
     /// Models in load order and the client-selected model.
     models: Vec<String>,
     selected_model: Option<String>,
+    /// Model of the tool currently rendering, for model-scoped commands.
+    active_model: Option<String>,
     /// Whether an interactive run is in progress (from run signals).
     running: bool,
     /// Whether the Options window is open.
@@ -126,8 +174,6 @@ pub struct App {
     error: Option<String>,
 
     // --- inspector state ---
-    tab: Tab,
-    last_tab: Tab,
     refresh_pending: bool,
     dm_filters: Vec<String>,
     dm_filter: String,
@@ -152,6 +198,9 @@ pub struct App {
     /// The production transition graph (nodes and counted edges).
     graph_nodes: Vec<String>,
     graph_edges: Vec<(String, String, u32)>,
+    /// Floating tool windows (Event Queue, Connections, About, â€¦).
+    tools: Vec<ToolWindow>,
+    next_tool_id: u64,
 }
 
 impl App {
@@ -177,7 +226,7 @@ impl App {
         );
         let models = backend.models();
         let selected_model = backend.current_model().or_else(|| models.last().cloned());
-        App {
+        let mut app = App {
             backend,
             start_dir,
             trace: String::new(),
@@ -187,11 +236,10 @@ impl App {
             settings,
             models,
             selected_model,
+            active_model: None,
             running: false,
             show_options: false,
             error: None,
-            tab: Tab::Trace,
-            last_tab: Tab::Trace,
             refresh_pending: true,
             dm_filters: vec!["_none_".to_string()],
             dm_filter: "_none_".to_string(),
@@ -213,12 +261,199 @@ impl App {
             history_text: String::new(),
             graph_nodes: Vec::new(),
             graph_edges: Vec::new(),
+            tools: Vec::new(),
+            next_tool_id: 1,
+        };
+        if app.settings.show_copyrights {
+            app.open_tool(ToolKind::About);
+        }
+        app
+    }
+
+    /// Open (or raise) a floating tool window.
+    fn open_tool(&mut self, kind: ToolKind) {
+        if let Some(tool) = self.tools.iter_mut().find(|t| t.kind == kind) {
+            tool.open = true;
+            tool.refresh_pending = true;
+            return;
+        }
+        let id = self.next_tool_id;
+        self.next_tool_id += 1;
+        let model = if kind.model_scoped() {
+            self.selected_model.clone()
+        } else {
+            None
+        };
+        let title = match &model {
+            Some(m) => format!("{} ({m})", kind.title()),
+            None => kind.title().to_string(),
+        };
+        self.tools.push(ToolWindow {
+            id,
+            kind,
+            title,
+            model,
+            open: true,
+            text: String::new(),
+            connections: Vec::new(),
+            refresh_pending: true,
+        });
+    }
+
+    /// Refresh one tool's data.
+    fn refresh_tool(&mut self, tool: &mut ToolWindow) {
+        match tool.kind {
+            ToolKind::Declarative => {
+                let filters = self.list("dm-slot-filters", Vec::new());
+                if !filters.is_empty() {
+                    self.dm_filters = filters;
+                }
+                if !self.dm_filters.iter().any(|f| *f == self.dm_filter) {
+                    self.dm_filter = self.dm_filters.first().cloned().unwrap_or_default();
+                }
+                self.refresh_dm_list();
+            }
+            ToolKind::Buffers => {
+                self.buffers = self.list("model-buffers", Vec::new());
+                if self.settings.sort_lists {
+                    self.buffers.sort();
+                }
+                self.buf_sel = None;
+                self.buf_detail.clear();
+            }
+            ToolKind::Procedural => {
+                self.prods = self.list("all-productions", Vec::new());
+                if self.settings.sort_lists {
+                    self.prods.sort();
+                }
+                self.prod_sel = None;
+                self.prod_detail.clear();
+            }
+            ToolKind::Parameters => {
+                self.modules = self.list("modules-with-parameters", Vec::new());
+                if self.settings.sort_lists {
+                    self.modules.sort();
+                }
+                self.mod_sel = None;
+                self.params.clear();
+                self.param_sel = None;
+                self.param_detail.clear();
+            }
+            ToolKind::TextTrace => {
+                self.history_text = self.fetch_trace_history();
+            }
+            ToolKind::ProductionGraph => {
+                let (n, e) = self.fetch_graph();
+                self.graph_nodes = n;
+                self.graph_edges = e;
+            }
+            ToolKind::EventQueue => {
+                tool.text = self
+                    .eval("mp-queue-text", vec![Json::Int(1)])
+                    .map_or_else(String::new, |v| {
+                        v.first().and_then(|x| x.as_str()).unwrap_or("").to_string()
+                    });
+            }
+            ToolKind::Connections => match self.backend.connections() {
+                Ok(c) => tool.connections = c,
+                Err(e) => self.error = Some(format!("list-connections: {e}")),
+            },
+            ToolKind::About => {
+                tool.text = self
+                    .eval("act-r-version", Vec::new())
+                    .and_then(|v| v.first().and_then(|x| x.as_str()).map(str::to_string))
+                    .unwrap_or_else(|| "ACT-R".to_string());
+            }
+            ToolKind::Stepper => {}
+        }
+    }
+
+    /// Draw the floating tools. Each is taken out of the list so it can borrow
+    /// `self` while it renders, then put back unless the user closed it.
+    fn render_tools(&mut self, ctx: &egui::Context) {
+        let mut i = 0;
+        while i < self.tools.len() {
+            let mut tool = self.tools.remove(i);
+            self.active_model = tool.model.clone();
+            if tool.refresh_pending {
+                self.refresh_tool(&mut tool);
+                tool.refresh_pending = false;
+            }
+            let mut open = tool.open;
+            let mut win = egui::Window::new(format!("{}##{}", tool.title, tool.id)).open(&mut open);
+            if let Some([x, y, w, h]) = self.settings.tool_geometry.get(&tool.title).copied() {
+                win = win.default_pos([x, y]).default_size([w, h]);
+            } else {
+                win = win.default_width(520.0).default_height(360.0);
+            }
+            let shown = win.show(ctx, |ui| self.tool_body(ui, &mut tool));
+            if let Some(inner) = shown {
+                let r = inner.response.rect;
+                self.settings.tool_geometry.insert(
+                    tool.title.clone(),
+                    [r.min.x, r.min.y, r.width(), r.height()],
+                );
+            }
+            self.active_model = None;
+            tool.open = open;
+            if open {
+                self.tools.insert(i, tool);
+                i += 1;
+            }
+        }
+    }
+
+    fn tool_body(&mut self, ui: &mut egui::Ui, tool: &mut ToolWindow) {
+        match tool.kind {
+            ToolKind::Connections => {
+                if ui.button("Get Status").clicked() {
+                    tool.refresh_pending = true;
+                }
+                ui.separator();
+                egui::Grid::new(("connections", tool.id))
+                    .num_columns(4)
+                    .striped(true)
+                    .show(ui, |ui| {
+                        ui.strong("Name");
+                        ui.strong("Sent");
+                        ui.strong("Received");
+                        ui.strong("Commands");
+                        ui.end_row();
+                        for c in &tool.connections {
+                            ui.label(&c.name);
+                            ui.label(c.sent.to_string());
+                            ui.label(c.received.to_string());
+                            ui.label(c.commands.join(" "));
+                            ui.end_row();
+                        }
+                    });
+            }
+            ToolKind::EventQueue | ToolKind::About => {
+                if ui.button("Refresh").clicked() {
+                    tool.refresh_pending = true;
+                }
+                ui.separator();
+                egui::ScrollArea::vertical()
+                    .id_salt(("tool-scroll", tool.id))
+                    .show(ui, |ui| {
+                        ui.monospace(&tool.text);
+                    });
+            }
+            ToolKind::Declarative => self.dm_panel(ui),
+            ToolKind::Buffers => self.buffer_panel(ui),
+            ToolKind::Procedural => self.proc_panel(ui),
+            ToolKind::Parameters => self.param_panel(ui),
+            ToolKind::TextTrace => self.history_panel(ui),
+            ToolKind::ProductionGraph => self.graph_panel(ui),
+            ToolKind::Stepper => {
+                ui.label("Stepper tools arrive in M5.");
+            }
         }
     }
 
     /// Fetch the production transition graph from the backend.
     fn fetch_graph(&mut self) -> (Vec<String>, Vec<(String, String, u32)>) {
-        let v = match self.eval("production-graph", Vec::new()) {
+        let v = match self.eval_model("production-graph", Vec::new()) {
             Some(v) => v,
             None => return (Vec::new(), Vec::new()),
         };
@@ -390,7 +625,7 @@ impl App {
             if ui.button("Refresh").clicked() {
                 self.refresh_pending = true;
             }
-            if ui.button("Save…").clicked() {
+            if ui.button("Saveâ€¦").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("Text", &["txt", "log"])
                     .save_file()
@@ -673,9 +908,16 @@ impl App {
         self.eval_for(None, name, args)
     }
 
-    /// Evaluate a model-scoped command against the selected model.
+    /// Evaluate a model-scoped command against the active tool's model, or
+    /// the current selection when no tool is rendering.
     fn eval_model(&mut self, name: &str, args: Vec<Json>) -> Option<Vec<Json>> {
-        self.eval_for(self.selected_model.clone(), name, args)
+        self.eval_for(
+            self.active_model
+                .clone()
+                .or_else(|| self.selected_model.clone()),
+            name,
+            args,
+        )
     }
 
     fn eval_for(
@@ -691,10 +933,24 @@ impl App {
                 Some(v)
             }
             Err(e) => {
-                self.error = Some(format!("{name}: {e}"));
+                let message = format!("{name}: {e}");
+                self.error = Some(message.clone());
+                self.log_error(&message);
                 self.drain_events();
                 None
             }
+        }
+    }
+
+    /// Append an error to `~/.actr-env.log` (Tcl writes `error.log`).
+    fn log_error(&self, message: &str) {
+        let path = settings::settings_path().with_file_name(".actr-env.log");
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+        {
+            let _ = writeln!(file, "{message}");
         }
     }
 
@@ -730,7 +986,7 @@ impl App {
         self.drain_events();
     }
 
-    fn load_dialog(&mut self) {
+    fn load_dialog(&mut self, command: &str) {
         let mut dlg = rfd::FileDialog::new()
             .add_filter("ACT-R model", &["lisp", "cl"])
             .add_filter("All files", &["*"]);
@@ -740,63 +996,13 @@ impl App {
         if let Some(path) = dlg.pick_file() {
             // A different model gets a fresh trace pane.
             self.trace.clear();
-            self.eval(
-                "load-act-r-model",
-                vec![Json::Str(path.to_string_lossy().into_owned())],
-            );
+            let mut args = vec![Json::Str(path.to_string_lossy().into_owned())];
+            if command == "load-act-r-code" {
+                args.push(Json::Bool(self.settings.use_smart_load));
+            }
+            self.eval(command, args);
             self.drain_events();
             self.refresh_pending = true;
-        }
-    }
-
-    /// Re-query the active inspector's data.
-    fn refresh_active(&mut self) {
-        match self.tab {
-            Tab::Trace => {}
-            Tab::Declarative => {
-                let filters = self.list("dm-slot-filters", Vec::new());
-                if !filters.is_empty() {
-                    self.dm_filters = filters;
-                }
-                if !self.dm_filters.iter().any(|f| *f == self.dm_filter) {
-                    self.dm_filter = self.dm_filters.first().cloned().unwrap_or_default();
-                }
-                self.refresh_dm_list();
-            }
-            Tab::Buffers => {
-                self.buffers = self.list("model-buffers", Vec::new());
-                if self.settings.sort_lists {
-                    self.buffers.sort();
-                }
-                self.buf_sel = None;
-                self.buf_detail.clear();
-            }
-            Tab::Procedural => {
-                self.prods = self.list("all-productions", Vec::new());
-                if self.settings.sort_lists {
-                    self.prods.sort();
-                }
-                self.prod_sel = None;
-                self.prod_detail.clear();
-            }
-            Tab::Parameters => {
-                self.modules = self.list("modules-with-parameters", Vec::new());
-                if self.settings.sort_lists {
-                    self.modules.sort();
-                }
-                self.mod_sel = None;
-                self.params.clear();
-                self.param_sel = None;
-                self.param_detail.clear();
-            }
-            Tab::History => {
-                self.history_text = self.fetch_trace_history();
-            }
-            Tab::Graph => {
-                let (n, e) = self.fetch_graph();
-                self.graph_nodes = n;
-                self.graph_edges = e;
-            }
         }
     }
 
@@ -813,10 +1019,59 @@ impl App {
     fn controls(&mut self, ui: &mut egui::Ui) {
         ui.heading("Controls");
         ui.separator();
-        if ui.button("Load model…").clicked() {
-            self.load_dialog();
-        }
+
+        // Current Model menu (`06-ctrl-panel-show-loaded.tcl`).
         ui.horizontal(|ui| {
+            ui.label("Current Model");
+            let selected = self
+                .selected_model
+                .clone()
+                .unwrap_or_else(|| "No Current Model".to_string());
+            let mut chosen = None;
+            egui::ComboBox::from_id_salt("current-model")
+                .selected_text(selected.clone())
+                .show_ui(ui, |ui| {
+                    if self.models.is_empty() {
+                        ui.label("No Current Model");
+                    }
+                    for name in &self.models {
+                        if ui.selectable_label(selected == *name, name).clicked() {
+                            chosen = Some(name.clone());
+                        }
+                    }
+                });
+            if let Some(name) = chosen {
+                self.selected_model = Some(name.clone());
+                self.backend.set_current_model(Some(name));
+                self.refresh_pending = true;
+            }
+            if ui.small_button("Refresh").clicked() {
+                self.models = self.backend.models();
+                if self
+                    .selected_model
+                    .as_ref()
+                    .map_or(true, |m| !self.models.contains(m))
+                {
+                    self.selected_model = self.models.last().cloned();
+                }
+            }
+        });
+        ui.separator();
+        ui.horizontal(|ui| {
+            if ui.button("Load codeâ€¦").clicked() {
+                self.load_dialog("load-act-r-code");
+            }
+            if ui.button("Load modelâ€¦").clicked() {
+                self.load_dialog("load-act-r-model");
+            }
+        });
+        ui.horizontal(|ui| {
+            if ui.button("Reload").clicked() {
+                self.trace.clear();
+                self.eval("reload", Vec::new());
+                self.drain_events();
+                self.refresh_pending = true;
+            }
             if ui.button("Reset").clicked() {
                 // A reset starts a fresh run context: clear the trace pane
                 // (then show only the reset's own output).
@@ -846,11 +1101,58 @@ impl App {
             self.backend.set_real_time(self.settings.real_time);
             settings::save(&self.settings);
         }
-        if ui.button("Options…").clicked() {
+        if ui.button("Optionsâ€¦").clicked() {
             self.show_options = true;
         }
+        ui.separator();
+        ui.label("Current Data");
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Declarative").clicked() {
+                self.open_tool(ToolKind::Declarative);
+            }
+            if ui.button("Buffers").clicked() {
+                self.open_tool(ToolKind::Buffers);
+            }
+            if ui.button("Procedural").clicked() {
+                self.open_tool(ToolKind::Procedural);
+            }
+            if ui.button("Parameters").clicked() {
+                self.open_tool(ToolKind::Parameters);
+            }
+        });
+        ui.separator();
+        ui.label("Recordable Data");
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Text Trace").clicked() {
+                self.open_tool(ToolKind::TextTrace);
+            }
+            if ui.button("Production Graph").clicked() {
+                self.open_tool(ToolKind::ProductionGraph);
+            }
+        });
+        ui.separator();
+        ui.label("Miscellaneous");
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Stepper").clicked() {
+                self.open_tool(ToolKind::Stepper);
+            }
+            if ui.button("Event Queue").clicked() {
+                self.open_tool(ToolKind::EventQueue);
+            }
+            if ui.button("Connections").clicked() {
+                self.open_tool(ToolKind::Connections);
+            }
+            if ui.button("About").clicked() {
+                self.open_tool(ToolKind::About);
+            }
+        });
         let running = self.running || self.backend.is_running();
         ui.horizontal(|ui| {
+            if running {
+                ui.colored_label(egui::Color32::from_rgb(0, 128, 0), "Running");
+            } else {
+                ui.colored_label(egui::Color32::from_rgb(160, 0, 0), "Stopped");
+            }
             if ui.add_enabled(!running, egui::Button::new("Run")).clicked() {
                 self.start_run(false);
             }
@@ -870,6 +1172,7 @@ impl App {
             }
             if ui.add_enabled(running, egui::Button::new("Stop")).clicked() {
                 self.backend.stop_run();
+                self.drain_events();
             }
         });
         ui.separator();
@@ -892,7 +1195,7 @@ impl App {
             }
         });
         if !self.result.is_empty() {
-            ui.label(format!("→ {}", self.result));
+            ui.label(format!("â†’ {}", self.result));
         }
     }
 
@@ -1079,39 +1382,6 @@ impl App {
             };
         }
     }
-
-    fn central(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.selectable_value(&mut self.tab, Tab::Trace, "Trace");
-            ui.selectable_value(&mut self.tab, Tab::Declarative, "Declarative");
-            ui.selectable_value(&mut self.tab, Tab::Buffers, "Buffers");
-            ui.selectable_value(&mut self.tab, Tab::Procedural, "Procedural");
-            ui.selectable_value(&mut self.tab, Tab::Parameters, "Parameters");
-            ui.selectable_value(&mut self.tab, Tab::History, "History");
-            ui.selectable_value(&mut self.tab, Tab::Graph, "Prod Graph");
-            if ui.button("Refresh").clicked() {
-                self.refresh_pending = true;
-            }
-        });
-        ui.separator();
-        if self.tab != self.last_tab {
-            self.refresh_pending = true;
-            self.last_tab = self.tab;
-        }
-        if self.refresh_pending {
-            self.refresh_active();
-            self.refresh_pending = false;
-        }
-        match self.tab {
-            Tab::Trace => self.trace_panel(ui),
-            Tab::Declarative => self.dm_panel(ui),
-            Tab::Buffers => self.buffer_panel(ui),
-            Tab::Procedural => self.proc_panel(ui),
-            Tab::Parameters => self.param_panel(ui),
-            Tab::History => self.history_panel(ui),
-            Tab::Graph => self.graph_panel(ui),
-        }
-    }
 }
 
 /// Replace an item with the same id, or append it.
@@ -1174,8 +1444,14 @@ impl eframe::App for App {
             });
         self.settings.controls_width = controls.response.rect.width();
 
-        egui::CentralPanel::default().show(ui, |ui| self.central(ui));
+        egui::CentralPanel::default().show(ui, |ui| self.trace_panel(ui));
 
+        if self.refresh_pending {
+            for tool in &mut self.tools {
+                tool.refresh_pending = true;
+            }
+            self.refresh_pending = false;
+        }
         let ctx = ui.ctx().clone();
         // Remember the window size for the next launch.
         if let Some(r) = ctx.input(|i| i.viewport().inner_rect) {
@@ -1187,19 +1463,72 @@ impl eframe::App for App {
                 .open(&mut open)
                 .show(&ctx, |ui| {
                     let mut changed = false;
-                    if ui
-                        .checkbox(&mut self.settings.sort_lists, "sort lists")
-                        .changed()
-                    {
-                        self.refresh_pending = true;
-                        changed = true;
-                    }
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.update_when_stepped,
+                            "update inspector windows automatically when stepping",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.use_env_window,
+                            "use an Environment window for visible experiment windows",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.show_copyrights,
+                            "show the ACT-R copyrights screen",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.use_localhost,
+                            "use localhost instead of 127.0.0.1",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.kill_model_windows,
+                            "close inspector windows for deleted models",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.use_smart_load,
+                            "compile an ACT-R file when loaded or reloaded",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.save_before_reload,
+                            "automatically save all open files when reload pressed",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.save_backups,
+                            "save a backup file when saving opened files",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(
+                            &mut self.settings.edit_warn,
+                            "show the editor limitations warning",
+                        )
+                        .changed();
+                    changed |= ui
+                        .checkbox(&mut self.settings.sort_lists, "sort viewer lists")
+                        .changed();
                     if ui
                         .checkbox(&mut self.settings.real_time, "real time")
                         .changed()
                     {
                         self.backend.set_real_time(self.settings.real_time);
                         changed = true;
+                    }
+                    if changed {
+                        self.refresh_pending = true;
                     }
                     ui.separator();
                     ui.label(format!("settings: {}", settings::settings_path().display()));
@@ -1209,10 +1538,60 @@ impl eframe::App for App {
                 });
             self.show_options = open;
         }
+        self.render_tools(&ctx);
         self.render_windows(&ctx);
     }
 
     fn on_exit(&mut self) {
         settings::save(&self.settings);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::env::InProc;
+
+    fn test_app() -> App {
+        let settings = Settings {
+            show_copyrights: false,
+            ..Default::default()
+        };
+        App::new(Box::new(InProc::new((100, 0))), None, settings)
+    }
+
+    #[test]
+    fn tool_windows_reuse_and_title_by_model() {
+        let mut app = test_app();
+        app.models = vec!["A".into(), "B".into()];
+        app.selected_model = Some("A".into());
+
+        app.open_tool(ToolKind::Declarative);
+        assert_eq!(app.tools.len(), 1);
+        assert_eq!(app.tools[0].title, "Declarative (A)");
+
+        // Opening the same kind again raises the existing window.
+        app.open_tool(ToolKind::Declarative);
+        assert_eq!(app.tools.len(), 1);
+
+        app.open_tool(ToolKind::EventQueue);
+        assert_eq!(app.tools.len(), 2);
+        assert_eq!(app.tools[1].title, "Event Queue");
+    }
+
+    #[test]
+    fn load_events_update_the_model_menu() {
+        let mut app = test_app();
+        let model = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("models")
+            .join("tutorial")
+            .join("unit1")
+            .join("count.lisp")
+            .to_string_lossy()
+            .into_owned();
+        app.eval("load-act-r-model", vec![Json::Str(model)]);
+        assert_eq!(app.models, vec!["COUNT".to_string()]);
+        assert_eq!(app.selected_model.as_deref(), Some("COUNT"));
     }
 }
