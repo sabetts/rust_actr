@@ -340,6 +340,39 @@ fn reload_reads_the_file_from_disk_and_loads_another_model() {
 }
 
 #[test]
+fn stop_request_interrupts_a_running_request() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("test-models/run-control.lisp"))],
+    );
+
+    // Send the run, then Stop on the same connection. The server must pump
+    // the Stop request between run slices instead of blocking on `run`.
+    let run_id = c.send(
+        Method::Evaluate,
+        vec![Json::Str("run".into()), Json::Null, Json::Float(60.0)],
+    );
+    let stop_id = c.send(
+        Method::Evaluate,
+        vec![
+            Json::Str("schedule-break-relative".into()),
+            Json::Null,
+            Json::Int(0),
+        ],
+    );
+    c.wait(stop_id).expect("schedule-break-relative");
+    let run = c.wait(run_id).expect("run");
+    let time = run.first().and_then(|x| x.as_f64()).unwrap_or(60.0);
+    assert!(
+        time < 60.0,
+        "run should stop early after schedule-break-relative, got {time}"
+    );
+}
+
+#[test]
 fn multi_model_run_emits_both_model_columns() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");

@@ -2,8 +2,8 @@
 //!
 //! Speaks the same `\x04`-framed JSON protocol as `tutorial/python/actr.py`
 //! and the Tcl environment: a background reader thread matches reply `id`s to
-//! pending requests and services server→client `evaluate` callbacks (the
-//! trace monitors we register).
+//! pending requests and services server→client `evaluate` callbacks (trace
+//! monitors, model/run signals, and visible-window ops).
 
 use std::collections::HashMap;
 use std::io::BufReader;
@@ -19,99 +19,115 @@ use crate::rpc::{
     parse_reply, parse_request, read_message, reply_err, reply_ok, write_message, Method,
 };
 
-use super::backend::EnvBackend;
+use super::backend::{BackendEvent, ConnectionInfo, EnvBackend, TraceStream};
 
-/// The command name the engine calls back with each trace line.
-const TRACE_HANDLER: &str = "env-model-trace";
-/// The four trace streams (`framework/printing.lisp`).
-const TRACE_STREAMS: [&str; 4] = [
-    "model-trace",
-    "command-trace",
-    "warning-trace",
-    "general-trace",
+/// One command per trace stream, so the UI can tag lines by source.
+const TRACE_HANDLERS: [(&str, &str, TraceStream); 4] = [
+    ("model-trace", "env-model-trace", TraceStream::Model),
+    ("command-trace", "env-command-trace", TraceStream::Command),
+    ("warning-trace", "env-warning-trace", TraceStream::Warning),
+    ("general-trace", "env-general-trace", TraceStream::General),
 ];
+/// The visible-window handler command.
+const VV_HANDLER: &str = "env-vv-handler";
+/// Signal handlers registered as client-owned commands.
+const MODEL_CREATED: &str = "env-model-created";
+const MODEL_DELETED: &str = "env-model-deleted";
+const RUN_START: &str = "env-run-start";
+const RUN_STOP: &str = "env-run-stop";
 
 type Pending = Arc<Mutex<HashMap<i64, Sender<Result<Vec<Json>, String>>>>>;
 
 pub struct Client {
     writer: Arc<Mutex<TcpStream>>,
     pending: Pending,
-    trace: Arc<Mutex<Vec<String>>>,
-    /// The visible-window handler command name (set by
-    /// [`EnvBackend::register_window_handler`]) and the ops it collected.
-    vv_name: Arc<Mutex<Option<String>>>,
-    ops: Arc<Mutex<Vec<Vec<Json>>>>,
+    events: Arc<Mutex<Vec<BackendEvent>>>,
     next_id: AtomicI64,
     /// Cached `current-model` (queried on demand; the trait getter is `&self`).
     model: Option<String>,
+    /// Cached `mp-models` order.
+    models: Vec<String>,
     addr: String,
-    /// A pending interactive run `(secs, full)`. The client runs it in one
-    /// blocking `evaluate` (the server drives its own slicing).
-    run: Option<(f64, bool)>,
+    /// A run in flight. The reply arrives on the reader thread, so the UI
+    /// thread can poll it and still send Stop on the same connection.
+    run: Option<mpsc::Receiver<Result<Vec<Json>, String>>>,
 }
 
 impl Client {
-    /// Connect to a running `actr server` and register the trace monitors.
+    /// Connect to a running `actr server` and register trace/signal monitors.
     pub fn connect(host: &str, port: u16) -> Result<Client, String> {
         let stream = TcpStream::connect((host, port))
             .map_err(|e| format!("could not connect to {host}:{port}: {e}"))?;
         let read_stream = stream.try_clone().map_err(|e| e.to_string())?;
         let writer = Arc::new(Mutex::new(stream));
         let pending: Pending = Arc::new(Mutex::new(HashMap::new()));
-        let trace = Arc::new(Mutex::new(Vec::new()));
-        let vv_name: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-        let ops = Arc::new(Mutex::new(Vec::new()));
+        let events: Arc<Mutex<Vec<BackendEvent>>> = Arc::new(Mutex::new(Vec::new()));
 
         spawn_reader(
             BufReader::new(read_stream),
             writer.clone(),
             pending.clone(),
-            trace.clone(),
-            vv_name.clone(),
-            ops.clone(),
+            events.clone(),
         );
 
         let mut client = Client {
             writer,
             pending,
-            trace,
-            vv_name,
-            ops,
+            events,
             next_id: AtomicI64::new(1),
             model: None,
+            models: Vec::new(),
             addr: format!("{host}:{port}"),
             run: None,
         };
 
         client.request("set-name", vec![Json::Str("ACT-R Environment".into())])?;
-        // Register the trace sink as a client-owned command, then monitor all
-        // four streams onto it (as `11-ctrl-panel-load-button.tcl` does).
-        client.request(
-            "add",
-            vec![
-                Json::Str(TRACE_HANDLER.into()),
-                Json::Str(TRACE_HANDLER.into()),
-                Json::Str("Environment trace sink".into()),
-                Json::Null,
-                Json::Str(TRACE_HANDLER.into()),
-            ],
-        )?;
-        for stream in TRACE_STREAMS {
-            client.request(
-                "monitor",
-                vec![
-                    Json::Str(stream.into()),
-                    Json::Str(TRACE_HANDLER.into()),
-                    Json::Str("simple".into()),
-                ],
-            )?;
+        for (stream, handler, _) in TRACE_HANDLERS {
+            client.register_handler(stream, handler, "Environment trace sink")?;
         }
+        for (signal, handler) in [
+            ("creating-model", MODEL_CREATED),
+            ("deleting-model", MODEL_DELETED),
+            ("run-start", RUN_START),
+            ("run-stop", RUN_STOP),
+        ] {
+            client.register_handler(signal, handler, "Environment signal handler")?;
+        }
+        let _ = client.refresh_models();
         let _ = client.refresh_model();
         Ok(client)
     }
 
-    /// Send a request and block for its reply.
-    fn request(&self, method: &str, params: Vec<Json>) -> Result<Vec<Json>, String> {
+    /// Register a client-owned command and attach it as a simple monitor.
+    fn register_handler(&self, target: &str, handler: &str, doc: &str) -> Result<(), String> {
+        // Register the handler as a client-owned command, then attach it as a
+        // simple monitor of the stream/signal command.
+        self.request(
+            "add",
+            vec![
+                Json::Str(handler.into()),
+                Json::Str(handler.into()),
+                Json::Str(doc.into()),
+                Json::Null,
+            ],
+        )?;
+        self.request(
+            "monitor",
+            vec![
+                Json::Str(target.into()),
+                Json::Str(handler.into()),
+                Json::Str("simple".into()),
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Send a request and return a receiver for its reply.
+    fn start_request(
+        &self,
+        method: &str,
+        params: Vec<Json>,
+    ) -> Result<mpsc::Receiver<Result<Vec<Json>, String>>, String> {
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
         let (tx, rx) = mpsc::channel();
         self.pending.lock().unwrap().insert(id, tx);
@@ -124,10 +140,17 @@ impl Client {
             let mut w = self.writer.lock().unwrap();
             write_message(&mut *w, &msg).map_err(|e| e.to_string())?;
         }
+        Ok(rx)
+    }
+
+    /// Send a request and block for its reply.
+    fn request(&self, method: &str, params: Vec<Json>) -> Result<Vec<Json>, String> {
+        let rx = self.start_request(method, params)?;
         match rx.recv_timeout(Duration::from_secs(600)) {
             Ok(r) => r,
             Err(_) => {
-                self.pending.lock().unwrap().remove(&id);
+                // The id is not known here; the reader will drop the sender
+                // when the reply finally arrives.
                 Err("timed out waiting for the server".into())
             }
         }
@@ -139,11 +162,26 @@ impl Client {
             "evaluate",
             vec![Json::Str("current-model".into()), Json::Null],
         ) {
-            if let Some(Json::Str(name)) = v.first() {
-                self.model = Some(name.clone());
+            match v.first() {
+                Some(Json::Str(name)) => self.model = Some(name.clone()),
+                Some(Json::Null) | None => self.model = None,
+                _ => {}
             }
         }
         self.model.clone()
+    }
+
+    /// Refresh the cached model order from the server.
+    pub fn refresh_models(&mut self) -> Vec<String> {
+        if let Ok(v) = self.request("evaluate", vec![Json::Str("mp-models".into()), Json::Null]) {
+            if let Some(Json::Arr(names)) = v.first() {
+                self.models = names
+                    .iter()
+                    .filter_map(|n| n.as_str().map(str::to_string))
+                    .collect();
+            }
+        }
+        self.models.clone()
     }
 }
 
@@ -165,19 +203,39 @@ impl EnvBackend for Client {
         // Model selection / loading changes the cached name.
         if matches!(
             name,
-            "load-act-r-model" | "load-act-r-code" | "reset" | "set-current-model"
+            "load-act-r-model"
+                | "load-act-r-code"
+                | "reset"
+                | "set-current-model"
+                | "reload"
+                | "clear-all"
         ) {
             let _ = self.refresh_model();
+            let _ = self.refresh_models();
         }
         result
     }
 
-    fn take_trace(&mut self) -> Vec<String> {
-        std::mem::take(&mut *self.trace.lock().unwrap())
+    fn take_events(&mut self) -> Vec<BackendEvent> {
+        let events = std::mem::take(&mut *self.events.lock().unwrap());
+        if events.iter().any(|e| {
+            matches!(
+                e,
+                BackendEvent::ModelCreated(_) | BackendEvent::ModelDeleted(_)
+            )
+        }) {
+            let _ = self.refresh_model();
+            let _ = self.refresh_models();
+        }
+        events
     }
 
     fn current_model(&self) -> Option<String> {
         self.model.clone()
+    }
+
+    fn models(&self) -> Vec<String> {
+        self.models.clone()
     }
 
     fn set_current_model(&mut self, name: Option<String>) {
@@ -191,7 +249,6 @@ impl EnvBackend for Client {
     }
 
     fn register_window_handler(&mut self, name: &str) {
-        *self.vv_name.lock().unwrap() = Some(name.to_string());
         let _ = self.request(
             "add",
             vec![
@@ -204,25 +261,90 @@ impl EnvBackend for Client {
         );
     }
 
-    fn take_window_ops(&mut self) -> Vec<Vec<Json>> {
-        std::mem::take(&mut *self.ops.lock().unwrap())
+    fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
+        let v = self.request("list-connections", Vec::new())?;
+        let Some(Json::Arr(rows)) = v.first() else {
+            return Ok(Vec::new());
+        };
+        Ok(rows
+            .iter()
+            .filter_map(|row| {
+                let Json::Arr(f) = row else { return None };
+                Some(ConnectionInfo {
+                    name: f.first().and_then(|x| x.as_str()).unwrap_or("").into(),
+                    address: String::new(),
+                    pending_calls: f.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+                    sent: f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+                    received: f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+                    commands: f
+                        .get(4)
+                        .and_then(|x| match x {
+                            Json::Arr(a) => Some(
+                                a.iter()
+                                    .filter_map(|s| s.as_str().map(str::to_string))
+                                    .collect(),
+                            ),
+                            _ => None,
+                        })
+                        .unwrap_or_default(),
+                })
+            })
+            .collect())
     }
 
     fn begin_run(&mut self, secs: f64, full: bool) -> bool {
-        self.run = Some((secs, full));
-        true
+        let name = if full { "run-full-time" } else { "run" };
+        match self.start_request(
+            "evaluate",
+            vec![Json::Str(name.into()), Json::Null, Json::Float(secs)],
+        ) {
+            Ok(rx) => {
+                self.run = Some(rx);
+                true
+            }
+            Err(e) => {
+                self.run = None;
+                let _ = self.events.lock().unwrap().push(BackendEvent::Status(e));
+                false
+            }
+        }
     }
 
     fn poll_run(&mut self) -> Result<bool, String> {
-        let Some((secs, full)) = self.run.take() else {
+        let Some(rx) = &self.run else {
             return Ok(false);
         };
-        let name = if full { "run-full-time" } else { "run" };
-        self.evaluate(name, None, vec![Json::Float(secs)])?;
-        Ok(false)
+        match rx.try_recv() {
+            Ok(Ok(_)) => {
+                self.run = None;
+                let _ = self.refresh_model();
+                let _ = self.refresh_models();
+                Ok(false)
+            }
+            Ok(Err(e)) => {
+                self.run = None;
+                Err(e)
+            }
+            Err(mpsc::TryRecvError::Empty) => Ok(true),
+            Err(mpsc::TryRecvError::Disconnected) => {
+                self.run = None;
+                Err("connection closed while a run was in progress".into())
+            }
+        }
     }
 
-    fn stop_run(&mut self) {}
+    fn stop_run(&mut self) {
+        // The server pumps client requests even while `run` is in flight, so
+        // this break reaches the same session and stops it before the limit.
+        let _ = self.request(
+            "evaluate",
+            vec![
+                Json::Str("schedule-break-relative".into()),
+                Json::Null,
+                Json::Int(0),
+            ],
+        );
+    }
 
     fn is_running(&self) -> bool {
         self.run.is_some()
@@ -231,15 +353,13 @@ impl EnvBackend for Client {
     fn set_real_time(&mut self, _on: bool) {}
 }
 
-/// The reader loop: replies to pending requests, and trace callbacks to the
-/// shared trace queue.
+/// The reader loop: replies to pending requests, trace/signal callbacks, and
+/// visible-window display ops.
 fn spawn_reader(
     mut reader: BufReader<TcpStream>,
     writer: Arc<Mutex<TcpStream>>,
     pending: Pending,
-    trace: Arc<Mutex<Vec<String>>>,
-    vv_name: Arc<Mutex<Option<String>>>,
-    ops: Arc<Mutex<Vec<Vec<Json>>>>,
+    events: Arc<Mutex<Vec<BackendEvent>>>,
 ) {
     thread::spawn(move || loop {
         let msg = match read_message(&mut reader) {
@@ -247,33 +367,75 @@ fn spawn_reader(
             _ => break,
         };
         if msg.get("method").is_some() {
-            // A server→client callback (a monitor we registered).
             if let Ok((method, params, id)) = parse_request(&msg) {
                 if method == Method::Evaluate {
                     let name = params.first().and_then(|p| p.as_str()).unwrap_or("");
-                    let is_vv = vv_name
-                        .lock()
-                        .unwrap()
-                        .as_deref()
-                        .map(|n| n == name)
-                        .unwrap_or(false);
-                    let reply = if name == TRACE_HANDLER {
-                        if let Some(line) = params.get(2).and_then(|p| p.as_str()) {
-                            trace.lock().unwrap().push(line.to_string());
+                    let model = params.get(1).and_then(|p| match p {
+                        Json::Str(s) => Some(s.clone()),
+                        _ => None,
+                    });
+                    let args: Vec<Json> = params.iter().skip(2).cloned().collect();
+                    let trace = TRACE_HANDLERS
+                        .iter()
+                        .find(|(_, handler, _)| *handler == name)
+                        .map(|(_, _, stream)| *stream);
+                    let handled = {
+                        let mut out = events.lock().unwrap();
+                        if let Some(stream) = trace {
+                            if let Some(line) = args.first().and_then(|p| p.as_str()) {
+                                out.push(BackendEvent::Trace {
+                                    stream,
+                                    line: line.to_string(),
+                                });
+                            }
+                            true
+                        } else {
+                            match name {
+                                MODEL_CREATED => {
+                                    if let Some(n) = args.first().and_then(|p| p.as_str()) {
+                                        out.push(BackendEvent::ModelCreated(n.to_string()));
+                                    }
+                                    true
+                                }
+                                MODEL_DELETED => {
+                                    if let Some(n) = args.first().and_then(|p| p.as_str()) {
+                                        out.push(BackendEvent::ModelDeleted(n.to_string()));
+                                    }
+                                    true
+                                }
+                                RUN_START => {
+                                    let time = args.first().and_then(|p| p.as_f64()).unwrap_or(0.0);
+                                    out.push(BackendEvent::RunStarted { model, time });
+                                    true
+                                }
+                                RUN_STOP => {
+                                    let time = args.first().and_then(|p| p.as_f64()).unwrap_or(0.0);
+                                    out.push(BackendEvent::RunStopped {
+                                        model,
+                                        time,
+                                        events: 0,
+                                    });
+                                    true
+                                }
+                                VV_HANDLER => {
+                                    // `[name, model, verb, …]`; every verb except
+                                    // `check` is a display op for the UI thread.
+                                    let op: Vec<Json> = args.clone();
+                                    let check = op
+                                        .first()
+                                        .and_then(|x| x.as_str())
+                                        .map(|s| s == "check")
+                                        .unwrap_or(false);
+                                    if !check {
+                                        out.push(BackendEvent::WindowOp(op));
+                                    }
+                                    true
+                                }
+                                _ => false,
+                            }
                         }
-                        reply_ok(id.as_ref(), Json::Arr(vec![Json::Bool(true)]))
-                    } else if is_vv {
-                        // `[name, model, verb, …]`; `check` answers true, every
-                        // other verb is a display op for the UI thread.
-                        let op: Vec<Json> = params.iter().skip(2).cloned().collect();
-                        let check = op
-                            .first()
-                            .and_then(|x| x.as_str())
-                            .map(|s| s == "check")
-                            .unwrap_or(false);
-                        if !check {
-                            ops.lock().unwrap().push(op);
-                        }
+                    };
+                    let reply = if handled {
                         reply_ok(id.as_ref(), Json::Arr(vec![Json::Bool(true)]))
                     } else {
                         reply_err(id.as_ref(), &format!("no handler for {name:?}"))

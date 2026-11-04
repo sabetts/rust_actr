@@ -1,19 +1,19 @@
 //! The RPC listener: accept a client, read `\x04`-framed JSON requests,
 //! dispatch them through the [`Session`], and stream trace output to monitors.
 //!
-//! Single-connection, synchronous: a client request may trigger a server→
+//! Single-connection, synchronous: a client request may trigger a serverâ†’
 //! client `evaluate` callback (a monitor or a client-owned command), and the
-//! server blocks reading that reply before continuing — the same shape as the
+//! server blocks reading that reply before continuing â€” the same shape as the
 //! Lisp dispatcher's `send-remote-command` (`framework/dispatcher.lisp:2074`).
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 
 use crate::json::Json;
 use crate::rpc::session::{MonitorWhen, Owner, Remote, RunStop, Session};
 use crate::rpc::{
-    callback, parse_reply, parse_request, read_message, reply_err, reply_ok, write_message, Method,
+    callback, parse_reply, parse_request, reply_err, reply_ok, write_message, Method,
 };
 
 /// Serve clients on `addr` (TCP).  Model and task files are loaded from
@@ -21,7 +21,7 @@ use crate::rpc::{
 ///
 /// Each connection is handled on its own thread so a second client (the
 /// Python `actr.connection()` a test may open alongside the driver) is
-/// answered immediately instead of blocking behind the first — the Lisp
+/// answered immediately instead of blocking behind the first â€” the Lisp
 /// server accepts clients concurrently too.
 pub fn serve(addr: &str, seed: (u64, u64)) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr)?;
@@ -67,9 +67,10 @@ fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
         peer,
         sent: 0,
         received: 0,
+        buf: Vec::new(),
     };
     loop {
-        let msg = match crate::rpc::read_message(&mut conn.stream)? {
+        let msg = match conn.read_next(true)? {
             Some(m) => m,
             None => return Ok(()),
         };
@@ -110,7 +111,7 @@ fn handle(session: &mut Session, stream: TcpStream) -> std::io::Result<()> {
 ///
 /// [`Conn::call`] cannot do this: it runs while `Session::evaluate` holds
 /// `&mut Session`, so a nested request from the callback has no way to reach
-/// the session and is dropped — leaving the client blocked forever waiting for
+/// the session and is dropped â€” leaving the client blocked forever waiting for
 /// a reply. Here the borrow is released, so nested requests (`paired-learning`'s
 /// testing function calls `set-parameter-value`) are dispatched normally.
 fn call_remote_reentrant(
@@ -126,7 +127,7 @@ fn call_remote_reentrant(
     conn.sent += 1;
     write_message(&mut conn.stream, &msg)?;
     loop {
-        let reply = match read_message(&mut conn.stream)? {
+        let reply = match conn.read_next(true)? {
             Some(m) => m,
             None => return Ok(()),
         };
@@ -149,7 +150,7 @@ fn call_remote_reentrant(
     }
 }
 
-/// Drain the trace and the model-fired commands (`output-key`, …) to their
+/// Drain the trace and the model-fired commands (`output-key`, â€¦) to their
 /// monitors. ACT-R fires those inside the run, so a task reads its handler's
 /// effect as soon as `run` returns; a handler can in turn emit trace, so drain
 /// until both are quiet.
@@ -217,11 +218,42 @@ fn drain_stepper_updates(session: &mut Session, conn: &mut Conn) -> std::io::Res
     Ok(())
 }
 
+/// Service ordinary client requests between run slices on the same
+/// connection (Stop, event queue, inspectors) without answering the pending
+/// `run` request. Non-blocking: returns as soon as no complete request is
+/// buffered.
+fn pump_requests(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
+    while let Some(msg) = conn.read_next(false)? {
+        conn.received += 1;
+        let (method, params, id) = match crate::rpc::parse_request(&msg) {
+            Ok(x) => x,
+            Err(e) => {
+                conn.sent += 1;
+                crate::rpc::write_message(&mut conn.stream, &reply_err(None, &e))?;
+                continue;
+            }
+        };
+        if method == Method::Close {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "connection closed while a run was in progress",
+            ));
+        }
+        let reply = dispatch(session, conn, method, &params, id.as_ref());
+        conn.sent += 1;
+        crate::rpc::write_message(&mut conn.stream, &reply)?;
+        drain(session, conn);
+        drain_stepper_updates(session, conn)?;
+        drain_pending_signals(session, conn)?;
+    }
+    Ok(())
+}
+
 /// While a stepper is paused before an event, keep servicing client requests
 /// (Step / Stop / Update / Set-*) without answering the pending `run` request.
 fn pump_stepper(session: &mut Session, conn: &mut Conn) -> std::io::Result<()> {
     while session.stepper_paused() {
-        let Some(msg) = crate::rpc::read_message(&mut conn.stream)? else {
+        let Some(msg) = conn.read_next(true)? else {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "connection closed while the stepper was paused",
@@ -289,12 +321,17 @@ fn run_interleaved(
         return reply_err(id, &e.to_string());
     }
     loop {
-        let stop = match session.run_slice_reason(limit, full) {
+        let stop = match session.run_slice_reason_capped(limit, full, 500) {
             Ok(stop) => stop,
             Err(e) => return reply_err(id, &e),
         };
         drain(session, conn);
         if let Err(e) = drain_stepper_updates(session, conn) {
+            return reply_err(id, &e.to_string());
+        }
+        // Service Stop / event-queue / inspector requests while the run is in
+        // flight. Without this the connection is blocked on the `run` reply.
+        if let Err(e) = pump_requests(session, conn) {
             return reply_err(id, &e.to_string());
         }
 
@@ -313,7 +350,7 @@ fn run_interleaved(
             continue;
         }
 
-        if stop == RunStop::StepperUpdate {
+        if stop == RunStop::StepperUpdate || stop == RunStop::Continue {
             continue;
         }
 
@@ -357,8 +394,8 @@ fn dispatch(
     match method {
         Method::Check => {
             let name = params.first().and_then(|p| p.as_str()).unwrap_or("");
-            // `check-command` (`framework/dispatcher.lisp:1235`): no entry →
-            // one value `(nil)`; an entry → `(t owned-by-this-evaluator doc)`.
+            // `check-command` (`framework/dispatcher.lisp:1235`): no entry â†’
+            // one value `(nil)`; an entry â†’ `(t owned-by-this-evaluator doc)`.
             // The Python client treats `result[0] == None` as "free name"
             // (`actr.py:438`), so a missing command must send `[null]`.
             let result = match session.commands().get(name) {
@@ -479,7 +516,7 @@ fn dispatch(
                 session.evaluate(&name, model, &args, conn)
             };
             // Stream any trace the command produced to the trace monitors, and
-            // dispatch the commands the model itself fired (`output-key`, …)
+            // dispatch the commands the model itself fired (`output-key`, â€¦)
             // to their monitors. ACT-R fires those *inside* the run, so a task
             // reads its handler's effect as soon as `run` returns; a handler
             // can in turn emit trace, so drain until both are quiet.
@@ -502,6 +539,53 @@ struct Conn {
     peer: String,
     sent: u64,
     received: u64,
+    /// Bytes read from the socket but not yet framed. Kept across a
+    /// non-blocking run pump so a partial request is never lost.
+    buf: Vec<u8>,
+}
+
+impl Conn {
+    /// Read the next framed request. `block` waits for one; otherwise returns
+    /// `Ok(None)` when no complete frame is available yet.
+    fn read_next(&mut self, block: bool) -> std::io::Result<Option<Json>> {
+        if let Some(msg) = self.take_buffered()? {
+            return Ok(Some(msg));
+        }
+        self.stream.set_nonblocking(!block)?;
+        let mut tmp = [0u8; 8192];
+        loop {
+            match self.stream.read(&mut tmp) {
+                Ok(0) => return Ok(None),
+                Ok(n) => {
+                    self.buf.extend_from_slice(&tmp[..n]);
+                    if let Some(msg) = self.take_buffered()? {
+                        return Ok(Some(msg));
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(e)
+                    if !block
+                        && (e.kind() == std::io::ErrorKind::WouldBlock
+                            || e.kind() == std::io::ErrorKind::TimedOut) =>
+                {
+                    return Ok(None)
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
+    fn take_buffered(&mut self) -> std::io::Result<Option<Json>> {
+        let Some(pos) = self.buf.iter().position(|b| *b == crate::rpc::EOM) else {
+            return Ok(None);
+        };
+        let frame: Vec<u8> = self.buf.drain(..=pos).collect();
+        let text = String::from_utf8_lossy(&frame[..frame.len() - 1]);
+        let v = crate::json::parse(text.trim()).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("bad JSON: {e}"))
+        })?;
+        Ok(Some(v))
+    }
 }
 
 impl Remote for Conn {
@@ -519,7 +603,8 @@ impl Remote for Conn {
         // Read until the matching reply (the client may interleave nothing
         // else while it is running our callback).
         loop {
-            let reply = read_message(&mut self.stream)
+            let reply = self
+                .read_next(true)
                 .map_err(|e| e.to_string())?
                 .ok_or_else(|| "connection closed waiting for a command reply".to_string())?;
             self.received += 1;

@@ -2,16 +2,17 @@
 //!
 //! This is the default `actr env` wiring. Commands go through
 //! [`Session::evaluate`], so the exact same dispatch the RPC server uses is
-//! exercised; trace is drained from the session's `out_lines`, and visible
-//! window display ops are collected from the client handler's `Remote`.
+//! exercised; trace, signals, window ops, and stepper callbacks are collected
+//! into a single [`BackendEvent`] stream for the UI thread.
 
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use crate::engine::TraceKind;
 use crate::json::Json;
 use crate::rpc::session::{Remote, Session};
 
-use super::backend::EnvBackend;
+use super::backend::{BackendEvent, ConnectionInfo, EnvBackend, TraceStream};
 
 /// An in-progress interactive run.
 struct RunState {
@@ -64,6 +65,8 @@ pub struct InProc {
     stop: bool,
     /// Pace runs to wall-clock time (`run`'s real-time flag).
     real_time: bool,
+    /// Events waiting for the UI thread.
+    events: Vec<BackendEvent>,
 }
 
 impl InProc {
@@ -75,12 +78,65 @@ impl InProc {
             run: None,
             stop: false,
             real_time: true,
+            events: Vec::new(),
         }
     }
 
     /// Direct access to the session (run slicing, device actions, …).
     pub fn session_mut(&mut self) -> &mut Session {
         &mut self.session
+    }
+
+    /// Gather trace, signals, window ops, and stepper callbacks into the event
+    /// queue.
+    fn collect_events(&mut self) {
+        for op in std::mem::take(&mut *self.ops.lock().unwrap()) {
+            self.events.push(BackendEvent::WindowOp(op));
+        }
+        for (line, kind) in self.session.take_trace_events() {
+            let stream = match kind {
+                TraceKind::Model => TraceStream::Model,
+                TraceKind::Command => TraceStream::Command,
+                TraceKind::Warning => TraceStream::Warning,
+                TraceKind::General => TraceStream::General,
+            };
+            self.events.push(BackendEvent::Trace { stream, line });
+        }
+        for (name, model, args) in self.session.take_pending_signals() {
+            match name.as_str() {
+                "creating-model" => {
+                    if let Some(name) = args.first().and_then(|a| a.as_str()) {
+                        self.events
+                            .push(BackendEvent::ModelCreated(name.to_string()));
+                    }
+                }
+                "deleting-model" => {
+                    if let Some(name) = args.first().and_then(|a| a.as_str()) {
+                        self.events
+                            .push(BackendEvent::ModelDeleted(name.to_string()));
+                    }
+                }
+                // Run signals are synthesized around begin_run/poll_run.
+                "run-start" | "run-stop" => {}
+                other => self
+                    .events
+                    .push(BackendEvent::Status(format!("signal: {other} {model:?}"))),
+            }
+        }
+        while let Some((command, model, args)) = self.session.take_stepper_pause() {
+            self.events.push(BackendEvent::StepperPause {
+                model,
+                command,
+                args,
+            });
+        }
+        while let Some((command, model, args)) = self.session.take_stepper_update() {
+            self.events.push(BackendEvent::StepperUpdate {
+                model,
+                command,
+                args,
+            });
+        }
     }
 }
 
@@ -95,19 +151,27 @@ impl EnvBackend for InProc {
             handler: self.handler.clone(),
             ops: self.ops.clone(),
         };
-        self.session.evaluate(name, model, &args, &mut remote)
+        let result = self.session.evaluate(name, model, &args, &mut remote);
+        self.collect_events();
+        result
     }
 
-    fn take_trace(&mut self) -> Vec<String> {
-        self.session.take_trace()
+    fn take_events(&mut self) -> Vec<BackendEvent> {
+        self.collect_events();
+        std::mem::take(&mut self.events)
     }
 
     fn current_model(&self) -> Option<String> {
         self.session.current_model().map(str::to_string)
     }
 
+    fn models(&self) -> Vec<String> {
+        self.session.models()
+    }
+
     fn set_current_model(&mut self, name: Option<String>) {
         self.session.set_current_model(name);
+        self.collect_events();
     }
 
     fn describe(&self) -> String {
@@ -119,16 +183,26 @@ impl EnvBackend for InProc {
         self.session.add_remote(name, Some(name.to_string()), None);
     }
 
-    fn take_window_ops(&mut self) -> Vec<Vec<Json>> {
-        std::mem::take(&mut *self.ops.lock().unwrap())
+    fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
+        Ok(vec![ConnectionInfo {
+            name: "in-process".into(),
+            address: "local".into(),
+            ..Default::default()
+        }])
     }
 
     fn begin_run(&mut self, secs: f64, full: bool) -> bool {
         let name = if full { "run-full-time" } else { "run" };
         let start_model_ms = (self.session.time_secs() * 1000.0).round() as i64;
+        let start_time = self.session.time_secs();
+        let model = self.current_model();
         let (limit_ms, full, should) = self.session.run_begin(name, secs);
         self.stop = false;
         if should {
+            self.events.push(BackendEvent::RunStarted {
+                model,
+                time: start_time,
+            });
             self.run = Some(RunState {
                 limit_ms,
                 full,
@@ -148,6 +222,15 @@ impl EnvBackend for InProc {
             // Drop the run (no terminator; the user aborted it).
             self.stop = false;
             self.run = None;
+            let model = self.current_model();
+            let time = self.session.time_secs();
+            let events = self.session.run_events();
+            self.collect_events();
+            self.events.push(BackendEvent::RunStopped {
+                model,
+                time,
+                events,
+            });
             return Ok(false);
         }
         let Some(run) = &self.run else {
@@ -164,7 +247,16 @@ impl EnvBackend for InProc {
         let running = self
             .session
             .run_chunk(run.limit_ms, run.full, Some(200), soft)?;
+        let model = self.current_model();
+        let time = self.session.time_secs();
+        let events = self.session.run_events();
+        self.collect_events();
         if !running {
+            self.events.push(BackendEvent::RunStopped {
+                model,
+                time,
+                events,
+            });
             self.run = None;
         }
         Ok(running)

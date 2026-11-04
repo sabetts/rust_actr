@@ -8,7 +8,7 @@ use eframe::egui;
 
 use crate::json::Json;
 
-use super::backend::{result_text, EnvBackend};
+use super::backend::{result_text, BackendEvent, EnvBackend};
 use super::settings::{self, Settings};
 
 /// The central-area views.
@@ -115,6 +115,11 @@ pub struct App {
     run_secs: f64,
     /// Persistent GUI settings.
     settings: Settings,
+    /// Models in load order and the client-selected model.
+    models: Vec<String>,
+    selected_model: Option<String>,
+    /// Whether an interactive run is in progress (from run signals).
+    running: bool,
     /// Whether the Options window is open.
     show_options: bool,
     /// Last error, shown in the status bar.
@@ -170,6 +175,8 @@ impl App {
             None,
             vec![Json::Str("trace-history".to_string())],
         );
+        let models = backend.models();
+        let selected_model = backend.current_model().or_else(|| models.last().cloned());
         App {
             backend,
             start_dir,
@@ -178,6 +185,9 @@ impl App {
             result: String::new(),
             run_secs: 10.0,
             settings,
+            models,
+            selected_model,
+            running: false,
             show_options: false,
             error: None,
             tab: Tab::Trace,
@@ -403,111 +413,109 @@ impl App {
             });
     }
 
-    /// Apply the display ops the handler received to the window list.
-    fn apply_window_ops(&mut self) {
-        for op in self.backend.take_window_ops() {
-            let s = |i: usize| op.get(i).and_then(|x| x.as_str()).unwrap_or("").to_string();
-            let n = |i: usize| op.get(i).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
-            match op.first().and_then(|x| x.as_str()).unwrap_or("") {
-                "open" => {
-                    let title = s(1);
-                    let win = VisWin {
-                        title: title.clone(),
-                        x: n(2),
-                        y: n(3),
-                        w: n(4),
-                        h: n(5),
-                        ..Default::default()
-                    };
-                    self.windows.retain(|w| w.title != title);
-                    self.windows.push(win);
-                }
-                "close" => {
-                    let title = s(1);
-                    self.windows.retain(|w| w.title != title);
-                }
-                "select" => {}
-                "text" => {
-                    let (title, id) = (s(1), s(2));
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        upsert(
-                            &mut w.items,
-                            WinItem::Text {
-                                id,
-                                x: n(3),
-                                y: n(4),
-                                text: s(5),
-                                color: color(&s(6)),
-                                size: n(7).max(6.0),
-                            },
-                        );
-                    }
-                }
-                "button" => {
-                    let (title, id) = (s(1), s(2));
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        upsert(
-                            &mut w.items,
-                            WinItem::Button {
-                                id,
-                                x: n(3),
-                                y: n(4),
-                                w: n(5),
-                                h: n(6),
-                                text: s(7),
-                                color: color(&s(8)),
-                            },
-                        );
-                    }
-                }
-                "line" => {
-                    let (title, id) = (s(1), s(2));
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        upsert(
-                            &mut w.items,
-                            WinItem::Line {
-                                id,
-                                x1: n(3),
-                                y1: n(4),
-                                x2: n(5),
-                                y2: n(6),
-                                color: color(&s(7)),
-                            },
-                        );
-                    }
-                }
-                "remove" => {
-                    let (title, id) = (s(1), s(2));
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        w.items.retain(|it| it.id() != id);
-                    }
-                }
-                "attention" => {
-                    let title = s(1);
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        w.attention = Some((n(3), n(4), color(&s(5))));
-                    }
-                }
-                "clearattention" => {
-                    let title = s(1);
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        w.attention = None;
-                    }
-                }
-                "cursor" => {
-                    let title = s(1);
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        w.cursor = Some((n(3), n(4), color(&s(5))));
-                    }
-                }
-                "clearcursor" => {
-                    let title = s(1);
-                    if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
-                        w.cursor = None;
-                    }
-                }
-                _ => {}
+    /// Apply one display op from the handler to the window list.
+    fn apply_window_op(&mut self, op: Vec<Json>) {
+        let s = |i: usize| op.get(i).and_then(|x| x.as_str()).unwrap_or("").to_string();
+        let n = |i: usize| op.get(i).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
+        match op.first().and_then(|x| x.as_str()).unwrap_or("") {
+            "open" => {
+                let title = s(1);
+                let win = VisWin {
+                    title: title.clone(),
+                    x: n(2),
+                    y: n(3),
+                    w: n(4),
+                    h: n(5),
+                    ..Default::default()
+                };
+                self.windows.retain(|w| w.title != title);
+                self.windows.push(win);
             }
+            "close" => {
+                let title = s(1);
+                self.windows.retain(|w| w.title != title);
+            }
+            "select" => {}
+            "text" => {
+                let (title, id) = (s(1), s(2));
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    upsert(
+                        &mut w.items,
+                        WinItem::Text {
+                            id,
+                            x: n(3),
+                            y: n(4),
+                            text: s(5),
+                            color: color(&s(6)),
+                            size: n(7).max(6.0),
+                        },
+                    );
+                }
+            }
+            "button" => {
+                let (title, id) = (s(1), s(2));
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    upsert(
+                        &mut w.items,
+                        WinItem::Button {
+                            id,
+                            x: n(3),
+                            y: n(4),
+                            w: n(5),
+                            h: n(6),
+                            text: s(7),
+                            color: color(&s(8)),
+                        },
+                    );
+                }
+            }
+            "line" => {
+                let (title, id) = (s(1), s(2));
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    upsert(
+                        &mut w.items,
+                        WinItem::Line {
+                            id,
+                            x1: n(3),
+                            y1: n(4),
+                            x2: n(5),
+                            y2: n(6),
+                            color: color(&s(7)),
+                        },
+                    );
+                }
+            }
+            "remove" => {
+                let (title, id) = (s(1), s(2));
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.items.retain(|it| it.id() != id);
+                }
+            }
+            "attention" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.attention = Some((n(3), n(4), color(&s(5))));
+                }
+            }
+            "clearattention" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.attention = None;
+                }
+            }
+            "cursor" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.cursor = Some((n(3), n(4), color(&s(5))));
+                }
+            }
+            "clearcursor" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.cursor = None;
+                }
+            }
+            _ => {}
         }
     }
 
@@ -624,41 +632,85 @@ impl App {
         }
     }
 
-    /// Drain any trace the engine produced into the pane.
-    fn drain_trace(&mut self) {
-        for line in self.backend.take_trace() {
-            self.trace.push_str(&line);
-            if !line.ends_with('\n') {
-                self.trace.push('\n');
+    /// Drain backend events: trace, model/run signals, and window ops.
+    fn drain_events(&mut self) {
+        for event in self.backend.take_events() {
+            match event {
+                BackendEvent::Trace { line, .. } => {
+                    self.trace.push_str(&line);
+                    if !line.ends_with('\n') {
+                        self.trace.push('\n');
+                    }
+                }
+                BackendEvent::ModelCreated(name) => {
+                    if !self.models.iter().any(|m| m == &name) {
+                        self.models.push(name.clone());
+                    }
+                    // A newly created model becomes the selected one, as in
+                    // the Tcl model menu.
+                    self.selected_model = Some(name);
+                }
+                BackendEvent::ModelDeleted(name) => {
+                    self.models.retain(|m| m != &name);
+                    if self.selected_model.as_deref() == Some(name.as_str()) {
+                        self.selected_model = self.models.first().cloned();
+                    }
+                }
+                BackendEvent::RunStarted { .. } => self.running = true,
+                BackendEvent::RunStopped { .. } => {
+                    self.running = false;
+                    self.refresh_pending = true;
+                }
+                BackendEvent::WindowOp(op) => self.apply_window_op(op),
+                BackendEvent::Status(_) => {}
+                BackendEvent::StepperPause { .. } | BackendEvent::StepperUpdate { .. } => {}
             }
         }
     }
 
-    /// Evaluate a command, recording any error for the status bar.
+    /// Evaluate a global command, recording any error for the status bar.
     fn eval(&mut self, name: &str, args: Vec<Json>) -> Option<Vec<Json>> {
-        match self.backend.evaluate(name, None, args) {
+        self.eval_for(None, name, args)
+    }
+
+    /// Evaluate a model-scoped command against the selected model.
+    fn eval_model(&mut self, name: &str, args: Vec<Json>) -> Option<Vec<Json>> {
+        self.eval_for(self.selected_model.clone(), name, args)
+    }
+
+    fn eval_for(
+        &mut self,
+        model: Option<String>,
+        name: &str,
+        args: Vec<Json>,
+    ) -> Option<Vec<Json>> {
+        match self.backend.evaluate(name, model.as_deref(), args) {
             Ok(v) => {
                 self.error = None;
+                self.drain_events();
                 Some(v)
             }
             Err(e) => {
                 self.error = Some(format!("{name}: {e}"));
-                self.drain_trace();
+                self.drain_events();
                 None
             }
         }
     }
 
-    /// Evaluate a command and take the first result as a string.
+    /// Evaluate a model-scoped command and take the first result as a string.
     fn text(&mut self, name: &str, args: Vec<Json>) -> String {
-        self.eval(name, args)
+        self.eval_model(name, args)
             .and_then(|v| v.first().and_then(|x| x.as_str()).map(str::to_string))
             .unwrap_or_default()
     }
 
-    /// Evaluate a command whose first result is a list of names.
+    /// Evaluate a model-scoped command whose first result is a list of names.
     fn list(&mut self, name: &str, args: Vec<Json>) -> Vec<String> {
-        match self.eval(name, args).and_then(|v| v.into_iter().next()) {
+        match self
+            .eval_model(name, args)
+            .and_then(|v| v.into_iter().next())
+        {
             Some(Json::Arr(a)) => a
                 .iter()
                 .filter_map(|x| x.as_str().map(str::to_string))
@@ -669,10 +721,13 @@ impl App {
 
     /// Start an interactive (chunked) run; `poll_run` advances it each frame.
     fn start_run(&mut self, full: bool) {
-        self.drain_trace();
-        if !self.backend.begin_run(self.run_secs, full) {
+        self.drain_events();
+        if self.backend.begin_run(self.run_secs, full) {
+            self.running = true;
+        } else {
             self.refresh_pending = true;
         }
+        self.drain_events();
     }
 
     fn load_dialog(&mut self) {
@@ -689,7 +744,7 @@ impl App {
                 "load-act-r-model",
                 vec![Json::Str(path.to_string_lossy().into_owned())],
             );
-            self.drain_trace();
+            self.drain_events();
             self.refresh_pending = true;
         }
     }
@@ -767,7 +822,7 @@ impl App {
                 // (then show only the reset's own output).
                 self.trace.clear();
                 self.eval("reset", Vec::new());
-                self.drain_trace();
+                self.drain_events();
                 self.refresh_pending = true;
             }
             if ui.button("Clear trace").clicked() {
@@ -794,7 +849,7 @@ impl App {
         if ui.button("Options…").clicked() {
             self.show_options = true;
         }
-        let running = self.backend.is_running();
+        let running = self.running || self.backend.is_running();
         ui.horizontal(|ui| {
             if ui.add_enabled(!running, egui::Button::new("Run")).clicked() {
                 self.start_run(false);
@@ -810,7 +865,7 @@ impl App {
                 .clicked()
             {
                 self.eval("step-once", Vec::new());
-                self.drain_trace();
+                self.drain_events();
                 self.refresh_pending = true;
             }
             if ui.add_enabled(running, egui::Button::new("Stop")).clicked() {
@@ -833,7 +888,7 @@ impl App {
                     Some(v) => result_text(&v),
                     None => String::new(),
                 };
-                self.drain_trace();
+                self.drain_events();
             }
         });
         if !self.result.is_empty() {
@@ -1070,20 +1125,18 @@ fn upsert(items: &mut Vec<WinItem>, item: WinItem) {
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        self.drain_trace();
-        self.apply_window_ops();
+        self.drain_events();
 
         // Advance an interactive run one chunk per frame (keeps the UI live
         // and honours Stop).
         if self.backend.is_running() {
             match self.backend.poll_run() {
                 Ok(true) => {
-                    self.drain_trace();
-                    self.apply_window_ops();
+                    self.drain_events();
                     ui.ctx().request_repaint();
                 }
                 Ok(false) => {
-                    self.drain_trace();
+                    self.drain_events();
                     self.refresh_pending = true;
                 }
                 Err(e) => {
@@ -1093,8 +1146,9 @@ impl eframe::App for App {
         }
 
         let model = self
-            .backend
-            .current_model()
+            .selected_model
+            .clone()
+            .or_else(|| self.backend.current_model())
             .unwrap_or_else(|| "(none)".to_string());
         let desc = self.backend.describe();
 

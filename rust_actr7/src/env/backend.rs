@@ -6,6 +6,72 @@
 
 use crate::json::Json;
 
+/// One of ACT-R's four output streams (`framework/printing.lisp`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TraceStream {
+    Model,
+    Command,
+    Warning,
+    General,
+}
+
+impl TraceStream {
+    pub fn name(self) -> &'static str {
+        match self {
+            TraceStream::Model => "model-trace",
+            TraceStream::Command => "command-trace",
+            TraceStream::Warning => "warning-trace",
+            TraceStream::General => "general-trace",
+        }
+    }
+}
+
+/// Transport-neutral events a backend produces for the GUI.
+#[derive(Debug, Clone)]
+pub enum BackendEvent {
+    /// A trace line on one of the four ACT-R output streams.
+    Trace { stream: TraceStream, line: String },
+    /// `creating-model`: a model was added to the session.
+    ModelCreated(String),
+    /// `deleting-model`: a model was removed from the session.
+    ModelDeleted(String),
+    /// `run-start`.
+    RunStarted { model: Option<String>, time: f64 },
+    /// `run-stop`.
+    RunStopped {
+        model: Option<String>,
+        time: f64,
+        events: u64,
+    },
+    /// A visible experiment-window display op (`[verb, …]`).
+    WindowOp(Vec<Json>),
+    /// A stepper pre-event pause callback (`next-event`).
+    StepperPause {
+        model: Option<String>,
+        command: String,
+        args: Vec<Json>,
+    },
+    /// A stepper post-event update callback (`update-event`).
+    StepperUpdate {
+        model: Option<String>,
+        command: String,
+        args: Vec<Json>,
+    },
+    /// A human-readable status/error message from the backend.
+    Status(String),
+}
+
+/// A connection row from the dispatcher (`list-connections`).
+#[derive(Debug, Clone, Default)]
+pub struct ConnectionInfo {
+    pub name: String,
+    pub address: String,
+    pub pending_calls: i64,
+    pub sent: i64,
+    pub received: i64,
+    pub commands: Vec<String>,
+}
+
 /// A connection to an ACT-R engine that the GUI drives.
 pub trait EnvBackend {
     /// Evaluate an ACT-R command by name (`evaluate <name> <model> <args…>`),
@@ -17,12 +83,14 @@ pub trait EnvBackend {
         args: Vec<Json>,
     ) -> Result<Vec<Json>, String>;
 
-    /// Drain trace lines accumulated since the last call (the four
-    /// `framework/printing.lisp` streams share one sink here).
-    fn take_trace(&mut self) -> Vec<String>;
+    /// Drain events accumulated since the last call.
+    fn take_events(&mut self) -> Vec<BackendEvent>;
 
     /// The current model's name, if one is loaded.
     fn current_model(&self) -> Option<String>;
+
+    /// Models in load order (`mp-models`).
+    fn models(&self) -> Vec<String>;
 
     /// Select the current model (`set-current-model`).
     fn set_current_model(&mut self, name: Option<String>);
@@ -34,9 +102,11 @@ pub trait EnvBackend {
     /// visible-virtual window ops (`add-virtual-window-handler`'s handler).
     fn register_window_handler(&mut self, name: &str);
 
-    /// Drain the display ops the engine pushed to the window handler since
-    /// the last call (each is `[verb, …args]`).
-    fn take_window_ops(&mut self) -> Vec<Vec<Json>>;
+    /// Connections known to the dispatcher (client mode) or the local
+    /// in-process backend.
+    fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
+        Ok(Vec::new())
+    }
 
     /// Start an interactive run of `secs` model seconds (`full` = the
     /// `run-full-time` terminator). Returns whether a run started.

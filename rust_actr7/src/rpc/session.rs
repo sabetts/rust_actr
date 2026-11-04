@@ -116,6 +116,8 @@ pub const BUILTINS: &[&str] = &[
     "schedule-event-relative",
     "schedule-event-now",
     "schedule-event",
+    "schedule-break",
+    "schedule-break-relative",
     "schedule-set-buffer-chunk",
     "schedule-mod-buffer-chunk",
     "schedule-event-after-module",
@@ -475,6 +477,8 @@ struct Stepper {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStop {
     Finished,
+    /// The slice hit its event budget; the run is still in progress.
+    Continue,
     DeviceAction,
     StepperPause,
     StepperUpdate,
@@ -1019,6 +1023,11 @@ impl Session {
 
     pub fn current_model(&self) -> Option<&str> {
         self.current_model.as_deref()
+    }
+
+    /// Model names in load order (`mp-models`).
+    pub fn models(&self) -> Vec<String> {
+        self.model_order.clone()
     }
 
     /// The live engine, for a harness that drives non-command steps at the
@@ -2040,6 +2049,10 @@ impl Session {
             }
             "schedule-event-relative" | "schedule-event-now" | "schedule-event" => {
                 self.schedule_event_cmd(name, args);
+                Ok(vec![Json::Null])
+            }
+            "schedule-break" | "schedule-break-relative" => {
+                self.schedule_break_cmd(name == "schedule-break-relative", args);
                 Ok(vec![Json::Null])
             }
             "release-chunk-spec-id" => Ok(vec![Json::Null]),
@@ -3832,6 +3845,52 @@ impl Session {
         }
     }
 
+    /// One capped run slice for the server loop. A single model processes at
+    /// most `max_events` events so the connection can service Stop and other
+    /// client requests between slices; multi-model already advances one event
+    /// per call.
+    pub fn run_slice_reason_capped(
+        &mut self,
+        limit_ms: i64,
+        full: bool,
+        max_events: u64,
+    ) -> Result<RunStop, String> {
+        if self.is_multi() {
+            return self.run_multi_slice(limit_ms);
+        }
+        if self
+            .engine
+            .as_ref()
+            .is_some_and(Engine::has_pending_device_actions)
+        {
+            return Ok(RunStop::DeviceAction);
+        }
+        let still = self
+            .engine
+            .as_mut()
+            .ok_or_else(|| "no model loaded".to_string())?
+            .run_chunk(limit_ms, full, Some(max_events), None)
+            .map_err(|e| e.to_string())?;
+        if self
+            .engine
+            .as_ref()
+            .is_some_and(Engine::has_pending_device_actions)
+        {
+            return Ok(RunStop::DeviceAction);
+        }
+        if self.stepper_paused() {
+            return Ok(RunStop::StepperPause);
+        }
+        if self.stepper_update_ready() {
+            return Ok(RunStop::StepperUpdate);
+        }
+        if still {
+            Ok(RunStop::Continue)
+        } else {
+            Ok(RunStop::Finished)
+        }
+    }
+
     fn stepper_update_ready(&self) -> bool {
         self.stepper
             .as_ref()
@@ -3925,7 +3984,7 @@ impl Session {
             } else {
                 self.inactive[idx - 1].name.clone()
             };
-            let (time, lines, kinds, levels) = if idx == 0 {
+            let (time, lines, kinds, levels, stopped) = if idx == 0 {
                 let eng = self.engine.as_mut().ok_or("no model loaded")?;
                 let mark = eng.out_len();
                 if !eng.run_one_event().map_err(|e| e.to_string())? {
@@ -3936,6 +3995,7 @@ impl Session {
                     eng.out_since(mark),
                     eng.out_kinds_since(mark),
                     eng.out_levels_since(mark),
+                    eng.stopped(),
                 )
             } else {
                 let eng = &mut self.inactive[idx - 1].engine;
@@ -3948,6 +4008,7 @@ impl Session {
                     eng.out_since(mark),
                     eng.out_kinds_since(mark),
                     eng.out_levels_since(mark),
+                    eng.stopped(),
                 )
             };
             for (i, line) in lines.into_iter().enumerate() {
@@ -3960,6 +4021,29 @@ impl Session {
             }
             self.global_time_ms = self.global_time_ms.max(time);
             self.global_run_events += 1;
+            if stopped {
+                // A break event is global to the meta-process: stop every
+                // model and emit the `run` terminator once.
+                let stop = self.global_time_ms;
+                let raw = crate::trace::format_line(
+                    stop,
+                    "------",
+                    "Stopped because break event",
+                    crate::trace::MODULE_WIDTH,
+                );
+                self.global_trace
+                    .push(crate::engine::multi::with_model_column(&raw, "-"));
+                self.global_trace_kinds.push(TraceKind::Model);
+                self.global_trace_levels.push(Out::Low);
+                for engine in self
+                    .engine
+                    .iter_mut()
+                    .chain(self.inactive.iter_mut().map(|m| &mut m.engine))
+                {
+                    engine.set_time_ms(stop);
+                }
+                return Ok(RunStop::Finished);
+            }
         }
     }
 
@@ -4329,6 +4413,43 @@ impl Session {
         }
         self.rebuild_global_trace();
         Ok(())
+    }
+
+    /// `schedule-break[-relative]`: enqueue `Event::Break`. The Tcl
+    /// Environment's Stop button sends `schedule-break-relative 0`; other
+    /// callers may pass `:priority :min` and details.
+    fn schedule_break_cmd(&mut self, relative: bool, args: &[Json]) {
+        let Some(time) = args.first().and_then(|a| {
+            a.as_f64()
+                .or_else(|| a.as_str().and_then(|s| s.parse::<f64>().ok()))
+        }) else {
+            return;
+        };
+        let priority_min = args.iter().any(|a| {
+            a.as_str()
+                .is_some_and(|s| s.eq_ignore_ascii_case(":min") || s.eq_ignore_ascii_case("min"))
+        });
+        let details = args
+            .iter()
+            .skip(1)
+            .filter_map(|a| a.as_str())
+            .find(|s| {
+                !s.starts_with(':')
+                    && !s.eq_ignore_ascii_case("min")
+                    && !s.eq_ignore_ascii_case("max")
+            })
+            .unwrap_or("Stopped by Environment")
+            .to_string();
+        let now_ms = (self.time_secs() * 1000.0).round() as i64;
+        let target_ms = if relative {
+            now_ms + (time * 1000.0).round() as i64
+        } else {
+            (time * 1000.0).round() as i64
+        };
+        let delay_ms = (target_ms - now_ms).max(0);
+        if let Some(eng) = &mut self.engine {
+            eng.schedule_break_relative(delay_ms, priority_min, details);
+        }
     }
 
     fn build_engine(&mut self) -> Result<(), String> {
@@ -5398,7 +5519,7 @@ mod tests {
                         break;
                     }
                 }
-                RunStop::DeviceAction => continue,
+                RunStop::DeviceAction | RunStop::Continue => continue,
                 RunStop::Finished => break,
             }
         }

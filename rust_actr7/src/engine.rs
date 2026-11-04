@@ -5222,6 +5222,20 @@ impl Engine {
         Ok(self.output())
     }
 
+    /// Schedule a break event (`schedule-break-relative`) at
+    /// `time_ms + delay_ms`. `priority_min` mirrors `:priority :min`; the
+    /// default is `:max`, matching the Tcl Environment Stop button.
+    pub fn schedule_break_relative(&mut self, delay_ms: i64, priority_min: bool, details: String) {
+        let time = self.time_ms + delay_ms.max(0);
+        let prio = if priority_min { Prio::Min } else { Prio::Max };
+        self.push(time, prio, Out::Medium, Event::Break { details });
+    }
+
+    /// Whether the current run was halted by a break event.
+    pub fn stopped(&self) -> bool {
+        self.stopped
+    }
+
     /// One `(run secs)` step: process events until the queue drains or the
     /// relative limit (`time_ms + secs*1000`) is passed. Emits its own
     /// `Stopped because ...` terminator, exactly like Lisp `run`

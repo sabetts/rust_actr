@@ -1,8 +1,8 @@
 //! Native ACT-R Environment (`actr env`).
 //!
 //! A GUI front-end that drives the engine through [`EnvBackend`]:
-//! - **in-process** (default) — the GUI owns the [`crate::rpc::session::Session`];
-//! - **client** (`--connect`) — the GUI is a real RPC client of `actr server`,
+//! - **in-process** (default) â€” the GUI owns the [`crate::rpc::session::Session`];
+//! - **client** (`--connect`) â€” the GUI is a real RPC client of `actr server`,
 //!   speaking the same `\x04`-framed JSON protocol as `actr.py` and the Tcl
 //!   environment.
 //!
@@ -31,7 +31,7 @@ pub struct EnvArgs {
     pub port: u16,
     /// Attach to a running server instead of hosting the engine in-process.
     pub connect: bool,
-    /// `(sgp :seed …)` for in-process mode.
+    /// `(sgp :seed â€¦)` for in-process mode.
     pub seed: (u64, u64),
     /// An optional model to load at startup.
     pub model: Option<String>,
@@ -88,7 +88,28 @@ pub fn run(args: EnvArgs) -> ExitCode {
 
 #[cfg(test)]
 mod tests {
+    use super::backend::BackendEvent;
     use super::*;
+
+    fn trace_lines(events: Vec<BackendEvent>) -> Vec<String> {
+        events
+            .into_iter()
+            .filter_map(|e| match e {
+                BackendEvent::Trace { line, .. } => Some(line),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn window_ops(events: Vec<BackendEvent>) -> Vec<Vec<Json>> {
+        events
+            .into_iter()
+            .filter_map(|e| match e {
+                BackendEvent::WindowOp(op) => Some(op),
+                _ => None,
+            })
+            .collect()
+    }
 
     fn count_model() -> String {
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -101,7 +122,7 @@ mod tests {
             .into_owned()
     }
 
-    /// The in-process backend loads, runs, and drains a trace headlessly —
+    /// The in-process backend loads, runs, and drains a trace headlessly â€”
     /// the plumbing the GUI panels sit on.
     #[test]
     fn inproc_loads_runs_and_drains_trace() {
@@ -111,7 +132,7 @@ mod tests {
         assert_eq!(b.current_model().as_deref(), Some("COUNT"));
         b.evaluate("run", None, vec![Json::Float(10.0)])
             .expect("run");
-        let trace = b.take_trace();
+        let trace = trace_lines(b.take_events());
         assert!(
             trace.iter().any(|l| l.contains("Stopped because")),
             "expected a stop line in trace: {trace:?}"
@@ -167,7 +188,7 @@ mod tests {
         )
         .expect("add-text-to-exp-window");
 
-        let ops = b.take_window_ops();
+        let ops = window_ops(b.take_events());
         let verbs: Vec<&str> = ops
             .iter()
             .filter_map(|o| o.first().and_then(|x| x.as_str()))
@@ -193,7 +214,7 @@ mod tests {
             chunks += 1;
             assert!(chunks < 100_000, "run did not terminate");
         }
-        let trace = b.take_trace();
+        let trace = trace_lines(b.take_events());
         assert!(
             trace.iter().any(|l| l.contains("Stopped because")),
             "expected a terminator: {trace:?}"
