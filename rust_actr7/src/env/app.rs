@@ -306,6 +306,23 @@ impl ToolWindow {
     }
 }
 
+#[derive(Default)]
+struct StepperState {
+    id: Option<String>,
+    step_all: bool,
+    tutor: bool,
+    next: String,
+    last: String,
+    items: Vec<String>,
+    selected: Option<usize>,
+    params: String,
+    bindings: String,
+    display: String,
+    tutorable: Option<String>,
+    run_type: usize,
+    run_value: String,
+}
+
 fn hex_color(text: &str) -> egui::Color32 {
     let text = text.trim().trim_start_matches('#');
     if text.len() != 6 {
@@ -439,6 +456,8 @@ pub struct App {
 
     /// Global refresh request forwarded to every open tool.
     refresh_pending: bool,
+    /// Stepper session state (one stepper at a time, as in ACT-R).
+    stepper: StepperState,
     /// The visible experiment windows the engine is displaying.
     windows: Vec<VisWin>,
     /// Floating tool windows (viewers, Event Queue, Connections, About, …).
@@ -483,6 +502,7 @@ impl App {
             show_options: false,
             error: None,
             refresh_pending: true,
+            stepper: StepperState::default(),
             windows: Vec::new(),
             tools: Vec::new(),
             next_tool_id: 1,
@@ -516,6 +536,12 @@ impl App {
             self.set_history_recording(&mut tool, true);
         }
         self.tools.push(tool);
+        if kind == ToolKind::Stepper {
+            // The control-panel Stepper button starts in step-all mode; Pause
+            // also forces step-all on (21-stepper.tcl).
+            self.stepper.step_all = true;
+            self.start_stepper();
+        }
     }
     /// Refresh one tool's data using the tool's own model.
     fn refresh_tool(&mut self, tool: &mut ToolWindow) {
@@ -698,6 +724,8 @@ impl App {
                 i += 1;
             } else if tool.history_recording {
                 self.set_history_recording(&mut tool, false);
+            } else if tool.kind == ToolKind::Stepper {
+                self.stop_stepper();
             }
         }
     }
@@ -768,9 +796,7 @@ impl App {
             ToolKind::BoldGraph | ToolKind::Bold2D | ToolKind::Bold3D => self.bold_panel(tool, ui),
             ToolKind::BufferPicker => self.buffer_picker_panel(tool, ui),
             ToolKind::ProductionGraph => self.graph_panel(tool, ui),
-            ToolKind::Stepper => {
-                ui.label("Stepper tools arrive in M5.");
-            }
+            ToolKind::Stepper => self.stepper_panel(tool, ui),
         }
     }
 
@@ -1400,7 +1426,30 @@ impl App {
                 }
                 BackendEvent::WindowOp(op) => self.apply_window_op(op),
                 BackendEvent::Status(_) => {}
-                BackendEvent::StepperPause { .. } | BackendEvent::StepperUpdate { .. } => {}
+                BackendEvent::StepperPause { args, .. } => {
+                    self.stepper.next = args
+                        .first()
+                        .and_then(|x| x.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                }
+                BackendEvent::StepperUpdate { args, .. } => {
+                    self.stepper.last = args
+                        .first()
+                        .and_then(|x| x.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    self.stepper.items = match args.get(1) {
+                        Some(Json::Arr(items)) => items
+                            .iter()
+                            .filter_map(|x| x.as_str().map(str::to_string))
+                            .collect(),
+                        _ => Vec::new(),
+                    };
+                    self.stepper.tutorable =
+                        args.get(2).and_then(|x| x.as_str()).map(str::to_string);
+                    self.stepper.selected = None;
+                }
             }
         }
     }
@@ -2115,6 +2164,177 @@ impl App {
             };
         }
     }
+    fn start_stepper(&mut self) {
+        if self.stepper.id.is_some() {
+            return;
+        }
+        if let Err(e) = self
+            .backend
+            .register_stepper_handlers("env-next-event", "env-update-event")
+        {
+            self.error = Some(format!("stepper handlers: {e}"));
+            return;
+        }
+        let args = vec![
+            Json::Bool(self.stepper.step_all),
+            Json::Bool(self.stepper.tutor),
+            Json::Str("env-next-event".into()),
+            Json::Str("env-update-event".into()),
+        ];
+        let Some(result) = self.eval("start-stepper", args) else {
+            return;
+        };
+        match result.as_slice() {
+            [Json::Bool(true), Json::Str(id), ..] => {
+                self.stepper.id = Some(id.clone());
+                self.eval("set-stepper-ready", vec![Json::Str(id.clone())]);
+            }
+            [_, Json::Str(err), ..] => self.error = Some(err.clone()),
+            _ => self.error = Some("start-stepper returned an unexpected value".into()),
+        }
+    }
+
+    fn stop_stepper(&mut self) {
+        if let Some(id) = self.stepper.id.take() {
+            self.eval("stop-stepper", vec![Json::Str(id)]);
+        }
+        self.stepper.next.clear();
+        self.stepper.last.clear();
+        self.stepper.items.clear();
+        self.stepper.selected = None;
+    }
+
+    fn stepper_command(&mut self, cmd: &str, mut args: Vec<Json>) {
+        let Some(id) = self.stepper.id.clone() else {
+            return;
+        };
+        args.insert(0, Json::Str(id));
+        if let Some(result) = self.eval(cmd, args) {
+            if let Some(Json::Str(err)) = result.get(1) {
+                if !err.is_empty() {
+                    self.error = Some(err.clone());
+                }
+            }
+        }
+    }
+
+    fn stepper_panel(&mut self, _tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        if self.stepper.id.is_none() {
+            if ui.button("Start stepper").clicked() {
+                self.start_stepper();
+            }
+            ui.label("The stepper pauses events before they execute.");
+            return;
+        }
+        ui.horizontal(|ui| {
+            if ui.button("Step").clicked() {
+                self.stepper_command("step-stepper", Vec::new());
+            }
+            if ui.button("Stop").clicked() {
+                self.stop_stepper();
+            }
+            let types = ["Production", "Time", "Module"];
+            egui::ComboBox::from_id_salt("step-type")
+                .selected_text(types[self.stepper.run_type.min(2)])
+                .show_ui(ui, |ui| {
+                    for (i, label) in types.iter().enumerate() {
+                        if ui
+                            .selectable_label(self.stepper.run_type == i, *label)
+                            .clicked()
+                        {
+                            self.stepper.run_type = i;
+                        }
+                    }
+                });
+            ui.add(
+                egui::TextEdit::singleline(&mut self.stepper.run_value)
+                    .desired_width(90.0)
+                    .hint_text("value"),
+            );
+            if ui.button("Run until").clicked() {
+                let kind = ["production", "time", "module"][self.stepper.run_type.min(2)];
+                self.stepper_command(
+                    "step-stepper",
+                    vec![
+                        Json::Bool(false),
+                        Json::Str(kind.into()),
+                        Json::Str(self.stepper.run_value.clone()),
+                    ],
+                );
+            }
+        });
+        ui.horizontal(|ui| {
+            if ui
+                .checkbox(&mut self.stepper.step_all, "Step all")
+                .changed()
+            {
+                self.stepper_command(
+                    "set-stepper-step-all",
+                    vec![Json::Bool(self.stepper.step_all)],
+                );
+            }
+            if ui.checkbox(&mut self.stepper.tutor, "Tutor mode").changed() {
+                self.stepper_command("set-stepper-tutoring", vec![Json::Bool(self.stepper.tutor)]);
+            }
+        });
+        ui.separator();
+        ui.label(format!("Last stepped: {}", self.stepper.last));
+        ui.label(format!("Next step: {}", self.stepper.next));
+        ui.separator();
+        let items = self.stepper.items.clone();
+        let mut selected = self.stepper.selected;
+        let params = self.stepper.params.clone();
+        let bindings = self.stepper.bindings.clone();
+        let display = self.stepper.display.clone();
+        ui.columns(2, |cols| {
+            egui::ScrollArea::vertical()
+                .id_salt("stepper-items")
+                .show(&mut cols[0], |ui| {
+                    for (i, item) in items.iter().enumerate() {
+                        if ui.selectable_label(selected == Some(i), item).clicked() {
+                            selected = Some(i);
+                        }
+                    }
+                });
+            egui::ScrollArea::vertical()
+                .id_salt("stepper-panes")
+                .show(&mut cols[1], |ui| {
+                    ui.monospace(&params);
+                    ui.separator();
+                    ui.monospace(&bindings);
+                    ui.separator();
+                    ui.monospace(&display);
+                });
+        });
+        if selected != self.stepper.selected {
+            self.stepper.selected = selected;
+            if let Some(i) = selected {
+                if let Some(result) = self.eval("update-stepper", vec![Json::Str(items[i].clone())])
+                {
+                    self.stepper.params = result
+                        .first()
+                        .and_then(|x| x.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    self.stepper.bindings = result
+                        .get(1)
+                        .and_then(|x| x.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    self.stepper.display = result
+                        .get(2)
+                        .and_then(|x| x.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                }
+            }
+        }
+        if let Some(t) = &self.stepper.tutorable {
+            ui.separator();
+            ui.label(format!("Tutor: {t}"));
+        }
+    }
+
     fn buffer_picker_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
         let buffers = tool.buffers.clone();
         let mut change = None;
@@ -2855,6 +3075,51 @@ mod tests {
         let detail = app.buffer_detail(Some("COUNT".to_string()), "goal", BufferMode::Contents);
         assert!(!detail.is_empty(), "goal buffer detail is empty");
     }
+    #[test]
+    fn stepper_pauses_and_steps_through_the_gui_state() {
+        let mut app = test_app();
+        app.backend.set_real_time(false);
+        let model = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("stepper")
+            .join("stepper-model.lisp")
+            .to_string_lossy()
+            .into_owned();
+        app.eval("load-act-r-model", vec![Json::Str(model)]);
+        app.open_tool(ToolKind::Stepper);
+        assert!(app.stepper.id.is_some(), "stepper should start");
+
+        app.start_run(false);
+        assert!(app.backend.is_running(), "run did not start");
+        let mut paused = false;
+        for _ in 0..200 {
+            if app.backend.is_running() {
+                let _ = app.backend.poll_run();
+            }
+            app.drain_events();
+            if !app.stepper.next.is_empty() {
+                paused = true;
+                break;
+            }
+        }
+        assert!(paused, "stepper never paused: {:?}", app.stepper.next);
+
+        app.stepper_command("step-stepper", Vec::new());
+        let mut stepped = false;
+        for _ in 0..200 {
+            if app.backend.is_running() {
+                let _ = app.backend.poll_run();
+            }
+            app.drain_events();
+            if !app.stepper.last.is_empty() {
+                stepped = true;
+                break;
+            }
+        }
+        assert!(stepped, "stepper never produced an update");
+        app.stop_stepper();
+    }
+
     #[test]
     fn production_color_hex_parsing() {
         assert_eq!(

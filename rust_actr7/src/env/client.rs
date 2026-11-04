@@ -35,6 +35,9 @@ const MODEL_CREATED: &str = "env-model-created";
 const MODEL_DELETED: &str = "env-model-deleted";
 const RUN_START: &str = "env-run-start";
 const RUN_STOP: &str = "env-run-stop";
+/// Stepper callback handlers.
+const STEP_NEXT: &str = "env-next-event";
+const STEP_UPDATE: &str = "env-update-event";
 
 type Pending = Arc<Mutex<HashMap<i64, Sender<Result<Vec<Json>, String>>>>>;
 
@@ -261,6 +264,21 @@ impl EnvBackend for Client {
         );
     }
 
+    fn register_stepper_handlers(&mut self, next: &str, update: &str) -> Result<(), String> {
+        for name in [next, update] {
+            self.request(
+                "add",
+                vec![
+                    Json::Str(name.to_string()),
+                    Json::Str(name.to_string()),
+                    Json::Str("Environment stepper callback".into()),
+                    Json::Null,
+                ],
+            )?;
+        }
+        Ok(())
+    }
+
     fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
         let v = self.request("list-connections", Vec::new())?;
         let Some(Json::Arr(rows)) = v.first() else {
@@ -414,6 +432,22 @@ fn spawn_reader(
                                         model,
                                         time,
                                         events: 0,
+                                    });
+                                    true
+                                }
+                                STEP_NEXT => {
+                                    out.push(BackendEvent::StepperPause {
+                                        model,
+                                        command: name.to_string(),
+                                        args,
+                                    });
+                                    true
+                                }
+                                STEP_UPDATE => {
+                                    out.push(BackendEvent::StepperUpdate {
+                                        model,
+                                        command: name.to_string(),
+                                        args,
                                     });
                                     true
                                 }

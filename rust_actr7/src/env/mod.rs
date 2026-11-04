@@ -254,6 +254,81 @@ mod tests {
         );
     }
 
+    /// The RPC-client backend routes stepper pause/update callbacks.
+    #[test]
+    fn client_backend_routes_stepper_callbacks() {
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        std::thread::spawn(move || {
+            let _ = crate::rpc::server::serve_listener(listener, (100, 0));
+        });
+        let mut c = Client::connect("127.0.0.1", addr.port()).expect("connect");
+        let model = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("stepper")
+            .join("stepper-model.lisp")
+            .to_string_lossy()
+            .into_owned();
+        c.evaluate("load-act-r-model", None, vec![Json::Str(model)])
+            .expect("load");
+        c.register_stepper_handlers("env-next-event", "env-update-event")
+            .expect("handlers");
+        let started = c
+            .evaluate(
+                "start-stepper",
+                None,
+                vec![
+                    Json::Bool(true),
+                    Json::Bool(false),
+                    Json::Str("env-next-event".into()),
+                    Json::Str("env-update-event".into()),
+                ],
+            )
+            .expect("start-stepper");
+        let id = match started.get(1) {
+            Some(Json::Str(id)) => id.clone(),
+            other => panic!("start-stepper failed: {other:?}"),
+        };
+        c.evaluate("set-stepper-ready", None, vec![Json::Str(id.clone())])
+            .expect("ready");
+        assert!(c.begin_run(10.0, false));
+
+        let mut paused = false;
+        for _ in 0..500 {
+            let _ = c.poll_run();
+            for event in c.take_events() {
+                if matches!(event, BackendEvent::StepperPause { .. }) {
+                    paused = true;
+                }
+            }
+            if paused {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        assert!(paused, "client never saw a stepper pause");
+
+        c.evaluate("step-stepper", None, vec![Json::Str(id.clone())])
+            .expect("step");
+        let mut updated = false;
+        for _ in 0..500 {
+            let _ = c.poll_run();
+            for event in c.take_events() {
+                if matches!(event, BackendEvent::StepperUpdate { .. }) {
+                    updated = true;
+                }
+            }
+            if updated {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        assert!(updated, "client never saw a stepper update");
+        c.evaluate("stop-stepper", None, vec![Json::Str(id)])
+            .expect("stop");
+    }
     /// The RPC-client backend emits the same model/run events as in-process.
     #[test]
     fn client_backend_emits_model_and_run_events() {

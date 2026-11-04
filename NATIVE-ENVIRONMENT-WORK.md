@@ -210,11 +210,39 @@ Follow-ups (M4 polish):
 - BOLD 3D is a scan-driven module grid, not the Tcl voxel mesh with rotation.
 - Multi-pane history splits remain combined text.
 
-### M5 — Stepper parity
+### M5 — Stepper parity (initial)
 
 Start/stop/step/run-until (production/time/module), Step All, Pause, detail
 panes, item selection, tutor modes (production instantiation,
 conflict-resolution, start-retrieval), reset/clear-all lifecycle.
+
+Completed:
+
+- Stepper tool starts with step-all enabled, sends the client-owned
+  `next-event` / `update-event` callbacks, and calls `set-stepper-ready`.
+- Step, Stop, Run Until (production/time/module), Step All, and Tutor Mode
+  controls.
+- Last-stepped / next-step text, possible-item list, and parameter / binding /
+  production panes from `update-stepper(item)`.
+- Both backends route stepper callbacks: in-process drains the shared
+  pause/update state; client mode registers the callback commands and receives
+  them through the reader thread.
+- Closing the Stepper tool stops the stepper; reset/clear-all lifecycle is
+  handled by the session.
+- Tests: in-process GUI-state stepper pause/step and client callback routing.
+
+Verified: env tests 16 passed; `cargo test --lib` 86 passed;
+`environment_rpc` 10 passed; `stepper_rpc` 2 passed; `cargo fmt --check` clean.
+
+Follow-ups (M5 polish):
+
+- Tutor mode has the setter and tutorable marker but not the full interaction
+  UIs (production binding answers, conflict-resolution checklist, start-retrieval
+  chunk checklist).
+- `update-when-stepped` does not yet re-focus every inspector window; the
+  global refresh tick covers it functionally.
+- Run-until time/module are wired but only production selection is covered by
+  the stepper RPC tests.
 
 ### M6 — Experiment window and overlay parity
 

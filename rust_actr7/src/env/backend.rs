@@ -102,6 +102,10 @@ pub trait EnvBackend {
     /// visible-virtual window ops (`add-virtual-window-handler`'s handler).
     fn register_window_handler(&mut self, name: &str);
 
+    /// Register the two client-owned callbacks the server invokes for the
+    /// stepper (`next-event` and `update-event`).
+    fn register_stepper_handlers(&mut self, next: &str, update: &str) -> Result<(), String>;
+
     /// Connections known to the dispatcher (client mode) or the local
     /// in-process backend.
     fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {

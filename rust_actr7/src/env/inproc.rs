@@ -190,6 +190,15 @@ impl EnvBackend for InProc {
         self.session.add_remote(name, Some(name.to_string()), None);
     }
 
+    fn register_stepper_handlers(&mut self, next: &str, update: &str) -> Result<(), String> {
+        // The session only needs these names to exist; in-process mode drains
+        // the shared pause/update state directly in `collect_events`.
+        self.session.add_remote(next, Some(next.to_string()), None);
+        self.session
+            .add_remote(update, Some(update.to_string()), None);
+        Ok(())
+    }
+
     fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
         Ok(vec![ConnectionInfo {
             name: "in-process".into(),
@@ -254,11 +263,14 @@ impl EnvBackend for InProc {
         let running = self
             .session
             .run_chunk(run.limit_ms, run.full, Some(200), soft)?;
+        // A stepper pause withholds the event and returns like a capped run;
+        // keep the interactive run alive until the GUI calls `step-stepper`.
+        let paused = self.session.stepper_paused();
         let model = self.current_model();
         let time = self.session.time_secs();
         let events = self.session.run_events();
         self.collect_events();
-        if !running {
+        if !running && !paused {
             self.events.push(BackendEvent::RunStopped {
                 model,
                 time,
@@ -266,7 +278,7 @@ impl EnvBackend for InProc {
             });
             self.run = None;
         }
-        Ok(running)
+        Ok(running || paused)
     }
 
     fn stop_run(&mut self) {
