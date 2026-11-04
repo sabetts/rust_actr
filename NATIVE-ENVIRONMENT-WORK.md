@@ -44,8 +44,59 @@ Last full verification:
 - `stepper_rpc`: 2 passed.
 - `cargo fmt --check`: clean.
 
+## Remaining polish backlog
+
+These are the known gaps after the initial M1-M7 implementations. They are
+ordered by impact rather than milestone number.
+
+### P0 — Gaps users will hit
+
+1. **Production Graph recording.** Opening the Production Graph tool does not
+   record `production-history`, so it stays empty unless another viewer
+   recorded it. Record/stop on open/close and share recording across viewers.
+2. **`update_when_stepped`.** The option is stored but inspector tools do not
+   refresh after each stepper update.
+3. **Connections documentation.** Connections & Commands lists command names
+   but does not show the `check <command>` documentation pane.
+4. **History pane splits.** Retrieval, blending, buffer, and perceptual
+   histories render as one text pane instead of the Tcl
+   Times/Chunks/Details/Request/Activation panes.
+5. **Trace streams.** The main trace pane ignores the model/command/warning/
+   general tags and has no stream filter, warning highlighting, or detail
+   control outside Text Trace.
+6. **Editor close/geometry.** No unsaved-close prompt; editor window geometry
+   is not persisted; no parenthesis matching.
+7. **Production grid/graph extras.** No EPS/PS export, zoom, per-cell
+   production/why-not popups, or full hide-empty semantics.
+
+### P1 — Parity depth
+
+1. Seven layered `production-graph-*` processors (all, frequencies, cycles,
+   unique cycles, runs, unique runs, utilities) and their layout/export.
+2. Graphic-trace zoom, hide-text/hide-grid, hover Request/Chunk/Notes
+   readouts, and EPS/PS export.
+3. Real 3D BOLD voxel mesh; per-buffer limiting through the Buffer Picker; raw
+   scaling/clamping.
+4. Full stepper tutor interaction windows: production binding answers,
+   conflict-resolution checklist, and start-retrieval chunk checklist.
+5. Engine/session emission of image/eyeloc/finger display ops; real image
+   loading and click hit-testing.
+6. Multiple experiment windows per model.
+7. Chunk-tree filled-slot filtering and the full recursive canvas tree.
+8. Option wiring: `use_env_window`, `use_localhost`, client-mode real-time,
+   reload smart-load, and `show_copyrights` beyond startup.
+
+### P2 — Nice-to-haves
+
+- Trace stream colors or separate warning/command panes.
+- GUI error-log viewer and fuller About/copyright text.
+- Editor syntax highlighting.
+- Client-mode real-time pacing.
+- Python module import (intentionally excluded).
+
 ## Current status
-The native GUI is an early subset of the Tcl Environment. It already has:
+
+The native GUI now covers the initial M1-M7 surface. It has:
 
 - in-process and RPC-client backends;
 - load model, reset, run/run-full-time/step/stop (in-process), trace drainage;
