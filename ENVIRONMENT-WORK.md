@@ -3,9 +3,10 @@
 This document is the handoff for the Rust ACT-R Environment work. It records
 the completed environment milestones and the remaining Environment limits.
 
-The target is the **upstream Tcl/Tk ACT-R Environment** in
+The target of this document is the **upstream Tcl/Tk ACT-R Environment** in
 `actr7.x/environment/`, connecting to `actr server` over the RPC socket. The
-native `actr env` GUI is a separate, deferred project.
+native `actr env` GUI is a separate program tracked in
+[`NATIVE-ENVIRONMENT-WORK.md`](NATIVE-ENVIRONMENT-WORK.md).
 
 ## Current status
 
@@ -44,10 +45,11 @@ Only the pre-existing untracked
 
 ## Confirmed scope decisions
 
-- The target is the Tcl/Tk Environment, not the native `actr env` GUI.
+- The target of this document is the Tcl/Tk Environment; the native `actr env`
+  GUI has its own program in `NATIVE-ENVIRONMENT-WORK.md`.
 - Multi-model is the Milestone 3 feature.
-- `999-*` AGI overlays are deferred.
-- The native `actr env` GUI is deferred.
+- `999-*` AGI overlays are deferred for the Tcl Environment; the native GUI
+  tracks them in M6 of `NATIVE-ENVIRONMENT-WORK.md`.
 - Python remains single-model; no multi-model Python API work.
 - The stepper is included in Milestone 3.
 - No `with-model-eval`-style host callbacks.
@@ -214,7 +216,7 @@ Support multiple models in the Rust RPC server and Tcl Environment:
 - `multi-model-talking` and other Lisp-task examples
 - multi-model Python API
 - `999-*` overlays
-- native `actr env`
+- native `actr env` (tracked separately in `NATIVE-ENVIRONMENT-WORK.md`)
 - full threads task-language work beyond existing engine support
 - byte-identical text formatting for all viewer panes
 
@@ -498,5 +500,6 @@ cargo test --test rpc_conformance -- --ignored --nocapture
 - `unit-1-together-1-mp` remains green.
 - Single-model Tcl behavior remains green.
 - Python remains green and single-model.
-- `999-*`, native `actr env`, `with-model-eval`, and arbitrary Lisp remain
-  documented as unsupported or deferred.
+- `999-*`, `with-model-eval`, and arbitrary Lisp remain documented as
+  unsupported or deferred. The native `actr env` GUI is tracked in
+  `NATIVE-ENVIRONMENT-WORK.md`.
