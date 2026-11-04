@@ -39,7 +39,7 @@ Milestones M1-M7 now have initial implementations:
 Last full verification:
 
 - `cargo test`: 559 passed / 8 ignored.
-- `cargo test --features env --quiet --lib env::`: 20 passed.
+- `cargo test --features env --quiet --lib env::`: 26 passed.
 - `environment_rpc`: 10 passed.
 - `stepper_rpc`: 2 passed.
 - `cargo fmt --check`: clean.
@@ -49,25 +49,25 @@ Last full verification:
 These are the known gaps after the initial M1-M7 implementations. They are
 ordered by impact rather than milestone number.
 
-### P0 — Gaps users will hit
+### P0 — Gaps users will hit (complete)
 
-Completed quick-win batch:
-
-- Production Graph now acquires/releases `production-history`, sharing
-  recording with other viewers through reference counts.
+- Production Graph acquires/releases `production-history`, sharing recording
+  with other viewers through reference counts.
 - `update_when_stepped` refreshes open inspector tools after each stepper
   update.
 - Connections & Commands has a command field and `check` documentation pane.
 - Editors prompt before discarding dirty files and persist their geometry.
 - The main trace pane filters model/command/warning/general streams.
+- Retrieval, blending, buffer, and perceptual histories use split panes with
+  time/item selection cascades.
+- Production Grid adds zoom, cell detail popups (production text / why-not),
+  hide-unselected columns, and `.eps` / `.ps` export.
+- Production Graph adds hide-unused nodes and `.eps` / `.dot` export.
 
-Remaining P0 items:
+Export formats are functionally faithful to the Tcl Environment, not
+byte-identical to Tk canvas PostScript.
 
-1. **History pane splits.** Retrieval, blending, buffer, and perceptual
-   histories render as one text pane instead of the Tcl
-   Times/Chunks/Details/Request/Activation panes.
-2. **Production grid/graph extras.** No EPS/PS export, zoom, per-cell
-   production/why-not popups, or full hide-empty semantics.
+### P1 — Parity depth
 ### P1 — Parity depth
 
 1. Seven layered `production-graph-*` processors (all, frequencies, cycles,

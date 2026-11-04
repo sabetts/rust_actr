@@ -10,6 +10,10 @@ use eframe::egui;
 use crate::json::Json;
 
 use super::backend::{result_text, BackendEvent, EnvBackend, TraceStream};
+use super::export;
+use super::history::{
+    self, BlendingEntry, BufferEntry, HistoryView, PerceptualEntry, RetrievalEntry,
+};
 use super::settings::{self, Settings};
 
 /// The central-area views.
@@ -257,10 +261,17 @@ struct ToolWindow {
     history_detail: String,
     history_recording: bool,
     history_records: Vec<Json>,
+    history_view: Option<HistoryView>,
+    history_time_sel: Option<usize>,
+    history_item_sel: Option<usize>,
     picker_selected: Vec<bool>,
     bold_scan: usize,
     bold_scale: usize,
     grid_hide_empty: bool,
+    grid_scale: f32,
+    grid_detail_title: String,
+    grid_detail: String,
+    graph_hide_unused: bool,
     graph_nodes: Vec<String>,
     graph_edges: Vec<(String, String, u32)>,
 }
@@ -309,10 +320,17 @@ impl ToolWindow {
             history_detail: "low".to_string(),
             history_recording: false,
             history_records: Vec::new(),
+            history_view: None,
+            history_time_sel: None,
+            history_item_sel: None,
             picker_selected: Vec::new(),
             bold_scan: 0,
             bold_scale: 0,
             grid_hide_empty: false,
+            grid_scale: 1.0,
+            grid_detail_title: String::new(),
+            grid_detail: String::new(),
+            graph_hide_unused: false,
             graph_nodes: Vec::new(),
             graph_edges: Vec::new(),
         }
@@ -941,68 +959,64 @@ impl App {
             ui.label("No production-history graph yet. Record \"production-history\", run, then Refresh.");
             return;
         }
-        // Relax edge constraints to assign layers (cycles stabilize).
-        let mut layer: HashMap<&str, usize> = tool
-            .graph_nodes
-            .iter()
-            .map(|n| (n.as_str(), 0usize))
-            .collect();
-        for _ in 0..tool.graph_nodes.len().min(20) {
-            let mut changed = false;
-            for (a, b, _) in &tool.graph_edges {
-                let la = layer[a.as_str()];
-                let lb = layer[b.as_str()];
-                if lb <= la {
-                    layer.insert(b.as_str(), (la + 1).min(tool.graph_nodes.len()));
-                    changed = true;
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut tool.graph_hide_unused, "hide unused productions");
+            if ui.button("Save .eps").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Encapsulated PostScript", &["eps"])
+                    .save_file()
+                {
+                    let layout = export::layout_graph(
+                        &tool.graph_nodes,
+                        &tool.graph_edges,
+                        tool.graph_hide_unused,
+                    );
+                    if let Err(e) = std::fs::write(&path, export::graph_eps(&layout)) {
+                        self.error = Some(format!("save {}: {e}", path.display()));
+                    }
                 }
             }
-            if !changed {
-                break;
+            if ui.button("Save .dot").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("DOT graph", &["dot"])
+                    .save_file()
+                {
+                    let layout = export::layout_graph(
+                        &tool.graph_nodes,
+                        &tool.graph_edges,
+                        tool.graph_hide_unused,
+                    );
+                    if let Err(e) = std::fs::write(&path, export::graph_dot(&layout)) {
+                        self.error = Some(format!("save {}: {e}", path.display()));
+                    }
+                }
             }
-        }
-        let max_layer = *layer.values().max().unwrap_or(&0);
-        let mut by_layer: Vec<Vec<&String>> = vec![Vec::new(); max_layer + 1];
-        for n in &tool.graph_nodes {
-            by_layer[layer[n.as_str()]].push(n);
-        }
-        let box_w = 130.0f32;
-        let box_h = 30.0f32;
-        let h_gap = 20.0f32;
-        let v_gap = 70.0f32;
-        let width =
-            by_layer.iter().map(|l| l.len()).max().unwrap_or(1) as f32 * (box_w + h_gap) + 40.0;
-        let height = (max_layer + 1) as f32 * (box_h + v_gap) + 40.0;
-        let mut pos: HashMap<&str, (f32, f32)> = HashMap::new();
-        for (li, layer_nodes) in by_layer.iter().enumerate() {
-            for (xi, n) in layer_nodes.iter().enumerate() {
-                pos.insert(
-                    n.as_str(),
-                    (
-                        20.0 + xi as f32 * (box_w + h_gap),
-                        20.0 + li as f32 * (box_h + v_gap),
-                    ),
-                );
-            }
-        }
+        });
+        ui.separator();
+        let layout =
+            export::layout_graph(&tool.graph_nodes, &tool.graph_edges, tool.graph_hide_unused);
+        let box_w = export::GRAPH_BOX_W;
+        let box_h = export::GRAPH_BOX_H;
         egui::ScrollArea::both()
             .id_salt(("prod-graph", tool.id))
             .show(ui, |ui| {
-                let (rect, _resp) =
-                    ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+                let (rect, _resp) = ui.allocate_exact_size(
+                    egui::vec2(layout.width, layout.height),
+                    egui::Sense::hover(),
+                );
                 let p = ui.painter_at(rect);
-                for (a, b, c) in &tool.graph_edges {
+                for (a, b, count) in &layout.edges {
                     if let (Some(&(ax, ay)), Some(&(bx, by))) =
-                        (pos.get(a.as_str()), pos.get(b.as_str()))
+                        (layout.positions.get(a), layout.positions.get(b))
                     {
                         let from = rect.min + egui::vec2(ax + box_w / 2.0, ay + box_h);
                         let to = rect.min + egui::vec2(bx + box_w / 2.0, by);
-                        let w = 1.0 + (*c as f32).min(6.0);
+                        let w = 1.0 + (*count as f32).min(6.0);
                         p.line_segment([from, to], egui::Stroke::new(w, egui::Color32::GRAY));
                     }
                 }
-                for n in &tool.graph_nodes {
-                    if let Some(&(x, y)) = pos.get(n.as_str()) {
+                for name in &layout.nodes {
+                    if let Some(&(x, y)) = layout.positions.get(name) {
                         let r = egui::Rect::from_min_size(
                             rect.min + egui::vec2(x, y),
                             egui::vec2(box_w, box_h),
@@ -1021,7 +1035,7 @@ impl App {
                         p.text(
                             r.center(),
                             egui::Align2::CENTER_CENTER,
-                            n,
+                            name,
                             egui::FontId::proportional(12.0),
                             egui::Color32::BLACK,
                         );
@@ -1133,8 +1147,25 @@ impl App {
                 tool.model.as_deref().unwrap_or("model")
             );
         }
+        tool.history_view = Self::parse_history_view(kind, &records);
+        tool.history_time_sel = None;
+        tool.history_item_sel = None;
         tool.history_text = render_history(kind, &records);
         tool.history_records = records;
+    }
+
+    fn parse_history_view(kind: HistoryKind, records: &[Json]) -> Option<HistoryView> {
+        match kind {
+            HistoryKind::Retrieval => {
+                Some(HistoryView::Retrieval(history::parse_retrieval(records)))
+            }
+            HistoryKind::Blending => Some(HistoryView::Blending(history::parse_blending(records))),
+            HistoryKind::Buffer => Some(HistoryView::Buffer(history::parse_buffer(records))),
+            HistoryKind::Visicon | HistoryKind::Audicon => {
+                Some(HistoryView::Perceptual(history::parse_perceptual(records)))
+            }
+            _ => None,
+        }
     }
 
     fn save_history(&mut self, tool: &ToolWindow, path: &std::path::Path) {
@@ -1189,6 +1220,9 @@ impl App {
         if let Some(c) = comment {
             tool.history_comment = c;
         }
+        tool.history_view = Self::parse_history_view(kind, &records);
+        tool.history_time_sel = None;
+        tool.history_item_sel = None;
         tool.history_text = render_history(kind, &records);
         tool.history_records = records;
     }
@@ -1315,12 +1349,396 @@ impl App {
             ui.label(&tool.history_comment);
         }
         ui.separator();
-        egui::ScrollArea::both()
-            .id_salt(("history", tool.id))
-            .show(ui, |ui| {
-                ui.monospace(&tool.history_text);
-            });
+        match tool.history_view.clone() {
+            Some(HistoryView::Retrieval(entries)) => self.retrieval_panes(tool, ui, &entries),
+            Some(HistoryView::Blending(entries)) => self.blending_panes(tool, ui, &entries),
+            Some(HistoryView::Buffer(entries)) => self.buffer_history_panes(tool, ui, &entries),
+            Some(HistoryView::Perceptual(entries)) => self.perceptual_panes(tool, ui, &entries),
+            None => {
+                egui::ScrollArea::both()
+                    .id_salt(("history", tool.id))
+                    .show(ui, |ui| {
+                        ui.monospace(&tool.history_text);
+                    });
+            }
+        }
     }
+    fn retrieval_panes(
+        &mut self,
+        tool: &mut ToolWindow,
+        ui: &mut egui::Ui,
+        entries: &[RetrievalEntry],
+    ) {
+        let mut time_sel = tool.history_time_sel;
+        let mut item_sel = tool.history_item_sel;
+        let entry = time_sel.and_then(|i| entries.get(i));
+        let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
+        let width = ui.available_width();
+        let height = ui.available_height().max(260.0);
+        let top_h = height * 0.60;
+        ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.12, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Times");
+                    egui::ScrollArea::vertical()
+                        .id_salt("retrieval-times")
+                        .show(ui, |ui| {
+                            for (i, entry) in entries.iter().enumerate() {
+                                if ui
+                                    .selectable_label(
+                                        time_sel == Some(i),
+                                        history::format_time(entry.time_ms),
+                                    )
+                                    .clicked()
+                                {
+                                    time_sel = Some(i);
+                                    item_sel = None;
+                                }
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.28, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Matching Chunks");
+                    egui::ScrollArea::vertical()
+                        .id_salt("retrieval-chunks")
+                        .show(ui, |ui| {
+                            if let Some(entry) = entry {
+                                for (i, chunk) in entry.chunks.iter().enumerate() {
+                                    if ui
+                                        .selectable_label(item_sel == Some(i), &chunk.name)
+                                        .clicked()
+                                    {
+                                        item_sel = Some(i);
+                                    }
+                                }
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.60, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Details");
+                    egui::ScrollArea::both()
+                        .id_salt("retrieval-details")
+                        .show(ui, |ui| {
+                            if let Some(chunk) = chunk {
+                                ui.monospace(&chunk.text);
+                                ui.monospace(&chunk.params);
+                            }
+                        });
+                },
+            );
+        });
+        ui.separator();
+        ui.label("Request");
+        egui::ScrollArea::both()
+            .id_salt("retrieval-request")
+            .max_height(height * 0.15)
+            .show(ui, |ui| {
+                if let Some(entry) = entry {
+                    ui.monospace(format!("+retrieval>\n{}", entry.request));
+                }
+            });
+        ui.separator();
+        ui.label("Activation");
+        egui::ScrollArea::both()
+            .id_salt("retrieval-activation")
+            .show(ui, |ui| {
+                if let Some(chunk) = chunk {
+                    ui.monospace(&chunk.trace);
+                }
+            });
+        tool.history_time_sel = time_sel;
+        tool.history_item_sel = item_sel;
+    }
+
+    fn blending_panes(
+        &mut self,
+        tool: &mut ToolWindow,
+        ui: &mut egui::Ui,
+        entries: &[BlendingEntry],
+    ) {
+        let mut time_sel = tool.history_time_sel;
+        let mut item_sel = tool.history_item_sel;
+        let entry = time_sel.and_then(|i| entries.get(i));
+        let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
+        let width = ui.available_width();
+        let height = ui.available_height().max(260.0);
+        let top_h = height * 0.60;
+        ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.15, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Times");
+                    egui::ScrollArea::vertical()
+                        .id_salt("blending-times")
+                        .show(ui, |ui| {
+                            for (i, entry) in entries.iter().enumerate() {
+                                if ui
+                                    .selectable_label(
+                                        time_sel == Some(i),
+                                        history::format_time(entry.time_ms),
+                                    )
+                                    .clicked()
+                                {
+                                    time_sel = Some(i);
+                                    item_sel = None;
+                                }
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.30, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Request");
+                    egui::ScrollArea::both()
+                        .id_salt("blending-request")
+                        .max_height(top_h * 0.45)
+                        .show(ui, |ui| {
+                            if let Some(entry) = entry {
+                                ui.monospace(format!("+blending>\n{}", entry.request));
+                            }
+                        });
+                    ui.label("Result");
+                    egui::ScrollArea::both()
+                        .id_salt("blending-result")
+                        .show(ui, |ui| {
+                            if let Some(entry) = entry {
+                                ui.monospace(&entry.result);
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.20, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Blended Chunks");
+                    egui::ScrollArea::vertical()
+                        .id_salt("blending-chunks")
+                        .show(ui, |ui| {
+                            if let Some(entry) = entry {
+                                for (i, chunk) in entry.chunks.iter().enumerate() {
+                                    if ui
+                                        .selectable_label(item_sel == Some(i), &chunk.name)
+                                        .clicked()
+                                    {
+                                        item_sel = Some(i);
+                                    }
+                                }
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.35, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Chunk");
+                    egui::ScrollArea::both()
+                        .id_salt("blending-chunk-detail")
+                        .show(ui, |ui| {
+                            if let Some(chunk) = chunk {
+                                ui.monospace(format!(
+                                    "Activation: {}\n\n{}",
+                                    chunk.activation, chunk.printed
+                                ));
+                            }
+                        });
+                },
+            );
+        });
+        ui.separator();
+        ui.label("Trace");
+        egui::ScrollArea::both()
+            .id_salt("blending-trace")
+            .show(ui, |ui| {
+                if let Some(entry) = entry {
+                    ui.monospace(&entry.trace);
+                }
+            });
+        tool.history_time_sel = time_sel;
+        tool.history_item_sel = item_sel;
+    }
+
+    fn buffer_history_panes(
+        &mut self,
+        tool: &mut ToolWindow,
+        ui: &mut egui::Ui,
+        entries: &[BufferEntry],
+    ) {
+        let mut time_sel = tool.history_time_sel;
+        let mut item_sel = tool.history_item_sel;
+        let entry = time_sel.and_then(|i| entries.get(i));
+        let action = entry.and_then(|e| item_sel.and_then(|i| e.actions.get(i)));
+        let width = ui.available_width();
+        let height = ui.available_height().max(260.0);
+        let top_h = height * 0.40;
+        ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.30, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Times");
+                    egui::ScrollArea::vertical()
+                        .id_salt("buffer-times")
+                        .show(ui, |ui| {
+                            for (i, entry) in entries.iter().enumerate() {
+                                if ui
+                                    .selectable_label(
+                                        time_sel == Some(i),
+                                        history::format_time(entry.time_ms),
+                                    )
+                                    .clicked()
+                                {
+                                    time_sel = Some(i);
+                                    item_sel = None;
+                                }
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.70, top_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Buffer actions");
+                    egui::ScrollArea::vertical()
+                        .id_salt("buffer-actions")
+                        .show(ui, |ui| {
+                            if let Some(entry) = entry {
+                                for (i, action) in entry.actions.iter().enumerate() {
+                                    let label = format!("{} {}", action.buffer, action.action);
+                                    if ui.selectable_label(item_sel == Some(i), label).clicked() {
+                                        item_sel = Some(i);
+                                    }
+                                }
+                            }
+                        });
+                },
+            );
+        });
+        ui.separator();
+        let pane_h = (height * 0.55).max(120.0);
+        ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.34, pane_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("After Action");
+                    egui::ScrollArea::both()
+                        .id_salt("buffer-after")
+                        .show(ui, |ui| {
+                            if let Some(action) = action {
+                                ui.monospace(format!(
+                                    "{}\n  {}\n{}",
+                                    action.action, action.chunk, action.status_after
+                                ));
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.33, pane_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Starting");
+                    egui::ScrollArea::both()
+                        .id_salt("buffer-starting")
+                        .show(ui, |ui| {
+                            if let Some(action) = action {
+                                ui.monospace(format!(
+                                    "{}\n{}",
+                                    action.previous_chunk, action.previous_status
+                                ));
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.33, pane_h),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Ending");
+                    egui::ScrollArea::both()
+                        .id_salt("buffer-ending")
+                        .show(ui, |ui| {
+                            if let Some(action) = action {
+                                ui.monospace(format!(
+                                    "{}\n{}",
+                                    action.current_chunk, action.current_status
+                                ));
+                            }
+                        });
+                },
+            );
+        });
+        tool.history_time_sel = time_sel;
+        tool.history_item_sel = item_sel;
+    }
+
+    fn perceptual_panes(
+        &mut self,
+        tool: &mut ToolWindow,
+        ui: &mut egui::Ui,
+        entries: &[PerceptualEntry],
+    ) {
+        let mut time_sel = tool.history_time_sel;
+        let entry = time_sel.and_then(|i| entries.get(i));
+        let width = ui.available_width();
+        let height = ui.available_height().max(240.0);
+        ui.horizontal(|ui| {
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.10, height),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Times");
+                    egui::ScrollArea::vertical()
+                        .id_salt("perceptual-times")
+                        .show(ui, |ui| {
+                            for (i, entry) in entries.iter().enumerate() {
+                                if ui
+                                    .selectable_label(
+                                        time_sel == Some(i),
+                                        history::format_time(entry.time_ms),
+                                    )
+                                    .clicked()
+                                {
+                                    time_sel = Some(i);
+                                }
+                            }
+                        });
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(width * 0.90, height),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label("Recorded data");
+                    egui::ScrollArea::both()
+                        .id_salt("perceptual-text")
+                        .show(ui, |ui| {
+                            if let Some(entry) = entry {
+                                ui.monospace(&entry.text);
+                            }
+                        });
+                },
+            );
+        });
+        tool.history_time_sel = time_sel;
+    }
+
     /// Apply one display op from the handler to the window list.
     fn apply_window_op(&mut self, op: Vec<Json>) {
         let s = |i: usize| op.get(i).and_then(|x| x.as_str()).unwrap_or("").to_string();
@@ -2864,42 +3282,61 @@ impl App {
     }
 
     fn production_grid_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
-        let mut names: Vec<String> = Vec::new();
-        let mut decisions: Vec<Json> = Vec::new();
-        for record in &tool.history_records {
-            let Json::Arr(fields) = record else {
-                continue;
-            };
-            match fields.get(1).and_then(|x| x.as_str()) {
-                Some("info") => {
-                    for prod in history_items(fields.get(3)) {
-                        if let Json::Arr(p) = prod {
-                            if let Some(n) = p.first().and_then(|x| x.as_str()) {
-                                names.push(n.to_string());
-                            }
-                        }
-                    }
-                }
-                Some("conflict-resolution") => {
-                    if let Some(row) = fields.get(3) {
-                        decisions.push(row.clone());
-                    }
-                }
-                _ => {}
-            }
-        }
+        let data = export::GridData::parse(&tool.history_records);
         ui.horizontal(|ui| {
-            ui.label(format!("{} decisions", decisions.len()));
+            ui.label(format!("{} decisions", data.times.len()));
             ui.checkbox(&mut tool.grid_hide_empty, "hide unselected columns");
+            if ui.small_button("−").clicked() {
+                tool.grid_scale = (tool.grid_scale * 0.5).max(0.5);
+            }
+            if ui.small_button("+").clicked() {
+                tool.grid_scale = (tool.grid_scale * 2.0).min(8.0);
+            }
+            if ui.button("Save .eps").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Encapsulated PostScript", &["eps"])
+                    .save_file()
+                {
+                    let text = export::grid_eps(
+                        &data,
+                        tool.grid_hide_empty,
+                        &self.settings.p_selected,
+                        &self.settings.p_matched,
+                        &self.settings.p_mismatched,
+                    );
+                    if let Err(e) = std::fs::write(&path, text) {
+                        self.error = Some(format!("save {}: {e}", path.display()));
+                    }
+                }
+            }
+            if ui.button("Save .ps").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("PostScript", &["ps"])
+                    .save_file()
+                {
+                    let text = export::grid_ps(
+                        &data,
+                        tool.grid_hide_empty,
+                        &self.settings.p_selected,
+                        &self.settings.p_matched,
+                        &self.settings.p_mismatched,
+                    );
+                    if let Err(e) = std::fs::write(&path, text) {
+                        self.error = Some(format!("save {}: {e}", path.display()));
+                    }
+                }
+            }
         });
         ui.separator();
-        if names.is_empty() || decisions.is_empty() {
+        if data.productions.is_empty() || data.times.is_empty() {
             ui.label("No production-history grid data yet.");
             return;
         }
+        let columns = data.visible_columns(tool.grid_hide_empty);
         let selected = hex_color(&self.settings.p_selected);
         let matched = hex_color(&self.settings.p_matched);
         let mismatched = hex_color(&self.settings.p_mismatched);
+        let cell_w = 34.0 * tool.grid_scale;
         egui::ScrollArea::both()
             .id_salt(("production-grid", tool.id))
             .show(ui, |ui| {
@@ -2907,62 +3344,93 @@ impl App {
                     .striped(true)
                     .show(ui, |ui| {
                         ui.label("");
-                        for decision in &decisions {
-                            let Json::Arr(f) = decision else { continue };
-                            let time = history_ms(f.first());
-                            let chosen = matches!(f.get(2), Some(Json::Bool(true)));
-                            if tool.grid_hide_empty && !chosen {
-                                continue;
-                            }
-                            ui.label(time);
+                        for column in &columns {
+                            ui.label(data.times.get(*column).cloned().unwrap_or_default());
                         }
                         ui.end_row();
-                        for (r, name) in names.iter().enumerate() {
+                        for (r, name) in data.productions.iter().enumerate() {
                             ui.label(name);
-                            for decision in &decisions {
-                                let Json::Arr(f) = decision else { continue };
-                                let chosen = matches!(f.get(2), Some(Json::Bool(true)));
-                                if tool.grid_hide_empty && !chosen {
-                                    continue;
-                                }
-                                let cell = history_items(f.get(3)).get(r);
-                                let (color, label) = match cell {
-                                    Some(Json::Arr(c)) => {
-                                        match c.first().and_then(|x| x.as_f64()) {
-                                            Some(0.0) => (selected, history_text(c.get(1))),
-                                            Some(1.0) => (matched, history_text(c.get(1))),
-                                            Some(2.0) => (mismatched, history_text(c.get(1))),
-                                            _ => (egui::Color32::TRANSPARENT, String::new()),
-                                        }
+                            for column in &columns {
+                                let cell = data
+                                    .rows
+                                    .get(r)
+                                    .and_then(|row| row.get(*column))
+                                    .unwrap_or(&export::GridCell::Blank);
+                                let (color, label): (egui::Color32, String) = match cell {
+                                    export::GridCell::Selected(label) => (selected, label.clone()),
+                                    export::GridCell::Matched(label) => (matched, label.clone()),
+                                    export::GridCell::Mismatched(label) => {
+                                        (mismatched, label.clone())
                                     }
-                                    _ => (egui::Color32::TRANSPARENT, String::new()),
+                                    export::GridCell::Blank => {
+                                        (egui::Color32::TRANSPARENT, String::new())
+                                    }
                                 };
                                 let (rect, resp) = ui.allocate_exact_size(
-                                    egui::vec2(34.0, 18.0),
-                                    egui::Sense::hover(),
+                                    egui::vec2(cell_w, 18.0),
+                                    egui::Sense::click(),
                                 );
-                                let label_for_hover = label.clone();
                                 if color != egui::Color32::TRANSPARENT {
                                     ui.painter().rect_filled(rect, 0.0, color);
                                     ui.painter().text(
                                         rect.center(),
                                         egui::Align2::CENTER_CENTER,
-                                        label,
+                                        &label,
                                         egui::FontId::proportional(10.0),
                                         egui::Color32::BLACK,
                                     );
                                 }
-                                resp.on_hover_text(format!(
-                                    "{name} @ {}\n{label_for_hover}",
-                                    history_ms(f.first())
-                                ));
+                                let hover = format!(
+                                    "{name} @ {}\n{label}",
+                                    data.times.get(*column).cloned().unwrap_or_default()
+                                );
+                                let resp = resp.on_hover_text(hover);
+                                if resp.clicked() {
+                                    tool.grid_detail_title = match cell {
+                                        export::GridCell::Mismatched(_) => {
+                                            format!("{name} — why not")
+                                        }
+                                        _ => name.clone(),
+                                    };
+                                    tool.grid_detail = match cell {
+                                        export::GridCell::Selected(_)
+                                        | export::GridCell::Matched(_) => {
+                                            data.production_text.get(r).cloned().unwrap_or_default()
+                                        }
+                                        export::GridCell::Mismatched(index) => data
+                                            .why_not
+                                            .get(index.parse::<usize>().unwrap_or(0))
+                                            .cloned()
+                                            .unwrap_or_else(|| index.clone()),
+                                        export::GridCell::Blank => String::new(),
+                                    };
+                                }
                             }
                             ui.end_row();
                         }
                     });
             });
+        if !tool.grid_detail.is_empty() {
+            let mut open = true;
+            egui::Window::new(format!(
+                "{}##grid-detail{}",
+                tool.grid_detail_title, tool.id
+            ))
+            .open(&mut open)
+            .default_width(420.0)
+            .show(ui.ctx(), |ui| {
+                egui::ScrollArea::both()
+                    .id_salt(("grid-detail", tool.id))
+                    .show(ui, |ui| {
+                        ui.monospace(&tool.grid_detail);
+                    });
+            });
+            if !open {
+                tool.grid_detail.clear();
+                tool.grid_detail_title.clear();
+            }
+        }
     }
-
     fn graphic_trace_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
         let horizontal = tool.kind == ToolKind::HorizontalGraphicTrace;
         let mut max_time = 0.0f64;
