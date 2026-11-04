@@ -31,15 +31,16 @@ Milestones M1-M7 now have initial implementations:
 
 - M1 shell/backends, M2 inspectors, M3 histories, M4 graphs/BOLD, M5 stepper,
   M6 window overlays/keys, and M7 editor.
-- Remaining work is concentrated in the per-milestone follow-ups: multi-pane
-  history layouts, layered production-graph processors, full tutor interaction
-  UIs, engine-emitted image/eye/finger ops, multiple experiment windows per
-  model, and editor paren matching.
+- Remaining work is concentrated in the per-milestone follow-ups: full tutor
+  interaction UIs, engine-emitted image/eye/finger ops, multiple experiment
+  windows per model, BOLD depth, chunk-tree filtering, option wiring, and
+  editor paren matching.
 
 Last full verification:
 
-- `cargo test`: 559 passed / 8 ignored.
-- `cargo test --features env --quiet --lib env::`: 26 passed.
+- `cargo test --lib`: 92 passed.
+- `cargo test` cases integration: 559 passed / 8 ignored.
+- `cargo test --features env --quiet --lib env::`: 27 passed.
 - `environment_rpc`: 10 passed.
 - `stepper_rpc`: 2 passed.
 - `cargo fmt --check`: clean.
@@ -68,21 +69,27 @@ Export formats are functionally faithful to the Tcl Environment, not
 byte-identical to Tk canvas PostScript.
 
 ### P1 — Parity depth
-### P1 — Parity depth
 
-1. Seven layered `production-graph-*` processors (all, frequencies, cycles,
-   unique cycles, runs, unique runs, utilities) and their layout/export.
-2. Graphic-trace zoom, hide-text/hide-grid, hover Request/Chunk/Notes
-   readouts, and EPS/PS export.
-3. Real 3D BOLD voxel mesh; per-buffer limiting through the Buffer Picker; raw
+Completed:
+
+- Seven layered `production-graph-*` views (all, frequencies, cycles,
+  unique cycles, runs, unique runs, utilities) with page stepping, node
+  details, styled edges, and current-page EPS/DOT export. Current-page export
+  matches the Tcl viewer.
+- Graphic-trace zoom, hide-text/hide-grid, hover Request/Chunk/Notes readouts,
+  and EPS/PS export.
+
+Remaining:
+
+1. Real 3D BOLD voxel mesh; per-buffer limiting through the Buffer Picker; raw
    scaling/clamping.
-4. Full stepper tutor interaction windows: production binding answers,
+2. Full stepper tutor interaction windows: production binding answers,
    conflict-resolution checklist, and start-retrieval chunk checklist.
-5. Engine/session emission of image/eyeloc/finger display ops; real image
+3. Engine/session emission of image/eyeloc/finger display ops; real image
    loading and click hit-testing.
-6. Multiple experiment windows per model.
-7. Chunk-tree filled-slot filtering and the full recursive canvas tree.
-8. Option wiring: `use_env_window`, `use_localhost`, client-mode real-time,
+4. Multiple experiment windows per model.
+5. Chunk-tree filled-slot filtering and the full recursive canvas tree.
+6. Option wiring: `use_env_window`, `use_localhost`, client-mode real-time,
    reload smart-load, and `show_copyrights` beyond startup.
 
 ### P2 — Nice-to-haves
@@ -100,23 +107,27 @@ The native GUI now covers the initial M1-M7 surface. It has:
 - in-process and RPC-client backends;
 - load model, reset, run/run-full-time/step/stop (in-process), trace drainage;
 - trace pane; declarative, procedural, buffers, and parameters viewers;
-- a basic production transition graph;
+- multi-pane trace/retrieval/blending/buffer/perceptual history viewers;
+- production grid with zoom, detail popups, and exports;
+- seven production-graph views with paging and exports;
+- horizontal/vertical graphic traces with zoom, grid, hover readouts, and
+  exports;
 - visible experiment windows with text/button/line/remove and
   attention/cursor ops, click forwarding;
 - persistent main-window size, controls width, sort lists, real time.
 
 Known gaps versus the Tcl Environment:
 
-| Area | Tcl Environment | Native after M1 |
+| Area | Tcl Environment | Native |
 |---|---|---|
 | Model lifecycle | model menu, load code, reload, creating/deleting monitors | model menu, load code/model, reload, monitors/events |
 | Run control | run/reset/reload/stop, running indicator, event queue | run/reset/reload/stop, indicator, event queue; client runs are non-blocking |
-| Inspectors | DM + why-not, chunk tree, procedural matches/why-not, buffers, visicon, audicon, parameters | basic DM/procedural/buffers/parameters as floating tools |
-| Histories | trace (detail/time), retrieval, blending, buffer, visicon, audicon, production | trace only |
-| Graphs/BOLD | production grid + 7 graph processors, 2 graphic traces, BOLD graph/2D/3D | one simple graph |
-| Stepper | full stepper + tutoring | placeholder tool |
-| Experiment windows | text/button/line/image, attention/cursor/eye/finger, keys+clicks, multiple titles | text/button/line/attention/cursor, clicks |
-| Options/tools | 10 options, geometry/colors, event queue, connections, editor, about | all 10 options, tool geometry/colors, event queue, connections, about |
+| Inspectors | DM + why-not, chunk tree, procedural matches/why-not, buffers, visicon, audicon, parameters | DM/procedural/buffers/parameters/visicon/audicon; chunk-tree filtering still shallow |
+| Histories | trace (detail/time), retrieval, blending, buffer, visicon, audicon, production | multi-pane histories and production grid/graphs |
+| Graphs/BOLD | production grid + 7 graph processors, 2 graphic traces, BOLD graph/2D/3D | grid, 7 graph processors, 2 graphic traces, BOLD graph/2D and approximate 3D |
+| Stepper | full stepper + tutoring | controls and callbacks; tutor interaction depth remains |
+| Experiment windows | text/button/line/image, attention/cursor/eye/finger, keys+clicks, multiple titles | text/button/line/attention/cursor, clicks; image/eye/finger pending |
+| Options/tools | 10 options, geometry/colors, event queue, connections, editor, about | all 10 options, tool geometry/colors, event queue, connections, editor, about |
 | Multi-model UI | client-side model menu | client-side model menu |
 
 ## Milestone program
