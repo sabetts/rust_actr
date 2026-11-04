@@ -739,6 +739,11 @@ impl Session {
         }
     }
 
+    /// The documentation string for a registered command (`check` result 2).
+    pub fn command_doc(&self, name: &str) -> Option<String> {
+        self.commands.get(name).map(|c| c.doc.clone())
+    }
+
     /// Remove a command (only client-added ones may be removed).
     pub fn remove(&mut self, name: &str) -> bool {
         match self.commands.get(name) {

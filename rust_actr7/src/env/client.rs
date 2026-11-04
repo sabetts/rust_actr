@@ -279,6 +279,15 @@ impl EnvBackend for Client {
         Ok(())
     }
 
+    fn command_doc(&mut self, name: &str) -> Result<Option<String>, String> {
+        let v = self.request("check", vec![Json::Str(name.to_string())])?;
+        match v.as_slice() {
+            [Json::Null] | [] => Ok(None),
+            [_, _, Json::Str(doc), ..] => Ok(Some(doc.clone())),
+            _ => Ok(None),
+        }
+    }
+
     fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
         let v = self.request("list-connections", Vec::new())?;
         let Some(Json::Arr(rows)) = v.first() else {

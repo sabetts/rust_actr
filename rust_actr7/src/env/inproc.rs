@@ -207,6 +207,10 @@ impl EnvBackend for InProc {
         }])
     }
 
+    fn command_doc(&mut self, name: &str) -> Result<Option<String>, String> {
+        Ok(self.session.command_doc(name))
+    }
+
     fn begin_run(&mut self, secs: f64, full: bool) -> bool {
         let name = if full { "run-full-time" } else { "run" };
         let start_model_ms = (self.session.time_secs() * 1000.0).round() as i64;

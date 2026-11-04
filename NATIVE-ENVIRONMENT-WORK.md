@@ -39,7 +39,7 @@ Milestones M1-M7 now have initial implementations:
 Last full verification:
 
 - `cargo test`: 559 passed / 8 ignored.
-- `cargo test --features env --quiet --lib env::`: 18 passed.
+- `cargo test --features env --quiet --lib env::`: 20 passed.
 - `environment_rpc`: 10 passed.
 - `stepper_rpc`: 2 passed.
 - `cargo fmt --check`: clean.
@@ -51,24 +51,23 @@ ordered by impact rather than milestone number.
 
 ### P0 — Gaps users will hit
 
-1. **Production Graph recording.** Opening the Production Graph tool does not
-   record `production-history`, so it stays empty unless another viewer
-   recorded it. Record/stop on open/close and share recording across viewers.
-2. **`update_when_stepped`.** The option is stored but inspector tools do not
-   refresh after each stepper update.
-3. **Connections documentation.** Connections & Commands lists command names
-   but does not show the `check <command>` documentation pane.
-4. **History pane splits.** Retrieval, blending, buffer, and perceptual
+Completed quick-win batch:
+
+- Production Graph now acquires/releases `production-history`, sharing
+  recording with other viewers through reference counts.
+- `update_when_stepped` refreshes open inspector tools after each stepper
+  update.
+- Connections & Commands has a command field and `check` documentation pane.
+- Editors prompt before discarding dirty files and persist their geometry.
+- The main trace pane filters model/command/warning/general streams.
+
+Remaining P0 items:
+
+1. **History pane splits.** Retrieval, blending, buffer, and perceptual
    histories render as one text pane instead of the Tcl
    Times/Chunks/Details/Request/Activation panes.
-5. **Trace streams.** The main trace pane ignores the model/command/warning/
-   general tags and has no stream filter, warning highlighting, or detail
-   control outside Text Trace.
-6. **Editor close/geometry.** No unsaved-close prompt; editor window geometry
-   is not persisted; no parenthesis matching.
-7. **Production grid/graph extras.** No EPS/PS export, zoom, per-cell
+2. **Production grid/graph extras.** No EPS/PS export, zoom, per-cell
    production/why-not popups, or full hide-empty semantics.
-
 ### P1 — Parity depth
 
 1. Seven layered `production-graph-*` processors (all, frequencies, cycles,

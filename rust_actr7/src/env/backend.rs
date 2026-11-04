@@ -112,6 +112,9 @@ pub trait EnvBackend {
         Ok(Vec::new())
     }
 
+    /// The documentation string for a registered command (`check <name>`).
+    fn command_doc(&mut self, name: &str) -> Result<Option<String>, String>;
+
     /// Start an interactive run of `secs` model seconds (`full` = the
     /// `run-full-time` terminator). Returns whether a run started.
     fn begin_run(&mut self, secs: f64, full: bool) -> bool;

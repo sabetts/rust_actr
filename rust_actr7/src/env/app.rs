@@ -9,7 +9,7 @@ use eframe::egui;
 
 use crate::json::Json;
 
-use super::backend::{result_text, BackendEvent, EnvBackend};
+use super::backend::{result_text, BackendEvent, EnvBackend, TraceStream};
 use super::settings::{self, Settings};
 
 /// The central-area views.
@@ -101,6 +101,17 @@ impl ToolKind {
                 | ToolKind::Bold3D
                 | ToolKind::BufferPicker
         )
+    }
+
+    /// The `record-history` source a tool needs while it is open.
+    fn recording_source(self) -> Option<&'static str> {
+        if let Some(kind) = self.history() {
+            Some(kind.source())
+        } else if self == ToolKind::ProductionGraph {
+            Some("production-history")
+        } else {
+            None
+        }
     }
 
     fn history(self) -> Option<HistoryKind> {
@@ -203,6 +214,7 @@ struct ToolWindow {
     model: Option<String>,
     open: bool,
     text: String,
+    command_query: String,
     connections: Vec<crate::env::backend::ConnectionInfo>,
     refresh_pending: bool,
 
@@ -266,6 +278,7 @@ impl ToolWindow {
             model,
             open: true,
             text: String::new(),
+            command_query: String::new(),
             connections: Vec::new(),
             refresh_pending: true,
             dm_filters: vec!["_none_".to_string()],
@@ -509,8 +522,12 @@ pub struct App {
 
     /// Global refresh request forwarded to every open tool.
     refresh_pending: bool,
+    /// Model / command / warning / general trace visibility.
+    trace_filter: [bool; 4],
     /// Stepper session state (one stepper at a time, as in ACT-R).
     stepper: StepperState,
+    /// Reference counts for `record-history` sources shared by viewers.
+    recorded_history: HashMap<(Option<String>, String), usize>,
     /// The visible experiment windows the engine is displaying.
     windows: Vec<VisWin>,
     /// Floating tool windows (viewers, Event Queue, Connections, About, …).
@@ -519,6 +536,8 @@ pub struct App {
     /// Open code-editor windows.
     editors: Vec<EditorWindow>,
     next_editor_id: u64,
+    /// Editor id awaiting an unsaved-changes decision.
+    editor_close: Option<u64>,
 }
 
 impl App {
@@ -558,12 +577,15 @@ impl App {
             show_options: false,
             error: None,
             refresh_pending: true,
+            trace_filter: [true; 4],
             stepper: StepperState::default(),
+            recorded_history: HashMap::new(),
             windows: Vec::new(),
             tools: Vec::new(),
             next_tool_id: 1,
             editors: Vec::new(),
             next_editor_id: 1,
+            editor_close: None,
         };
         if app.settings.show_copyrights {
             app.open_tool(ToolKind::About);
@@ -590,7 +612,7 @@ impl App {
         let id = self.next_tool_id;
         self.next_tool_id += 1;
         let mut tool = ToolWindow::new(id, kind, model);
-        if tool.kind.history().is_some() {
+        if tool.kind.recording_source().is_some() {
             self.set_history_recording(&mut tool, true);
         }
         self.tools.push(tool);
@@ -812,6 +834,28 @@ impl App {
                             ui.end_row();
                         }
                     });
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.label("Command:");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut tool.command_query).desired_width(180.0),
+                    );
+                    if ui.button("Documentation").clicked() {
+                        let name = tool.command_query.trim().to_string();
+                        tool.text = match self.backend.command_doc(&name) {
+                            Ok(Some(doc)) if !doc.is_empty() => doc,
+                            Ok(_) => "(no documentation)".into(),
+                            Err(e) => format!("check {name}: {e}"),
+                        };
+                    }
+                });
+                if !tool.text.is_empty() {
+                    egui::ScrollArea::vertical()
+                        .id_salt(("connection-doc", tool.id))
+                        .show(ui, |ui| {
+                            ui.monospace(&tool.text);
+                        });
+                }
             }
             ToolKind::EventQueue | ToolKind::About => {
                 if ui.button("Refresh").clicked() {
@@ -1149,17 +1193,64 @@ impl App {
         tool.history_records = records;
     }
 
+    fn history_recording_target(tool: &ToolWindow) -> Option<String> {
+        match tool.kind.history() {
+            Some(HistoryKind::Trace) => None,
+            _ => tool.model.clone(),
+        }
+    }
+
+    /// Start recording a source once, even when several viewers need it.
+    fn acquire_history(&mut self, model: Option<String>, source: &str) {
+        let key = (model.clone(), source.to_string());
+        let start = match self.recorded_history.get_mut(&key) {
+            Some(count) => {
+                *count += 1;
+                false
+            }
+            None => {
+                self.recorded_history.insert(key, 1);
+                true
+            }
+        };
+        if start {
+            self.eval_for(model, "record-history", vec![Json::Str(source.to_string())]);
+        }
+    }
+
+    /// Stop recording a source when its last viewer closes.
+    fn release_history(&mut self, model: Option<String>, source: &str) {
+        let key = (model.clone(), source.to_string());
+        let stop = match self.recorded_history.get_mut(&key) {
+            Some(count) if *count > 1 => {
+                *count -= 1;
+                false
+            }
+            Some(_) => {
+                self.recorded_history.remove(&key);
+                true
+            }
+            None => false,
+        };
+        if stop {
+            self.eval_for(
+                model,
+                "stop-recording-history",
+                vec![Json::Str(source.to_string())],
+            );
+        }
+    }
+
     fn set_history_recording(&mut self, tool: &mut ToolWindow, on: bool) {
-        let Some(kind) = tool.kind.history() else {
+        let Some(source) = tool.kind.recording_source() else {
             return;
         };
-        let target = Self::history_target(kind, tool.model.clone());
-        let name = if on {
-            "record-history"
+        let target = Self::history_recording_target(tool);
+        if on {
+            self.acquire_history(target, source);
         } else {
-            "stop-recording-history"
-        };
-        self.eval_for(target, name, vec![Json::Str(kind.source().into())]);
+            self.release_history(target, source);
+        }
         tool.history_recording = on;
     }
     fn history_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
@@ -1591,10 +1682,12 @@ impl App {
     fn drain_events(&mut self) {
         for event in self.backend.take_events() {
             match event {
-                BackendEvent::Trace { line, .. } => {
-                    self.trace.push_str(&line);
-                    if !line.ends_with('\n') {
-                        self.trace.push('\n');
+                BackendEvent::Trace { stream, line } => {
+                    if self.trace_visible(stream) {
+                        self.trace.push_str(&line);
+                        if !line.ends_with('\n') {
+                            self.trace.push('\n');
+                        }
                     }
                 }
                 BackendEvent::ModelCreated(name) => {
@@ -1614,6 +1707,8 @@ impl App {
                         self.tools
                             .retain(|t| t.model.as_deref() != Some(name.as_str()));
                     }
+                    self.recorded_history
+                        .retain(|(model, _), _| model.as_deref() != Some(name.as_str()));
                 }
                 BackendEvent::RunStarted { .. } => self.running = true,
                 BackendEvent::RunStopped { .. } => {
@@ -1645,6 +1740,11 @@ impl App {
                     self.stepper.tutorable =
                         args.get(2).and_then(|x| x.as_str()).map(str::to_string);
                     self.stepper.selected = None;
+                    if self.settings.update_when_stepped {
+                        for tool in &mut self.tools {
+                            tool.refresh_pending = true;
+                        }
+                    }
                 }
             }
         }
@@ -1986,7 +2086,25 @@ impl App {
         }
     }
 
+    fn trace_visible(&self, stream: TraceStream) -> bool {
+        let index = match stream {
+            TraceStream::Model => 0,
+            TraceStream::Command => 1,
+            TraceStream::Warning => 2,
+            TraceStream::General => 3,
+        };
+        self.trace_filter[index]
+    }
+
     fn trace_panel(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Trace streams:");
+            ui.checkbox(&mut self.trace_filter[0], "model");
+            ui.checkbox(&mut self.trace_filter[1], "command");
+            ui.checkbox(&mut self.trace_filter[2], "warning");
+            ui.checkbox(&mut self.trace_filter[3], "general");
+        });
+        ui.separator();
         egui::ScrollArea::vertical()
             .stick_to_bottom(true)
             .show(ui, |ui| {
@@ -2616,6 +2734,7 @@ impl App {
     }
 
     fn render_editors(&mut self, ctx: &egui::Context) {
+        let mut pending_close = None;
         let mut i = 0;
         while i < self.editors.len() {
             let mut editor = self.editors.remove(i);
@@ -2626,47 +2745,102 @@ impl App {
                 if editor.dirty { " *" } else { "" },
                 editor.id
             );
-            let mut save = false;
-            egui::Window::new(title)
+            let geo_key = format!("editor:{}", editor.path.display());
+            let mut win = egui::Window::new(title)
                 .open(&mut open)
                 .default_width(640.0)
-                .default_height(480.0)
-                .show(ctx, |ui| {
-                    if self.settings.edit_warn {
-                        ui.label("Basic text editor: files are saved as-is; no Lisp evaluation.");
+                .default_height(480.0);
+            if let Some([x, y, w, h]) = self.settings.tool_geometry.get(&geo_key).copied() {
+                win = win.default_pos([x, y]).default_size([w, h]);
+            }
+            let mut save = false;
+            let shown = win.show(ctx, |ui| {
+                if self.settings.edit_warn {
+                    ui.label("Basic text editor: files are saved as-is; no Lisp evaluation.");
+                }
+                ui.horizontal(|ui| {
+                    if ui.button("Save").clicked() {
+                        save = true;
                     }
-                    ui.horizontal(|ui| {
-                        if ui.button("Save").clicked() {
-                            save = true;
+                });
+                egui::ScrollArea::both()
+                    .id_salt(("editor", editor.id))
+                    .show(ui, |ui| {
+                        if ui
+                            .add(
+                                egui::TextEdit::multiline(&mut editor.text)
+                                    .desired_width(f32::INFINITY)
+                                    .desired_rows(30)
+                                    .code_editor(),
+                            )
+                            .changed()
+                        {
+                            editor.dirty = true;
                         }
                     });
-                    egui::ScrollArea::both()
-                        .id_salt(("editor", editor.id))
-                        .show(ui, |ui| {
-                            if ui
-                                .add(
-                                    egui::TextEdit::multiline(&mut editor.text)
-                                        .desired_width(f32::INFINITY)
-                                        .desired_rows(30)
-                                        .code_editor(),
-                                )
-                                .changed()
-                            {
-                                editor.dirty = true;
-                            }
-                        });
-                });
+            });
+            if let Some(inner) = shown {
+                let r = inner.response.rect;
+                self.settings
+                    .tool_geometry
+                    .insert(geo_key, [r.min.x, r.min.y, r.width(), r.height()]);
+            }
             if save {
                 self.save_editor(&mut editor);
             }
-            editor.open = open;
-            if open {
+            if !open && editor.dirty {
+                editor.open = true;
+                pending_close = Some(editor.id);
+            } else {
+                editor.open = open;
+            }
+            if editor.open {
                 self.editors.insert(i, editor);
                 i += 1;
             }
         }
+        if pending_close.is_some() {
+            self.editor_close = pending_close;
+        }
+        if let Some(id) = self.editor_close {
+            let Some(pos) = self.editors.iter().position(|e| e.id == id) else {
+                self.editor_close = None;
+                return;
+            };
+            let path = self.editors[pos].path.clone();
+            let mut action = None;
+            egui::Window::new("Unsaved changes")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.label(format!("Save changes to {}?", path.display()));
+                    ui.horizontal(|ui| {
+                        if ui.button("Save & Close").clicked() {
+                            action = Some(0);
+                        }
+                        if ui.button("Discard").clicked() {
+                            action = Some(1);
+                        }
+                        if ui.button("Cancel").clicked() {
+                            action = Some(2);
+                        }
+                    });
+                });
+            match action {
+                Some(0) => {
+                    let mut editor = self.editors.remove(pos);
+                    self.save_editor(&mut editor);
+                    self.editor_close = None;
+                }
+                Some(1) => {
+                    self.editors.remove(pos);
+                    self.editor_close = None;
+                }
+                Some(2) => self.editor_close = None,
+                _ => {}
+            }
+        }
     }
-
     fn buffer_picker_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
         let buffers = tool.buffers.clone();
         let mut change = None;
@@ -3419,6 +3593,14 @@ mod tests {
             .to_string_lossy()
             .into_owned();
         app.eval("load-act-r-model", vec![Json::Str(model)]);
+        app.open_tool(ToolKind::Declarative);
+        if let Some(tool) = app
+            .tools
+            .iter_mut()
+            .find(|t| t.kind == ToolKind::Declarative)
+        {
+            tool.refresh_pending = false;
+        }
         app.open_tool(ToolKind::Stepper);
         assert!(app.stepper.id.is_some(), "stepper should start");
 
@@ -3450,6 +3632,13 @@ mod tests {
             }
         }
         assert!(stepped, "stepper never produced an update");
+        assert!(
+            app.tools
+                .iter()
+                .filter(|t| t.kind == ToolKind::Declarative)
+                .all(|t| t.refresh_pending),
+            "update_when_stepped did not refresh inspector tools"
+        );
         app.stop_stepper();
     }
 
@@ -3540,6 +3729,38 @@ mod tests {
         assert_eq!(translate_special_key(egui::Key::Enter), Some("return"));
         assert_eq!(translate_special_key(egui::Key::ArrowUp), Some("up-arrow"));
     }
+    #[test]
+    fn production_graph_tool_records_history() {
+        let mut app = test_app();
+        load_count(&mut app);
+        app.open_tool(ToolKind::ProductionGraph);
+        assert_eq!(app.tools.len(), 1);
+        assert!(app.tools[0].history_recording);
+        assert!(app
+            .recorded_history
+            .contains_key(&(Some("COUNT".to_string()), "production-history".to_string())));
+
+        app.acquire_history(Some("COUNT".to_string()), "production-history");
+        app.release_history(Some("COUNT".to_string()), "production-history");
+        assert!(app
+            .recorded_history
+            .contains_key(&(Some("COUNT".to_string()), "production-history".to_string())));
+        app.release_history(Some("COUNT".to_string()), "production-history");
+        assert!(!app
+            .recorded_history
+            .contains_key(&(Some("COUNT".to_string()), "production-history".to_string())));
+    }
+
+    #[test]
+    fn command_doc_and_trace_filters() {
+        let mut app = test_app();
+        assert!(app.backend.command_doc("run").unwrap().is_some());
+        assert!(app.backend.command_doc("not-a-command").unwrap().is_none());
+        assert!(app.trace_visible(TraceStream::Model));
+        app.trace_filter[2] = false;
+        assert!(!app.trace_visible(TraceStream::Warning));
+    }
+
     #[test]
     fn production_color_hex_parsing() {
         assert_eq!(
