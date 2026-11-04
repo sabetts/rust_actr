@@ -274,10 +274,27 @@ Follow-ups (M6 polish):
 - The image item is a placeholder; real image loading and click hit-testing are
   not wired.
 
-### M7 — Editor and remaining utilities
+### M7 — Editor and remaining utilities (initial)
 
-Open/New/Save editor with backups and paren matching. Python import remains
-out of scope.
+Completed:
+
+- Open File / New File / Save All control-panel actions.
+- Floating editor windows with a multiline text pane, dirty marker, and Save.
+- Backup files (`file-backup-N`) honor the `save_backups` option.
+- Reload saves all dirty editor files first when `save_before_reload` is set.
+- The editor-limitations warning is shown when `edit_warn` is set.
+- Unit test covers open/edit/save/backup.
+
+Verified: env tests 18 passed; `cargo test --lib` 86 passed; `cargo fmt --check`
+clean.
+
+Follow-ups:
+
+- Parenthesis matching/highlighting from the Tcl editor is not implemented.
+- Python module import remains out of scope.
+- Multi-pane history layouts, layered production-graph processors, full tutor
+  UIs, engine-emitted image/eye/finger ops, and multiple experiment windows
+  per model remain tracked in their milestone follow-ups.
 
 ## Architecture notes
 

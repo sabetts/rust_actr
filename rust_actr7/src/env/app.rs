@@ -384,6 +384,14 @@ fn translate_special_key(key: egui::Key) -> Option<&'static str> {
         _ => return None,
     })
 }
+/// A simple code editor window (`12-ctrl-panel-open-button.tcl`).
+struct EditorWindow {
+    id: u64,
+    path: PathBuf,
+    text: String,
+    dirty: bool,
+    open: bool,
+}
 /// A visible experiment window the engine is displaying, with its items.
 #[derive(Default, Clone)]
 struct VisWin {
@@ -508,6 +516,9 @@ pub struct App {
     /// Floating tool windows (viewers, Event Queue, Connections, About, …).
     tools: Vec<ToolWindow>,
     next_tool_id: u64,
+    /// Open code-editor windows.
+    editors: Vec<EditorWindow>,
+    next_editor_id: u64,
 }
 
 impl App {
@@ -551,6 +562,8 @@ impl App {
             windows: Vec::new(),
             tools: Vec::new(),
             next_tool_id: 1,
+            editors: Vec::new(),
+            next_editor_id: 1,
         };
         if app.settings.show_copyrights {
             app.open_tool(ToolKind::About);
@@ -1778,7 +1791,21 @@ impl App {
             }
         });
         ui.horizontal(|ui| {
+            if ui.button("Open File…").clicked() {
+                self.open_editor();
+            }
+            if ui.button("New File…").clicked() {
+                self.new_editor();
+            }
+            if ui.button("Save All").clicked() {
+                self.save_all_editors();
+            }
+        });
+        ui.horizontal(|ui| {
             if ui.button("Reload").clicked() {
+                if self.settings.save_before_reload {
+                    self.save_all_editors();
+                }
                 self.trace.clear();
                 self.eval("reload", Vec::new());
                 self.drain_events();
@@ -2518,6 +2545,128 @@ impl App {
         }
     }
 
+    fn open_editor(&mut self) {
+        let mut dlg = rfd::FileDialog::new().add_filter("ACT-R code", &["lisp", "cl"]);
+        if let Some(dir) = &self.start_dir {
+            dlg = dlg.set_directory(dir);
+        }
+        if let Some(path) = dlg.pick_file() {
+            self.open_editor_path(path);
+        }
+    }
+
+    fn new_editor(&mut self) {
+        let mut dlg = rfd::FileDialog::new().add_filter("ACT-R code", &["lisp", "cl"]);
+        if let Some(dir) = &self.start_dir {
+            dlg = dlg.set_directory(dir);
+        }
+        if let Some(path) = dlg.save_file() {
+            let _ = std::fs::write(&path, "");
+            self.open_editor_path(path);
+        }
+    }
+
+    fn open_editor_path(&mut self, path: PathBuf) {
+        if let Some(editor) = self.editors.iter_mut().find(|e| e.path == path) {
+            editor.open = true;
+            return;
+        }
+        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        let id = self.next_editor_id;
+        self.next_editor_id += 1;
+        self.editors.push(EditorWindow {
+            id,
+            path,
+            text,
+            dirty: false,
+            open: true,
+        });
+    }
+
+    fn save_editor(&mut self, editor: &mut EditorWindow) {
+        if self.settings.save_backups && editor.path.exists() {
+            let mut n = 0u32;
+            loop {
+                let mut name = editor.path.as_os_str().to_os_string();
+                name.push(format!("-backup-{n}"));
+                let backup = PathBuf::from(name);
+                if !backup.exists() {
+                    let _ = std::fs::copy(&editor.path, &backup);
+                    break;
+                }
+                n += 1;
+            }
+        }
+        match std::fs::write(&editor.path, &editor.text) {
+            Ok(()) => editor.dirty = false,
+            Err(e) => self.error = Some(format!("save {}: {e}", editor.path.display())),
+        }
+    }
+
+    fn save_all_editors(&mut self) {
+        let mut i = 0;
+        while i < self.editors.len() {
+            let mut editor = self.editors.remove(i);
+            if editor.dirty {
+                self.save_editor(&mut editor);
+            }
+            self.editors.insert(i, editor);
+            i += 1;
+        }
+    }
+
+    fn render_editors(&mut self, ctx: &egui::Context) {
+        let mut i = 0;
+        while i < self.editors.len() {
+            let mut editor = self.editors.remove(i);
+            let mut open = editor.open;
+            let title = format!(
+                "{}{}##editor{}",
+                editor.path.display(),
+                if editor.dirty { " *" } else { "" },
+                editor.id
+            );
+            let mut save = false;
+            egui::Window::new(title)
+                .open(&mut open)
+                .default_width(640.0)
+                .default_height(480.0)
+                .show(ctx, |ui| {
+                    if self.settings.edit_warn {
+                        ui.label("Basic text editor: files are saved as-is; no Lisp evaluation.");
+                    }
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            save = true;
+                        }
+                    });
+                    egui::ScrollArea::both()
+                        .id_salt(("editor", editor.id))
+                        .show(ui, |ui| {
+                            if ui
+                                .add(
+                                    egui::TextEdit::multiline(&mut editor.text)
+                                        .desired_width(f32::INFINITY)
+                                        .desired_rows(30)
+                                        .code_editor(),
+                                )
+                                .changed()
+                            {
+                                editor.dirty = true;
+                            }
+                        });
+                });
+            if save {
+                self.save_editor(&mut editor);
+            }
+            editor.open = open;
+            if open {
+                self.editors.insert(i, editor);
+                i += 1;
+            }
+        }
+    }
+
     fn buffer_picker_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
         let buffers = tool.buffers.clone();
         let mut change = None;
@@ -3189,6 +3338,7 @@ impl eframe::App for App {
                 });
             self.show_options = open;
         }
+        self.render_editors(&ctx);
         self.render_tools(&ctx);
         self.render_windows(&ctx);
     }
@@ -3301,6 +3451,35 @@ mod tests {
         }
         assert!(stepped, "stepper never produced an update");
         app.stop_stepper();
+    }
+
+    #[test]
+    fn editor_saves_with_backups() {
+        let mut app = test_app();
+        let path = std::env::temp_dir().join(format!(
+            "actr-env-editor-{}-{}.lisp",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::write(&path, "(define-model old)").unwrap();
+        app.open_editor_path(path.clone());
+        assert_eq!(app.editors.len(), 1);
+        app.editors[0].text = "(define-model new)".into();
+        app.editors[0].dirty = true;
+        let mut editor = app.editors.remove(0);
+        app.save_editor(&mut editor);
+        assert!(!editor.dirty);
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "(define-model new)"
+        );
+        let backup = std::path::PathBuf::from(format!("{}-backup-0", path.display()));
+        assert!(backup.exists(), "expected a backup at {}", backup.display());
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(backup);
     }
 
     #[test]
