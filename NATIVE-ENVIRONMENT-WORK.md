@@ -121,17 +121,34 @@ Completed and verified:
 
 Known M1 follow-ups (moved into M2):
 
-- Viewer tools currently share one instance/state per kind; per-model tool
-  instances and per-window focus refresh come with the M2 viewer work.
+- Viewer tools now have one instance per model and refresh on the global
+  refresh tick.
 - Reload still uses the server default compile behavior; Load honors
   `use_smart_load`.
 - Connections shows command names but not the `check` documentation pane yet.
 - Clear All has no control-panel button, matching the Tcl Environment.
-### M2 — Inspectors parity
+### M2 — Inspectors parity (complete)
 
 DM why-not, chunk tree, procedural match markers and why-not, buffers
 contents/status and multi-buffer chunks, standalone buffer status, visicon,
 audicon, complete parameter viewer; per-model windows and focus refresh.
+
+Completed:
+
+- Declarative viewer: slot filters, chunk list/details, and "Why not?".
+- Chunk Tree: filters/list plus a recursive slot tree using
+  `chunk-filled-slots-list`, `chunk-slot-value`, and `chunk-p`.
+- Procedural viewer: Yes/No match markers from `no-output … whynot`, details,
+  and "Why not?".
+- Buffer viewer: Contents/Status toggle, empty buffers, multi-buffer chunks,
+  and standalone Buffer Status.
+- Visicon and Audicon viewers.
+- One tool window per kind **per model**, titled `<title> (<model>)`; deleting
+  a model closes its tools when `kill_model_windows` is enabled.
+- Tool refresh is per-window and follows the model that opened it.
+
+Verified: env tests 11 passed; `environment_rpc` 10 passed; `stepper_rpc`
+2 passed; `cargo fmt --check` clean.
 
 ### M3 — Histories parity
 

@@ -17,9 +17,13 @@ use super::settings::{self, Settings};
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ToolKind {
     Declarative,
+    ChunkTree,
     Buffers,
+    BufferStatus,
     Procedural,
     Parameters,
+    Visicon,
+    Audicon,
     TextTrace,
     ProductionGraph,
     EventQueue,
@@ -32,9 +36,13 @@ impl ToolKind {
     fn title(self) -> &'static str {
         match self {
             ToolKind::Declarative => "Declarative",
+            ToolKind::ChunkTree => "Chunk Tree",
             ToolKind::Buffers => "Buffers",
+            ToolKind::BufferStatus => "Buffer Status",
             ToolKind::Procedural => "Procedural",
             ToolKind::Parameters => "Parameters",
+            ToolKind::Visicon => "Visicon",
+            ToolKind::Audicon => "Audicon",
             ToolKind::TextTrace => "Text Trace",
             ToolKind::ProductionGraph => "Production Graph",
             ToolKind::EventQueue => "Event Queue",
@@ -48,13 +56,23 @@ impl ToolKind {
         matches!(
             self,
             ToolKind::Declarative
+                | ToolKind::ChunkTree
                 | ToolKind::Buffers
+                | ToolKind::BufferStatus
                 | ToolKind::Procedural
                 | ToolKind::Parameters
-                | ToolKind::TextTrace
+                | ToolKind::Visicon
+                | ToolKind::Audicon
                 | ToolKind::ProductionGraph
         )
     }
+}
+
+/// Which pane a buffer viewer is showing.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BufferMode {
+    Contents,
+    Status,
 }
 
 /// One open floating tool and its transient UI state.
@@ -67,6 +85,85 @@ struct ToolWindow {
     text: String,
     connections: Vec<crate::env::backend::ConnectionInfo>,
     refresh_pending: bool,
+
+    // Declarative viewer.
+    dm_filters: Vec<String>,
+    dm_filter: String,
+    dm_chunks: Vec<String>,
+    dm_sel: Option<usize>,
+    dm_detail: String,
+
+    // Chunk tree.
+    tree_chunks: Vec<String>,
+    tree_sel: Option<usize>,
+    tree_text: String,
+
+    // Buffer viewer / status.
+    buffers: Vec<String>,
+    buf_sel: Option<usize>,
+    buf_detail: String,
+    buf_mode: BufferMode,
+
+    // Procedural viewer.
+    prods: Vec<String>,
+    prod_sel: Option<usize>,
+    prod_detail: String,
+    prod_matched: Vec<bool>,
+
+    // Parameter viewer.
+    modules: Vec<String>,
+    mod_sel: Option<usize>,
+    params: Vec<String>,
+    param_sel: Option<usize>,
+    param_detail: String,
+
+    // Text trace / production graph.
+    history_text: String,
+    graph_nodes: Vec<String>,
+    graph_edges: Vec<(String, String, u32)>,
+}
+
+impl ToolWindow {
+    fn new(id: u64, kind: ToolKind, model: Option<String>) -> ToolWindow {
+        let title = match &model {
+            Some(m) => format!("{} ({m})", kind.title()),
+            None => kind.title().to_string(),
+        };
+        ToolWindow {
+            id,
+            kind,
+            title,
+            model,
+            open: true,
+            text: String::new(),
+            connections: Vec::new(),
+            refresh_pending: true,
+            dm_filters: vec!["_none_".to_string()],
+            dm_filter: "_none_".to_string(),
+            dm_chunks: Vec::new(),
+            dm_sel: None,
+            dm_detail: String::new(),
+            tree_chunks: Vec::new(),
+            tree_sel: None,
+            tree_text: String::new(),
+            buffers: Vec::new(),
+            buf_sel: None,
+            buf_detail: String::new(),
+            buf_mode: BufferMode::Contents,
+            prods: Vec::new(),
+            prod_sel: None,
+            prod_detail: String::new(),
+            prod_matched: Vec::new(),
+            modules: Vec::new(),
+            mod_sel: None,
+            params: Vec::new(),
+            param_sel: None,
+            param_detail: String::new(),
+            history_text: String::new(),
+            graph_nodes: Vec::new(),
+            graph_edges: Vec::new(),
+        }
+    }
 }
 
 /// A visible experiment window the engine is displaying, with its items.
@@ -164,8 +261,6 @@ pub struct App {
     /// Models in load order and the client-selected model.
     models: Vec<String>,
     selected_model: Option<String>,
-    /// Model of the tool currently rendering, for model-scoped commands.
-    active_model: Option<String>,
     /// Whether an interactive run is in progress (from run signals).
     running: bool,
     /// Whether the Options window is open.
@@ -173,32 +268,11 @@ pub struct App {
     /// Last error, shown in the status bar.
     error: Option<String>,
 
-    // --- inspector state ---
+    /// Global refresh request forwarded to every open tool.
     refresh_pending: bool,
-    dm_filters: Vec<String>,
-    dm_filter: String,
-    dm_chunks: Vec<String>,
-    dm_sel: Option<usize>,
-    dm_detail: String,
-    buffers: Vec<String>,
-    buf_sel: Option<usize>,
-    buf_detail: String,
-    prods: Vec<String>,
-    prod_sel: Option<usize>,
-    prod_detail: String,
-    modules: Vec<String>,
-    mod_sel: Option<usize>,
-    params: Vec<String>,
-    param_sel: Option<usize>,
-    param_detail: String,
     /// The visible experiment windows the engine is displaying.
     windows: Vec<VisWin>,
-    /// The recorded `trace-history` text.
-    history_text: String,
-    /// The production transition graph (nodes and counted edges).
-    graph_nodes: Vec<String>,
-    graph_edges: Vec<(String, String, u32)>,
-    /// Floating tool windows (Event Queue, Connections, About, â€¦).
+    /// Floating tool windows (viewers, Event Queue, Connections, About, …).
     tools: Vec<ToolWindow>,
     next_tool_id: u64,
 }
@@ -236,31 +310,11 @@ impl App {
             settings,
             models,
             selected_model,
-            active_model: None,
             running: false,
             show_options: false,
             error: None,
             refresh_pending: true,
-            dm_filters: vec!["_none_".to_string()],
-            dm_filter: "_none_".to_string(),
-            dm_chunks: Vec::new(),
-            dm_sel: None,
-            dm_detail: String::new(),
-            buffers: Vec::new(),
-            buf_sel: None,
-            buf_detail: String::new(),
-            prods: Vec::new(),
-            prod_sel: None,
-            prod_detail: String::new(),
-            modules: Vec::new(),
-            mod_sel: None,
-            params: Vec::new(),
-            param_sel: None,
-            param_detail: String::new(),
             windows: Vec::new(),
-            history_text: String::new(),
-            graph_nodes: Vec::new(),
-            graph_edges: Vec::new(),
             tools: Vec::new(),
             next_tool_id: 1,
         };
@@ -270,82 +324,116 @@ impl App {
         app
     }
 
-    /// Open (or raise) a floating tool window.
+    /// Open (or raise) a floating tool window for the selected model.
     fn open_tool(&mut self, kind: ToolKind) {
-        if let Some(tool) = self.tools.iter_mut().find(|t| t.kind == kind) {
+        let model = if kind.model_scoped() {
+            self.selected_model.clone()
+        } else {
+            None
+        };
+        if let Some(tool) = self
+            .tools
+            .iter_mut()
+            .find(|t| t.kind == kind && t.model == model)
+        {
             tool.open = true;
             tool.refresh_pending = true;
             return;
         }
         let id = self.next_tool_id;
         self.next_tool_id += 1;
-        let model = if kind.model_scoped() {
-            self.selected_model.clone()
-        } else {
-            None
-        };
-        let title = match &model {
-            Some(m) => format!("{} ({m})", kind.title()),
-            None => kind.title().to_string(),
-        };
-        self.tools.push(ToolWindow {
-            id,
-            kind,
-            title,
-            model,
-            open: true,
-            text: String::new(),
-            connections: Vec::new(),
-            refresh_pending: true,
-        });
+        self.tools.push(ToolWindow::new(id, kind, model));
     }
-
-    /// Refresh one tool's data.
+    /// Refresh one tool's data using the tool's own model.
     fn refresh_tool(&mut self, tool: &mut ToolWindow) {
+        let model = tool.model.clone();
         match tool.kind {
             ToolKind::Declarative => {
-                let filters = self.list("dm-slot-filters", Vec::new());
+                let filters = self.list_for(model.clone(), "dm-slot-filters", Vec::new());
                 if !filters.is_empty() {
-                    self.dm_filters = filters;
+                    tool.dm_filters = filters;
                 }
-                if !self.dm_filters.iter().any(|f| *f == self.dm_filter) {
-                    self.dm_filter = self.dm_filters.first().cloned().unwrap_or_default();
+                if !tool.dm_filters.iter().any(|f| *f == tool.dm_filter) {
+                    tool.dm_filter = tool.dm_filters.first().cloned().unwrap_or_default();
                 }
-                self.refresh_dm_list();
-            }
-            ToolKind::Buffers => {
-                self.buffers = self.list("model-buffers", Vec::new());
+                let filter = tool.dm_filter.clone();
+                tool.dm_chunks = self.list_for(model, "filter-dm-chunks", vec![Json::Str(filter)]);
                 if self.settings.sort_lists {
-                    self.buffers.sort();
+                    tool.dm_chunks.sort();
                 }
-                self.buf_sel = None;
-                self.buf_detail.clear();
+                tool.dm_sel = None;
+                tool.dm_detail.clear();
+            }
+            ToolKind::ChunkTree => {
+                tool.tree_chunks = self.list_for(model, "chunks", Vec::new());
+                if self.settings.sort_lists {
+                    tool.tree_chunks.sort();
+                }
+                tool.tree_sel = None;
+                tool.tree_text.clear();
+            }
+            ToolKind::Buffers | ToolKind::BufferStatus => {
+                tool.buffers = self.list_for(model, "model-buffers", Vec::new());
+                if self.settings.sort_lists {
+                    tool.buffers.sort();
+                }
+                tool.buf_sel = None;
+                tool.buf_detail.clear();
             }
             ToolKind::Procedural => {
-                self.prods = self.list("all-productions", Vec::new());
+                tool.prods = self.list_for(model.clone(), "all-productions", Vec::new());
                 if self.settings.sort_lists {
-                    self.prods.sort();
+                    tool.prods.sort();
                 }
-                self.prod_sel = None;
-                self.prod_detail.clear();
+                let matched = self
+                    .eval_for(model, "no-output", vec![Json::Str("whynot".into())])
+                    .and_then(|v| v.into_iter().next());
+                let matched: Vec<String> = match matched {
+                    Some(Json::Arr(a)) => a
+                        .iter()
+                        .filter_map(|x| x.as_str().map(str::to_string))
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                tool.prod_matched = tool
+                    .prods
+                    .iter()
+                    .map(|p| matched.iter().any(|m| m.eq_ignore_ascii_case(p)))
+                    .collect();
+                tool.prod_sel = None;
+                tool.prod_detail.clear();
             }
             ToolKind::Parameters => {
-                self.modules = self.list("modules-with-parameters", Vec::new());
+                tool.modules = self.list_for(model, "modules-with-parameters", Vec::new());
                 if self.settings.sort_lists {
-                    self.modules.sort();
+                    tool.modules.sort();
                 }
-                self.mod_sel = None;
-                self.params.clear();
-                self.param_sel = None;
-                self.param_detail.clear();
+                tool.mod_sel = None;
+                tool.params.clear();
+                tool.param_sel = None;
+                tool.param_detail.clear();
+            }
+            ToolKind::Visicon => {
+                tool.text = self
+                    .eval_for(model, "printed-visicon", Vec::new())
+                    .and_then(|v| v.into_iter().next())
+                    .and_then(|x| x.as_str().map(str::to_string))
+                    .unwrap_or_default();
+            }
+            ToolKind::Audicon => {
+                tool.text = self
+                    .eval_for(model, "printed-audicon", Vec::new())
+                    .and_then(|v| v.into_iter().next())
+                    .and_then(|x| x.as_str().map(str::to_string))
+                    .unwrap_or_default();
             }
             ToolKind::TextTrace => {
-                self.history_text = self.fetch_trace_history();
+                tool.history_text = self.fetch_trace_history();
             }
             ToolKind::ProductionGraph => {
-                let (n, e) = self.fetch_graph();
-                self.graph_nodes = n;
-                self.graph_edges = e;
+                let (n, e) = self.fetch_graph(model);
+                tool.graph_nodes = n;
+                tool.graph_edges = e;
             }
             ToolKind::EventQueue => {
                 tool.text = self
@@ -367,14 +455,12 @@ impl App {
             ToolKind::Stepper => {}
         }
     }
-
     /// Draw the floating tools. Each is taken out of the list so it can borrow
     /// `self` while it renders, then put back unless the user closed it.
     fn render_tools(&mut self, ctx: &egui::Context) {
         let mut i = 0;
         while i < self.tools.len() {
             let mut tool = self.tools.remove(i);
-            self.active_model = tool.model.clone();
             if tool.refresh_pending {
                 self.refresh_tool(&mut tool);
                 tool.refresh_pending = false;
@@ -394,7 +480,6 @@ impl App {
                     [r.min.x, r.min.y, r.width(), r.height()],
                 );
             }
-            self.active_model = None;
             tool.open = open;
             if open {
                 self.tools.insert(i, tool);
@@ -439,12 +524,25 @@ impl App {
                         ui.monospace(&tool.text);
                     });
             }
-            ToolKind::Declarative => self.dm_panel(ui),
-            ToolKind::Buffers => self.buffer_panel(ui),
-            ToolKind::Procedural => self.proc_panel(ui),
-            ToolKind::Parameters => self.param_panel(ui),
-            ToolKind::TextTrace => self.history_panel(ui),
-            ToolKind::ProductionGraph => self.graph_panel(ui),
+            ToolKind::Declarative => self.dm_panel(tool, ui),
+            ToolKind::ChunkTree => self.chunk_tree_panel(tool, ui),
+            ToolKind::Buffers => self.buffer_panel(tool, ui),
+            ToolKind::BufferStatus => self.buffer_status_panel(tool, ui),
+            ToolKind::Procedural => self.proc_panel(tool, ui),
+            ToolKind::Parameters => self.param_panel(tool, ui),
+            ToolKind::Visicon | ToolKind::Audicon => {
+                if ui.button("Refresh").clicked() {
+                    tool.refresh_pending = true;
+                }
+                ui.separator();
+                egui::ScrollArea::vertical()
+                    .id_salt(("tool-text", tool.id))
+                    .show(ui, |ui| {
+                        ui.monospace(&tool.text);
+                    });
+            }
+            ToolKind::TextTrace => self.history_panel(tool, ui),
+            ToolKind::ProductionGraph => self.graph_panel(tool, ui),
             ToolKind::Stepper => {
                 ui.label("Stepper tools arrive in M5.");
             }
@@ -452,8 +550,8 @@ impl App {
     }
 
     /// Fetch the production transition graph from the backend.
-    fn fetch_graph(&mut self) -> (Vec<String>, Vec<(String, String, u32)>) {
-        let v = match self.eval_model("production-graph", Vec::new()) {
+    fn fetch_graph(&mut self, model: Option<String>) -> (Vec<String>, Vec<(String, String, u32)>) {
+        let v = match self.eval_for(model, "production-graph", Vec::new()) {
             Some(v) => v,
             None => return (Vec::new(), Vec::new()),
         };
@@ -485,24 +583,24 @@ impl App {
         (nodes, edges)
     }
 
-    fn graph_panel(&mut self, ui: &mut egui::Ui) {
-        if self.graph_nodes.is_empty() {
+    fn graph_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        if tool.graph_nodes.is_empty() {
             ui.label("No production-history graph yet. Record \"production-history\", run, then Refresh.");
             return;
         }
         // Relax edge constraints to assign layers (cycles stabilize).
-        let mut layer: HashMap<&str, usize> = self
+        let mut layer: HashMap<&str, usize> = tool
             .graph_nodes
             .iter()
             .map(|n| (n.as_str(), 0usize))
             .collect();
-        for _ in 0..self.graph_nodes.len().min(20) {
+        for _ in 0..tool.graph_nodes.len().min(20) {
             let mut changed = false;
-            for (a, b, _) in &self.graph_edges {
+            for (a, b, _) in &tool.graph_edges {
                 let la = layer[a.as_str()];
                 let lb = layer[b.as_str()];
                 if lb <= la {
-                    layer.insert(b.as_str(), (la + 1).min(self.graph_nodes.len()));
+                    layer.insert(b.as_str(), (la + 1).min(tool.graph_nodes.len()));
                     changed = true;
                 }
             }
@@ -512,7 +610,7 @@ impl App {
         }
         let max_layer = *layer.values().max().unwrap_or(&0);
         let mut by_layer: Vec<Vec<&String>> = vec![Vec::new(); max_layer + 1];
-        for n in &self.graph_nodes {
+        for n in &tool.graph_nodes {
             by_layer[layer[n.as_str()]].push(n);
         }
         let box_w = 130.0f32;
@@ -535,12 +633,12 @@ impl App {
             }
         }
         egui::ScrollArea::both()
-            .id_salt("prod-graph")
+            .id_salt(("prod-graph", tool.id))
             .show(ui, |ui| {
                 let (rect, _resp) =
                     ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
                 let p = ui.painter_at(rect);
-                for (a, b, c) in &self.graph_edges {
+                for (a, b, c) in &tool.graph_edges {
                     if let (Some(&(ax, ay)), Some(&(bx, by))) =
                         (pos.get(a.as_str()), pos.get(b.as_str()))
                     {
@@ -550,7 +648,7 @@ impl App {
                         p.line_segment([from, to], egui::Stroke::new(w, egui::Color32::GRAY));
                     }
                 }
-                for n in &self.graph_nodes {
+                for n in &tool.graph_nodes {
                     if let Some(&(x, y)) = pos.get(n.as_str()) {
                         let r = egui::Rect::from_min_size(
                             rect.min + egui::vec2(x, y),
@@ -578,7 +676,6 @@ impl App {
                 }
             });
     }
-
     /// Fetch the recorded `trace-history` via the incremental protocol.
     fn fetch_trace_history(&mut self) -> String {
         let id = match self.eval(
@@ -620,12 +717,12 @@ impl App {
         out
     }
 
-    fn history_panel(&mut self, ui: &mut egui::Ui) {
+    fn history_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             if ui.button("Refresh").clicked() {
-                self.refresh_pending = true;
+                tool.refresh_pending = true;
             }
-            if ui.button("Saveâ€¦").clicked() {
+            if ui.button("Save…").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("Text", &["txt", "log"])
                     .save_file()
@@ -642,12 +739,11 @@ impl App {
             }
         });
         egui::ScrollArea::vertical()
-            .id_salt("history")
+            .id_salt(("history", tool.id))
             .show(ui, |ui| {
-                ui.monospace(&self.history_text);
+                ui.monospace(&tool.history_text);
             });
     }
-
     /// Apply one display op from the handler to the window list.
     fn apply_window_op(&mut self, op: Vec<Json>) {
         let s = |i: usize| op.get(i).and_then(|x| x.as_str()).unwrap_or("").to_string();
@@ -890,6 +986,10 @@ impl App {
                     if self.selected_model.as_deref() == Some(name.as_str()) {
                         self.selected_model = self.models.first().cloned();
                     }
+                    if self.settings.kill_model_windows {
+                        self.tools
+                            .retain(|t| t.model.as_deref() != Some(name.as_str()));
+                    }
                 }
                 BackendEvent::RunStarted { .. } => self.running = true,
                 BackendEvent::RunStopped { .. } => {
@@ -906,18 +1006,6 @@ impl App {
     /// Evaluate a global command, recording any error for the status bar.
     fn eval(&mut self, name: &str, args: Vec<Json>) -> Option<Vec<Json>> {
         self.eval_for(None, name, args)
-    }
-
-    /// Evaluate a model-scoped command against the active tool's model, or
-    /// the current selection when no tool is rendering.
-    fn eval_model(&mut self, name: &str, args: Vec<Json>) -> Option<Vec<Json>> {
-        self.eval_for(
-            self.active_model
-                .clone()
-                .or_else(|| self.selected_model.clone()),
-            name,
-            args,
-        )
     }
 
     fn eval_for(
@@ -955,16 +1043,16 @@ impl App {
     }
 
     /// Evaluate a model-scoped command and take the first result as a string.
-    fn text(&mut self, name: &str, args: Vec<Json>) -> String {
-        self.eval_model(name, args)
+    fn text_for(&mut self, model: Option<String>, name: &str, args: Vec<Json>) -> String {
+        self.eval_for(model, name, args)
             .and_then(|v| v.first().and_then(|x| x.as_str()).map(str::to_string))
             .unwrap_or_default()
     }
 
     /// Evaluate a model-scoped command whose first result is a list of names.
-    fn list(&mut self, name: &str, args: Vec<Json>) -> Vec<String> {
+    fn list_for(&mut self, model: Option<String>, name: &str, args: Vec<Json>) -> Vec<String> {
         match self
-            .eval_model(name, args)
+            .eval_for(model, name, args)
             .and_then(|v| v.into_iter().next())
         {
             Some(Json::Arr(a)) => a
@@ -1004,16 +1092,6 @@ impl App {
             self.drain_events();
             self.refresh_pending = true;
         }
-    }
-
-    fn refresh_dm_list(&mut self) {
-        let filter = self.dm_filter.clone();
-        self.dm_chunks = self.list("filter-dm-chunks", vec![Json::Str(filter)]);
-        if self.settings.sort_lists {
-            self.dm_chunks.sort();
-        }
-        self.dm_sel = None;
-        self.dm_detail.clear();
     }
 
     fn controls(&mut self, ui: &mut egui::Ui) {
@@ -1110,14 +1188,26 @@ impl App {
             if ui.button("Declarative").clicked() {
                 self.open_tool(ToolKind::Declarative);
             }
+            if ui.button("Chunk Tree").clicked() {
+                self.open_tool(ToolKind::ChunkTree);
+            }
             if ui.button("Buffers").clicked() {
                 self.open_tool(ToolKind::Buffers);
+            }
+            if ui.button("Buffer Status").clicked() {
+                self.open_tool(ToolKind::BufferStatus);
             }
             if ui.button("Procedural").clicked() {
                 self.open_tool(ToolKind::Procedural);
             }
             if ui.button("Parameters").clicked() {
                 self.open_tool(ToolKind::Parameters);
+            }
+            if ui.button("Visicon").clicked() {
+                self.open_tool(ToolKind::Visicon);
+            }
+            if ui.button("Audicon").clicked() {
+                self.open_tool(ToolKind::Audicon);
             }
         });
         ui.separator();
@@ -1212,34 +1302,43 @@ impl App {
             });
     }
 
-    fn dm_panel(&mut self, ui: &mut egui::Ui) {
-        // Filter dropdown.
-        let filters = self.dm_filters.clone();
+    fn dm_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let filters = tool.dm_filters.clone();
         let mut chosen: Option<String> = None;
         ui.horizontal(|ui| {
             ui.label("Filter:");
-            egui::ComboBox::from_id_salt("dm-filter")
-                .selected_text(self.dm_filter.clone())
+            egui::ComboBox::from_id_salt(("dm-filter", tool.id))
+                .selected_text(tool.dm_filter.clone())
                 .show_ui(ui, |ui| {
                     for f in &filters {
-                        if ui.selectable_label(*f == self.dm_filter, f).clicked() {
+                        if ui.selectable_label(*f == tool.dm_filter, f).clicked() {
                             chosen = Some(f.clone());
                         }
                     }
                 });
         });
         if let Some(f) = chosen {
-            self.dm_filter = f;
-            self.refresh_dm_list();
+            tool.dm_filter = f;
+            let filter = tool.dm_filter.clone();
+            tool.dm_chunks = self.list_for(
+                tool.model.clone(),
+                "filter-dm-chunks",
+                vec![Json::Str(filter)],
+            );
+            if self.settings.sort_lists {
+                tool.dm_chunks.sort();
+            }
+            tool.dm_sel = None;
+            tool.dm_detail.clear();
         }
         ui.separator();
 
-        let chunks = self.dm_chunks.clone();
-        let mut sel = self.dm_sel;
-        let detail = self.dm_detail.clone();
+        let chunks = tool.dm_chunks.clone();
+        let mut sel = tool.dm_sel;
+        let detail = tool.dm_detail.clone();
         ui.columns(2, |cols| {
             egui::ScrollArea::vertical()
-                .id_salt("dm-list")
+                .id_salt(("dm-list", tool.id))
                 .show(&mut cols[0], |ui| {
                     for (i, name) in chunks.iter().enumerate() {
                         if ui.selectable_label(sel == Some(i), name).clicked() {
@@ -1248,30 +1347,128 @@ impl App {
                     }
                 });
             egui::ScrollArea::vertical()
-                .id_salt("dm-detail")
+                .id_salt(("dm-detail", tool.id))
                 .show(&mut cols[1], |ui| {
                     ui.monospace(detail);
                 });
         });
-        if sel != self.dm_sel {
-            self.dm_sel = sel;
-            self.dm_detail = match sel {
+        if sel != tool.dm_sel {
+            tool.dm_sel = sel;
+            tool.dm_detail = match sel {
+                Some(i) => self.text_for(
+                    tool.model.clone(),
+                    "dm-chunk-details",
+                    vec![Json::Str(chunks[i].clone())],
+                ),
+                None => String::new(),
+            };
+        }
+        if ui.button("Why not?").clicked() {
+            if let Some(i) = tool.dm_sel {
+                tool.dm_detail = self.text_for(
+                    tool.model.clone(),
+                    "dm-whynot-text",
+                    vec![Json::Str(chunks[i].clone())],
+                );
+            }
+        }
+    }
+
+    fn chunk_tree_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let chunks = tool.tree_chunks.clone();
+        let mut sel = tool.tree_sel;
+        let tree = tool.tree_text.clone();
+        ui.columns(2, |cols| {
+            egui::ScrollArea::vertical()
+                .id_salt(("tree-list", tool.id))
+                .show(&mut cols[0], |ui| {
+                    for (i, name) in chunks.iter().enumerate() {
+                        if ui.selectable_label(sel == Some(i), name).clicked() {
+                            sel = Some(i);
+                        }
+                    }
+                });
+            egui::ScrollArea::both()
+                .id_salt(("tree-detail", tool.id))
+                .show(&mut cols[1], |ui| {
+                    ui.monospace(tree);
+                });
+        });
+        if sel != tool.tree_sel {
+            tool.tree_sel = sel;
+            tool.tree_text = match sel {
                 Some(i) => {
-                    let name = chunks[i].clone();
-                    self.text("dm-chunk-details", vec![Json::Str(name)])
+                    let mut path = Vec::new();
+                    self.chunk_tree_text(&tool.model, &chunks[i], 0, &mut path)
                 }
                 None => String::new(),
             };
         }
     }
 
-    fn buffer_panel(&mut self, ui: &mut egui::Ui) {
-        let buffers = self.buffers.clone();
-        let mut sel = self.buf_sel;
-        let detail = self.buf_detail.clone();
+    fn chunk_tree_text(
+        &mut self,
+        model: &Option<String>,
+        chunk: &str,
+        depth: usize,
+        path: &mut Vec<String>,
+    ) -> String {
+        let indent = "  ".repeat(depth);
+        let mut out = format!("{indent}{chunk}\n");
+        if path.iter().any(|p| p.eq_ignore_ascii_case(chunk)) {
+            return out;
+        }
+        path.push(chunk.to_string());
+        let slots = self.list_for(
+            model.clone(),
+            "chunk-filled-slots-list",
+            vec![Json::Str(chunk.to_string()), Json::Bool(true)],
+        );
+        for slot in slots {
+            let value = self.text_for(
+                model.clone(),
+                "chunk-slot-value",
+                vec![Json::Str(chunk.to_string()), Json::Str(slot.clone())],
+            );
+            out.push_str(&format!("{indent}  {slot} = {value}\n"));
+            let is_chunk = matches!(
+                self.eval_for(model.clone(), "chunk-p", vec![Json::Str(value.clone())])
+                    .and_then(|v| v.into_iter().next()),
+                Some(Json::Bool(true))
+            );
+            if is_chunk {
+                out.push_str(&self.chunk_tree_text(model, &value, depth + 2, path));
+            }
+        }
+        path.pop();
+        out
+    }
+    fn buffer_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            if ui
+                .selectable_label(tool.buf_mode == BufferMode::Contents, "Contents")
+                .clicked()
+            {
+                tool.buf_mode = BufferMode::Contents;
+                tool.buf_sel = None;
+                tool.buf_detail.clear();
+            }
+            if ui
+                .selectable_label(tool.buf_mode == BufferMode::Status, "Status")
+                .clicked()
+            {
+                tool.buf_mode = BufferMode::Status;
+                tool.buf_sel = None;
+                tool.buf_detail.clear();
+            }
+        });
+        ui.separator();
+        let buffers = tool.buffers.clone();
+        let mut sel = tool.buf_sel;
+        let detail = tool.buf_detail.clone();
         ui.columns(2, |cols| {
             egui::ScrollArea::vertical()
-                .id_salt("buf-list")
+                .id_salt(("buf-list", tool.id))
                 .show(&mut cols[0], |ui| {
                     for (i, name) in buffers.iter().enumerate() {
                         if ui.selectable_label(sel == Some(i), name).clicked() {
@@ -1280,66 +1477,159 @@ impl App {
                     }
                 });
             egui::ScrollArea::vertical()
-                .id_salt("buf-detail")
+                .id_salt(("buf-detail", tool.id))
                 .show(&mut cols[1], |ui| {
                     ui.monospace(detail);
                 });
         });
-        if sel != self.buf_sel {
-            self.buf_sel = sel;
-            self.buf_detail = match sel {
-                Some(i) => {
-                    let name = buffers[i].clone();
-                    let chunk = self.text("printed-buffer-chunk", vec![Json::Str(name.clone())]);
-                    let status = self.text("printed-buffer-status", vec![Json::Str(name)]);
-                    format!("{status}\n{chunk}")
-                }
+        if sel != tool.buf_sel {
+            tool.buf_sel = sel;
+            tool.buf_detail = match sel {
+                Some(i) => self.buffer_detail(tool.model.clone(), &buffers[i], tool.buf_mode),
                 None => String::new(),
             };
         }
     }
 
-    fn proc_panel(&mut self, ui: &mut egui::Ui) {
-        let prods = self.prods.clone();
-        let mut sel = self.prod_sel;
-        let detail = self.prod_detail.clone();
+    fn buffer_status_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let buffers = tool.buffers.clone();
+        let mut sel = tool.buf_sel;
+        let detail = tool.buf_detail.clone();
         ui.columns(2, |cols| {
             egui::ScrollArea::vertical()
-                .id_salt("prod-list")
+                .id_salt(("bufstatus-list", tool.id))
                 .show(&mut cols[0], |ui| {
-                    for (i, name) in prods.iter().enumerate() {
+                    for (i, name) in buffers.iter().enumerate() {
                         if ui.selectable_label(sel == Some(i), name).clicked() {
                             sel = Some(i);
                         }
                     }
                 });
             egui::ScrollArea::vertical()
-                .id_salt("prod-detail")
+                .id_salt(("bufstatus-detail", tool.id))
                 .show(&mut cols[1], |ui| {
                     ui.monospace(detail);
                 });
         });
-        if sel != self.prod_sel {
-            self.prod_sel = sel;
-            self.prod_detail = match sel {
-                Some(i) => {
-                    let name = prods[i].clone();
-                    self.text("production-details", vec![Json::Str(name)])
-                }
+        if sel != tool.buf_sel {
+            tool.buf_sel = sel;
+            tool.buf_detail = match sel {
+                Some(i) => self.text_for(
+                    tool.model.clone(),
+                    "printed-buffer-status",
+                    vec![Json::Str(buffers[i].clone())],
+                ),
                 None => String::new(),
             };
         }
     }
 
-    fn param_panel(&mut self, ui: &mut egui::Ui) {
-        let modules = self.modules.clone();
-        let params = self.params.clone();
-        let mut mod_sel = self.mod_sel;
-        let mut param_sel = self.param_sel;
-        let detail = self.param_detail.clone();
+    fn buffer_detail(&mut self, model: Option<String>, buffer: &str, mode: BufferMode) -> String {
+        if mode == BufferMode::Status {
+            return self.text_for(
+                model,
+                "printed-buffer-status",
+                vec![Json::Str(buffer.to_string())],
+            );
+        }
+        let chunk = self.text_for(
+            model.clone(),
+            "buffer-read",
+            vec![Json::Str(buffer.to_string())],
+        );
+        if chunk.is_empty() {
+            let multi = self.text_for(
+                model.clone(),
+                "multi-buffer-p",
+                vec![Json::Str(buffer.to_string())],
+            );
+            if !multi.is_empty() {
+                let chunks = self.list_for(
+                    model.clone(),
+                    "get-m-buffer-chunks",
+                    vec![Json::Str(buffer.to_string())],
+                );
+                let mut out = String::new();
+                for c in chunks {
+                    out.push_str(&self.text_for(
+                        model.clone(),
+                        "printed-chunk",
+                        vec![Json::Str(c)],
+                    ));
+                    out.push('\n');
+                }
+                return out;
+            }
+            return "Buffer is empty".to_string();
+        }
+        self.text_for(
+            model,
+            "printed-buffer-chunk",
+            vec![Json::Str(buffer.to_string())],
+        )
+    }
+
+    fn proc_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let prods = tool.prods.clone();
+        let matched = tool.prod_matched.clone();
+        let mut sel = tool.prod_sel;
+        let detail = tool.prod_detail.clone();
+        ui.columns(2, |cols| {
+            egui::ScrollArea::vertical()
+                .id_salt(("prod-list", tool.id))
+                .show(&mut cols[0], |ui| {
+                    for (i, name) in prods.iter().enumerate() {
+                        let yes = matched.get(i).copied().unwrap_or(false);
+                        ui.horizontal(|ui| {
+                            let (text, color) = if yes {
+                                ("Yes", egui::Color32::GREEN)
+                            } else {
+                                ("No", egui::Color32::RED)
+                            };
+                            ui.colored_label(color, text);
+                            if ui.selectable_label(sel == Some(i), name).clicked() {
+                                sel = Some(i);
+                            }
+                        });
+                    }
+                });
+            egui::ScrollArea::vertical()
+                .id_salt(("prod-detail", tool.id))
+                .show(&mut cols[1], |ui| {
+                    ui.monospace(detail);
+                });
+        });
+        if sel != tool.prod_sel {
+            tool.prod_sel = sel;
+            tool.prod_detail = match sel {
+                Some(i) => self.text_for(
+                    tool.model.clone(),
+                    "production-details",
+                    vec![Json::Str(prods[i].clone())],
+                ),
+                None => String::new(),
+            };
+        }
+        if ui.button("Why not?").clicked() {
+            if let Some(i) = tool.prod_sel {
+                tool.prod_detail = self.text_for(
+                    tool.model.clone(),
+                    "whynot-text",
+                    vec![Json::Str(prods[i].clone())],
+                );
+            }
+        }
+    }
+
+    fn param_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
+        let modules = tool.modules.clone();
+        let params = tool.params.clone();
+        let mut mod_sel = tool.mod_sel;
+        let mut param_sel = tool.param_sel;
+        let detail = tool.param_detail.clone();
         ui.columns(3, |cols| {
             egui::ScrollArea::vertical()
-                .id_salt("mod-list")
+                .id_salt(("mod-list", tool.id))
                 .show(&mut cols[0], |ui| {
                     for (i, name) in modules.iter().enumerate() {
                         if ui.selectable_label(mod_sel == Some(i), name).clicked() {
@@ -1349,7 +1639,7 @@ impl App {
                     }
                 });
             egui::ScrollArea::vertical()
-                .id_salt("param-list")
+                .id_salt(("param-list", tool.id))
                 .show(&mut cols[1], |ui| {
                     for (i, name) in params.iter().enumerate() {
                         if ui.selectable_label(param_sel == Some(i), name).clicked() {
@@ -1358,23 +1648,28 @@ impl App {
                     }
                 });
             egui::ScrollArea::vertical()
-                .id_salt("param-detail")
+                .id_salt(("param-detail", tool.id))
                 .show(&mut cols[2], |ui| {
                     ui.monospace(detail);
                 });
         });
-        if mod_sel != self.mod_sel {
-            self.mod_sel = mod_sel;
-            self.param_sel = None;
-            self.param_detail.clear();
-            self.params = match mod_sel {
-                Some(i) => self.list("modules-parameters", vec![Json::Str(modules[i].clone())]),
+        if mod_sel != tool.mod_sel {
+            tool.mod_sel = mod_sel;
+            tool.param_sel = None;
+            tool.param_detail.clear();
+            tool.params = match mod_sel {
+                Some(i) => self.list_for(
+                    tool.model.clone(),
+                    "modules-parameters",
+                    vec![Json::Str(modules[i].clone())],
+                ),
                 None => Vec::new(),
             };
-        } else if param_sel != self.param_sel {
-            self.param_sel = param_sel;
-            self.param_detail = match param_sel {
-                Some(i) => self.text(
+        } else if param_sel != tool.param_sel {
+            tool.param_sel = param_sel;
+            tool.param_detail = match param_sel {
+                Some(i) => self.text_for(
+                    tool.model.clone(),
                     "printed-parameter-details",
                     vec![Json::Str(params[i].clone())],
                 ),
@@ -1560,6 +1855,53 @@ mod tests {
         App::new(Box::new(InProc::new((100, 0))), None, settings)
     }
 
+    fn load_count(app: &mut App) {
+        let model = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("models")
+            .join("tutorial")
+            .join("unit1")
+            .join("count.lisp")
+            .to_string_lossy()
+            .into_owned();
+        app.eval("load-act-r-model", vec![Json::Str(model)]);
+    }
+
+    #[test]
+    fn tool_windows_are_per_model() {
+        let mut app = test_app();
+        app.models = vec!["A".into(), "B".into()];
+        app.selected_model = Some("A".into());
+        app.open_tool(ToolKind::Declarative);
+        app.selected_model = Some("B".into());
+        app.open_tool(ToolKind::Declarative);
+        assert_eq!(app.tools.len(), 2);
+        assert_eq!(app.tools[0].title, "Declarative (A)");
+        assert_eq!(app.tools[1].title, "Declarative (B)");
+    }
+
+    #[test]
+    fn chunk_tree_renders_slot_values() {
+        let mut app = test_app();
+        load_count(&mut app);
+        let model = Some("COUNT".to_string());
+        let chunk = app
+            .list_for(model.clone(), "chunks", Vec::new())
+            .into_iter()
+            .next()
+            .expect("a DM chunk");
+        let mut path = Vec::new();
+        let text = app.chunk_tree_text(&model, &chunk, 0, &mut path);
+        assert!(text.starts_with(&chunk), "tree: {text}");
+    }
+
+    #[test]
+    fn buffer_detail_reads_the_goal_buffer() {
+        let mut app = test_app();
+        load_count(&mut app);
+        let detail = app.buffer_detail(Some("COUNT".to_string()), "goal", BufferMode::Contents);
+        assert!(!detail.is_empty(), "goal buffer detail is empty");
+    }
     #[test]
     fn tool_windows_reuse_and_title_by_model() {
         let mut app = test_app();
