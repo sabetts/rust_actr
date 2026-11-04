@@ -244,11 +244,35 @@ Follow-ups (M5 polish):
 - Run-until time/module are wired but only production selection is covered by
   the stepper RPC tests.
 
-### M6 — Experiment window and overlay parity
+### M6 — Experiment window and overlay parity (initial)
 
 Image item, EMMA eye spot, touch fingers, keyboard forwarding, select/open/close
 semantics, multiple windows per model (engine/session work), AGI extension
 handlers.
+
+Completed:
+
+- Native window ops now cover text, button, line, image, remove, attention,
+  cursor, EMMA eye spot (`eyeloc`/`cleareyeloc`), and touch finger markers
+  (`showfinger`/`removefinger`).
+- Image items render as a labelled placeholder until an image loader is added.
+- Clicking a visible window focuses it; printable keys and special keys are
+  translated and forwarded through `output-key` (Enter/Escape/arrows/F-keys,
+  space, etc.).
+- `output-key`/`release-key` are accepted by the session instead of erroring.
+
+Verified: env tests 17 passed; `cargo test --lib` 86 passed; `cargo fmt --check`
+clean.
+
+Follow-ups (M6 polish):
+
+- Engine/session do not yet emit image/eyeloc/finger display ops from device
+  state; the native renderer is ready but needs the producer side.
+- Multiple experiment windows per model are still not supported; the engine
+  keeps one window record per model.
+- Window titles remain global keys, matching the Tcl limitation.
+- The image item is a placeholder; real image loading and click hit-testing are
+  not wired.
 
 ### M7 — Editor and remaining utilities
 

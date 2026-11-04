@@ -3235,6 +3235,11 @@ impl Session {
             }
             "visible-virtuals-available?" => Ok(vec![Json::Bool(!self.vwin_handlers.is_empty())]),
             "start-hand-at-mouse" | "process-events" => Ok(vec![Json::Null]),
+            // Window key presses are forwarded by the Environment; the Rust
+            // Window key presses are forwarded by the Environment; the Rust
+            // task layer has no Lisp output-key handler to invoke, so accept
+            // the command (monitors still fire through the command path).
+            "output-key" | "release-key" => Ok(vec![Json::Bool(true)]),
             "correlation" | "mean-deviation" => {
                 let a = num_list(args.first());
                 let b = num_list(args.get(1));

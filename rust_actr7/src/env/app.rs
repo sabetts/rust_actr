@@ -352,6 +352,38 @@ fn palette(i: usize) -> egui::Color32 {
     COLORS[i % COLORS.len()]
 }
 
+fn translate_special_key(key: egui::Key) -> Option<&'static str> {
+    use egui::Key;
+    Some(match key {
+        Key::Enter => "return",
+        Key::Escape => "esc",
+        Key::Backspace => "delete",
+        Key::Tab => "tab",
+        Key::ArrowUp => "up-arrow",
+        Key::ArrowDown => "down-arrow",
+        Key::ArrowLeft => "left-arrow",
+        Key::ArrowRight => "right-arrow",
+        Key::Delete => "delete",
+        Key::Home => "home",
+        Key::End => "end",
+        Key::PageUp => "page-up",
+        Key::PageDown => "page-down",
+        Key::Insert => "insert",
+        Key::F1 => "f1",
+        Key::F2 => "f2",
+        Key::F3 => "f3",
+        Key::F4 => "f4",
+        Key::F5 => "f5",
+        Key::F6 => "f6",
+        Key::F7 => "f7",
+        Key::F8 => "f8",
+        Key::F9 => "f9",
+        Key::F10 => "f10",
+        Key::F11 => "f11",
+        Key::F12 => "f12",
+        _ => return None,
+    })
+}
 /// A visible experiment window the engine is displaying, with its items.
 #[derive(Default, Clone)]
 struct VisWin {
@@ -363,6 +395,8 @@ struct VisWin {
     items: Vec<WinItem>,
     attention: Option<(f32, f32, egui::Color32)>,
     cursor: Option<(f32, f32, egui::Color32)>,
+    eyeloc: Option<(f32, f32, egui::Color32)>,
+    fingers: Vec<(String, String, f32, f32, bool)>,
 }
 
 /// One item in a visible window (`env-window-features`).
@@ -393,12 +427,23 @@ enum WinItem {
         y2: f32,
         color: egui::Color32,
     },
+    Image {
+        id: String,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        file: String,
+    },
 }
 
 impl WinItem {
     fn id(&self) -> &str {
         match self {
-            WinItem::Button { id, .. } | WinItem::Text { id, .. } | WinItem::Line { id, .. } => id,
+            WinItem::Button { id, .. }
+            | WinItem::Text { id, .. }
+            | WinItem::Line { id, .. }
+            | WinItem::Image { id, .. } => id,
         }
     }
 }
@@ -1274,6 +1319,51 @@ impl App {
                     w.cursor = None;
                 }
             }
+            "image" => {
+                let (title, id) = (s(1), s(2));
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    upsert(
+                        &mut w.items,
+                        WinItem::Image {
+                            id,
+                            x: n(3),
+                            y: n(4),
+                            w: n(6),
+                            h: n(7),
+                            file: s(5),
+                        },
+                    );
+                }
+            }
+            "eyeloc" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.eyeloc = Some((n(3), n(4), color(&s(6))));
+                }
+            }
+            "cleareyeloc" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    w.eyeloc = None;
+                }
+            }
+            "showfinger" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    let hand = s(3);
+                    let finger = s(4);
+                    w.fingers.retain(|(h, f, ..)| !(h == &hand && f == &finger));
+                    w.fingers.push((hand, finger, n(5), n(6), n(7) as i64 == 1));
+                }
+            }
+            "removefinger" => {
+                let title = s(1);
+                if let Some(w) = self.windows.iter_mut().find(|w| w.title == title) {
+                    let hand = s(3);
+                    let finger = s(4);
+                    w.fingers.retain(|(h, f, ..)| !(h == &hand && f == &finger));
+                }
+            }
             _ => {}
         }
     }
@@ -1282,6 +1372,7 @@ impl App {
     fn render_windows(&mut self, ctx: &egui::Context) {
         let wins = self.windows.clone();
         let mut click: Option<(String, f64, f64)> = None;
+        let mut keys: Vec<String> = Vec::new();
         for w in &wins {
             egui::Window::new(&w.title)
                 .default_pos([w.x, w.y])
@@ -1354,6 +1445,37 @@ impl App {
                                     egui::Color32::BLACK,
                                 );
                             }
+                            WinItem::Image {
+                                x,
+                                y,
+                                w: iw,
+                                h: ih,
+                                file,
+                                ..
+                            } => {
+                                let r = egui::Rect::from_min_size(
+                                    rect.min + egui::vec2(*x, *y),
+                                    egui::vec2(*iw, *ih),
+                                );
+                                p.rect_filled(
+                                    r,
+                                    egui::CornerRadius::ZERO,
+                                    egui::Color32::from_gray(220),
+                                );
+                                p.rect_stroke(
+                                    r,
+                                    egui::CornerRadius::ZERO,
+                                    egui::Stroke::new(1.0, egui::Color32::GRAY),
+                                    egui::StrokeKind::Inside,
+                                );
+                                p.text(
+                                    r.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    file,
+                                    egui::FontId::proportional(11.0),
+                                    egui::Color32::BLACK,
+                                );
+                            }
                         }
                     }
                     if let Some((x, y, c)) = w.attention {
@@ -1372,7 +1494,39 @@ impl App {
                             c,
                         );
                     }
+                    if let Some((x, y, c)) = w.eyeloc {
+                        p.circle_stroke(
+                            rect.min + egui::vec2(x, y),
+                            5.0,
+                            egui::Stroke::new(3.0, c),
+                        );
+                    }
+                    for (hand, finger, x, y, up) in &w.fingers {
+                        let label = format!(
+                            "{}{}",
+                            hand.chars().next().unwrap_or('?'),
+                            finger.chars().next().unwrap_or('?')
+                        );
+                        let color = if *up {
+                            egui::Color32::WHITE
+                        } else {
+                            egui::Color32::BROWN
+                        };
+                        p.circle_filled(rect.min + egui::vec2(*x, *y), 7.0, color);
+                        p.text(
+                            rect.min + egui::vec2(*x, *y),
+                            egui::Align2::CENTER_CENTER,
+                            label,
+                            egui::FontId::proportional(9.0),
+                            if *up {
+                                egui::Color32::BROWN
+                            } else {
+                                egui::Color32::WHITE
+                            },
+                        );
+                    }
                     if resp.clicked() {
+                        resp.request_focus();
                         if let Some(q) = resp.interact_pointer_pos() {
                             click = Some((
                                 w.title.clone(),
@@ -1381,12 +1535,41 @@ impl App {
                             ));
                         }
                     }
+                    if resp.has_focus() {
+                        ui.input(|input| {
+                            for event in &input.events {
+                                match event {
+                                    egui::Event::Text(text) => {
+                                        if text == " " {
+                                            keys.push("space".into());
+                                        } else if !text.is_empty() {
+                                            keys.push(text.clone());
+                                        }
+                                    }
+                                    egui::Event::Key {
+                                        key, pressed: true, ..
+                                    } => {
+                                        if let Some(name) = translate_special_key(*key) {
+                                            keys.push(name.to_string());
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        });
+                    }
                 });
         }
         if let Some((title, x, y)) = click {
             self.eval(
                 "visible-virtual-window-mouse-click",
                 vec![Json::Str(title), Json::Float(x), Json::Float(y)],
+            );
+        }
+        for key in keys {
+            self.eval(
+                "output-key",
+                vec![Json::Arr(vec![Json::Bool(false), Json::Str(key)])],
             );
         }
     }
@@ -3120,6 +3303,64 @@ mod tests {
         app.stop_stepper();
     }
 
+    #[test]
+    fn window_overlay_ops_render_state() {
+        let mut app = test_app();
+        app.apply_window_op(vec![
+            Json::Str("open".into()),
+            Json::Str("W".into()),
+            Json::Int(10),
+            Json::Int(20),
+            Json::Int(300),
+            Json::Int(200),
+        ]);
+        app.apply_window_op(vec![
+            Json::Str("image".into()),
+            Json::Str("W".into()),
+            Json::Str("logo".into()),
+            Json::Int(5),
+            Json::Int(6),
+            Json::Str("logo.gif".into()),
+            Json::Int(40),
+            Json::Int(20),
+        ]);
+        app.apply_window_op(vec![
+            Json::Str("eyeloc".into()),
+            Json::Str("W".into()),
+            Json::Str("M".into()),
+            Json::Int(30),
+            Json::Int(40),
+            Json::Int(0),
+            Json::Str("red".into()),
+        ]);
+        app.apply_window_op(vec![
+            Json::Str("showfinger".into()),
+            Json::Str("W".into()),
+            Json::Str("M".into()),
+            Json::Str("left".into()),
+            Json::Str("index".into()),
+            Json::Int(50),
+            Json::Int(60),
+            Json::Int(1),
+        ]);
+        let win = &app.windows[0];
+        assert!(win
+            .items
+            .iter()
+            .any(|i| matches!(i, WinItem::Image { file, .. } if file == "logo.gif")));
+        assert!(win.eyeloc.is_some());
+        assert_eq!(win.fingers.len(), 1);
+        app.apply_window_op(vec![
+            Json::Str("removefinger".into()),
+            Json::Str("W".into()),
+            Json::Str("M".into()),
+            Json::Str("left".into()),
+            Json::Str("index".into()),
+        ]);
+        assert!(app.windows[0].fingers.is_empty());
+        assert_eq!(translate_special_key(egui::Key::Enter), Some("return"));
+        assert_eq!(translate_special_key(egui::Key::ArrowUp), Some("up-arrow"));
+    }
     #[test]
     fn production_color_hex_parsing() {
         assert_eq!(
