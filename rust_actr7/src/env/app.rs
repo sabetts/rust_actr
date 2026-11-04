@@ -1059,7 +1059,11 @@ impl App {
                     } else {
                         group_colors[edge.group.unwrap_or(0) as usize % group_colors.len()]
                     };
-                    let width = 1.0 + (edge.count.saturating_sub(1) as f32).min(5.0);
+                    let width = if layout.weighted_edges {
+                        1.0 + (edge.count.saturating_sub(1) as f32).min(5.0)
+                    } else {
+                        1.0
+                    };
                     if edge.dashed {
                         for shape in egui::Shape::dashed_line(
                             &[from, to],

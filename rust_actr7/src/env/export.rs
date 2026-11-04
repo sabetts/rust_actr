@@ -124,6 +124,7 @@ pub struct GraphLayout {
     pub end_ms: Option<i64>,
     pub utility_min: Option<f64>,
     pub utility_max: Option<f64>,
+    pub weighted_edges: bool,
 }
 
 pub const GRAPH_BOX_W: f32 = 130.0;
@@ -219,6 +220,7 @@ pub fn layout_graph_page(
         end_ms: data.pages.get(page as usize).and_then(|p| p.end_ms),
         utility_min: data.utility_min,
         utility_max: data.utility_max,
+        weighted_edges: data.mode == crate::engine::ProductionGraphMode::Frequencies,
     }
 }
 
@@ -449,7 +451,11 @@ pub fn graph_eps(layout: &GraphLayout) -> String {
         } else {
             ps_color(&mut out, (0.0, 0.0, 0.0));
         }
-        let width = 1.0 + (edge.count.saturating_sub(1) as f32).min(5.0);
+        let width = if layout.weighted_edges {
+            1.0 + (edge.count.saturating_sub(1) as f32).min(5.0)
+        } else {
+            1.0
+        };
         if edge.from == edge.to {
             out.push_str(&format!(
                 "newpath {x1:.1} {y1:.1} moveto 20 18 rlineto 0 24 rlineto -40 0 rlineto 0 -24 rlineto stroke\n"
