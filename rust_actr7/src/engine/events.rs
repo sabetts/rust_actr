@@ -225,8 +225,28 @@ impl Engine {
                 // scheduling the device notification, so `new-sound` precedes
                 // the `SPEAK <text>` line at the same instant.
                 if self.cfg.hear_self.hears(style) {
+                    let n = self.word_seq;
+                    self.word_seq += 1;
                     let evt = self.audio_events;
                     self.audio_events += 1;
+                    let recode = (art / 2).max(art - 150);
+                    self.sounds.push(Sound {
+                        sname: format!("WORD{n}"),
+                        ename: format!("AUDIO-EVENT{evt}"),
+                        kind: "WORD".to_string(),
+                        content: Value::Str(text.clone()),
+                        location: "SELF".to_string(),
+                        onset: init_at,
+                        offset: Some(finish_at),
+                        duration: Some(art),
+                        delay: 300,
+                        recode,
+                        pitch: "MIDDLE".to_string(),
+                        attended: SoundAttended::Nil,
+                        other_features: Vec::new(),
+                    });
+                    let idx = self.sounds.len() - 1;
+                    self.sync_audio_chunks(idx);
                     self.push(
                         init_at,
                         Prio::Num(0),
@@ -280,15 +300,18 @@ impl Engine {
                         slot == "LOCATION"
                             && matches!(value, Sexp::Sym(s) if s.eq_ignore_ascii_case("SELF"))
                     });
-                    let event = if excludes_self {
-                        Event::Emit {
-                            module: "AUDIO".to_string(),
-                            line: "find-sound-failure".to_string(),
-                        }
-                    } else {
-                        Event::AuralLocation { evt }
-                    };
-                    self.push(self.time_ms + 300, Prio::Num(0), Out::Medium, event);
+                    // `stuff-sound-buffer` is called with `:stuffed t`, and
+                    // `find-sound` only schedules `find-sound-failure` for a
+                    // non-stuffed request. Automatic self-speech filtering
+                    // therefore leaves the aural-location buffer untouched.
+                    if !excludes_self {
+                        self.push(
+                            self.time_ms + 300,
+                            Prio::Num(0),
+                            Out::Medium,
+                            Event::AuralLocation { evt },
+                        );
+                    }
                 }
                 // `find-sound` (`audio.lisp:1045`): a word/tone event whose
                 // chunk has no `offset`/`duration` schedules
