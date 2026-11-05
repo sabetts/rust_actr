@@ -320,6 +320,7 @@ mod tutorial_unit5modeling_chunk_2_1;
 mod tutorial_unit5modeling_first_run;
 mod tutorial_unit5modeling_goal_and_context_chunks;
 mod tutorial_unit5modeling_initial_load;
+mod tutorial_unit5modeling_long_no_noise;
 mod tutorial_unit5modeling_other_chunk_types;
 mod tutorial_unit5modeling_other_chunks;
 mod tutorial_unit5modeling_p1_production;

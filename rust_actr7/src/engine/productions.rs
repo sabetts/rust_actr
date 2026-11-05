@@ -452,10 +452,11 @@ impl Engine {
             LhsItem::Match { buffer, tests } => {
                 // A LHS `ISA TYPE` as the *only* test constrains the buffer
                 // chunk's type: a request-built `(ISA CHUNK)` chunk must not
-                // satisfy `ISA GOAL` (bind-test). With other slot tests the
-                // type is carried for slot indices only, so the tests
-                // themselves decide (blending/addition).
-                let only_isa = tests.iter().all(|t| t.slot == "ISA");
+                // satisfy `ISA GOAL` (bind-test). Retrieval/imaginal
+                // conditions are the exception: ACT-R warns that such an
+                // `ISA` provides no tests and matches any chunk there.
+                let only_isa = tests.iter().all(|t| t.slot == "ISA")
+                    && !matches!(buffer.as_str(), "RETRIEVAL" | "IMAGINAL");
                 // Threaded goal: search the goal set in order for the first
                 // chunk satisfying the tests.
                 if buffer == "GOAL" && self.cfg.threads {
