@@ -476,7 +476,7 @@ pub fn run_model_steps_with_hook(
         // in turn loads the actual model. Only files that define a model are
         // fed to the strict loader.
         if path.is_file() {
-            if file_defines_model(&path) {
+            if file_defines_model(&path).map_err(EngineError::Model)? {
                 defs.extend(load_models(&path)?);
             }
             // Task files (also listed in the spec's model chain) carry the
@@ -730,18 +730,14 @@ fn companion_task_file(model_path: &Path) -> Option<std::path::PathBuf> {
 /// Whether a file contains a top-level `define-model` (possibly `-fct`)
 /// form. Used to skip test-model task files, which strict `load_models`
 /// would reject on their `defun`/experiment forms.
-pub fn file_defines_model(path: &Path) -> bool {
-    let Ok(src) = std::fs::read_to_string(path) else {
-        return false;
-    };
-    let Ok(forms) = sexpr::parse_all(&src) else {
-        return false;
-    };
-    forms.iter().any(|f| match f {
+pub fn file_defines_model(path: &Path) -> Result<bool, String> {
+    let src = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let forms = sexpr::parse_all(&src).map_err(|e| e.to_string())?;
+    Ok(forms.iter().any(|f| match f {
         sexpr::Sexp::List(v) => matches!(
             v.first(),
             Some(sexpr::Sexp::Sym(s)) if s == "DEFINE-MODEL" || s == "DEFINE-MODEL-FCT"
         ),
         _ => false,
-    })
+    }))
 }

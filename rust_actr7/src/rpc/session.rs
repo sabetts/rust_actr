@@ -4271,7 +4271,7 @@ impl Session {
                 }
             }
         }
-        if crate::file_defines_model(&path) {
+        if crate::file_defines_model(&path)? {
             self.prepare_model_load();
             let loaded = load_models(&path).map_err(|e| e.to_string())?;
             for def in loaded {
@@ -5495,6 +5495,27 @@ mod tests {
         s.evaluate("run", None, &[Json::Int(1)], &mut remote)
             .unwrap();
         assert!(s.take_trace().is_empty());
+    }
+
+    #[test]
+    fn malformed_model_file_is_rejected() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        let err = s
+            .evaluate(
+                "load-act-r-model",
+                None,
+                &[Json::Str(fixture_model(
+                    "tutorial;unit1;broken-addition.lisp",
+                ))],
+                &mut remote,
+            )
+            .unwrap_err();
+        assert!(err.contains("parse error"), "{err}");
     }
 
     #[test]
