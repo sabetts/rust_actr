@@ -322,6 +322,10 @@ pub struct Session {
     stepper: Option<Stepper>,
     /// The scripted device the engine is built with (empty by default).
     device: DeviceSetup,
+    /// Models that installed a speech/microphone device. A runtime engine
+    /// rebuild must restore this flag, as `define-chunks` does not uninstall
+    /// the device in ACT-R.
+    speech_models: std::collections::HashSet<String>,
     /// Client commands registered to display visible-virtual windows
     /// (`add-virtual-window-handler`, `tools/visible-virtual.lisp:469`).
     vwin_handlers: Vec<String>,
@@ -527,6 +531,7 @@ impl Session {
             pending_signals: Vec::new(),
             stepper: None,
             device: DeviceSetup::default(),
+            speech_models: Default::default(),
             vwin_handlers: Vec::new(),
             windows: HashMap::new(),
             hist_recording: Default::default(),
@@ -595,6 +600,13 @@ impl Session {
                 .iter()
                 .any(|name| !name.eq_ignore_ascii_case(&def.name));
         eng.set_multi_model(multi_model);
+        if self
+            .speech_models
+            .iter()
+            .any(|name| name.eq_ignore_ascii_case(&def.name))
+        {
+            eng.set_speech_device(true);
+        }
         eng.set_user_fns(self.user_fns.clone());
         eng.set_user_vars(self.user_vars.clone());
         eng.use_shared_sequence(self.shared_seq.clone());
@@ -746,6 +758,8 @@ impl Session {
             self.current_model = None;
         }
         self.inactive.retain(|m| !m.name.eq_ignore_ascii_case(name));
+        self.speech_models
+            .retain(|model| !model.eq_ignore_ascii_case(name));
         self.windows
             .retain(|window_model, _| !window_model.eq_ignore_ascii_case(name));
         self.sync_multi_model_flags();
@@ -1485,11 +1499,22 @@ impl Session {
             }
             "reset" => {
                 self.queue_signal("reset-start", Vec::new());
-                if let Some(eng) = &mut self.engine {
-                    eng.reset().map_err(|e| e.to_string())?;
-                }
-                for model in &mut self.inactive {
-                    model.engine.reset().map_err(|e| e.to_string())?;
+                if self.model_order.is_empty() {
+                    if let Some(eng) = &mut self.engine {
+                        eng.reset().map_err(|e| e.to_string())?;
+                    }
+                    for model in &mut self.inactive {
+                        model.engine.reset().map_err(|e| e.to_string())?;
+                    }
+                } else {
+                    // ACT-R resets models in meta-process order, not with the
+                    // selected model first. The order determines the shared
+                    // FIFO sequence for the resulting 0.000 events.
+                    for name in self.model_order.clone() {
+                        if let Some(eng) = self.engine_mut_for(&name) {
+                            eng.reset().map_err(|e| e.to_string())?;
+                        }
+                    }
                 }
                 if self.is_multi() {
                     self.global_time_ms = 0;
@@ -1811,7 +1836,9 @@ impl Session {
                 };
                 let mut extended = Vec::new();
                 let mut warnings = Vec::new();
+                let mut new_defined = Vec::new();
                 if let Some(m) = self.current_def_mut() {
+                    let defined_before = m.defined_chunks.len();
                     for c in &chunks {
                         let Json::Arr(items) = c else { continue };
                         let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();
@@ -1845,8 +1872,19 @@ impl Session {
                         }
                     }
                     m.apply_chunk_defaults();
+                    if !is_dm {
+                        new_defined.extend_from_slice(&m.defined_chunks[defined_before..]);
+                    }
                 }
-                self.rebuild_engine_in_place()?;
+                if is_dm {
+                    self.rebuild_engine_in_place()?;
+                } else if let Some(eng) = self.engine.as_mut() {
+                    // `define-chunks` only updates the chunk table; rebuilding
+                    // would re-arm the reset event and replay trace mid-run.
+                    for chunk in &new_defined {
+                        eng.add_defined_chunk(chunk).map_err(|e| e.to_string())?;
+                    }
+                }
                 if let Some(eng) = self.engine.as_mut() {
                     for w in warnings {
                         eng.emit_warning(&w);
@@ -2301,7 +2339,10 @@ impl Session {
                 Ok(vec![Json::Null])
             }
             "mp-time" | "mp-time-ms" | "get-time" => {
-                let v = self.engine.as_ref().map(|e| e.time_secs()).unwrap_or(0.0);
+                // `mp-time` is the meta-process clock. In a multi-model run
+                // the current engine can be an inactive model whose own clock
+                // has not advanced, so use the shared session clock.
+                let v = self.time_secs();
                 if name == "mp-time-ms" {
                     Ok(vec![Json::Int((v * 1000.0).round() as i64)])
                 } else {
@@ -3322,6 +3363,9 @@ impl Session {
             "install-device" => {
                 // Any installed device receives speech notifications; the
                 // Python tutorial uses this for `output-speech` monitors.
+                if let Some(name) = self.current_model.clone() {
+                    self.speech_models.insert(name);
+                }
                 if let Some(eng) = &mut self.engine {
                     eng.set_speech_device(true);
                 }
@@ -3912,7 +3956,7 @@ impl Session {
     /// One run slice, reporting why it returned.
     pub fn run_slice_reason(&mut self, limit_ms: i64, full: bool) -> Result<RunStop, String> {
         if self.is_multi() {
-            return self.run_multi_slice(limit_ms);
+            return self.run_multi_slice(limit_ms, None);
         }
         if self
             .engine
@@ -3955,7 +3999,7 @@ impl Session {
         max_events: u64,
     ) -> Result<RunStop, String> {
         if self.is_multi() {
-            return self.run_multi_slice(limit_ms);
+            return self.run_multi_slice(limit_ms, Some(1));
         }
         if self
             .engine
@@ -4000,9 +4044,14 @@ impl Session {
         self.stepper.is_some()
     }
 
-    fn run_multi_slice(&mut self, limit_ms: i64) -> Result<RunStop, String> {
+    fn run_multi_slice(
+        &mut self,
+        limit_ms: i64,
+        max_events: Option<u64>,
+    ) -> Result<RunStop, String> {
         let model_width =
             crate::engine::multi::model_column_width(self.model_order.iter().map(String::len));
+        let mut processed = 0u64;
         loop {
             let pending_action = self
                 .engine
@@ -4156,6 +4205,10 @@ impl Session {
                     engine.set_time_ms(stop);
                 }
                 return Ok(RunStop::Finished);
+            }
+            processed += 1;
+            if max_events.is_some_and(|n| processed >= n) {
+                return Ok(RunStop::Continue);
             }
         }
     }
@@ -4519,12 +4572,26 @@ impl Session {
             .as_ref()
             .map(|e| e.out_since(0))
             .unwrap_or_default();
-        self.build_engine()?;
+        // `build_engine` also resets the global trace buffer. A runtime
+        // definition change (the relay's `define-chunks`, a task's
+        // `chunk-type`) must not replay or reorder the trace already
+        // delivered this run.
+        let global_trace = std::mem::take(&mut self.global_trace);
+        let global_kinds = std::mem::take(&mut self.global_trace_kinds);
+        let global_levels = std::mem::take(&mut self.global_trace_levels);
+        let global_pos = self.global_trace_pos;
+        let trace_pos = self.trace_pos;
+        let result = self.build_engine();
+        self.global_trace = global_trace;
+        self.global_trace_kinds = global_kinds;
+        self.global_trace_levels = global_levels;
+        self.global_trace_pos = global_pos;
+        self.trace_pos = trace_pos;
+        result?;
         if let Some(eng) = self.engine.as_mut() {
             eng.set_device_run(run);
             eng.set_out_lines(trace);
         }
-        self.rebuild_global_trace();
         Ok(())
     }
 
@@ -7253,6 +7320,55 @@ mod tests {
             matches!(prod_detail.first(), Some(Json::Str(s)) if s.contains("Parameters for production") && s.contains(&prod)),
             "production detail omitted spp or text: {prod_detail:?}"
         );
+    }
+
+    #[test]
+    fn runtime_define_chunks_does_not_replay_multi_model_trace() {
+        if !fixture_root().is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        for model in ["tutorial;unit1;count.lisp", "tutorial;unit1;semantic.lisp"] {
+            s.evaluate(
+                "load-act-r-model",
+                None,
+                &[Json::Str(fixture_model(model))],
+                &mut remote,
+            )
+            .unwrap();
+        }
+        s.evaluate("run", None, &[Json::Int(1)], &mut remote)
+            .unwrap();
+        let before = s.take_trace();
+        assert!(!before.is_empty(), "multi-model run produced no trace");
+        assert!(before.iter().any(|line| line.contains(" COUNT ")));
+
+        s.evaluate(
+            "define-chunks",
+            Some("COUNT"),
+            &[Json::Arr(vec![
+                Json::Str("RUNTIME-CHUNK".into()),
+                Json::Str("ISA".into()),
+                Json::Str("CHUNK".into()),
+            ])],
+            &mut remote,
+        )
+        .unwrap();
+        let after = s.take_trace();
+        assert!(
+            after.is_empty(),
+            "define-chunks replayed the run trace: {after:?}"
+        );
+        let chunk_p = s
+            .evaluate(
+                "chunk-p",
+                Some("COUNT"),
+                &[Json::Str("RUNTIME-CHUNK".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(chunk_p[0], Json::Bool(true));
     }
 
     #[test]

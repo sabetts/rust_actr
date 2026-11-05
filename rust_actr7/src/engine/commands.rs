@@ -768,6 +768,19 @@ impl Engine {
         Ok(())
     }
 
+    /// Add a `define-chunks` entry to the live chunk table without resetting
+    /// the engine. ACT-R's `define-chunks` is a table update, not a model
+    /// reset; rebuilding here would re-arm the reset event mid-run.
+    pub fn add_defined_chunk(&mut self, chunk: &Chunk) -> Result<(), EngineError> {
+        let inst = super::rhs::chunk_inst(chunk)?;
+        let Some(name) = inst.name.clone() else {
+            return Ok(());
+        };
+        self.chunk_names.insert(name.clone());
+        self.named.insert(name, inst);
+        Ok(())
+    }
+
     pub(super) fn add_runtime_dm(&mut self, inst: ChunkInst) {
         let name = inst.name.clone().unwrap_or_default();
         if self
