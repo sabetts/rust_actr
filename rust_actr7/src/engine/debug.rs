@@ -17,7 +17,7 @@ fn apply_chunk_mods(chunk: &mut ChunkInst, mods: &[(String, Sexp)]) -> Result<()
 /// The implicit queries `pp` prints for a production: one `?buffer> state
 /// free` per requested buffer (`+` request or `*` modify-request) that has no
 /// explicit `?buffer>` condition and is not exempt (`:do-not-query`). ACT-R's
-/// `production-statement-text` shows these in the `(P …)` block.
+/// `production-statement-text` shows these in the `(P â€¦)` block.
 fn pp_implicit_queries(prod: &crate::model::Production, exempt: &[String]) -> Vec<String> {
     let mut out = Vec::new();
     for a in &prod.rhs {
@@ -596,7 +596,7 @@ impl Engine {
         self.model_output(&line);
     }
 
-    /// `(model-output "chunk a: ~s~%…")`: one labelled decay line per chunk.
+    /// `(model-output "chunk a: ~s~%â€¦")`: one labelled decay line per chunk.
     pub fn print_named_decay_lines(&mut self, names: &[String]) {
         for name in names {
             let up = name.to_uppercase();
@@ -615,7 +615,7 @@ impl Engine {
             );
             self.model_output(&line);
         }
-        // The task's single `(model-output "…~%…~%")` ends with a newline,
+        // The task's single `(model-output "â€¦~%â€¦~%")` ends with a newline,
         // which `command-output` turns into one trailing blank line.
         self.model_output("");
     }
@@ -1221,7 +1221,7 @@ impl Engine {
     }
 
     /// `(predict-bold-response)`: the BOLD haemodynamic prediction for each
-    /// traced buffer (`other-files/bold.lisp`), printed as the `time …`
+    /// traced buffer (`other-files/bold.lisp`), printed as the `time â€¦`
     /// table. Defaults: `:bold-inc 2`, `:bold-exp 5`, `:bold-scale 1`,
     /// `:bold-settle 40`, `:bold-positive 6`, `:bold-negative 1`,
     /// `:neg-bold-exp 15`, `:point-predict (goal)`.
@@ -1266,7 +1266,7 @@ impl Engine {
             self.out_lines.push(row);
             time += INC;
         }
-        // `command-output` wraps its argument with `~&…~%`
+        // `command-output` wraps its argument with `~&â€¦~%`
         // (`misc-utils.lisp:845`); the data block already ends in `~%`, so
         // the table is followed by one blank line.
         self.out_lines.push(String::new());
@@ -1308,12 +1308,25 @@ impl Engine {
     }
 
     /// Emit a raw task warning line (`print-warning`), e.g. the act-touch
-    /// stub's "Installing a default touch device���?���" banner.
+    /// stub's "Installing a default touch deviceï¿½ï¿½ï¿½?ï¿½ï¿½ï¿½" banner.
+    fn warning_line(&self, msg: &str) -> String {
+        if self.multi_model {
+            format!("#|Warning (in model {}): {msg} |#", self.model.name)
+        } else {
+            format!("#|Warning: {msg} |#")
+        }
+    }
+
     pub fn emit_warning(&mut self, msg: &str) {
         if self.trace_on {
-            self.out_lines
-                .push_kind(TraceKind::Warning, format!("#|Warning: {msg} |#"));
+            let line = self.warning_line(msg);
+            self.out_lines.push_kind(TraceKind::Warning, line);
         }
+    }
+
+    pub fn emit_warning_always(&mut self, msg: &str) {
+        let line = self.warning_line(msg);
+        self.out_lines.push_kind(TraceKind::Warning, line);
     }
 
     /// `model-warning`: like `emit_warning`, but suppressed unless the model
@@ -1484,13 +1497,65 @@ impl Engine {
         self.trace_on = on;
     }
 
-    /// `(model-output "…")` (`misc-utils.lisp:801`): a raw echoed line (no
+    pub fn set_multi_model(&mut self, multi: bool) {
+        self.multi_model = multi;
+    }
+
+    pub fn warn_invalid_hooks(&mut self) {
+        for (key, value) in [
+            (":SIM-HOOK", self.cfg.sim_hook.clone()),
+            (":PPM-HOOK", self.cfg.ppm_hook.clone()),
+        ] {
+            let Some(name) = value else {
+                continue;
+            };
+            let known = self.user_fns.contains_key(&name.to_uppercase())
+                || self.task_commands.contains(&name.to_uppercase());
+            if !known {
+                self.emit_warning_always(&format!(
+                    "Parameter {key} cannot take value \"{name}\" because it must be a function, string naming a command, or nil."
+                ));
+            }
+        }
+    }
+
+    pub fn warn_invalid_scheduled_commands(&mut self) {
+        for (_, command, _) in self.model.scheduled_events.clone() {
+            let known = self.user_fns.contains_key(&command.to_uppercase())
+                || self.task_commands.contains(&command.to_uppercase());
+            if !known {
+                self.emit_warning_always(&format!(
+                    "Can't schedule \"{command}\" because it is not a valid command identifier."
+                ));
+            }
+        }
+    }
+
+    pub fn warn_invalid_goals(&mut self) {
+        for warning in self.model.goal_warnings.clone() {
+            self.emit_warning_always(&warning);
+        }
+    }
+
+    pub fn warn_missing_model_commands(&mut self) {
+        for (command, _) in self.model.call_commands.clone() {
+            let known = self.user_fns.contains_key(&command.to_uppercase())
+                || self.task_commands.contains(&command.to_uppercase());
+            if !known {
+                self.emit_warning_always(&format!(
+                    "Command \"{command}\" not found in the table and cannot be executed."
+                ));
+            }
+        }
+    }
+
+    /// `(model-output "â€¦")` (`misc-utils.lisp:801`): a raw echoed line (no
     /// timestamp/module formatting), gated by the model trace (`:v`).
     pub fn model_output(&mut self, s: &str) {
         // `model-output` writes to the command stream, independently of the
         // model-trace toggle (`:v`): ACT-R captures it whenever the output
         // stream is live, so a driver that turns `:v` off and then does a
-        // `(model-output "? …")` echo still prints it.
+        // `(model-output "? â€¦")` echo still prints it.
         self.out_lines.push(s.to_string());
     }
 
@@ -2017,8 +2082,8 @@ impl Engine {
         }
     }
 
-    /// `(spp <name>…)` getter: resolve each production's parameters and print
-    /// its `Parameters for production …` block, like ACT-R's
+    /// `(spp <name>â€¦)` getter: resolve each production's parameters and print
+    /// its `Parameters for production â€¦` block, like ACT-R's
     /// `production-parameter-fct` (`utility-and-reward-1.lisp:678`); unknown
     /// names are skipped.
     pub fn print_prod_params_by_name(&mut self, name: &str) {
@@ -2061,7 +2126,7 @@ impl Engine {
 
     /// `buffer-slot-value` (`buffers.lisp:1030`): the value of `slot` on the
     /// chunk in `buffer`, encoded the way `encode-string`
-    /// (`dispatcher.lisp:921`) does for the remote protocol — a string value
+    /// (`dispatcher.lisp:921`) does for the remote protocol â€” a string value
     /// is wrapped in single quotes (`"k"` -> `'k'`), which is what the Python
     /// tutorial tasks compare against.
     pub fn buffer_slot_value(&self, buffer: &str, slot: &str) -> Option<String> {
@@ -2365,7 +2430,7 @@ impl Engine {
     }
 
     /// The same direct set without re-arming conflict resolution. A task-level
-    /// `(set-buffer-chunk …)` is not a production action, so ACT-R prints no
+    /// `(set-buffer-chunk â€¦)` is not a production action, so ACT-R prints no
     /// follow-up `CONFLICT-RESOLUTION` for it (the spacing-effect ref's fake
     /// retrievals).
     pub fn set_buffer_chunk_quiet(
@@ -2405,7 +2470,7 @@ impl Engine {
     /// `(sgp <param>)` / `get-parameter-value`: the printed current value of a
     /// supported model parameter (`framework/printing.lisp`,
     /// `modules/utility-and-reward-1.lisp`). `None` for an unknown name.
-    /// `(spp <production> :key …)` read (`utility-and-reward-1.lisp:660`): the
+    /// `(spp <production> :key â€¦)` read (`utility-and-reward-1.lisp:660`): the
     /// value of one production parameter. `None` for an unknown production or
     /// key. `:at` is the global default action time, as ACT-R reports it.
     pub fn prod_param(&self, name: &str, key: &str) -> Option<Sexp> {
@@ -2433,7 +2498,7 @@ impl Engine {
         })
     }
 
-    /// Every production's name, in load order — `(spp)` with no production
+    /// Every production's name, in load order â€” `(spp)` with no production
     /// reports them all (`utility-and-reward-1.lisp:804`).
     pub fn production_names(&self) -> Vec<String> {
         self.model
@@ -2502,7 +2567,7 @@ impl Engine {
     }
 }
 
-/// Parse an `sdm` specification (`{modifier} slot value …`,
+/// Parse an `sdm` specification (`{modifier} slot value â€¦`,
 /// `sdm-external`, `commands/dm-commands.lisp:511`) into predicates. A
 /// single punctuation token is a modifier (`-` = not equal).
 fn parse_sdm_spec(spec: &[String]) -> Vec<(Option<char>, String, String)> {
@@ -2677,7 +2742,7 @@ impl Engine {
             let hit = conflict
                 .iter()
                 .find(|(i, _, _)| self.model.productions[*i].name == prod.name);
-            // `command-output "~%Production …"` prints a leading newline.
+            // `command-output "~%Production â€¦"` prints a leading newline.
             self.out_lines.push(String::new());
             let (header, partials): (String, &[(String, String, Value, Value, f32)]) = match hit {
                 // A ppm partial match renders the mismatched slots inline
@@ -2951,7 +3016,7 @@ impl Engine {
         self.now_display();
     }
 
-    /// `print-visicon` (`vision.lisp:4090`) → `printed-visicon`
+    /// `print-visicon` (`vision.lisp:4090`) â†’ `printed-visicon`
     /// (`vision.lisp:4098`): the visicon table, then the pending
     /// `visicon-updates`.
     pub fn print_visicon_rpc(
@@ -3148,7 +3213,7 @@ impl Engine {
             }
             for u in &self.visicon_pending {
                 match u {
-                    // `(format "~s" (cons name (slots…)))`: the loc name then
+                    // `(format "~s" (cons name (slotsâ€¦)))`: the loc name then
                     // the slot/value pairs in printed order.
                     VisPending::Add(f) => adds.push(add_entry(f)),
                     VisPending::Delete(n) => deletes.push(n.clone()),
@@ -3342,7 +3407,7 @@ fn chop_string(text: &str) -> Vec<Chop> {
     accum
 }
 
-/// Lisp `(round n d)` — round half to even.
+/// Lisp `(round n d)` â€” round half to even.
 fn round_half_even(n: i64, d: i64) -> i64 {
     let q = n.div_euclid(d);
     let r = n.rem_euclid(d);
@@ -3356,7 +3421,7 @@ fn round_half_even(n: i64, d: i64) -> i64 {
     }
 }
 
-/// Lisp `(round x)` — round half to even, on a float.
+/// Lisp `(round x)` â€” round half to even, on a float.
 fn round_half_even_f(x: f64) -> i64 {
     let fl = x.floor();
     let diff = x - fl;
@@ -3470,8 +3535,8 @@ impl Engine {
     /// once per cycle: `bst`'s `build-display` calls `add-button`/
     /// `add-line` nine times before the run and the ref shows **one**
     /// `visicon-update`, not nine. The `add-visicon-features` API and the
-    /// scripted driver keep their own per-call push — the device-timeline
-    /// specs depend on it — so this is deliberately the window helpers only.
+    /// scripted driver keep their own per-call push â€” the device-timeline
+    /// specs depend on it â€” so this is deliberately the window helpers only.
     pub(super) fn now_display(&mut self) {
         if self.display_queued_ms == Some(self.time_ms) {
             return;
@@ -3501,7 +3566,7 @@ impl Engine {
         // (the scripted `CLEAR` ops). A client `clear-exp-window` empties the
         // visicon here, and the `proc_display` that `now_display` queues below
         // then sees the attended location's feature gone and schedules the
-        // re-encode itself — scheduling it here too would emit the
+        // re-encode itself â€” scheduling it here too would emit the
         // `encoding-complete`/`no visual-object found` pair twice
         // (`bst-learn`'s per-trial window rebuild).
         self.now_display();
@@ -3621,8 +3686,8 @@ impl Engine {
                         height: text_h,
                         extra: vec![("TEXT".to_string(), Value::Sym("T".to_string()))],
                         // `build-string-feats` (`vision.lisp:3558`) builds
-                        // `(isa (visual-location text) <y-slot> … height …
-                        // value … width … <x-slot> …)`, and the device appends
+                        // `(isa (visual-location text) <y-slot> â€¦ height â€¦
+                        // value â€¦ width â€¦ <x-slot> â€¦)`, and the device appends
                         // `color`, `kind` and `text` (PORTING-NOTES #238)."
                         spec: vec![
                             ("SCREEN-Y".to_string(), Value::Int(screen_y)),
@@ -3694,7 +3759,7 @@ impl Engine {
         let name = format!("VISUAL-LOCATION{}", self.feat_seq);
         self.feat_seq += 1;
         // `add-button-to-exp-window`'s visicon feature (`uwi.lisp:401`):
-        // `(isa (visual-location oval) … value (oval <text>) …)` — the button is
+        // `(isa (visual-location oval) â€¦ value (oval <text>) â€¦)` â€” the button is
         // an **oval** whose value is its text, which is how the tutorial models
         // ask for it (`+visual-location> kind oval, value "b"`). It was built
         // as `kind BUTTON` with the window-item key as its value, so no such
@@ -3738,7 +3803,7 @@ impl Engine {
         // with `start-x = px(view-loc)`, `y-pos = py(view-loc)` and
         // `x-fct = (lambda (s startx obj) (- startx (round (str-width obj) 2)))`,
         // so `build-string-feats`' `(+ curr-x x-off (round curr-width 2))`
-        // collapses to `px(top-xy) + px(view-loc)` — exactly the oval's own
+        // collapses to `px(top-xy) + px(view-loc)` â€” exactly the oval's own
         // `screen-x`/`screen-y`. (A label one pixel off lands in a column of
         // its own and changes `newest_feature`'s pick: bst-learn's ref places
         // VISUAL-LOCATION19, a label, at a trial start.)
@@ -4504,7 +4569,7 @@ impl Engine {
         set
     }
 
-    /// `printed-production` / `pp`: the `(P …)` text of a production.
+    /// `printed-production` / `pp`: the `(P â€¦)` text of a production.
     pub fn printed_production(&self, name: &str) -> Option<String> {
         let up = name.to_uppercase();
         let prod = self.model.productions.iter().find(|p| p.name == up)?;
@@ -5342,7 +5407,7 @@ struct BoldDemand {
 impl Engine {
     /// `bold-prediction-with-time` (`-scaled`): the BOLD prediction per
     /// buffer-trace buffer, sampled over time. The result is the time header
-    /// followed by one `[buffer, value…]` row per buffer, sorted by name.
+    /// followed by one `[buffer, valueâ€¦]` row per buffer, sorted by name.
     pub fn bold_prediction_with_times(&self, scaled: bool) -> Vec<Json> {
         const INC: f64 = 2.0;
         const SETTLE: f64 = 40.0;
@@ -5849,7 +5914,7 @@ fn ct_split(classes: &[CtClass], cond: &CtCond) -> (f64, Vec<CtClass>, Vec<CtCla
 }
 
 /// A chunk-type default value as Lisp `~S` would print it
-/// (`(chunk-type �?� (slot default))`).
+/// (`(chunk-type ï¿½?ï¿½ (slot default))`).
 fn pattern_show(p: &crate::model::Pattern) -> String {
     use crate::model::Pattern;
     match p {

@@ -588,11 +588,21 @@ impl Session {
     fn make_engine(&self, def: &Model) -> Result<Engine, String> {
         let mut eng = Engine::new(def.clone(), self.seed, 0.0, self.device.clone())
             .map_err(|e| e.to_string())?;
+        let multi_model = self.model_order.len() > 1
+            || self
+                .model_order
+                .iter()
+                .any(|name| !name.eq_ignore_ascii_case(&def.name));
+        eng.set_multi_model(multi_model);
         eng.set_user_fns(self.user_fns.clone());
         eng.set_user_vars(self.user_vars.clone());
         eng.use_shared_sequence(self.shared_seq.clone());
         eng.apply_model_commands().map_err(|e| e.to_string())?;
         if self.has_any_trace_monitor() {
+            eng.warn_invalid_goals();
+            eng.warn_invalid_hooks();
+            eng.warn_invalid_scheduled_commands();
+            eng.warn_missing_model_commands();
             eng.replay_reset_warnings();
         }
         if let Some(st) = &self.stepper {
@@ -602,6 +612,16 @@ impl Session {
             })));
         }
         Ok(eng)
+    }
+
+    fn sync_multi_model_flags(&mut self) {
+        let multi = self.model_order.len() > 1;
+        if let Some(engine) = self.engine.as_mut() {
+            engine.set_multi_model(multi);
+        }
+        for model in &mut self.inactive {
+            model.engine.set_multi_model(multi);
+        }
     }
 
     fn install_stepper_hook(&mut self, name: &str, eng: &mut Engine) {
@@ -639,6 +659,7 @@ impl Session {
         }
         self.engine = Some(eng);
         self.current_model = Some(name);
+        self.sync_multi_model_flags();
         self.rebuild_global_trace();
         Ok(())
     }
@@ -678,6 +699,8 @@ impl Session {
             self.global_trace_pos = 0;
             return;
         }
+        let model_width =
+            crate::engine::multi::model_column_width(self.model_order.iter().map(String::len));
         for name in &self.model_order {
             if let Some(eng) = self.engine_for(name) {
                 let lines = eng.out_since(0);
@@ -685,7 +708,11 @@ impl Session {
                 let levels = eng.out_levels_since(0);
                 for (i, line) in lines.into_iter().enumerate() {
                     self.global_trace
-                        .push(crate::engine::multi::with_model_column(&line, name));
+                        .push(crate::engine::multi::with_model_column(
+                            &line,
+                            name,
+                            model_width,
+                        ));
                     self.global_trace_kinds
                         .push(kinds.get(i).copied().unwrap_or(TraceKind::Model));
                     self.global_trace_levels
@@ -719,6 +746,7 @@ impl Session {
         self.inactive.retain(|m| !m.name.eq_ignore_ascii_case(name));
         self.windows
             .retain(|window_model, _| !window_model.eq_ignore_ascii_case(name));
+        self.sync_multi_model_flags();
     }
 
     /// The command registry (for `check`/`list-commands`/`add`/`remove`).
@@ -3961,6 +3989,8 @@ impl Session {
     }
 
     fn run_multi_slice(&mut self, limit_ms: i64) -> Result<RunStop, String> {
+        let model_width =
+            crate::engine::multi::model_column_width(self.model_order.iter().map(String::len));
         loop {
             let pending_action = self
                 .engine
@@ -4033,7 +4063,11 @@ impl Session {
                 let raw =
                     crate::trace::format_line(stop, "------", reason, crate::trace::MODULE_WIDTH);
                 self.global_trace
-                    .push(crate::engine::multi::with_model_column(&raw, "-"));
+                    .push(crate::engine::multi::with_model_column(
+                        &raw,
+                        "-",
+                        model_width,
+                    ));
                 self.global_trace_kinds.push(TraceKind::Model);
                 self.global_trace_levels.push(Out::Low);
                 return Ok(RunStop::Finished);
@@ -4072,7 +4106,11 @@ impl Session {
             };
             for (i, line) in lines.into_iter().enumerate() {
                 self.global_trace
-                    .push(crate::engine::multi::with_model_column(&line, &model_name));
+                    .push(crate::engine::multi::with_model_column(
+                        &line,
+                        &model_name,
+                        model_width,
+                    ));
                 self.global_trace_kinds
                     .push(kinds.get(i).copied().unwrap_or(TraceKind::Model));
                 self.global_trace_levels
@@ -4091,7 +4129,11 @@ impl Session {
                     crate::trace::MODULE_WIDTH,
                 );
                 self.global_trace
-                    .push(crate::engine::multi::with_model_column(&raw, "-"));
+                    .push(crate::engine::multi::with_model_column(
+                        &raw,
+                        "-",
+                        model_width,
+                    ));
                 self.global_trace_kinds.push(TraceKind::Model);
                 self.global_trace_levels.push(Out::Low);
                 for engine in self
@@ -4712,7 +4754,10 @@ pub fn json_to_text(j: &Json) -> String {
 
 /// The Environment's multi-model trace column starts at byte 12.
 fn trace_model_from_line(line: &str) -> Option<String> {
-    let model = line.get(12..22)?.trim();
+    if line.len() <= 12 || line.as_bytes().get(6) != Some(&b'.') {
+        return None;
+    }
+    let model = line.get(12..)?.split_whitespace().next()?;
     (!model.is_empty()).then(|| model.to_string())
 }
 
@@ -5426,6 +5471,29 @@ mod tests {
                 "{trace:?}"
             );
         }
+    }
+
+    #[test]
+    fn model_v_nil_suppresses_run_trace() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model(
+                "tutorial;unit4;zbrodoff-model.lisp",
+            ))],
+            &mut remote,
+        )
+        .unwrap();
+        assert!(s.take_trace().is_empty());
+        s.evaluate("run", None, &[Json::Int(1)], &mut remote)
+            .unwrap();
+        assert!(s.take_trace().is_empty());
     }
 
     fn stepper_fixture() -> String {

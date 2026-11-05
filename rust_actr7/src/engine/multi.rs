@@ -4,9 +4,9 @@ use std::cell::Cell;
 use std::cmp::Reverse;
 use std::rc::Rc;
 
-/// A model-name column is fixed at ten characters by the multi-model trace
-/// formatter; `unit-1-together-1-mp` pins it for COUNT/SEMANTIC/ADDITION.
-const MODEL_WIDTH: usize = 10;
+pub(crate) fn model_column_width(widths: impl IntoIterator<Item = usize>) -> usize {
+    widths.into_iter().max().unwrap_or(0) + 2
+}
 
 /// Run several models against one shared clock and emit the interleaved trace.
 pub struct MultiEngine {
@@ -28,6 +28,7 @@ impl MultiEngine {
         let mut names = Vec::with_capacity(models.len());
         let mut lines = Vec::new();
         let shared_seq = Rc::new(Cell::new(0u64));
+        let model_width = model_column_width(models.iter().map(|m| m.name.len()));
         for model in models {
             let name = model.name.clone();
             let mut engine = Engine::new_with_width(model, seed, 0.0, device.clone(), width)?;
@@ -35,7 +36,7 @@ impl MultiEngine {
             engine.set_module_width(width);
             engine.use_shared_sequence(shared_seq.clone());
             for line in engine.out_since(0) {
-                lines.push(with_model_column(&line, &name));
+                lines.push(with_model_column(&line, &name, model_width));
             }
             names.push(name);
             engines.push(engine);
@@ -65,6 +66,7 @@ impl MultiEngine {
     pub fn run_secs(&mut self, secs: f64) -> Result<(), EngineError> {
         let start = self.time_ms;
         let limit = start + (secs * 1000.0).round() as i64;
+        let model_width = model_column_width(self.names.iter().map(String::len));
         for engine in &mut self.engines {
             engine.set_time_ms(start);
         }
@@ -96,7 +98,7 @@ impl MultiEngine {
             }
             for line in self.engines[index].out_since(mark) {
                 self.lines
-                    .push(with_model_column(&line, &self.names[index]));
+                    .push(with_model_column(&line, &self.names[index], model_width));
             }
         }
         let stop = if beyond_limit {
@@ -118,7 +120,7 @@ impl MultiEngine {
             "Stopped because no events left to process"
         };
         let raw = format_line(stop, "------", reason, self.width);
-        self.lines.push(with_model_column(&raw, "-"));
+        self.lines.push(with_model_column(&raw, "-", model_width));
         Ok(())
     }
 
@@ -154,6 +156,7 @@ pub(crate) fn run_models(
 ) -> Result<u64, EngineError> {
     let start = *time_ms;
     let limit = start + (secs * 1000.0).round() as i64;
+    let model_width = model_column_width(engines.iter().map(|(name, _)| name.len()));
     for (_, engine) in engines.iter_mut() {
         engine.set_time_ms(start);
         engine.set_module_width(width);
@@ -191,7 +194,7 @@ pub(crate) fn run_models(
         let line_kinds = engine.out_kinds_since(mark);
         let line_levels = engine.out_levels_since(mark);
         for (i, line) in lines.into_iter().enumerate() {
-            trace.push(with_model_column(&line, name));
+            trace.push(with_model_column(&line, name, model_width));
             kinds.push(line_kinds.get(i).copied().unwrap_or(TraceKind::Model));
             levels.push(line_levels.get(i).copied().unwrap_or(Out::Low));
         }
@@ -215,17 +218,17 @@ pub(crate) fn run_models(
         "Stopped because no events left to process"
     };
     let raw = format_line(stop, "------", reason, width);
-    trace.push(with_model_column(&raw, "-"));
+    trace.push(with_model_column(&raw, "-", model_width));
     kinds.push(TraceKind::Model);
     levels.push(Out::Low);
     Ok(events)
 }
 
-pub(crate) fn with_model_column(line: &str, model: &str) -> String {
+pub(crate) fn with_model_column(line: &str, model: &str, width: usize) -> String {
     // A trace line is `     0.000   MODULE ...`; raw `model-output` lines have
     // no timestamp and stay unmodified.
     if line.len() <= 13 || line.as_bytes().get(6) != Some(&b'.') {
         return line.to_string();
     }
-    format!("{}  {:<MODEL_WIDTH$}{}", &line[..10], model, &line[13..])
+    format!("{}  {model:<width$}{}", &line[..10], &line[13..])
 }

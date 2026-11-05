@@ -366,6 +366,8 @@ pub struct Model {
     /// All model-body `(goal-focus ...)` calls in order (the threads extra
     /// applies every one).
     pub goal_focuses: Vec<ChunkDesc>,
+    /// Warnings for goal-focus specs naming an unknown chunk type.
+    pub goal_warnings: Vec<String>,
     pub productions: Vec<Production>,
     /// Model-body `(schedule-event <secs> "command" :params (...) ...)`:
     /// scheduled relative to model time 0 on each reset.
@@ -427,6 +429,93 @@ pub struct Model {
     /// chunks created by `define-chunks`). Emitted on reset only when
     /// `:model-warnings` is on.
     pub model_warnings: Vec<String>,
+}
+
+fn pattern_text(p: &Pattern) -> String {
+    match p {
+        Pattern::Var(v) => format!("={v}"),
+        Pattern::Sym(v) => v.clone(),
+        Pattern::Int(i) => i.to_string(),
+        Pattern::Num(x) => x.to_string(),
+        Pattern::Str(s) => format!("\"{s}\""),
+        Pattern::Nil => "NIL".into(),
+        Pattern::List(items) => {
+            format!(
+                "({})",
+                items.iter().map(pattern_text).collect::<Vec<_>>().join(" ")
+            )
+        }
+    }
+}
+
+fn chunk_desc_text(desc: &ChunkDesc) -> String {
+    match desc {
+        ChunkDesc::Named(name) => format!("({name})"),
+        ChunkDesc::Spec { ctype, slots, .. } => {
+            let mut parts = vec!["ISA".to_string(), ctype.clone()];
+            for (slot, value) in slots {
+                parts.push(slot.clone());
+                parts.push(pattern_text(value));
+            }
+            format!("({})", parts.join(" "))
+        }
+    }
+}
+
+fn goal_focus_valid(model: &Model, desc: &ChunkDesc) -> bool {
+    match desc {
+        ChunkDesc::Named(name) => model
+            .chunks
+            .iter()
+            .chain(model.defined_chunks.iter())
+            .any(|c| c.name.eq_ignore_ascii_case(name)),
+        ChunkDesc::Spec { ctype, .. } => {
+            ctype.is_empty()
+                || model
+                    .chunk_types
+                    .iter()
+                    .any(|t| t.name.eq_ignore_ascii_case(ctype))
+        }
+    }
+}
+
+fn validate_goal_focus(model: &mut Model) {
+    let mut invalid = Vec::new();
+    if let Some(goal) = model.initial_goal.clone() {
+        if !goal_focus_valid(model, &goal) {
+            invalid.push(goal);
+            model.initial_goal = None;
+        }
+    }
+    let valid: Vec<bool> = model
+        .goal_focuses
+        .iter()
+        .map(|goal| goal_focus_valid(model, goal))
+        .collect();
+    let goals = std::mem::take(&mut model.goal_focuses);
+    let mut kept = Vec::new();
+    for (goal, ok) in goals.into_iter().zip(valid) {
+        if ok {
+            kept.push(goal);
+        } else {
+            invalid.push(goal);
+        }
+    }
+    model.goal_focuses = kept;
+    let mut seen = Vec::new();
+    for goal in invalid {
+        let text = chunk_desc_text(&goal);
+        if seen.contains(&text) {
+            continue;
+        }
+        seen.push(text.clone());
+        model.goal_warnings.push(format!(
+            "Element after isa in define-chunk-spec isn't a chunk-type. {text}"
+        ));
+        model.goal_warnings.push(format!(
+            "{text} is not a valid chunk description - goal-focus failed."
+        ));
+    }
 }
 
 impl Model {
@@ -2666,6 +2755,7 @@ fn parse_model(
         window_origin: None,
         reset_warnings: Vec::new(),
         model_warnings: Vec::new(),
+        goal_warnings: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -3292,6 +3382,7 @@ fn parse_model(
         }
     }
     model.apply_chunk_defaults();
+    validate_goal_focus(&mut model);
     if !lhs_undefined.is_empty() || !rhs_undefined.is_empty() {
         let mut ordered = lhs_undefined;
         ordered.extend(rhs_undefined);

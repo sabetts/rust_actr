@@ -153,11 +153,9 @@ impl Engine {
                 .push((key, params.iter().map(Value::show).collect()));
             return Ok(());
         }
-        let def = self
-            .user_fns
-            .get(&key)
-            .cloned()
-            .ok_or_else(|| unimpl(format!("scheduled command has no task defun: {name}")))?;
+        let Some(def) = self.user_fns.get(&key).cloned() else {
+            return Ok(());
+        };
         let mut b: Bindings = HashMap::new();
         for (p, v) in def.params.iter().zip(params) {
             b.insert(p.to_uppercase(), v);
