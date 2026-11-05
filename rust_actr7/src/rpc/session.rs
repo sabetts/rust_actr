@@ -251,6 +251,7 @@ pub const BUILTINS: &[&str] = &[
     // task monitors them (`monitor-command "output-key" …`). The engine
     // records each press and the server dispatches it to its monitors.
     "output-key",
+    "output-speech",
     "release-key",
     // The four trace streams (`framework/printing.lisp`); their monitors are
     // what actually receive output (the Rust engine already formatted it).
@@ -853,19 +854,29 @@ impl Session {
     /// dispatches them to their monitors so a client's `monitor-command`
     /// handler runs, as ACT-R's `output-key` does mid-run.
     pub fn take_fired_commands(&mut self) -> Vec<(String, String, String)> {
-        self.engine
+        let mut out = self
+            .engine
             .as_mut()
             .map(|e| e.take_fired_commands())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        for model in &mut self.inactive {
+            out.extend(model.engine.take_fired_commands());
+        }
+        out
     }
 
     /// Task commands fired by `!eval!` since the last call, with their
     /// evaluated arguments rendered as Lisp text.
     pub fn take_fired_task_commands(&mut self) -> Vec<(String, Vec<String>)> {
-        self.engine
+        let mut out = self
+            .engine
             .as_mut()
             .map(|e| e.take_fired_task_commands())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        for model in &mut self.inactive {
+            out.extend(model.engine.take_fired_task_commands());
+        }
+        out
     }
 
     /// A pending embedder `imaginal-action` request, with its command,
@@ -3322,7 +3333,7 @@ impl Session {
             // Window key presses are forwarded by the Environment; the Rust
             // task layer has no Lisp output-key handler to invoke, so accept
             // the command (monitors still fire through the command path).
-            "output-key" | "release-key" => Ok(vec![Json::Bool(true)]),
+            "output-key" | "output-speech" | "release-key" => Ok(vec![Json::Bool(true)]),
             "correlation" | "mean-deviation" => {
                 let a = num_list(args.first());
                 let b = num_list(args.get(1));

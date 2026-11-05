@@ -414,6 +414,8 @@ pub struct Model {
     /// constraints for an unconstrained aural-location request (the audio
     /// analogue of `set-visloc-default`).
     pub audloc_default: Vec<(String, Sexp)>,
+    /// Negative default aural-location constraints (`- slot value`).
+    pub audloc_neg: Vec<(String, Sexp)>,
     /// Model-body `(set-parameter-value :module-param value)`: a module
     /// parameter set from a task-file variable. ACT-R re-evaluates the model
     /// body on every reset (`model.lisp:983`), so the variable's current
@@ -2755,6 +2757,7 @@ fn parse_model(
         initial_buffer_specs: Vec::new(),
         hand_start: None,
         audloc_default: Vec::new(),
+        audloc_neg: Vec::new(),
         set_param_values: Vec::new(),
         window_origin: None,
         reset_warnings: Vec::new(),
@@ -3290,11 +3293,22 @@ fn parse_model(
             // `(set-audloc-default slot value ...)`: default constraints for
             // an unconstrained aural-location request.
             "SET-AUDLOC-DEFAULT" => {
-                let mut it = items[1..].iter();
-                while let (Some(Sexp::Sym(slot)), Some(val)) = (it.next(), it.next()) {
-                    model
-                        .audloc_default
-                        .push((slot.to_uppercase(), val.clone()));
+                let mut i = 1;
+                while i + 1 < items.len() {
+                    let negated = items[i].as_sym() == Some("-");
+                    if negated {
+                        i += 1;
+                    }
+                    let Some(slot) = items.get(i).and_then(|x| x.as_sym()) else {
+                        break;
+                    };
+                    let value = items[i + 1].clone();
+                    if negated {
+                        model.audloc_neg.push((slot.to_uppercase(), value));
+                    } else {
+                        model.audloc_default.push((slot.to_uppercase(), value));
+                    }
+                    i += 2;
                 }
             }
             // `(set-parameter-value :module-param value)`: set a module

@@ -276,12 +276,19 @@ impl Engine {
                 // buffer is empty (`audio.lisp:716`); later sounds leave the
                 // first location in place. Aural detection/recode delay.
                 if self.aural_loc_evt.is_none() {
-                    self.push(
-                        self.time_ms + 300,
-                        Prio::Num(0),
-                        Out::Medium,
-                        Event::AuralLocation { evt },
-                    );
+                    let excludes_self = self.model.audloc_neg.iter().any(|(slot, value)| {
+                        slot == "LOCATION"
+                            && matches!(value, Sexp::Sym(s) if s.eq_ignore_ascii_case("SELF"))
+                    });
+                    let event = if excludes_self {
+                        Event::Emit {
+                            module: "AUDIO".to_string(),
+                            line: "find-sound-failure".to_string(),
+                        }
+                    } else {
+                        Event::AuralLocation { evt }
+                    };
+                    self.push(self.time_ms + 300, Prio::Num(0), Out::Medium, event);
                 }
                 // `find-sound` (`audio.lisp:1045`): a word/tone event whose
                 // chunk has no `offset`/`duration` schedules
