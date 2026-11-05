@@ -3822,6 +3822,16 @@ impl Engine {
         self.arm_device_script();
     }
 
+    fn emit_model_outputs(&mut self) {
+        for line in self.model.model_outputs.clone() {
+            self.model_output(&line);
+        }
+    }
+
+    pub fn replay_model_outputs(&mut self) {
+        self.emit_model_outputs();
+    }
+
     fn emit_reset_warnings(&mut self) {
         let warning_trace = sgp_tri_state(&self.model.params, ":V");
         let restore_trace = self.trace_on;
@@ -3878,6 +3888,7 @@ impl Engine {
         self.model.productions.truncate(self.base_prods);
         self.trace_on = sgp_tri_state(&self.model.params, ":V");
         self.retrieval_pending = false;
+        self.emit_model_outputs();
         self.emit_reset_warnings();
         self.dm = Vec::new();
         for c in &self.model.chunks {

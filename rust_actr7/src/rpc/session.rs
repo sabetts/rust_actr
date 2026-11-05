@@ -599,6 +599,7 @@ impl Session {
         eng.use_shared_sequence(self.shared_seq.clone());
         eng.apply_model_commands().map_err(|e| e.to_string())?;
         if self.has_any_trace_monitor() {
+            eng.replay_model_outputs();
             eng.warn_invalid_goals();
             eng.warn_invalid_hooks();
             eng.warn_invalid_scheduled_commands();
@@ -5494,6 +5495,17 @@ mod tests {
         s.evaluate("run", None, &[Json::Int(1)], &mut remote)
             .unwrap();
         assert!(s.take_trace().is_empty());
+    }
+
+    #[test]
+    fn model_body_output_is_streamed() {
+        let mut s = Session::new((100, 0));
+        s.add_remote("sink", None, Some("me".into()));
+        s.add_monitor("model-trace", "sink", MonitorWhen::Simple);
+        s.load_source("(define-model output-test (sgp :v t) (model-output \"hello\"))")
+            .unwrap();
+        let trace = s.take_trace();
+        assert!(trace.iter().any(|line| line == "hello"), "{trace:?}");
     }
 
     #[test]

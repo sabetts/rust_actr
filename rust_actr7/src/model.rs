@@ -372,6 +372,9 @@ pub struct Model {
     /// Model-body `(schedule-event <secs> "command" :params (...) ...)`:
     /// scheduled relative to model time 0 on each reset.
     pub scheduled_events: Vec<(i64, String, Vec<Sexp>)>,
+    /// Model-body `(model-output "name" args...)`: literal output lines
+    /// emitted when the model body is evaluated.
+    pub model_outputs: Vec<String>,
     /// Model-body `(call-act-r-command "name" args...)`: run the registered
     /// task command at load and on every reset.
     pub call_commands: Vec<(String, Vec<Sexp>)>,
@@ -2740,6 +2743,7 @@ fn parse_model(
         goal_focuses: Vec::new(),
         productions: Vec::new(),
         scheduled_events: Vec::new(),
+        model_outputs: Vec::new(),
         call_commands: Vec::new(),
         buffer_decls: Vec::new(),
         buffer_decl_slots: Vec::new(),
@@ -3059,6 +3063,11 @@ fn parse_model(
                 model
                     .scheduled_events
                     .push(((at * 1000.0).round() as i64, command, params));
+            }
+            "MODEL-OUTPUT" => {
+                if let Some(Sexp::Str(text)) = items.get(1) {
+                    model.model_outputs.push(text.clone());
+                }
             }
             "CALL-ACT-R-COMMAND" => {
                 let command = items
