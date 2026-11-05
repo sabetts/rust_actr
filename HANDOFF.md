@@ -21,14 +21,17 @@ changes.
 
 ## Current status
 
+Rust changes are committed through `4ca31bf`.
+
 Full Rust test suite:
 
 ```powershell
 cd rust_actr7
+cargo fmt --check
 cargo test
 ```
 
-Last result: `559 passed, 0 failed, 8 ignored`.
+Last result: `560 passed, 0 failed, 8 ignored`.
 
 Differential harness (requires SBCL, Python 3, and a built Rust binary):
 
@@ -38,25 +41,28 @@ python rust_actr7/fixtures/differential/run_cases.py --server both
 cargo test --test differential -- --ignored --nocapture
 ```
 
-Current ignored differential result:
+Current differential cases all pass:
 
 ```text
 DIFF-OK count-basic
+DIFF-OK declarative-act
+DIFF-OK declarative-long
 DIFF-OK declarative-no-noise
+DIFF-OK multi-model-talking
 ```
 
 ## Commits relevant to this work
 
-- `fdaa3f8 tests: add differential SBCL/Rust harness`
-- `d678ea0 engine: match isa-only retrieval and imaginal conditions`
+- `4ca31bf tests: add multi-model-talking differential case`
+- `e3fd403 rpc: preserve multi-model state during callbacks`
+- `d85282e engine: preserve speech sound names and self filtering`
+- `ea13c0f tests: add declarative activation-order differential cases`
+- `f4f8a1c engine: use dm-chunks order for retrieval candidates`
+- `82f2b87 docs: add differential parity handoff`
 - `1e0ad9d tests: add declarative retrieval differential case`
+- `d678ea0 engine: match isa-only retrieval and imaginal conditions`
+- `fdaa3f8 tests: add differential SBCL/Rust harness`
 - `c065a46 rpc: relay speech output across models`
-- `9a04221 motor: warn on invalid cursor locations`
-- `3e67294 model: reject malformed model files`
-- `18a1292 model: support model-body model-output`
-- `d46f04b engine: drop invalid scheduled command events`
-- `00a8503 rpc: align multi-model traces and load warnings`
-- `0addd3b engine: honor model :v on reset`
 
 ## Harness layout
 
@@ -66,7 +72,10 @@ rust_actr7/fixtures/differential/
   run_cases.py     # run every cases/*/client.py under both and compare
   cases/
     count-basic/client.py
+    declarative-act/client.py
+    declarative-long/client.py
     declarative-no-noise/client.py
+    multi-model-talking/client.py
 ```
 
 Each case is a directory with a `client.py` that imports the vendored
@@ -79,110 +88,63 @@ Each case is a directory with a `client.py` that imports the vendored
 cargo test --test differential -- --ignored --nocapture
 ```
 
-## What is fixed
+## Resolved: declarative retrieval candidate order
 
-- Trace monitor callbacks now include the trailing newline SBCL sends.
-- Load-time reset warnings are replayed when trace monitors are attached.
-- `:v nil` is honored on reset.
-- Multi-model warnings include the model name; trace columns use dynamic width.
-- Invalid scheduled commands are dropped instead of emitting `NONE` trace lines.
-- Model-body `(model-output "…")` is supported.
-- Malformed model files are rejected.
-- Invalid `move-cursor` locations emit SBCL's warning; valid visual-location
-  chunks are still accepted.
-- `set-audloc-default` supports `- slot value`; self-speech can produce
-  `find-sound-failure` instead of a self aural-location.
-- `output-speech` is a registered command, and fired commands are drained from
-  inactive models as well as the current model.
+ACT-R's `chunk-list` comes from the ordered `dm-chunks` alist, not the merge
+hash table:
 
-## Open issue 1: declarative-issues activation noise
+- `declarative-memory.lisp:1125` builds `chunk-list` from `dm-chunks`.
+- `declarative-memory.lisp:1929-1931` groups by filled-slot signature and
+  pushes new signature groups and chunks to the front.
+- `declarative-memory.lisp:2749` flattens the same structure for
+  `all-dm-chunks`.
+- `dm-chunk-hash-table` is only used for merge/identity lookup.
 
-Short run is fixed. The remaining mismatch is the longer run with activation
-noise (`:ans .25`), at the second retrieval:
+Rust standard retrieval originally walked raw reverse insertion order. That
+happens to match a single signature group but not the interleaved groups in
+`declarative-issues`. `f4f8a1c` switched retrieval, recent-retrieval tracing,
+and `dm` printing to `dm_alist_order()`.
 
-```text
-SBCL: 0.243 RETRIEVED-CHUNK 2-1=1
-Rust: 0.245 RETRIEVED-CHUNK ZERO
-```
+Regression coverage:
 
-With `:ans nil` the full trace matches exactly. The committed Rust regression is
-`tutorial_unit5modeling_long_no_noise` (`tests/cases/`), and the differential
-case is `declarative-no-noise`.
+- `retrieval_candidate_order_uses_dm_signature_groups`
+- `retrieval_candidate_order_follows_extended_signature_groups`
+- `declarative-act`
+- `declarative-long`
+- `declarative-no-noise`
 
-The activation trace (`set :act t`) shows the root difference is candidate
-order, which shifts every noise draw:
+This also fixes the prior noisy activation mismatch; no SBCL hash-table
+emulation is needed.
 
-```text
-SBCL order starts: V3, 1-1=0, 2-1=1, 3-2=1, 1+1=2, 1+2=3, V1, V2, ...
-Rust order starts: 1-1=0, 2-1=1, 3-2=1, 1+1=2, 1+2=3, V1, V2, V3, ...
-```
+## Resolved: multi-model-talking
 
-SBCL then picks `2-1=1` with activation `2.8939683`; Rust picks `ZERO` with
-`2.8666682`. This looks like SBCL hash-table iteration order, not a simple
-request/type-filter bug. Reproduce with a temporary case whose `client.py` is:
+The intended Python task now matches SBCL. Root causes were:
 
-```python
-import sys
-from pathlib import Path
+1. Runtime `define-chunks` rebuilt the current engine, re-arming a reset
+   event mid-run and replaying the trace. `define-chunks` now updates the live
+   chunk table without a rebuild.
+2. Engine rebuilds reset the global multi-model trace buffer and position.
+   `rebuild_engine_in_place` now preserves them.
+3. The multi-model run processed all events before draining client callbacks.
+   The capped RPC path now yields one event at a time so `output-speech` relay
+   callbacks run during the run.
+4. `mp-time` used the current model's local clock. It now uses the shared
+   meta-process clock.
+5. `reset` reset the selected model first, changing shared FIFO ordering.
+   It now resets models in `model-order`.
+6. Speech self-sounds did not consume a `WORD{n}` name. They now create the
+   same sound/event chunks as SBCL.
+7. Automatic self-speech filtering incorrectly emitted
+   `find-sound-failure`. `stuff-sound-buffer` is a stuffed request, so it
+   leaves the buffer untouched instead.
+8. Speech-device installation was lost on rebuild. It is now tracked per
+   model and reapplied.
 
-ROOT = Path(__file__).resolve().parents[5]
-sys.path.insert(0, str(ROOT / "actr7.x" / "tutorial" / "python"))
+Regression coverage:
 
-import actr
-
-actr.load_act_r_model(str(ROOT / "actr7.x" / "tutorial" / "unit5" / "declarative-issues.lisp"))
-actr.set_parameter_value(":act", True)
-actr.run(1.0)
-```
-
-Options:
-
-1. Try to emulate SBCL's hash iteration order. Likely high effort and
-   implementation-specific.
-2. Treat this as a documented stochastic-order limitation and add
-   expected-failure metadata to the differential harness.
-3. Investigate whether `set-base-levels` or DM insertion can be matched more
-   narrowly, but preserve all existing refs.
-
-Recommendation: option 2 unless exact noisy-trace parity is a requirement.
-
-## Open issue 2: multi-model-talking full task
-
-The bare model now produces `find-sound-failure` for self speech, and the
-committed RPC fixes allow `output-speech` callbacks and cross-model sounds.
-The intended Python task still does not match. Temporary probe:
-`C:\Users\sabetts\AppData\Local\Temp\opencode\probe_talking.py` (if still
-present). It loads the absolute multi-model file, adds the `relay-speech-output`
-command, monitors `output-speech`, installs `["speech","microphone"]` on every
-model, and runs 10 seconds.
-
-Observed after the partial fixes:
-
-- M1/M3 relay sounds are still missing/misordered in the first run.
-- The Rust client trace is emitted multiple times during nested
-  `set-current-model` callbacks from the relay handler.
-- SBCL produces one continuous multi-model trace ending around `1.775`.
-
-Likely areas:
-
-- `Session::take_fired_commands` and multi-model fired-command draining.
-- `set-current-model` / `activate_model` during a run.
-- `global_trace` / `global_trace_pos` handling when models are switched inside
-  a callback.
-- Whether `rebuild_global_trace` is invoked during the relay callback.
-
-Recommended next step: build a minimal two-model differential case:
-
-1. Listener model with a `hear` production.
-2. Speaker model that produces `SPEAK TEXT hello`.
-3. Python installs speech devices, adds an `output-speech` monitor that calls
-   `new_word_sound` on the listener.
-4. Run both servers, compare callback order and trace.
-5. Add nested `set_current_model` inside the relay handler and isolate the trace
-   duplication.
-
-Add the resulting regression to `tests/environment_rpc.rs` and a small
-differential case once it passes.
+- `multi-model-talking`
+- `runtime_define_chunks_does_not_replay_multi_model_trace`
+- `hear_self`
 
 ## Out of scope
 
