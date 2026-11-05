@@ -1242,7 +1242,11 @@ impl Session {
         if c.before.is_empty() && c.after.is_empty() && c.simple.is_empty() {
             return;
         }
-        let args = [Json::Str(line.to_string())];
+        let mut text = line.to_string();
+        if !text.ends_with('\n') {
+            text.push('\n');
+        }
+        let args = [Json::Str(text)];
         let _ = self.evaluate(target, None, &args, remote);
     }
 
@@ -7326,6 +7330,7 @@ mod tests {
         );
         // count.lisp emits a fixed 48-line trace.
         assert_eq!(remote.lines.len(), 48);
+        assert!(remote.lines.iter().all(|l| l.ends_with('\n')));
     }
 
     #[test]

@@ -227,9 +227,9 @@ fn control_panel_signals_event_queue_and_clear_all() {
     c.eval_ok("command-output", None, vec![Json::Str("cmd line".into())]);
     c.eval_ok("act-r-output", None, vec![Json::Str("general line".into())]);
     assert!(c.callbacks.iter().any(|(n, _, args)| n == "on-command"
-        && args.first().and_then(|a| a.as_str()) == Some("cmd line")));
+        && args.first().and_then(|a| a.as_str()) == Some("cmd line\n")));
     assert!(c.callbacks.iter().any(|(n, _, args)| n == "on-general"
-        && args.first().and_then(|a| a.as_str()) == Some("general line")));
+        && args.first().and_then(|a| a.as_str()) == Some("general line\n")));
 
     let queue = c.eval_ok("mp-queue-text", None, Vec::new());
     assert!(
