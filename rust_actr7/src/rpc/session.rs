@@ -592,6 +592,9 @@ impl Session {
         eng.set_user_vars(self.user_vars.clone());
         eng.use_shared_sequence(self.shared_seq.clone());
         eng.apply_model_commands().map_err(|e| e.to_string())?;
+        if self.has_any_trace_monitor() {
+            eng.replay_reset_warnings();
+        }
         if let Some(st) = &self.stepper {
             eng.set_event_hook(Some(Box::new(StepperHook {
                 shared: st.shared.clone(),
@@ -1255,6 +1258,17 @@ impl Session {
             .get(name)
             .map(|c| !c.before.is_empty() || !c.after.is_empty() || !c.simple.is_empty())
             .unwrap_or(false)
+    }
+
+    fn has_any_trace_monitor(&self) -> bool {
+        [
+            "model-trace",
+            "command-trace",
+            "warning-trace",
+            "general-trace",
+        ]
+        .iter()
+        .any(|name| self.has_trace_monitor(name))
     }
 
     /// A warning that is not itself part of the trace.
@@ -5383,6 +5397,35 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    #[test]
+    fn semantic_load_warnings_are_streamed() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("sink", None, Some("me".into()));
+        s.add_monitor("warning-trace", "sink", MonitorWhen::Simple);
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;semantic.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        let trace = s.take_trace_events();
+        for name in ["CATEGORY", "PENDING", "YES", "NO"] {
+            let warning = format!("Creating chunk {name} with no slots");
+            assert!(
+                trace
+                    .iter()
+                    .any(|(line, kind)| *kind == TraceKind::Warning && line.contains(&warning)),
+                "{trace:?}"
+            );
+        }
     }
 
     fn stepper_fixture() -> String {

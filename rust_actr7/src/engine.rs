@@ -3819,6 +3819,28 @@ impl Engine {
         self.arm_device_script();
     }
 
+    fn emit_reset_warnings(&mut self) {
+        let warning_trace = sgp_tri_state(&self.model.params, ":V");
+        let restore_trace = self.trace_on;
+        self.trace_on = warning_trace;
+        for w in self.model.reset_warnings.clone() {
+            self.emit_warning(&w);
+        }
+        if self.cfg.model_warnings {
+            for w in self.model.model_warnings.clone() {
+                self.emit_warning(&w);
+            }
+        }
+        for w in self.implicit_query_style_warnings() {
+            self.emit_warning(&w);
+        }
+        self.trace_on = restore_trace;
+    }
+
+    pub fn replay_reset_warnings(&mut self) {
+        self.emit_reset_warnings();
+    }
+
     fn reset_impl(&mut self) -> Result<(), EngineError> {
         // Driver-set extended-motor-actions params survive a reset.
         let zz = (
@@ -3853,26 +3875,7 @@ impl Engine {
         self.model.productions.truncate(self.base_prods);
         self.trace_on = true;
         self.retrieval_pending = false;
-        // ACT-R re-evaluates the model body on reset, so the validator's
-        // rejection warnings reappear here (the load-time ones are dropped).
-        // Warnings honour the model body's `:v`, as `model-warning` does, but
-        // the driver trace is restored afterwards so engine-path tests keep
-        // their established trace contract.
-        let warning_trace = sgp_tri_state(&self.model.params, ":V");
-        let restore_trace = self.trace_on;
-        self.trace_on = warning_trace;
-        for w in self.model.reset_warnings.clone() {
-            self.emit_warning(&w);
-        }
-        if self.cfg.model_warnings {
-            for w in self.model.model_warnings.clone() {
-                self.emit_warning(&w);
-            }
-        }
-        for w in self.implicit_query_style_warnings() {
-            self.emit_warning(&w);
-        }
-        self.trace_on = restore_trace;
+        self.emit_reset_warnings();
         self.dm = Vec::new();
         for c in &self.model.chunks {
             self.dm.push(chunk_inst(c)?);
