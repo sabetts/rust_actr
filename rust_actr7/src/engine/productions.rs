@@ -3235,7 +3235,7 @@ impl Engine {
         let mut recent_removed: Vec<String> = Vec::new();
         if let Some(rv) = &recent_req {
             if matches!(rv, Value::Nil) {
-                for idx in (0..self.dm.len()).rev() {
+                for idx in self.dm_alist_order() {
                     let c = &self.dm[idx];
                     let cname = c.name.clone().unwrap_or_default();
                     let sig_ok = req_filled.iter().all(|s| c.get(s) != Value::Nil)
@@ -3263,8 +3263,9 @@ impl Engine {
         let mut acts: Vec<(usize, f32, f32)> = Vec::new();
         let mut best_a: Option<f32> = None;
         let mut tied: Vec<ChunkInst> = Vec::new();
-        // `chunk-list` (the DM hash-table order) is reverse-insertion.
-        let order: Vec<usize> = (0..self.dm.len()).rev().collect();
+        // `chunk-list` is `(dm-chunks)` (`declarative-memory.lisp:1125`):
+        // newest signature group first, newest chunk first within a group.
+        let order = self.dm_alist_order();
         // Pass 1 — candidacy: ACT-R prints every match/no-match line before
         // any activation line (`declarative-memory.lisp:1314`).
         let mut candidates: Vec<usize> = Vec::new();

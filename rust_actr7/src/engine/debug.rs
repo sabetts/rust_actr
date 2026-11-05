@@ -298,10 +298,9 @@ impl Engine {
     /// named (or all) declarative-memory chunks.
     pub fn print_dm(&mut self, names: &[String]) -> Vec<String> {
         let out: Vec<usize> = if names.is_empty() {
-            // `all-dm-chunks` walks `dm-chunks`, whose sets are pushed to the
-            // front as they are created, so the model's `add-dm` chunks print
-            // newest-first.
-            (0..self.dm.len()).rev().collect()
+            // `all-dm-chunks` walks `dm-chunks`: newest signature group
+            // first, newest chunk first within a group.
+            self.dm_alist_order()
         } else {
             names
                 .iter()

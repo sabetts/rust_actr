@@ -14,6 +14,15 @@ fn tutorial_model(name: &str) -> Model {
     ms.into_iter().next().unwrap()
 }
 
+fn unit5_model(name: &str) -> Model {
+    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../actr7.x/tutorial/unit5")
+        .join(name);
+    let ms = crate::model::load_models(&p).unwrap();
+    assert_eq!(ms.len(), 1);
+    ms.into_iter().next().unwrap()
+}
+
 fn inst(ctype: &str, slots: Vec<(&str, Value)>) -> ChunkInst {
     ChunkInst {
         name: None,
@@ -25,6 +34,107 @@ fn inst(ctype: &str, slots: Vec<(&str, Value)>) -> ChunkInst {
 
 fn sym(s: &str) -> Value {
     Value::Sym(s.into())
+}
+
+/// `chunk-list` comes from `dm-chunks`, not raw insertion order
+/// (`declarative-memory.lisp:1125`). Signature groups are newest-first and
+/// chunks within a group are newest-first; partial matching then reverses
+/// the filtered list. `declarative-issues`'s first request exercises several
+/// interleaved signature groups.
+#[test]
+fn retrieval_candidate_order_uses_dm_signature_groups() {
+    let mut e = Engine::new(
+        unit5_model("declarative-issues.lisp"),
+        (100, 1),
+        0.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.trace_on = true;
+    e.cfg.act = Some(Act::T);
+    e.start_retrieval(
+        NewChunk::Spec {
+            ctype: "SIMPLE-VALUE".to_string(),
+            slots: Vec::new(),
+            neg: vec![("RESULT".to_string(), Value::Nil)],
+            rels: Vec::new(),
+            bare: false,
+        },
+        &[],
+    )
+    .unwrap();
+    let out = e.output();
+    let order: Vec<String> = out
+        .lines()
+        .filter_map(|line| line.strip_prefix("Computing activation for chunk "))
+        .map(str::to_string)
+        .collect();
+    assert_eq!(
+        order,
+        vec!["1-1=0", "2-1=1", "3-2=1", "1+1=2", "1+2=3", "V1", "V2",]
+    );
+}
+
+/// The unconstrained `isa simple-value` request in `declarative-issues`
+/// matches every DM chunk. SBCL walks the signature groups newest-first,
+/// reverses the filtered `chunk-list` for partial matching, and therefore
+/// places `V3` (which shares the empty-signature group) before the math
+/// facts. Raw insertion order puts `V3` after them.
+#[test]
+fn retrieval_candidate_order_follows_extended_signature_groups() {
+    let mut e = Engine::new(
+        unit5_model("declarative-issues.lisp"),
+        (100, 1),
+        0.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.trace_on = true;
+    e.cfg.act = Some(Act::T);
+    e.start_retrieval(
+        NewChunk::Spec {
+            ctype: String::new(),
+            slots: Vec::new(),
+            neg: Vec::new(),
+            rels: Vec::new(),
+            bare: false,
+        },
+        &[],
+    )
+    .unwrap();
+    let order: Vec<String> = e
+        .output()
+        .lines()
+        .filter_map(|line| line.strip_prefix("Computing activation for chunk "))
+        .map(str::to_string)
+        .collect();
+    assert_eq!(
+        order,
+        vec![
+            "ZERO",
+            "ONE",
+            "TWO",
+            "THREE",
+            "ADD",
+            "SUBTRACT",
+            "SKY",
+            "GRASS",
+            "ROSE",
+            "V3",
+            "1-1=0",
+            "2-1=1",
+            "3-2=1",
+            "1+1=2",
+            "1+2=3",
+            "V1",
+            "V2",
+            "F1",
+            "F2",
+            "F3",
+            "G1",
+            "OLD-CONTEXT",
+        ]
+    );
 }
 
 #[test]
