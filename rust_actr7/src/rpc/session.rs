@@ -5519,6 +5519,31 @@ mod tests {
     }
 
     #[test]
+    fn invalid_move_cursor_location_warns() {
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("sink", None, Some("me".into()));
+        s.add_monitor("warning-trace", "sink", MonitorWhen::Simple);
+        s.load_source(
+            "(define-model move-test \
+             (chunk-type goal state) \
+             (define-chunks (start-pos screen-x 100 screen-y 0)) \
+             (p start ?goal> buffer empty ==> +goal> +manual> isa move-cursor loc start-pos))",
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(1)], &mut remote)
+            .unwrap();
+        let trace = s.take_trace();
+        assert!(
+            trace
+                .iter()
+                .any(|line| line
+                    .contains("No valid location could be generated from NIL or START-POS")),
+            "{trace:?}"
+        );
+    }
+
+    #[test]
     fn model_body_output_is_streamed() {
         let mut s = Session::new((100, 0));
         s.add_remote("sink", None, Some("me".into()));

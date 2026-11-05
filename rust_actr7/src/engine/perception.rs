@@ -374,14 +374,18 @@ impl Engine {
     }
 
     pub(super) fn loc_known(&self, loc: &str) -> bool {
+        let is_visual_location = |c: &ChunkInst| c.ctype.eq_ignore_ascii_case("VISUAL-LOCATION");
         self.vl_copies.contains_key(loc)
             || self.features.iter().any(|f| f.name == loc)
             || self
                 .buffers
-                .get("VISUAL-LOCATION")
-                .and_then(|b| b.chunk.as_ref())
-                .and_then(|c| c.name.as_deref())
-                == Some(loc)
+                .values()
+                .any(|b| b.chunk.as_ref().and_then(|c| c.name.as_deref()) == Some(loc))
+            || self.named.get(loc).is_some_and(is_visual_location)
+            || self
+                .dm
+                .iter()
+                .any(|c| c.name.as_deref() == Some(loc) && is_visual_location(c))
     }
 
     /// A location name (feature base, request copy, or buffer chunk) to

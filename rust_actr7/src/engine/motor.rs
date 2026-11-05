@@ -1938,10 +1938,39 @@ impl Engine {
         slots: &[(String, Value)],
     ) -> Result<(), EngineError> {
         let req_ms = self.time_ms;
-        let loc = slots
+        let loc_value = slots
             .iter()
             .find(|(s, _)| s == "LOC")
-            .and_then(|(_, v)| self.chunk_xy_name(v));
+            .map(|(_, v)| v.clone());
+        let loc = loc_value.as_ref().and_then(|v| self.chunk_xy_name(v));
+        let loc_name = match loc_value.as_ref() {
+            Some(Value::Sym(s)) | Some(Value::Str(s)) => s.clone(),
+            _ => "NIL".to_string(),
+        };
+        if cmd == "MOVE-CURSOR"
+            && loc
+                .as_ref()
+                .map_or(true, |(_, _, name)| !self.loc_known(name))
+        {
+            self.now(
+                Prio::Num(0),
+                Out::Low,
+                Event::Emit {
+                    module: "MOTOR".to_string(),
+                    line: format!("MOVE-CURSOR LOC {loc_name}"),
+                },
+            );
+            self.now(
+                Prio::Num(0),
+                Out::Low,
+                Event::Warning {
+                    message: format!(
+                        "No valid location could be generated from NIL or {loc_name} when trying to move a cursor."
+                    ),
+                },
+            );
+            return Ok(());
+        }
         // `move-cursor` aborts when the cursor is already at the requested
         // target (`motor.lisp:1316`, "r=0 is a no-op"): the trace line is
         // still emitted but no ply runs, so the manual module stays free.

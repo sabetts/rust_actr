@@ -2418,6 +2418,10 @@ enum Event {
         buffer: String,
         module: String,
     },
+    /// A warning emitted at a scheduled point in the trace.
+    Warning {
+        message: String,
+    },
     /// A task command scheduled by model-body `schedule-event` or by
     /// `schedule-event-relative` inside another command. Emits a `NONE`
     /// trace line then runs the registered task function.

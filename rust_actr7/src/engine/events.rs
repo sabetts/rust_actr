@@ -2501,6 +2501,9 @@ impl Engine {
                 }
                 self.run_scripted_click();
             }
+            Event::Warning { message } => {
+                self.emit_warning_always(&message);
+            }
             Event::Command { name, params } => {
                 if !self.scheduled_command_known(&name) {
                     return Ok(());
