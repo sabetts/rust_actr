@@ -174,6 +174,7 @@ fn zbrodoff_device() -> DeviceSetup {
 }
 
 fn zbrodoff_settings(s: &mut Session, r: &mut dyn Remote) -> Result<(), String> {
+    sgp(s, r, ":V", Json::Bool(true))?;
     sgp(s, r, ":MP", Json::Int(1))?;
     sgp(s, r, ":PPM", Json::Int(1))?;
     sgp(s, r, ":EGS", Json::Float(0.0))?;
@@ -214,6 +215,7 @@ fn choice_surrogate() {
         load(s, r, "extras;surrogates;choice-task.lisp")?;
         load(s, r, "extras;surrogates;choice-model.lisp")?;
         eval(s, r, "reset", &[])?;
+        sgp(s, r, ":V", Json::Bool(true))?;
         sgp(s, r, ":TRACE-DETAIL", Json::Str("MEDIUM".into()))?;
         for reward in [
             -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0,

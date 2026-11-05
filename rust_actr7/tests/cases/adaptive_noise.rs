@@ -15,6 +15,7 @@ fn adaptive_noise() -> Result<(), String> {
             // The test stub's `:starting-parameters (:seed (1 0))` is
             // re-applied on every reset.
             Step::Seed((1, 0)),
+            Step::Sgp(":V".into(), crate::sexp(r#"T"#)),
             Step::Sgp(":UAN".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":OL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(":ACT".into(), crate::sexp(r#"NIL"#)),
@@ -24,6 +25,7 @@ fn adaptive_noise() -> Result<(), String> {
             Step::AdaptiveNoiseTrace,
             Step::Reset,
             Step::Seed((1, 0)),
+            Step::Sgp(":V".into(), crate::sexp(r#"T"#)),
             Step::Sgp(":UAN".into(), crate::sexp(r#"T"#)),
             Step::Sgp(":OL".into(), crate::sexp(r#"NIL"#)),
             Step::Sgp(

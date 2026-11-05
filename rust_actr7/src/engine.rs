@@ -3123,6 +3123,8 @@ pub struct Engine {
     tracker_target: String,
     /// Trace output enabled (`:v`). Scripted drivers can toggle it.
     trace_on: bool,
+    /// Include the `(in model NAME)` prefix on warnings in a multi-model run.
+    multi_model: bool,
     /// Task-file `defun`s available to `!eval!`/`!bind!`.
     user_fns: HashMap<String, crate::model::UserDefun>,
     /// Registered task commands whose side effects are outside the model
@@ -3544,6 +3546,7 @@ impl Engine {
             tracker_feature: None,
             tracker_target: "2".to_string(),
             trace_on: true,
+            multi_model: false,
             user_fns: HashMap::new(),
             task_commands: HashSet::new(),
             task_command_values: HashMap::new(),
@@ -3873,7 +3876,7 @@ impl Engine {
         }
         // Compiled productions do not survive a reset.
         self.model.productions.truncate(self.base_prods);
-        self.trace_on = true;
+        self.trace_on = sgp_tri_state(&self.model.params, ":V");
         self.retrieval_pending = false;
         self.emit_reset_warnings();
         self.dm = Vec::new();

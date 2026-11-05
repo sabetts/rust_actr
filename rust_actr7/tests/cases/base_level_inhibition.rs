@@ -10,6 +10,9 @@ fn base_level_inhibition() -> Result<(), String> {
     Case::new("base-level-inhibition")
         .models(&["extras;base-level-inhibition;free-recall.lisp"])
         .seed((1, 0))
-        .steps(vec![Step::BaseLevelInhibition])
+        .steps(vec![
+            Step::Sgp(":V".into(), crate::sexp(r#"T"#)),
+            Step::BaseLevelInhibition,
+        ])
         .check()
 }

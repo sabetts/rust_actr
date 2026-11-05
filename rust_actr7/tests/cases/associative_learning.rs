@@ -10,6 +10,10 @@ fn associative_learning() -> Result<(), String> {
     Case::new("associative-learning")
         .models(&["extras;associative-learning;al-fan-study.lisp"])
         .seed((100, 0))
-        .steps(vec![Step::Reset, Step::AlDriver])
+        .steps(vec![
+            Step::Reset,
+            Step::Sgp(":V".into(), crate::sexp(r#"T"#)),
+            Step::AlDriver,
+        ])
         .check()
 }

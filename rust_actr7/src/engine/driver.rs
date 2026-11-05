@@ -624,6 +624,7 @@ impl Engine {
         self.rng.borrow_mut().set_seed(1, 0);
         self.al_create_stims();
         self.reset()?;
+        self.set_trace(true);
         self.rng.borrow_mut().set_seed(1, 0);
         // `(set-parameter-value …)`: :lf .75, :al-show t, :ol t, :al-prior-p
         // .08, :al-prior-w 2.5 (`approach-1-results`).
@@ -2535,6 +2536,7 @@ impl Engine {
 
     fn free_recall_run(&mut self, inhibit: bool) -> Result<(), EngineError> {
         self.reset()?;
+        self.set_trace(true);
         // The task's `(ssp :starting-parameters (:seed (1 0) ...))` re-seeds
         // on every reset.
         self.set_seed((1, 0));
