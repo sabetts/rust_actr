@@ -5496,6 +5496,42 @@ mod tests {
         assert!(s.take_trace().is_empty());
     }
 
+    #[test]
+    fn invalid_scheduled_commands_are_skipped_silently() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.add_remote("sink", None, Some("me".into()));
+        s.add_monitor("warning-trace", "sink", MonitorWhen::Simple);
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model(
+                "tutorial;unit7;utility-learning-issues-model.lisp",
+            ))],
+            &mut remote,
+        )
+        .unwrap();
+        let load = s.take_trace();
+        assert!(
+            load.iter()
+                .any(|line| line.contains("Can't schedule \"utility-learning-issues-choose\"")),
+            "{load:?}"
+        );
+        s.evaluate("run", None, &[Json::Int(1)], &mut remote)
+            .unwrap();
+        let trace = s.take_trace();
+        assert!(
+            !trace
+                .iter()
+                .any(|line| line.contains("utility-learning-issues-choose")),
+            "{trace:?}"
+        );
+    }
+
     fn stepper_fixture() -> String {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("fixtures")

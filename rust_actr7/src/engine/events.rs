@@ -4,6 +4,15 @@ use super::motor::{key_is_punch, key_xy};
 use super::perception::{audio_event_chunk, sound_chunk};
 use super::*;
 impl Engine {
+    fn scheduled_command_known(&self, name: &str) -> bool {
+        let key = name.to_uppercase();
+        matches!(
+            key.as_str(),
+            "SET-IMAGINAL-FREE" | "SET-IMAGINAL-ERROR" | "CLEAR-EXP-WINDOW"
+        ) || self.task_commands.contains(&key)
+            || self.user_fns.contains_key(&key)
+    }
+
     pub(super) fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
         match event {
             Event::SetBuffer {
@@ -2493,6 +2502,9 @@ impl Engine {
                 self.run_scripted_click();
             }
             Event::Command { name, params } => {
+                if !self.scheduled_command_known(&name) {
+                    return Ok(());
+                }
                 if show {
                     let suffix = if params.is_empty() {
                         String::new()
