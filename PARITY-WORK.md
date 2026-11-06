@@ -240,6 +240,18 @@ audio trace parity, not just audicon state.
 - Acceptance: `DIFF-OK probe-audio-trace` under both servers; full suite
   green; any changed behavior has a default-suite regression.
 
+Candidate root causes to check, in order:
+
+- Rust schedules `AudioEventEnded` for self-speech sounds that already have
+  `offset`/`duration`; Lisp's `find-sound` skips the end check for those.
+- `aural_loc_evt` is a cached event id; Lisp's precondition reads the live
+  `aural-location` buffer, so a stale cache can emit a mod after the buffer has
+  moved to a later sound.
+- Same-time priority/queue order differs between `new-sound`,
+  `SET-BUFFER-CHUNK`, `ModBuffer`, and `AUDIO-EVENT-ENDED`.
+- `:output high` is applied at schedule time in Lisp but event visibility is
+  checked at emit time in Rust, changing whether the internal end event runs.
+
 Useful commands:
 
 ```powershell
@@ -260,6 +272,13 @@ trace narration when they interact.
   blended request, plus one noisy retrieval.
 - Compare full traces and, if numeric drift appears, add a draw-sequence test
   in the style of `tests/draws.rs`.
+- `:blt`, `:tmp`, `:min-bl`, and `:blend-all-slots` are **model-only** in Rust;
+  put them in the model body, not in client `set_parameter_value` calls.
+- Highest-risk areas: one noise draw per candidate in DM order; partial
+  matching reversing activation order; blending drawing in reversed match
+  order; `:min-bl` drawing before suppression; `lisp_f` vs `lisp_s_f32`
+  formatting.
+- Avoid `:cst t`; Rust and Lisp route it to different streams.
 - Acceptance: `DIFF-OK probe-activation-combo`; any numerical fix backed by a
   focused unit test.
 
@@ -272,6 +291,18 @@ imaginal, clear, and a failed indirect request.
 - Cover both `:recently-retrieved` and the `:ncnar` update path if practical.
 - Inspect `engine/productions.rs` indirect-request resolution and
   `engine/events.rs` imaginal actions.
+- Known likely gaps to target:
+  - Rust concretizes `+retrieval> =imaginal` before the same firing's queued
+    `=imaginal>` MOD; Lisp expands the indirect request after the MOD.
+  - An indirect request from an empty/failed imaginal buffer errors in Rust
+    instead of warning and requesting an empty spec.
+  - `ImaginalError` does not set failure on both `imaginal` and
+    `imaginal-action`.
+  - `?imaginal> state error` is not implemented in production matching.
+  - Whole-chunk copies into imaginal can keep the source name where Lisp
+    copies to `CHUNK{n}` when `buffer-requires-copies` is in force.
+- Use `buffer_read`, `buffer_chunk`, `sdm`, and `whynot` for deterministic
+  output. Avoid `buffer-status`; Rust hardcodes its `buffer full` line.
 - Acceptance: `DIFF-OK probe-imaginal-indirect`; default-suite regression for
   any engine change.
 
@@ -284,6 +315,15 @@ and utility update.
   that changes selection.
 - Compare compiled-production trace text, utility values, and action timing.
 - Inspect `engine/compilation.rs` and `engine/productions.rs`.
+- Base the model on `actr7.x/user-loads/compilation-units/goal-dynamic-roundtrip.lisp`;
+  its expected compiled block already exists in
+  `rust_actr7/fixtures/compilation-traces/goal-dynamic-roundtrip.trace`.
+- Likely risk areas: generated `PRODUCTION{n}` collision handling, hardcoded
+  new-production utility vs `:nu`, duplicate-utility updates gated by `:esc`,
+  compile-time rendering vs later `production-details`, and reward timing.
+- The differential harness compares client stdout, not server trace. Prefer
+  `all_productions`, `production-details`, `spp` getters, and `get_time`; add a
+  companion trace oracle only if exact server trace text is required.
 - Acceptance: `DIFF-OK probe-compile-utility`; full suite green.
 
 ## Priority 2 — device and meta-process probes
