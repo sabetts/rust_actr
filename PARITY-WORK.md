@@ -111,12 +111,20 @@ rust_actr7/fixtures/differential/
     declarative-long/client.py
     declarative-no-noise/client.py
     multi-model-talking/client.py
+    probe-activation-combo/client.py
     probe-audio-stack/client.py
+    probe-audio-trace/client.py
+    probe-compile-utility/client.py
+    probe-imaginal-indirect/client.py
     probe-retrieval-lifecycle/client.py
     probe-run-control/client.py
     probe-runtime-defs/client.py
   models/
+    probe-activation-combo.lisp
     probe-audio-stack.lisp
+    probe-audio-trace.lisp
+    probe-compile-utility.lisp
+    probe-imaginal-indirect.lisp
     probe-retrieval-lifecycle.lisp
     probe-run-control.lisp
     probe-runtime-defs.lisp
@@ -414,6 +422,58 @@ prints the shortest single-float form when the value is exactly an f32, and
 
 These are more expensive. Start them only after the Priority 1 queue is green
 or after an explicit reassessment.
+
+### Priority 2 implementation plan (active)
+
+Priority 1 is green as of `d8da1a3`; begin Priority 2 in the document order:
+vision mutation, motor overlap, then multi-model parameters.
+
+Planning findings:
+
+- Existing tests already cover nearest visual locations (`nearest-vis-loc`) and
+  basic remove/restore (`removed-and-restored-visual-item`). The new vision
+  probe must combine window mutation with nearest selection and a two-slot
+  visual search rather than duplicating those cases.
+- Rust `install-device` only marks a speech device
+  (`src/rpc/session.rs:3362`). Keyboard/mouse behavior must not depend on a
+  Rust-side device install; the motor probe should use the standard manual
+  module plus `extended-motor-actions`.
+- Extended motor parameters (`:dual-processor-stages`,
+  `:dual-execution-stages`, and related timing flags) are currently wired only
+  through the scripted `ZzDriver`, not the normal SGP path
+  (`src/engine/debug.rs`). The second-hand overlap probe will likely expose
+  this.
+- `run_multi_secs` forces `set_trace(true)` on every engine
+  (`src/rpc/session.rs:1115-1129`), so per-model `:v nil` is a likely gap.
+- Replacing a model removes it and appends the replacement
+  (`add_model_definition`, `src/rpc/session.rs:652`), so model order during a
+  single-model reload needs checking.
+- The harness-layout list below is stale; update it when each probe lands.
+
+Execution plan:
+
+1. `probe-vision-mutation`: add a small goal-state model and client that
+   opens a headless window, sets an explicit visual center point, adds colored
+   text, requests `:nearest current` and a two-slot search, then removes,
+   re-adds at a new position, and clears the window. Compare `printed-visicon`,
+   selected location slots, `get_time`, and high-detail vision trace. Fix
+   confirmed mutation/search defects with focused engine regressions.
+2. `probe-motor-overlap`: require `extended-motor-actions`, enable dual
+   processor/execution stages in the model body, and issue left/right hand
+   keypresses plus a release while the other hand is pending. Compare
+   high-detail motor/device trace, `output-key`/`release-key` monitor timing,
+   and manual buffer state. Add SGP support for confirmed missing extended
+   motor flags and regress it.
+3. `probe-multi-model-params`: define two models with different `:seed`,
+   `:ans`, `:rt`, and `:v`, print `mp-models` and per-model parameters, run
+   interleaved, mutate a parameter from a client callback, then reload and
+   check model order. Validate per-model trace suppression, independent RNG,
+   global clock behavior, and no trace replay. Fix confirmed lifecycle/trace
+   defects with session regressions.
+4. After each probe: run targeted differential plus relevant default tests,
+   commit probe and fix separately where practical, and update this document.
+   Finish with the full suite, all differential cases under `--isolate`, and a
+   final Priority 2 status/commit update.
 
 ### 1. `probe-vision-mutation`
 
