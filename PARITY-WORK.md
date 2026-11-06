@@ -631,6 +631,16 @@ explicitly scoped out:
    per-hand stage-query path. The existing `zz` driver covers parts of this,
    but the differential probe does not.
 
+Execution decisions:
+
+- "Mid-run reset" means between separate client `run` calls, because ACT-R
+  rejects `reset` while the meta-process is running.
+- Single-model deletion uses an existing Lisp `(delete-model name)` form
+  loaded from a code sidecar. Rust will recognize that top-level form in the
+  code-file loader; no new remote command is exposed.
+- Event-count acceptance is exact parity of the `run` return tuple, including
+  the processed-event count. The count will not be normalized or hidden.
+
 **Priority 2 status: reopened.** The probes and fixes above are valid, but the
 gaps listed here remain in scope. Current run is still green:
 `cargo fmt --check` clean, `cargo test` green (`113` library/unit tests plus
