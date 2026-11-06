@@ -21,8 +21,9 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `145e61f`. Priority 0 is complete; the
-Priority 1 and Priority 2 probe queues below are ready for the next agent.
+Rust changes are committed through `1dacda4`. Priority 0 and Priority 1
+probe 1 (`probe-audio-trace`) are complete; the remaining Priority 1 and
+Priority 2 probe queues below are ready for the next agent.
 
 Full Rust test suite:
 
@@ -54,6 +55,7 @@ DIFF-OK declarative-long
 DIFF-OK declarative-no-noise
 DIFF-OK multi-model-talking
 DIFF-OK probe-audio-stack
+DIFF-OK probe-audio-trace
 DIFF-OK probe-retrieval-lifecycle
 DIFF-OK probe-run-control
 DIFF-OK probe-runtime-defs
@@ -61,6 +63,9 @@ DIFF-OK probe-runtime-defs
 
 ## Commits relevant to this work
 
+- `1dacda4 tests: add high-detail audio trace probe`
+- `f26628d engine: mirror audio detection and end scheduling`
+- `95fef3c docs: detail priority 1 handoff plan`
 - `9d0df4a tests: add audio-stack differential probe`
 - `28cf5ca engine: match audio, speech, and full-time boundaries`
 - `2213f31 tests: add retrieval-lifecycle differential probe`
@@ -204,10 +209,10 @@ Findings fixed by this pass:
   `PREPARATION-COMPLETE`, `INITIATION-COMPLETE`, `FINISH-MOVEMENT`, and
   `MICROPHONE output-speech` at high detail.
 
-Known remaining audio observation: a high-detail audio trace still showed
-same-time differences around `audio-event-ended` and aural-location updates
-when external and self sounds bound at 0.45/0.50 s. The audicon probe does not
-assert that ordering yet; make a dedicated trace probe before changing it.
+The high-detail ordering lead was resolved by `probe-audio-trace` in
+Priority 1: detection is now queued at sound creation, fills the real
+`AURAL-LOCATION` buffer, checks the live buffer for the end precondition, and
+skips end checks for sounds already finished at detection.
 
 ## Priority 1 — combined mechanisms
 
@@ -240,7 +245,27 @@ audio trace parity, not just audicon state.
 - Acceptance: `DIFF-OK probe-audio-trace` under both servers; full suite
   green; any changed behavior has a default-suite regression.
 
-Candidate root causes to check, in order:
+**Status: complete (`1dacda4`, fix `f26628d`).** The reproduced diff had three
+parts: an extra `AUDIO-EVENT-ENDED` at 0.45, `new-sound` before
+`SET-BUFFER-CHUNK` at 0.50, and an extra aural-location set at 0.55. Root
+causes fixed:
+
+- `StuffSound`/speech detection was queued when the sound's onset event ran,
+  not when the sound was created; same-time order now follows Lisp's
+  `new-sound-event :around`.
+- The speech path only emitted a set trace and never filled the real
+  `AURAL-LOCATION` buffer, so later stuffing saw an empty buffer.
+- The end precondition used cached `aural_loc_evt` instead of the live
+  buffer, and the end check was scheduled for sounds already finished at
+  detection.
+- `unstuff-buffer` now erases inside the maintenance event so a same-time
+  conflict resolution follows the erase.
+
+Regression tests: `aural_detection_installs_location_and_skips_finished_end`,
+`aural_detection_schedules_end_for_unfinished_sound`, plus existing
+`hear-self`, `audio-updates`, `unstuff-aural`, and Sperling cases.
+
+Candidate root causes checked:
 
 - Rust schedules `AudioEventEnded` for self-speech sounds that already have
   `offset`/`duration`; Lisp's `find-sound` skips the end check for those.
