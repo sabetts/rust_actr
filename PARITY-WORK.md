@@ -606,11 +606,16 @@ Regression: `multi_model_honors_per_model_trace_and_parameter_types`,
 `source_clear_all_is_detected_at_top_level_only`; existing multi-model session,
 RPC, and `multi-model-talking` cases remain green.
 
-Coverage gaps in this probe (not yet closed):
+Single-model deletion is covered through a code sidecar:
+`probe-multi-model-extra.lisp` adds `MP-C` without a top-level `clear-all`,
+`probe-multi-model-delete.lisp` runs `(delete-model mp-c)`, and the probe then
+loads `MP-C` again while `MP-A`/`MP-B` remain untouched. Rust now recognizes
+top-level `(delete-model name)` in code files. Regression:
+`delete_model_forms_are_read_from_code_files`.
 
-- It reloads the whole model file. It does not delete/reload a single model
-  while retaining the other.
-- It does not perform a `reset` in the middle of a multi-model run.
+Coverage gap still open:
+
+- The probe does not perform a `reset` in the middle of a multi-model run.
 
 Residual note: with `MP-B` at `:v nil`, SBCL's `run` reports 33 processed
 events and Rust reports 37, although both produce the same trace, parameter
@@ -625,9 +630,7 @@ explicitly scoped out:
 1. Multi-model: the `run` event count differs under per-model `:v nil`
    (`33` SBCL vs `37` Rust) even though trace, parameter state, and clock
    match. The probe currently omits the event count from its output.
-2. Multi-model: add a single-model delete/reload scenario without clearing the
-   untouched sibling model.
-3. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
+2. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
    order, parameters, seeds, and the global clock.
 
 Execution decisions:
