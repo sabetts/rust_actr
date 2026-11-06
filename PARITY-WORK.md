@@ -21,10 +21,10 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `dddb7f3`. Priority 0 and the first two
-Priority 1 probes (`probe-audio-trace`, `probe-activation-combo`) are complete;
-the remaining Priority 1 and Priority 2 probe queues below are ready for the
-next agent.
+Rust changes are committed through `7ce4b8b`. Priority 0 and the first three
+Priority 1 probes (`probe-audio-trace`, `probe-activation-combo`,
+`probe-imaginal-indirect`) are complete; the remaining Priority 1 and Priority
+2 probe queues below are ready for the next agent.
 
 Full Rust test suite:
 
@@ -58,6 +58,7 @@ DIFF-OK multi-model-talking
 DIFF-OK probe-activation-combo
 DIFF-OK probe-audio-stack
 DIFF-OK probe-audio-trace
+DIFF-OK probe-imaginal-indirect
 DIFF-OK probe-retrieval-lifecycle
 DIFF-OK probe-run-control
 DIFF-OK probe-runtime-defs
@@ -65,6 +66,9 @@ DIFF-OK probe-runtime-defs
 
 ## Commits relevant to this work
 
+- `7ce4b8b tests: add imaginal indirect differential probe`
+- `d6ef974 engine: apply same-fire imaginal mods before indirect requests`
+- `3e405f6 docs: record activation combo probe completion`
 - `dddb7f3 tests: add activation-combo differential probe`
 - `02b6f7f engine: trace blending activation with lisp float formatting`
 - `c0a4116 docs: record audio trace probe completion`
@@ -351,6 +355,19 @@ imaginal, clear, and a failed indirect request.
   output. Avoid `buffer-status`; Rust hardcodes its `buffer full` line.
 - Acceptance: `DIFF-OK probe-imaginal-indirect`; default-suite regression for
   any engine change.
+
+**Status: complete (`7ce4b8b`, fix `d6ef974`).** The probe covers dynamic
+imaginal creation/modification, a same-fire `=imaginal>` MOD plus
+`+retrieval> =imaginal`, copy into imaginal, and clear. It found the expected
+ordering gap: Rust expanded the indirect retrieval before the MOD, so it
+retrieved `R1` where SBCL correctly failed. Fixed by applying a queued same-fire
+imaginal MOD to the live buffer before resolving a request, while leaving the
+visible `MOD-BUFFER-CHUNK` event queued. Regression:
+`indirect_request_sees_same_fire_imaginal_mod`.
+
+The probe intentionally prints slot values rather than buffer/chunk names, so
+the known `GOAL` reuse-name difference (`START` vs `GOAL-CHUNK0`) does not
+obscure the targeted behavior.
 
 ### 4. `probe-compile-utility`
 
