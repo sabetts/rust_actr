@@ -32,6 +32,11 @@
       state 1
     ?manual>
       preparation free
+    ?manual-left>
+      execution busy
+    ?manual-right>
+      processor free
+      state free
     ==>
     +manual>
       isa type-key
@@ -45,6 +50,10 @@
       state 2
     ?manual>
       preparation free
+    ?manual-right>
+      processor busy
+    ?manual-left>
+      index down
     ==>
     +manual>
       isa release-key
