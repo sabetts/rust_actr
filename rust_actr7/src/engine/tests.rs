@@ -979,3 +979,29 @@ fn visual_location_request_matches_device_feature_slots() {
     assert!(!matches(vec![("COLOR", sym("RED"))]));
     assert!(!matches(vec![("WIDTH", Value::Int(27))]));
 }
+
+#[test]
+fn same_time_window_ops_after_display_queue_a_new_wave() {
+    let src = r#"
+(define-model probe)
+"#;
+    let model = crate::model::load_models_from_str(src)
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut e = Engine::new(model, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    e.add_window_text("alpha", 10, 10, 75, 20, 12);
+    e.proc_display().unwrap();
+
+    e.clear_window();
+    e.add_window_text("beta", 20, 20, 75, 20, 12);
+
+    assert_eq!(e.display_queued_ms, Some(e.time_ms));
+    assert!(
+        e.queue
+            .iter()
+            .any(|q| matches!(q.event, Event::ProcDisplay)),
+        "same-time clear/add after a display must queue a proc-display"
+    );
+}

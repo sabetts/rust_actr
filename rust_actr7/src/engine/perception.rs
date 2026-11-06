@@ -1083,6 +1083,11 @@ impl Engine {
         if let Some(at) = next_at {
             self.push_m(at, Prio::Num(-100), Out::Always, true, Event::ProcDisplay);
         }
+        // A display wave only coalesces ops made *while it is running*. Once
+        // the wave is done, `display_queued_ms` must describe the wave still
+        // queued, if any: a client `clear-exp-window` followed immediately by
+        // an add at this same time needs its own wave.
+        self.display_queued_ms = (next_at == Some(now)).then_some(now);
         Ok(())
     }
 
