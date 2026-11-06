@@ -21,10 +21,8 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `7ce4b8b`. Priority 0 and the first three
-Priority 1 probes (`probe-audio-trace`, `probe-activation-combo`,
-`probe-imaginal-indirect`) are complete; the remaining Priority 1 and Priority
-2 probe queues below are ready for the next agent.
+Rust changes are committed through `f10773e`. Priority 0 and all Priority 1
+probes are complete; the Priority 2 queue below is ready for the next agent.
 
 Full Rust test suite:
 
@@ -58,6 +56,7 @@ DIFF-OK multi-model-talking
 DIFF-OK probe-activation-combo
 DIFF-OK probe-audio-stack
 DIFF-OK probe-audio-trace
+DIFF-OK probe-compile-utility
 DIFF-OK probe-imaginal-indirect
 DIFF-OK probe-retrieval-lifecycle
 DIFF-OK probe-run-control
@@ -66,6 +65,9 @@ DIFF-OK probe-runtime-defs
 
 ## Commits relevant to this work
 
+- `f10773e tests: add compile utility differential probe`
+- `ed49e9c rpc: print f32 values as shortest single floats`
+- `bf33fae docs: record imaginal indirect probe completion`
 - `7ce4b8b tests: add imaginal indirect differential probe`
 - `d6ef974 engine: apply same-fire imaginal mods before indirect requests`
 - `3e405f6 docs: record activation combo probe completion`
@@ -388,6 +390,17 @@ and utility update.
   `all_productions`, `production-details`, `spp` getters, and `get_time`; add a
   companion trace oracle only if exact server trace text is required.
 - Acceptance: `DIFF-OK probe-compile-utility`; full suite green.
+
+**Status: complete (`f10773e`, fix `ed49e9c`).** The probe clones
+`goal-dynamic-roundtrip`, adds rewards/utility learning, and compares the
+compiled `PRODUCTION0` block, `:u` values, and action timing before/after the
+parent production is disabled. The compiled text and timing already matched.
+The remaining diff was RPC float spelling: Lisp returns shortest single floats
+(`0.19`, `0.59000003`, `0`), while Rust sent exact f64 expansions
+(`0.1899999976158142`, `0.5900000333786011`, `0.0`). `Json::write_float` now
+prints the shortest single-float form when the value is exactly an f32, and
+`:u` zero is returned as integer `0`. Regression:
+`f32_values_print_shortest_single_float`.
 
 ## Priority 2 — device and meta-process probes
 
