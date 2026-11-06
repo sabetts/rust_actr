@@ -561,9 +561,13 @@ Regression: `required_extra_wrapped_in_let_enables_extended_motor_slots`,
 `extended_motor_dual_stage_params_survive_reset`; existing
 `zz_extended_motor_actions` and manual-keyboard cases remain green.
 
-Residual note: the probe uses explicit `?manual> preparation free` queries and
-client-timed goal states to create the overlap; per-hand stage queries are
-covered by the existing `zz` driver, not re-probed here.
+The probe now gates the overlap with real per-hand queries:
+`?manual-left> execution busy`, `?manual-right> processor free/state free`,
+`?manual-right> processor busy`, and `?manual-left> index down`. Rust now
+implements per-hand `state`, `processor`, and `execution`, plus `last-command`
+and finger `up` queries. Regression:
+`extended_manual_hand_stage_queries_follow_per_hand_state`; the
+`zz-extended-motor-actions` reference remains green.
 
 ### 3. `probe-multi-model-params`
 
@@ -625,9 +629,6 @@ explicitly scoped out:
    untouched sibling model.
 3. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
    order, parameters, seeds, and the global clock.
-4. Motor: replace or supplement the client-timed overlap with the real
-   per-hand stage-query path. The existing `zz` driver covers parts of this,
-   but the differential probe does not.
 
 Execution decisions:
 
