@@ -619,19 +619,14 @@ time, order, parameters, and seeds before/after `reset`, then runs again. Rust
 rebuilding the global trace from `out_since(0)`, which had replayed already
 delivered lines.
 
-Residual note: with `MP-B` at `:v nil`, SBCL's `run` reports 33 processed
-events and Rust reports 37, although both produce the same trace, parameter
-state, and clock. The probe does not print the `run` event count; this count
-semantics remains uninvestigated.
+Exact `run` event-count parity is now covered. The probe prints the full
+`[elapsed, events, break]` tuple for the initial run and the post-reset run.
+Finding: ACT-R schedules a production's LHS read/query selection events only
+when `:v` is on (`procedural.lisp:2582`); Rust scheduled them unconditionally,
+so an untraced model added events to the count. The events are now gated on
+`trace_on`. The probe matches SBCL exactly.
 
-### Open Priority 2 gaps
-
-Priority 2 remains open until these are reproduced and either fixed or
-explicitly scoped out:
-
-1. Multi-model: the `run` event count differs under per-model `:v nil`
-   (`33` SBCL vs `37` Rust) even though trace, parameter state, and clock
-   match. The probe currently omits the event count from its output.
+No Priority 2 gaps remain after the final verification pass below.
 
 Execution decisions:
 
