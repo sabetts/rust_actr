@@ -375,7 +375,7 @@ impl Engine {
                             offset,
                             Prio::Num(9),
                             Out::Always,
-                            false,
+                            true,
                             Event::AudioEventEnded { evt },
                         );
                     }
@@ -515,7 +515,7 @@ impl Engine {
                                 offset,
                                 Prio::Num(9),
                                 Out::Always,
-                                false,
+                                true,
                                 Event::AudioEventEnded { evt },
                             );
                         }
