@@ -737,6 +737,34 @@ impl Session {
         self.global_trace_pos = 0;
     }
 
+    /// Append only the lines each model emitted after `marks` to the global
+    /// multi-model trace, preserving the already-consumed prefix.
+    fn append_multi_trace_since(&mut self, marks: &[(String, usize)]) {
+        let model_width =
+            crate::engine::multi::model_column_width(self.model_order.iter().map(String::len));
+        let mut rows = Vec::new();
+        for (name, mark) in marks {
+            let Some(eng) = self.engine_for(name) else {
+                continue;
+            };
+            let lines = eng.out_since(*mark);
+            let kinds = eng.out_kinds_since(*mark);
+            let levels = eng.out_levels_since(*mark);
+            for (i, line) in lines.into_iter().enumerate() {
+                rows.push((
+                    crate::engine::multi::with_model_column(&line, name, model_width),
+                    kinds.get(i).copied().unwrap_or(TraceKind::Model),
+                    levels.get(i).copied().unwrap_or(Out::Low),
+                ));
+            }
+        }
+        for (line, kind, level) in rows {
+            self.global_trace.push(line);
+            self.global_trace_kinds.push(kind);
+            self.global_trace_levels.push(level);
+        }
+    }
+
     fn remove_model(&mut self, name: &str) {
         if let Some(idx) = self
             .defs
@@ -1492,6 +1520,17 @@ impl Session {
             }
             "reset" => {
                 self.queue_signal("reset-start", Vec::new());
+                let multi_marks: Vec<(String, usize)> = if self.is_multi() {
+                    self.model_order
+                        .iter()
+                        .filter_map(|name| {
+                            self.engine_for(name)
+                                .map(|eng| (name.clone(), eng.out_len()))
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
                 if self.model_order.is_empty() {
                     if let Some(eng) = &mut self.engine {
                         eng.reset().map_err(|e| e.to_string())?;
@@ -1510,9 +1549,13 @@ impl Session {
                     }
                 }
                 if self.is_multi() {
+                    // Reset preserves engine trace history. Do not rebuild the
+                    // global trace from `out_since(0)`: that would replay every
+                    // line already delivered to the client. Append only the
+                    // reset output since the marks captured above.
+                    self.append_multi_trace_since(&multi_marks);
                     self.global_time_ms = 0;
                     self.global_run_events = 0;
-                    self.rebuild_global_trace();
                 }
                 self.queue_signal("reset-step1", Vec::new());
                 // ACT-R's `:testing-module` reset hook fires after the model
