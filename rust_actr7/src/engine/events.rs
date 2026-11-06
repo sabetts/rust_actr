@@ -1151,20 +1151,26 @@ impl Engine {
                     },
                 );
                 // Reads and queries in LHS order, implicit queries last,
-                // then firing at +dat.
-                for item in self.model.productions[prod].lhs.clone() {
-                    match item {
-                        LhsItem::Match { buffer, .. } => {
-                            self.now(Prio::Num(0), Out::Always, Event::BufferRead { buffer });
+                // then firing at +dat. ACT-R schedules these selection-code
+                // events only when `:v` is on (`procedural.lisp:2582`), so an
+                // untraced model does not add them to the run event count.
+                if self.trace_on {
+                    for item in self.model.productions[prod].lhs.clone() {
+                        match item {
+                            LhsItem::Match { buffer, .. } => {
+                                self.now(Prio::Num(0), Out::Always, Event::BufferRead { buffer });
+                            }
+                            LhsItem::Query { buffer, .. } => {
+                                self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
+                            }
+                            LhsItem::Eval { .. }
+                            | LhsItem::Bind { .. }
+                            | LhsItem::MvBind { .. } => {}
                         }
-                        LhsItem::Query { buffer, .. } => {
-                            self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
-                        }
-                        LhsItem::Eval { .. } | LhsItem::Bind { .. } | LhsItem::MvBind { .. } => {}
                     }
-                }
-                for buffer in self.exec_prods[prod].implicit_queries.clone() {
-                    self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
+                    for buffer in self.exec_prods[prod].implicit_queries.clone() {
+                        self.now(Prio::Num(0), Out::Always, Event::QueryBuffer { buffer });
+                    }
                 }
                 let action_ms = self.model.productions[prod]
                     .at
