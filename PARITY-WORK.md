@@ -21,9 +21,9 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `769e983`. Priority 0 and all Priority 1
-probes are complete. Priority 2 is in progress: `probe-vision-mutation` and
-`probe-motor-overlap` pass; the multi-model probe remains.
+Rust changes are committed through `7967f6c`. Priority 0, Priority 1, and all
+three Priority 2 probes are implemented; final full-suite and all-case
+differential verification is pending.
 Final Priority 1 verification: `cargo fmt --check` clean, `cargo test`
 `560 passed, 0 failed, 8 ignored`, and all 13 differential cases pass with
 `--isolate`.
@@ -66,11 +66,14 @@ DIFF-OK probe-retrieval-lifecycle
 DIFF-OK probe-run-control
 DIFF-OK probe-runtime-defs
 DIFF-OK probe-motor-overlap
+DIFF-OK probe-multi-model-params
 DIFF-OK probe-vision-mutation
 ```
 
 ## Commits relevant to this work
 
+- `7967f6c tests: add multi-model parameter differential probe`
+- `4682da8 engine: match multi-model trace, seed, and reload semantics`
 - `769e983 tests: add motor overlap differential probe`
 - `7f9f48f engine: apply extended motor dual stage sgp`
 - `e8697e4 engine: load wrapped extras and extended motor slots`
@@ -126,6 +129,7 @@ rust_actr7/fixtures/differential/
     probe-compile-utility/client.py
     probe-imaginal-indirect/client.py
     probe-motor-overlap/client.py
+    probe-multi-model-params/client.py
     probe-retrieval-lifecycle/client.py
     probe-run-control/client.py
     probe-runtime-defs/client.py
@@ -137,6 +141,7 @@ rust_actr7/fixtures/differential/
     probe-compile-utility.lisp
     probe-imaginal-indirect.lisp
     probe-motor-overlap.lisp
+    probe-multi-model-params.lisp
     probe-retrieval-lifecycle.lisp
     probe-run-control.lisp
     probe-runtime-defs.lisp
@@ -567,6 +572,37 @@ deleted/reloaded, and a reset in the middle.
 - Include one client callback that mutates model order or parameters.
 - Acceptance: `DIFF-OK probe-multi-model-params`; no trace replay or global
   clock drift.
+
+**Status: complete (`7967f6c`, fix `4682da8`).** The probe loads one file
+containing `MP-A` (`:v t`, seed 101, `.1` activation noise, `:rt -100`) and
+`MP-B` (`:v nil`, seed 202, `.5` noise, `:rt 100`). It prints `mp-models`,
+per-model parameters before/after the run, then reloads the file and checks
+that time, seeds, and parameters reset. A `run-start` monitor mutates `MP-B`'s
+`:rt`/`:ans` mid-run. Findings fixed:
+
+- Multi-model runs forced `set_trace(true)` on every engine, so a model with
+  `:v nil` leaked into the global trace. Runs now honor each model's own trace
+  flag; `MultiEngine` also no longer forces trace on construction.
+- `get-parameter-value` returned `:seed` as the string `"(S C)"` and `:v` as
+  the strings `"T"/"NIL"`. It now returns a two-element array for `:seed` and
+  JSON booleans/null for `:v`, matching the Lisp RPC types and the live RNG
+  draw count.
+- `reload` did not execute the model file's top-level `(clear-all)`, so model
+  time and state survived. Reload now clears when the source has a top-level
+  `(clear-all)`, matching SBCL.
+- A second `load-act-r-model` of a different file intentionally keeps the old
+  Rust "append models" behavior: existing tests rely on it, while the
+  canonical multi-model file contains all models. `reload` handles the
+  clear-all case separately.
+
+Regression: `multi_model_honors_per_model_trace_and_parameter_types`,
+`source_clear_all_is_detected_at_top_level_only`; existing multi-model session,
+RPC, and `multi-model-talking` cases remain green.
+
+Residual note: with `MP-B` at `:v nil`, SBCL's `run` reports 33 processed
+events and Rust reports 37, although both produce the same trace, parameter
+state, and clock. The probe does not print the `run` event count; this count
+semantics remains uninvestigated.
 
 ## Probe workflow
 
