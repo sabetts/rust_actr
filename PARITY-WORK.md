@@ -21,8 +21,11 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `f10773e`. Priority 0 and all Priority 1
+Rust changes are committed through `6d8ee0f`. Priority 0 and all Priority 1
 probes are complete; the Priority 2 queue below is ready for the next agent.
+Final Priority 1 verification: `cargo fmt --check` clean, `cargo test`
+`560 passed, 0 failed, 8 ignored`, and all 13 differential cases pass with
+`--isolate`.
 
 Full Rust test suite:
 
@@ -65,6 +68,8 @@ DIFF-OK probe-runtime-defs
 
 ## Commits relevant to this work
 
+- `6d8ee0f engine: keep audio end checks maintenance`
+- `9013bba docs: record compile utility probe completion`
 - `f10773e tests: add compile utility differential probe`
 - `ed49e9c rpc: print f32 values as shortest single floats`
 - `bf33fae docs: record imaginal indirect probe completion`
@@ -271,6 +276,9 @@ causes fixed:
   detection.
 - `unstuff-buffer` now erases inside the maintenance event so a same-time
   conflict resolution follows the erase.
+- `audio-event-ended` is queued as maintenance (`6d8ee0f`), matching
+  `audio.lisp:1045`; a no-op end check no longer wakes `M2`/`M3` conflict
+  resolution in `multi-model-talking`.
 
 Regression tests: `aural_detection_installs_location_and_skips_finished_end`,
 `aural_detection_schedules_end_for_unfinished_sound`, plus existing
