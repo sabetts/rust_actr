@@ -314,6 +314,32 @@ pub fn parse_defuns(src: &str) -> HashMap<String, UserDefun> {
     map
 }
 
+/// Top-level `(delete-model name)` forms in a code file. `None` means
+/// `(delete-model)` and targets the current model. Parse failures yield an
+/// empty list; model-file loading still reports their syntax errors itself.
+pub fn parse_model_deletions(src: &str) -> Vec<Option<String>> {
+    let Ok(forms) = parse_all(src) else {
+        return Vec::new();
+    };
+    forms
+        .iter()
+        .filter_map(|f| {
+            let Sexp::List(items) = f else {
+                return None;
+            };
+            if items.first().and_then(Sexp::as_sym) != Some("DELETE-MODEL") {
+                return None;
+            }
+            match items.get(1) {
+                None => Some(None),
+                Some(Sexp::Sym(name)) => Some(Some(name.clone())),
+                Some(Sexp::Str(name)) => Some(Some(name.clone())),
+                Some(_) => None,
+            }
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChunkType {
     pub name: String,
@@ -3823,6 +3849,16 @@ mod tests {
         assert!(source_clears_all("(clear-all)\n(define-model x)"));
         assert!(!source_clears_all("(define-model x (clear-all))"));
         assert!(!source_clears_all(";; (clear-all)\n(define-model x)"));
+    }
+
+    #[test]
+    fn delete_model_forms_are_read_from_code_files() {
+        assert_eq!(
+            parse_model_deletions("(delete-model mp-c)\n(delete-model \"MP-D\")"),
+            vec![Some("MP-C".to_string()), Some("MP-D".to_string())]
+        );
+        assert_eq!(parse_model_deletions("(delete-model)"), vec![None]);
+        assert!(parse_model_deletions("(define-model x (delete-model y))").is_empty());
     }
 
     #[test]

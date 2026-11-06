@@ -4352,12 +4352,29 @@ impl Session {
             return Err(format!("no such file: {}", path.display()));
         }
         let mut created = Vec::new();
-        if let Ok(src) = std::fs::read_to_string(&path) {
-            self.user_fns.extend(model::parse_defuns(&src));
-            self.user_vars.extend(model::parse_task_globals(&src));
-            for (cmd, fname) in model::parse_commands(&src) {
+        let source = std::fs::read_to_string(&path).ok();
+        if let Some(src) = &source {
+            self.user_fns.extend(model::parse_defuns(src));
+            self.user_vars.extend(model::parse_task_globals(src));
+            for (cmd, fname) in model::parse_commands(src) {
                 if let Some(def) = self.user_fns.get(&fname).cloned() {
                     self.user_fns.insert(cmd, def);
+                }
+            }
+        }
+        if !crate::file_defines_model(&path)? {
+            // SBCL's `load` evaluates ordinary top-level forms, so a code
+            // sidecar can use the existing `(delete-model name)` form even
+            // though it is not a remote command.
+            if let Some(src) = &source {
+                for target in model::parse_model_deletions(src) {
+                    let name = target.or_else(|| self.current_model.clone());
+                    let Some(name) = name else {
+                        continue;
+                    };
+                    self.queue_signal("deleting-model", vec![Json::Str(name.clone())]);
+                    self.close_model_window(&name, remote);
+                    self.remove_model(&name);
                 }
             }
         }
