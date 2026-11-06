@@ -52,7 +52,7 @@ for model in actr.mp_models():
 
 actr.add_command("probe-multi-mutate", mutate)
 actr.monitor_command("run-start", "probe-multi-mutate")
-actr.run(1)
+print("RUN", actr.run(1))
 actr.remove_command_monitor("run-start", "probe-multi-mutate")
 actr.remove_command("probe-multi-mutate")
 
@@ -64,8 +64,8 @@ actr.reset()
 print("RESET-AFTER", actr.mp_time(), actr.mp_models())
 for model in actr.mp_models():
     report("RESET", model)
-actr.run(0.5)
-print("RESET-RUN", actr.mp_time(), actr.mp_models())
+reset_run = actr.run(0.5)
+print("RESET-RUN", reset_run, actr.mp_time(), actr.mp_models())
 for model in actr.mp_models():
     report("POST-RESET", model)
 
