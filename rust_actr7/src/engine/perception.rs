@@ -45,7 +45,24 @@ impl Engine {
         });
         let idx = self.sounds.len() - 1;
         self.sync_audio_chunks(idx);
+        self.schedule_sound_detection(idx);
         idx
+    }
+
+    /// `new-sound-event :around` (`audio.lisp:733`): schedule
+    /// `stuff-sound-buffer` at `detect-at-time` when the sound is created.
+    /// Scheduling at creation, not at onset, preserves the queue order for a
+    /// detection that lands at the same time as another sound's `new-sound`.
+    fn schedule_sound_detection(&mut self, idx: usize) {
+        let s = &self.sounds[idx];
+        let at = s.onset + s.delay;
+        self.push_m(
+            at,
+            Prio::Num(0),
+            Out::Always,
+            true,
+            Event::StuffSound { idx },
+        );
     }
 
     /// `new-digit-sound` (`audio.lisp:760`): a `DIGIT` sound whose `content`
@@ -77,7 +94,8 @@ impl Engine {
         });
         let idx = self.sounds.len() - 1;
         self.sync_audio_chunks(idx);
-        self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        self.schedule_sound_detection(idx);
+        self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound);
     }
 
     /// `new-word-sound` (`audio.lisp:901`): a `WORD` sound whose `content`
@@ -108,7 +126,8 @@ impl Engine {
         });
         let idx = self.sounds.len() - 1;
         self.sync_audio_chunks(idx);
-        self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        self.schedule_sound_detection(idx);
+        self.push(onset, Prio::Num(0), Out::Medium, Event::ToneSound);
     }
 
     /// `new-ongoing-sound` (`audio.lisp:840`): a custom sound with no offset
@@ -176,10 +195,11 @@ impl Engine {
         });
         let idx = self.sounds.len() - 1;
         self.sync_audio_chunks(idx);
+        self.schedule_sound_detection(idx);
         self.ongoing_seq += 1;
         let id = self.ongoing_seq as i64;
         self.ongoing_sounds.insert(id as u64, idx);
-        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound);
         Ok(id)
     }
 

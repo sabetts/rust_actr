@@ -3339,8 +3339,8 @@ impl Engine {
         // `offset` from it. Storing the argument instead made every tone a
         // task sounds between runs land its detection at `0 + delay`.
         let at = self.time_ms().max(onset_ms);
-        let idx = self.add_sound(freq, duration, at);
-        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        self.add_sound(freq, duration, at);
+        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound);
     }
 
     /// `new-digit-sound <digit> [onset] [time-in-ms]`: schedule a digit sound.

@@ -3152,8 +3152,8 @@ impl Engine {
             1 => 1000,
             _ => 500,
         };
-        let idx = self.add_sound(freq, 500, at);
-        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+        self.add_sound(freq, 500, at);
+        self.push(at, Prio::Num(0), Out::Medium, Event::ToneSound);
     }
 
     /// Record the current trial's target row when the goal buffer gets it

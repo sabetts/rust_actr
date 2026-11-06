@@ -164,15 +164,7 @@ impl Engine {
                 self.changed();
             }
             Event::EraseBuffer { buffer, module } => {
-                // `erase-buffer` (`buffers.lisp:1273`): drop the chunk but
-                // keep the buffer state (no clear-buffer).
-                if show {
-                    self.emit(&module, format!("ERASE-BUFFER {buffer}"));
-                }
-                self.buffer_mut(&buffer).chunk = None;
-                self.buffer_mut(&buffer).failed = false;
-                self.buffer_mut(&buffer).modified = false;
-                self.changed();
+                self.erase_buffer(&buffer, &module, show);
             }
             Event::VocalFree { req_ms } => {
                 if show {
@@ -277,15 +269,23 @@ impl Engine {
                     });
                     let idx = self.sounds.len() - 1;
                     self.sync_audio_chunks(idx);
-                    self.push(
-                        init_at,
-                        Prio::Num(0),
-                        Out::Medium,
-                        Event::NewSound {
-                            evt,
-                            offset: finish_at,
-                        },
-                    );
+                    // `new-sound-event :around` schedules the detection
+                    // lookup when the sound is created. The live buffer and
+                    // the end check are evaluated there (`audio.lisp:733`).
+                    let excludes_self = self.model.audloc_neg.iter().any(|(slot, value)| {
+                        slot == "LOCATION"
+                            && matches!(value, Sexp::Sym(s) if s.eq_ignore_ascii_case("SELF"))
+                    });
+                    if !excludes_self {
+                        self.push_m(
+                            init_at + 300,
+                            Prio::Num(10),
+                            Out::Medium,
+                            true,
+                            Event::AuralLocation { evt },
+                        );
+                    }
+                    self.push(init_at, Prio::Num(0), Out::Medium, Event::NewSound);
                 }
                 self.push(
                     init_at,
@@ -328,57 +328,66 @@ impl Engine {
                     }
                 }
             }
-            Event::NewSound { evt, offset } => {
+            Event::NewSound => {
                 if show {
                     self.emit("AUDIO", "new-sound".to_string());
                 }
                 self.record_audicon_snapshot();
-                // `stuff-sound-buffer` only sets AURAL-LOCATION while the
-                // buffer is empty (`audio.lisp:716`); later sounds leave the
-                // first location in place. Aural detection/recode delay.
-                if self.aural_loc_evt.is_none() {
-                    let excludes_self = self.model.audloc_neg.iter().any(|(slot, value)| {
-                        slot == "LOCATION"
-                            && matches!(value, Sexp::Sym(s) if s.eq_ignore_ascii_case("SELF"))
-                    });
-                    // `stuff-sound-buffer` is called with `:stuffed t`, and
-                    // `find-sound` only schedules `find-sound-failure` for a
-                    // non-stuffed request. Automatic self-speech filtering
-                    // therefore leaves the aural-location buffer untouched.
-                    if !excludes_self {
-                        self.push(
-                            self.time_ms + 300,
-                            Prio::Num(0),
-                            Out::Medium,
-                            Event::AuralLocation { evt },
+            }
+            Event::AuralLocation { evt } => {
+                // `stuff-sound-buffer` -> `find-sound … :stuffed t`
+                // (`audio.lisp:716`): set AURAL-LOCATION to the sound's
+                // `audio-event` chunk with `:requested nil`. The live buffer
+                // decides, not a cached event id: a later sound may have
+                // replaced the location since this event was queued.
+                let Some(idx) = self
+                    .sounds
+                    .iter()
+                    .position(|s| s.ename == format!("AUDIO-EVENT{evt}"))
+                else {
+                    return Ok(());
+                };
+                if !self.can_stuff_aural() {
+                    return Ok(());
+                }
+                self.sync_audio_chunks(idx);
+                let s = self.sounds[idx].clone();
+                self.aural_loc_evt = Some(evt);
+                let chunk = audio_event_chunk(&s, self.time_ms, self.cfg.audio_ms_times);
+                // `find-sound` uses `schedule-set-buffer-chunk` unless the
+                // buffer is already full; an auto-stuffed unmodified chunk
+                // gets the overwrite path when overstuff is enabled. Install
+                // it directly: ACT-R's `set-buffer-chunk` does not wake a
+                // delayed conflict resolution here, which is why `hear-self`
+                // prints only the later MOD's CR.
+                let overwrite = self
+                    .buffers
+                    .get("AURAL-LOCATION")
+                    .is_some_and(|b| b.chunk.is_some());
+                self.install_aural_location(chunk, overwrite, show);
+                // `find-sound` (`audio.lisp:1042-1048`) schedules the end
+                // check only when the event chunk has no `offset`/`duration`
+                // yet. A finished sound is skipped, which is why short word
+                // and digit sounds do not print `AUDIO-EVENT-ENDED`.
+                if let Some(offset) = s.offset {
+                    if offset > self.time_ms {
+                        self.push_m(
+                            offset,
+                            Prio::Num(9),
+                            Out::Always,
+                            false,
+                            Event::AudioEventEnded { evt },
                         );
                     }
                 }
-                // `find-sound` (`audio.lisp:1045`): a word/tone event whose
-                // chunk has no `offset`/`duration` schedules
-                // `audio-event-ended` at the sound's offset.
-                self.push_m(
-                    offset,
-                    Prio::Num(0),
-                    Out::Always,
-                    false,
-                    Event::AudioEventEnded { evt },
-                );
-            }
-            Event::AuralLocation { evt } => {
-                self.aural_loc_evt = Some(evt);
-                self.emit(
-                    "AUDIO",
-                    format!("SET-BUFFER-CHUNK AURAL-LOCATION AUDIO-EVENT{evt} NIL"),
-                );
             }
             Event::AudioEventEnded { evt } => {
                 // `audio-event-ended` (`audio.lisp:1077`) fires only while the
-                // `AURAL-LOCATION` buffer still holds this event
+                // live `AURAL-LOCATION` buffer still holds this event
                 // (`aural-location-update-check`), then `mod-buffer-chunk`s
                 // its `offset`/`duration`. The scheduled event's own trace
                 // line (`AUDIO-EVENT-ENDED <ename>`) precedes the mod.
-                if self.aural_loc_evt == Some(evt) {
+                if self.aural_location_holds(evt) {
                     let ename = format!("AUDIO-EVENT{evt}");
                     if let Some(idx) = self.sounds.iter().position(|s| s.ename == ename) {
                         self.sync_audio_chunks(idx);
@@ -404,23 +413,14 @@ impl Engine {
             Event::EndOngoingSound { id } => {
                 self.end_ongoing_sound(id)?;
             }
-            Event::ToneSound { idx } => {
+            Event::ToneSound => {
                 // `new-sound-event :around` (`audio.lisp:733`): `new-sound`
-                // at the onset (`:output medium`), then `stuff-sound-buffer`
-                // at `detect-at-time` = `onset + tone-detect-delay` as a
-                // maintenance event.
+                // at the onset (`:output medium`). `stuff-sound-buffer` was
+                // already queued at creation in `schedule_sound_detection`.
                 if show {
                     self.emit("AUDIO", "new-sound".to_string());
                 }
                 self.record_audicon_snapshot();
-                let s = self.sounds[idx].clone();
-                self.push_m(
-                    s.onset + s.delay,
-                    Prio::Num(0),
-                    Out::Always,
-                    true,
-                    Event::StuffSound { idx },
-                );
             }
             Event::StuffSound { idx } => {
                 // `stuff-sound-buffer` -> `find-sound … :stuffed t`
@@ -476,11 +476,7 @@ impl Engine {
                 }
                 // `stuff-sound-buffer` also arms the unstuff
                 // (`audio.lisp:1056`): `t` unstuffs at `offset + decay-time`, a
-                // number that many ms from now, with the same "still the
-                // unchanged auto-stuffed copy" precondition.
-                // `stuff-sound-buffer` also arms the unstuff
-                // (`audio.lisp:1056`): `t` unstuffs at `offset + decay-time`, a
-                // number that many ms from now. Each stuff arms its own — the
+                // number that many ms from now. Each stuff arms its own �?" the
                 // probe shows all four accumulating, and the stale ones failing
                 // their precondition.
                 if let Some(delay) = self.cfg.unstuff_aural {
@@ -500,25 +496,24 @@ impl Engine {
                         );
                     }
                 }
-                // `find-sound` also schedules the end check at the sound's
-                // `offset` (`audio.lisp:1048`). Only the speech path reached it
-                // before, so a tone never reported `audio-event-ended`.
+                // `find-sound` schedules the end check only while the event
+                // chunk still lacks `offset`/`duration` (`audio.lisp:1042`).
+                // A sound already finished at detection is skipped.
                 // `audio-event-ended` is scheduled `:output high`
                 // (`audio.lisp:1048`): only a high-detail run reaches it. Of
                 // the tone refs, `unstuff-aural` is the one whose model sets
                 // `(sgp :trace-detail high)`; `sperling` (medium) shows neither
-                // this event nor its mod, and `hear-self`'s speech sound gets
-                // its mod from the `new-sound` path instead.
+                // this event nor its mod.
                 if let Ok(evt) = s.ename.trim_start_matches("AUDIO-EVENT").parse::<u64>() {
                     // The buffer now holds this event, which is what the end
                     // check's precondition tests (`aural-location-update-check`,
                     // `audio.lisp:1068`).
                     self.aural_loc_evt = Some(evt);
-                    if self.cfg.detail.shows(Out::Always) {
-                        if let Some(offset) = s.offset {
+                    if let Some(offset) = s.offset {
+                        if offset > self.time_ms {
                             self.push_m(
                                 offset,
-                                Prio::Num(0),
+                                Prio::Num(9),
                                 Out::Always,
                                 false,
                                 Event::AudioEventEnded { evt },
@@ -728,14 +723,11 @@ impl Engine {
                 // line is high-detail (`unstuff-aural` is the only ref that
                 // shows it).
                 if self.unstuff_aural_valid(&copy) {
-                    self.now(
-                        Prio::Min,
-                        Out::Always,
-                        Event::EraseBuffer {
-                            buffer: "AURAL-LOCATION".to_string(),
-                            module: "AUDIO".to_string(),
-                        },
-                    );
+                    // `unstuff-buffer` calls `clear-buffer` directly, so the
+                    // erase happens inside this maintenance event, before a
+                    // same-time conflict resolution.
+                    let show = self.cfg.detail.shows(Out::Always);
+                    self.erase_buffer("AURAL-LOCATION", "AUDIO", show);
                 }
             }
             Event::UnstuffVl { copy } => {
@@ -2598,6 +2590,48 @@ impl Engine {
             }
         }
         Ok(())
+    }
+
+    /// Install an auto-stuffed `AURAL-LOCATION` chunk the way
+    /// `find-sound`/`set-buffer-chunk` does, including the `{event}-{k}` copy
+    /// name. The set is a real non-maintenance buffer change, so it wakes a
+    /// waiting conflict resolution; a no-op detection (buffer already full)
+    /// never reaches here.
+    fn install_aural_location(&mut self, mut inst: ChunkInst, overwrite: bool, show: bool) {
+        let text = inst.show();
+        if let Some(source) = inst.name.clone() {
+            let n = *self.copy_count.entry(source.clone()).or_insert(0);
+            self.copy_count.insert(source.clone(), n + 1);
+            let copy = format!("{source}-{n}");
+            self.audio_copied_from.insert(copy.clone(), source);
+            inst.name = Some(copy);
+        }
+        if show {
+            let mut details = if overwrite {
+                format!("OVERWRITE-BUFFER-CHUNK AURAL-LOCATION {text}")
+            } else {
+                format!("SET-BUFFER-CHUNK AURAL-LOCATION {text}")
+            };
+            details.push_str(" NIL");
+            self.emit("AUDIO", details);
+        }
+        self.buffer_mut("AURAL-LOCATION").chunk = Some(inst);
+        self.buffer_mut("AURAL-LOCATION").failed = false;
+        self.buffer_mut("AURAL-LOCATION").modified = false;
+        self.buffer_mut("AURAL-LOCATION").requested = false;
+        self.changed();
+    }
+
+    /// `erase-buffer` (`buffers.lisp:1273`): drop the chunk but keep the
+    /// buffer state (no clear-buffer).
+    fn erase_buffer(&mut self, buffer: &str, module: &str, show: bool) {
+        if show {
+            self.emit(module, format!("ERASE-BUFFER {buffer}"));
+        }
+        self.buffer_mut(buffer).chunk = None;
+        self.buffer_mut(buffer).failed = false;
+        self.buffer_mut(buffer).modified = false;
+        self.changed();
     }
 
     /// `audio-event-ended` calls `update-sound-evt` and then mods the

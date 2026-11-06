@@ -2347,12 +2347,8 @@ enum Event {
         text: String,
     },
     /// Audio module: a self-generated (outside-the-run) sound begins
-    /// (`new-sound`). The event index is the sound's `AUDIO-EVENT{n}`; the
-    /// offset is where its `audio-event-ended` lands.
-    NewSound {
-        evt: u64,
-        offset: i64,
-    },
+    /// (`new-sound`). The end check is scheduled from the detection event.
+    NewSound,
     /// Audio module: the sound's aural location is set.
     AuralLocation {
         evt: u64,
@@ -2368,11 +2364,9 @@ enum Event {
     EndOngoingSound {
         id: u64,
     },
-    /// Audio module: a tone's onset (`new-sound`, then schedule
-    /// `stuff-sound-buffer` at `onset + detect-delay`).
-    ToneSound {
-        idx: usize,
-    },
+    /// Audio module: a tone's onset (`new-sound`; `stuff-sound-buffer` is
+    /// queued when the sound is created).
+    ToneSound,
     /// Audio module: `stuff-sound-buffer` sets `AURAL-LOCATION` to the
     /// sound's `audio-event` chunk.
     StuffSound {
@@ -4146,8 +4140,8 @@ impl Engine {
             .into_iter()
             .filter(|s| s.run.is_none() || s.run == Some(run))
         {
-            let idx = self.add_sound(s.freq, s.duration, s.at_ms);
-            self.push(s.at_ms, Prio::Num(0), Out::Medium, Event::ToneSound { idx });
+            self.add_sound(s.freq, s.duration, s.at_ms);
+            self.push(s.at_ms, Prio::Num(0), Out::Medium, Event::ToneSound);
         }
         self.name_count.clear();
         self.buffer_reuse.clear();
@@ -5201,6 +5195,27 @@ impl Engine {
             return true;
         };
         buf.chunk.is_none() || (self.cfg.overstuff_aural && !buf.requested && !buf.modified)
+    }
+
+    /// `aural-location-update-check` (`audio.lisp:1072`): the live
+    /// aural-location buffer still holds the event's chunk. The buffer stores
+    /// a copy (`AUDIO-EVENT0-0`), so resolve it through `audio_copied_from`.
+    fn aural_location_holds(&self, evt: u64) -> bool {
+        let ename = format!("AUDIO-EVENT{evt}");
+        let Some(name) = self
+            .buffers
+            .get("AURAL-LOCATION")
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.as_deref())
+        else {
+            return false;
+        };
+        let source = self
+            .audio_copied_from
+            .get(name)
+            .map(String::as_str)
+            .unwrap_or(name);
+        source == ename
     }
 
     /// `aural-location-unstuff-check` (`audio.lisp:1068`): the aural-location

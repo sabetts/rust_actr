@@ -775,3 +775,102 @@ fn event_view_reports_non_empty_buffers() {
     assert!(view.buffer_present("GOAL"));
     assert!(!view.buffer_present("MISSING"));
 }
+
+fn probe_sound(onset: i64, offset: i64, duration: i64) -> Sound {
+    Sound {
+        sname: "WORD0".into(),
+        ename: "AUDIO-EVENT0".into(),
+        kind: "WORD".into(),
+        content: Value::Str("probe".into()),
+        location: "SELF".into(),
+        onset,
+        offset: Some(offset),
+        duration: Some(duration),
+        delay: 300,
+        recode: 150,
+        pitch: "MIDDLE".into(),
+        attended: SoundAttended::Nil,
+        other_features: Vec::new(),
+    }
+}
+
+#[test]
+fn aural_detection_installs_location_and_skips_finished_end() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.reset().unwrap();
+    e.cfg.detail = Detail::High;
+    e.trace_on = true;
+    e.sounds.push(probe_sound(250, 350, 100));
+    e.sync_audio_chunks(0);
+    e.push(250, Prio::Num(0), Out::Medium, Event::NewSound);
+    e.push(
+        550,
+        Prio::Num(10),
+        Out::Medium,
+        Event::AuralLocation { evt: 0 },
+    );
+    e.run_secs(1.0).unwrap();
+
+    assert!(
+        e.aural_location_holds(0),
+        "detection did not set the buffer"
+    );
+    assert_eq!(
+        e.buffers["AURAL-LOCATION"]
+            .chunk
+            .as_ref()
+            .and_then(|c| c.name.as_deref()),
+        Some("AUDIO-EVENT0-0")
+    );
+    assert!(
+        !e.out_lines
+            .lines
+            .iter()
+            .any(|l| l.contains("AUDIO-EVENT-ENDED")),
+        "a sound already finished at detection must not schedule the end check: {:?}",
+        e.out_lines
+    );
+}
+
+#[test]
+fn aural_detection_schedules_end_for_unfinished_sound() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.reset().unwrap();
+    e.cfg.detail = Detail::High;
+    e.trace_on = true;
+    e.sounds.push(probe_sound(250, 750, 500));
+    e.sync_audio_chunks(0);
+    e.push(250, Prio::Num(0), Out::Medium, Event::NewSound);
+    e.push(
+        550,
+        Prio::Num(10),
+        Out::Medium,
+        Event::AuralLocation { evt: 0 },
+    );
+    e.run_secs(1.0).unwrap();
+
+    assert!(
+        e.aural_location_holds(0),
+        "detection did not set the buffer"
+    );
+    assert!(
+        e.out_lines
+            .lines
+            .iter()
+            .any(|l| l.contains("AUDIO-EVENT-ENDED AUDIO-EVENT0")),
+        "unfinished sound should report its end: {:?}",
+        e.out_lines
+    );
+}
