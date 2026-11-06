@@ -1005,3 +1005,35 @@ fn same_time_window_ops_after_display_queue_a_new_wave() {
         "same-time clear/add after a display must queue a proc-display"
     );
 }
+
+#[test]
+fn extended_manual_hand_stage_queries_follow_per_hand_state() {
+    let src = r#"
+(clear-all)
+(require-extra "extended-motor-actions")
+(define-model probe
+  (sgp :dual-processor-stages t :dual-execution-stages t))
+"#;
+    let model = crate::model::load_models_from_str(src)
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut e = Engine::new(model, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    e.reset().unwrap();
+    assert!(e.cfg.zz_ext);
+
+    e.man_prep_busy = true;
+    e.man_proc[0] = true;
+    e.man_exec[1] = true;
+    e.zz_last_cmd[0] = "HOLD-PUNCH".into();
+
+    assert!(!e.query_free("MANUAL-LEFT").unwrap());
+    assert!(!e.query_free("MANUAL-RIGHT").unwrap());
+    assert!(!e.query_processor_free("MANUAL-LEFT").unwrap());
+    assert!(!e.query_free("MANUAL-LEFT").unwrap());
+    assert!(e.query_execution_free("MANUAL-LEFT").unwrap());
+    assert!(!e.query_execution_free("MANUAL-RIGHT").unwrap());
+    assert!(!e.query_prep_free("MANUAL-RIGHT").unwrap());
+    assert!(e.zz_last_cmd[0].eq_ignore_ascii_case("hold-punch"));
+}

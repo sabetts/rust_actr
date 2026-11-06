@@ -564,6 +564,20 @@ impl Engine {
                         ("PREPARATION", Pattern::Sym(s)) if s == "BUSY" => {
                             !self.query_prep_free(buffer)?
                         }
+                        ("EXECUTION", Pattern::Sym(s)) if s == "FREE" => {
+                            self.query_execution_free(buffer)?
+                        }
+                        ("EXECUTION", Pattern::Sym(s)) if s == "BUSY" => {
+                            !self.query_execution_free(buffer)?
+                        }
+                        ("LAST-COMMAND", v)
+                            if matches!(
+                                buffer.as_str(),
+                                "MANUAL" | "MANUAL-LEFT" | "MANUAL-RIGHT"
+                            ) =>
+                        {
+                            self.query_last_command(buffer, v)
+                        }
                         // `?manual-left> index free/down` etc.
                         (attr, Pattern::Sym(s))
                             if matches!(attr, "INDEX" | "MIDDLE" | "RING" | "PINKIE" | "THUMB") =>
@@ -572,6 +586,7 @@ impl Engine {
                                 "FREE" => self.query_finger_free(buffer, attr)?,
                                 "BUSY" => !self.query_finger_free(buffer, attr)?,
                                 "DOWN" => self.query_finger_down(buffer, attr)?,
+                                "UP" => !self.query_finger_down(buffer, attr)?,
                                 _ => {
                                     return Err(unimpl(format!("query ?{buffer}> {attr} {val:?}")))
                                 }
@@ -643,6 +658,8 @@ impl Engine {
                     Ok(!self.man_prep_busy && !self.man_exec_busy)
                 }
             }
+            "MANUAL-LEFT" => Ok(!self.man_proc[0] && !self.man_exec[0]),
+            "MANUAL-RIGHT" => Ok(!self.man_proc[1] && !self.man_exec[1]),
             "IMAGINAL" => Ok(!self.imag_busy),
             // The imaginal-action buffer is the imaginal module's second
             // buffer; `?imaginal-action> state free` tests the same busy flag.
@@ -662,6 +679,8 @@ impl Engine {
     pub(super) fn query_processor_free(&self, buffer: &str) -> Result<bool, EngineError> {
         match buffer {
             "MANUAL" => Ok(!self.man_proc[0] && !self.man_proc[1]),
+            "MANUAL-LEFT" => Ok(!self.man_proc[0]),
+            "MANUAL-RIGHT" => Ok(!self.man_proc[1]),
             _ => self.query_free(buffer),
         }
     }
@@ -669,9 +688,41 @@ impl Engine {
     /// `?manual> preparation free/busy` (extended-motor-actions).
     pub(super) fn query_prep_free(&self, buffer: &str) -> Result<bool, EngineError> {
         match buffer {
-            "MANUAL" => Ok(!self.man_prep_busy),
+            "MANUAL" | "MANUAL-LEFT" | "MANUAL-RIGHT" => Ok(!self.man_prep_busy),
             "VOCAL" => Ok(!self.vocal_prep_busy),
             _ => self.query_free(buffer),
+        }
+    }
+
+    /// `?manual> execution free/busy` (extended-motor-actions).
+    pub(super) fn query_execution_free(&self, buffer: &str) -> Result<bool, EngineError> {
+        match buffer {
+            "MANUAL" => Ok(!self.man_exec[0] && !self.man_exec[1]),
+            "MANUAL-LEFT" => Ok(!self.man_exec[0]),
+            "MANUAL-RIGHT" => Ok(!self.man_exec[1]),
+            _ => self.query_free(buffer),
+        }
+    }
+
+    /// `?manual-left> last-command X` (`motor-extension.lisp:1392`).
+    fn query_last_command(&self, buffer: &str, value: &Pattern) -> bool {
+        let hand = match buffer {
+            "MANUAL-LEFT" => Some(0),
+            "MANUAL-RIGHT" => Some(1),
+            _ => None,
+        };
+        let want = match value {
+            Pattern::Sym(s) => s.as_str(),
+            Pattern::Str(s) => s.as_str(),
+            Pattern::Nil => return false,
+            _ => return false,
+        };
+        match hand {
+            Some(h) => self.zz_last_cmd[h].eq_ignore_ascii_case(want),
+            None => self
+                .zz_last_cmd
+                .iter()
+                .any(|cmd| cmd.eq_ignore_ascii_case(want)),
         }
     }
 
