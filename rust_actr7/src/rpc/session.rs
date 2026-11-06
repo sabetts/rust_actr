@@ -7527,10 +7527,7 @@ mod tests {
                 &mut r,
             )
             .unwrap();
-        assert_eq!(
-            seed,
-            vec![Json::Arr(vec![Json::Int(101), Json::Int(0)])]
-        );
+        assert_eq!(seed, vec![Json::Arr(vec![Json::Int(101), Json::Int(0)])]);
         let v = s
             .evaluate(
                 "get-parameter-value",
