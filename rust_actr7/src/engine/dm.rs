@@ -149,8 +149,12 @@ impl Engine {
         want_slots: &[(String, Value)],
         want_neg: &[(String, Value)],
     ) -> (f32, f32) {
-        let base = self.base_level(idx, self.cfg.bll, false);
         let name = self.dm[idx].name.clone().unwrap_or_default();
+        if self.act_medium() {
+            self.out(format!("Computing activation for chunk {name}"));
+            self.out("Computing base-level".to_string());
+        }
+        let base = self.base_level(idx, self.cfg.bll, true);
         let spread = if self.dm[idx].name.is_some() {
             self.spreading_activation(&name, self.cfg.mas)
         } else {
@@ -158,20 +162,64 @@ impl Engine {
         };
         let mut a = base + spread + self.inhibition_offset(&self.hist[idx].refs);
         if let Some(mp) = self.cfg.mp {
+            let show = self.act_medium();
+            if show {
+                self.out("Computing partial matching component".to_string());
+            }
+            let mut total = 0.0f32;
+            for (s, v) in want_neg {
+                if s.starts_with(':') {
+                    continue;
+                }
+                let cv = self.dm[idx].get(s);
+                let sim = self.similarity(v, &cv);
+                if show {
+                    self.out(format!("  comparing slot {s}"));
+                    self.out(format!(
+                        "  Requested: - {}  Chunk's slot value: {}",
+                        v.show(),
+                        cv.show()
+                    ));
+                    self.out(format!("  similarity: {}", lisp_f(sim)));
+                }
+                let simd = if sim == self.cfg.ms {
+                    mp * self.cfg.md
+                } else {
+                    if show {
+                        self.out(
+                            "  negation test with similarity not ms has no effect".to_string(),
+                        );
+                    }
+                    0.0
+                };
+                if show {
+                    self.out(format!("  effective similarity value is {}", lisp_f(simd)));
+                }
+                total += simd;
+            }
             for (s, v) in want_slots {
                 if s.starts_with(':') || *v == Value::Nil {
                     continue;
                 }
-                a += mp * self.similarity(v, &self.dm[idx].get(s));
-            }
-            for (s, v) in want_neg {
-                if s.starts_with(':') || *v == Value::Nil {
-                    continue;
+                let cv = self.dm[idx].get(s);
+                let sim = self.similarity(v, &cv);
+                let simd = mp * sim;
+                if show {
+                    self.out(format!("  comparing slot {s}"));
+                    self.out(format!(
+                        "  Requested: = {}  Chunk's slot value: {}",
+                        v.show(),
+                        cv.show()
+                    ));
+                    self.out(format!("  similarity: {}", lisp_f(sim)));
+                    self.out(format!("  effective similarity value is {}", lisp_f(simd)));
                 }
-                if self.similarity(v, &self.dm[idx].get(s)) == self.cfg.ms {
-                    a += mp * self.cfg.md;
-                }
+                total += simd;
             }
+            if show {
+                self.out(format!("Total similarity score {}", lisp_f(total)));
+            }
+            a += total;
         }
         let noise = if self.cfg.uan {
             0.0
@@ -181,7 +229,20 @@ impl Engine {
                 None => 0.0,
             }
         };
-        (a + noise, base)
+        if self.act_medium() {
+            if self.cfg.uan {
+                self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+                self.out(format!("noise hook returns: {}", lisp_f(0.0)));
+            } else {
+                self.out(format!("Adding transient noise {}", lisp_f(noise)));
+                self.out(format!("Adding permanent noise {}", lisp_f(0.0)));
+            }
+        }
+        a += noise;
+        if self.act_low() {
+            self.out(format!("Chunk {name} has an activation of: {}", lisp_f(a)));
+        }
+        (a, base)
     }
 
     /// `compute-spacing-effect-activation`
@@ -523,14 +584,14 @@ impl Engine {
 
         // Temperature.
         let (temperature, temp_line) = if let Some(t) = self.cfg.tmp_ {
-            (t, format!("Blending temperature is: {}", lisp_s_f32(t)))
+            (t, format!("Blending temperature is: {}", lisp_f(t)))
         } else if let Some(a) = self.cfg.ans {
             let t = std::f32::consts::SQRT_2 * a;
             (
                 t,
                 format!(
                     "Blending temperature defaults to (* (sqrt 2) :ans): {}",
-                    lisp_s_f32(t)
+                    lisp_f(t)
                 ),
             )
         } else {
@@ -608,8 +669,8 @@ impl Engine {
             for ((a, _, name), p) in act_list.iter().zip(probs.iter()) {
                 self.out(format!(
                     "Chunk {name} matches blending request\n  Activation {}\n  Probability of recall {}\n",
-                    lisp_s_f32(*a),
-                    lisp_s_f32(*p)
+                    lisp_f(*a),
+                    lisp_f(*p)
                 ));
             }
             self.out(format!(
@@ -699,25 +760,25 @@ impl Engine {
                     if self.cfg.blt {
                         self.out(format!(
                             " Chunk {name} with probability {} times magnitude {} = {} cumulative result: {}",
-                            lisp_s_f32(*p),
-                            lisp_s_f32(mag),
-                            lisp_s_f32(inc),
-                            lisp_s_f32(sum)
+                            lisp_f(*p),
+                            lisp_f(mag),
+                            lisp_f(inc),
+                            lisp_f(sum)
                         ));
                     }
                     slot_trace.push_str(&format!(
                         "  Chunk {name} with probability {} times magnitude {} = {} cumulative result: {}\n",
-                        lisp_s_f32(*p),
-                        lisp_s_f32(mag),
-                        lisp_s_f32(inc),
-                        lisp_s_f32(sum)
+                        lisp_f(*p),
+                        lisp_f(mag),
+                        lisp_f(inc),
+                        lisp_f(sum)
                     ));
                 }
                 set_result(&mut results, slot, Value::Num(sum as f64));
                 if self.cfg.blt {
-                    self.out(format!(" Final result: {}", lisp_s_f32(sum)));
+                    self.out(format!(" Final result: {}", lisp_f(sum)));
                 }
-                slot_trace.push_str(&format!(" Final result: {}\n", lisp_s_f32(sum)));
+                slot_trace.push_str(&format!(" Final result: {}\n", lisp_f(sum)));
                 continue;
             }
 
@@ -836,18 +897,18 @@ impl Engine {
                         if self.cfg.blt {
                             self.out(format!(
                                 "  Chunk {name} with probability {} slot value {} similarity: {} cumulative result: {}",
-                                lisp_s_f32(*p),
+                                lisp_f(*p),
                                 v.show(),
-                                lisp_s_f32(sim),
-                                lisp_s_f32(sum)
+                                lisp_f(sim),
+                                lisp_f(sum)
                             ));
                         }
                         slot_trace.push_str(&format!(
                             "   Chunk {name} with probability {} slot value {} similarity: {} cumulative result: {}\n",
-                            lisp_s_f32(*p),
+                            lisp_f(*p),
                             v.show(),
-                            lisp_s_f32(sim),
-                            lisp_s_f32(sum)
+                            lisp_f(sim),
+                            lisp_f(sum)
                         ));
                     }
                     if best_mag.is_none() || sum < best_mag.unwrap() {
@@ -898,15 +959,12 @@ impl Engine {
         for (a, _, name) in &act_list {
             act += a.exp();
             if self.cfg.blt {
-                self.out(format!(" Activation of chunk {name} is {}", lisp_s_f32(*a)));
+                self.out(format!(" Activation of chunk {name} is {}", lisp_f(*a)));
             }
         }
         act = act.ln();
         if self.cfg.blt {
-            self.out(format!(
-                "Activation for blended chunk is: {}",
-                lisp_s_f32(act)
-            ));
+            self.out(format!("Activation for blended chunk is: {}", lisp_f(act)));
         }
 
         let result_text = format!(
@@ -924,7 +982,7 @@ impl Engine {
             .collect();
         let mut history_trace = format!(
             "Blending request for chunks {request_text}\nBlending temperature is: {}\n",
-            lisp_s_f32(temperature)
+            lisp_f(temperature)
         );
         if !filled_names.is_empty() {
             history_trace.push_str(&format!("with slots ({})\n", filled_names.join(" ")));
@@ -939,14 +997,14 @@ impl Engine {
         for (name, a, p) in &chunks {
             history_trace.push_str(&format!(
                 "Chunk {name} matches blending request\n  Activation {}\n  Probability of recall {}\n",
-                lisp_s_f32(*a),
-                lisp_s_f32(*p)
+                lisp_f(*a),
+                lisp_f(*p)
             ));
         }
         history_trace.push_str(&slot_trace);
         history_trace.push_str(&format!(
             "\nThis is the definition of the blended chunk:\n{result_text}\nActivation for blended chunk is: {}\n",
-            lisp_s_f32(act)
+            lisp_f(act)
         ));
         if act < self.cfg.rt {
             history_trace.push_str("Not above threshold so blending failed");
