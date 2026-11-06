@@ -915,6 +915,11 @@ impl Engine {
                     );
                 }
                 RhsAction::Request { buffer, spec } => {
+                    // `=imaginal>` is priority 100 and the request is
+                    // priority 50, so a `+retrieval> =imaginal` in the same
+                    // fire sees the modified chunk even though the visible
+                    // MOD event is still queued.
+                    self.apply_pending_imaginal_mod_peek();
                     let copy = matches!(buffer.as_str(), "GOAL" | "IMAGINAL");
                     let concrete = self.concretize(spec, &b, copy, &mut copied)?;
                     if let NewChunk::Named(n) = &concrete {

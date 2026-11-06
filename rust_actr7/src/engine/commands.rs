@@ -817,6 +817,36 @@ impl Engine {
     /// that also requested an imaginal action. ACT-R's action sees the updated
     /// slots; the modification is invisible in the trace (the module-request
     /// line is the next visible event), so consume the queued event silently.
+    /// Apply the same-fire `=imaginal>` modification to the live buffer
+    /// without removing the queued `ModBuffer` event. A production's
+    /// `+retrieval> =imaginal` expands at priority 50, after the modification
+    /// at priority 100, so the indirect request must see the new slots while
+    /// the normal `MOD-BUFFER-CHUNK` trace still runs.
+    pub(super) fn apply_pending_imaginal_mod_peek(&mut self) {
+        let now = self.time_ms;
+        let Some(slots) = self.queue.iter().find_map(|q| match &q.event {
+            Event::ModBuffer { buffer, slots, .. } if buffer == "IMAGINAL" && q.time_ms == now => {
+                Some(slots.clone())
+            }
+            _ => None,
+        }) else {
+            return;
+        };
+        if let Some(chunk) = self
+            .buffers
+            .get_mut("IMAGINAL")
+            .and_then(|b| b.chunk.as_mut())
+        {
+            for (slot, value) in slots {
+                match chunk.slots.iter_mut().find(|(k, _)| *k == slot) {
+                    Some((_, old)) => *old = value,
+                    None => chunk.slots.push((slot, value)),
+                }
+            }
+        }
+        self.buffer_mut("IMAGINAL").modified = true;
+    }
+
     pub(super) fn apply_pending_imaginal_mod(&mut self) {
         let now = self.time_ms;
         let Some(slots) = self.queue.iter().find_map(|q| match &q.event {

@@ -874,3 +874,42 @@ fn aural_detection_schedules_end_for_unfinished_sound() {
         e.out_lines
     );
 }
+
+#[test]
+fn indirect_request_sees_same_fire_imaginal_mod() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.reset().unwrap();
+    let mut chunk = inst("RESULT", vec![("SLOT1", sym("RED"))]);
+    chunk.name = Some("IMAGINAL-CHUNK0".into());
+    e.buffer_mut("IMAGINAL").chunk = Some(chunk);
+    e.push(
+        0,
+        Prio::Num(100),
+        Out::Medium,
+        Event::ModBuffer {
+            buffer: "IMAGINAL".into(),
+            slots: vec![("SLOT2".into(), sym("TWO"))],
+            module: "PROCEDURAL".into(),
+        },
+    );
+
+    e.apply_pending_imaginal_mod_peek();
+
+    assert_eq!(
+        e.buffers["IMAGINAL"].chunk.as_ref().unwrap().get("SLOT2"),
+        Value::Sym("TWO".into())
+    );
+    assert!(
+        e.queue.iter().any(|q| matches!(
+            &q.event,
+            Event::ModBuffer { buffer, .. } if buffer == "IMAGINAL"
+        )),
+        "visible ModBuffer event must remain queued"
+    );
+}
