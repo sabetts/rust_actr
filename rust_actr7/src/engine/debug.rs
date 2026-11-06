@@ -3052,10 +3052,18 @@ impl Engine {
             })
             .collect();
         live.sort_by_key(|s| s.onset);
-        let mut out = vec![
-            "Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH".to_string(),
-            "--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----".to_string(),
-        ];
+        let has_features = live.iter().any(|s| !s.other_features.is_empty());
+        let mut out = if has_features {
+            vec![
+                "Sound event     Att  Detectable  Kind           Content           Location      Onset     Offset    Sound ID  ONLY-SOUND  ONLY-EVT  BOTH".to_string(),
+                "--------------  ---  ----------  -------------  ----------------  ------------  --------  --------  --------  ----------  --------  ----".to_string(),
+            ]
+        } else {
+            vec![
+                "Sound event    Att  Detectable  Kind           Content           location     onset     offset  Sound ID".to_string(),
+                "-----------    ---  ----------  -------------  ----------------  --------     -----     ------  --------".to_string(),
+            ]
+        };
         for s in live {
             let num = |ms: i64| {
                 if self.cfg.audio_ms_times {
@@ -3065,15 +3073,36 @@ impl Engine {
                 }
             };
             let content = s.content.show();
+            let detectable = if self.time_ms >= s.onset + s.delay {
+                "T"
+            } else {
+                "NIL"
+            };
+            if !has_features {
+                let mut row = format!(
+                    "{:<15}{:<5}{:<12}{:<15}{:<18}{:<10}{:>8}",
+                    s.ename,
+                    s.attended.table(),
+                    detectable,
+                    s.kind,
+                    content,
+                    s.location,
+                    num(s.onset),
+                );
+                match s.offset {
+                    Some(offset) => {
+                        row.push_str(&format!("   {:>8}  {}", num(offset), s.sname));
+                    }
+                    None => row.push_str(&format!("   ongoing  {}", s.sname)),
+                }
+                out.push(row);
+                continue;
+            }
             let mut row = format!(
                 "{:<16}{:<5}{:<12}{:<15}{:<18}{:<14}{:>8}",
                 s.ename,
                 s.attended.table(),
-                if self.time_ms >= s.onset + s.delay {
-                    "T"
-                } else {
-                    "NIL"
-                },
+                detectable,
                 s.kind,
                 content,
                 s.location,

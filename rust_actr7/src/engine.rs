@@ -2324,7 +2324,9 @@ enum Event {
         style: String,
     },
     /// Speech module: the vocal buffer finished its utterance.
-    VocalFree,
+    VocalFree {
+        req_ms: i64,
+    },
     /// Speech module: an utterance starts (`SPEAK TEXT ...` /
     /// `SUBVOCALIZE TEXT ...`).
     Speak {
@@ -2336,6 +2338,7 @@ enum Event {
     SpeechPrep {
         style: SpeechStyle,
         text: String,
+        req_ms: i64,
     },
     /// Speech module: `initiation-complete` (procedural released); for
     /// `speak` this is also the device-notify line (`SPEAK <text>`).
@@ -5696,7 +5699,7 @@ impl Engine {
     fn run_to_limit(
         &mut self,
         limit_ms: i64,
-        _full: bool,
+        full: bool,
         yield_on_action: bool,
         max_events: Option<u64>,
         soft_ms: Option<i64>,
@@ -5748,7 +5751,18 @@ impl Engine {
                     self.emit("------", "Stopped because time limit reached".into());
                     break;
                 }
-                Some(t) if t > limit_ms => {
+                // A window display wave exactly on a full-time boundary belongs
+                // to the task's next run (`paired`); ordinary events at the
+                // limit still run.
+                Some(t)
+                    if t > limit_ms
+                        || (full
+                            && t == limit_ms
+                            && self
+                                .queue
+                                .peek()
+                                .is_some_and(|q| matches!(&q.event, Event::ProcDisplay))) =>
+                {
                     self.time_ms = limit_ms;
                     self.emit("------", "Stopped because time limit reached".into());
                     break;

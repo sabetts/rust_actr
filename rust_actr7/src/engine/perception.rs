@@ -51,6 +51,10 @@ impl Engine {
     /// `new-digit-sound` (`audio.lisp:760`): a `DIGIT` sound whose `content`
     /// is the digit itself. The audio module's defaults are 600 ms duration,
     /// 300 ms detect delay, and 500 ms recode delay (`audio.lisp:540`).
+    ///
+    /// Lisp's `sound-event` `:after` method computes `offset` before the
+    /// `digit-sound-evt` `:after` method installs `duration`, so a digit's
+    /// offset stays at its onset even though its duration is 600 ms.
     pub(super) fn new_digit_sound(&mut self, digit: i64, onset: i64) {
         let n = self.digit_seq;
         self.digit_seq += 1;
@@ -63,7 +67,7 @@ impl Engine {
             content: Value::Int(digit),
             location: "EXTERNAL".to_string(),
             onset,
-            offset: Some(onset + 600),
+            offset: Some(onset),
             duration: Some(600),
             delay: 300,
             recode: 500,

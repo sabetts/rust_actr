@@ -174,7 +174,13 @@ impl Engine {
                 self.buffer_mut(&buffer).modified = false;
                 self.changed();
             }
-            Event::VocalFree => {
+            Event::VocalFree { req_ms } => {
+                if show {
+                    self.emit(
+                        "SPEECH",
+                        format!("FINISH-MOVEMENT {}", Self::secs_str(req_ms)),
+                    );
+                }
                 if self.time_ms >= self.vocal_end_ms {
                     self.vocal_busy = false;
                     self.vocal_end_ms = 0;
@@ -182,6 +188,7 @@ impl Engine {
                 self.changed();
             }
             Event::Speak { style, text } => {
+                let req_ms = self.time_ms;
                 self.emit("SPEECH", format!("{} TEXT {text}", style.trace()));
                 self.vocal_busy = true;
                 self.vocal_prep_busy = true;
@@ -201,10 +208,24 @@ impl Engine {
                     self.time_ms + prep,
                     Prio::Num(0),
                     Out::Always,
-                    Event::SpeechPrep { style, text },
+                    Event::SpeechPrep {
+                        style,
+                        text,
+                        req_ms,
+                    },
                 );
             }
-            Event::SpeechPrep { style, text } => {
+            Event::SpeechPrep {
+                style,
+                text,
+                req_ms,
+            } => {
+                if show {
+                    self.emit(
+                        "SPEECH",
+                        format!("PREPARATION-COMPLETE {}", Self::secs_str(req_ms)),
+                    );
+                }
                 // `perform-movement`: preparation is complete, but articulation
                 // keeps the vocal buffer busy (`?vocal> preparation` vs
                 // `?vocal> state`).
@@ -220,6 +241,15 @@ impl Engine {
                 let init_at = exec_start + init;
                 let finish_at = init_at + art;
                 self.vocal_end_ms = self.vocal_end_ms.max(finish_at);
+                self.push(
+                    init_at,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::Emit {
+                        module: "SPEECH".to_string(),
+                        line: format!("INITIATION-COMPLETE {}", Self::secs_str(req_ms)),
+                    },
+                );
                 // `queue-output-events` (`speech.lisp:294`/`:314`) creates the
                 // sound -- when `:hear-self` admits this style -- *before*
                 // scheduling the device notification, so `new-sound` precedes
@@ -266,17 +296,28 @@ impl Engine {
                         text: text.clone(),
                     },
                 );
-                self.push(finish_at, Prio::Num(0), Out::Never, Event::VocalFree);
+                self.push(
+                    finish_at,
+                    Prio::Num(0),
+                    Out::Always,
+                    Event::VocalFree { req_ms },
+                );
             }
             Event::SpeechInit { style, text } => {
                 // `notify-speech-device` (`speech.lisp:267`): with no speech
                 // device installed, a `speak` start schedules
                 // `default-speech-action` at `:output medium`, whose details
                 // render as `SPEAK <text>`. With a device the module notifies
-                // it instead (no trace), and `subvocalize` only notifies when
+                // it instead, and `subvocalize` only notifies when
                 // `:notify-subvocalize` is on (off by default).
                 if style == SpeechStyle::Speak {
                     if self.speech_device {
+                        if show {
+                            self.emit(
+                                "MICROPHONE",
+                                format!("output-speech {} {}", self.model.name, text),
+                            );
+                        }
                         self.fired_commands.push((
                             "output-speech".to_string(),
                             self.model.name.clone(),
