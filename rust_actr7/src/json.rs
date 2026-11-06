@@ -105,7 +105,14 @@ impl Json {
 /// JSON floats keep a decimal point even when integral, matching Python's
 /// `json.dumps` (`0.0` stays a float, not the integer `0`).
 fn write_float(x: f64, out: &mut String) {
-    let text = format!("{x}");
+    // ACT-R returns single floats for model values. When this f64 is exactly
+    // representable as that single float, print its shortest round-trip form
+    // (`0.1899999976158142` -> `0.19`), matching the Lisp JSON bridge.
+    let text = if x != 0.0 && (x as f32) as f64 == x {
+        format!("{}", x as f32)
+    } else {
+        format!("{x}")
+    };
     out.push_str(&text);
     if !text.contains('.') && !text.contains('e') && !text.contains('E') {
         out.push_str(".0");
@@ -402,6 +409,12 @@ mod tests {
         assert_eq!(Json::Float(10.0).write(), "10.0");
         assert_eq!(Json::Float(0.0).write(), "0.0");
         assert_eq!(Json::Float(1.5).write(), "1.5");
+    }
+
+    #[test]
+    fn f32_values_print_shortest_single_float() {
+        assert_eq!(Json::Float(0.1899999976158142).write(), "0.19");
+        assert_eq!(Json::Float(0.5900000333786011).write(), "0.59000003");
     }
 
     #[test]

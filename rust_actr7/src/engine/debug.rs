@@ -2481,6 +2481,7 @@ impl Engine {
         let prod = &self.model.productions[idx];
         Some(match key.to_uppercase().as_str() {
             ":NAME" => Sexp::Sym(prod.name.clone()),
+            ":U" if self.utilities[idx] == 0.0 => Sexp::Int(0),
             ":U" => Sexp::Float(self.utilities[idx] as f64),
             ":UTILITY" => match self.production_utility[idx] {
                 Some(v) => Sexp::Float(v as f64),
