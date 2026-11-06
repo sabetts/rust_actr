@@ -21,11 +21,12 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `fbfb58c`. Priority 0, Priority 1, and all
-three Priority 2 probes are complete. Final verification: `cargo fmt --check`
-clean; `cargo test` passed (`113` library/unit tests plus `560` model cases,
-`0` failed, `8` ignored model cases); all 16 differential cases pass with
-`--isolate`.
+Rust changes are committed through `fbfb58c`. Priority 0 and Priority 1 are
+complete. All three Priority 2 probes are implemented and currently `DIFF-OK`,
+but Priority 2 is **reopened** for the residual gaps recorded below. Current
+verified state: `cargo fmt --check` clean; `cargo test` passed (`113`
+library/unit tests plus `560` model cases, `0` failed, `8` ignored model
+cases); all 16 differential cases pass with `--isolate`.
 
 Full Rust test suite:
 
@@ -442,7 +443,7 @@ prints the shortest single-float form when the value is exactly an f32, and
 These are more expensive. Start them only after the Priority 1 queue is green
 or after an explicit reassessment.
 
-### Priority 2 implementation plan (complete)
+### Priority 2 implementation plan (reopened)
 
 Priority 1 is green as of `d8da1a3`; begin Priority 2 in the document order:
 vision mutation, motor overlap, then multi-model parameters.
@@ -600,14 +601,41 @@ Regression: `multi_model_honors_per_model_trace_and_parameter_types`,
 `source_clear_all_is_detected_at_top_level_only`; existing multi-model session,
 RPC, and `multi-model-talking` cases remain green.
 
+Coverage gaps in this probe (not yet closed):
+
+- It reloads the whole model file. It does not delete/reload a single model
+  while retaining the other.
+- It does not perform a `reset` in the middle of a multi-model run.
+
 Residual note: with `MP-B` at `:v nil`, SBCL's `run` reports 33 processed
 events and Rust reports 37, although both produce the same trace, parameter
 state, and clock. The probe does not print the `run` event count; this count
 semantics remains uninvestigated.
 
-**Priority 2 complete.** Final run: `cargo fmt --check` clean, `cargo test`
-green (`113` library/unit tests plus `560` model cases, `8` ignored model
-cases), and all 16 differential cases `DIFF-OK` under `--isolate`.
+### Open Priority 2 gaps
+
+Priority 2 remains open until these are reproduced and either fixed or
+explicitly scoped out:
+
+1. Vision: same-time `clear-exp-window` then `add-text-to-exp-window` can leave
+   Rust without a queued `proc-display`. The current probe advances time with
+   `run_until_time` and therefore does not assert the same-time ordering.
+2. Multi-model: the `run` event count differs under per-model `:v nil`
+   (`33` SBCL vs `37` Rust) even though trace, parameter state, and clock
+   match. The probe currently omits the event count from its output.
+3. Multi-model: add a single-model delete/reload scenario without clearing the
+   untouched sibling model.
+4. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
+   order, parameters, seeds, and the global clock.
+5. Motor: replace or supplement the client-timed overlap with the real
+   per-hand stage-query path. The existing `zz` driver covers parts of this,
+   but the differential probe does not.
+
+**Priority 2 status: reopened.** The probes and fixes above are valid, but the
+gaps listed here remain in scope. Current run is still green:
+`cargo fmt --check` clean, `cargo test` green (`113` library/unit tests plus
+`560` model cases, `8` ignored model cases), and all 16 differential cases
+`DIFF-OK` under `--isolate`.
 
 ## Probe workflow
 
