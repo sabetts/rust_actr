@@ -102,13 +102,13 @@ impl Json {
     }
 }
 
-/// JSON floats: integral values print without a decimal point, matching
-/// Python's `json.dumps` (which the round-trips rely on).
+/// JSON floats keep a decimal point even when integral, matching Python's
+/// `json.dumps` (`0.0` stays a float, not the integer `0`).
 fn write_float(x: f64, out: &mut String) {
-    if x.is_finite() && x.fract() == 0.0 && x.abs() < 1e15 {
-        let _ = write!(out, "{}", x as i64);
-    } else {
-        let _ = write!(out, "{x}");
+    let text = format!("{x}");
+    out.push_str(&text);
+    if !text.contains('.') && !text.contains('e') && !text.contains('E') {
+        out.push_str(".0");
     }
 }
 
@@ -399,7 +399,8 @@ mod tests {
 
     #[test]
     fn integral_floats_print_like_python() {
-        assert_eq!(Json::Float(10.0).write(), "10");
+        assert_eq!(Json::Float(10.0).write(), "10.0");
+        assert_eq!(Json::Float(0.0).write(), "0.0");
         assert_eq!(Json::Float(1.5).write(), "1.5");
     }
 

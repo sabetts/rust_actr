@@ -1451,7 +1451,11 @@ impl Engine {
                 }
             }
             Event::Break { details } => {
-                self.emit("------", format!("BREAK-EVENT {details}"));
+                if details.is_empty() {
+                    self.emit("------", "BREAK-EVENT".to_string());
+                } else {
+                    self.emit("------", format!("BREAK-EVENT {details}"));
+                }
                 self.stopped = true;
             }
             Event::Emit { module, line } => {

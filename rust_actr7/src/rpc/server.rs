@@ -299,15 +299,12 @@ fn run_interleaved(
     id: Option<&Json>,
 ) -> Json {
     let secs = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
+    let start_ms = (session.time_secs() * 1000.0).round() as i64;
     let (limit, full, should_run) = session.run_begin(name, secs);
     if !should_run {
         return reply_ok(
             id,
-            Json::Arr(vec![
-                Json::Float(session.time_secs()),
-                Json::Int(session.run_events() as i64),
-                Json::Null,
-            ]),
+            Json::Arr(vec![Json::Float(0.0), Json::Int(0), Json::Null]),
         );
     }
     let model = session.current_model().map(str::to_string);
@@ -375,12 +372,17 @@ fn run_interleaved(
     ) {
         return reply_err(id, &e.to_string());
     }
+    let elapsed_ms = (session.time_secs() * 1000.0).round() as i64 - start_ms;
     reply_ok(
         id,
         Json::Arr(vec![
-            Json::Float(session.time_secs()),
+            Json::Float(elapsed_ms as f64 / 1000.0),
             Json::Int(session.run_events() as i64),
-            Json::Null,
+            if session.run_break_hit() {
+                Json::Bool(true)
+            } else {
+                Json::Null
+            },
         ]),
     )
 }

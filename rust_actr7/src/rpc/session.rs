@@ -2343,10 +2343,9 @@ impl Session {
                 // the current engine can be an inactive model whose own clock
                 // has not advanced, so use the shared session clock.
                 let v = self.time_secs();
-                if name == "mp-time-ms" {
-                    Ok(vec![Json::Int((v * 1000.0).round() as i64)])
-                } else {
-                    Ok(vec![Json::Float(v)])
+                match name {
+                    "mp-time-ms" | "get-time" => Ok(vec![Json::Int((v * 1000.0).round() as i64)]),
+                    _ => Ok(vec![Json::Float(v)]),
                 }
             }
             // --- R3 output commands -----------------------------------------
@@ -3507,6 +3506,8 @@ impl Session {
         if name == "step-once" {
             return self.step_once().map(|b| vec![Json::Bool(b)]);
         }
+        let start_ms = (self.time_secs() * 1000.0).round() as i64;
+        let mut break_hit = false;
         if self.is_multi() && name == "run" {
             self.run_multi_secs(secs, true, crate::trace::MODULE_WIDTH)?;
         } else {
@@ -3519,14 +3520,20 @@ impl Session {
                 _ => unreachable!(),
             };
             r.map_err(|e: EngineError| e.to_string())?;
+            break_hit = eng.stopped();
         }
         // `run` returns `(values seconds events break)` in ACT-R; the first is
-        // the model time reached and the second the event count
-        // (`scheduling.lisp:877`), which `tutorial_unit2code_initial` prints.
+        // the elapsed model time (not the absolute clock), the second the
+        // event count (`scheduling.lisp:877`), and the third the break flag.
+        let elapsed_ms = (self.time_secs() * 1000.0).round() as i64 - start_ms;
         Ok(vec![
-            Json::Float(self.time_secs()),
+            Json::Float(elapsed_ms as f64 / 1000.0),
             Json::Int(self.run_events() as i64),
-            Json::Null,
+            if break_hit {
+                Json::Bool(true)
+            } else {
+                Json::Null
+            },
         ])
     }
 
@@ -4291,6 +4298,11 @@ impl Session {
         }
     }
 
+    /// Whether the last run stopped on a break event.
+    pub fn run_break_hit(&self) -> bool {
+        self.engine.as_ref().is_some_and(|e| e.stopped())
+    }
+
     /// Load model definitions from in-memory Lisp source.
     ///
     /// This is the embedder entry point: a Python builder renders a
@@ -4618,7 +4630,7 @@ impl Session {
                     && !s.eq_ignore_ascii_case("min")
                     && !s.eq_ignore_ascii_case("max")
             })
-            .unwrap_or("Stopped by Environment")
+            .unwrap_or("")
             .to_string();
         let now_ms = (self.time_secs() * 1000.0).round() as i64;
         let target_ms = if relative {
@@ -7762,6 +7774,44 @@ mod tests {
         )
         .unwrap();
         assert_eq!(slot(&mut s, "myc", "number"), Json::Str("NINE".into()));
+    }
+
+    #[test]
+    fn run_returns_elapsed_time_and_get_time_returns_ms() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("reset", None, &[], &mut remote).unwrap();
+
+        let n2 = s
+            .evaluate("run-n-events", None, &[Json::Int(2)], &mut remote)
+            .unwrap();
+        assert_eq!(n2, vec![Json::Float(0.0), Json::Int(2), Json::Null]);
+        let time = s
+            .evaluate("get-time", None, &[Json::Bool(true)], &mut remote)
+            .unwrap();
+        assert_eq!(time, vec![Json::Int(0)]);
+
+        let until = s
+            .evaluate("run-until-time", None, &[Json::Float(0.3)], &mut remote)
+            .unwrap();
+        assert_eq!(until[0], Json::Float(0.3));
+        assert!(matches!(until[1], Json::Int(n) if n > 0));
+        assert_eq!(until[2], Json::Null);
+        let time = s
+            .evaluate("get-time", None, &[Json::Bool(true)], &mut remote)
+            .unwrap();
+        assert_eq!(time, vec![Json::Int(300)]);
     }
 
     #[test]

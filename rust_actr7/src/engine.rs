@@ -5575,6 +5575,7 @@ impl Engine {
             self.last_output_key = None;
         }
         let mut n = 0u64;
+        self.run_events = 0;
         self.stopped = false;
         self.p_hist_run_start();
         loop {
@@ -5613,6 +5614,7 @@ impl Engine {
             self.bh_record(bh_info);
             self.bt_post(bt_info);
             self.bold_record();
+            self.run_events += 1;
             n += 1;
             if self.zz_break_hit {
                 self.zz_break_hit = false;
@@ -5643,10 +5645,6 @@ impl Engine {
         self.zz_run_step_mode(secs, false)
     }
 
-    /// `full` selects `run-full-time`'s stop: events at exactly the limit
-    /// stay queued. The task's window change between runs schedules its
-    /// `proc-display` at the boundary *after* the previous run returns
-    /// (`paired`), so the engine must not consume it in the earlier run.
     /// Queue a window `ProcDisplay` for device ops already due, unless one is
     /// already queued at this time.
     ///
@@ -5698,7 +5696,7 @@ impl Engine {
     fn run_to_limit(
         &mut self,
         limit_ms: i64,
-        full: bool,
+        _full: bool,
         yield_on_action: bool,
         max_events: Option<u64>,
         soft_ms: Option<i64>,
@@ -5750,7 +5748,7 @@ impl Engine {
                     self.emit("------", "Stopped because time limit reached".into());
                     break;
                 }
-                Some(t) if (if full { t >= limit_ms } else { t > limit_ms }) => {
+                Some(t) if t > limit_ms => {
                     self.time_ms = limit_ms;
                     self.emit("------", "Stopped because time limit reached".into());
                     break;

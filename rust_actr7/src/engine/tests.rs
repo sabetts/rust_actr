@@ -678,6 +678,41 @@ fn hook_break_still_applies_pre_effects() {
 }
 
 #[test]
+fn run_n_events_reports_the_processed_count() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.reset().unwrap();
+    e.run_n_events(2).unwrap();
+    assert_eq!(e.run_events(), 2);
+}
+
+#[test]
+fn run_full_time_processes_events_at_the_limit() {
+    let mut e = Engine::new(
+        tutorial_model("count.lisp"),
+        (100, 0),
+        10.0,
+        DeviceSetup::default(),
+    )
+    .unwrap();
+    e.reset().unwrap();
+    e.run_full_time(0.05).unwrap();
+    assert!(
+        e.out_lines
+            .lines
+            .iter()
+            .any(|line| line.contains("PRODUCTION-FIRED START")),
+        "event at the full-time limit was left queued: {:?}",
+        e.out_lines
+    );
+}
+
+#[test]
 fn reset_silent_suppresses_setup_trace() {
     let mut e = Engine::new(
         tutorial_model("count.lisp"),
