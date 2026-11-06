@@ -21,7 +21,8 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `9d0df4a`.
+Rust changes are committed through `145e61f`. Priority 0 is complete; the
+Priority 1 and Priority 2 probe queues below are ready for the next agent.
 
 Full Rust test suite:
 
@@ -207,6 +208,138 @@ Known remaining audio observation: a high-detail audio trace still showed
 same-time differences around `audio-event-ended` and aural-location updates
 when external and self sounds bound at 0.45/0.50 s. The audicon probe does not
 assert that ordering yet; make a dedicated trace probe before changing it.
+
+## Priority 1 — combined mechanisms
+
+Work these in order. Each should get a project-authored model under
+`rust_actr7/fixtures/differential/models/` and a case under
+`rust_actr7/fixtures/differential/cases/`.
+
+### 1. `probe-audio-trace` (do this first)
+
+The known lead from the Priority 0 audio work. The goal is full high-detail
+audio trace parity, not just audicon state.
+
+- Model: two self-spoken words plus external word, digit, and tone sounds,
+  with onsets chosen so an external sound and a self sound overlap around
+  0.45–0.55 s. Set `:hear-self t`, `:trace-detail high`, `:v t`, and
+  `:unstuff-aural-location .5`.
+- Client: install `["speech", "microphone"]`, schedule the sounds, run in
+  short slices, and leave the trace on.
+- Expected observation to reproduce: Rust emits `AUDIO-EVENT-ENDED` and
+  `MOD-BUFFER-CHUNK AURAL-LOCATION` where SBCL does not, orders `new-sound`
+  and `SET-BUFFER-CHUNK AURAL-LOCATION` differently at 0.50 s, and may add an
+  extra aural-location set at 0.55 s.
+- Inspect `actr7.x/core-modules/audio.lisp:1045` (`find-sound` scheduling
+  `audio-event-ended`), `:1073` (`aural-location-update-check`), and `:1077`
+  (`audio-event-ended`). The Rust paths are in `events.rs`
+  (`Event::AudioEventEnded`, `Event::StuffSound`, `Event::NewSound`).
+- Do not “fix” this by hiding trace lines. Capture the exact first divergence
+  with `--verbose`, then add a minimal engine test before changing ordering or
+  preconditions.
+- Acceptance: `DIFF-OK probe-audio-trace` under both servers; full suite
+  green; any changed behavior has a default-suite regression.
+
+Useful commands:
+
+```powershell
+cargo build --bin actr
+python rust_actr7/fixtures/differential/run_cases.py --server both --isolate --case probe-audio-trace --verbose
+python rust_actr7/fixtures/differential/capture.py --server both --test rust_actr7/fixtures/differential/cases/probe-audio-trace/client.py --full-server-output
+```
+
+### 2. `probe-activation-combo`
+
+One model combining base-level learning, spreading activation, partial
+matching, activation noise, and blending. The current full-detail suite covers
+these mostly in isolation; this probe targets rounding, candidate ordering, and
+trace narration when they interact.
+
+- Use explicit seeds and `:trace-detail high :act high :pct t`.
+- Include at least two competing chunks with explicit similarities and a
+  blended request, plus one noisy retrieval.
+- Compare full traces and, if numeric drift appears, add a draw-sequence test
+  in the style of `tests/draws.rs`.
+- Acceptance: `DIFF-OK probe-activation-combo`; any numerical fix backed by a
+  focused unit test.
+
+### 3. `probe-imaginal-indirect`
+
+Dynamic imaginal slots, indirect retrieval from `=imaginal>`, copy/merge into
+imaginal, clear, and a failed indirect request.
+
+- Keep the model small enough that the first divergence is attributable.
+- Cover both `:recently-retrieved` and the `:ncnar` update path if practical.
+- Inspect `engine/productions.rs` indirect-request resolution and
+  `engine/events.rs` imaginal actions.
+- Acceptance: `DIFF-OK probe-imaginal-indirect`; default-suite regression for
+  any engine change.
+
+### 4. `probe-compile-utility`
+
+A tiny two-production chain that compiles on the second trial, with a reward
+and utility update.
+
+- Exercise dynamic slots in the composed production and at least one reward
+  that changes selection.
+- Compare compiled-production trace text, utility values, and action timing.
+- Inspect `engine/compilation.rs` and `engine/productions.rs`.
+- Acceptance: `DIFF-OK probe-compile-utility`; full suite green.
+
+## Priority 2 — device and meta-process probes
+
+These are more expensive. Start them only after the Priority 1 queue is green
+or after an explicit reassessment.
+
+### 1. `probe-vision-mutation`
+
+Virtual-window add/remove/restore/clear, nearest-location selection, and a
+two-feature search. This extends the existing `attend` and `unstuff-visual`
+coverage into mutation ordering.
+
+- Use `open_exp_window` / `add_text_to_exp_window` / `remove_items_from_exp_window`
+  from the Python client, or a scripted device sidecar if the timing is easier.
+- Keep the window small and seed the model explicitly.
+- Acceptance: `DIFF-OK probe-vision-mutation`.
+
+### 2. `probe-motor-overlap`
+
+Overlapping manual movement and keypress actions: preparation/initiation/
+execution overlap, a second hand request while the first executes, and a
+keypress that releases while a hand movement is pending.
+
+- Use `install_device(["keyboard", "mouse"])` or the relevant virtual device.
+- Compare high-detail MOTOR timing and buffer state.
+- Acceptance: `DIFF-OK probe-motor-overlap`.
+
+### 3. `probe-multi-model-params`
+
+Two models with different seeds/parameters, interleaved runs, one model
+deleted/reloaded, and a reset in the middle.
+
+- Extend `multi-model-talking` rather than duplicating it.
+- Cover per-model `:seed`, `:ans`, `:rt`, and `:v`, plus trace column ordering.
+- Include one client callback that mutates model order or parameters.
+- Acceptance: `DIFF-OK probe-multi-model-params`; no trace replay or global
+  clock drift.
+
+## Probe workflow
+
+For each new probe:
+
+1. Add `models/probe-<name>.lisp` and `cases/probe-<name>/client.py`.
+2. Use `ROOT = Path(__file__).resolve().parents[5]` in the client and load an
+   absolute model path; do not edit `actr7.x`.
+3. Run with `--isolate`. Capture the first diff with `--verbose`; use
+   `capture.py --full-server-output` when the client output is interleaved.
+4. Minimize the model before fixing. Add a failing Rust unit/session test when
+   the behavior is testable without SBCL.
+5. Fix the engine, re-run the probe under both servers, then run
+   `cargo fmt --check` and `cargo test`.
+6. Commit the probe and fix separately where practical, and update the current
+   case list and findings in this file.
+7. If a mismatch is genuinely out of scope, record it here with the exact
+   command and first-diff line rather than silently dropping the probe.
 
 ## Out of scope
 
