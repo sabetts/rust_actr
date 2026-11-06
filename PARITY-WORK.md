@@ -21,8 +21,9 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `6d8ee0f`. Priority 0 and all Priority 1
-probes are complete; the Priority 2 queue below is ready for the next agent.
+Rust changes are committed through `2308369`. Priority 0 and all Priority 1
+probes are complete. Priority 2 is in progress: `probe-vision-mutation` passes;
+the motor and multi-model probes remain.
 Final Priority 1 verification: `cargo fmt --check` clean, `cargo test`
 `560 passed, 0 failed, 8 ignored`, and all 13 differential cases pass with
 `--isolate`.
@@ -64,10 +65,14 @@ DIFF-OK probe-imaginal-indirect
 DIFF-OK probe-retrieval-lifecycle
 DIFF-OK probe-run-control
 DIFF-OK probe-runtime-defs
+DIFF-OK probe-vision-mutation
 ```
 
 ## Commits relevant to this work
 
+- `2308369 tests: add vision mutation differential probe`
+- `525ce89 engine: match device slots in visual-location search`
+- `b9616f1 docs: plan priority 2 parity probes`
 - `6d8ee0f engine: keep audio end checks maintenance`
 - `9013bba docs: record compile utility probe completion`
 - `f10773e tests: add compile utility differential probe`
@@ -119,6 +124,7 @@ rust_actr7/fixtures/differential/
     probe-retrieval-lifecycle/client.py
     probe-run-control/client.py
     probe-runtime-defs/client.py
+    probe-vision-mutation/client.py
   models/
     probe-activation-combo.lisp
     probe-audio-stack.lisp
@@ -128,6 +134,7 @@ rust_actr7/fixtures/differential/
     probe-retrieval-lifecycle.lisp
     probe-run-control.lisp
     probe-runtime-defs.lisp
+    probe-vision-mutation.lisp
 ```
 
 Project-authored probe models live in `differential/models/`; the vendored
@@ -485,6 +492,29 @@ coverage into mutation ordering.
   from the Python client, or a scripted device sidecar if the timing is easier.
 - Keep the window small and seed the model explicitly.
 - Acceptance: `DIFF-OK probe-vision-mutation`.
+
+**Status: complete (`2308369`, fixes `525ce89`).** The probe requests
+`nearest current` before mutation, after removing the alpha item, and after a
+clear, then performs a two-slot `value "beta"`/`color black` search. Findings
+fixed:
+
+- Device-feature slots (`color`, `width`, `height`, `size`, `distance`,
+  `text`/`line`/`oval`/`image`, and line endpoints) were not valid
+  visual-location request slots; any such constraint errored
+  (`not implemented: visual-location slot`). `loc_matches` now reads them from
+  the feature construction spec, case-insensitively for string/symbol values.
+- A `nearest current`/`current-x`/`current-y`/`current-distance` or
+  clockwise/counterclockwise request with no prior attention now emits the
+  same model warning as SBCL.
+
+Regression: `visual_location_request_matches_device_feature_slots`; existing
+`nearest-vis-loc`, `removed-and-restored-visual-item`, and vision tutorial
+cases remain green.
+
+Residual note: the probe advances model time with `run_until_time` between
+`clear-exp-window` and re-adding gamma. A same-time clear-then-add immediately
+after a display can still leave Rust without a queued `proc-display`; this
+was not isolated or fixed in this pass.
 
 ### 2. `probe-motor-overlap`
 
