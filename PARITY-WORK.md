@@ -21,9 +21,10 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `1dacda4`. Priority 0 and Priority 1
-probe 1 (`probe-audio-trace`) are complete; the remaining Priority 1 and
-Priority 2 probe queues below are ready for the next agent.
+Rust changes are committed through `dddb7f3`. Priority 0 and the first two
+Priority 1 probes (`probe-audio-trace`, `probe-activation-combo`) are complete;
+the remaining Priority 1 and Priority 2 probe queues below are ready for the
+next agent.
 
 Full Rust test suite:
 
@@ -54,6 +55,7 @@ DIFF-OK declarative-act
 DIFF-OK declarative-long
 DIFF-OK declarative-no-noise
 DIFF-OK multi-model-talking
+DIFF-OK probe-activation-combo
 DIFF-OK probe-audio-stack
 DIFF-OK probe-audio-trace
 DIFF-OK probe-retrieval-lifecycle
@@ -63,6 +65,9 @@ DIFF-OK probe-runtime-defs
 
 ## Commits relevant to this work
 
+- `dddb7f3 tests: add activation-combo differential probe`
+- `02b6f7f engine: trace blending activation with lisp float formatting`
+- `c0a4116 docs: record audio trace probe completion`
 - `1dacda4 tests: add high-detail audio trace probe`
 - `f26628d engine: mirror audio detection and end scheduling`
 - `95fef3c docs: detail priority 1 handoff plan`
@@ -306,6 +311,22 @@ trace narration when they interact.
 - Avoid `:cst t`; Rust and Lisp route it to different streams.
 - Acceptance: `DIFF-OK probe-activation-combo`; any numerical fix backed by a
   focused unit test.
+
+**Status: complete (`dddb7f3`, fix `02b6f7f`).** The probe combines a
+partial-matching retrieval (base-level + spreading + similarities + noise) with
+a blending request. Findings fixed:
+
+- Blending candidate activations bypassed the standard activation narration;
+  they now print base-level, spreading, partial-matching, noise, and final
+  activation lines when `:act` is medium/high.
+- Blending trace values used `~S`-style scientific formatting
+  (`3.7122225e-6`); SBCL uses `~f` (`0.0000037122225`). All blending trace
+  numbers now use `lisp_f`. `tests/cases/blending.ref` was corrected to the
+  SBCL spelling.
+
+The probe uses numeric goal states deliberately: Lisp auto-creates chunks for
+symbol slot values, while Rust only treats names already in the chunk table as
+sources. That separate widening is not exercised here.
 
 ### 3. `probe-imaginal-indirect`
 
