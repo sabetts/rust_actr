@@ -7,6 +7,8 @@ sys.path.insert(0, str(ROOT / "actr7.x" / "tutorial" / "python"))
 import actr
 
 MODELS = ROOT / "rust_actr7" / "fixtures" / "differential" / "models"
+EXTRA_MODEL = MODELS / "probe-multi-model-extra.lisp"
+DELETE_CODE = MODELS / "probe-multi-model-delete.lisp"
 mutated = False
 
 
@@ -61,3 +63,19 @@ actr.reload()
 print("RELOADED", actr.mp_models())
 for model in actr.mp_models():
     report("RELOAD", model)
+
+actr.load_act_r_model(str(EXTRA_MODEL))
+print("EXTRA", actr.mp_models())
+for model in actr.mp_models():
+    report("EXTRA", model)
+
+actr.set_current_model("MP-A")
+actr.load_act_r_code(str(DELETE_CODE))
+print("DELETED", actr.mp_models())
+for model in actr.mp_models():
+    report("DELETED", model)
+
+actr.load_act_r_model(str(EXTRA_MODEL))
+print("RELOADED-SINGLE", actr.mp_models())
+for model in actr.mp_models():
+    report("RELOADED-SINGLE", model)
