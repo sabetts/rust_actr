@@ -1544,6 +1544,26 @@ fn model_known_slots(model: &Model) -> std::collections::HashSet<String> {
         .iter()
         .map(|s| s.to_string())
         .collect();
+    // `extended-motor-actions` adds the per-hand stages and finger slots to
+    // the manual-left/manual-right buffers (`motor-extension.lisp:1477`).
+    if model
+        .required_extras
+        .iter()
+        .any(|e| e.eq_ignore_ascii_case("extended-motor-actions"))
+    {
+        for s in [
+            "EXECUTION",
+            "PROCESSOR",
+            "LAST-COMMAND",
+            "INDEX",
+            "MIDDLE",
+            "RING",
+            "PINKIE",
+            "THUMB",
+        ] {
+            set.insert(s.to_string());
+        }
+    }
     for ct in &model.chunk_types {
         for s in &ct.slots {
             set.insert(s.to_uppercase());
@@ -2717,6 +2737,7 @@ fn p_fct_body(e: Option<&Sexp>) -> Option<&Vec<Sexp>> {
 fn parse_model(
     form: &Sexp,
     defs: &std::collections::HashMap<String, Sexp>,
+    required_extras: &[String],
 ) -> Result<Model, LoadError> {
     let body = match form {
         Sexp::List(items) => match items.as_slice() {
@@ -2740,7 +2761,7 @@ fn parse_model(
         set_all_base_levels: None,
         sdp_creation_time: None,
         sdp_references: None,
-        required_extras: Vec::new(),
+        required_extras: required_extras.to_vec(),
         initial_goal: None,
         goal_focuses: Vec::new(),
         productions: Vec::new(),
@@ -3460,6 +3481,21 @@ pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
 /// twin of [`load_models`], for embedders (the wasm build) that hold the model
 /// text rather than a path. `(clear-all)` is acknowledged and skipped; anything
 /// else top-level errors.
+fn collect_required_extras(form: &Sexp, out: &mut Vec<String>) {
+    let Sexp::List(items) = form else {
+        return;
+    };
+    if items.first().and_then(|x| x.as_sym()) == Some("REQUIRE-EXTRA") {
+        if let Some(Sexp::Str(n)) = items.get(1) {
+            out.push(n.clone());
+        }
+        return;
+    }
+    for item in items {
+        collect_required_extras(item, out);
+    }
+}
+
 pub fn load_models_from_str(src: &str) -> Result<Vec<Model>, LoadError> {
     let mut models = Vec::new();
     let mut required_extras: Vec<String> = Vec::new();
@@ -3470,13 +3506,18 @@ pub fn load_models_from_str(src: &str) -> Result<Vec<Model>, LoadError> {
                 Some(Sexp::Sym(h)) if h == "CLEAR-ALL" => {}
                 // `(require-extra "name")` loads an extra Lisp module; record
                 // it so the engine can tell which behaviors are expected.
-                Some(Sexp::Sym(h)) if h == "REQUIRE-EXTRA" => {
-                    if let Some(Sexp::Str(n)) = items.get(1) {
-                        required_extras.push(n.clone());
-                    }
+                // Task files wrap it in `suppress-warnings`, `let` output
+                // redirection, or `progn` to hide Lisp compiler chatter.
+                Some(Sexp::Sym(h))
+                    if matches!(
+                        h.as_str(),
+                        "REQUIRE-EXTRA" | "SUPPRESS-WARNINGS" | "LET" | "PROGN"
+                    ) =>
+                {
+                    collect_required_extras(&form, &mut required_extras);
                 }
                 Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => {
-                    models.push(parse_model(&form, &defs)?)
+                    models.push(parse_model(&form, &defs, &required_extras)?)
                 }
                 // `(written-for-act-r-version "7.15" "...")`: a version
                 // annotation with no runtime effect.
@@ -3758,6 +3799,44 @@ mod tests {
                 Sexp::Sym("NL".into()),
                 Sexp::Sym("MH".into()),
             ]))
+        );
+    }
+
+    #[test]
+    fn required_extra_wrapped_in_let_enables_extended_motor_slots() {
+        let src = r#"
+(let ((*standard-output* (make-broadcast-stream))
+      (*error-output* (make-broadcast-stream)))
+  (require-extra "extended-motor-actions"))
+
+(define-model probe
+  (chunk-type goal state)
+  (add-dm (start isa goal state 0))
+  (p type-right
+    =goal>
+      isa goal
+      state 0
+    ?manual-right>
+      ring free
+    ==>
+    +manual>
+      isa type-key
+      key "l"
+    =goal>
+      state 1))
+"#;
+        let models = load_models_from_str(src).unwrap();
+        assert_eq!(
+            models[0].required_extras,
+            vec!["extended-motor-actions".to_string()]
+        );
+        assert!(
+            !models[0]
+                .reset_warnings
+                .iter()
+                .any(|w| w.contains("previously undefined slot")),
+            "{:?}",
+            models[0].reset_warnings
         );
     }
 
