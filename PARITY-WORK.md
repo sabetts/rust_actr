@@ -21,11 +21,10 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `7967f6c`. Priority 0, Priority 1, and all
-three Priority 2 probes are implemented; final full-suite and all-case
-differential verification is pending.
-Final Priority 1 verification: `cargo fmt --check` clean, `cargo test`
-`560 passed, 0 failed, 8 ignored`, and all 13 differential cases pass with
+Rust changes are committed through `fbfb58c`. Priority 0, Priority 1, and all
+three Priority 2 probes are complete. Final verification: `cargo fmt --check`
+clean; `cargo test` passed (`113` library/unit tests plus `560` model cases,
+`0` failed, `8` ignored model cases); all 16 differential cases pass with
 `--isolate`.
 
 Full Rust test suite:
@@ -36,7 +35,8 @@ cargo fmt --check
 cargo test
 ```
 
-Last result: `560 passed, 0 failed, 8 ignored`.
+Last result: `113` library/unit tests plus `560` model cases passed, `0`
+failed, `8` ignored model cases.
 
 Differential harness (requires SBCL, Python 3, and a built Rust binary):
 
@@ -72,6 +72,7 @@ DIFF-OK probe-vision-mutation
 
 ## Commits relevant to this work
 
+- `fbfb58c style: format multi-model trace test`
 - `7967f6c tests: add multi-model parameter differential probe`
 - `4682da8 engine: match multi-model trace, seed, and reload semantics`
 - `769e983 tests: add motor overlap differential probe`
@@ -441,7 +442,7 @@ prints the shortest single-float form when the value is exactly an f32, and
 These are more expensive. Start them only after the Priority 1 queue is green
 or after an explicit reassessment.
 
-### Priority 2 implementation plan (active)
+### Priority 2 implementation plan (complete)
 
 Priority 1 is green as of `d8da1a3`; begin Priority 2 in the document order:
 vision mutation, motor overlap, then multi-model parameters.
@@ -603,6 +604,10 @@ Residual note: with `MP-B` at `:v nil`, SBCL's `run` reports 33 processed
 events and Rust reports 37, although both produce the same trace, parameter
 state, and clock. The probe does not print the `run` event count; this count
 semantics remains uninvestigated.
+
+**Priority 2 complete.** Final run: `cargo fmt --check` clean, `cargo test`
+green (`113` library/unit tests plus `560` model cases, `8` ignored model
+cases), and all 16 differential cases `DIFF-OK` under `--isolate`.
 
 ## Probe workflow
 
