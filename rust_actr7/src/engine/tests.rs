@@ -913,3 +913,50 @@ fn indirect_request_sees_same_fire_imaginal_mod() {
         "visible ModBuffer event must remain queued"
     );
 }
+
+#[test]
+fn visual_location_request_matches_device_feature_slots() {
+    let f = Feature {
+        name: "VISUAL-LOCATION0".into(),
+        kind: "TEXT".into(),
+        value: "beta".into(),
+        x: 75,
+        y: 36,
+        width: 28,
+        height: 10,
+        extra: vec![("TEXT".into(), sym("T"))],
+        spec: vec![
+            ("COLOR".into(), sym("BLACK")),
+            ("VALUE".into(), Value::Str("beta".into())),
+            ("SCREEN-X".into(), Value::Int(75)),
+            ("SCREEN-Y".into(), Value::Int(36)),
+            ("WIDTH".into(), Value::Int(28)),
+            ("HEIGHT".into(), Value::Int(10)),
+            ("KIND".into(), sym("TEXT")),
+            ("TEXT".into(), sym("T")),
+        ],
+        spec_pre: Vec::new(),
+        tstamp_ms: 0,
+        new_p: true,
+        finst_ms: None,
+    };
+    let matches = |want: Vec<(&str, Value)>| {
+        super::perception::loc_matches(
+            &f,
+            &want
+                .into_iter()
+                .map(|(s, v)| (s.to_string(), v))
+                .collect::<Vec<_>>(),
+            0,
+            500,
+        )
+        .unwrap()
+    };
+
+    assert!(matches(vec![("COLOR", sym("black"))]));
+    assert!(matches(vec![("VALUE", Value::Str("BETA".into()))]));
+    assert!(matches(vec![("WIDTH", Value::Int(28))]));
+    assert!(matches(vec![("TEXT", sym("T"))]));
+    assert!(!matches(vec![("COLOR", sym("RED"))]));
+    assert!(!matches(vec![("WIDTH", Value::Int(27))]));
+}

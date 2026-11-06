@@ -1552,7 +1552,7 @@ impl Engine {
     /// selected coordinate/distance, or to the first/last angular candidate
     /// around the module's center point.
     fn apply_nearest_filter(
-        &self,
+        &mut self,
         cands: &mut Vec<Feature>,
         nearest: &Value,
         center: Option<&Value>,
@@ -1561,6 +1561,20 @@ impl Engine {
             Value::Sym(s) | Value::Str(s) => s.to_uppercase(),
             _ => return,
         };
+        if self.last_attention.is_none() {
+            let msg = match name.as_str() {
+                "CURRENT" | "CURRENT-X" | "CURRENT-Y" | "CURRENT-DISTANCE" => {
+                    "No location has yet been attended so current is assumed to be at 0,0,1080."
+                }
+                "CLOCKWISE" | "COUNTERCLOCKWISE" => {
+                    "No location has yet been attended so current is assumed to be at 0,0."
+                }
+                _ => "",
+            };
+            if !msg.is_empty() {
+                self.emit_warning(msg);
+            }
+        }
         let current = self
             .last_attention
             .as_ref()
@@ -1929,6 +1943,38 @@ fn feature_num(f: &Feature, slot: &str) -> Option<f64> {
     }
 }
 
+/// A visual feature's value for a slot request. The base fields are authoritative
+/// for geometry/object slots; everything else comes from the feature's
+/// construction spec.
+fn feature_slot(f: &Feature, slot: &str) -> Option<Value> {
+    match slot {
+        "SCREEN-X" => Some(Value::Int(f.x)),
+        "SCREEN-Y" => Some(Value::Int(f.y)),
+        "WIDTH" => Some(Value::Int(f.width)),
+        "HEIGHT" => Some(Value::Int(f.height)),
+        "SIZE" => Some(Value::Num(f.size())),
+        "VALUE" => Some(Value::Str(f.value.clone())),
+        "KIND" => Some(Value::Sym(f.kind.clone())),
+        _ => f
+            .filled_slots()
+            .into_iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(slot))
+            .map(|(_, value)| value),
+    }
+}
+
+/// ACT-R compares visual feature strings and symbols case-insensitively
+/// (`bst` asks for `value "b"` while the visicon holds `"B"`).
+fn feature_value_matches(got: &Value, want: &Value) -> bool {
+    match (got, want) {
+        (Value::Str(a), Value::Str(b))
+        | (Value::Str(a), Value::Sym(b))
+        | (Value::Sym(a), Value::Str(b))
+        | (Value::Sym(a), Value::Sym(b)) => a.eq_ignore_ascii_case(b),
+        _ => got == want,
+    }
+}
+
 /// Visual-location request matching over features. Unconstrained
 /// requests match everything; unknown slots error.
 pub(super) fn loc_matches(
@@ -1992,6 +2038,22 @@ pub(super) fn loc_matches(
             }
             ("SCREEN-Y", Value::Num(y)) => {
                 if (*y as i64) != feat.y {
+                    return Ok(false);
+                }
+            }
+            // Device-feature slots (`color`, `width`, `text`, …) are ordinary
+            // visual-location chunk slots; match them from the feature's
+            // construction spec. A slot the feature does not carry cannot
+            // match (`fast-chunk-slot-value-fct` returns nil).
+            (
+                "COLOR" | "WIDTH" | "HEIGHT" | "SIZE" | "DISTANCE" | "TEXT" | "LINE" | "OVAL"
+                | "IMAGE" | "END1-X" | "END1-Y" | "END2-X" | "END2-Y",
+                _,
+            ) => {
+                let Some(got) = feature_slot(feat, s) else {
+                    return Ok(false);
+                };
+                if !feature_value_matches(&got, v) {
                     return Ok(false);
                 }
             }
