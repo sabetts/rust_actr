@@ -1112,7 +1112,7 @@ impl Session {
     }
 
     /// Drive all loaded models on the shared meta-process clock.
-    pub fn run_multi_secs(&mut self, secs: f64, trace: bool, width: usize) -> Result<(), String> {
+    pub fn run_multi_secs(&mut self, secs: f64, _trace: bool, width: usize) -> Result<(), String> {
         if !self.is_multi() {
             return self
                 .engine
@@ -1120,13 +1120,6 @@ impl Session {
                 .ok_or_else(|| "no model loaded".to_string())?
                 .run_secs(secs)
                 .map_err(|e| e.to_string());
-        }
-        for eng in self
-            .engine
-            .iter_mut()
-            .chain(self.inactive.iter_mut().map(|m| &mut m.engine))
-        {
-            eng.set_trace(trace);
         }
         let mut trace_lines = std::mem::take(&mut self.global_trace);
         let mut kinds = std::mem::take(&mut self.global_trace_kinds);
@@ -1578,8 +1571,20 @@ impl Session {
                     .first()
                     .and_then(|a| a.as_str())
                     .ok_or("missing parameter")?;
-                let v = self.engine.as_ref().and_then(|e| e.get_param(key));
-                Ok(vec![v.map(Json::Str).unwrap_or(Json::Null)])
+                let upper = key.to_uppercase();
+                let v = self.engine.as_ref().and_then(|e| match upper.as_str() {
+                    ":SEED" => Some(match e.seed() {
+                        Some((s, c)) => Json::Arr(vec![Json::Int(s as i64), Json::Int(c as i64)]),
+                        None => Json::Null,
+                    }),
+                    ":V" => Some(if e.get_param(":V").as_deref() == Some("T") {
+                        Json::Bool(true)
+                    } else {
+                        Json::Null
+                    }),
+                    _ => e.get_param(key).map(Json::Str),
+                });
+                Ok(vec![v.unwrap_or(Json::Null)])
             }
             "set-system-parameter-value" => {
                 let key = args
@@ -1631,20 +1636,29 @@ impl Session {
                     .last_model_file
                     .clone()
                     .ok_or_else(|| "No model file recorded to reload.".to_string())?;
-                let replace: Vec<String> = self
-                    .def_sources
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, src)| {
-                        (src.as_deref() == Some(path.as_str()))
-                            .then(|| self.defs.get(i).map(|d| d.name.clone()))
-                            .flatten()
-                    })
-                    .collect();
-                for name in &replace {
-                    self.queue_signal("deleting-model", vec![Json::Str(name.clone())]);
-                    self.close_model_window(name, remote);
-                    self.remove_model(name);
+                let clears_all = std::fs::read_to_string(&path)
+                    .map(|src| model::source_clears_all(&src))
+                    .unwrap_or(false);
+                if clears_all {
+                    // The file begins with `(clear-all)`. ACT-R's `load`
+                    // executes it, which also resets the meta-process clock.
+                    self.evaluate("clear-all", None, &[], remote)?;
+                } else {
+                    let replace: Vec<String> = self
+                        .def_sources
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, src)| {
+                            (src.as_deref() == Some(path.as_str()))
+                                .then(|| self.defs.get(i).map(|d| d.name.clone()))
+                                .flatten()
+                        })
+                        .collect();
+                    for name in &replace {
+                        self.queue_signal("deleting-model", vec![Json::Str(name.clone())]);
+                        self.close_model_window(name, remote);
+                        self.remove_model(name);
+                    }
                 }
                 let created = self.load_file(&path, remote, false)?;
                 for name in created {
@@ -7472,6 +7486,60 @@ mod tests {
             s.evaluate("current-model", None, &[], &mut r).unwrap(),
             vec![Json::Str("ADDITION".into())]
         );
+    }
+
+    #[test]
+    fn multi_model_honors_per_model_trace_and_parameter_types() {
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.load_source(
+            r#"
+(define-model trace-a
+  (sgp :v t :seed (101 0))
+  (chunk-type goal state)
+  (add-dm (start isa goal state 0))
+  (goal-focus start))
+(define-model trace-b
+  (sgp :v nil :seed (202 0))
+  (chunk-type goal state)
+  (add-dm (start isa goal state 0))
+  (goal-focus start))
+"#,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Float(0.1)], &mut r)
+            .unwrap();
+        let trace = s.take_trace();
+        assert!(
+            trace.iter().any(|line| line.contains("TRACE-A")),
+            "trace-on model missing: {trace:?}"
+        );
+        assert!(
+            !trace.iter().any(|line| line.contains("TRACE-B")),
+            "trace-off model leaked into the trace: {trace:?}"
+        );
+
+        let seed = s
+            .evaluate(
+                "get-parameter-value",
+                Some("TRACE-A"),
+                &[Json::Str(":seed".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(
+            seed,
+            vec![Json::Arr(vec![Json::Int(101), Json::Int(0)])]
+        );
+        let v = s
+            .evaluate(
+                "get-parameter-value",
+                Some("TRACE-B"),
+                &[Json::Str(":v".into())],
+                &mut r,
+            )
+            .unwrap();
+        assert_eq!(v, vec![Json::Null]);
     }
 
     #[test]

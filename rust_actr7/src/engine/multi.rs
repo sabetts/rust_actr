@@ -32,7 +32,6 @@ impl MultiEngine {
         for model in models {
             let name = model.name.clone();
             let mut engine = Engine::new_with_width(model, seed, 0.0, device.clone(), width)?;
-            engine.set_trace(true);
             engine.set_module_width(width);
             engine.use_shared_sequence(shared_seq.clone());
             for line in engine.out_since(0) {

@@ -2528,6 +2528,10 @@ impl Engine {
         }
     }
 
+    pub fn seed(&self) -> Option<(u64, u64)> {
+        Some(self.rng.borrow().state())
+    }
+
     pub fn get_param(&self, key: &str) -> Option<String> {
         let b = |x: bool| if x { "T" } else { "NIL" }.to_string();
         Some(match key.to_uppercase().as_str() {
@@ -2562,8 +2566,7 @@ impl Engine {
             ":SJI" => "T".to_string(),
             ":TRACE-DETAIL" => format!("{:?}", self.cfg.detail).to_uppercase(),
             ":SEED" => self
-                .cfg
-                .seed
+                .seed()
                 .map(|(a, b)| format!("({a} {b})"))
                 .unwrap_or_else(|| "NIL".into()),
             _ => return None,

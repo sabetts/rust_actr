@@ -3496,6 +3496,22 @@ fn collect_required_extras(form: &Sexp, out: &mut Vec<String>) {
     }
 }
 
+/// Whether a model/task source has a top-level `(clear-all)` form. ACT-R
+/// executes it while loading, so a second load replaces the existing models.
+pub fn source_clears_all(src: &str) -> bool {
+    parse_all(src)
+        .map(|forms| {
+            forms.iter().any(|form| {
+                matches!(
+                    form,
+                    Sexp::List(items)
+                        if items.first().and_then(|x| x.as_sym()) == Some("CLEAR-ALL")
+                )
+            })
+        })
+        .unwrap_or(false)
+}
+
 pub fn load_models_from_str(src: &str) -> Result<Vec<Model>, LoadError> {
     let mut models = Vec::new();
     let mut required_extras: Vec<String> = Vec::new();
@@ -3800,6 +3816,13 @@ mod tests {
                 Sexp::Sym("MH".into()),
             ]))
         );
+    }
+
+    #[test]
+    fn source_clear_all_is_detected_at_top_level_only() {
+        assert!(source_clears_all("(clear-all)\n(define-model x)"));
+        assert!(!source_clears_all("(define-model x (clear-all))"));
+        assert!(!source_clears_all(";; (clear-all)\n(define-model x)"));
     }
 
     #[test]
