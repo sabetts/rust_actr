@@ -613,9 +613,11 @@ loads `MP-C` again while `MP-A`/`MP-B` remain untouched. Rust now recognizes
 top-level `(delete-model name)` in code files. Regression:
 `delete_model_forms_are_read_from_code_files`.
 
-Coverage gap still open:
-
-- The probe does not perform a `reset` in the middle of a multi-model run.
+Mid-run reset is now covered between client `run` calls. The probe records
+time, order, parameters, and seeds before/after `reset`, then runs again. Rust
+`reset` now appends only each engine's newly emitted reset trace instead of
+rebuilding the global trace from `out_since(0)`, which had replayed already
+delivered lines.
 
 Residual note: with `MP-B` at `:v nil`, SBCL's `run` reports 33 processed
 events and Rust reports 37, although both produce the same trace, parameter
@@ -630,8 +632,6 @@ explicitly scoped out:
 1. Multi-model: the `run` event count differs under per-model `:v nil`
    (`33` SBCL vs `37` Rust) even though trace, parameter state, and clock
    match. The probe currently omits the event count from its output.
-2. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
-   order, parameters, seeds, and the global clock.
 
 Execution decisions:
 
