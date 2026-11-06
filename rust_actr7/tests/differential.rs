@@ -24,6 +24,7 @@ fn differential_cases() {
         .arg(&script)
         .arg("--server")
         .arg("both")
+        .arg("--isolate")
         .status()
         .expect("failed to spawn differential harness");
     assert!(status.success(), "differential cases failed");
