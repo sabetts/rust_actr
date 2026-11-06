@@ -116,4 +116,31 @@
     ==>
     !output! (NEAREST-AFTER-CLEAR =visual-location =x =y =v)
     =goal>
+      state 100)
+
+  (p find-nearest-same-time
+    =goal>
+      isa probe
+      state 9
+    ?visual-location>
+      state free
+    ==>
+    +visual-location>
+      isa visual-location
+      :nearest current
+    =goal>
+      state 10)
+
+  (p report-nearest-same-time
+    =goal>
+      isa probe
+      state 10
+    =visual-location>
+      isa visual-location
+      screen-x =x
+      screen-y =y
+      value =v
+    ==>
+    !output! (NEAREST-SAME-TIME =visual-location =x =y =v)
+    =goal>
       state 100))
