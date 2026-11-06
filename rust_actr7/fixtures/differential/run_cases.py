@@ -37,6 +37,11 @@ def main():
     parser.add_argument("--server", choices=("sbcl", "rust", "both"), default="both")
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--case", action="append", default=[])
+    parser.add_argument(
+        "--isolate",
+        action="store_true",
+        help="start a fresh server for each case instead of reusing one per backend",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -50,15 +55,26 @@ def main():
     failed = False
 
     for name in servers:
-        try:
-            with Server(name, args.timeout) as srv:
-                for case in cases:
-                    results[name][case.name] = srv.run(
-                        case / "client.py", args.timeout
-                    )
-        except Exception as exc:
-            print(f"DIFF-FAIL {name}: {exc}")
-            failed = True
+        if args.isolate:
+            for case in cases:
+                try:
+                    with Server(name, args.timeout) as srv:
+                        results[name][case.name] = srv.run(
+                            case / "client.py", args.timeout
+                        )
+                except Exception as exc:
+                    print(f"DIFF-FAIL {name}/{case.name}: {exc}")
+                    failed = True
+        else:
+            try:
+                with Server(name, args.timeout) as srv:
+                    for case in cases:
+                        results[name][case.name] = srv.run(
+                            case / "client.py", args.timeout
+                        )
+            except Exception as exc:
+                print(f"DIFF-FAIL {name}: {exc}")
+                failed = True
 
     if "sbcl" in results and "rust" in results:
         for case in cases:
