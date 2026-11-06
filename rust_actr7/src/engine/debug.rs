@@ -1742,6 +1742,8 @@ impl Engine {
                 }
             }
             ":ANS" => self.cfg.ans = num(val).filter(|x| *x > 0.0),
+            ":DUAL-PROCESSOR-STAGES" => self.cfg.zz_two_proc = truthy,
+            ":DUAL-EXECUTION-STAGES" => self.cfg.zz_two_exec = truthy,
             ":MP" => self.cfg.mp = num(val),
             ":MD" => {
                 if let Some(x) = num(val) {
@@ -2551,6 +2553,8 @@ impl Engine {
             ":USE-SYLLABLE-TABLE" => b(self.cfg.use_syllable_table),
             ":SPLIT-VOCAL-STRINGS" => b(self.cfg.split_vocal_strings),
             ":ANS" => self.cfg.ans.map(|x| x.to_string()).unwrap_or("NIL".into()),
+            ":DUAL-PROCESSOR-STAGES" => b(self.cfg.zz_two_proc),
+            ":DUAL-EXECUTION-STAGES" => b(self.cfg.zz_two_exec),
             ":BLL" => self.cfg.bll.map(|x| x.to_string()).unwrap_or("NIL".into()),
             ":EBLSE" => b(self.cfg.eblse),
             ":SE-INTERCEPT" => self.cfg.se_intercept.to_string(),

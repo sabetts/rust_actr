@@ -1674,8 +1674,8 @@ impl Config {
                 .required_extras
                 .iter()
                 .any(|e| e.eq_ignore_ascii_case("extended-motor-actions")),
-            zz_two_proc: false,
-            zz_two_exec: false,
+            zz_two_proc: sgp_bool(&m.params, ":DUAL-PROCESSOR-STAGES"),
+            zz_two_exec: sgp_bool(&m.params, ":DUAL-EXECUTION-STAGES"),
             zz_query: "STATE".to_string(),
             zz_kct_ms: 10,
             zz_krt_ms: 40,

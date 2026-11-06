@@ -915,6 +915,25 @@ fn indirect_request_sees_same_fire_imaginal_mod() {
 }
 
 #[test]
+fn extended_motor_dual_stage_params_survive_reset() {
+    let src = r#"
+(define-model probe
+  (sgp :dual-processor-stages t :dual-execution-stages t))
+"#;
+    let model = crate::model::load_models_from_str(src)
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut e = Engine::new(model, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    assert_eq!(e.get_param(":DUAL-PROCESSOR-STAGES").as_deref(), Some("T"));
+    assert_eq!(e.get_param(":DUAL-EXECUTION-STAGES").as_deref(), Some("T"));
+    e.reset().unwrap();
+    assert_eq!(e.get_param(":DUAL-PROCESSOR-STAGES").as_deref(), Some("T"));
+    assert_eq!(e.get_param(":DUAL-EXECUTION-STAGES").as_deref(), Some("T"));
+}
+
+#[test]
 fn visual_location_request_matches_device_feature_slots() {
     let f = Feature {
         name: "VISUAL-LOCATION0".into(),
