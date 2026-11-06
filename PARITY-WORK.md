@@ -21,12 +21,11 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `fbfb58c`. Priority 0 and Priority 1 are
-complete. All three Priority 2 probes are implemented and currently `DIFF-OK`,
-but Priority 2 is **reopened** for the residual gaps recorded below. Current
-verified state: `cargo fmt --check` clean; `cargo test` passed (`113`
-library/unit tests plus `560` model cases, `0` failed, `8` ignored model
-cases); all 16 differential cases pass with `--isolate`.
+Rust changes are committed through `d56c398`. Priority 0, Priority 1, and
+Priority 2 are complete. Final verified state: `cargo fmt --check` clean;
+`cargo test` passed (`116` library/unit tests plus `560` model cases, `0`
+failed, `8` ignored model cases); all 16 differential cases pass with
+`--isolate`.
 
 Full Rust test suite:
 
@@ -36,7 +35,7 @@ cargo fmt --check
 cargo test
 ```
 
-Last result: `113` library/unit tests plus `560` model cases passed, `0`
+Last result: `116` library/unit tests plus `560` model cases passed, `0`
 failed, `8` ignored model cases.
 
 Differential harness (requires SBCL, Python 3, and a built Rust binary):
@@ -73,6 +72,22 @@ DIFF-OK probe-vision-mutation
 
 ## Commits relevant to this work
 
+- `61ed027 docs: close multi-model event-count gap`
+- `1f119ac tests: assert exact multi-model run event counts`
+- `d56c398 engine: skip selection trace events when model trace is off`
+- `7f8874b docs: close multi-model reset gap`
+- `a0004a8 tests: cover multi-model reset between runs`
+- `75789a3 engine: avoid replaying multi-model trace on reset`
+- `6a42b10 docs: close single-model deletion gap`
+- `37a2482 tests: cover single-model deletion in multi-model probe`
+- `bd6ae80 engine: honor delete-model forms in code files`
+- `5dae495 docs: close motor per-hand query gap`
+- `6d26cce tests: gate motor overlap on per-hand stage queries`
+- `fa8dd62 engine: implement per-hand motor stage queries`
+- `b9b13f6 docs: close vision same-time mutation gap`
+- `d6812f4 tests: cover same-time vision window mutation`
+- `6945d9b engine: queue same-time window ops after a display`
+- `68b8954 docs: record priority 2 completion decisions`
 - `fbfb58c style: format multi-model trace test`
 - `7967f6c tests: add multi-model parameter differential probe`
 - `4682da8 engine: match multi-model trace, seed, and reload semantics`
@@ -443,7 +458,7 @@ prints the shortest single-float form when the value is exactly an f32, and
 These are more expensive. Start them only after the Priority 1 queue is green
 or after an explicit reassessment.
 
-### Priority 2 implementation plan (reopened)
+### Priority 2 implementation plan (complete)
 
 Priority 1 is green as of `d8da1a3`; begin Priority 2 in the document order:
 vision mutation, motor overlap, then multi-model parameters.
@@ -626,7 +641,7 @@ when `:v` is on (`procedural.lisp:2582`); Rust scheduled them unconditionally,
 so an untraced model added events to the count. The events are now gated on
 `trace_on`. The probe matches SBCL exactly.
 
-No Priority 2 gaps remain after the final verification pass below.
+No Priority 2 gaps remain. Final verification is recorded in Current status.
 
 Execution decisions:
 
@@ -638,11 +653,10 @@ Execution decisions:
 - Event-count acceptance is exact parity of the `run` return tuple, including
   the processed-event count. The count will not be normalized or hidden.
 
-**Priority 2 status: reopened.** The probes and fixes above are valid, but the
-gaps listed here remain in scope. Current run is still green:
-`cargo fmt --check` clean, `cargo test` green (`113` library/unit tests plus
-`560` model cases, `8` ignored model cases), and all 16 differential cases
-`DIFF-OK` under `--isolate`.
+**Priority 2 status: complete.** All reopened gaps are closed and the final
+verification is green: `cargo fmt --check` clean, `cargo test` green (`116`
+library/unit tests plus `560` model cases, `8` ignored model cases), and all
+16 differential cases `DIFF-OK` under `--isolate`.
 
 ## Probe workflow
 
