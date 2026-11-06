@@ -21,9 +21,9 @@ changes.
 
 ## Current status
 
-Rust changes are committed through `2308369`. Priority 0 and all Priority 1
-probes are complete. Priority 2 is in progress: `probe-vision-mutation` passes;
-the motor and multi-model probes remain.
+Rust changes are committed through `769e983`. Priority 0 and all Priority 1
+probes are complete. Priority 2 is in progress: `probe-vision-mutation` and
+`probe-motor-overlap` pass; the multi-model probe remains.
 Final Priority 1 verification: `cargo fmt --check` clean, `cargo test`
 `560 passed, 0 failed, 8 ignored`, and all 13 differential cases pass with
 `--isolate`.
@@ -65,11 +65,15 @@ DIFF-OK probe-imaginal-indirect
 DIFF-OK probe-retrieval-lifecycle
 DIFF-OK probe-run-control
 DIFF-OK probe-runtime-defs
+DIFF-OK probe-motor-overlap
 DIFF-OK probe-vision-mutation
 ```
 
 ## Commits relevant to this work
 
+- `769e983 tests: add motor overlap differential probe`
+- `7f9f48f engine: apply extended motor dual stage sgp`
+- `e8697e4 engine: load wrapped extras and extended motor slots`
 - `2308369 tests: add vision mutation differential probe`
 - `525ce89 engine: match device slots in visual-location search`
 - `b9616f1 docs: plan priority 2 parity probes`
@@ -121,6 +125,7 @@ rust_actr7/fixtures/differential/
     probe-audio-trace/client.py
     probe-compile-utility/client.py
     probe-imaginal-indirect/client.py
+    probe-motor-overlap/client.py
     probe-retrieval-lifecycle/client.py
     probe-run-control/client.py
     probe-runtime-defs/client.py
@@ -131,6 +136,7 @@ rust_actr7/fixtures/differential/
     probe-audio-trace.lisp
     probe-compile-utility.lisp
     probe-imaginal-indirect.lisp
+    probe-motor-overlap.lisp
     probe-retrieval-lifecycle.lisp
     probe-run-control.lisp
     probe-runtime-defs.lisp
@@ -525,6 +531,31 @@ keypress that releases while a hand movement is pending.
 - Use `install_device(["keyboard", "mouse"])` or the relevant virtual device.
 - Compare high-detail MOTOR timing and buffer state.
 - Acceptance: `DIFF-OK probe-motor-overlap`.
+
+**Status: complete (`769e983`, fixes `e8697e4`, `7f9f48f`).** The probe uses
+`install-device '("motor" "keyboard")`, holds a left-hand key, types a
+right-hand key while the left hand is executing, then releases the left key
+while the right hand is executing. Findings fixed:
+
+- Model files failed to load when `require-extra` was wrapped in
+  `suppress-warnings`/`let` output redirection; top-level `require-extra`
+  detection now scans those wrappers. The wrapped extra also suppresses SBCL
+  compiler/redefinition chatter so the differential output stays comparable.
+- Extended manual query slots (`execution`, `processor`, `last-command`, and
+  the five fingers) were reported as previously undefined. They are now known
+  when `extended-motor-actions` is required, and `required_extras` is attached
+  before production validation.
+- `:dual-processor-stages` / `:dual-execution-stages` were only applied by the
+  scripted `ZzDriver`. They now load from the model body, work through
+  `sgp`/`get-parameter-value`, and survive reset.
+
+Regression: `required_extra_wrapped_in_let_enables_extended_motor_slots`,
+`extended_motor_dual_stage_params_survive_reset`; existing
+`zz_extended_motor_actions` and manual-keyboard cases remain green.
+
+Residual note: the probe uses explicit `?manual> preparation free` queries and
+client-timed goal states to create the overlap; per-hand stage queries are
+covered by the existing `zz` driver, not re-probed here.
 
 ### 3. `probe-multi-model-params`
 
