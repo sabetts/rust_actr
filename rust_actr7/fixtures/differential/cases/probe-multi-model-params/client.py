@@ -59,6 +59,16 @@ actr.remove_command("probe-multi-mutate")
 for model in actr.mp_models():
     report("AFTER", model)
 
+print("RESET-BEFORE", actr.mp_time(), actr.mp_models())
+actr.reset()
+print("RESET-AFTER", actr.mp_time(), actr.mp_models())
+for model in actr.mp_models():
+    report("RESET", model)
+actr.run(0.5)
+print("RESET-RUN", actr.mp_time(), actr.mp_models())
+for model in actr.mp_models():
+    report("POST-RESET", model)
+
 actr.reload()
 print("RELOADED", actr.mp_models())
 for model in actr.mp_models():
