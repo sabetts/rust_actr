@@ -524,10 +524,11 @@ Regression: `visual_location_request_matches_device_feature_slots`; existing
 `nearest-vis-loc`, `removed-and-restored-visual-item`, and vision tutorial
 cases remain green.
 
-Residual note: the probe advances model time with `run_until_time` between
-`clear-exp-window` and re-adding gamma. A same-time clear-then-add immediately
-after a display can still leave Rust without a queued `proc-display`; this
-was not isolated or fixed in this pass.
+Same-time clear-then-add is now covered: the probe re-adds `delta` immediately
+after clearing, and after a one-event display run re-adds `zeta` at the same
+clock. `proc_display` now clears `display_queued_ms` at the end of a wave while
+keeping any wave still queued for the current time. Regression:
+`same_time_window_ops_after_display_queue_a_new_wave`.
 
 ### 2. `probe-motor-overlap`
 
@@ -617,17 +618,14 @@ semantics remains uninvestigated.
 Priority 2 remains open until these are reproduced and either fixed or
 explicitly scoped out:
 
-1. Vision: same-time `clear-exp-window` then `add-text-to-exp-window` can leave
-   Rust without a queued `proc-display`. The current probe advances time with
-   `run_until_time` and therefore does not assert the same-time ordering.
-2. Multi-model: the `run` event count differs under per-model `:v nil`
+1. Multi-model: the `run` event count differs under per-model `:v nil`
    (`33` SBCL vs `37` Rust) even though trace, parameter state, and clock
    match. The probe currently omits the event count from its output.
-3. Multi-model: add a single-model delete/reload scenario without clearing the
+2. Multi-model: add a single-model delete/reload scenario without clearing the
    untouched sibling model.
-4. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
+3. Multi-model: add a mid-run `reset` scenario and verify trace replay, model
    order, parameters, seeds, and the global clock.
-5. Motor: replace or supplement the client-timed overlap with the real
+4. Motor: replace or supplement the client-timed overlap with the real
    per-hand stage-query path. The existing `zz` driver covers parts of this,
    but the differential probe does not.
 
