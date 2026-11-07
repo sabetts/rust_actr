@@ -15,6 +15,8 @@ use super::*;
 mod support;
 #[path = "app_gui_tests/controls.rs"]
 mod controls;
+#[path = "app_gui_tests/viewers.rs"]
+mod viewers;
 
 use support::*;
 
