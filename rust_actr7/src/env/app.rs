@@ -819,7 +819,9 @@ impl App {
                 tool.refresh_pending = false;
             }
             let mut open = tool.open;
-            let mut win = egui::Window::new(format!("{}##{}", tool.title, tool.id)).open(&mut open);
+            let mut win = egui::Window::new(&tool.title)
+                .id(egui::Id::unique(("tool-window", tool.id)))
+                .open(&mut open);
             if let Some([x, y, w, h]) = self.settings.tool_geometry.get(&tool.title).copied() {
                 win = win.default_pos([x, y]).default_size([w, h]);
             } else {
@@ -1159,19 +1161,17 @@ impl App {
             });
         if !tool.graph_detail.is_empty() {
             let mut open = true;
-            egui::Window::new(format!(
-                "{}##graph-detail{}",
-                tool.graph_detail_title, tool.id
-            ))
-            .open(&mut open)
-            .default_width(420.0)
-            .show(ui.ctx(), |ui| {
-                egui::ScrollArea::both()
-                    .id_salt(("graph-detail", tool.id))
-                    .show(ui, |ui| {
-                        ui.monospace(&tool.graph_detail);
-                    });
-            });
+            egui::Window::new(&tool.graph_detail_title)
+                .id(egui::Id::unique(("graph-detail", tool.id)))
+                .open(&mut open)
+                .default_width(420.0)
+                .show(ui.ctx(), |ui| {
+                    egui::ScrollArea::both()
+                        .id_salt(("graph-detail", tool.id))
+                        .show(ui, |ui| {
+                            ui.monospace(&tool.graph_detail);
+                        });
+                });
             if !open {
                 tool.graph_detail.clear();
                 tool.graph_detail_title.clear();
@@ -2455,10 +2455,10 @@ impl App {
         });
         ui.separator();
         ui.horizontal(|ui| {
-            if ui.button("Load codeâ€¦").clicked() {
+            if ui.button("Load code...").clicked() {
                 self.load_dialog("load-act-r-code");
             }
-            if ui.button("Load modelâ€¦").clicked() {
+            if ui.button("Load model...").clicked() {
                 self.load_dialog("load-act-r-model");
             }
         });
@@ -2512,7 +2512,7 @@ impl App {
             self.backend.set_real_time(self.settings.real_time);
             settings::save(&self.settings);
         }
-        if ui.button("Optionsâ€¦").clicked() {
+        if ui.button("Options...").clicked() {
             self.show_options = true;
         }
         ui.separator();
@@ -3316,13 +3316,13 @@ impl App {
             let mut editor = self.editors.remove(i);
             let mut open = editor.open;
             let title = format!(
-                "{}{}##editor{}",
+                "{}{}",
                 editor.path.display(),
-                if editor.dirty { " *" } else { "" },
-                editor.id
+                if editor.dirty { " *" } else { "" }
             );
             let geo_key = format!("editor:{}", editor.path.display());
             let mut win = egui::Window::new(title)
+                .id(egui::Id::unique(("editor", editor.id)))
                 .open(&mut open)
                 .default_width(640.0)
                 .default_height(480.0);
@@ -3570,19 +3570,17 @@ impl App {
             });
         if !tool.grid_detail.is_empty() {
             let mut open = true;
-            egui::Window::new(format!(
-                "{}##grid-detail{}",
-                tool.grid_detail_title, tool.id
-            ))
-            .open(&mut open)
-            .default_width(420.0)
-            .show(ui.ctx(), |ui| {
-                egui::ScrollArea::both()
-                    .id_salt(("grid-detail", tool.id))
-                    .show(ui, |ui| {
-                        ui.monospace(&tool.grid_detail);
-                    });
-            });
+            egui::Window::new(&tool.grid_detail_title)
+                .id(egui::Id::unique(("grid-detail", tool.id)))
+                .open(&mut open)
+                .default_width(420.0)
+                .show(ui.ctx(), |ui| {
+                    egui::ScrollArea::both()
+                        .id_salt(("grid-detail", tool.id))
+                        .show(ui, |ui| {
+                            ui.monospace(&tool.grid_detail);
+                        });
+                });
             if !open {
                 tool.grid_detail.clear();
                 tool.grid_detail_title.clear();
