@@ -19,6 +19,8 @@ mod controls;
 mod viewers;
 #[path = "app_gui_tests/histories.rs"]
 mod histories;
+#[path = "app_gui_tests/visualizations.rs"]
+mod visualizations;
 
 use support::*;
 
