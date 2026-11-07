@@ -21,6 +21,8 @@ mod viewers;
 mod histories;
 #[path = "app_gui_tests/visualizations.rs"]
 mod visualizations;
+#[path = "app_gui_tests/windows.rs"]
+mod windows;
 
 use support::*;
 
