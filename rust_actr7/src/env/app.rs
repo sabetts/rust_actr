@@ -2505,6 +2505,35 @@ impl App {
             );
             ui.label("s");
         });
+        let running = self.running || self.backend.is_running();
+        ui.horizontal(|ui| {
+            if running {
+                ui.colored_label(egui::Color32::from_rgb(0, 128, 0), "Running");
+            } else {
+                ui.colored_label(egui::Color32::from_rgb(160, 0, 0), "Stopped");
+            }
+            if ui.add_enabled(!running, egui::Button::new("Run")).clicked() {
+                self.start_run(false);
+            }
+            if ui
+                .add_enabled(!running, egui::Button::new("Run full time"))
+                .clicked()
+            {
+                self.start_run(true);
+            }
+            if ui
+                .add_enabled(!running, egui::Button::new("Step"))
+                .clicked()
+            {
+                self.eval("step-once", Vec::new());
+                self.drain_events();
+                self.refresh_pending = true;
+            }
+            if ui.add_enabled(running, egui::Button::new("Stop")).clicked() {
+                self.backend.stop_run();
+                self.drain_events();
+            }
+        });
         if ui
             .checkbox(&mut self.settings.real_time, "real time")
             .changed()
@@ -2607,35 +2636,6 @@ impl App {
             }
             if ui.button("About").clicked() {
                 self.open_tool(ToolKind::About);
-            }
-        });
-        let running = self.running || self.backend.is_running();
-        ui.horizontal(|ui| {
-            if running {
-                ui.colored_label(egui::Color32::from_rgb(0, 128, 0), "Running");
-            } else {
-                ui.colored_label(egui::Color32::from_rgb(160, 0, 0), "Stopped");
-            }
-            if ui.add_enabled(!running, egui::Button::new("Run")).clicked() {
-                self.start_run(false);
-            }
-            if ui
-                .add_enabled(!running, egui::Button::new("Run full time"))
-                .clicked()
-            {
-                self.start_run(true);
-            }
-            if ui
-                .add_enabled(!running, egui::Button::new("Step"))
-                .clicked()
-            {
-                self.eval("step-once", Vec::new());
-                self.drain_events();
-                self.refresh_pending = true;
-            }
-            if ui.add_enabled(running, egui::Button::new("Stop")).clicked() {
-                self.backend.stop_run();
-                self.drain_events();
             }
         });
         ui.separator();
