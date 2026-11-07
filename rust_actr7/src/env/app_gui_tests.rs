@@ -23,6 +23,8 @@ mod histories;
 mod visualizations;
 #[path = "app_gui_tests/windows.rs"]
 mod windows;
+#[path = "app_gui_tests/editors.rs"]
+mod editors;
 
 use support::*;
 
