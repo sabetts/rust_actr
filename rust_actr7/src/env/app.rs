@@ -18,6 +18,10 @@ use super::history::{
 };
 use super::settings::{self, Settings};
 
+#[cfg(test)]
+#[path = "app_gui_tests.rs"]
+mod gui_tests;
+
 /// The central-area views.
 /// A floating tool window (the Rust equivalent of a Tcl dialog).
 #[derive(Clone, Copy, PartialEq, Eq)]
