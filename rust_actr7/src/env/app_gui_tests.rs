@@ -25,6 +25,8 @@ mod visualizations;
 mod windows;
 #[path = "app_gui_tests/editors.rs"]
 mod editors;
+#[path = "app_gui_tests/lisp_e2e.rs"]
+mod lisp_e2e;
 
 use support::*;
 
