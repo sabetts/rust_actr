@@ -11,6 +11,7 @@ use crate::engine::{ProductionGraph, ProductionGraphMode};
 use crate::json::Json;
 
 use super::backend::{result_text, BackendEvent, EnvBackend, TraceStream};
+use super::debug::env_debug;
 use super::export;
 use super::history::{
     self, BlendingEntry, BufferEntry, HistoryView, PerceptualEntry, RetrievalEntry,
@@ -580,11 +581,12 @@ impl App {
         // Register the client command the engine calls with window ops.
         let handler = "env-vv-handler";
         backend.register_window_handler(handler);
-        let _ = backend.evaluate(
+        let registered = backend.evaluate(
             "add-virtual-window-handler",
             None,
             vec![Json::Str(handler.to_string())],
         );
+        env_debug!("add-virtual-window-handler -> {registered:?}");
         backend.set_real_time(settings.real_time);
         // Record the trace from the start so the History tab has data.
         let _ = backend.evaluate(
@@ -1875,6 +1877,9 @@ impl App {
 
     /// Apply one display op from the handler to the window list.
     fn apply_window_op(&mut self, op: Vec<Json>) {
+        if super::debug::enabled() {
+            env_debug!("window op {}", Json::Arr(op.clone()).write());
+        }
         let s = |i: usize| op.get(i).and_then(|x| x.as_str()).unwrap_or("").to_string();
         let n = |i: usize| op.get(i).and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
         match op.first().and_then(|x| x.as_str()).unwrap_or("") {
@@ -2021,6 +2026,10 @@ impl App {
                 }
             }
             _ => {}
+        }
+        if super::debug::enabled() {
+            let titles: Vec<&str> = self.windows.iter().map(|w| w.title.as_str()).collect();
+            env_debug!("window state titles={titles:?}");
         }
     }
 
@@ -2217,6 +2226,7 @@ impl App {
                 });
         }
         if let Some((title, x, y)) = click {
+            env_debug!("click {title:?} at {x},{y}");
             self.eval(
                 "visible-virtual-window-mouse-click",
                 vec![Json::Str(title), Json::Float(x), Json::Float(y)],

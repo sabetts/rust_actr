@@ -20,6 +20,7 @@ use crate::rpc::{
 };
 
 use super::backend::{BackendEvent, ConnectionInfo, EnvBackend, TraceStream};
+use super::debug::env_debug;
 
 /// One command per trace stream, so the UI can tag lines by source.
 const TRACE_HANDLERS: [(&str, &str, TraceStream); 4] = [
@@ -38,6 +39,16 @@ const RUN_STOP: &str = "env-run-stop";
 /// Stepper callback handlers.
 const STEP_NEXT: &str = "env-next-event";
 const STEP_UPDATE: &str = "env-update-event";
+
+/// The Lisp dispatcher passes a command's argument list as one nested list:
+/// `params: ["handler", model, ["open", title, ...]]`. The Rust dispatcher
+/// sends the same op flat, so accept both shapes.
+fn window_op(args: &[Json]) -> Vec<Json> {
+    match args {
+        [Json::Arr(op)] => op.clone(),
+        _ => args.to_vec(),
+    }
+}
 
 type Pending = Arc<Mutex<HashMap<i64, Sender<Result<Vec<Json>, String>>>>>;
 
@@ -59,8 +70,10 @@ pub struct Client {
 impl Client {
     /// Connect to a running `actr server` and register trace/signal monitors.
     pub fn connect(host: &str, port: u16) -> Result<Client, String> {
+        env_debug!("RPC connecting to {host}:{port}");
         let stream = TcpStream::connect((host, port))
             .map_err(|e| format!("could not connect to {host}:{port}: {e}"))?;
+        env_debug!("RPC connected to {host}:{port}");
         let read_stream = stream.try_clone().map_err(|e| e.to_string())?;
         let writer = Arc::new(Mutex::new(stream));
         let pending: Pending = Arc::new(Mutex::new(HashMap::new()));
@@ -105,7 +118,7 @@ impl Client {
     fn register_handler(&self, target: &str, handler: &str, doc: &str) -> Result<(), String> {
         // Register the handler as a client-owned command, then attach it as a
         // simple monitor of the stream/signal command.
-        self.request(
+        let added = self.request(
             "add",
             vec![
                 Json::Str(handler.into()),
@@ -113,15 +126,19 @@ impl Client {
                 Json::Str(doc.into()),
                 Json::Null,
             ],
-        )?;
-        self.request(
+        );
+        env_debug!("register add {handler} -> {added:?}");
+        added?;
+        let monitored = self.request(
             "monitor",
             vec![
                 Json::Str(target.into()),
                 Json::Str(handler.into()),
                 Json::Str("simple".into()),
             ],
-        )?;
+        );
+        env_debug!("register monitor {target} -> {monitored:?}");
+        monitored?;
         Ok(())
     }
 
@@ -139,6 +156,7 @@ impl Client {
             ("params".into(), Json::Arr(params)),
             ("id".into(), Json::Int(id)),
         ]);
+        env_debug!("send id={id} {}", msg.write());
         {
             let mut w = self.writer.lock().unwrap();
             write_message(&mut *w, &msg).map_err(|e| e.to_string())?;
@@ -252,7 +270,7 @@ impl EnvBackend for Client {
     }
 
     fn register_window_handler(&mut self, name: &str) {
-        let _ = self.request(
+        let result = self.request(
             "add",
             vec![
                 Json::Str(name.to_string()),
@@ -262,6 +280,7 @@ impl EnvBackend for Client {
                 Json::Str(name.to_string()),
             ],
         );
+        env_debug!("register window handler {name} -> {result:?}");
     }
 
     fn register_stepper_handlers(&mut self, next: &str, update: &str) -> Result<(), String> {
@@ -393,6 +412,7 @@ fn spawn_reader(
             Ok(Some(m)) => m,
             _ => break,
         };
+        env_debug!("recv {}", msg.write());
         if msg.get("method").is_some() {
             if let Ok((method, params, id)) = parse_request(&msg) {
                 if method == Method::Evaluate {
@@ -402,6 +422,10 @@ fn spawn_reader(
                         _ => None,
                     });
                     let args: Vec<Json> = params.iter().skip(2).cloned().collect();
+                    env_debug!(
+                        "callback {name} model={model:?} args={}",
+                        Json::Arr(args.clone()).write()
+                    );
                     let trace = TRACE_HANDLERS
                         .iter()
                         .find(|(_, handler, _)| *handler == name)
@@ -461,9 +485,9 @@ fn spawn_reader(
                                     true
                                 }
                                 VV_HANDLER => {
-                                    // `[name, model, verb, …]`; every verb except
-                                    // `check` is a display op for the UI thread.
-                                    let op: Vec<Json> = args.clone();
+                                    // Every verb except `check` is a display op
+                                    // for the UI thread.
+                                    let op = window_op(&args);
                                     let check = op
                                         .first()
                                         .and_then(|x| x.as_str())
@@ -483,6 +507,7 @@ fn spawn_reader(
                     } else {
                         reply_err(id.as_ref(), &format!("no handler for {name:?}"))
                     };
+                    env_debug!("callback {name} handled={handled}");
                     let mut w = writer.lock().unwrap();
                     let _ = write_message(&mut *w, &reply);
                 }
@@ -494,4 +519,36 @@ fn spawn_reader(
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn window_ops_accept_the_lisp_nested_argument_list() {
+        let nested = vec![Json::Arr(vec![
+            Json::Str("open".into()),
+            Json::Str("W".into()),
+            Json::Int(1),
+        ])];
+        assert_eq!(
+            window_op(&nested),
+            vec![
+                Json::Str("open".into()),
+                Json::Str("W".into()),
+                Json::Int(1)
+            ]
+        );
+    }
+
+    #[test]
+    fn window_ops_accept_the_rust_flat_argument_list() {
+        let flat = vec![
+            Json::Str("open".into()),
+            Json::Str("W".into()),
+            Json::Int(1),
+        ];
+        assert_eq!(window_op(&flat), flat);
+    }
 }

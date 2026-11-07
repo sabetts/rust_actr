@@ -15,6 +15,7 @@ mod app;
 mod backend;
 mod client;
 mod connection;
+mod debug;
 mod export;
 mod history;
 mod inproc;
