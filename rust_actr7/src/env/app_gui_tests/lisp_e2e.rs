@@ -97,6 +97,36 @@ fn lisp_production_grid_smoke() {
 
 #[test]
 #[ignore = "requires a running Lisp server; use fixtures/gui/run_lisp_gui.py"]
+fn lisp_production_graph_smoke() {
+    let mut h = lisp_harness();
+    {
+        let app = h.state_mut();
+        load_count(app);
+        app.eval("reset", Vec::new());
+        app.open_tool(ToolKind::ProductionGraph);
+        app.eval("run", vec![Json::Float(1.0)]);
+    }
+    h.run();
+
+    let tool = h
+        .state()
+        .tools
+        .iter()
+        .find(|t| t.kind == ToolKind::ProductionGraph)
+        .expect("production graph tool");
+    let graph = tool.graph_data.as_ref().expect("Lisp graph data");
+    assert!(
+        !graph.nodes.is_empty(),
+        "Lisp production graph had no nodes"
+    );
+    assert!(
+        !graph.edges.is_empty(),
+        "Lisp production graph had no edges"
+    );
+}
+
+#[test]
+#[ignore = "requires a running Lisp server; use fixtures/gui/run_lisp_gui.py"]
 fn lisp_connections_and_documentation_smoke() {
     let mut h = lisp_harness();
     h.run();

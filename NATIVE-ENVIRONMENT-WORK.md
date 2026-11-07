@@ -433,10 +433,13 @@ python fixtures/gui/run_lisp_gui.py
 ```
 
 The Lisp matrix covers trace/window callbacks, retrieval history, buffer
-history, production grid, and connections/documentation. Production-graph
-commands remain covered against the in-process engine; the Lisp dispatcher
-expects those processors through its incremental-history API instead of the
-direct command path used by the GUI.
+history, production grid, production graph, and connections/documentation.
+Production graphs use one incremental-history path for Lisp, the Rust RPC
+server, and in-process mode; both servers expose the `production-graph-*`
+history processors in the canvas-item shape parsed by `env/graph_parse.rs`.
+Lisp emits utility-bar geometry rather than raw values, so the Lisp Utilities
+view shows graph structure without per-node bars; the Rust processors also
+emit an optional `utility` item so in-process Utilities keeps its bars.
 
 Manual smoke (desktop session required):
 
