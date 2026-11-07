@@ -27,7 +27,8 @@ cd rust_actr7
 cargo test                       # no SBCL or actr7.x checkout needed; regen does
 cargo run -- run <model.lisp>
 cargo run -- server              # RPC dispatcher
-cargo run --features env -- env  # native GUI
+cargo run --features env -- env  # native GUI, auto-connects via ~/act-r-*.txt
+cargo run --features env -- env --in-process  # native GUI with a local engine
 ```
 
 ## Python interface

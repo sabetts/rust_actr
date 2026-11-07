@@ -22,8 +22,11 @@ now owns the native GUI program.
 - `999-*` overlays (images, EMMA eye spot, touch fingers) are in scope in a
   later milestone.
 - Both backends must expose the same event surface:
-  - **in-process**: the GUI owns `Session`;
-  - **client** (`--connect`): the GUI speaks the RPC protocol to `actr server`.
+  - **client** (default): the GUI speaks the RPC protocol to `actr server`,
+    reading `~/act-r-address.txt` and `~/act-r-port-num.txt` like the Tcl
+    Environment; `--connect HOST:PORT` overrides discovery;
+  - **in-process** (`--in-process`): the GUI owns `Session`.
+- Auto-connect failures are fatal; use `--in-process` for the local engine.
 
 ## Program status
 
@@ -380,6 +383,10 @@ Follow-ups:
 - `EnvBackend` is the transport boundary (`env/backend.rs`). Both `InProc` and
   `Client` must implement events, run control, window ops, signals, and
   histories.
+- `env/connection.rs` reads the dispatcher address from
+  `~/act-r-address.txt` and `~/act-r-port-num.txt`. Missing, empty, or
+  malformed values fall back independently to `127.0.0.1` and `2650`; the
+  connection itself is not silently replaced by the in-process backend.
 - `Session::evaluate` temporarily switches the current model for an explicit
   `model` argument. The native GUI should pass the selected model for
   model-scoped commands and `None` for global commands, matching the Tcl
@@ -404,8 +411,12 @@ cargo test --features env --quiet --lib env::tests
 Manual smoke (desktop session required):
 
 ```powershell
+# Client mode from the ACT-R home files, then an explicit address.
 cargo run --features env -- env
 cargo run --features env -- env --connect 127.0.0.1:2650
+
+# Local engine, for a machine with no dispatcher.
+cargo run --features env -- env --in-process
 ```
 
 ## Definition of done
