@@ -338,6 +338,9 @@ Completed:
   cursor, EMMA eye spot (`eyeloc`/`cleareyeloc`), and touch finger markers
   (`showfinger`/`removefinger`).
 - Image items render as a labelled placeholder until an image loader is added.
+- Experiment windows have a close affordance that sends
+  `close-exp-window <title>`; **Miscellaneous > Close Windows** sends
+  `close-all-exp-windows` and clears stale windows after a task disconnects.
 - Clicking a visible window focuses it; printable keys and special keys are
   translated and forwarded through `output-key` (Enter/Escape/arrows/F-keys,
   space, etc.).
