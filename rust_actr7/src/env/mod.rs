@@ -17,6 +17,7 @@ mod client;
 mod connection;
 mod debug;
 mod export;
+mod graph_parse;
 mod history;
 mod inproc;
 mod settings;

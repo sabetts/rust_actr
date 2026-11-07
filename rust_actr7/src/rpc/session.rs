@@ -1099,6 +1099,26 @@ impl Session {
             "PRODUCTION-HISTORY" => self.engine.as_ref().map(production_history_records),
             // `production-grid` is a processor over `production-history`.
             "PRODUCTION-GRID" => self.engine.as_ref().map(production_grid_records),
+            "PRODUCTION-GRAPH-ALL"
+            | "PRODUCTION-GRAPH-FREQ"
+            | "PRODUCTION-GRAPH-CYCLES"
+            | "PRODUCTION-GRAPH-U-CYCLES"
+            | "PRODUCTION-GRAPH-RUNS"
+            | "PRODUCTION-GRAPH-U-RUNS"
+            | "PRODUCTION-GRAPH-UTILITY" => {
+                let mode = match name {
+                    "PRODUCTION-GRAPH-FREQ" => ProductionGraphMode::Frequencies,
+                    "PRODUCTION-GRAPH-CYCLES" => ProductionGraphMode::Cycles,
+                    "PRODUCTION-GRAPH-U-CYCLES" => ProductionGraphMode::UniqueCycles,
+                    "PRODUCTION-GRAPH-RUNS" => ProductionGraphMode::Runs,
+                    "PRODUCTION-GRAPH-U-RUNS" => ProductionGraphMode::UniqueRuns,
+                    "PRODUCTION-GRAPH-UTILITY" => ProductionGraphMode::Utilities,
+                    _ => ProductionGraphMode::All,
+                };
+                self.engine
+                    .as_ref()
+                    .map(|e| production_graph_history_records(e, mode))
+            }
             // BOLD predictions are processors over `buffer-trace`.
             "BOLD-PREDICTION-WITH-TIME" | "BOLD-PREDICTION-WITH-TIME-SCALED" => {
                 let scaled = name == "BOLD-PREDICTION-WITH-TIME-SCALED";
@@ -5379,6 +5399,90 @@ fn production_grid_records(e: &crate::engine::Engine) -> Vec<String> {
     out
 }
 
+/// Production-graph processors over `production-history`, emitted in the
+/// canvas-item shape the Environment's Production Graph view consumes. The
+/// Lisp Environment emits the same records from its own history processors.
+fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Vec<String> {
+    let graph = e.production_graph_data(mode);
+    let mut out =
+        vec![Json::Arr(vec![Json::Str("size".into()), Json::Int(1), Json::Int(1)]).write()];
+
+    for (page, info) in graph.pages.iter().enumerate() {
+        let page_num = page as u32;
+        let mut items = Vec::new();
+        for node in &graph.nodes {
+            let color = if node.used { "black" } else { "gray" };
+            items.push(Json::Arr(vec![
+                Json::Str("label".into()),
+                Json::Str(node.name.clone()),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Int(0),
+                Json::Str(color.into()),
+                Json::Str(node.text.clone()),
+            ]));
+            if node.starts.contains(&page_num) {
+                items.push(Json::Arr(vec![
+                    Json::Str("box".into()),
+                    Json::Str(node.name.clone()),
+                    Json::Int(0),
+                    Json::Int(0),
+                    Json::Int(0),
+                    Json::Int(0),
+                    Json::Str("green".into()),
+                    Json::Int(1),
+                ]));
+            }
+            if node.ends.contains(&page_num) {
+                items.push(Json::Arr(vec![
+                    Json::Str("box".into()),
+                    Json::Str(node.name.clone()),
+                    Json::Int(0),
+                    Json::Int(0),
+                    Json::Int(0),
+                    Json::Int(0),
+                    Json::Str("red".into()),
+                    Json::Int(1),
+                ]));
+            }
+            if let Some((_, value)) = node.utilities.iter().find(|(p, _)| *p == page_num) {
+                items.push(Json::Arr(vec![
+                    Json::Str("utility".into()),
+                    Json::Str(node.name.clone()),
+                    Json::Float(*value),
+                ]));
+            }
+        }
+        for edge in graph.edges.iter().filter(|edge| edge.page == page_num) {
+            items.push(Json::Arr(vec![
+                Json::Str("link".into()),
+                Json::Str(edge.from.clone()),
+                Json::Str(edge.to.clone()),
+                Json::Str(if edge.dashed { "gray" } else { "black" }.into()),
+                Json::Int(edge.count as i64),
+                Json::Int(1),
+            ]));
+        }
+        if let Some(start) = info.start_ms {
+            items.push(Json::Arr(vec![
+                Json::Str("min_time".into()),
+                Json::Int(start),
+            ]));
+        }
+        if let Some(end) = info.end_ms {
+            items.push(Json::Arr(vec![
+                Json::Str("max_time".into()),
+                Json::Int(end),
+            ]));
+        }
+        out.push(Json::Arr(items).write());
+    }
+    out
+}
+
 /// Parse the Lisp history envelope (`{name, date, version, comment, data}`),
 /// accepting the old bare-array form too.
 fn parse_saved_history(text: &str) -> Option<(Option<String>, Vec<String>)> {
@@ -7300,6 +7404,83 @@ mod tests {
             assert!(data.get("nodes").is_some(), "{command}");
             assert!(data.get("edges").is_some(), "{command}");
             assert!(data.get("pages").is_some(), "{command}");
+        }
+    }
+
+    /// The same production graphs are exposed as history processors, in the
+    /// canvas-item shape the native Environment parses for every backend.
+    #[test]
+    fn production_graph_history_processors() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return; // vendored fixtures not available
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "record-history",
+            None,
+            &[Json::Str("production-history".into())],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        for command in [
+            "production-graph-all",
+            "production-graph-freq",
+            "production-graph-cycles",
+            "production-graph-u-cycles",
+            "production-graph-runs",
+            "production-graph-u-runs",
+            "production-graph-utility",
+        ] {
+            let id = s
+                .evaluate(
+                    "start-incremental-history-data",
+                    None,
+                    &[Json::Str(command.into()), Json::Int(16000)],
+                    &mut r,
+                )
+                .unwrap()[0]
+                .clone();
+            let Json::Int(id) = id else {
+                panic!("{command}: no history id");
+            };
+            let chunk = s
+                .evaluate(
+                    "get-incremental-history-data",
+                    None,
+                    &[Json::Int(id)],
+                    &mut r,
+                )
+                .unwrap();
+            let text = chunk[0].as_str().unwrap();
+            let Json::Arr(records) = crate::json::parse(text).unwrap() else {
+                panic!("{command}: payload is not an array");
+            };
+            let has_kind = |kind: &str| {
+                records.iter().any(|record| match record {
+                    Json::Arr(fields) => {
+                        fields.first().and_then(Json::as_str) == Some(kind)
+                            || fields.iter().any(|item| {
+                                matches!(item, Json::Arr(inner)
+                                    if inner.first().and_then(Json::as_str) == Some(kind))
+                            })
+                    }
+                    _ => false,
+                })
+            };
+            assert!(has_kind("label"), "{command}: no label records");
+            assert!(has_kind("link"), "{command}: no link records");
+            assert!(has_kind("size"), "{command}: no size record");
         }
     }
 

@@ -13,6 +13,7 @@ use crate::json::Json;
 use super::backend::{result_text, BackendEvent, EnvBackend, TraceStream};
 use super::debug::env_debug;
 use super::export;
+use super::graph_parse;
 use super::history::{
     self, BlendingEntry, BufferEntry, HistoryView, PerceptualEntry, RetrievalEntry,
 };
@@ -948,8 +949,34 @@ impl App {
         model: Option<String>,
         mode: ProductionGraphMode,
     ) -> Option<ProductionGraph> {
-        let v = self.eval_for(model, mode.command(), Vec::new())?;
-        ProductionGraph::from_json(v.first()?)
+        let target = model.clone();
+        let available = self
+            .eval_for(
+                target.clone(),
+                "history-data-available",
+                vec![Json::Str("production-history".into())],
+            )
+            .and_then(|v| v.into_iter().next());
+        let any = match available {
+            Some(Json::Bool(value)) => value,
+            Some(Json::Null) | None => false,
+            _ => true,
+        };
+        if !any {
+            return None;
+        }
+        let id = self
+            .eval_for(
+                target,
+                "start-incremental-history-data",
+                vec![Json::Str(mode.command().into()), Json::Int(16000)],
+            )
+            .and_then(|v| v.into_iter().next());
+        let Some(Json::Int(id)) = id else {
+            return None;
+        };
+        let (_, records) = self.collect_history(id);
+        graph_parse::from_canvas_items(&records, mode)
     }
 
     fn graph_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
