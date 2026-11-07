@@ -1,7 +1,7 @@
 //! Production grid/graph, graphic-trace, and BOLD controls.
 
-use egui_kittest::kittest::Queryable;
 use egui::accesskit::Role;
+use egui_kittest::kittest::Queryable;
 
 use crate::json::Json;
 
@@ -61,7 +61,10 @@ fn production_graph_switches_modes_and_hides_unused_nodes() {
 
     let graph = find_tool(&h, ToolKind::ProductionGraph);
     assert!(
-        graph.graph_data.as_ref().is_some_and(|g| !g.nodes.is_empty()),
+        graph
+            .graph_data
+            .as_ref()
+            .is_some_and(|g| !g.nodes.is_empty()),
         "production graph had no nodes"
     );
     assert!(!graph.graph_hide_unused);
@@ -70,7 +73,9 @@ fn production_graph_switches_modes_and_hides_unused_nodes() {
         .get_by_label("Frequencies")
         .click_accesskit();
     h.run();
-    assert!(find_tool(&h, ToolKind::ProductionGraph).graph_data.is_some());
+    assert!(find_tool(&h, ToolKind::ProductionGraph)
+        .graph_data
+        .is_some());
     h.get_by_label("hide unused productions").click_accesskit();
     h.run();
     assert!(find_tool(&h, ToolKind::ProductionGraph).graph_hide_unused);
@@ -104,9 +109,7 @@ fn graphic_trace_uses_real_buffer_trace_and_toggles_controls() {
         .get_by_label("+")
         .click_accesskit();
     h.run();
-    assert!(
-        find_tool(&h, ToolKind::HorizontalGraphicTrace).graphic_scale > before
-    );
+    assert!(find_tool(&h, ToolKind::HorizontalGraphicTrace).graphic_scale > before);
     h.get_by_role_and_label(Role::Window, title)
         .get_by_label("Hide text")
         .click_accesskit();

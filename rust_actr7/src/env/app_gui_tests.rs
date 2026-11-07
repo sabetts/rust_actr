@@ -11,22 +11,22 @@ use crate::json::Json;
 use super::super::backend::{BackendEvent, EnvBackend};
 use super::*;
 
-#[path = "app_gui_tests/support.rs"]
-mod support;
 #[path = "app_gui_tests/controls.rs"]
 mod controls;
-#[path = "app_gui_tests/viewers.rs"]
-mod viewers;
+#[path = "app_gui_tests/editors.rs"]
+mod editors;
 #[path = "app_gui_tests/histories.rs"]
 mod histories;
+#[path = "app_gui_tests/lisp_e2e.rs"]
+mod lisp_e2e;
+#[path = "app_gui_tests/support.rs"]
+mod support;
+#[path = "app_gui_tests/viewers.rs"]
+mod viewers;
 #[path = "app_gui_tests/visualizations.rs"]
 mod visualizations;
 #[path = "app_gui_tests/windows.rs"]
 mod windows;
-#[path = "app_gui_tests/editors.rs"]
-mod editors;
-#[path = "app_gui_tests/lisp_e2e.rs"]
-mod lisp_e2e;
 
 use support::*;
 

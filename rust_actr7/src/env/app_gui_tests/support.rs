@@ -15,7 +15,7 @@ use crate::json::Json;
 use super::super::super::backend::{BackendEvent, ConnectionInfo, EnvBackend};
 use super::super::super::settings::Settings;
 use super::super::super::InProc;
-use super::super::{App, ToolKind};
+use super::super::App;
 
 #[derive(Clone, Debug)]
 pub struct Call {
@@ -121,13 +121,6 @@ impl MockState {
             .entry(name.to_string())
             .or_default()
             .push_back(Ok(values));
-    }
-
-    pub fn error(&mut self, name: &str, message: &str) {
-        self.responses
-            .entry(name.to_string())
-            .or_default()
-            .push_back(Err(message.to_string()));
     }
 
     pub fn event(&mut self, event: BackendEvent) {
@@ -282,7 +275,10 @@ pub fn app_with_backend(backend: Box<dyn EnvBackend>) -> Harness<'static, App> {
     )
 }
 
-pub fn app_with_settings(backend: Box<dyn EnvBackend>, settings: Settings) -> Harness<'static, App> {
+pub fn app_with_settings(
+    backend: Box<dyn EnvBackend>,
+    settings: Settings,
+) -> Harness<'static, App> {
     Harness::builder()
         .allow_missing_glyphs()
         .with_accessibility_check(false)
@@ -292,10 +288,6 @@ pub fn app_with_settings(backend: Box<dyn EnvBackend>, settings: Settings) -> Ha
 
 pub fn inproc_harness() -> Harness<'static, App> {
     app_with_backend(Box::new(InProc::new((100, 0))))
-}
-
-pub fn count_harness() -> Harness<'static, App> {
-    inproc_harness()
 }
 
 pub fn device_count_harness() -> Harness<'static, App> {
@@ -370,11 +362,6 @@ pub fn load_count(app: &mut App) {
     load_model(app, &count_model());
 }
 
-pub fn load_count_for_recording(app: &mut App) {
-    app.open_tool(ToolKind::TextTrace);
-    load_count(app);
-}
-
 pub fn temp_path(suffix: &str) -> PathBuf {
     std::env::temp_dir().join(format!(
         "actr-env-gui-{}-{}-{suffix}",
@@ -428,19 +415,6 @@ impl Drop for TempHome {
     }
 }
 
-pub fn retrieval_records() -> Vec<Json> {
-    vec![Json::Arr(vec![
-        Json::Int(250),
-        Json::Str("+retrieval>".into()),
-        Json::Arr(vec![Json::Arr(vec![
-            Json::Str("CHUNK0".into()),
-            Json::Str("chunk text".into()),
-            Json::Str("params".into()),
-            Json::Str("activation".into()),
-        ])]),
-    ])]
-}
-
 pub fn blending_records() -> Vec<Json> {
     vec![Json::Arr(vec![
         Json::Int(300),
@@ -456,93 +430,12 @@ pub fn blending_records() -> Vec<Json> {
     ])]
 }
 
-pub fn buffer_records() -> Vec<Json> {
-    vec![Json::Arr(vec![
-        Json::Int(400),
-        Json::Arr(vec![Json::Arr(vec![
-            Json::Str("goal".into()),
-            Json::Str("set-buffer-chunk".into()),
-            Json::Str("chunk".into()),
-            Json::Str("free".into()),
-            Json::Str("old".into()),
-            Json::Str("free".into()),
-            Json::Str("new".into()),
-            Json::Str("busy".into()),
-        ])]),
-    ])]
-}
-
 pub fn perceptual_records() -> Vec<Json> {
     vec![Json::Arr(vec![
         Json::Int(500),
         Json::Str("TEXT0".into()),
         Json::Str("TEXT1".into()),
     ])]
-}
-
-pub fn grid_records() -> Vec<Json> {
-    vec![
-        Json::Arr(vec![
-            Json::Int(0),
-            Json::Str("info".into()),
-            Json::Arr(vec![Json::Str("no match".into())]),
-            Json::Arr(vec![
-                Json::Arr(vec![Json::Str("P1".into()), Json::Str("p1".into())]),
-                Json::Arr(vec![Json::Str("P2".into()), Json::Str("p2".into())]),
-            ]),
-        ]),
-        Json::Arr(vec![
-            Json::Int(1000),
-            Json::Str("conflict-resolution".into()),
-            Json::Bool(true),
-            Json::Arr(vec![
-                Json::Arr(vec![Json::Int(0), Json::Float(1.2), Json::Float(0.0)]),
-                Json::Arr(vec![Json::Int(2), Json::Int(0)]),
-            ]),
-        ]),
-    ]
-}
-
-pub fn graphic_records(vertical: bool) -> Vec<Json> {
-    let rect = if vertical {
-        vec![
-            Json::Str("rectangle".into()),
-            Json::Int(0),
-            Json::Int(100),
-            Json::Int(20),
-            Json::Int(300),
-            Json::Int(1),
-            Json::Str("goal".into()),
-            Json::Str("chunk".into()),
-            Json::Str("note".into()),
-            Json::Str("chunk".into()),
-            Json::Str("goal".into()),
-        ]
-    } else {
-        vec![
-            Json::Str("rectangle".into()),
-            Json::Int(100),
-            Json::Int(0),
-            Json::Int(300),
-            Json::Int(20),
-            Json::Int(1),
-            Json::Str("goal".into()),
-            Json::Str("chunk".into()),
-            Json::Str("note".into()),
-            Json::Str("chunk".into()),
-            Json::Str("goal".into()),
-        ]
-    };
-    vec![
-        Json::Arr(vec![Json::Str("size".into()), Json::Int(500)]),
-        Json::Arr(vec![
-            Json::Str("label".into()),
-            Json::Str("goal".into()),
-            Json::Int(10),
-            Json::Int(1),
-        ]),
-        Json::Arr(rect),
-    ]
 }
 
 pub fn bold_records() -> Vec<Json> {

@@ -1,7 +1,7 @@
 //! Control-panel, status, run, and Options coverage.
 
-use egui_kittest::kittest::Queryable;
 use egui::accesskit::Role;
+use egui_kittest::kittest::Queryable;
 
 use crate::json::Json;
 
@@ -49,7 +49,8 @@ fn current_model_menu_switches_model_and_scopes_new_tools() {
         calls
             .borrow()
             .iter()
-            .any(|c| c.name == "set-current-model" && c.args.first().and_then(Json::as_str) == Some("B")),
+            .any(|c| c.name == "set-current-model"
+                && c.args.first().and_then(Json::as_str) == Some("B")),
         "model menu did not select B through the backend"
     );
 
@@ -115,7 +116,9 @@ fn trace_filters_hide_and_clear_streams() {
 #[test]
 fn evaluate_debug_command_runs_on_go() {
     let (mut h, calls, state) = mock_harness();
-    state.borrow_mut().response("run", vec![Json::Str("ok".into())]);
+    state
+        .borrow_mut()
+        .response("run", vec![Json::Str("ok".into())]);
     h.run();
 
     h.get_by_role(Role::TextInput).focus();
@@ -123,10 +126,15 @@ fn evaluate_debug_command_runs_on_go() {
     h.get_by_role(Role::TextInput).type_text("run");
     h.run();
     assert_eq!(h.state().command, "run");
-    h.get_by_role_and_label(Role::Button, "Go").click_accesskit();
+    h.get_by_role_and_label(Role::Button, "Go")
+        .click_accesskit();
     h.run();
 
-    assert!(h.state().result.contains("ok"), "result: {:?}", h.state().result);
+    assert!(
+        h.state().result.contains("ok"),
+        "result: {:?}",
+        h.state().result
+    );
     assert!(has_call(&calls.borrow(), "run"));
 }
 
@@ -153,11 +161,13 @@ fn run_step_and_stop_use_the_expected_backend_paths() {
     state.borrow_mut().begin_run_result = false;
     h.state_mut().running = false;
     h.run();
-    h.get_by_role_and_label(Role::Button, "Run full time").click();
+    h.get_by_role_and_label(Role::Button, "Run full time")
+        .click();
     h.run_steps(1);
-    assert!(calls.borrow().iter().any(|c| {
-        c.name == "begin-run" && c.args.get(1) == Some(&Json::Bool(true))
-    }));
+    assert!(calls
+        .borrow()
+        .iter()
+        .any(|c| { c.name == "begin-run" && c.args.get(1) == Some(&Json::Bool(true)) }));
 
     h.state_mut().running = false;
     h.run();

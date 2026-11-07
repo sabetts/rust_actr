@@ -418,12 +418,25 @@ cargo test --features env --lib env::app::gui_tests
 ```
 
 The headless GUI tests use `egui_kittest` to click the real control-panel
-buttons and exercise history/window state. The real-Lisp smoke test starts its
-own SBCL dispatcher and is run separately:
+buttons, viewer rows, history panes, graph controls, experiment windows, and
+editor prompts. Model-backed cases load `fixtures/models/tutorial/unit1/count.lisp`
+into `InProc`; Visicon/Audicon use a minimal test device plus `new-tone-sound`.
+Seeded history records are used only for rendering branches that depend on
+specific record shapes.
+
+The real-Lisp matrix starts a fresh SBCL dispatcher for each ignored `lisp_`
+case (the dispatcher keeps client-owned command names after a disconnect) and
+restores `05-current-net.tcl` around every case:
 
 ```powershell
 python fixtures/gui/run_lisp_gui.py
 ```
+
+The Lisp matrix covers trace/window callbacks, retrieval history, buffer
+history, production grid, and connections/documentation. Production-graph
+commands remain covered against the in-process engine; the Lisp dispatcher
+expects those processors through its incremental-history API instead of the
+direct command path used by the GUI.
 
 Manual smoke (desktop session required):
 

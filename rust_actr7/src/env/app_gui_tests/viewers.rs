@@ -1,7 +1,7 @@
 //! Viewer-tool and lifecycle interactions.
 
-use egui_kittest::kittest::Queryable;
 use egui::accesskit::Role;
+use egui_kittest::kittest::Queryable;
 
 use crate::json::Json;
 
@@ -176,9 +176,7 @@ fn procedural_queries_details_and_whynot() {
         .click_accesskit();
     h.run();
     assert!(
-        !tool_after(&h, ToolKind::Procedural)
-            .prod_detail
-            .is_empty(),
+        !tool_after(&h, ToolKind::Procedural).prod_detail.is_empty(),
         "production detail was empty"
     );
 
@@ -221,9 +219,7 @@ fn parameters_walk_module_and_parameter_lists() {
         .click_accesskit();
     h.run();
 
-    assert!(!tool_after(&h, ToolKind::Parameters)
-        .param_detail
-        .is_empty());
+    assert!(!tool_after(&h, ToolKind::Parameters).param_detail.is_empty());
     assert!(calls
         .borrow()
         .iter()
@@ -261,8 +257,7 @@ fn buffer_picker_records_and_stops_history() {
         .click_accesskit();
     h.run();
     assert!(calls.borrow().iter().any(|c| {
-        c.name == "stop-recording-history"
-            && c.args.first().and_then(Json::as_str) == Some(&buffer)
+        c.name == "stop-recording-history" && c.args.first().and_then(Json::as_str) == Some(&buffer)
     }));
 }
 

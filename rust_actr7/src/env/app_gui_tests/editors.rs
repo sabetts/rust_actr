@@ -144,10 +144,7 @@ fn unsaved_editor_save_and_close_writes_the_file() {
     h.run();
 
     assert!(h.state().editors.is_empty());
-    assert_eq!(
-        std::fs::read_to_string(&path).unwrap(),
-        "saved on close"
-    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "saved on close");
     cleanup(&path);
 }
 

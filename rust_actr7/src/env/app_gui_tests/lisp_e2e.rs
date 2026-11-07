@@ -1,7 +1,7 @@
 //! Real-dispatcher GUI smoke cases. Run through `fixtures/gui/run_lisp_gui.py`.
 
-use egui_kittest::kittest::Queryable;
 use egui::accesskit::Role;
+use egui_kittest::kittest::Queryable;
 
 use crate::json::Json;
 
