@@ -1,10 +1,12 @@
 //! Native ACT-R Environment (`actr env`).
 //!
 //! A GUI front-end that drives the engine through [`EnvBackend`]:
-//! - **in-process** (default) â€” the GUI owns the [`crate::rpc::session::Session`];
-//! - **client** (`--connect`) â€” the GUI is a real RPC client of `actr server`,
+//! - **client** (default) â€” the GUI is a real RPC client of `actr server`,
 //!   speaking the same `\x04`-framed JSON protocol as `actr.py` and the Tcl
-//!   environment.
+//!   environment. It reads `~/act-r-address.txt` and `~/act-r-port-num.txt`
+//!   like the Tcl Environment unless `--connect HOST:PORT` overrides them.
+//! - **in-process** (`--in-process`) â€” the GUI owns the
+//!   [`crate::rpc::session::Session`].
 //!
 //! Compiled only with the `env` feature so the core engine, the trace test
 //! suites, and the wasm cdylib stay dependency-free.
@@ -12,6 +14,7 @@
 mod app;
 mod backend;
 mod client;
+mod connection;
 mod export;
 mod history;
 mod inproc;
@@ -25,14 +28,21 @@ use std::process::ExitCode;
 
 use crate::json::Json;
 
+/// Where `actr env` gets its engine.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EnvTarget {
+    /// Read the ACT-R address files from the user's home directory and connect.
+    Discover,
+    /// Connect to an explicit dispatcher address.
+    Server { host: String, port: u16 },
+    /// Host the engine in this process.
+    InProcess,
+}
+
 /// Parsed `actr env` options.
 pub struct EnvArgs {
-    /// RPC host (client mode).
-    pub host: String,
-    /// RPC port (client mode).
-    pub port: u16,
-    /// Attach to a running server instead of hosting the engine in-process.
-    pub connect: bool,
+    /// The engine the GUI should drive.
+    pub target: EnvTarget,
     /// `(sgp :seed â€¦)` for in-process mode.
     pub seed: (u64, u64),
     /// An optional model to load at startup.
@@ -41,23 +51,41 @@ pub struct EnvArgs {
 
 /// Launch the native Environment and return the process exit code.
 pub fn run(args: EnvArgs) -> ExitCode {
-    let mut backend: Box<dyn EnvBackend> = if args.connect {
-        match Client::connect(&args.host, args.port) {
-            Ok(c) => Box::new(c),
-            Err(e) => {
-                eprintln!("actr env: {e}");
-                return ExitCode::FAILURE;
+    let in_process = args.target == EnvTarget::InProcess;
+    let mut backend: Box<dyn EnvBackend> = match args.target {
+        EnvTarget::Discover => {
+            let address = connection::discover();
+            let (address_file, port_file) = connection::source_files();
+            match Client::connect(&address.host, address.port) {
+                Ok(c) => Box::new(c),
+                Err(e) => {
+                    eprintln!(
+                        "actr env: could not connect to {} (from {} and {}): {e}",
+                        address.label(),
+                        address_file.display(),
+                        port_file.display()
+                    );
+                    eprintln!("         pass --in-process to run the engine locally.");
+                    return ExitCode::FAILURE;
+                }
             }
         }
-    } else {
-        Box::new(InProc::new(args.seed))
+        EnvTarget::Server { host, port } => match Client::connect(&host, port) {
+            Ok(c) => Box::new(c),
+            Err(e) => {
+                eprintln!("actr env: could not connect to {host}:{port}: {e}");
+                eprintln!("         pass --in-process to run the engine locally.");
+                return ExitCode::FAILURE;
+            }
+        },
+        EnvTarget::InProcess => Box::new(InProc::new(args.seed)),
     };
     // The in-process file dialog starts in the current directory; client mode
     // has no local file dialog.
-    let start_dir = if args.connect {
-        None
-    } else {
+    let start_dir = if in_process {
         std::env::current_dir().ok()
+    } else {
+        None
     };
 
     if let Some(model) = &args.model {

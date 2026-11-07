@@ -3,6 +3,7 @@
 //! Usage:
 //!   actr run    [--seed <n> <m>] [--run <secs>] <model-file>
 //!   actr server [--host <h>] [--port <p>] [--seed <n> <m>] [--no-port-file]
+//!   actr env    [--in-process | --connect [HOST:PORT]] [model-file]
 //!
 //! `run` executes a single model file through the offline engine and prints its
 //! trace exactly as `(sgp :v ...)` would write it: lines from reset through the
@@ -23,11 +24,16 @@
 //! Python/other-language clients. It speaks the `\x04`-framed JSON protocol on
 //! TCP (default `127.0.0.1:2650`) and writes `~/act-r-port-num.txt` so the
 //! vendored `tutorial/python/actr.py` client auto-connects.
+//!
+//! `env` is an RPC client by default: it reads `~/act-r-address.txt` and
+//! `~/act-r-port-num.txt` like the Tcl Environment. Use `--in-process` to run
+//! the engine locally instead, or `--connect HOST:PORT` to bypass the files.
 
-use std::process::ExitCode;
-
+#[cfg(feature = "env")]
+use actr_engine::env::{EnvArgs, EnvTarget};
 use actr_engine::rpc::server::{serve, write_port_file};
 use actr_engine::{run_model, DeviceSetup};
+use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -73,7 +79,11 @@ Commands:
 "
     );
     #[cfg(feature = "env")]
-    print!("  env     Launch the native Environment GUI.\n");
+    print!(concat!(
+        "  env     Launch the native Environment GUI (RPC client by default;\n",
+        "          reads ~/act-r-address.txt and ~/act-r-port-num.txt).\n",
+        "          Use --in-process for a local engine.\n",
+    ));
     print!(
         "
 Model arguments are filesystem paths (absolute or relative to the current directory).
@@ -196,14 +206,22 @@ fn cmd_server(args: &[String]) -> ExitCode {
     }
 }
 
-/// `actr env`: launch the native Environment GUI.
 #[cfg(feature = "env")]
-fn cmd_env(args: &[String]) -> ExitCode {
+#[derive(Debug, PartialEq, Eq)]
+struct ParsedEnvArgs {
+    target: EnvTarget,
+    seed: (u64, u64),
+    model: Option<String>,
+}
+
+/// Parse `actr env` arguments. `Ok(None)` means help was requested.
+#[cfg(feature = "env")]
+fn parse_env_args(args: &[String]) -> Result<Option<ParsedEnvArgs>, String> {
     let mut seed: (u64, u64) = (100, 0);
     let mut model: Option<String> = None;
-    let mut connect = false;
-    let mut host = "127.0.0.1".to_string();
-    let mut port: u16 = 2650;
+    let mut connect_requested = false;
+    let mut in_process = false;
+    let mut explicit: Option<(String, u16)> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -215,24 +233,15 @@ fn cmd_env(args: &[String]) -> ExitCode {
                 i += 3;
             }
             "--connect" => {
-                connect = true;
-                // An optional `host:port` may follow.
-                if let Some(v) = args.get(i + 1) {
-                    if let Some((h, p)) = v.split_once(':') {
-                        host = h.to_string();
-                        if let Ok(pv) = p.parse() {
-                            port = pv;
-                        }
-                        i += 2;
-                        continue;
-                    }
-                }
+                connect_requested = true;
+                explicit = args.get(i + 1).and_then(|v| parse_host_port(v));
+                i += if explicit.is_some() { 2 } else { 1 };
+            }
+            "--in-process" => {
+                in_process = true;
                 i += 1;
             }
-            "-h" | "--help" => {
-                println!("actr env [--seed S C] [--connect [HOST:PORT]] [model-file]");
-                return ExitCode::SUCCESS;
-            }
+            "-h" | "--help" => return Ok(None),
             other => {
                 model = Some(other.to_string());
                 i += 1;
@@ -240,11 +249,106 @@ fn cmd_env(args: &[String]) -> ExitCode {
         }
     }
 
-    actr_engine::env::run(actr_engine::env::EnvArgs {
-        host,
-        port,
-        connect,
+    if connect_requested && in_process {
+        return Err("--connect and --in-process cannot be used together".into());
+    }
+    let target = if in_process {
+        EnvTarget::InProcess
+    } else if let Some((host, port)) = explicit {
+        EnvTarget::Server { host, port }
+    } else {
+        EnvTarget::Discover
+    };
+    Ok(Some(ParsedEnvArgs {
+        target,
         seed,
         model,
+    }))
+}
+
+#[cfg(feature = "env")]
+fn parse_host_port(value: &str) -> Option<(String, u16)> {
+    let (host, port) = value.rsplit_once(':')?;
+    let host = host.trim();
+    let host = host.strip_prefix('[').unwrap_or(host);
+    let host = host.strip_suffix(']').unwrap_or(host);
+    let port = port.trim().parse::<u16>().ok()?;
+    if host.is_empty() || port == 0 {
+        None
+    } else {
+        Some((host.to_string(), port))
+    }
+}
+
+/// `actr env`: launch the native Environment GUI.
+#[cfg(feature = "env")]
+fn cmd_env(args: &[String]) -> ExitCode {
+    let parsed = match parse_env_args(args) {
+        Ok(Some(parsed)) => parsed,
+        Ok(None) => {
+            println!("actr env [--in-process | --connect [HOST:PORT]] [--seed S C] [model-file]");
+            return ExitCode::SUCCESS;
+        }
+        Err(e) => {
+            eprintln!("actr env: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    actr_engine::env::run(EnvArgs {
+        target: parsed.target,
+        seed: parsed.seed,
+        model: parsed.model,
     })
+}
+
+#[cfg(all(test, feature = "env"))]
+mod env_args_tests {
+    use super::*;
+
+    fn args(values: &[&str]) -> Vec<String> {
+        values.iter().map(|s| s.to_string()).collect()
+    }
+
+    fn parsed(values: &[&str]) -> ParsedEnvArgs {
+        parse_env_args(&args(values))
+            .expect("parse")
+            .expect("not help")
+    }
+
+    #[test]
+    fn defaults_to_home_discovery() {
+        let p = parsed(&[]);
+        assert_eq!(p.target, EnvTarget::Discover);
+        assert_eq!(p.seed, (100, 0));
+        assert_eq!(p.model, None);
+    }
+
+    #[test]
+    fn in_process_is_an_opt_out() {
+        assert_eq!(parsed(&["--in-process"]).target, EnvTarget::InProcess);
+    }
+
+    #[test]
+    fn connect_without_address_uses_discovery() {
+        assert_eq!(parsed(&["--connect"]).target, EnvTarget::Discover);
+    }
+
+    #[test]
+    fn explicit_address_overrides_discovery() {
+        let p = parsed(&["--connect", "10.0.0.11:2651", "model.lisp"]);
+        assert_eq!(
+            p.target,
+            EnvTarget::Server {
+                host: "10.0.0.11".into(),
+                port: 2651,
+            }
+        );
+        assert_eq!(p.model.as_deref(), Some("model.lisp"));
+    }
+
+    #[test]
+    fn connect_and_in_process_conflict() {
+        assert!(parse_env_args(&args(&["--connect", "--in-process"])).is_err());
+        assert!(parse_env_args(&args(&["--connect", "127.0.0.1:2650", "--in-process"])).is_err());
+    }
 }
