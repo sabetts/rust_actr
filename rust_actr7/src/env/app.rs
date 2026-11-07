@@ -1226,12 +1226,13 @@ impl App {
                 .and_then(|v| v.into_iter().next())
                 .and_then(|x| x.as_str().map(str::to_string));
             let Some(chunk) = chunk else { break };
-            if chunk.is_empty() {
+            if history_chunk_is_end(&chunk) {
                 break;
             }
             match crate::json::parse(&chunk) {
                 Ok(Json::Arr(mut a)) => records.append(&mut a),
                 Ok(Json::Str(s)) => comment = Some(s),
+                Ok(Json::Null) => break,
                 _ => {}
             }
         }
@@ -3940,6 +3941,13 @@ impl App {
             });
     }
 }
+/// Lisp returns the JSON text `null` once after the last history segment, then
+/// drops the id. Rust's own server returns an empty string instead.
+fn history_chunk_is_end(chunk: &str) -> bool {
+    let chunk = chunk.trim();
+    chunk.is_empty() || chunk.eq_ignore_ascii_case("null")
+}
+
 fn parse_seconds(text: &str) -> Option<f64> {
     let text = text.trim();
     if text.is_empty() {
@@ -4583,5 +4591,14 @@ mod tests {
         app.eval("load-act-r-model", vec![Json::Str(model)]);
         assert_eq!(app.models, vec!["COUNT".to_string()]);
         assert_eq!(app.selected_model.as_deref(), Some("COUNT"));
+    }
+
+    #[test]
+    fn history_stream_ends_on_lisp_null_or_rust_empty_chunk() {
+        assert!(history_chunk_is_end("null"));
+        assert!(history_chunk_is_end(" NULL \n"));
+        assert!(history_chunk_is_end(""));
+        assert!(!history_chunk_is_end("[]"));
+        assert!(!history_chunk_is_end(r#"[[0,"LOW","COUNT","line"]]"#));
     }
 }
