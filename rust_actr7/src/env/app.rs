@@ -1206,13 +1206,7 @@ impl App {
                     .map(Json::Float)
                     .unwrap_or(Json::Null),
             );
-            args.push(Json::Str(
-                if tool.history_detail.eq_ignore_ascii_case("all") {
-                    "t".into()
-                } else {
-                    tool.history_detail.clone()
-                },
-            ));
+            args.push(Json::Str(history_detail_arg(&tool.history_detail).into()));
         }
         args
     }
@@ -1247,7 +1241,7 @@ impl App {
                 Json::Str(kind.source().into()),
                 Json::Null,
                 Json::Null,
-                Json::Str(tool.history_detail.clone()),
+                Json::Str(history_detail_arg(&tool.history_detail).into()),
             ]
         } else {
             vec![Json::Str(kind.source().into())]
@@ -1327,13 +1321,7 @@ impl App {
                     .map(Json::Float)
                     .unwrap_or(Json::Null),
             );
-            args.push(Json::Str(
-                if tool.history_detail.eq_ignore_ascii_case("all") {
-                    "t".into()
-                } else {
-                    tool.history_detail.clone()
-                },
-            ));
+            args.push(Json::Str(history_detail_arg(&tool.history_detail).into()));
         }
         self.eval_for(target, "save-history-data", args);
     }
@@ -3941,6 +3929,15 @@ impl App {
             });
     }
 }
+/// The viewer's "all" choice maps to ACT-R's `t` detail level.
+fn history_detail_arg(detail: &str) -> &str {
+    if detail.eq_ignore_ascii_case("all") {
+        "t"
+    } else {
+        detail
+    }
+}
+
 /// Lisp returns the JSON text `null` once after the last history segment, then
 /// drops the id. Rust's own server returns an empty string instead.
 fn history_chunk_is_end(chunk: &str) -> bool {
@@ -4600,5 +4597,14 @@ mod tests {
         assert!(history_chunk_is_end(""));
         assert!(!history_chunk_is_end("[]"));
         assert!(!history_chunk_is_end(r#"[[0,"LOW","COUNT","line"]]"#));
+    }
+
+    #[test]
+    fn history_detail_all_maps_to_lisp_t() {
+        assert_eq!(history_detail_arg("all"), "t");
+        assert_eq!(history_detail_arg("ALL"), "t");
+        assert_eq!(history_detail_arg("low"), "low");
+        assert_eq!(history_detail_arg("medium"), "medium");
+        assert_eq!(history_detail_arg("high"), "high");
     }
 }
