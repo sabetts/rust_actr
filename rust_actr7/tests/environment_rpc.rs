@@ -711,6 +711,51 @@ fn multi_model_windows_are_scoped_by_model() {
 }
 
 #[test]
+fn close_window_by_title_and_close_all_without_a_model_argument() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        Some("COUNT"),
+        vec![Json::Str("COUNT-WIN".into()), Json::Null],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        Some("ADDITION"),
+        vec![Json::Str("ADDITION-WIN".into()), Json::Null],
+    );
+
+    // The Environment sends the title with no model argument. Close the
+    // non-current model's window by title.
+    c.eval_ok(
+        "close-exp-window",
+        None,
+        vec![Json::Str("COUNT-WIN".into())],
+    );
+    let closes = window_ops(&c, "close");
+    assert!(closes.iter().any(|(m, a)| m.as_deref() == Some("COUNT")
+        && a.get(1).and_then(|x| x.as_str()) == Some("COUNT-WIN")));
+    assert!(!closes.iter().any(|(m, a)| m.as_deref() == Some("ADDITION")
+        && a.get(1).and_then(|x| x.as_str()) == Some("ADDITION-WIN")));
+
+    c.eval_ok("close-all-exp-windows", None, Vec::new());
+    let closes = window_ops(&c, "close");
+    assert!(closes.iter().any(|(m, a)| m.as_deref() == Some("ADDITION")
+        && a.get(1).and_then(|x| x.as_str()) == Some("ADDITION-WIN")));
+}
+
+#[test]
 fn multi_model_clear_all_closes_each_model_window() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");

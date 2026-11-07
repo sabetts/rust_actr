@@ -2037,12 +2037,15 @@ impl App {
     fn render_windows(&mut self, ctx: &egui::Context) {
         let wins = self.windows.clone();
         let mut click: Option<(String, f64, f64)> = None;
+        let mut close: Option<String> = None;
         let mut keys: Vec<String> = Vec::new();
         for w in &wins {
+            let mut open = true;
             egui::Window::new(&w.title)
                 .default_pos([w.x, w.y])
                 .resizable(false)
                 .collapsible(false)
+                .open(&mut open)
                 .show(ctx, |ui| {
                     let (rect, resp) =
                         ui.allocate_exact_size(egui::vec2(w.w, w.h), egui::Sense::click());
@@ -2224,8 +2227,15 @@ impl App {
                         });
                     }
                 });
+            if !open {
+                close = Some(w.title.clone());
+            }
         }
-        if let Some((title, x, y)) = click {
+        if let Some(title) = close {
+            env_debug!("close window {title:?}");
+            let _ = self.eval("close-exp-window", vec![Json::Str(title.clone())]);
+            self.windows.retain(|w| w.title != title);
+        } else if let Some((title, x, y)) = click {
             env_debug!("click {title:?} at {x},{y}");
             self.eval(
                 "visible-virtual-window-mouse-click",
@@ -2590,6 +2600,10 @@ impl App {
             }
             if ui.button("Connections").clicked() {
                 self.open_tool(ToolKind::Connections);
+            }
+            if ui.button("Close Windows").clicked() {
+                let _ = self.eval("close-all-exp-windows", Vec::new());
+                self.windows.clear();
             }
             if ui.button("About").clicked() {
                 self.open_tool(ToolKind::About);

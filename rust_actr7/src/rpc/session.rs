@@ -239,6 +239,7 @@ pub const BUILTINS: &[&str] = &[
     "modify-line-for-exp-window",
     "open-exp-window",
     "close-exp-window",
+    "close-all-exp-windows",
     "select-exp-window",
     "add-virtual-window-handler",
     "remove-virtual-window-handler",
@@ -3205,9 +3206,19 @@ impl Session {
                 Ok(vec![Json::Str("window".into())])
             }
             "close-exp-window" => {
-                if let Some(model) = self.current_model.clone() {
+                let title = args.first().and_then(|a| a.as_str()).unwrap_or("");
+                let model = if title.is_empty() {
+                    self.current_model.clone()
+                } else {
+                    self.window_owner_by_title(title)
+                };
+                if let Some(model) = model {
                     self.close_model_window(&model, remote);
                 }
+                Ok(vec![Json::Bool(true)])
+            }
+            "close-all-exp-windows" => {
+                self.close_all_windows(remote);
                 Ok(vec![Json::Bool(true)])
             }
             "select-exp-window" => {
