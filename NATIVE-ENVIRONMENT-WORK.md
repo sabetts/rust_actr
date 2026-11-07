@@ -414,6 +414,15 @@ From `rust_actr7/`:
 cargo fmt --check
 cargo test
 cargo test --features env --quiet --lib env::tests
+cargo test --features env --lib env::app::gui_tests
+```
+
+The headless GUI tests use `egui_kittest` to click the real control-panel
+buttons and exercise history/window state. The real-Lisp smoke test starts its
+own SBCL dispatcher and is run separately:
+
+```powershell
+python fixtures/gui/run_lisp_gui.py
 ```
 
 Manual smoke (desktop session required):
