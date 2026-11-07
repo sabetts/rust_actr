@@ -150,10 +150,11 @@ fn call_remote_reentrant(
     }
 }
 
-/// Drain the trace and the model-fired commands (`output-key`, â€¦) to their
-/// monitors. ACT-R fires those inside the run, so a task reads its handler's
-/// effect as soon as `run` returns; a handler can in turn emit trace, so drain
-/// until both are quiet.
+/// Drain the trace, model-fired commands (`output-key`, ...), and queued window
+/// actions to their handlers. ACT-R fires window actions as part of the click
+/// and model-fired commands inside the run, so a task reads its handler's
+/// effect as soon as the request returns. A handler can in turn emit trace, so
+/// drain until all three are quiet.
 fn drain(session: &mut Session, conn: &mut Conn) {
     for _ in 0..32 {
         let lines = session.take_trace_events();
@@ -161,7 +162,8 @@ fn drain(session: &mut Session, conn: &mut Conn) {
             session.deliver_trace(&line, kind, conn);
         }
         let fired = session.take_fired_commands();
-        if fired.is_empty() {
+        let actions = session.take_pending_device_actions_with_models();
+        if fired.is_empty() && actions.is_empty() {
             break;
         }
         for (cmd, model_name, key) in fired {
@@ -178,6 +180,13 @@ fn drain(session: &mut Session, conn: &mut Conn) {
                 } else {
                     let _ = session.evaluate(&monitor, Some(&model_name), &a, conn);
                 }
+            }
+        }
+        for (model_name, cmd, args) in actions {
+            if session.command_is_remote(&cmd) {
+                let _ = call_remote_reentrant(session, conn, &cmd, model_name.as_deref(), args);
+            } else {
+                let _ = session.evaluate(&cmd, model_name.as_deref(), &args, conn);
             }
         }
     }

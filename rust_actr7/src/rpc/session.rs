@@ -866,6 +866,15 @@ impl Session {
         self.commands.contains_key(name)
     }
 
+    /// Whether `name` is owned by a remote client. Used to dispatch a queued
+    /// window action as a callback instead of invoking it server-side.
+    pub fn command_is_remote(&self, name: &str) -> bool {
+        self.commands
+            .get(name)
+            .map(|c| matches!(c.owner, Owner::Remote { .. }))
+            .unwrap_or(false)
+    }
+
     /// The simple monitors of a command, each with whether it is
     /// client-owned (`call_remote_reentrant`) or server-side
     /// (`Session::evaluate`). A model-fired command's monitors must run with

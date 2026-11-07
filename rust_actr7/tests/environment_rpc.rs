@@ -743,7 +743,7 @@ fn multi_model_clear_all_closes_each_model_window() {
 }
 
 #[test]
-fn multi_model_window_click_queues_the_owning_models_action() {
+fn multi_model_window_click_dispatches_the_owning_models_action() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
     add_window_handler(&mut c);
@@ -788,12 +788,61 @@ fn multi_model_window_click_queues_the_owning_models_action() {
         None,
         vec![Json::Str("COUNT-WIN".into()), Json::Int(37), Json::Int(9)],
     );
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, model, _)| { name == "clicked" && model.as_deref() == Some("COUNT") }),
+        "click action did not fire without a run or target COUNT: {:?}",
+        c.callbacks
+    );
     c.eval_ok("run", None, vec![Json::Float(2.0)]);
     assert!(
         c.callbacks
             .iter()
             .any(|(name, model, _)| { name == "clicked" && model.as_deref() == Some("COUNT") }),
         "click action did not target COUNT: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
+fn window_button_builtin_action_dispatches_without_a_run() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        None,
+        vec![Json::Str("CLOSE-WIN".into()), Json::Null],
+    );
+    c.eval_ok(
+        "add-button-to-exp-window",
+        None,
+        vec![
+            Json::Str("CLOSE-WIN".into()),
+            options(vec![
+                ("text", Json::Str("Close".into())),
+                ("x", Json::Int(0)),
+                ("y", Json::Int(0)),
+                ("width", Json::Int(75)),
+                ("height", Json::Int(20)),
+                ("action", Json::Str("close-exp-window".into())),
+            ]),
+        ],
+    );
+    c.eval_ok(
+        "visible-virtual-window-mouse-click",
+        None,
+        vec![Json::Str("CLOSE-WIN".into()), Json::Int(37), Json::Int(9)],
+    );
+    assert!(
+        !window_ops(&c, "close").is_empty(),
+        "button action did not close the window: {:?}",
         c.callbacks
     );
 }
