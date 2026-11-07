@@ -1,7 +1,6 @@
 //! Headless click-through tests for the native Environment.
 
-use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::cell::Cell;
 use std::rc::Rc;
 
 use egui_kittest::kittest::Queryable;
@@ -9,91 +8,15 @@ use egui_kittest::Harness;
 
 use crate::json::Json;
 
-use super::super::backend::{BackendEvent, ConnectionInfo, EnvBackend};
-use super::super::InProc;
+use super::super::backend::{BackendEvent, EnvBackend};
 use super::*;
 
-#[derive(Clone)]
-struct Call {
-    name: String,
-    args: Vec<Json>,
-}
+#[path = "app_gui_tests/support.rs"]
+mod support;
+#[path = "app_gui_tests/controls.rs"]
+mod controls;
 
-struct RecordingBackend {
-    inner: InProc,
-    calls: Rc<RefCell<Vec<Call>>>,
-}
-
-impl EnvBackend for RecordingBackend {
-    fn evaluate(
-        &mut self,
-        name: &str,
-        model: Option<&str>,
-        args: Vec<Json>,
-    ) -> Result<Vec<Json>, String> {
-        self.calls.borrow_mut().push(Call {
-            name: name.to_string(),
-            args: args.clone(),
-        });
-        self.inner.evaluate(name, model, args)
-    }
-
-    fn take_events(&mut self) -> Vec<BackendEvent> {
-        self.inner.take_events()
-    }
-
-    fn current_model(&self) -> Option<String> {
-        self.inner.current_model()
-    }
-
-    fn models(&self) -> Vec<String> {
-        self.inner.models()
-    }
-
-    fn set_current_model(&mut self, name: Option<String>) {
-        self.inner.set_current_model(name);
-    }
-
-    fn describe(&self) -> String {
-        self.inner.describe()
-    }
-
-    fn register_window_handler(&mut self, name: &str) {
-        self.inner.register_window_handler(name);
-    }
-
-    fn register_stepper_handlers(&mut self, next: &str, update: &str) -> Result<(), String> {
-        self.inner.register_stepper_handlers(next, update)
-    }
-
-    fn connections(&mut self) -> Result<Vec<ConnectionInfo>, String> {
-        self.inner.connections()
-    }
-
-    fn command_doc(&mut self, name: &str) -> Result<Option<String>, String> {
-        self.inner.command_doc(name)
-    }
-
-    fn begin_run(&mut self, secs: f64, full: bool) -> bool {
-        self.inner.begin_run(secs, full)
-    }
-
-    fn poll_run(&mut self) -> Result<bool, String> {
-        self.inner.poll_run()
-    }
-
-    fn stop_run(&mut self) {
-        self.inner.stop_run();
-    }
-
-    fn is_running(&self) -> bool {
-        self.inner.is_running()
-    }
-
-    fn set_real_time(&mut self, on: bool) {
-        self.inner.set_real_time(on);
-    }
-}
+use support::*;
 
 struct ScriptedBackend {
     gets: Rc<Cell<usize>>,
@@ -170,45 +93,6 @@ impl EnvBackend for ScriptedBackend {
     }
 
     fn set_real_time(&mut self, _on: bool) {}
-}
-
-fn app_with_backend(backend: Box<dyn EnvBackend>) -> Harness<'static, App> {
-    let settings = Settings {
-        show_copyrights: false,
-        ..Default::default()
-    };
-    Harness::builder()
-        .allow_missing_glyphs()
-        .with_accessibility_check(false)
-        .build_eframe(move |_cc| App::new(backend, None, settings))
-}
-
-fn inproc_harness() -> Harness<'static, App> {
-    app_with_backend(Box::new(InProc::new((100, 0))))
-}
-
-fn recording_harness() -> (Harness<'static, App>, Rc<RefCell<Vec<Call>>>) {
-    let calls = Rc::new(RefCell::new(Vec::new()));
-    let backend = RecordingBackend {
-        inner: InProc::new((100, 0)),
-        calls: calls.clone(),
-    };
-    (app_with_backend(Box::new(backend)), calls)
-}
-
-fn count_model() -> String {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("fixtures")
-        .join("models")
-        .join("tutorial")
-        .join("unit1")
-        .join("count.lisp")
-        .to_string_lossy()
-        .into_owned()
-}
-
-fn load_count(app: &mut App) {
-    app.eval("load-act-r-model", vec![Json::Str(count_model())]);
 }
 
 #[test]
