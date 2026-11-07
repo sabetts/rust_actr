@@ -2601,7 +2601,7 @@ impl App {
             if ui.button("Connections").clicked() {
                 self.open_tool(ToolKind::Connections);
             }
-            if ui.button("Close Windows").clicked() {
+            if ui.button("Close Exp Windows").clicked() {
                 let _ = self.eval("close-all-exp-windows", Vec::new());
                 self.windows.clear();
             }
