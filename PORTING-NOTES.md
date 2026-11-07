@@ -6450,3 +6450,14 @@ Remaining limits: one experiment window per model, Tcl's global window-title
 namespace, viewer text that is functionally but not byte-identical, no raw
 SBLT structure in the Rust blending record, native `actr env`, and `999-*`
 overlays.
+
+## 371. Lisp AGI callbacks wrap the window op in one argument list
+
+The Lisp dispatcher invokes a client-owned command with its argument list as a
+single nested list: `["env-vv-handler", model, ["open", title, x, ...]]`
+(`framework/dispatcher.lisp`'s remote `evaluate`; `tools/visible-virtual.lisp`'s
+`send-update-to-handlers`). The Rust server sends the same op flat:
+`["env-vv-handler", model, "open", title, ...]`. The native Environment's
+client must unwrap a sole array argument before dispatching a visible-window
+op; otherwise every op looks like an unknown verb and no experiment window is
+created.

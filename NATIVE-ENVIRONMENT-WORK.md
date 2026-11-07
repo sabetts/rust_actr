@@ -387,6 +387,11 @@ Follow-ups:
   `~/act-r-address.txt` and `~/act-r-port-num.txt`. Missing, empty, or
   malformed values fall back independently to `127.0.0.1` and `2650`; the
   connection itself is not silently replaced by the in-process backend.
+- Set `ACTR_ENV_DEBUG=1` and redirect stderr to trace RPC requests, callbacks,
+  and visible-window ops:
+  `cargo run --features env -- env 2> env-debug.log`.
+- Lisp sends AGI window ops as `["handler", model, ["open", ...]]`; the Rust
+  dispatcher sends them flat. `env/client.rs` accepts both shapes.
 - `Session::evaluate` temporarily switches the current model for an explicit
   `model` argument. The native GUI should pass the selected model for
   model-scoped commands and `None` for global commands, matching the Tcl
