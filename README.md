@@ -11,7 +11,7 @@ that arbitrary Lisp cannot be executed.
 |---|---|
 | `rust_actr7/` | the crate, `actr-engine` (`actr_engine` in code) |
 | `rust_actr7/src/` | engine (`engine/`), s-expression reader, model loader, RNG, RPC server, wasm ABI, native GUI (`env/`, feature `env`) |
-| `rust_actr7/src/bin/actr.rs` | CLI: `actr run <model>`, `actr server`, `actr env` |
+| `rust_actr7/src/bin/actr.rs` | CLI: `actr run <model>`, `actr server [--env [model]]`, `actr env` |
 | `rust_actr7/tests/` | integration suites (below) |
 | `rust_actr7/fixtures/` | test oracles + regen scripts — see `fixtures/README.md` |
 | `rust_actr7/web/` | browser (wasm) build — see `web/README.md` |
@@ -26,7 +26,8 @@ that arbitrary Lisp cannot be executed.
 cd rust_actr7
 cargo test                       # no SBCL or actr7.x checkout needed; regen does
 cargo run -- run <model.lisp>
-cargo run -- server              # RPC dispatcher
+cargo run -- server              # RPC dispatcher, one shared model session
+cargo run --features env -- server --env  # dispatcher + attached native GUI
 cargo run --features env -- env  # native GUI, auto-connects via ~/act-r-*.txt
 cargo run --features env -- env --in-process  # native GUI with a local engine
 ```
