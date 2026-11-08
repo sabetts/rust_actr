@@ -318,10 +318,10 @@ impl EnvBackend for Client {
                 let Json::Arr(f) = row else { return None };
                 Some(ConnectionInfo {
                     name: f.first().and_then(|x| x.as_str()).unwrap_or("").into(),
-                    address: String::new(),
-                    pending_calls: f.get(1).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
-                    sent: f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
-                    received: f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+                    address: f.get(1).and_then(|x| x.as_str()).unwrap_or("").into(),
+                    pending_calls: 0,
+                    sent: f.get(3).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
+                    received: f.get(2).and_then(|x| x.as_f64()).unwrap_or(0.0) as i64,
                     commands: f
                         .get(4)
                         .and_then(|x| match x {

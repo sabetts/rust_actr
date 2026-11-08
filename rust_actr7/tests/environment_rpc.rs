@@ -161,6 +161,11 @@ impl Client {
         let id = self.send(Method::ListConnections, Vec::new());
         self.wait(id).expect("list-connections")
     }
+
+    fn list_commands(&mut self) -> Vec<Json> {
+        let id = self.send(Method::ListCommands, Vec::new());
+        self.wait(id).expect("list-commands")
+    }
 }
 
 fn model(name: &str) -> String {
@@ -373,6 +378,154 @@ fn stop_request_interrupts_a_running_request() {
 }
 
 #[test]
+fn connections_share_one_model_session() {
+    let addr = server();
+    let mut python = Client::connect(addr).expect("connect python");
+    let mut env = Client::connect(addr).expect("connect environment");
+    python.set_name("Python task");
+    env.set_name("ACT-R Environment");
+
+    python.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    assert_eq!(
+        strings(&env.eval_ok("mp-models", None, Vec::new())),
+        vec!["COUNT".to_string()]
+    );
+    assert!(strings(&env.eval_ok("all-productions", None, Vec::new()))
+        .iter()
+        .any(|p| p.contains("START")));
+
+    let conns = env.connections();
+    let Some(Json::Arr(rows)) = conns.first() else {
+        panic!("connections is not an array: {conns:?}");
+    };
+    let names: Vec<&str> = rows
+        .iter()
+        .filter_map(|row| match row {
+            Json::Arr(fields) => fields.first().and_then(Json::as_str),
+            _ => None,
+        })
+        .collect();
+    assert!(names.contains(&"Python task"), "{names:?}");
+    assert!(names.contains(&"ACT-R Environment"), "{names:?}");
+    assert!(names.contains(&"internal ACT-R commands"), "{names:?}");
+}
+
+#[test]
+fn one_connection_can_stop_another_connection_run() {
+    let addr = server();
+    let mut runner = Client::connect(addr).expect("connect runner");
+    let mut env = Client::connect(addr).expect("connect environment");
+    runner.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("test-models/run-control.lisp"))],
+    );
+
+    let run_id = runner.send(
+        Method::Evaluate,
+        vec![Json::Str("run".into()), Json::Null, Json::Float(60.0)],
+    );
+    let stop_id = env.send(
+        Method::Evaluate,
+        vec![
+            Json::Str("schedule-break-relative".into()),
+            Json::Null,
+            Json::Int(0),
+        ],
+    );
+    env.wait(stop_id).expect("schedule-break-relative");
+    let run = runner.wait(run_id).expect("run");
+    let time = run.first().and_then(|x| x.as_f64()).unwrap_or(60.0);
+    assert!(
+        time < 60.0,
+        "shared run should stop early after another connection breaks it, got {time}"
+    );
+}
+
+#[test]
+fn trace_monitor_services_requests_on_the_owning_connection() {
+    let addr = server();
+    let mut python = Client::connect(addr).expect("connect python");
+    let mut env = Client::connect(addr).expect("connect environment");
+    env.add_command("env-trace", "env-trace");
+    env.monitor("model-trace", "env-trace");
+
+    let python = std::thread::spawn(move || {
+        python.eval_ok(
+            "load-act-r-model",
+            None,
+            vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+        );
+        python.eval_ok("run", None, vec![Json::Float(2.0)]);
+        python
+    });
+
+    for _ in 0..1000 {
+        // Keep reading this connection so a trace callback can be answered
+        // while the other connection is still inside `run`.
+        let id = env.send(
+            Method::Evaluate,
+            vec![Json::Str("get-time".into()), Json::Null],
+        );
+        env.wait(id).expect("get-time");
+        if python.is_finished() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let _ = python.join().expect("python task");
+    assert!(
+        env.callbacks.iter().any(|(name, _, _)| name == "env-trace"),
+        "trace monitor was not called: {:?}",
+        env.callbacks
+    );
+}
+
+#[test]
+fn disconnecting_removes_owned_commands_and_monitors() {
+    let addr = server();
+    let mut owner = Client::connect(addr).expect("connect owner");
+    let mut env = Client::connect(addr).expect("connect environment");
+    owner.set_name("owner");
+    env.set_name("ACT-R Environment");
+    owner.add_command("gone-command", "gone-command");
+    owner.monitor("model-trace", "gone-command");
+
+    drop(owner);
+    for _ in 0..100 {
+        let rows = env.connections();
+        let Some(Json::Arr(rows)) = rows.first() else {
+            panic!("connections is not an array: {rows:?}");
+        };
+        let owner_gone = !rows.iter().any(|row| {
+            matches!(row, Json::Arr(fields)
+                if fields.first().and_then(Json::as_str) == Some("owner"))
+        });
+        if owner_gone {
+            let listed = env.list_commands();
+            let Some(Json::Arr(items)) = listed.first() else {
+                panic!("list-commands is not an array: {listed:?}");
+            };
+            assert!(
+                !items.iter().any(|item| {
+                    matches!(item, Json::Obj(fields)
+                        if fields.iter().any(|(k, v)| k == "name"
+                            && v.as_str() == Some("gone-command")))
+                }),
+                "disconnected owner's command is still registered"
+            );
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    panic!("owner connection was not removed");
+}
+
+#[test]
 fn multi_model_run_emits_both_model_columns() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
@@ -463,11 +616,11 @@ fn viewers_connections_and_history_round_trip() {
     assert_eq!(first[0].as_str(), Some("ACT-R Environment"));
     assert!(
         first[2].as_f64().is_some_and(|v| v > 0.0),
-        "sent counter: {first:?}"
+        "received counter: {first:?}"
     );
     assert!(
         first[3].as_f64().is_some_and(|v| v > 0.0),
-        "received counter: {first:?}"
+        "sent counter: {first:?}"
     );
     let Some(Json::Arr(cmds)) = first.get(4) else {
         panic!("connection commands missing: {first:?}");

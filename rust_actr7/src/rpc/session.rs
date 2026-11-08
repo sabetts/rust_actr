@@ -270,6 +270,20 @@ pub trait Remote {
         model: Option<&str>,
         args: Vec<Json>,
     ) -> Result<Vec<Json>, String>;
+
+    /// Invoke a client-owned command belonging to `owner`.
+    ///
+    /// Single-client backends can use the default; the shared server overrides
+    /// it to route a command to the connection that registered it.
+    fn call_from(
+        &mut self,
+        _owner: Option<&str>,
+        name: &str,
+        model: Option<&str>,
+        args: Vec<Json>,
+    ) -> Result<Vec<Json>, String> {
+        self.call(name, model, args)
+    }
 }
 
 /// An inactive model engine owned by the session.
@@ -839,6 +853,30 @@ impl Session {
         }
     }
 
+    /// Remove every command and monitor registration owned by a connection.
+    ///
+    /// The dispatcher does this when an external client disconnects
+    /// (`framework/dispatcher.lisp:1500`).
+    pub fn remove_connection(&mut self, connection: &str) {
+        let owned: Vec<String> = self
+            .commands
+            .iter()
+            .filter(|(_, c)| c.connection.as_deref() == Some(connection))
+            .map(|(name, _)| name.clone())
+            .collect();
+        for name in &owned {
+            self.commands.remove(name);
+        }
+        if owned.is_empty() {
+            return;
+        }
+        for command in self.commands.values_mut() {
+            for list in [&mut command.before, &mut command.after, &mut command.simple] {
+                list.retain(|monitor| !owned.contains(monitor));
+            }
+        }
+    }
+
     /// Attach a monitor (`monitor`, `framework/dispatcher.lisp:1152`).
     pub fn add_monitor(&mut self, command: &str, monitor: &str, when: MonitorWhen) {
         if let Some(c) = self.commands.get_mut(command) {
@@ -1324,7 +1362,7 @@ impl Session {
             Owner::None => Ok(vec![Json::Bool(true)]),
             Owner::Remote { local_name } => {
                 let call = local_name.clone().unwrap_or_else(|| name.to_string());
-                remote.call(&call, model, args.to_vec())
+                remote.call_from(c.connection.as_deref(), &call, model, args.to_vec())
             }
         }
     }
@@ -7954,6 +7992,22 @@ mod tests {
             }
             Ok(vec![Json::Null])
         }
+    }
+
+    #[test]
+    fn removing_a_connection_drops_its_commands_and_monitors() {
+        let mut s = Session::new((100, 0));
+        s.add_remote("sink", None, Some("connection-1".into()));
+        s.add_monitor("model-trace", "sink", MonitorWhen::Simple);
+        assert!(s.has_command("sink"));
+        assert_eq!(
+            s.simple_monitors("model-trace"),
+            vec![("sink".to_string(), true)]
+        );
+
+        s.remove_connection("connection-1");
+        assert!(!s.has_command("sink"));
+        assert!(s.simple_monitors("model-trace").is_empty());
     }
 
     #[test]
