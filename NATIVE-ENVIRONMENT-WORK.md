@@ -24,8 +24,12 @@ now owns the native GUI program.
 - Both backends must expose the same event surface:
   - **client** (default): the GUI speaks the RPC protocol to `actr server`,
     reading `~/act-r-address.txt` and `~/act-r-port-num.txt` like the Tcl
-    Environment; `--connect HOST:PORT` overrides discovery;
+    Environment; `--connect HOST:PORT` overrides discovery. All server
+    connections share one `Session`, matching the Lisp dispatcher, so the GUI
+    sees models loaded by Python or other clients.
   - **in-process** (`--in-process`): the GUI owns `Session`.
+- `actr server --env [MODEL]` starts the shared server and opens the native
+  Environment as another client of it. Closing the GUI exits the process.
 - Auto-connect failures are fatal; use `--in-process` for the local engine.
 
 ## Program status
@@ -399,9 +403,14 @@ Follow-ups:
   `model` argument. The native GUI should pass the selected model for
   model-scoped commands and `None` for global commands, matching the Tcl
   client's `nil`.
-- The RPC server creates a separate `Session` per connection, so Stop must be
-  serviced on the same connection as the running request. Do not use a second
-  connection for control.
+- The RPC server owns one shared `Session` on a single actor thread. Connection
+  reader threads only parse frames; Stop, inspectors, and Stepper commands can
+  come from any connection while another connection is running. Remote
+  callbacks are routed to the connection that registered the command, and
+  disconnecting removes that connection's commands and monitors.
+- `Session` is not `Send` (`Rc<Cell<...>>`/`Rc<RefCell<...>>`), so the shared
+  session must stay on its actor thread. Do not replace the actor with
+  `Arc<Mutex<Session>>`.
 - Trace-time units are mixed upstream: history records use milliseconds; BOLD
   prediction arrays use seconds; trace-history start/end entries are seconds.
   Keep the conversions at the viewer boundary.
@@ -415,6 +424,8 @@ cargo fmt --check
 cargo test
 cargo test --features env --quiet --lib env::tests
 cargo test --features env --lib env::app::gui_tests
+cargo test --features env --test environment_rpc
+cargo test --features env --test stepper_rpc
 ```
 
 The headless GUI tests use `egui_kittest` to click the real control-panel

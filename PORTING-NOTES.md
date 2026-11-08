@@ -4440,6 +4440,7 @@ The Lisp server answers a second connection immediately, and
 *sequentially*, so the second `new-symbol` blocked behind the first
 connection's run. Each accepted stream is now handled on its own thread with
 its own `Session` (the existing per-connection isolation, just concurrent).
+That isolation was later replaced by one shared session; see note 372.
 
 `run`'s second value is ACT-R's `event-count` (`run-sched-queue`,
 `scheduling.lisp:627`), which `tutorial_unit2code_initial` prints. The engine
@@ -6461,3 +6462,27 @@ single nested list: `["env-vv-handler", model, ["open", title, x, ...]]`
 client must unwrap a sole array argument before dispatching a visible-window
 op; otherwise every op looks like an unknown verb and no experiment window is
 created.
+
+## 372. The RPC server shares one session across connections
+
+The Lisp dispatcher has one global command table and one global ACT-R model
+state (`framework/dispatcher.lisp:821`); connections are clients, and
+`list-connections` returns every handler plus the internal command row.
+Earlier the Rust listener gave each TCP connection its own `Session` (note
+265), which made an Environment client unable to see a Python client's model.
+
+The server now runs one session actor: connection reader threads parse frames
+and send requests, callback replies, and disconnects to a single thread that
+owns `Session`. The actor must stay single-threaded because `Session` holds
+`Rc<Cell<...>>`/`Rc<RefCell<...>>` and is neither `Send` nor `Sync`. Commands
+are serialized, remote callbacks route to the connection that registered the
+command, and `run` pumps requests from every connection between capped slices
+so another client (or the Environment) can Stop, Step, or inspect. Trace
+callbacks are recorded while the session is borrowed and replayed reentrantly,
+so a monitor on a different connection can issue nested commands. Disconnect
+removes that connection's commands and monitor registrations.
+
+`list-connections` uses the Lisp row shape
+`[name, address, received/pending, sent, commands]`. `actr server --env
+[MODEL]` binds first, starts the shared listener on a background thread, and
+opens the Environment as another RPC client of the same session.
