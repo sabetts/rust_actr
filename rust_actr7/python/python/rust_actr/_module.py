@@ -50,8 +50,10 @@ class Module(ModuleBase):
     def buffer_mod(self, ctx: Any, buffer: str, spec: Any) -> None:
         pass
 
-    def query(self, ctx: Any, buffer: str, name: str, value: Any) -> bool:
-        return False
+    def query(
+        self, ctx: Any, buffer: str, name: str, value: Any
+    ) -> Optional[bool]:
+        return None
 
     def params(
         self, ctx: Any, name: str, value: Any = UNSET

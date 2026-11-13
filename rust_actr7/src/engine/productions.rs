@@ -649,6 +649,14 @@ impl Engine {
     /// buffers, buffer flag otherwise. (Motor free = neither preparing
     /// nor executing; visual free = no attention shift in flight.)
     pub(super) fn query_free(&self, buffer: &str) -> Result<bool, EngineError> {
+        // Lisp routes `state free` through the owning module's `:query`
+        // callback (`query-module`, modules.lisp:794). Custom modules get the
+        // first word; built-in modules keep their hand-coded flags.
+        if self.module_index_for_buffer(buffer).is_some() {
+            if let Some(answer) = self.module_query(buffer, "STATE", &Value::Sym("FREE".into())) {
+                return Ok(answer);
+            }
+        }
         match buffer {
             "VISUAL" => Ok(!self.visual_busy && !self.visual_prep_busy),
             "MANUAL" => {
@@ -766,6 +774,11 @@ impl Engine {
     /// `?buffer> error t/nil`: blending owns a module-level flag; other
     /// buffers use their `failed` state (e.g. an imaginal-action `nil`).
     pub(super) fn buffer_error(&self, buffer: &str) -> bool {
+        if self.module_index_for_buffer(buffer).is_some() {
+            if let Some(answer) = self.module_query(buffer, "STATE", &Value::Sym("ERROR".into())) {
+                return answer;
+            }
+        }
         if buffer == "BLENDING" {
             self.blending_error
         } else {

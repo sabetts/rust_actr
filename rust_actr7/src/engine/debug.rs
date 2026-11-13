@@ -625,11 +625,13 @@ impl Engine {
     pub fn clear_buffer_driver(&mut self, buffer: &str) {
         let bname = buffer.to_uppercase();
         let cleared = self.buffer_mut(&bname).chunk.take();
+        let cleared_name = cleared.as_ref().and_then(|c| c.name.clone());
         self.buffer_mut(&bname).modified = false;
         self.buffer_mut(&bname).failed = false;
         if let Some(chunk) = cleared {
             self.merge_into_dm(chunk, &bname);
         }
+        self.module_notify_clear(&bname, cleared_name.as_deref());
         // No `changed()`: like the direct command, a task-level clear does not
         // re-arm conflict resolution.
     }
@@ -2163,10 +2165,17 @@ impl Engine {
 
     /// `clear-buffer <name>`: empty the buffer.
     pub fn clear_buffer_rpc(&mut self, buffer: &str) {
-        let b = self.buffer_mut(&buffer.to_uppercase());
+        let upper = buffer.to_uppercase();
+        let cleared_name = self
+            .buffers
+            .get(&upper)
+            .and_then(|b| b.chunk.as_ref())
+            .and_then(|c| c.name.clone());
+        let b = self.buffer_mut(&upper);
         b.chunk = None;
         b.failed = false;
         b.modified = false;
+        self.module_notify_clear(&upper, cleared_name.as_deref());
         self.changed();
     }
 
