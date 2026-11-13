@@ -353,13 +353,6 @@ if actr is not None:
 def build_model(
     lander: LunarLander, seed: int, trace: bool = False
 ) -> Any:
-    if actr is None:
-        raise RuntimeError(
-            "rust_actr is not installed. Build/install the Python wheel first: "
-            "python -m maturin build --release && "
-            "python -m pip install --force-reinstall "
-            "target/wheels/rust_actr-*.whl"
-        )
     model = actr.Model(
         "lunar-lander",
         seed=(seed, 0),
