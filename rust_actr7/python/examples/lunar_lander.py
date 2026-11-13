@@ -350,114 +350,6 @@ if actr is not None:
             )
 
 
-PRODUCTIONS = r"""
-(p fuel-out
-   =goal> state play
-   =lander-state> status flying fuel empty
-   ?lander-control> state free
-   ==>
-   +lander-control> coast t)
-
-(p steer-right-fast
-   =goal> state play
-   =lander-state> status flying horizontal left vertical fast fuel ok
-   ?lander-control> state free
-   ==>
-   +lander-control> main t right t)
-
-(p steer-right-fast-low
-   =goal> state play
-   =lander-state> status flying horizontal left vertical fast fuel low
-   ?lander-control> state free
-   ==>
-   +lander-control> main t right t)
-
-(p steer-right
-   =goal> state play
-   =lander-state> status flying horizontal left - vertical fast fuel ok
-   ?lander-control> state free
-   ==>
-   +lander-control> right t)
-
-(p steer-right-low
-   =goal> state play
-   =lander-state> status flying horizontal left - vertical fast fuel low
-   ?lander-control> state free
-   ==>
-   +lander-control> right t)
-
-(p steer-left-fast
-   =goal> state play
-   =lander-state> status flying horizontal right vertical fast fuel ok
-   ?lander-control> state free
-   ==>
-   +lander-control> main t left t)
-
-(p steer-left-fast-low
-   =goal> state play
-   =lander-state> status flying horizontal right vertical fast fuel low
-   ?lander-control> state free
-   ==>
-   +lander-control> main t left t)
-
-(p steer-left
-   =goal> state play
-   =lander-state> status flying horizontal right - vertical fast fuel ok
-   ?lander-control> state free
-   ==>
-   +lander-control> left t)
-
-(p steer-left-low
-   =goal> state play
-   =lander-state> status flying horizontal right - vertical fast fuel low
-   ?lander-control> state free
-   ==>
-   +lander-control> left t)
-
-(p brake
-   =goal> state play
-   =lander-state> status flying horizontal aligned vertical fast fuel ok
-   ?lander-control> state free
-   ==>
-   +lander-control> main t)
-
-(p brake-low
-   =goal> state play
-   =lander-state> status flying horizontal aligned vertical fast fuel low
-   ?lander-control> state free
-   ==>
-   +lander-control> main t)
-
-(p descend
-   =goal> state play
-   =lander-state> status flying horizontal aligned vertical ok altitude high fuel ok
-   ?lander-control> state free
-   ==>
-   +lander-control> coast t)
-
-(p descend-low
-   =goal> state play
-   =lander-state> status flying horizontal aligned vertical ok altitude high fuel low
-   ?lander-control> state free
-   ==>
-   +lander-control> coast t)
-
-(p float
-   =goal> state play
-   =lander-state> status flying horizontal aligned vertical rising
-   ?lander-control> state free
-   ==>
-   +lander-control> coast t)
-
-(p low-coast
-   =goal> state play
-   =lander-state> status flying horizontal aligned - vertical fast altitude low
-   ?lander-control> state free
-   ==>
-   +lander-control> coast t)
-"""
-
-
 def build_model(
     lander: LunarLander, seed: int, trace: bool = False
 ) -> Any:
@@ -478,9 +370,172 @@ def build_model(
     model.goal_focus(start)
     if not trace:
         model.sgp(":v", False)
-    for text in PRODUCTIONS.strip().split("\n\n"):
-        if text.strip():
-            model.add_production(text.strip())
+
+    model.add_production(
+        """
+(p fuel-out
+   =goal> state play
+   =lander-state> status flying fuel empty
+   ?lander-control> state free
+   ==>
+   +lander-control> coast t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-right-fast
+   =goal> state play
+   =lander-state> status flying horizontal left vertical fast fuel ok
+   ?lander-control> state free
+   ==>
+   +lander-control> main t right t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-right-fast-low
+   =goal> state play
+   =lander-state> status flying horizontal left vertical fast fuel low
+   ?lander-control> state free
+   ==>
+   +lander-control> main t right t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-right
+   =goal> state play
+   =lander-state> status flying horizontal left - vertical fast fuel ok
+   ?lander-control> state free
+   ==>
+   +lander-control> right t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-right-low
+   =goal> state play
+   =lander-state> status flying horizontal left - vertical fast fuel low
+   ?lander-control> state free
+   ==>
+   +lander-control> right t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-left-fast
+   =goal> state play
+   =lander-state> status flying horizontal right vertical fast fuel ok
+   ?lander-control> state free
+   ==>
+   +lander-control> main t left t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-left-fast-low
+   =goal> state play
+   =lander-state> status flying horizontal right vertical fast fuel low
+   ?lander-control> state free
+   ==>
+   +lander-control> main t left t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-left
+   =goal> state play
+   =lander-state> status flying horizontal right - vertical fast fuel ok
+   ?lander-control> state free
+   ==>
+   +lander-control> left t)
+"""
+    )
+
+    model.add_production(
+        """
+(p steer-left-low
+   =goal> state play
+   =lander-state> status flying horizontal right - vertical fast fuel low
+   ?lander-control> state free
+   ==>
+   +lander-control> left t)
+"""
+    )
+
+    model.add_production(
+        """
+(p brake
+   =goal> state play
+   =lander-state> status flying horizontal aligned vertical fast fuel ok
+   ?lander-control> state free
+   ==>
+   +lander-control> main t)
+"""
+    )
+
+    model.add_production(
+        """
+(p brake-low
+   =goal> state play
+   =lander-state> status flying horizontal aligned vertical fast fuel low
+   ?lander-control> state free
+   ==>
+   +lander-control> main t)
+"""
+    )
+
+    model.add_production(
+        """
+(p descend
+   =goal> state play
+   =lander-state> status flying horizontal aligned vertical ok altitude high fuel ok
+   ?lander-control> state free
+   ==>
+   +lander-control> coast t)
+"""
+    )
+
+    model.add_production(
+        """
+(p descend-low
+   =goal> state play
+   =lander-state> status flying horizontal aligned vertical ok altitude high fuel low
+   ?lander-control> state free
+   ==>
+   +lander-control> coast t)
+"""
+    )
+
+    model.add_production(
+        """
+(p float
+   =goal> state play
+   =lander-state> status flying horizontal aligned vertical rising
+   ?lander-control> state free
+   ==>
+   +lander-control> coast t)
+"""
+    )
+
+    model.add_production(
+        """
+(p low-coast
+   =goal> state play
+   =lander-state> status flying horizontal aligned - vertical fast altitude low
+   ?lander-control> state free
+   ==>
+   +lander-control> coast t)
+"""
+    )
+
     return model
 
 
