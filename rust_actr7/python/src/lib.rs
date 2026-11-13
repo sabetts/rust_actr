@@ -1,14 +1,29 @@
 use std::rc::Rc;
 
+use actr_engine::engine::module::{ModuleFactory, ModuleSet};
 use actr_engine::engine::Engine as CoreEngine;
-use actr_engine::HookValue;
 use actr_engine::json::Json;
-use actr_engine::model::load_models_from_str;
+use actr_engine::model::load_models_from_str_with_modules;
 use actr_engine::rpc::session::{MonitorWhen, Remote, Session as CoreSession};
 use actr_engine::trace::MODULE_WIDTH;
 use actr_engine::DeviceSetup;
+use actr_engine::HookValue;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
+
+mod module;
+
+fn module_factories(modules: Option<Vec<Py<PyAny>>>) -> Vec<Box<dyn ModuleFactory>> {
+    modules
+        .unwrap_or_default()
+        .into_iter()
+        .map(|obj| Box::new(module::PyModuleFactory::new(obj)) as Box<dyn ModuleFactory>)
+        .collect()
+}
+
+fn module_set(factories: &[Box<dyn ModuleFactory>]) -> ModuleSet {
+    ModuleSet::new(factories.iter().map(|factory| factory.describe()).collect())
+}
 
 fn runtime_error(e: impl std::fmt::Display) -> PyErr {
     PyRuntimeError::new_err(e.to_string())
@@ -51,19 +66,28 @@ struct Engine {
 #[pymethods]
 impl Engine {
     #[new]
-    #[pyo3(signature = (source, seed0=100, seed1=0))]
-    fn new(source: &str, seed0: u64, seed1: u64) -> PyResult<Self> {
-        let models = load_models_from_str(source).map_err(runtime_error)?;
+    #[pyo3(signature = (source, seed0=100, seed1=0, modules=None))]
+    fn new(
+        source: &str,
+        seed0: u64,
+        seed1: u64,
+        modules: Option<Vec<Py<PyAny>>>,
+    ) -> PyResult<Self> {
+        let factories = module_factories(modules);
+        let modules = module_set(&factories);
+        let models = load_models_from_str_with_modules(source, &modules).map_err(runtime_error)?;
         let model = models
             .last()
             .cloned()
             .ok_or_else(|| PyValueError::new_err("source contains no define-model"))?;
-        let inner = CoreEngine::new_with_width(
+        let instances = factories.iter().map(|factory| factory.create()).collect();
+        let inner = CoreEngine::with_module_instances(
             model,
             (seed0, seed1),
             0.0,
             DeviceSetup::default(),
             MODULE_WIDTH,
+            instances,
         )
         .map_err(runtime_error)?;
         Ok(Self { inner })
@@ -152,9 +176,17 @@ struct Session {
 #[pymethods]
 impl Session {
     #[new]
-    #[pyo3(signature = (source=None, seed0=100, seed1=0))]
-    fn new(source: Option<&str>, seed0: u64, seed1: u64) -> PyResult<Self> {
+    #[pyo3(signature = (source=None, seed0=100, seed1=0, modules=None))]
+    fn new(
+        source: Option<&str>,
+        seed0: u64,
+        seed1: u64,
+        modules: Option<Vec<Py<PyAny>>>,
+    ) -> PyResult<Self> {
         let mut inner = CoreSession::new((seed0, seed1));
+        for factory in module_factories(modules) {
+            inner.add_module_factory(factory).map_err(runtime_error)?;
+        }
         if let Some(src) = source {
             inner.load_source(src).map_err(runtime_error)?;
         }
@@ -308,6 +340,14 @@ impl Session {
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Engine>()?;
     m.add_class::<Session>()?;
+    m.add_class::<module::ModuleBase>()?;
+    m.add_class::<module::PyBufferSpec>()?;
+    m.add_class::<module::PyChunkTypeSpec>()?;
+    m.add_class::<module::PyParamSpec>()?;
+    m.add_class::<module::PyResetPhase>()?;
+    m.add_class::<module::ModuleContext>()?;
+    m.add_class::<module::PyRequest>()?;
+    m.add_class::<module::PyModuleEvent>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

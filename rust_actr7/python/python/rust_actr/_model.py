@@ -134,9 +134,15 @@ class Model(RuntimeMixin):
     methods inherited from :class:`RuntimeMixin` operate on the live model.
     """
 
-    def __init__(self, name: str, seed: Sequence[int] = (100, 0)) -> None:
+    def __init__(
+        self,
+        name: str,
+        seed: Sequence[int] = (100, 0),
+        modules: Optional[Sequence[Any]] = None,
+    ) -> None:
         self.name = render_symbol(name, what="model name")
         self.seed = _check_seed(seed)
+        self._modules: list[Any] = list(modules or [])
         self._chunk_types: list[_ChunkType] = []
         self._chunks: list[Chunk] = []
         self._defined: list[Chunk] = []
@@ -163,11 +169,21 @@ class Model(RuntimeMixin):
     def _emit(self, form: str) -> None:
         self._body.append(form)
 
+    def add_module(self, module: Any) -> None:
+        """Register a module class/factory before the engine is built."""
+        self._check_mutable()
+        self._modules.append(module)
+
     def _ensure_session(self) -> _native.Session:
         if self._session is None:
             source = self.to_lisp()
             try:
-                self._session = _native.Session(source, self.seed[0], self.seed[1])
+                self._session = _native.Session(
+                    source,
+                    self.seed[0],
+                    self.seed[1],
+                    modules=self._modules,
+                )
             except Exception as exc:
                 raise RuntimeError(
                     f"could not compile model {self.name!r}:\n{source}\n{exc}"

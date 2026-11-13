@@ -7,7 +7,9 @@
 
 use std::collections::HashSet;
 
-use super::{bad, Event, Out, Prio, Value};
+use super::{bad, Event, Out, Prio};
+
+pub use super::Value;
 use crate::model::{ChunkDesc, ChunkType, Pattern};
 
 /// The reset hook being invoked (`:reset`'s primary/secondary/tertiary
@@ -563,10 +565,6 @@ impl super::Engine {
 
     pub(crate) fn module_index_for_param(&self, key: &str) -> Option<usize> {
         self.module_param_owner.get(&key.to_uppercase()).copied()
-    }
-
-    pub(crate) fn custom_module_names(&self) -> &[String] {
-        &self.module_names
     }
 
     fn with_module_mut<R>(

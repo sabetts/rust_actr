@@ -1,5 +1,11 @@
 class Engine:
-    def __init__(self, source: str, seed0: int = 100, seed1: int = 0) -> None: ...
+    def __init__(
+        self,
+        source: str,
+        seed0: int = 100,
+        seed1: int = 0,
+        modules: list[object] | None = None,
+    ) -> None: ...
     def run(self, seconds: float) -> str: ...
     def run_until(self, time: float) -> str: ...
     def reset(self) -> str: ...
@@ -15,6 +21,7 @@ class Session:
         source: str | None = None,
         seed0: int = 100,
         seed1: int = 0,
+        modules: list[object] | None = None,
     ) -> None: ...
     def load_source(self, source: str) -> None: ...
     def set_sim_hook(self, callable: object | None) -> None: ...
@@ -41,5 +48,86 @@ class Session:
         soft_ms: int | None = None,
     ) -> bool: ...
     def run_events(self) -> int: ...
+
+class ModuleBase:
+    def __init__(self) -> None: ...
+
+class BufferSpec:
+    name: str
+    spread: tuple[str, float | None] | None
+    request_params: list[str]
+    queries: list[str]
+    status_fn: str | None
+    multi: str | None
+    def __init__(
+        self,
+        name: str,
+        spread: tuple[str, float | None] | None = None,
+        request_params: list[str] | None = None,
+        queries: list[str] | None = None,
+        status_fn: str | None = None,
+        multi: str | None = None,
+    ) -> None: ...
+
+class ChunkTypeSpec:
+    name: str
+    parents: list[str]
+    slots: list[str]
+    defaults: dict[str, object] | None
+    def __init__(
+        self,
+        name: str,
+        parents: list[str] | None = None,
+        slots: list[str] | None = None,
+        defaults: dict[str, object] | None = None,
+    ) -> None: ...
+
+class ParamSpec:
+    name: str
+    owner: bool
+    default_value: object | None
+    valid_test: str | None
+    warning: str
+    documentation: str
+    def __init__(
+        self,
+        name: str,
+        owner: bool = True,
+        default_value: object | None = None,
+        valid_test: str | None = None,
+        warning: str = "",
+        documentation: str = "",
+    ) -> None: ...
+
+class ResetPhase:
+    Primary: ResetPhase
+    Secondary: ResetPhase
+    Tertiary: ResetPhase
+
+class Request:
+    buffer: str
+    slots: dict[str, object]
+    chunk: str | None
+    var_slots: list[str]
+
+class ModuleEvent:
+    name: str
+    payload: list[object]
+
+class ModuleContext:
+    def time(self) -> float: ...
+    def time_ms(self) -> int: ...
+    def emit(self, details: str) -> None: ...
+    def set_busy(self, buffer: str, busy: bool) -> None: ...
+    def set_error(self, buffer: str, error: bool) -> None: ...
+    def set_buffer(
+        self, buffer: str, ctype: str, slots: dict[str, object]
+    ) -> None: ...
+    def clear_buffer(self, buffer: str) -> None: ...
+    def mod_buffer(self, buffer: str, slots: dict[str, object]) -> None: ...
+    def schedule_named(
+        self, delay_ms: int, name: str, payload: list[object] | None = None
+    ) -> None: ...
+    def param(self, name: str) -> object: ...
 
 __version__: str
