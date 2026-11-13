@@ -691,20 +691,46 @@ class LunarApp:
     def _draw_hud(self) -> None:
         c = self.canvas
         status = self.lander.status.upper()
+        status_color = {
+            "READY": "#fbbf24",
+            "FLYING": "#e2e8f0",
+            "LANDED": "#4ade80",
+            "CRASHED": "#f87171",
+        }.get(status, "#e2e8f0")
         altitude = max(0.0, self.lander.altitude())
-        line = (
-            f"STATUS {status:<7}   "
-            f"FUEL {self.lander.fuel:5.1f}   "
-            f"ALT {altitude:6.1f}   "
-            f"VX {self.lander.vx:6.1f}   "
-            f"VY {self.lander.vy:6.1f}"
-        )
+        fuel_ratio = clamp(self.lander.fuel / FUEL_MAX, 0.0, 1.0)
+
         c.create_rectangle(0, 0, WIDTH, 28, fill="#111827", outline="")
         c.create_text(
             14,
             14,
             anchor="w",
-            text=line,
+            text=status,
+            fill=status_color,
+            font=("Consolas", 12, "bold"),
+        )
+        c.create_text(
+            145,
+            14,
+            anchor="w",
+            text="FUEL",
+            fill="#94a3b8",
+            font=("Consolas", 12),
+        )
+        c.create_rectangle(198, 7, 398, 21, fill="#1e293b", outline="#94a3b8")
+        c.create_rectangle(
+            200,
+            9,
+            200 + 196 * fuel_ratio,
+            19,
+            fill="#4ade80" if fuel_ratio > 0.2 else "#f87171",
+            outline="",
+        )
+        c.create_text(
+            430,
+            14,
+            anchor="w",
+            text=f"ALT {altitude:6.1f}",
             fill="#e2e8f0",
             font=("Consolas", 12),
         )
