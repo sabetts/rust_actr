@@ -623,7 +623,7 @@ class LunarApp:
         )
         c.create_text(
             (ground.pad_left + ground.pad_right) / 2,
-            ground.pad_y - 18,
+            ground.pad_y + 16,
             text="LAND HERE",
             fill="#86efac",
             font=("Consolas", 12, "bold"),
