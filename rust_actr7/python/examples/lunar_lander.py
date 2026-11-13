@@ -544,7 +544,7 @@ class LunarApp:
             return
         if self.mode != "human":
             return
-        if key == "r":
+        if key in {"return", "kp_enter", "enter"}:
             self.lander.reset()
             self.pressed.clear()
             self.last_time = time.monotonic()
@@ -684,9 +684,9 @@ class LunarApp:
         if self.lander.status == "ready":
             self._banner("Press W / A / D (or arrow keys) to start")
         elif self.lander.status == "landed":
-            self._banner("LANDED!  Press R for a new run")
+            self._banner("LANDED!  Press Enter for a new run")
         elif self.lander.status == "crashed":
-            self._banner("CRASHED.  Press R to try again")
+            self._banner("CRASHED.  Press Enter to try again")
 
     def _draw_hud(self) -> None:
         c = self.canvas
