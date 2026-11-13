@@ -119,7 +119,7 @@ class LunarLander:
         self.terrain = Terrain.generate(self.rng)
         self.x = self.rng.uniform(WIDTH * 0.15, WIDTH * 0.85)
         self.y = self.rng.uniform(70.0, 150.0)
-        self.vx = self.rng.uniform(-24.0, 24.0)
+        self.vx = 0.0
         self.vy = self.rng.uniform(0.0, 12.0)
         self.fuel = FUEL_MAX
         self.main = self.left = self.right = False
