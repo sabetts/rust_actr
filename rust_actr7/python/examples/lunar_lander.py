@@ -691,38 +691,29 @@ class LunarApp:
     def _draw_hud(self) -> None:
         c = self.canvas
         status = self.lander.status.upper()
-        lines = [
-            f"STATUS  {status}",
-            f"FUEL    {self.lander.fuel:5.1f}",
-            f"ALT     {max(0.0, self.lander.altitude()):6.1f}",
-            f"VX      {self.lander.vx:6.1f}",
-            f"VY      {self.lander.vy:6.1f}",
-        ]
-        for i, line in enumerate(lines):
-            c.create_text(
-                18,
-                18 + i * 18,
-                anchor="nw",
-                text=line,
-                fill="#e2e8f0",
-                font=("Consolas", 12),
-            )
-        c.create_rectangle(
-            18,
-            118,
-            218,
-            130,
-            outline="#94a3b8",
-            fill="#1e293b",
+        altitude = max(0.0, self.lander.altitude())
+        line = (
+            f"STATUS {status:<7}   "
+            f"FUEL {self.lander.fuel:5.1f}   "
+            f"ALT {altitude:6.1f}   "
+            f"VX {self.lander.vx:6.1f}   "
+            f"VY {self.lander.vy:6.1f}"
         )
-        width = 200 * clamp(self.lander.fuel / FUEL_MAX, 0.0, 1.0)
-        c.create_rectangle(18, 118, 18 + width, 130, outline="", fill="#4ade80")
+        c.create_rectangle(0, 0, WIDTH, 28, fill="#111827", outline="")
+        c.create_text(
+            14,
+            14,
+            anchor="w",
+            text=line,
+            fill="#e2e8f0",
+            font=("Consolas", 12),
+        )
 
         if self.mode == "model":
             c.create_text(
-                WIDTH - 18,
-                18,
-                anchor="ne",
+                WIDTH - 14,
+                14,
+                anchor="e",
                 text="ACT-R MODEL",
                 fill="#fbbf24",
                 font=("Consolas", 12, "bold"),
