@@ -639,8 +639,8 @@ class LunarApp:
                 y - 9,
                 x + 2,
                 y + 14,
-                fill="#4b5563",
-                outline="#9ca3af",
+                fill="#e5e7eb",
+                outline="#94a3b8",
                 width=2,
             )
             c.create_polygon(
@@ -650,8 +650,8 @@ class LunarApp:
                 y - 5,
                 x + 21,
                 y + 12,
-                fill="#374151",
-                outline="#9ca3af",
+                fill="#e5e7eb",
+                outline="#94a3b8",
                 width=2,
             )
             c.create_line(x - 7, y + 4, x + 6, y - 2, fill="#ef4444", width=2)
