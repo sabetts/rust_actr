@@ -631,53 +631,94 @@ class LunarApp:
 
         x = self.lander.x
         y = self.lander.y
-        c.create_polygon(
-            x,
-            y - LANDER_H / 2,
-            x - LANDER_W / 2,
-            y + LANDER_H / 2,
-            x + LANDER_W / 2,
-            y + LANDER_H / 2,
-            fill="#e5e7eb",
-            outline="#94a3b8",
-            width=2,
-        )
-        c.create_oval(x - 5, y - 5, x + 5, y + 5, fill="#38bdf8", outline="")
-
-        if self.lander.main and self.lander.fuel > 0:
+        if self.lander.status == "crashed":
             c.create_polygon(
-                x - 5,
-                y + LANDER_H / 2,
-                x + 5,
-                y + LANDER_H / 2,
+                x - 18,
+                y + 12,
+                x - 7,
+                y - 9,
+                x + 2,
+                y + 14,
+                fill="#4b5563",
+                outline="#9ca3af",
+                width=2,
+            )
+            c.create_polygon(
+                x + 2,
+                y + 14,
+                x + 11,
+                y - 5,
+                x + 21,
+                y + 12,
+                fill="#374151",
+                outline="#9ca3af",
+                width=2,
+            )
+            c.create_line(x - 7, y + 4, x + 6, y - 2, fill="#ef4444", width=2)
+            c.create_line(x + 2, y + 8, x + 14, y + 4, fill="#f97316", width=2)
+            for dx, dy, radius in [
+                (-27, 9, 3),
+                (-20, 17, 2),
+                (23, 10, 3),
+                (29, 18, 2),
+                (0, 21, 2),
+            ]:
+                c.create_oval(
+                    x + dx - radius,
+                    y + dy - radius,
+                    x + dx + radius,
+                    y + dy + radius,
+                    fill="#f59e0b",
+                    outline="",
+                )
+        else:
+            c.create_polygon(
                 x,
-                y + LANDER_H / 2 + 24,
-                fill="#fb923c",
-                outline="",
-            )
-        if self.lander.left and self.lander.fuel > 0:
-            # Exhaust points right, so the reaction pushes the lander left.
-            c.create_polygon(
-                x + LANDER_W / 2,
-                y - 4,
-                x + LANDER_W / 2,
-                y + 6,
-                x + LANDER_W / 2 + 18,
-                y + 1,
-                fill="#fbbf24",
-                outline="",
-            )
-        if self.lander.right and self.lander.fuel > 0:
-            c.create_polygon(
+                y - LANDER_H / 2,
                 x - LANDER_W / 2,
-                y - 4,
-                x - LANDER_W / 2,
-                y + 6,
-                x - LANDER_W / 2 - 18,
-                y + 1,
-                fill="#fbbf24",
-                outline="",
+                y + LANDER_H / 2,
+                x + LANDER_W / 2,
+                y + LANDER_H / 2,
+                fill="#e5e7eb",
+                outline="#94a3b8",
+                width=2,
             )
+            c.create_oval(x - 5, y - 5, x + 5, y + 5, fill="#38bdf8", outline="")
+
+            if self.lander.main and self.lander.fuel > 0:
+                c.create_polygon(
+                    x - 5,
+                    y + LANDER_H / 2,
+                    x + 5,
+                    y + LANDER_H / 2,
+                    x,
+                    y + LANDER_H / 2 + 24,
+                    fill="#fb923c",
+                    outline="",
+                )
+            if self.lander.left and self.lander.fuel > 0:
+                # Exhaust points right, so the reaction pushes the lander left.
+                c.create_polygon(
+                    x + LANDER_W / 2,
+                    y - 4,
+                    x + LANDER_W / 2,
+                    y + 6,
+                    x + LANDER_W / 2 + 18,
+                    y + 1,
+                    fill="#fbbf24",
+                    outline="",
+                )
+            if self.lander.right and self.lander.fuel > 0:
+                c.create_polygon(
+                    x - LANDER_W / 2,
+                    y - 4,
+                    x - LANDER_W / 2,
+                    y + 6,
+                    x - LANDER_W / 2 - 18,
+                    y + 1,
+                    fill="#fbbf24",
+                    outline="",
+                )
 
         self._draw_hud()
 
