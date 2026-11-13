@@ -48,6 +48,7 @@ mod dm;
 mod driver;
 mod eval;
 mod events;
+pub mod module;
 mod motor;
 pub(crate) mod multi;
 pub mod params;
@@ -251,9 +252,10 @@ fn bad(what: impl Into<String>) -> EngineError {
 
 // ---------------------------------------------------------------- values
 
-/// Evaluated Lisp value usable by the bounded task-function evaluator.
+/// Evaluated Lisp value usable by the bounded task-function evaluator and the
+/// module API.
 #[derive(Debug, Clone)]
-enum Value {
+pub enum Value {
     Sym(String),
     Int(i64),
     Num(f64),
@@ -317,7 +319,7 @@ impl Value {
     }
 
     /// Lisp `~S` printing, as used by `!output!` and SET-BUFFER-CHUNK specs.
-    fn show(&self) -> String {
+    pub fn show(&self) -> String {
         match self {
             Value::Sym(s) => s.clone(),
             Value::Int(i) => i.to_string(),
@@ -1386,12 +1388,14 @@ fn sgp_nsji(params: &[(String, Sexp)], key: &str) -> Nsji {
 }
 
 impl Config {
-    fn from_model(m: &Model) -> Result<Config, EngineError> {
+    fn from_model_with(m: &Model, module_params: &HashSet<String>) -> Result<Config, EngineError> {
         // Reject parameters the engine has never heard of instead of silently
         // running with defaults. `params::sgp_support` also classifies the
         // accepted no-ops so the corpus coverage test can tell them apart.
+        // Parameters declared by a custom module are accepted here and routed
+        // to the module through its `params` callback.
         for (key, _) in &m.params {
-            if params::sgp_support(key).is_none() {
+            if params::sgp_support(key).is_none() && !module_params.contains(&key.to_uppercase()) {
                 return Err(bad(format!("unknown sgp parameter {key}")));
             }
         }
@@ -1764,7 +1768,7 @@ fn apply_buffer_list(target: &mut Vec<String>, v: &Sexp) -> Result<(), EngineErr
 // ---------------------------------------------------------------- chunks
 
 #[derive(Debug, Clone)]
-struct ChunkInst {
+pub(crate) struct ChunkInst {
     name: Option<String>,
     ctype: String,
     slots: Vec<(String, Value)>,
@@ -1955,7 +1959,7 @@ impl PartialOrd for Prio {
 }
 
 #[derive(Debug, Clone)]
-enum NewChunk {
+pub(crate) enum NewChunk {
     Named(String),
     Spec {
         ctype: String,
@@ -1975,6 +1979,12 @@ enum NewChunk {
 
 #[derive(Debug, Clone)]
 enum Event {
+    /// A named callback scheduled by a custom module.
+    ModuleCallback {
+        module: usize,
+        name: String,
+        payload: Vec<Value>,
+    },
     SetBuffer {
         buffer: String,
         chunk: NewChunk,
@@ -2628,6 +2638,20 @@ impl PartialEq<Vec<String>> for OutLines {
 
 pub struct Engine {
     model: Model,
+    /// Custom modules, one instance per engine. `None` while a callback is
+    /// running (the engine temporarily takes the module out to build
+    /// [`module::ModuleCtx`]).
+    modules: Vec<Option<Box<dyn module::Module>>>,
+    module_descriptors: Vec<module::ModuleDescriptor>,
+    module_names: Vec<String>,
+    /// Buffer name -> module index for custom modules.
+    module_by_buffer: HashMap<String, usize>,
+    /// Owned parameter name -> module index.
+    module_param_owner: HashMap<String, usize>,
+    /// Last value returned by a module's `params` callback.
+    module_param_values: HashMap<String, Value>,
+    /// Parameter names contributed by modules (used by `Config::from_model`).
+    module_param_names: HashSet<String>,
     cfg: Config,
     rng: RefCell<Mt>,
     dm: Vec<ChunkInst>,
@@ -3171,7 +3195,55 @@ impl Engine {
         device: DeviceSetup,
         module_width: usize,
     ) -> Result<Engine, EngineError> {
-        let cfg = Config::from_model(&model)?;
+        Engine::with_module_factories(model, seed, run_secs, device, module_width, Vec::new())
+    }
+
+    /// Build an engine with custom module factories. Each factory creates one
+    /// instance for this engine, so multi-model state is isolated.
+    pub fn with_module_factories(
+        model: Model,
+        seed: (u64, u64),
+        run_secs: f64,
+        device: DeviceSetup,
+        module_width: usize,
+        factories: Vec<Box<dyn module::ModuleFactory>>,
+    ) -> Result<Engine, EngineError> {
+        let modules: Vec<Box<dyn module::Module>> = factories
+            .into_iter()
+            .map(|factory| factory.create())
+            .collect();
+        Engine::with_module_instances(model, seed, run_secs, device, module_width, modules)
+    }
+
+    /// Build an engine from already-created module instances. The session uses
+    /// this to give each model its own instances from its factory list.
+    pub fn with_module_instances(
+        mut model: Model,
+        seed: (u64, u64),
+        run_secs: f64,
+        device: DeviceSetup,
+        module_width: usize,
+        modules: Vec<Box<dyn module::Module>>,
+    ) -> Result<Engine, EngineError> {
+        let module_descriptors: Vec<module::ModuleDescriptor> = modules
+            .iter()
+            .map(|m| module::ModuleDescriptor::from_module(&**m))
+            .collect();
+        let modules: Vec<Option<Box<dyn module::Module>>> = modules.into_iter().map(Some).collect();
+        let module_set = module::ModuleSet::new(module_descriptors.clone());
+        // Module chunk types participate in model validation and slot
+        // checking exactly like `chunk-type` forms in the model body.
+        for ct in module_set.chunk_types() {
+            if !model
+                .chunk_types
+                .iter()
+                .any(|existing| existing.name == ct.name)
+            {
+                model.chunk_types.push(ct);
+            }
+        }
+        let module_param_names = module_set.param_names();
+        let cfg = Config::from_model_with(&model, &module_param_names)?;
         // `open-exp-window`'s default origin is (300, 300); a model body may
         // override it (e.g. the extended-motor-actions test model uses (0, 0)).
         let window_origin = model.window_origin.unwrap_or((300, 300));
@@ -3220,8 +3292,31 @@ impl Engine {
             .flat_map(|ct| ct.slots.iter())
             .map(|s| s.to_uppercase())
             .collect();
+        let module_names: Vec<String> = module_descriptors
+            .iter()
+            .map(|d| d.name.to_uppercase())
+            .collect();
+        let mut module_by_buffer = HashMap::new();
+        let mut module_param_owner = HashMap::new();
+        let mut module_param_values = HashMap::new();
+        for (idx, d) in module_descriptors.iter().enumerate() {
+            for buffer in &d.buffers {
+                module_by_buffer.insert(buffer.name.to_uppercase(), idx);
+            }
+            for param in d.params.iter().filter(|p| p.owner) {
+                module_param_owner.insert(param.name.to_uppercase(), idx);
+                module_param_values.insert(param.name.to_uppercase(), param.default.clone());
+            }
+        }
         let mut eng = Engine {
             model,
+            modules,
+            module_descriptors,
+            module_names,
+            module_by_buffer,
+            module_param_owner,
+            module_param_values,
+            module_param_names,
             cfg,
             rng: RefCell::new(rng),
             dm: Vec::new(),
@@ -3558,6 +3653,7 @@ impl Engine {
         // `+buffer> isa TYPE` carries the chunk-type's default slots (e.g.
         // `cmd move-attention`), which the rendering and composition see.
         eng.expand_request_defaults();
+        eng.init_custom_modules()?;
         eng.reset_impl()?;
         eng.cfg.module_width = module_width;
         // The construction reset is not part of the recorded trace: ACT-R
@@ -3869,7 +3965,7 @@ impl Engine {
             self.cfg.zz_fpd_ms,
             self.cfg.zz_spd_ms,
         );
-        self.cfg = Config::from_model(&self.model)?;
+        self.cfg = Config::from_model_with(&self.model, &self.module_param_names)?;
         self.cfg.zz_two_proc = zz.0;
         self.cfg.zz_two_exec = zz.1;
         self.cfg.zz_query = zz.2;
@@ -4058,6 +4154,7 @@ impl Engine {
         if self.cfg.blending {
             self.buffers.insert("BLENDING".to_string(), Buffer::empty());
         }
+        self.insert_module_buffers();
         self.queue = BinaryHeap::new();
         // `display_queued_ms` describes a wave *in the queue*: a reset drops
         // that queue, so the flag must go with it or it suppresses the
@@ -4363,6 +4460,13 @@ impl Engine {
                 },
             );
         }
+        // Lisp's `reset-module` / `secondary-reset-module` /
+        // `tertiary-reset-module` callbacks.
+        self.module_reset(module::ResetPhase::Primary)?;
+        self.module_reset(module::ResetPhase::Secondary)?;
+        self.module_reset(module::ResetPhase::Tertiary)?;
+        // ACT-R re-evaluates the model body (and its `sgp` forms) on reset.
+        self.apply_model_module_params()?;
         Ok(())
     }
 
@@ -5290,6 +5394,7 @@ impl Engine {
     /// until it returns `false`. Returns `(limit_ms, full, should_run)`.
     pub fn run_begin(&mut self, name: &str, secs: f64) -> (i64, bool, bool) {
         self.run_events = 0;
+        self.module_run_start();
         match name {
             "run-full-time" => {
                 let end = self.time_ms + (secs * 1000.0).round() as i64;
@@ -5340,7 +5445,9 @@ impl Engine {
             return Ok(false);
         }
         let next = self.queue.pop().expect("peeked non-empty");
+        let previous_time = self.time_ms;
         self.time_ms = next.time_ms;
+        self.module_update(previous_time, self.time_ms);
         self.bh_pre_hook();
         self.bt_pre_hook();
         let bh_info = self.bh_event_info_take(&next.event);
@@ -5450,7 +5557,9 @@ impl Engine {
         let Some(next) = self.queue.pop() else {
             return Ok(false);
         };
+        let previous_time = self.time_ms;
         self.time_ms = next.time_ms;
+        self.module_update(previous_time, self.time_ms);
         let show = self.cfg.detail.shows(next.out);
         let hook_view = match self.pre_event_hook(&next.event, next.out, show)? {
             Some((_, Verdict::Break)) => {
@@ -5701,6 +5810,7 @@ impl Engine {
     fn zz_run_step_mode(&mut self, secs: f64, full: bool) -> Result<bool, EngineError> {
         let limit_ms = self.time_ms + (secs * 1000.0).round() as i64;
         self.run_events = 0;
+        self.module_run_start();
         self.p_hist_run_start();
         let r = self.run_to_limit(limit_ms, full, false, None, None);
         self.p_hist_run_stop();
@@ -5794,7 +5904,9 @@ impl Engine {
                 }
             }
             let next = self.queue.pop().expect("peeked non-empty");
+            let previous_time = self.time_ms;
             self.time_ms = next.time_ms;
+            self.module_update(previous_time, self.time_ms);
             self.bh_pre_hook();
             self.bt_pre_hook();
             let bh_info = self.bh_event_info_take(&next.event);
@@ -5860,6 +5972,9 @@ impl Engine {
                 self.run_capped = true;
                 break;
             }
+        }
+        if !self.run_capped && !self.device_action_yield && self.pending_host_action.is_none() {
+            self.module_run_end();
         }
         Ok(processed)
     }

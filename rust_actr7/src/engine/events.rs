@@ -15,6 +15,13 @@ impl Engine {
 
     pub(super) fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
         match event {
+            Event::ModuleCallback {
+                module,
+                name,
+                payload,
+            } => {
+                self.module_on_event(module, name, payload)?;
+            }
             Event::SetBuffer {
                 buffer,
                 chunk,
@@ -675,6 +682,7 @@ impl Engine {
                     self.emit(&module, format!("CLEAR-BUFFER {buffer}"));
                 }
                 let cleared = self.buffer_mut(&buffer).chunk.take();
+                let cleared_name = cleared.as_ref().and_then(|c| c.name.clone());
                 self.buffer_mut(&buffer).modified = false;
                 if buffer == "AURAL-LOCATION" {
                     // `aural-location-update-check` only fires while the buffer
@@ -715,6 +723,7 @@ impl Engine {
                         }
                     }
                 }
+                self.module_notify_clear(&buffer, cleared_name.as_deref());
                 self.changed();
             }
             Event::UnstuffAural { copy } => {
@@ -759,6 +768,10 @@ impl Engine {
                     self.emit("PROCEDURAL", format!("MODULE-MOD-REQUEST {buffer}"));
                 } else {
                     self.capture_line("PROCEDURAL", &format!("MODULE-MOD-REQUEST {buffer}"));
+                }
+                if let Some(idx) = self.module_index_for_buffer(&buffer) {
+                    self.module_buffer_mod(idx, &buffer, &slots)?;
+                    return Ok(());
                 }
                 if buffer == "IMAGINAL" {
                     self.imag_busy = true;
@@ -856,6 +869,10 @@ impl Engine {
                     // a buffer change, so it must not wake conflict resolution
                     // (the module's own set/clear does that).
                     self.event_silent = true;
+                }
+                if let Some(idx) = self.module_index_for_buffer(&buffer) {
+                    self.module_request(idx, &buffer, &spec, &var_slots)?;
+                    return Ok(());
                 }
                 match buffer.as_str() {
                     "RETRIEVAL" => {

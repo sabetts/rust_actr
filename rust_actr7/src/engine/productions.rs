@@ -596,6 +596,10 @@ impl Engine {
                         // error flag (`query-module`, modules.lisp:798).
                         ("ERROR", Pattern::Nil) => !self.buffer_error(buffer),
                         ("ERROR", Pattern::Sym(s)) if s == "T" => self.buffer_error(buffer),
+                        (attr, value) if self.module_index_for_buffer(buffer).is_some() => {
+                            let value = Value::from_pattern(value)?;
+                            self.module_query(buffer, attr, &value).unwrap_or(false)
+                        }
                         _ => {
                             return Err(unimpl(format!("query ?{buffer}> {attr} {val:?}")));
                         }

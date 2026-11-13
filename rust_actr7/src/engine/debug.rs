@@ -1977,6 +1977,12 @@ impl Engine {
                     self.cfg.decay_time_ms = (secs * 1000.0).round() as i64;
                 }
             }
+            // A parameter owned by a custom module: dispatch to its `params`
+            // callback, exactly like Lisp's module `:params` handler.
+            other if self.module_index_for_param(other).is_some() => {
+                let value = Value::from_sexp(val)?;
+                self.set_module_param(other, &value)?;
+            }
             // Classify anything without an arm above. `Ignored` entries are
             // accepted no-ops (cosmetic flags and documented parity gaps);
             // `ModelOnly` has no runtime setter yet. A `Both`/`RuntimeOnly`
@@ -2533,6 +2539,9 @@ impl Engine {
     }
 
     pub fn get_param(&self, key: &str) -> Option<String> {
+        if let Some(value) = self.module_param(key) {
+            return Some(value.show());
+        }
         let b = |x: bool| if x { "T" } else { "NIL" }.to_string();
         Some(match key.to_uppercase().as_str() {
             ":V" => b(self.trace_on),

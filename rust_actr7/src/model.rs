@@ -16,6 +16,7 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
+use crate::engine::module::ModuleSet;
 use crate::sexpr::{parse_all, Sexp};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2764,6 +2765,7 @@ fn parse_model(
     form: &Sexp,
     defs: &std::collections::HashMap<String, Sexp>,
     required_extras: &[String],
+    modules: &ModuleSet,
 ) -> Result<Model, LoadError> {
     let body = match form {
         Sexp::List(items) => match items.as_slice() {
@@ -2778,7 +2780,9 @@ fn parse_model(
     let mut model = Model {
         name,
         params: Vec::new(),
-        chunk_types: Vec::new(),
+        // Module-contributed chunk types are visible to production parsing and
+        // slot validation exactly like model-body `chunk-type` forms.
+        chunk_types: modules.chunk_types(),
         chunks: Vec::new(),
         defined_chunks: Vec::new(),
         merge_chunks: Vec::new(),
@@ -2819,7 +2823,7 @@ fn parse_model(
     let mut created_chunks: Vec<String> = Vec::new();
     // Slots extended by a production parse (`extend-possible-slots`);
     // `check-between-production-style` treats them as new for ordering.
-    let mut extended_slots: Vec<String> = Vec::new();
+    let mut extended_slots: Vec<String> = modules.request_param_names();
     // ACT-R emits the LHS-condition chunk warnings before the RHS-action ones,
     // even when the productions are interleaved (`tutorial-unit1-semantic-warnings`).
     let mut lhs_undefined: Vec<String> = Vec::new();
@@ -3132,8 +3136,12 @@ fn parse_model(
                 model.call_commands.push((command, items[2..].to_vec()));
             }
             "P" => {
-                let extra: Vec<String> =
-                    model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
+                let extra: Vec<String> = model
+                    .buffer_decls
+                    .iter()
+                    .map(|(b, _)| b.clone())
+                    .chain(modules.buffer_names())
+                    .collect();
                 match parse_production(f, &extra) {
                     Ok(p) => {
                         let mut known: Vec<String> = model
@@ -3189,8 +3197,12 @@ fn parse_model(
                     let sub = substitute_commas(list, defs);
                     let mut form = vec![Sexp::Sym("P".to_string())];
                     form.extend(sub);
-                    let extra: Vec<String> =
-                        model.buffer_decls.iter().map(|(b, _)| b.clone()).collect();
+                    let extra: Vec<String> = model
+                        .buffer_decls
+                        .iter()
+                        .map(|(b, _)| b.clone())
+                        .chain(modules.buffer_names())
+                        .collect();
                     match parse_production(&Sexp::List(form), &extra) {
                         Ok(p) => {
                             model.reset_warnings.extend(undefined_slot_warnings(
@@ -3499,8 +3511,14 @@ fn push_production(model: &mut Model, p: Production) {
 /// Load every `define-model` in a `.lisp` model file (these files hold one).
 /// `(clear-all)` is acknowledged and skipped; anything else top-level errors.
 pub fn load_models(path: &Path) -> Result<Vec<Model>, LoadError> {
+    load_models_with_modules(path, &ModuleSet::default())
+}
+
+/// Like [`load_models`], but module-contributed chunk types and buffer
+/// definitions are visible while the model is parsed.
+pub fn load_models_with_modules(path: &Path, modules: &ModuleSet) -> Result<Vec<Model>, LoadError> {
     let src = fs::read_to_string(path).map_err(LoadError::Io)?;
-    load_models_from_str(&src)
+    load_models_from_str_with_modules(&src, modules)
 }
 
 /// Parse every `define-model` in already-read Lisp source — the filesystem-free
@@ -3539,6 +3557,15 @@ pub fn source_clears_all(src: &str) -> bool {
 }
 
 pub fn load_models_from_str(src: &str) -> Result<Vec<Model>, LoadError> {
+    load_models_from_str_with_modules(src, &ModuleSet::default())
+}
+
+/// Like [`load_models_from_str`], but module-contributed chunk types are
+/// visible while the model body is parsed.
+pub fn load_models_from_str_with_modules(
+    src: &str,
+    modules: &ModuleSet,
+) -> Result<Vec<Model>, LoadError> {
     let mut models = Vec::new();
     let mut required_extras: Vec<String> = Vec::new();
     let mut defs: std::collections::HashMap<String, Sexp> = std::collections::HashMap::new();
@@ -3559,7 +3586,7 @@ pub fn load_models_from_str(src: &str) -> Result<Vec<Model>, LoadError> {
                     collect_required_extras(&form, &mut required_extras);
                 }
                 Some(Sexp::Sym(h)) if h == "DEFINE-MODEL" => {
-                    models.push(parse_model(&form, &defs, &required_extras)?)
+                    models.push(parse_model(&form, &defs, &required_extras, modules)?)
                 }
                 // `(written-for-act-r-version "7.15" "...")`: a version
                 // annotation with no runtime effect.

@@ -12,12 +12,13 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use crate::engine::module::{ModuleFactory, ModuleSet};
 use crate::engine::{
     DeviceSetup, Engine, EngineError, EventHook, EventView, PreResult, ProductionGraphMode,
     StepperSnapshot, TraceKind,
 };
 use crate::json::Json;
-use crate::model::{self, load_models, ChunkDesc, Model, UserDefun};
+use crate::model::{self, ChunkDesc, Model, UserDefun};
 use crate::sexpr::Sexp;
 use crate::trace::Out;
 
@@ -337,6 +338,8 @@ pub struct Session {
     stepper: Option<Stepper>,
     /// The scripted device the engine is built with (empty by default).
     device: DeviceSetup,
+    /// Custom module factories; every model engine gets fresh instances.
+    module_factories: Vec<Box<dyn ModuleFactory>>,
     /// Models that installed a speech/microphone device. A runtime engine
     /// rebuild must restore this flag, as `define-chunks` does not uninstall
     /// the device in ACT-R.
@@ -546,6 +549,7 @@ impl Session {
             pending_signals: Vec::new(),
             stepper: None,
             device: DeviceSetup::default(),
+            module_factories: Vec::new(),
             speech_models: Default::default(),
             vwin_handlers: Vec::new(),
             windows: HashMap::new(),
@@ -554,6 +558,27 @@ impl Session {
             hist_jobs: Default::default(),
             hist_next_id: 0,
         }
+    }
+
+    /// Register a module factory. Mirrors `define-module`'s restriction: it may
+    /// only be called while no model is defined.
+    pub fn add_module_factory(&mut self, factory: Box<dyn ModuleFactory>) -> Result<(), String> {
+        if !self.defs.is_empty() || self.engine.is_some() {
+            return Err(
+                "cannot define a module when a model is loaded; call clear-all first".into(),
+            );
+        }
+        self.module_factories.push(factory);
+        Ok(())
+    }
+
+    pub fn module_set(&self) -> ModuleSet {
+        ModuleSet::new(
+            self.module_factories
+                .iter()
+                .map(|factory| factory.describe())
+                .collect(),
+        )
     }
 
     /// Kept for the regression harness call sites; multi-model is now allowed.
@@ -607,8 +632,20 @@ impl Session {
     }
 
     fn make_engine(&self, def: &Model) -> Result<Engine, String> {
-        let mut eng = Engine::new(def.clone(), self.seed, 0.0, self.device.clone())
-            .map_err(|e| e.to_string())?;
+        let modules: Vec<Box<dyn crate::engine::module::Module>> = self
+            .module_factories
+            .iter()
+            .map(|factory| factory.create())
+            .collect();
+        let mut eng = Engine::with_module_instances(
+            def.clone(),
+            self.seed,
+            0.0,
+            self.device.clone(),
+            crate::trace::MODULE_WIDTH,
+            modules,
+        )
+        .map_err(|e| e.to_string())?;
         let multi_model = self.model_order.len() > 1
             || self
                 .model_order
@@ -4445,7 +4482,9 @@ impl Session {
     /// Task-file `defun`s are not parsed; Python callbacks are registered
     /// through [`Session::add_remote`] and the fired-command bridge.
     pub fn load_source(&mut self, source: &str) -> Result<(), String> {
-        let loaded = crate::model::load_models_from_str(source).map_err(|e| e.to_string())?;
+        let modules = self.module_set();
+        let loaded = crate::model::load_models_from_str_with_modules(source, &modules)
+            .map_err(|e| e.to_string())?;
         self.prepare_model_load();
         for def in loaded {
             self.add_model_definition(def, None)?;
@@ -4501,7 +4540,9 @@ impl Session {
         }
         if crate::file_defines_model(&path)? {
             self.prepare_model_load();
-            let loaded = load_models(&path).map_err(|e| e.to_string())?;
+            let modules = self.module_set();
+            let loaded =
+                model::load_models_with_modules(&path, &modules).map_err(|e| e.to_string())?;
             for def in loaded {
                 let name = def.name.clone();
                 self.close_model_window(&name, remote);
