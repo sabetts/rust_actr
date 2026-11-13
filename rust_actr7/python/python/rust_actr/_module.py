@@ -21,6 +21,11 @@ UNSET = object()
 class Module(ModuleBase):
     """A module definition. Override only the hooks your module needs."""
 
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Module":
+        # PyO3's base ``__new__`` takes no constructor arguments; subclasses
+        # may define their own ``__init__(...)`` with configuration values.
+        return super().__new__(cls)
+
     version = ""
     documentation = ""
     required: Any = ()
