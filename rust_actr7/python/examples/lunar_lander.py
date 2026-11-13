@@ -656,23 +656,24 @@ class LunarApp:
                 outline="",
             )
         if self.lander.left and self.lander.fuel > 0:
-            c.create_polygon(
-                x - LANDER_W / 2,
-                y - 4,
-                x - LANDER_W / 2,
-                y + 6,
-                x - LANDER_W / 2 - 18,
-                y + 1,
-                fill="#fbbf24",
-                outline="",
-            )
-        if self.lander.right and self.lander.fuel > 0:
+            # Exhaust points right, so the reaction pushes the lander left.
             c.create_polygon(
                 x + LANDER_W / 2,
                 y - 4,
                 x + LANDER_W / 2,
                 y + 6,
                 x + LANDER_W / 2 + 18,
+                y + 1,
+                fill="#fbbf24",
+                outline="",
+            )
+        if self.lander.right and self.lander.fuel > 0:
+            c.create_polygon(
+                x - LANDER_W / 2,
+                y - 4,
+                x - LANDER_W / 2,
+                y + 6,
+                x - LANDER_W / 2 - 18,
                 y + 1,
                 fill="#fbbf24",
                 outline="",
