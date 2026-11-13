@@ -96,6 +96,23 @@ Slot and query names are uppercase Lisp symbols (`"CMD"`, `"STATE"`, `"FREE"`).
 Use `ctx.schedule_named(...)`/`on_event` for delayed module work; it is an
 engine extension, not a `define-module` keyword.
 
+## Lunar lander example
+
+`examples/lunar_lander.py` is a single-file playable demo of the module API.
+It has rough terrain, a flat landing pad, three combinable thrusters, and a
+small ACT-R model that uses a Python module to observe and control the lander.
+
+```powershell
+# Play it yourself (tkinter)
+python examples/lunar_lander.py --mode human
+
+# Let the ACT-R model play, headless
+python examples/lunar_lander.py --mode model --seed 1
+
+# Watch the ACT-R model play in the game window
+python examples/lunar_lander.py --mode model --seed 1 --gui
+```
+
 ## Values
 
 Python strings are model symbols, which is what slot conditions usually use:
