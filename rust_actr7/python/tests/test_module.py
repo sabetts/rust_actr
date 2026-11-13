@@ -58,6 +58,10 @@ class Counter(actr.Module):
     def update(self, ctx, old_time, new_time):
         Counter.log.append(("update", old_time, new_time))
 
+    def buffer_mod(self, ctx, buffer, spec):
+        ctx.emit("BUFFER-MOD")
+        ctx.mod_buffer(buffer, spec.slots)
+
     def params(self, ctx, name, value=actr.UNSET):
         if name.upper() == ":COUNTER-STEP":
             if value is not actr.UNSET:
@@ -82,6 +86,20 @@ def make_model():
      state done)
 """
     )
+    model.add_production(
+        """
+(p bump
+   =goal>
+     state done
+   =counter>
+     value 2
+   ==>
+   *counter>
+     value 3
+   =goal>
+     state end)
+"""
+    )
     return model
 
 
@@ -91,7 +109,13 @@ class ModuleTests(unittest.TestCase):
         trace = model.run(1.0)
         self.assertIn("REQUEST inc 2", trace)
         self.assertIn("DONE 2", trace)
-        self.assertEqual(model.chunk_slot_value("counter", "value"), 2)
+        self.assertEqual(model.chunk_slot_value("counter", "value"), 3)
+
+    def test_buffer_mod_request(self):
+        model = make_model()
+        trace = model.run(1.0)
+        self.assertIn("BUFFER-MOD", trace)
+        self.assertEqual(model.chunk_slot_value("counter", "value"), 3)
 
     def test_parameter_routes_to_module(self):
         model = make_model()
