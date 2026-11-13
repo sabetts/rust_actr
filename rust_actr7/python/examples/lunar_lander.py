@@ -690,13 +690,20 @@ class LunarApp:
 
     def _draw_hud(self) -> None:
         c = self.canvas
-        status = self.lander.status.upper()
-        status_color = {
-            "READY": "#fbbf24",
-            "FLYING": "#e2e8f0",
-            "LANDED": "#4ade80",
-            "CRASHED": "#f87171",
-        }.get(status, "#e2e8f0")
+        if self.lander.status == "ready":
+            status, status_color = "READY", "#fbbf24"
+        elif self.lander.status == "landed":
+            status, status_color = "LANDED", "#4ade80"
+        elif self.lander.status == "crashed":
+            status, status_color = "CRASHED", "#f87171"
+        else:
+            safe = (
+                self.lander.vy <= SAFE_VY
+                and abs(self.lander.vx) <= SAFE_VX
+            )
+            status, status_color = (
+                ("GOOD", "#4ade80") if safe else ("TOO FAST", "#f87171")
+            )
         altitude = max(0.0, self.lander.altitude())
         fuel_ratio = clamp(self.lander.fuel / FUEL_MAX, 0.0, 1.0)
 
