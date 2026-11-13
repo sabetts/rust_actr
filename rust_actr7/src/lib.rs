@@ -34,6 +34,10 @@ pub mod trace;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
+pub use engine::module::{
+    BufferSpec, ChunkTypeSpec, Module, ModuleCtx, ModuleDescriptor, ModuleError, ModuleEvent,
+    ModuleFactory, ModuleSet, ParamSpec, Request, ResetPhase, Value as ModuleValue,
+};
 pub use engine::params::{sgp_support, SgpSupport};
 pub use engine::{
     DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, HookValue, MultiEngine,

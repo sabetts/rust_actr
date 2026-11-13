@@ -40,6 +40,62 @@ print(trace)
 Productions use the same Lisp syntax as `define-model` files, including
 `=buffer>` conditions and `==>`.
 
+## Modules
+
+Rust and Python can both define cognitive modules. A Python module subclasses
+`actr.Module`; the hooks mirror Lisp's `define-module` and are optional except
+`name` (and `query`/`params` when the module has buffers/parameters).
+
+```python
+import rust_actr as actr
+
+
+class Game(actr.Module):
+    version = "0.1"
+    documentation = "game bridge"
+
+    def name(self):
+        return "game"
+
+    def buffers(self):
+        return [
+            actr.BufferSpec("game-state", request_params=["look"]),
+            actr.BufferSpec("game-action", request_params=["move"]),
+        ]
+
+    def chunk_types(self):
+        return [
+            actr.ChunkTypeSpec("game-state", slots=["mode", "x", "y"]),
+            actr.ChunkTypeSpec("game-action", slots=["cmd"]),
+        ]
+
+    def parameters(self):
+        return [actr.ParamSpec(":game-action-time", default_value=0.05)]
+
+    def request(self, ctx, buffer, spec):
+        ctx.set_busy(buffer, True)
+        ctx.schedule_named(50, "done", [spec.slots.get("CMD", "wait")])
+
+    def on_event(self, ctx, event):
+        if event.name == "done":
+            ctx.set_busy("GAME-ACTION", False)
+            ctx.emit("action-complete")
+
+    def query(self, ctx, buffer, name, value):
+        # Return True/False for queries you handle, or None to fall back.
+        return None
+
+    def params(self, ctx, name, value=actr.UNSET):
+        return None
+
+
+m = actr.Model("model", modules=[Game])
+```
+
+Slot and query names are uppercase Lisp symbols (`"CMD"`, `"STATE"`, `"FREE"`).
+Use `ctx.schedule_named(...)`/`on_event` for delayed module work; it is an
+engine extension, not a `define-module` keyword.
+
 ## Values
 
 Python strings are model symbols, which is what slot conditions usually use:

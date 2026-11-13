@@ -11,7 +11,7 @@ use actr_engine::engine::module::{
     BufferSpec, ChunkTypeSpec, Module, ModuleCtx, ModuleDescriptor, ModuleError, ModuleEvent,
     ModuleFactory, ParamSpec, ResetPhase, Value,
 };
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList};
 
@@ -525,13 +525,22 @@ impl PyModuleAdapter {
     {
         let effects = Rc::new(RefCell::new(Vec::new()));
         let time_ms = ctx.time_ms();
+        let params: HashMap<String, Value> = self
+            .descriptor
+            .params
+            .iter()
+            .filter_map(|param| {
+                ctx.param(&param.name)
+                    .map(|value| (param.name.clone(), value))
+            })
+            .collect();
         let py_ctx = Python::attach(|py| {
             Py::new(
                 py,
                 ModuleContext {
                     effects: effects.clone(),
                     time_ms,
-                    params: HashMap::new(),
+                    params,
                 },
             )
         })
@@ -838,6 +847,3 @@ impl ModuleFactory for PyModuleFactory {
         })
     }
 }
-
-#[allow(dead_code)]
-fn _unused(_: PyValueError) {}
