@@ -5,6 +5,9 @@ execution traces and speaks ACT-R's RPC protocol, so an existing ACT-R client
 (e.g. the Python `actr.py`) can connect unchanged — the one divergence being
 that arbitrary Lisp cannot be executed.
 
+This is a vibe coded project. Reading the source code is considered
+harmful to your health. Please wear appropriate PPE.
+
 ## Layout
 
 | path | what |
