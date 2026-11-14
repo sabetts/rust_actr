@@ -213,11 +213,45 @@ actr.run(10)
 print(count.m.trace)
 ```
 
+## Tutorial notebooks
+
+The tutorial also has Rust-port notebooks next to each unit's scripts:
+
+```text
+tutorial/tutorial.ipynb
+tutorial/unit1/unit1.ipynb
+...
+tutorial/unit8/unit8.ipynb
+```
+
+Launch Jupyter from `rust_actr7/python` and open `tutorial/tutorial.ipynb`.
+The setup cell puts the tutorial tree on `sys.path`, imports `rust_actr.actr`,
+and the model cells import the ported Python modules instead of loading Lisp
+files. Edit the module next to the notebook and call `actr.reload()` to pick
+up changes.
+
+The notebooks keep the original tutorial text and cell order. Cells that need
+a human in front of an Experiment window, old `<name>` templates, and heavy
+experiment runs are tagged `rust-actr-skip`. Unit 1's intentionally malformed
+`broken-addition` section is documented but not ported.
+
+Run every notebook headlessly (skipping tagged cells) with:
+
+```powershell
+python tools/run_notebook.py --all
+```
+
+Regenerate the notebooks from the vendored Lisp/Python tutorial with:
+
+```powershell
+python tools/port_notebooks.py
+```
+
 Port status:
 
-- Every checked-in model/task script for units 1-8 runs through the Python
-  interface. `tests/test_tutorial_units.py` is the per-unit smoke matrix:
-  model runs, trials, and experiment entry points for each unit.
+- Every checked-in model/task script and tutorial notebook for units 1-8 runs
+  through the Python interface. `tests/test_tutorial_units.py` and
+  `tests/test_notebooks.py` are the per-unit smoke matrices.
 - Working end-to-end: `count`, `addition`, `semantic`, `tutor-model`, `demo2`,
   unit2 assignment, `sperling`, `subitize` (starting model), `pm-issues`,
   `paired`, `zbrodoff` (set/block/experiment), `fan`, `fan-no-pm`, `grouped`,

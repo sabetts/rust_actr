@@ -150,6 +150,26 @@ ported scripts execute; it does not compare every experiment summary against
 its vendored `.ref`. Protected solution models (Zbrodoff, choice, categorize,
 subitize) remain unavailable upstream.
 
+### 3.4 Tutorial notebooks
+
+The tutorial notebooks are ported next to the unit scripts:
+`tutorial/tutorial.ipynb` and `tutorial/unit{1..8}/unit{1..8}.ipynb`. They
+import the ported Python modules instead of loading Lisp files. The facade now
+tracks the module behind the current model, so `actr.use_module(module)` and
+`actr.reload()` re-import the ported module and pick up edits. Unit 7/8
+alternate paired models are supported by rebinding the task module:
+`actr.bind_module(paired.__dict__, model)`.
+
+Unit 5's history walkthrough is covered by new runtime helpers:
+`get_history_data`, `saved_activation_history`, `print_activation_trace`,
+`print_chunk_activation_trace`, `print_dm_finsts`, and `mp_show_queue`.
+`saved-activation-history` is backed by the engine's existing `:sact` traces.
+
+Cells that need a human participant, placeholder templates, and heavy
+experiments are tagged `rust-actr-skip`. `broken-addition` remains Lisp-only.
+`tools/port_notebooks.py` regenerates the notebooks and
+`tools/run_notebook.py --all` executes them headlessly.
+
 ## 4. Important implementation notes
 
 ### 4.1 Stepped runs
@@ -198,10 +218,14 @@ semantics (which continue to use `chunk_name_slot`).
 | `rust_actr7/python/python/rust_actr/_model.py` | builder + runtime host |
 | `rust_actr7/python/python/rust_actr/_runtime.py` | runtime command surface |
 | `rust_actr7/python/python/rust_actr/actr.py` | tutorial `actr` façade (`use`, `clear_state`) |
-| `rust_actr7/python/tutorial/` | self-contained tutorial model/task scripts |
+| `rust_actr7/python/tutorial/` | self-contained tutorial model/task scripts and notebooks |
 | `rust_actr7/python/tools/port_tutorial.py` | model/task port generator |
+| `rust_actr7/python/tools/port_notebooks.py` | notebook port generator |
+| `rust_actr7/python/tools/run_notebook.py` | headless notebook executor |
 | `rust_actr7/python/tests/test_model.py` | builder/runtime/device unit tests |
 | `rust_actr7/python/tests/test_execution.py` | stepping, callbacks, sim-hook, bst-ppm, siegler |
+| `rust_actr7/python/tests/test_notebook_support.py` | reload, rebind, history helpers |
+| `rust_actr7/python/tests/test_notebooks.py` | notebook smoke tests |
 | `rust_actr7/python/tests/test_tutorial.py` | model compile, CLI smoke tests |
 | `rust_actr7/src/engine/*` | engine changes for hooks, host actions, live reads, speech |
 
@@ -235,6 +259,16 @@ print(actr.run(20))
 
 The scripts no longer need an ACT-R checkout; they import only `rust_actr`.
 
+Run tutorial notebooks headlessly:
+
+```powershell
+python tools/run_notebook.py --all
+```
+
+Launch Jupyter from `rust_actr7/python` and open
+`tutorial/tutorial.ipynb` for the interactive versions. Do not run tagged
+human-mode cells without an ACT-R Environment.
+
 ## 7. Tests
 
 ```powershell
@@ -242,7 +276,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **80 tests passing**. It covers:
+Current Python suite: **87 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices
@@ -256,6 +290,8 @@ Current Python suite: **80 tests passing**. It covers:
 - `bst-ppm` live task
 - per-unit smoke coverage for every ported unit 1-8 model/task script
   (`tests/test_tutorial_units.py`)
+- notebook reload/rebind and history helpers
+- headless execution of every tutorial notebook
 - tutorial script compilation and CLI smoke tests
 - multiple tutorial modules in one process
 - word sounds and articulation/syllable commands
@@ -289,8 +325,14 @@ solution sources and the environment-gated RPC test.
    for correctness; a typed bridge or batched stepping would be useful for
    large experiments.
 7. **Tutorial packaging (by design).** The tutorial tree is a checkout-only
-   learning resource, not wheel content. Its scripts build models from
-   in-memory source and do not require `ACTR_DIR`.
+   learning resource, not wheel content. Its scripts and notebooks build
+   models from in-memory source and do not require `ACTR_DIR`.
+8. **Notebook editing uses the Python ports.** The notebooks edit the
+   `tutorial/unitN/*.py` modules rather than the original `.lisp` files.
+   `broken-addition` stays Lisp-only.
+9. **Notebook human-mode cells.** Interactive `human=True` cells need the
+   pending Python-to-Environment bridge; they are tagged `rust-actr-skip` and
+   documented instead of run headlessly.
 
 ## 9. Milestone commits
 

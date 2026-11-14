@@ -6486,3 +6486,22 @@ removes that connection's commands and monitor registrations.
 `[name, address, received/pending, sent, commands]`. `actr server --env
 [MODEL]` binds first, starts the shared listener on a background thread, and
 opens the Environment as another RPC client of the same session.
+
+## 373. Notebook reload, rebinding, and saved activation history
+
+The tutorial notebooks are module-backed, so their reload cells cannot use
+`Model.reload` (an in-memory session is written to `model_files` as
+`<source>`, not `last_model_file`, and `reload` requires the latter). The
+facade tracks the module behind the current model: `use_module` records it and
+`reload` calls `importlib.reload` then re-uses the module's `MODEL`/`m`.
+
+Unit 7/8 pair the unit-4 task code with a different model. `bind_module`
+therefore unwraps an existing `__wrapped__` function before rebinding, so
+`actr.bind_module(paired.__dict__, alternate_model)` moves the task functions
+without nesting another binding.
+
+`get-history-data` is not a Rust session command. The Python helper builds it
+from `start-incremental-history-data` plus `get-incremental-history-data`,
+concatenating the chunks into the JSON string Lisp returns.
+`saved-activation-history` is a new session command over the engine's
+`sact_traces`, returning `[time, [chunk names]]` rows sorted by time.
