@@ -215,13 +215,19 @@ print(count.m.trace)
 
 Port status:
 
-- Working end-to-end: `count`, `addition`, `semantic`, `demo2`, `fan-no-pm`,
-  `grouped`, `onehit` (hands/blocks/learning), `zbrodoff` (set/block/experiment),
-  `sperling` (trial/experiment), `pm-issues`, `bst-ppm`, `siegler`, and the
-  dynamic models that do not need task-side hooks.
+- Every checked-in model/task script for units 1-8 runs through the Python
+  interface. `tests/test_tutorial_units.py` is the per-unit smoke matrix:
+  model runs, trials, and experiment entry points for each unit.
+- Working end-to-end: `count`, `addition`, `semantic`, `tutor-model`, `demo2`,
+  unit2 assignment, `sperling`, `subitize` (starting model), `pm-issues`,
+  `paired`, `zbrodoff` (set/block/experiment), `fan`, `fan-no-pm`, `grouped`,
+  `onehit` (hands/learning), `siegler`, `bst` (test), `choice` (starting
+  model), `paired-learning`, `past-tense`, `pcomp-issues`, `ul-issues`,
+  `bst-ppm`, `categorize` (starting model), and the dynamic models that do not
+  need task-side hooks.
 - Python `:sim-hook` functions are wired for `1hit`, `bst-ppm`, and
   `categorize`. Python `imaginal-action` callbacks are also bridged through a
-  host-yield step; `bst-ppm` still stops earlier in its live-window/mouse path.
+  host-yield step.
 - Starting models (no/partial productions by design): unit2 assignment,
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
@@ -229,7 +235,8 @@ Port status:
 - Tutorial task modules bind their functions to their own model, so several
   modules can be imported in one process. Full `.ref` parity for every
   experiment summary is still a test-suite expansion, not a missing runtime
-  path.
+  path. Protected solution models are not available upstream; see
+  `planning/PARITY-AUDIT.md`.
 
 ## Tests
 

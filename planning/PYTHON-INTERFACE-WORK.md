@@ -143,6 +143,13 @@ Starting models (no or partial productions by design):
 `unit1/broken-addition.lisp` is intentionally malformed upstream and is not
 ported.
 
+Every checked-in script for units 1-8 now has a smoke test in
+`python/tests/test_tutorial_units.py`: the matrix runs each model and calls
+the smallest trial/experiment entry point for each unit. This proves the
+ported scripts execute; it does not compare every experiment summary against
+its vendored `.ref`. Protected solution models (Zbrodoff, choice, categorize,
+subitize) remain unavailable upstream.
+
 ## 4. Important implementation notes
 
 ### 4.1 Stepped runs
@@ -235,7 +242,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **38 tests passing**. It covers:
+Current Python suite: **80 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices
@@ -245,8 +252,10 @@ Current Python suite: **38 tests passing**. It covers:
 - `mod-chunk`
 - imaginal-action host yield
 - `siegler` digit/speech
-- `zbrodoff` 24-trial set
+- `zbrodoff` set/block
 - `bst-ppm` live task
+- per-unit smoke coverage for every ported unit 1-8 model/task script
+  (`tests/test_tutorial_units.py`)
 - tutorial script compilation and CLI smoke tests
 - multiple tutorial modules in one process
 - word sounds and articulation/syllable commands
@@ -264,9 +273,9 @@ solution sources and the environment-gated RPC test.
 
 ## 8. Known limitations and next steps
 
-1. **Full `.ref` parity for every experiment summary.** The runtime paths now
-   exist; expanding tests to compare every tutorial experiment against its
-   vendored reference is the next verification step.
+1. **Full `.ref` parity for every experiment summary.** The runtime paths and
+   per-unit smoke tests now exist; expanding tests to compare every tutorial
+   experiment against its vendored reference is the next verification step.
 2. **Arbitrary Lisp.** The engine supports the tutorial's bounded Lisp
    evaluator, not arbitrary Lisp. Python callbacks cover the gaps.
 3. **Multiple models.** The Python façade binds tutorial modules to their own
