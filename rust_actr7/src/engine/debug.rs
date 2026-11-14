@@ -866,6 +866,23 @@ impl Engine {
         }
     }
 
+    /// `saved-activation-history` (`dm-commands.lisp:1360`): the request
+    /// times with saved `:sact` data and the chunks considered at each time.
+    pub fn saved_activation_history(&self) -> Vec<(i64, Vec<String>)> {
+        let mut entries: Vec<(i64, Vec<String>)> = self
+            .sact_traces
+            .iter()
+            .map(|(time, trace)| {
+                (
+                    *time,
+                    trace.chunks.iter().map(|(name, _)| name.clone()).collect(),
+                )
+            })
+            .collect();
+        entries.sort_by_key(|(time, _)| *time);
+        entries
+    }
+
     /// `print-conflict-tree` (`commands/conflict-tree.lisp:222`): print the
     /// decision tree over the model's constant LHS tests. The upstream builder
     /// chooses splits by information gain; this tree uses the first condition

@@ -136,6 +136,7 @@ pub const BUILTINS: &[&str] = &[
     "print-dm-finsts",
     "print-activation-trace",
     "print-chunk-activation-trace",
+    "saved-activation-history",
     // Environment viewers (`environment/environment-cmds.lisp` + the
     // `printed-*`/`all-productions`/`buffers`/`chunks` families).
     "act-r-version",
@@ -3644,6 +3645,22 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "saved-activation-history" => {
+                let entries = self
+                    .engine
+                    .as_ref()
+                    .map(|eng| eng.saved_activation_history())
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|(time, names)| {
+                        Json::Arr(vec![
+                            Json::Int(time),
+                            Json::Arr(names.into_iter().map(Json::Str).collect()),
+                        ])
+                    })
+                    .collect();
+                Ok(vec![Json::Arr(entries)])
+            }
             "mp-show-queue" => {
                 if let Some(eng) = &mut self.engine {
                     eng.print_queue();
@@ -6719,6 +6736,52 @@ mod tests {
                 params.contains(":Activation") && params.contains(":Base-Level"),
                 "params sdp block: {params:?}"
             );
+        }
+    }
+
+    /// `saved-activation-history` lists the request times with saved `:sact`
+    /// data and the chunks considered at each time.
+    #[test]
+    fn saved_activation_history_lists_times_and_chunks() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return; // vendored fixtures not available
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate(
+            "sgp",
+            None,
+            &[Json::Str(":sact".into()), Json::Bool(true)],
+            &mut r,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(10)], &mut r).unwrap();
+
+        let out = s
+            .evaluate("saved-activation-history", None, &[], &mut r)
+            .unwrap();
+        let Json::Arr(entries) = &out[0] else {
+            panic!("saved activation history is not an array");
+        };
+        assert!(!entries.is_empty(), "count.lisp saves activation traces");
+        for entry in entries {
+            let Json::Arr(pair) = entry else {
+                panic!("history entry is not an array");
+            };
+            assert!(matches!(pair[0], Json::Int(_)), "entry[0] = time");
+            let Json::Arr(names) = &pair[1] else {
+                panic!("entry[1] is not the chunk-name list");
+            };
+            assert!(!names.is_empty(), "entry has no chunks");
+            assert!(names.iter().all(|n| matches!(n, Json::Str(_))));
         }
     }
 

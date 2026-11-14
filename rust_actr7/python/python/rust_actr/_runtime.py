@@ -301,11 +301,50 @@ class RuntimeMixin:
     def simulate_retrieval_request(self, *spec: Any) -> Any:
         return self._eval("simulate-retrieval-request", *spec)
 
+    def mp_show_queue(self, indicate_traced: bool = False) -> Any:
+        return self._single("mp-show-queue", indicate_traced)
+
+    def print_dm_finsts(self) -> Any:
+        return self._single("print-dm-finsts")
+
+    def print_activation_trace(self, time: Any, ms: bool = True) -> Any:
+        return self._single("print-activation-trace", time, ms)
+
+    def print_chunk_activation_trace(
+        self, chunk: str, time: Any, ms: bool = True
+    ) -> Any:
+        return self._single("print-chunk-activation-trace", chunk, time, ms)
+
+    def saved_activation_history(self) -> Any:
+        return self._single("saved-activation-history")
+
     def record_history(self, *params: Any) -> Any:
         return self._eval("record-history", *params)
 
     def stop_recording_history(self, *params: Any) -> Any:
         return self._eval("stop-recording-history", *params)
+
+    def history_data_available(
+        self, history: str, file: Any = False, *params: Any
+    ) -> Any:
+        return self._single("history-data-available", history, file, *params)
+
+    def get_history_data(self, history: str, file: Any = None, *params: Any) -> Any:
+        start = params[0] if len(params) > 0 else None
+        end = params[1] if len(params) > 1 else None
+        detail = params[2] if len(params) > 2 else None
+        job = self._single(
+            "start-incremental-history-data", history, 16000, file, start, end, detail
+        )
+        if job is None:
+            return None
+        chunks: list[str] = []
+        while True:
+            part = self._single("get-incremental-history-data", job)
+            if not isinstance(part, str) or part == "":
+                break
+            chunks.append(part)
+        return "".join(chunks) if chunks else None
 
     def predict_bold_response(self, *params: Any) -> Any:
         return self._single("predict-bold-response", *params)

@@ -15,6 +15,7 @@ The self-contained tutorial scripts call functions such as ``actr.run`` and
 from __future__ import annotations
 
 import functools
+import importlib
 import types
 from typing import Any, Optional
 
@@ -22,22 +23,25 @@ from ._model import Chunk, Model
 from ._values import LispString, String
 
 _current: Optional[Any] = None
+_current_module: Optional[Any] = None
 _pending_commands: dict[str, Any] = {}
 _pending_monitors: list[tuple[str, str]] = []
 
 
 def clear_state() -> None:
     """Drop the current model and any commands queued before it was bound."""
-    global _current, _pending_commands, _pending_monitors
+    global _current, _current_module, _pending_commands, _pending_monitors
     _current = None
+    _current_module = None
     _pending_commands = {}
     _pending_monitors = []
 
 
 def use(model: Any) -> Any:
     """Bind ``model`` as the current model and replay pending commands."""
-    global _current
+    global _current, _current_module
     _current = model
+    _current_module = None
     for name, function in _pending_commands.items():
         _current.add_command(name, function)
     for original, monitor in _pending_monitors:
@@ -49,8 +53,40 @@ def use(model: Any) -> Any:
     return model
 
 
+def use_module(module: Any) -> Any:
+    """Bind the model built by ``module`` and remember it for :func:`reload`.
+
+    Tutorial modules expose either ``MODEL`` (task modules) or ``m``
+    (model-only modules).
+    """
+    global _current_module
+    model = getattr(module, "MODEL", None)
+    if model is None:
+        model = getattr(module, "m", None)
+    if model is None:
+        raise ValueError(f"{module!r} does not define MODEL or m")
+    use(model)
+    _current_module = module
+    return model
+
+
 def current_model() -> Optional[Any]:
     return _current
+
+
+def reload(compile: bool = False) -> Any:
+    """Reload the current model.
+
+    Module-backed models are re-imported so edits to the ported Python module
+    are picked up.  Plain builder models fall back to ``Model.reload``.
+    """
+    if _current is None:
+        raise RuntimeError("no current model; call actr.use(model) first")
+    module = _current_module
+    if module is None:
+        return _current.reload(compile)
+    importlib.reload(module)
+    return use_module(module)
 
 
 def _bound(model: Any, function: Any) -> Any:
@@ -84,7 +120,8 @@ def bind_module(namespace: dict[str, Any], model: Any) -> Any:
             continue
         if value.__module__ != module_name:
             continue
-        namespace[name] = _bound(model, value)
+        target = getattr(value, "__wrapped__", value)
+        namespace[name] = _bound(model, target)
     return model
 
 
