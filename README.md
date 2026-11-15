@@ -19,6 +19,7 @@ harmful to your health. Please wear appropriate PPE.
 | `rust_actr7/fixtures/` | test oracles + regen scripts — see `fixtures/README.md` |
 | `rust_actr7/web/` | browser (wasm) build — see `web/README.md` |
 | `rust_actr7/python/` | in-process Python interface (`import rust_actr`) — see `python/README.md` |
+| `benchmarking/` | Lisp-vs-Rust-vs-Python benchmark harness — see `benchmarking/README.md` |
 | `actr7.x/` | upstream Lisp ACT-R sources (reference/regen; tests use vendored copies) |
 | `contrib/` | local unpacked GUI crate sources (untracked, not part of the engine) |
 | `PORTING-NOTES.md` | non-obvious ACT-R/Lisp behaviors the port must match |
@@ -56,6 +57,23 @@ print(m.run(1.0))
 ```
 
 Build and install it with maturin; see `rust_actr7/python/README.md`.
+
+## Benchmarks
+
+`benchmarking/` runs identical ACT-R workloads against three backends: the
+upstream Lisp server, the Rust RPC server, and the in-process `rust_actr`
+binding. The Lisp and Rust runs use the same stock `actr.py` client, so the
+comparison isolates the engine.
+
+```sh
+python benchmarking/run.py --engine all          # all three backends
+python benchmarking/run.py --engine lisp         # start a Lisp server, run it
+python benchmarking/run.py --engine rust         # same client, Rust server
+python benchmarking/parity.py                    # verify traces match first
+```
+
+See `benchmarking/README.md` for workloads, methodology, and the baseline
+results.
 
 ## Tests
 

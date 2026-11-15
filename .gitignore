@@ -13,6 +13,9 @@ __pycache__/
 *.pyc
 # local scratch (spec-regeneration probes)
 .tmp/
+# benchmark artifacts
+benchmarking/models/generated/
+benchmarking/results/
 # local unpacked GUI crate sources (not part of the engine)
 contrib/
 # ACT-R GUI runtime files
