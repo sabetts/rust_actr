@@ -63,13 +63,16 @@ Build and install it with maturin; see `rust_actr7/python/README.md`.
 `benchmarking/` runs identical ACT-R workloads against three backends: the
 upstream Lisp server, the Rust RPC server, and the in-process `rust_actr`
 binding. The Lisp and Rust runs use the same stock `actr.py` client, so the
-comparison isolates the engine.
+comparison isolates the engine. It covers synthetic feature probes as well as
+device-free real models from `actr7.x` (`fan-no-pm`, `semantic`,
+`semantic-dynamic`, production compilation).
 
 ```sh
 python benchmarking/run.py --engine all          # all three backends
 python benchmarking/run.py --engine lisp         # start a Lisp server, run it
 python benchmarking/run.py --engine rust         # same client, Rust server
-python benchmarking/parity.py                    # verify traces match first
+python benchmarking/parity.py                    # verify synthetic traces match
+python benchmarking/verify_scenarios.py          # verify real-model work matches
 ```
 
 See `benchmarking/README.md` for workloads, methodology, and the baseline

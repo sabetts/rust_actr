@@ -14,6 +14,10 @@ def median_ns(record: dict[str, Any]) -> int:
     return int(statistics.median(times)) if times else int(record.get("median_ns", 0))
 
 
+def median(values: list[int]) -> int:
+    return int(statistics.median(values)) if values else 0
+
+
 def ms(ns: int | float | None) -> str:
     if ns is None:
         return "-"
@@ -110,6 +114,92 @@ def detail_table(records: Iterable[dict[str, Any]]) -> str:
             ]
         )
     widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
+    lines = []
+    for i, row in enumerate(rows):
+        lines.append("  ".join(cell.ljust(widths[j]) for j, cell in enumerate(row)))
+        if i == 0:
+            lines.append("  ".join("-" * width for width in widths))
+    return "\n".join(lines)
+
+
+def scenario_table(
+    records: Iterable[dict[str, Any]],
+    metric: str = "run",
+    workloads: list[str] | None = None,
+) -> str:
+    """Table for real-model scenarios.
+
+    ``metric="run"`` uses the engine phase (sum of every ``run`` call in a
+    scenario block) and adds ms/trial.  ``metric="scenario"`` uses the full
+    block wall time, including resets and setup commands.
+    """
+    records = list(records)
+    data = index(records)
+    engines = [name for name in ENGINE_ORDER if name in data]
+    if not engines:
+        return "(no scenario results)"
+    names = workloads or list(dict.fromkeys(record["workload"] for record in records))
+
+    header = ["scenario", "trials"]
+    for engine in engines:
+        header.append(f"{engine} ms" if metric == "scenario" else f"{engine} run ms")
+    if metric == "run":
+        header.append("ms/trial")
+    if "lisp" in data:
+        for engine in engines:
+            if engine != "lisp":
+                header.append(f"{engine}/lisp")
+
+    rows: list[list[str]] = [header]
+    for name in names:
+        row = [name, "-"]
+        first = data[engines[0]].get(name)
+        if first is not None:
+            row[1] = str(first.get("trials", "-"))
+        for engine in engines:
+            record = data.get(engine, {}).get(name)
+            if record is None:
+                row.append("-")
+                continue
+            if metric == "scenario":
+                value = median(record.get("times_ns") or [])
+            else:
+                value = median(record.get("run_totals_ns") or [])
+            row.append(ms(value))
+        if metric == "run":
+            first_record = data[engines[0]].get(name)
+            if first_record is not None and first_record.get("trials"):
+                row.append(
+                    ms(
+                        median(first_record.get("run_totals_ns") or [])
+                        / first_record["trials"]
+                    )
+                )
+            else:
+                row.append("-")
+        if "lisp" in data:
+            base = data["lisp"].get(name)
+            if base is None:
+                base_ns = 0
+            elif metric == "scenario":
+                base_ns = median(base.get("times_ns") or [])
+            else:
+                base_ns = median(base.get("run_totals_ns") or [])
+            for engine in engines:
+                if engine == "lisp":
+                    continue
+                record = data.get(engine, {}).get(name)
+                if record is None or not base_ns:
+                    row.append("-")
+                    continue
+                if metric == "scenario":
+                    value = median(record.get("times_ns") or [])
+                else:
+                    value = median(record.get("run_totals_ns") or [])
+                row.append(f"{value / base_ns:.2f}x")
+        rows.append(row)
+
+    widths = [max(len(row[i]) for row in rows) for i in range(len(header))]
     lines = []
     for i, row in enumerate(rows):
         lines.append("  ".join(cell.ljust(widths[j]) for j, cell in enumerate(row)))

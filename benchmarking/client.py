@@ -28,7 +28,8 @@ TUTORIAL_PYTHON = ROOT / "actr7.x" / "tutorial" / "python"
 CLEAR_MODELS = HERE / "models" / "generated" / "clear-user-models.lisp"
 
 sys.path.insert(0, str(HERE))
-from workloads import Workload, select  # noqa: E402
+from scenarios import SCENARIOS  # noqa: E402
+from workloads import ScenarioWorkload, Workload, select  # noqa: E402
 
 
 class RpcApi:
@@ -71,6 +72,33 @@ class RpcApi:
     def set_trace(self, enabled: bool) -> None:
         # `:v` is the model-trace switch in both engines.
         self.actr.set_parameter_value(":v", enabled)
+
+    def sgp(self, key: str, value: Any) -> None:
+        self._check(self.actr.set_parameter_value(key, value), f"sgp {key}")
+
+    def set_system_parameter(self, key: str, value: Any) -> None:
+        self._check(
+            self.actr.set_system_parameter_value(key, value),
+            f"set-system-parameter {key}",
+        )
+
+    def mod_focus(self, *pairs: Any) -> None:
+        self._check(self.actr.mod_focus(*pairs), "mod-focus")
+
+    def goal_focus(self, name: str) -> None:
+        self._check(self.actr.goal_focus(name), "goal-focus")
+
+    def pdisable(self, *names: str) -> None:
+        self._check(self.actr.pdisable(*names), "pdisable")
+
+    def penable(self, *names: str) -> None:
+        self._check(self.actr.penable(*names), "penable")
+
+    def spp(self, *args: Any) -> None:
+        self._check(self.actr.spp(*args), "spp")
+
+    def buffer_slot_value(self, buffer: str, slot: str) -> Any:
+        return self.actr.buffer_slot_value(buffer, slot)
 
     def reset(self) -> None:
         self.actr.reset()
@@ -131,6 +159,31 @@ class LocalApi:
     def set_trace(self, enabled: bool) -> None:
         self._eval("sgp", ":v", enabled)
 
+    def sgp(self, key: str, value: Any) -> None:
+        self._eval("set-parameter-value", key, value)
+
+    def set_system_parameter(self, key: str, value: Any) -> None:
+        self._eval("set-system-parameter-value", key, value)
+
+    def mod_focus(self, *pairs: Any) -> None:
+        self._eval("mod-focus", *pairs)
+
+    def goal_focus(self, name: str) -> None:
+        self._eval("goal-focus", name)
+
+    def pdisable(self, *names: str) -> None:
+        self._eval("pdisable", *names)
+
+    def penable(self, *names: str) -> None:
+        self._eval("penable", *names)
+
+    def spp(self, *args: Any) -> None:
+        self._eval("spp", *args)
+
+    def buffer_slot_value(self, buffer: str, slot: str) -> Any:
+        result = self._eval("buffer-slot-value", buffer, slot)
+        return result[0] if result else None
+
     def reset(self) -> None:
         self._eval("reset")
 
@@ -160,7 +213,18 @@ def _measure(api: Any, workload: Workload, count: int | None) -> int:
     return time.perf_counter_ns()
 
 
-def run_one(api: Any, workload: Workload, repeats: int, warmup: int) -> dict[str, Any]:
+def _model_display(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _median(values: list[int]) -> int:
+    return int(statistics.median(values)) if values else 0
+
+
+def run_synthetic(api: Any, workload: Workload, repeats: int, warmup: int) -> dict[str, Any]:
     count = workload.events
     path = workload.resolve_model()
     if not path.is_file():
@@ -192,8 +256,9 @@ def run_one(api: Any, workload: Workload, repeats: int, warmup: int) -> dict[str
         model_times.append(api.model_time())
 
     return {
+        "kind": "synthetic",
         "workload": workload.name,
-        "model": str(path.relative_to(HERE)),
+        "model": _model_display(path),
         "events": count,
         "seconds": workload.seconds,
         "repeats": repeats,
@@ -202,11 +267,91 @@ def run_one(api: Any, workload: Workload, repeats: int, warmup: int) -> dict[str
         "reset_ns": resets,
         "times_ns": times,
         "model_times": model_times,
-        "median_ns": int(statistics.median(times)),
+        "median_ns": _median(times),
         "min_ns": int(min(times)),
         "max_ns": int(max(times)),
         "mean_ns": int(statistics.fmean(times)),
     }
+
+
+def run_scenario(
+    api: Any,
+    workload: ScenarioWorkload,
+    repeats: int,
+    warmup: int,
+) -> dict[str, Any]:
+    scenario = SCENARIOS[workload.scenario]
+    path = workload.resolve_model()
+    if not path.is_file():
+        raise FileNotFoundError(f"missing benchmark model {path}")
+
+    api.reset_models()
+    t0 = time.perf_counter_ns()
+    api.load(path, workload.seed)
+    load_ns = time.perf_counter_ns() - t0
+
+    api.set_trace(False)
+    scenario.setup(api, workload.seed)
+
+    for _ in range(warmup):
+        scenario.block(api)
+
+    block_times: list[int] = []
+    run_totals: list[int] = []
+    setup_totals: list[int] = []
+    trial_counts: list[int] = []
+    all_trials: list[dict[str, Any]] = []
+    for _ in range(repeats):
+        started = time.perf_counter_ns()
+        trials = scenario.block(api)
+        block_times.append(time.perf_counter_ns() - started)
+        all_trials.extend(trials)
+        trial_counts.append(len(trials))
+        run_totals.append(sum(trial["run_ns"] for trial in trials))
+        setup_totals.append(sum(trial["setup_ns"] for trial in trials))
+
+    trial_runs = [trial["run_ns"] for trial in all_trials]
+    model_times = [trial["model_time"] for trial in all_trials]
+    outcomes = [trial["outcome"] for trial in all_trials]
+    resets = [trial["reset_ns"] for trial in all_trials if trial["reset_ns"]]
+
+    return {
+        "kind": "scenario",
+        "workload": workload.name,
+        "scenario": workload.scenario,
+        "model": _model_display(path),
+        "trials": trial_counts[0] if trial_counts else 0,
+        "seed": list(workload.seed),
+        "repeats": repeats,
+        "warmup": warmup,
+        "load_ns": load_ns,
+        "reset_ns": resets,
+        "times_ns": block_times,
+        "run_totals_ns": run_totals,
+        "setup_totals_ns": setup_totals,
+        "trial_runs_ns": trial_runs,
+        "model_times": model_times,
+        "outcomes": outcomes,
+        "trial_details": all_trials,
+        "median_ns": _median(block_times),
+        "run_median_ns": _median(run_totals),
+        "trial_median_ns": _median(trial_runs),
+        "setup_median_ns": _median(setup_totals),
+        "min_ns": int(min(block_times)) if block_times else 0,
+        "max_ns": int(max(block_times)) if block_times else 0,
+        "mean_ns": int(statistics.fmean(block_times)) if block_times else 0,
+    }
+
+
+def run_one(
+    api: Any,
+    workload: Workload | ScenarioWorkload,
+    repeats: int,
+    warmup: int,
+) -> dict[str, Any]:
+    if isinstance(workload, ScenarioWorkload):
+        return run_scenario(api, workload, repeats, warmup)
+    return run_synthetic(api, workload, repeats, warmup)
 
 
 def main() -> int:

@@ -162,9 +162,16 @@ def main() -> int:
 
     if args.list:
         for workload in workload_mod.WORKLOADS:
-            count = workload.events if workload.events is not None else f"{workload.seconds}s"
+            if isinstance(workload, workload_mod.ScenarioWorkload):
+                label = f"scenario:{workload.scenario}"
+            else:
+                label = (
+                    f"{workload.events} events"
+                    if workload.events is not None
+                    else f"{workload.seconds}s"
+                )
             print(
-                f"{workload.name:24} {count!s:>10}  repeats={workload.repeats}  "
+                f"{workload.name:24} {label:>24}  repeats={workload.repeats}  "
                 f"{workload.description}"
             )
         return 0
@@ -213,9 +220,27 @@ def main() -> int:
         engine_data[engine] = {"meta": meta, "workloads": records}
         print()
 
+    synthetic = [record for record in all_records if record.get("kind") != "scenario"]
+    real = [record for record in all_records if record.get("kind") == "scenario"]
+    synthetic_names = [
+        w.name for w in selected if not isinstance(w, workload_mod.ScenarioWorkload)
+    ]
+    real_names = [
+        w.name for w in selected if isinstance(w, workload_mod.ScenarioWorkload)
+    ]
+
     print("=" * 78)
-    print(report.comparison_table(all_records, [w.name for w in selected]))
-    print()
+    if synthetic:
+        print("Synthetic feature workloads")
+        print(report.comparison_table(synthetic, synthetic_names))
+        print()
+    if real:
+        print("Real-model run phase (sum of run calls per scenario)")
+        print(report.scenario_table(real, "run", real_names))
+        print()
+        print("Real-model full scenario (includes reset/setup)")
+        print(report.scenario_table(real, "scenario", real_names))
+        print()
     print(report.detail_table(all_records))
     print()
     print(report.overhead_table(metas))

@@ -71,8 +71,19 @@ def main() -> int:
         wanted = set(args.workload)
         records = [record for record in records if record["workload"] in wanted]
 
-    print(report.comparison_table(records, args.workload or None))
-    print()
+    synthetic = [record for record in records if record.get("kind") != "scenario"]
+    real = [record for record in records if record.get("kind") == "scenario"]
+
+    if synthetic:
+        print(report.comparison_table(synthetic, args.workload or None))
+        print()
+    if real:
+        print("Real-model run phase (sum of run calls per scenario)")
+        print(report.scenario_table(real, "run", args.workload or None))
+        print()
+        print("Real-model full scenario (includes reset/setup)")
+        print(report.scenario_table(real, "scenario", args.workload or None))
+        print()
     print(report.detail_table(records))
     if args.json:
         print()

@@ -107,7 +107,14 @@ def main() -> int:
     import workloads as workload_mod
 
     gen_models.generate()
-    selected = workload_mod.select(args.workload)
+    selected = [
+        workload
+        for workload in workload_mod.select(args.workload)
+        if not isinstance(workload, workload_mod.ScenarioWorkload)
+    ]
+    if not selected:
+        print("no synthetic workloads selected")
+        return 1
     failed = False
     saved = harness.save_actr_files()
 
