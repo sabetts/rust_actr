@@ -143,6 +143,14 @@ fn module_tint(module: usize, level: f32) -> egui::Color32 {
     egui::Color32::from_rgb(scale(color.r()), scale(color.g()), scale(color.b()))
 }
 
+/// Keep the module hue for the 2D labels while lifting the dark channels so
+/// they stay readable against the gray strip left of the brain image.
+fn label_tint(module: usize) -> egui::Color32 {
+    let color = COLORS_2D[module];
+    let lift = |c: u8| (c as u16 * 3 / 4 + 64) as u8;
+    egui::Color32::from_rgb(lift(color.r()), lift(color.g()), lift(color.b()))
+}
+
 fn gray(value: Option<f32>) -> egui::Color32 {
     match value {
         Some(value) => egui::Color32::from_gray((value.clamp(0.0, 1.0) * 255.0).round() as u8),
@@ -210,10 +218,18 @@ pub(crate) fn draw_2d(
 
     for &(module, [x, y]) in BOLD_2D_LABELS {
         let color = if data.has_module(module as usize) {
-            module_tint(module as usize, 0.75)
+            label_tint(module as usize)
         } else {
-            egui::Color32::GRAY
+            egui::Color32::from_gray(210)
         };
+        painter.rect_filled(
+            egui::Rect::from_min_size(
+                rect.min + egui::vec2(x - 4.0, y - 9.0),
+                egui::vec2(92.0, 18.0),
+            ),
+            2.0,
+            egui::Color32::from_black_alpha(170),
+        );
         painter.text(
             rect.min + egui::vec2(x, y),
             egui::Align2::LEFT_CENTER,
