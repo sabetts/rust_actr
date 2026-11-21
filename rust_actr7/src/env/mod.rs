@@ -51,6 +51,12 @@ pub struct EnvArgs {
     pub model: Option<String>,
 }
 
+fn window_icon() -> Option<std::sync::Arc<eframe::egui::IconData>> {
+    eframe::icon_data::from_png_bytes(include_bytes!("../data/actr-head.png"))
+        .ok()
+        .map(std::sync::Arc::new)
+}
+
 /// Launch the native Environment and return the process exit code.
 pub fn run(args: EnvArgs) -> ExitCode {
     let in_process = args.target == EnvTarget::InProcess;
@@ -99,10 +105,14 @@ pub fn run(args: EnvArgs) -> ExitCode {
     // Restore the last window size (the Tcl env persists window geometry).
     let settings = settings::load();
     let size = settings.window.unwrap_or((900.0, 600.0));
+    let mut viewport = eframe::egui::ViewportBuilder::default()
+        .with_inner_size([size.0, size.1])
+        .with_title("ACT-R Environment");
+    if let Some(icon) = window_icon() {
+        viewport = viewport.with_icon(icon);
+    }
     let options = eframe::NativeOptions {
-        viewport: eframe::egui::ViewportBuilder::default()
-            .with_inner_size([size.0, size.1])
-            .with_title("ACT-R Environment"),
+        viewport,
         ..Default::default()
     };
     match eframe::run_native(
