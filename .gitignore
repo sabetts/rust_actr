@@ -21,3 +21,5 @@ contrib/
 # ACT-R GUI runtime files
 actr7.x/environment/gui/error.log
 actr7.x/environment/gui/init/10-userguisettings.tcl
+# release staging output
+dist/

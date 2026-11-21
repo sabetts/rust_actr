@@ -1,0 +1,30 @@
+ACT-R Rust quickstart
+=====================
+
+1. Install the Python module from this bundle:
+
+   Windows:
+     py -3 -m pip install wheels\rust_actr-*.whl
+
+   macOS / Linux:
+     python3 -m pip install wheels/rust_actr-*.whl
+
+2. Try the Python tutorial:
+
+   python3 tutorial/unit1/count.py
+   python3 tutorial/unit5/grouped.py
+   python3 tutorial/unit5/onehit.py hands 2
+
+3. Try the command-line engine:
+
+   actr --help
+   actr run path/to/model.lisp
+   actr server
+   actr env
+
+Notes:
+- Both binaries are unsigned; macOS quarantine and Windows SmartScreen may warn.
+- The Linux binary needs glibc 2.35 or newer; the bundled Linux wheel is
+  manylinux_2_17.
+- Notebook versions of the tutorial are not included in this release.
+- See README.md for details and LICENSES/ for licensing.

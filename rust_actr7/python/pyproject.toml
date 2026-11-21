@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Build and run ACT-R models with the Rust ACT-R engine"
 requires-python = ">=3.9"
 readme = "README.md"
+license = "LGPL-2.1-only"
+license-files = ["LICENSES/*.txt"]
 
 [tool.maturin]
 module-name = "rust_actr._native"
