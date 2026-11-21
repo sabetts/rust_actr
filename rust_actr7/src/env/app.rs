@@ -947,7 +947,12 @@ impl App {
                                         ui.label(c.received.to_string());
                                     });
                                     ui.separator();
-                                    let bottom_h = if tool.text.is_empty() { 80.0 } else { 200.0 };
+                                    let bottom_h = if tool.text.is_empty() {
+                                        48.0
+                                    } else {
+                                        let lines = tool.text.lines().count().max(1) as f32;
+                                        68.0 + (lines * 14.0).clamp(24.0, 140.0)
+                                    };
                                     egui::Panel::bottom(("connection-bottom", tool.id))
                                         .resizable(false)
                                         .exact_size(bottom_h)
