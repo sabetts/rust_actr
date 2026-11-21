@@ -353,9 +353,7 @@ fn signed_area(points: &[egui::Pos2]) -> f32 {
 
 fn surface_shade(normal: [f32; 3]) -> egui::Color32 {
     let light = [0.35, 0.55, 0.76];
-    let diffuse = (normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2])
-        .abs()
-        .clamp(0.0, 1.0);
+    let diffuse = dot(normal, light).abs().clamp(0.0, 1.0);
     let value = 0.15 + 0.45 * diffuse;
     egui::Color32::from_gray((value * 255.0).round() as u8)
 }
