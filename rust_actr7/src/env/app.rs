@@ -370,6 +370,10 @@ const BUFFER_HISTORY_TOP_HEIGHT: f32 = 140.0;
 const HISTORY_TOP_HEIGHT: f32 = 180.0;
 const HISTORY_DETAIL_MIN_HEIGHT: f32 = 120.0;
 
+fn history_top_height(available: f32) -> f32 {
+    (available * 0.60).max(HISTORY_TOP_HEIGHT)
+}
+
 #[derive(Default)]
 struct StepperState {
     id: Option<String>,
@@ -1572,7 +1576,7 @@ impl App {
         let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
         let width = ui.available_width();
         let height = ui.available_height().max(1.0);
-        let top_h = HISTORY_TOP_HEIGHT;
+        let top_h = history_top_height(height);
         let rest = (height - top_h).max(1.0);
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
@@ -1669,7 +1673,8 @@ impl App {
         let entry = time_sel.and_then(|i| entries.get(i));
         let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
         let width = ui.available_width();
-        let top_h = HISTORY_TOP_HEIGHT;
+        let height = ui.available_height().max(1.0);
+        let top_h = history_top_height(height);
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.15, top_h),
@@ -4606,6 +4611,13 @@ mod tests {
             app.stepper.modules
         );
         app.stop_stepper();
+    }
+
+    #[test]
+    fn history_top_height_grows_with_the_window() {
+        assert_eq!(history_top_height(300.0), HISTORY_TOP_HEIGHT);
+        assert_eq!(history_top_height(600.0), 360.0);
+        assert!(history_top_height(600.0) > history_top_height(300.0));
     }
 
     #[test]
