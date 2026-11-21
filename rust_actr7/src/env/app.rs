@@ -883,7 +883,7 @@ impl App {
                 win = win.min_size([420.0, 300.0]);
             }
             let default_size = match tool.kind {
-                ToolKind::Bold2D => [760.0, 790.0],
+                ToolKind::Bold2D => [660.0, 790.0],
                 ToolKind::Bold3D => [670.0, 650.0],
                 _ => [520.0, 360.0],
             };

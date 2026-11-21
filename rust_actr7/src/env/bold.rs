@@ -170,7 +170,7 @@ pub(crate) fn draw_2d(
         egui::Sense::hover(),
     );
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, egui::Color32::GRAY);
+    painter.rect_filled(rect, 0.0, egui::Color32::BLACK);
 
     if let Some(texture) = texture {
         let image_rect = egui::Rect::from_min_size(
@@ -217,8 +217,11 @@ pub(crate) fn draw_2d(
         if !data.has_module(module as usize) {
             continue;
         }
-        let region =
-            egui::Rect::from_min_max(rect.min + egui::vec2(x1, y1), rect.min + egui::vec2(x2, y2));
+        let image_origin = egui::vec2(BOLD_2D_IMAGE_POS[0], BOLD_2D_IMAGE_POS[1]);
+        let region = egui::Rect::from_min_max(
+            rect.min + image_origin + egui::vec2(x1, y1),
+            rect.min + image_origin + egui::vec2(x2, y2),
+        );
         let outline = module_tint(module as usize, 0.75);
         let fill = if scan == 0 {
             egui::Color32::TRANSPARENT
@@ -243,17 +246,9 @@ pub(crate) fn draw_2d(
         } else {
             egui::Color32::from_gray(210)
         };
-        painter.rect_filled(
-            egui::Rect::from_min_size(
-                rect.min + egui::vec2(x - 4.0, y - 9.0),
-                egui::vec2(92.0, 18.0),
-            ),
-            2.0,
-            egui::Color32::from_black_alpha(170),
-        );
         painter.text(
             rect.min + egui::vec2(x, y),
-            egui::Align2::LEFT_CENTER,
+            egui::Align2::CENTER_CENTER,
             MODULES[module as usize],
             egui::FontId::monospace(10.0),
             color,
@@ -516,6 +511,16 @@ mod tests {
         assert_eq!(BOLD_3D_FACES.len(), 271);
         assert_eq!(BOLD_2D_REGIONS.len(), 62);
         assert_eq!(BOLD_2D_LABELS.len(), 8);
+        for &(_, [x1, y1, x2, y2]) in BOLD_2D_REGIONS {
+            assert!((0.0..=BOLD_2D_IMAGE_SIZE[0]).contains(&x1));
+            assert!((0.0..=BOLD_2D_IMAGE_SIZE[1]).contains(&y1));
+            assert!((0.0..=BOLD_2D_IMAGE_SIZE[0]).contains(&x2));
+            assert!((0.0..=BOLD_2D_IMAGE_SIZE[1]).contains(&y2));
+        }
+        for &(_, [x, y]) in BOLD_2D_LABELS {
+            assert!((0.0..=BOLD_2D_IMAGE_SIZE[0]).contains(&x));
+            assert!(y < BOLD_2D_IMAGE_POS[1]);
+        }
         for face in BOLD_3D_FACES {
             for &index in &face.verts[..face.len as usize] {
                 assert!(index < BOLD_3D_VERTICES.len());
