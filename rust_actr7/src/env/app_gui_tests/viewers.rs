@@ -434,6 +434,37 @@ fn closing_stepper_stops_it() {
 }
 
 #[test]
+fn restarting_stepper_does_not_reregister_handlers() {
+    let (mut h, _calls, state) = mock_harness();
+    h.run();
+    state.borrow_mut().response(
+        "start-stepper",
+        vec![Json::Bool(true), Json::Str("STEPPER1".into())],
+    );
+    h.state_mut().open_tool(ToolKind::Stepper);
+    h.run();
+    assert_eq!(h.state().stepper.id.as_deref(), Some("STEPPER1"));
+    assert_eq!(state.borrow().stepper_registrations, 1);
+
+    h.state_mut().stop_stepper();
+    h.run();
+    assert!(h.state().stepper.id.is_none());
+
+    state.borrow_mut().response(
+        "start-stepper",
+        vec![Json::Bool(true), Json::Str("STEPPER2".into())],
+    );
+    h.state_mut().start_stepper();
+    h.run();
+    assert_eq!(h.state().stepper.id.as_deref(), Some("STEPPER2"));
+    assert_eq!(
+        state.borrow().stepper_registrations,
+        1,
+        "handlers should only be registered once per connection"
+    );
+}
+
+#[test]
 fn model_delete_closes_scoped_tools_and_keeps_global_tools() {
     use crate::env::backend::BackendEvent;
 

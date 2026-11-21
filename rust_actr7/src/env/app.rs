@@ -369,6 +369,7 @@ fn stepper_kind(run_type: usize) -> &'static str {
 #[derive(Default)]
 struct StepperState {
     id: Option<String>,
+    handlers_registered: bool,
     step_all: bool,
     tutor: bool,
     next: String,
@@ -3104,12 +3105,19 @@ impl App {
         if self.stepper.id.is_some() {
             return;
         }
-        if let Err(e) = self
-            .backend
-            .register_stepper_handlers("env-next-event", "env-update-event")
-        {
-            self.error = Some(format!("stepper handlers: {e}"));
-            return;
+        if !self.stepper.handlers_registered {
+            // The callbacks are client-owned commands and the server keeps
+            // them after stop-stepper. Re-adding them makes the Lisp command
+            // table reject the duplicate, so register them once per
+            // connection, as the Tcl Environment does.
+            if let Err(e) = self
+                .backend
+                .register_stepper_handlers("env-next-event", "env-update-event")
+            {
+                self.error = Some(format!("stepper handlers: {e}"));
+                return;
+            }
+            self.stepper.handlers_registered = true;
         }
         let args = vec![
             Json::Bool(self.stepper.step_all),

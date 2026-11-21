@@ -113,6 +113,7 @@ pub struct MockState {
     pub running: bool,
     pub poll_results: VecDeque<Result<bool, String>>,
     pub real_time: bool,
+    pub stepper_registrations: usize,
 }
 
 impl MockState {
@@ -200,6 +201,7 @@ impl EnvBackend for MockBackend {
     fn register_window_handler(&mut self, _name: &str) {}
 
     fn register_stepper_handlers(&mut self, _next: &str, _update: &str) -> Result<(), String> {
+        self.state.borrow_mut().stepper_registrations += 1;
         Ok(())
     }
 
