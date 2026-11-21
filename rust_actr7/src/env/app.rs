@@ -3702,89 +3702,100 @@ impl App {
         let notes_h = 24.0;
         let grid_h = (ui.available_height() - notes_h - 8.0).max(1.0);
         let mut hover_note = String::new();
-        egui::ScrollArea::both()
-            .id_salt(("production-grid", tool.id))
+        egui::ScrollArea::vertical()
+            .id_salt(("production-grid-body", tool.id))
             .auto_shrink([false, false])
-            .max_height(grid_h)
             .show(ui, |ui| {
-                egui::Grid::new(("production-grid-cells", tool.id))
-                    .striped(true)
+                egui::ScrollArea::both()
+                    .id_salt(("production-grid", tool.id))
+                    .auto_shrink([false, false])
+                    .max_height(grid_h)
                     .show(ui, |ui| {
-                        ui.label("");
-                        for column in &columns {
-                            ui.label(data.times.get(*column).cloned().unwrap_or_default());
-                        }
-                        ui.end_row();
-                        for (r, name) in data.productions.iter().enumerate() {
-                            ui.label(name);
-                            for column in &columns {
-                                let cell = data
-                                    .rows
-                                    .get(r)
-                                    .and_then(|row| row.get(*column))
-                                    .unwrap_or(&export::GridCell::Blank);
-                                let (color, label): (egui::Color32, String) = match cell {
-                                    export::GridCell::Selected(label) => (selected, label.clone()),
-                                    export::GridCell::Matched(label) => (matched, label.clone()),
-                                    export::GridCell::Mismatched(label) => {
-                                        (mismatched, label.clone())
-                                    }
-                                    export::GridCell::Blank => {
-                                        (egui::Color32::TRANSPARENT, String::new())
-                                    }
-                                };
-                                let (rect, resp) = ui.allocate_exact_size(
-                                    egui::vec2(cell_w, 18.0),
-                                    egui::Sense::click(),
-                                );
-                                if color != egui::Color32::TRANSPARENT {
-                                    ui.painter().rect_filled(rect, 0.0, color);
-                                    ui.painter().text(
-                                        rect.center(),
-                                        egui::Align2::CENTER_CENTER,
-                                        &label,
-                                        egui::FontId::proportional(10.0),
-                                        egui::Color32::BLACK,
-                                    );
+                        egui::Grid::new(("production-grid-cells", tool.id))
+                            .striped(true)
+                            .show(ui, |ui| {
+                                ui.label("");
+                                for column in &columns {
+                                    ui.label(data.times.get(*column).cloned().unwrap_or_default());
                                 }
-                                if resp.hovered() {
-                                    hover_note = data
-                                        .notes
-                                        .get(r)
-                                        .and_then(|row| row.get(*column))
-                                        .cloned()
-                                        .unwrap_or_default();
-                                }
-                                if resp.clicked() {
-                                    tool.grid_detail_title = match cell {
-                                        export::GridCell::Mismatched(_) => {
-                                            format!("{name} — why not")
+                                ui.end_row();
+                                for (r, name) in data.productions.iter().enumerate() {
+                                    ui.label(name);
+                                    for column in &columns {
+                                        let cell = data
+                                            .rows
+                                            .get(r)
+                                            .and_then(|row| row.get(*column))
+                                            .unwrap_or(&export::GridCell::Blank);
+                                        let (color, label): (egui::Color32, String) = match cell {
+                                            export::GridCell::Selected(label) => {
+                                                (selected, label.clone())
+                                            }
+                                            export::GridCell::Matched(label) => {
+                                                (matched, label.clone())
+                                            }
+                                            export::GridCell::Mismatched(label) => {
+                                                (mismatched, label.clone())
+                                            }
+                                            export::GridCell::Blank => {
+                                                (egui::Color32::TRANSPARENT, String::new())
+                                            }
+                                        };
+                                        let (rect, resp) = ui.allocate_exact_size(
+                                            egui::vec2(cell_w, 18.0),
+                                            egui::Sense::click(),
+                                        );
+                                        if color != egui::Color32::TRANSPARENT {
+                                            ui.painter().rect_filled(rect, 0.0, color);
+                                            ui.painter().text(
+                                                rect.center(),
+                                                egui::Align2::CENTER_CENTER,
+                                                &label,
+                                                egui::FontId::proportional(10.0),
+                                                egui::Color32::BLACK,
+                                            );
                                         }
-                                        _ => name.clone(),
-                                    };
-                                    tool.grid_detail = match cell {
-                                        export::GridCell::Selected(_)
-                                        | export::GridCell::Matched(_) => {
-                                            data.production_text.get(r).cloned().unwrap_or_default()
+                                        if resp.hovered() {
+                                            hover_note = data
+                                                .notes
+                                                .get(r)
+                                                .and_then(|row| row.get(*column))
+                                                .cloned()
+                                                .unwrap_or_default();
                                         }
-                                        export::GridCell::Mismatched(index) => data
-                                            .why_not
-                                            .get(index.parse::<usize>().unwrap_or(0))
-                                            .cloned()
-                                            .unwrap_or_else(|| index.clone()),
-                                        export::GridCell::Blank => String::new(),
-                                    };
+                                        if resp.clicked() {
+                                            tool.grid_detail_title = match cell {
+                                                export::GridCell::Mismatched(_) => {
+                                                    format!("{name} — why not")
+                                                }
+                                                _ => name.clone(),
+                                            };
+                                            tool.grid_detail = match cell {
+                                                export::GridCell::Selected(_)
+                                                | export::GridCell::Matched(_) => data
+                                                    .production_text
+                                                    .get(r)
+                                                    .cloned()
+                                                    .unwrap_or_default(),
+                                                export::GridCell::Mismatched(index) => data
+                                                    .why_not
+                                                    .get(index.parse::<usize>().unwrap_or(0))
+                                                    .cloned()
+                                                    .unwrap_or_else(|| index.clone()),
+                                                export::GridCell::Blank => String::new(),
+                                            };
+                                        }
+                                    }
+                                    ui.end_row();
                                 }
-                            }
-                            ui.end_row();
-                        }
+                            });
                     });
+                ui.separator();
+                ui.add_sized(
+                    egui::vec2(ui.available_width(), notes_h),
+                    egui::Label::new(hover_note),
+                );
             });
-        ui.separator();
-        ui.add_sized(
-            egui::vec2(ui.available_width(), notes_h),
-            egui::Label::new(hover_note),
-        );
         if !tool.grid_detail.is_empty() {
             let mut open = true;
             egui::Window::new(&tool.grid_detail_title)

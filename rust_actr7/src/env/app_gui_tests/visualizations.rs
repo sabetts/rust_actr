@@ -32,6 +32,22 @@ fn production_grid_uses_real_count_history_and_scales() {
     );
     assert!(!tool.grid_hide_empty);
 
+    let initial = h
+        .get_by_role_and_label(Role::Window, "Production Grid (COUNT)")
+        .rect();
+    for _ in 0..30 {
+        h.run();
+    }
+    let stable = h
+        .get_by_role_and_label(Role::Window, "Production Grid (COUNT)")
+        .rect();
+    assert!(
+        (stable.height() - initial.height()).abs() <= 1.0,
+        "production grid grew from {} to {} while idle",
+        initial.height(),
+        stable.height()
+    );
+
     h.get_by_label("hide unselected columns").click_accesskit();
     h.run();
     let before = find_tool(&h, ToolKind::ProductionGrid).grid_scale;
