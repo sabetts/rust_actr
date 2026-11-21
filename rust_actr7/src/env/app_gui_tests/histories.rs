@@ -3,6 +3,7 @@
 use egui::accesskit::Role;
 use egui_kittest::kittest::Queryable;
 
+use crate::env::history::HistoryView;
 use crate::json::Json;
 
 use super::super::HistoryKind;
@@ -273,4 +274,88 @@ fn history_recording_is_released_when_the_tool_closes() {
         .borrow()
         .iter()
         .any(|c| c.name == "stop-recording-history"));
+}
+
+#[test]
+fn history_windows_honor_small_sizes_and_do_not_snap_on_bottom_press() {
+    let (mut h, _calls) = recording_harness();
+    h.run();
+    {
+        let app = h.state_mut();
+        load_count(app);
+    }
+
+    let views = [
+        (
+            ToolKind::RetrievalHistory,
+            "Retrieval History (COUNT)",
+            HistoryView::Retrieval(Vec::new()),
+        ),
+        (
+            ToolKind::BlendingHistory,
+            "Blending History (COUNT)",
+            HistoryView::Blending(Vec::new()),
+        ),
+        (
+            ToolKind::BufferHistory,
+            "Buffer History (COUNT)",
+            HistoryView::Buffer(Vec::new()),
+        ),
+        (
+            ToolKind::VisiconHistory,
+            "Visicon History (COUNT)",
+            HistoryView::Perceptual(Vec::new()),
+        ),
+        (
+            ToolKind::AudiconHistory,
+            "Audicon History (COUNT)",
+            HistoryView::Perceptual(Vec::new()),
+        ),
+    ];
+
+    for (kind, title, view) in views {
+        {
+            let app = h.state_mut();
+            app.settings
+                .tool_geometry
+                .insert(title.into(), [40.0, 40.0, 520.0, 200.0]);
+            app.open_tool(kind);
+        }
+        {
+            let app = h.state_mut();
+            let tool = app.tools.iter_mut().find(|t| t.kind == kind).unwrap();
+            tool.refresh_pending = false;
+            tool.history_view = Some(view);
+        }
+        h.run();
+
+        let before = h.get_by_role_and_label(Role::Window, title).rect();
+        assert!(
+            before.height() <= 220.0,
+            "{title} ignored the requested 200px height: {}",
+            before.height()
+        );
+
+        let pos = egui::pos2(before.center().x, before.max.y - 1.0);
+        h.hover_at(pos);
+        h.run();
+        h.drag_at(pos);
+        h.run();
+        h.run();
+
+        let after = h.get_by_role_and_label(Role::Window, title).rect();
+        assert!(
+            (after.height() - before.height()).abs() <= 1.0,
+            "{title} snapped from {} to {} on a plain press",
+            before.height(),
+            after.height()
+        );
+
+        h.drop_at(pos);
+        h.run();
+        if let Some(tool) = h.state_mut().tools.iter_mut().find(|t| t.kind == kind) {
+            tool.open = false;
+        }
+        h.run();
+    }
 }

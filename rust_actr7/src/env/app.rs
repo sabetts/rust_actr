@@ -366,6 +366,17 @@ fn stepper_kind(run_type: usize) -> &'static str {
     STEPPER_RUN_KINDS[run_type.min(STEPPER_RUN_KINDS.len() - 1)]
 }
 
+/// Consume any leftover space. Resizable windows otherwise auto-shrink to
+/// their content when a resize interaction starts, which looks like a snap
+/// back to the minimum size.
+fn fill_remaining(ui: &mut egui::Ui) {
+    let rest = ui.available_size();
+    let rest = egui::vec2(rest.x.max(0.0), rest.y.max(0.0));
+    if rest.x > 0.0 || rest.y > 0.0 {
+        ui.allocate_space(rest);
+    }
+}
+
 #[derive(Default)]
 struct StepperState {
     id: Option<String>,
@@ -840,6 +851,9 @@ impl App {
             let mut win = egui::Window::new(&tool.title)
                 .id(egui::Id::unique(("tool-window", tool.id)))
                 .open(&mut open);
+            if tool.kind.history().is_some() {
+                win = win.min_size([420.0, 180.0]);
+            }
             if let Some([x, y, w, h]) = self.settings.tool_geometry.get(&tool.title).copied() {
                 win = win.default_pos([x, y]).default_size([w, h]);
             } else {
@@ -1526,11 +1540,13 @@ impl App {
             None => {
                 egui::ScrollArea::both()
                     .id_salt(("history", tool.id))
+                    .auto_shrink([false, false])
                     .show(ui, |ui| {
                         ui.monospace(&tool.history_text);
                     });
             }
         }
+        fill_remaining(ui);
     }
     fn retrieval_panes(
         &mut self,
@@ -1543,7 +1559,7 @@ impl App {
         let entry = time_sel.and_then(|i| entries.get(i));
         let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
         let width = ui.available_width();
-        let height = ui.available_height().max(260.0);
+        let height = ui.available_height().max(1.0);
         let top_h = height * 0.60;
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
@@ -1640,7 +1656,7 @@ impl App {
         let entry = time_sel.and_then(|i| entries.get(i));
         let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
         let width = ui.available_width();
-        let height = ui.available_height().max(260.0);
+        let height = ui.available_height().max(1.0);
         let top_h = height * 0.60;
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
@@ -1752,7 +1768,7 @@ impl App {
         let entry = time_sel.and_then(|i| entries.get(i));
         let action = entry.and_then(|e| item_sel.and_then(|i| e.actions.get(i)));
         let width = ui.available_width();
-        let height = ui.available_height().max(260.0);
+        let height = ui.available_height().max(1.0);
         let top_h = height * 0.40;
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
@@ -1799,7 +1815,7 @@ impl App {
             );
         });
         ui.separator();
-        let pane_h = (height * 0.55).max(120.0);
+        let pane_h = height * 0.55;
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.34, pane_h),
@@ -1866,7 +1882,7 @@ impl App {
         let mut time_sel = tool.history_time_sel;
         let entry = time_sel.and_then(|i| entries.get(i));
         let width = ui.available_width();
-        let height = ui.available_height().max(240.0);
+        let height = ui.available_height().max(1.0);
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.10, height),
