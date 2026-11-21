@@ -366,15 +366,11 @@ fn stepper_kind(run_type: usize) -> &'static str {
     STEPPER_RUN_KINDS[run_type.min(STEPPER_RUN_KINDS.len() - 1)]
 }
 
-/// Consume any leftover space. Resizable windows otherwise auto-shrink to
-/// their content when a resize interaction starts, which looks like a snap
-/// back to the minimum size.
+/// Make the content fill the available rect without allocating a widget.
+/// `allocate_space(available_size())` adds item spacing, which makes a
+/// resizable window grow a little every frame while it clamps to the content.
 fn fill_remaining(ui: &mut egui::Ui) {
-    let rest = ui.available_size();
-    let rest = egui::vec2(rest.x.max(0.0), rest.y.max(0.0));
-    if rest.x > 0.0 || rest.y > 0.0 {
-        ui.allocate_space(rest);
-    }
+    ui.expand_to_include_rect(ui.max_rect());
 }
 
 #[derive(Default)]

@@ -329,12 +329,24 @@ fn history_windows_honor_small_sizes_and_do_not_snap_on_bottom_press() {
         }
         h.run();
 
-        let before = h.get_by_role_and_label(Role::Window, title).rect();
+        let initial = h.get_by_role_and_label(Role::Window, title).rect();
         assert!(
-            before.height() <= 220.0,
+            initial.height() <= 220.0,
             "{title} ignored the requested 200px height: {}",
-            before.height()
+            initial.height()
         );
+
+        for _ in 0..30 {
+            h.run();
+        }
+        let stable = h.get_by_role_and_label(Role::Window, title).rect();
+        assert!(
+            (stable.height() - initial.height()).abs() <= 1.0,
+            "{title} grew from {} to {} while idle",
+            initial.height(),
+            stable.height()
+        );
+        let before = stable;
 
         let pos = egui::pos2(before.center().x, before.max.y - 1.0);
         h.hover_at(pos);
