@@ -210,6 +210,15 @@ jobs:
           manylinux: "2_17"
           args: --release --locked --out ../../dist/wheels
 
+      # The manylinux container runs as root, so `dist/` (created by
+      # `--out ../../dist/wheels`) and `rust_actr7/python/target` come out
+      # root-owned. The runner user cannot then create the staged bundle in
+      # `dist/`, and the action's own chown only looks for a literal `target`.
+      - name: reclaim container output
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" dist
+          sudo chown -R "$(id -u):$(id -g)" rust_actr7/python/target
+
       - name: smoke test and stage
         run: |
           wheel=$(ls dist/wheels/rust_actr-*.whl | head -n 1)
