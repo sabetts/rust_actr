@@ -18,8 +18,24 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  verify:
+    name: verify version
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: check tag and manifests
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: python scripts/bump_version.py --check --tag "$RELEASE_TAG"
+
   windows:
     name: build (windows-x86_64)
+    needs: verify
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +91,7 @@ jobs:
 
   macos:
     name: build (macos-universal)
+    needs: verify
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -140,6 +157,7 @@ jobs:
 
   linux:
     name: build (linux-x86_64)
+    needs: verify
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
