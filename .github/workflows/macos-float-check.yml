@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref/SHA to check out (defaults to the dispatched ref)"
+        description: "Branch, tag or commit SHA to check out (not HEAD; defaults to the dispatched ref)"
         required: false
         type: string
       test:
