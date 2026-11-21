@@ -228,6 +228,7 @@ struct ToolWindow {
     command_query: String,
     connections: Vec<crate::env::backend::ConnectionInfo>,
     conn_sel: Option<usize>,
+    conn_doc_h: f32,
     refresh_pending: bool,
 
     // Declarative viewer.
@@ -306,6 +307,7 @@ impl ToolWindow {
             command_query: String::new(),
             connections: Vec::new(),
             conn_sel: None,
+            conn_doc_h: 0.0,
             refresh_pending: true,
             dm_filters: vec!["_none_".to_string()],
             dm_filter: "_none_".to_string(),
@@ -374,6 +376,15 @@ const HISTORY_DETAIL_MIN_HEIGHT: f32 = 120.0;
 
 fn history_top_height(available: f32) -> f32 {
     (available * 0.60).max(HISTORY_TOP_HEIGHT)
+}
+
+fn connection_doc_height(text: &str) -> f32 {
+    if text.is_empty() {
+        0.0
+    } else {
+        let lines = text.lines().count().max(1) as f32;
+        24.0 + (lines * 14.0).clamp(24.0, 140.0)
+    }
 }
 
 #[derive(Default)]
@@ -947,70 +958,57 @@ impl App {
                                         ui.label(c.received.to_string());
                                     });
                                     ui.separator();
-                                    let bottom_h = if tool.text.is_empty() {
-                                        48.0
+                                    let bottom_h = 48.0 + tool.conn_doc_h;
+                                    let list_h = (ui.available_height()
+                                        - bottom_h
+                                        - ui.spacing().item_spacing.y)
+                                        .max(80.0);
+                                    ui.label("Commands");
+                                    if c.commands.is_empty() {
+                                        ui.label("(none)");
                                     } else {
-                                        let lines = tool.text.lines().count().max(1) as f32;
-                                        68.0 + (lines * 14.0).clamp(24.0, 140.0)
-                                    };
-                                    egui::Panel::bottom(("connection-bottom", tool.id))
-                                        .resizable(false)
-                                        .exact_size(bottom_h)
-                                        .frame(egui::Frame::NONE)
-                                        .show(ui, |ui| {
-                                            ui.separator();
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Command:");
-                                                ui.add(
-                                                    egui::TextEdit::singleline(
-                                                        &mut tool.command_query,
-                                                    )
-                                                    .desired_width(140.0),
-                                                );
-                                                if ui.button("Documentation").clicked() {
-                                                    doc_requested = true;
+                                        let row_h = ui.text_style_height(&egui::TextStyle::Body)
+                                            + ui.spacing().item_spacing.y;
+                                        egui::ScrollArea::both()
+                                            .id_salt(("connection-commands", tool.id))
+                                            .auto_shrink([false, false])
+                                            .max_height(list_h)
+                                            .show_rows(ui, row_h, c.commands.len(), |ui, range| {
+                                                for i in range {
+                                                    let cmd = &c.commands[i];
+                                                    if ui
+                                                        .selectable_label(
+                                                            tool.command_query == *cmd,
+                                                            cmd,
+                                                        )
+                                                        .clicked()
+                                                    {
+                                                        selected_cmd = Some(cmd.clone());
+                                                    }
                                                 }
                                             });
-                                            if !tool.text.is_empty() {
-                                                ui.separator();
-                                                ui.label("Documentation:");
-                                                egui::ScrollArea::both()
-                                                    .id_salt(("connection-doc", tool.id))
-                                                    .auto_shrink([false, false])
-                                                    .show(ui, |ui| {
-                                                        ui.add(
-                                                            egui::Label::new(
-                                                                egui::RichText::new(
-                                                                    tool.text.clone(),
-                                                                )
-                                                                .monospace(),
-                                                            )
-                                                            .wrap(),
-                                                        );
-                                                    });
-                                            }
-                                        });
+                                    }
                                     ui.separator();
-                                    ui.label("Commands");
-                                    egui::ScrollArea::both()
-                                        .id_salt(("connection-commands", tool.id))
-                                        .auto_shrink([false, false])
-                                        .show(ui, |ui| {
-                                            if c.commands.is_empty() {
-                                                ui.label("(none)");
-                                            }
-                                            for cmd in &c.commands {
-                                                if ui
-                                                    .selectable_label(
-                                                        tool.command_query == *cmd,
-                                                        cmd,
-                                                    )
-                                                    .clicked()
-                                                {
-                                                    selected_cmd = Some(cmd.clone());
-                                                }
-                                            }
-                                        });
+                                    ui.horizontal_wrapped(|ui| {
+                                        ui.label("Command:");
+                                        ui.add(
+                                            egui::TextEdit::singleline(&mut tool.command_query)
+                                                .desired_width(140.0),
+                                        );
+                                        if ui.button("Documentation").clicked() {
+                                            doc_requested = true;
+                                        }
+                                    });
+                                    if !tool.text.is_empty() {
+                                        ui.separator();
+                                        ui.label("Documentation:");
+                                        egui::ScrollArea::both()
+                                            .id_salt(("connection-doc", tool.id))
+                                            .auto_shrink([false, false])
+                                            .show(ui, |ui| {
+                                                ui.monospace(&tool.text);
+                                            });
+                                    }
                                 },
                             );
                         });
@@ -1031,6 +1029,7 @@ impl App {
                         Err(e) => format!("check {name}: {e}"),
                     };
                 }
+                tool.conn_doc_h = connection_doc_height(&tool.text);
             }
             ToolKind::EventQueue | ToolKind::About => {
                 if ui.button("Refresh").clicked() {
@@ -4751,6 +4750,16 @@ mod tests {
         assert_eq!(history_top_height(300.0), HISTORY_TOP_HEIGHT);
         assert_eq!(history_top_height(600.0), 360.0);
         assert!(history_top_height(600.0) > history_top_height(300.0));
+    }
+
+    #[test]
+    fn connection_doc_height_grows_and_caps_long_docs() {
+        assert_eq!(connection_doc_height(""), 0.0);
+        let short = connection_doc_height("one\ntwo");
+        let long = connection_doc_height(&"line\n".repeat(100));
+        assert!(short > 0.0);
+        assert_eq!(long, 164.0);
+        assert!(long > short);
     }
 
     #[test]
