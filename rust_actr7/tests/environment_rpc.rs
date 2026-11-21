@@ -20,7 +20,7 @@ struct Client {
 impl Client {
     fn connect(addr: std::net::SocketAddr) -> io::Result<Client> {
         let stream = TcpStream::connect(addr)?;
-        stream.set_read_timeout(Some(Duration::from_secs(20)))?;
+        stream.set_read_timeout(Some(Duration::from_secs(60)))?;
         Ok(Client {
             stream,
             next_id: 1,
