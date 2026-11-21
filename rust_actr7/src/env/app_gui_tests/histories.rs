@@ -371,3 +371,87 @@ fn history_windows_honor_small_sizes_and_do_not_snap_on_bottom_press() {
         h.run();
     }
 }
+
+#[test]
+fn buffer_history_selected_action_stays_stable() {
+    let records = vec![Json::Arr(vec![
+        Json::Int(0),
+        Json::Arr(vec![Json::Arr(vec![
+            Json::Str("retrieval".into()),
+            Json::Str("set-buffer-chunk".into()),
+            Json::Str("chunk".into()),
+            Json::Str("free".into()),
+            Json::Str("previous".into()),
+            Json::Str("free".into()),
+            Json::Str("current".into()),
+            Json::Str("free".into()),
+        ])]),
+    ])];
+
+    let (mut h, _calls) = recording_harness();
+    h.run();
+    load_count(h.state_mut());
+    seeded_tool(
+        &mut h,
+        ToolKind::BufferHistory,
+        HistoryKind::Buffer,
+        records,
+    );
+
+    let title = "Buffer History (COUNT)";
+    h.get_by_role_and_label(Role::Window, title)
+        .get_by_label("0.000")
+        .click_accesskit();
+    h.run();
+    h.get_by_role_and_label(Role::Window, title)
+        .get_by_label("retrieval set-buffer-chunk")
+        .click_accesskit();
+    h.run();
+
+    let tool = h
+        .state()
+        .tools
+        .iter()
+        .find(|t| t.kind == ToolKind::BufferHistory)
+        .unwrap();
+    assert!(tool.history_time_sel.is_some());
+    assert!(tool.history_item_sel.is_some());
+
+    let initial = h.get_by_role_and_label(Role::Window, title).rect();
+    for _ in 0..30 {
+        h.run();
+    }
+    let stable = h.get_by_role_and_label(Role::Window, title).rect();
+    assert!(
+        (stable.height() - initial.height()).abs() <= 1.0,
+        "buffer history grew from {} to {} after selecting an action",
+        initial.height(),
+        stable.height()
+    );
+
+    let pos = egui::pos2(stable.center().x, stable.max.y - 1.0);
+    h.hover_at(pos);
+    h.run();
+    h.drag_at(pos);
+    h.run();
+    h.run();
+    let pressed = h.get_by_role_and_label(Role::Window, title).rect();
+    assert!(
+        (pressed.height() - stable.height()).abs() <= 1.0,
+        "buffer history snapped from {} to {} on a plain press",
+        stable.height(),
+        pressed.height()
+    );
+    h.drop_at(pos);
+    h.run();
+
+    if let Some(tool) = h
+        .state_mut()
+        .tools
+        .iter_mut()
+        .find(|t| t.kind == ToolKind::BufferHistory)
+    {
+        tool.open = false;
+    }
+    h.run();
+}

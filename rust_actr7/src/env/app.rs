@@ -366,12 +366,9 @@ fn stepper_kind(run_type: usize) -> &'static str {
     STEPPER_RUN_KINDS[run_type.min(STEPPER_RUN_KINDS.len() - 1)]
 }
 
-/// Make the content fill the available rect without allocating a widget.
-/// `allocate_space(available_size())` adds item spacing, which makes a
-/// resizable window grow a little every frame while it clamps to the content.
-fn fill_remaining(ui: &mut egui::Ui) {
-    ui.expand_to_include_rect(ui.max_rect());
-}
+const BUFFER_HISTORY_TOP_HEIGHT: f32 = 140.0;
+const HISTORY_TOP_HEIGHT: f32 = 180.0;
+const HISTORY_DETAIL_MIN_HEIGHT: f32 = 120.0;
 
 #[derive(Default)]
 struct StepperState {
@@ -1529,10 +1526,30 @@ impl App {
         }
         ui.separator();
         match tool.history_view.clone() {
-            Some(HistoryView::Retrieval(entries)) => self.retrieval_panes(tool, ui, &entries),
-            Some(HistoryView::Blending(entries)) => self.blending_panes(tool, ui, &entries),
-            Some(HistoryView::Buffer(entries)) => self.buffer_history_panes(tool, ui, &entries),
-            Some(HistoryView::Perceptual(entries)) => self.perceptual_panes(tool, ui, &entries),
+            Some(HistoryView::Retrieval(entries)) => {
+                egui::ScrollArea::vertical()
+                    .id_salt(("history-body", tool.id))
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| self.retrieval_panes(tool, ui, &entries));
+            }
+            Some(HistoryView::Blending(entries)) => {
+                egui::ScrollArea::vertical()
+                    .id_salt(("history-body", tool.id))
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| self.blending_panes(tool, ui, &entries));
+            }
+            Some(HistoryView::Buffer(entries)) => {
+                egui::ScrollArea::vertical()
+                    .id_salt(("history-body", tool.id))
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| self.buffer_history_panes(tool, ui, &entries));
+            }
+            Some(HistoryView::Perceptual(entries)) => {
+                egui::ScrollArea::vertical()
+                    .id_salt(("history-body", tool.id))
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| self.perceptual_panes(tool, ui, &entries));
+            }
             None => {
                 egui::ScrollArea::both()
                     .id_salt(("history", tool.id))
@@ -1542,7 +1559,6 @@ impl App {
                     });
             }
         }
-        fill_remaining(ui);
     }
     fn retrieval_panes(
         &mut self,
@@ -1556,7 +1572,8 @@ impl App {
         let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
         let width = ui.available_width();
         let height = ui.available_height().max(1.0);
-        let top_h = height * 0.60;
+        let top_h = HISTORY_TOP_HEIGHT;
+        let rest = (height - top_h).max(1.0);
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.12, top_h),
@@ -1622,7 +1639,7 @@ impl App {
         ui.label("Request");
         egui::ScrollArea::both()
             .id_salt("retrieval-request")
-            .max_height(height * 0.15)
+            .max_height((rest * 0.25).max(60.0))
             .show(ui, |ui| {
                 if let Some(entry) = entry {
                     ui.monospace(format!("+retrieval>\n{}", entry.request));
@@ -1652,8 +1669,7 @@ impl App {
         let entry = time_sel.and_then(|i| entries.get(i));
         let chunk = entry.and_then(|e| item_sel.and_then(|i| e.chunks.get(i)));
         let width = ui.available_width();
-        let height = ui.available_height().max(1.0);
-        let top_h = height * 0.60;
+        let top_h = HISTORY_TOP_HEIGHT;
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.15, top_h),
@@ -1764,8 +1780,7 @@ impl App {
         let entry = time_sel.and_then(|i| entries.get(i));
         let action = entry.and_then(|e| item_sel.and_then(|i| e.actions.get(i)));
         let width = ui.available_width();
-        let height = ui.available_height().max(1.0);
-        let top_h = height * 0.40;
+        let top_h = BUFFER_HISTORY_TOP_HEIGHT;
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.30, top_h),
@@ -1811,7 +1826,7 @@ impl App {
             );
         });
         ui.separator();
-        let pane_h = height * 0.55;
+        let pane_h = ui.available_height().max(HISTORY_DETAIL_MIN_HEIGHT);
         ui.horizontal(|ui| {
             ui.allocate_ui_with_layout(
                 egui::vec2(width * 0.34, pane_h),
