@@ -3699,8 +3699,13 @@ impl App {
         let matched = hex_color(&self.settings.p_matched);
         let mismatched = hex_color(&self.settings.p_mismatched);
         let cell_w = 34.0 * tool.grid_scale;
+        let notes_h = 24.0;
+        let grid_h = (ui.available_height() - notes_h - 8.0).max(1.0);
+        let mut hover_note = String::new();
         egui::ScrollArea::both()
             .id_salt(("production-grid", tool.id))
+            .auto_shrink([false, false])
+            .max_height(grid_h)
             .show(ui, |ui| {
                 egui::Grid::new(("production-grid-cells", tool.id))
                     .striped(true)
@@ -3742,11 +3747,14 @@ impl App {
                                         egui::Color32::BLACK,
                                     );
                                 }
-                                let hover = format!(
-                                    "{name} @ {}\n{label}",
-                                    data.times.get(*column).cloned().unwrap_or_default()
-                                );
-                                let resp = resp.on_hover_text(hover);
+                                if resp.hovered() {
+                                    hover_note = data
+                                        .notes
+                                        .get(r)
+                                        .and_then(|row| row.get(*column))
+                                        .cloned()
+                                        .unwrap_or_default();
+                                }
                                 if resp.clicked() {
                                     tool.grid_detail_title = match cell {
                                         export::GridCell::Mismatched(_) => {
@@ -3772,6 +3780,11 @@ impl App {
                         }
                     });
             });
+        ui.separator();
+        ui.add_sized(
+            egui::vec2(ui.available_width(), notes_h),
+            egui::Label::new(hover_note),
+        );
         if !tool.grid_detail.is_empty() {
             let mut open = true;
             egui::Window::new(&tool.grid_detail_title)

@@ -20,6 +20,8 @@ pub struct GridData {
     pub why_not: Vec<String>,
     /// `rows[production][decision]`.
     pub rows: Vec<Vec<GridCell>>,
+    /// Hover note per cell, parallel to `rows`.
+    pub notes: Vec<Vec<String>>,
 }
 
 impl GridData {
@@ -58,21 +60,47 @@ impl GridData {
             }
         }
         data.rows = vec![Vec::new(); data.productions.len()];
+        data.notes = vec![Vec::new(); data.productions.len()];
+        let why_not = data.why_not.clone();
         for decision in decisions {
             let Json::Arr(cells) = decision else {
                 continue;
             };
-            for (i, row) in data.rows.iter_mut().enumerate() {
+            for i in 0..data.rows.len() {
                 let cell = cells.get(i);
-                row.push(match cell {
+                let (cell, note) = match cell {
                     Some(Json::Arr(c)) => match c.first().and_then(|x| x.as_f64()) {
-                        Some(0.0) => GridCell::Selected(json_text(c.get(1))),
-                        Some(1.0) => GridCell::Matched(json_text(c.get(1))),
-                        Some(2.0) => GridCell::Mismatched(json_text(c.get(1))),
-                        _ => GridCell::Blank,
+                        Some(0.0) => {
+                            let utility = json_text(c.get(1));
+                            let u_n = json_text(c.get(2));
+                            (
+                                GridCell::Selected(utility.clone()),
+                                format!("Utility: {utility}  U(n): {u_n}"),
+                            )
+                        }
+                        Some(1.0) => {
+                            let utility = json_text(c.get(1));
+                            let u_n = json_text(c.get(2));
+                            (
+                                GridCell::Matched(utility.clone()),
+                                format!("Utility: {utility}  U(n): {u_n}"),
+                            )
+                        }
+                        Some(2.0) => {
+                            let index = json_text(c.get(1));
+                            let reason = index
+                                .parse::<usize>()
+                                .ok()
+                                .and_then(|i| why_not.get(i).cloned())
+                                .unwrap_or_else(|| index.clone());
+                            (GridCell::Mismatched(index), format!("Whynot: {reason}"))
+                        }
+                        _ => (GridCell::Blank, String::new()),
                     },
-                    _ => GridCell::Blank,
-                });
+                    _ => (GridCell::Blank, String::new()),
+                };
+                data.rows[i].push(cell);
+                data.notes[i].push(note);
             }
         }
         data
@@ -919,6 +947,8 @@ mod tests {
         assert_eq!(data.times, vec!["1.000"]);
         assert_eq!(data.rows[0][0], GridCell::Selected("1.2".into()));
         assert_eq!(data.rows[1][0], GridCell::Mismatched("0".into()));
+        assert_eq!(data.notes[0][0], "Utility: 1.2  U(n): 0");
+        assert_eq!(data.notes[1][0], "Whynot: no match");
         assert_eq!(data.production_text[0], "p1");
         assert_eq!(data.why_not, vec!["no match".to_string()]);
         assert_eq!(data.visible_columns(false), vec![0]);
