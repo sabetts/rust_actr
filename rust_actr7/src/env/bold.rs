@@ -251,12 +251,17 @@ pub(crate) fn draw_2d(
     }
 
     for &(module, [x, y]) in BOLD_2D_LABELS {
+        let color = if data.has_module(module as usize) {
+            label_tint(module as usize)
+        } else {
+            egui::Color32::GRAY
+        };
         painter.text(
             rect.min + egui::vec2(x, y),
             egui::Align2::CENTER_CENTER,
             MODULES[module as usize],
             egui::FontId::monospace(10.0),
-            label_tint(module as usize),
+            color,
         );
     }
 }
