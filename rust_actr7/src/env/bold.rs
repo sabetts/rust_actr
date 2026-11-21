@@ -23,7 +23,7 @@ pub(crate) const COLORS_2D: [egui::Color32; 8] = [
     egui::Color32::from_rgb(0, 0, 255),
     egui::Color32::from_rgb(255, 255, 0),
     egui::Color32::from_rgb(255, 0, 255),
-    egui::Color32::from_rgb(255, 0, 255),
+    egui::Color32::from_rgb(255, 128, 0),
     egui::Color32::from_rgb(0, 255, 0),
     egui::Color32::from_rgb(0, 0, 255),
 ];
@@ -158,6 +158,14 @@ fn gray(value: Option<f32>) -> egui::Color32 {
     }
 }
 
+fn centered_canvas(outer: egui::Rect, canvas: egui::Vec2) -> egui::Rect {
+    let offset = egui::vec2(
+        ((outer.width() - canvas.x) * 0.5).max(0.0),
+        ((outer.height() - canvas.y) * 0.5).max(0.0),
+    );
+    egui::Rect::from_min_size(outer.min + offset, canvas)
+}
+
 pub(crate) fn draw_2d(
     ui: &mut egui::Ui,
     data: &BoldData,
@@ -165,12 +173,14 @@ pub(crate) fn draw_2d(
     texture: Option<&egui::TextureHandle>,
     image_error: Option<&str>,
 ) {
-    let (rect, _) = ui.allocate_exact_size(
-        egui::vec2(BOLD_2D_CANVAS[0], BOLD_2D_CANVAS[1]),
-        egui::Sense::hover(),
-    );
+    let canvas = egui::vec2(BOLD_2D_CANVAS[0], BOLD_2D_CANVAS[1]);
+    let available = ui.available_size();
+    let outer_size = egui::vec2(available.x.max(canvas.x), available.y.max(canvas.y));
+    let (outer, _) = ui.allocate_exact_size(outer_size, egui::Sense::hover());
+    let rect = centered_canvas(outer, canvas);
+    ui.painter_at(outer)
+        .rect_filled(outer, 0.0, egui::Color32::BLACK);
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, egui::Color32::BLACK);
 
     if let Some(texture) = texture {
         let image_rect = egui::Rect::from_min_size(
@@ -241,17 +251,12 @@ pub(crate) fn draw_2d(
     }
 
     for &(module, [x, y]) in BOLD_2D_LABELS {
-        let color = if data.has_module(module as usize) {
-            label_tint(module as usize)
-        } else {
-            egui::Color32::from_gray(210)
-        };
         painter.text(
             rect.min + egui::vec2(x, y),
             egui::Align2::CENTER_CENTER,
             MODULES[module as usize],
             egui::FontId::monospace(10.0),
-            color,
+            label_tint(module as usize),
         );
     }
 }
@@ -503,6 +508,19 @@ mod tests {
         let matrix = viewing_transform(rotated.theta, rotated.phi);
         let moved = project_point(&matrix, &rotated, [0.5, 0.0, 0.0]);
         assert!((moved.x - center.x).abs() > 1.0);
+    }
+
+    #[test]
+    fn centers_the_brain_canvas_in_available_space() {
+        let outer = egui::Rect::from_min_size(egui::pos2(10.0, 20.0), egui::vec2(800.0, 700.0));
+        let rect = centered_canvas(outer, egui::vec2(640.0, 660.0));
+        assert_eq!(rect.min, egui::pos2(90.0, 40.0));
+        assert_eq!(rect.size(), egui::vec2(640.0, 660.0));
+    }
+
+    #[test]
+    fn procedural_has_its_own_2d_color() {
+        assert_ne!(COLORS_2D[4], COLORS_2D[5]);
     }
 
     #[test]
