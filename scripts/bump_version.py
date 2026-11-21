@@ -19,6 +19,12 @@ Full release steps:
        git push origin main
     3. git tag v0.1.1
        git push origin v0.1.1
+
+Follow the release run:
+    gh run list --workflow release.yml
+    gh run watch <run-id> --exit-status
+    gh run view <run-id> --log-failed
+    gh release view v0.1.1
 """
 
 from __future__ import annotations
@@ -188,6 +194,9 @@ def bump(version: str, dry_run: bool) -> None:
     print("  git push origin main")
     print(f"  git tag v{version}")
     print(f"  git push origin v{version}")
+    print("  gh run list --workflow release.yml")
+    print("  gh run watch <run-id> --exit-status")
+    print(f"  gh release view v{version}")
 
 
 def main() -> int:
