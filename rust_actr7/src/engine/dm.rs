@@ -1110,8 +1110,7 @@ pub(super) fn bl_equation(
                 let denom = 1.0f32 - decay;
                 let a = (now_ms - creation_ms).max(0) as f32;
                 let b = (now_ms - last_ref).max(0) as f32;
-                value += ((count - *ol as f32)
-                    * (expt_coerced(a, denom) - expt_coerced(b, denom)))
+                value += ((count - *ol as f32) * (expt_coerced(a, denom) - expt_coerced(b, denom)))
                     / ((last_ref - creation_ms).max(50) as f32 * denom);
             }
             log_coerced(value) + act_scale
