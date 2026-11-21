@@ -227,6 +227,7 @@ struct ToolWindow {
     text: String,
     command_query: String,
     connections: Vec<crate::env::backend::ConnectionInfo>,
+    conn_sel: Option<usize>,
     refresh_pending: bool,
 
     // Declarative viewer.
@@ -304,6 +305,7 @@ impl ToolWindow {
             text: String::new(),
             command_query: String::new(),
             connections: Vec::new(),
+            conn_sel: None,
             refresh_pending: true,
             dm_filters: vec!["_none_".to_string()],
             dm_filter: "_none_".to_string(),
@@ -822,7 +824,14 @@ impl App {
                     });
             }
             ToolKind::Connections => match self.backend.connections() {
-                Ok(c) => tool.connections = c,
+                Ok(c) => {
+                    tool.connections = c;
+                    if tool.connections.is_empty() {
+                        tool.conn_sel = None;
+                    } else if tool.conn_sel.map_or(true, |i| i >= tool.connections.len()) {
+                        tool.conn_sel = Some(0);
+                    }
+                }
                 Err(e) => self.error = Some(format!("list-connections: {e}")),
             },
             ToolKind::About => {
@@ -883,44 +892,131 @@ impl App {
                     tool.refresh_pending = true;
                 }
                 ui.separator();
-                egui::Grid::new(("connections", tool.id))
-                    .num_columns(4)
-                    .striped(true)
+                let mut sel = tool.conn_sel;
+                let mut selected_cmd: Option<String> = None;
+                let mut doc_requested = false;
+                egui::ScrollArea::vertical()
+                    .id_salt(("connections-body", tool.id))
+                    .auto_shrink([false, false])
                     .show(ui, |ui| {
-                        ui.strong("Name");
-                        ui.strong("Sent");
-                        ui.strong("Received");
-                        ui.strong("Commands");
-                        ui.end_row();
-                        for c in &tool.connections {
-                            ui.label(&c.name);
-                            ui.label(c.sent.to_string());
-                            ui.label(c.received.to_string());
-                            ui.label(c.commands.join(" "));
-                            ui.end_row();
-                        }
-                    });
-                ui.separator();
-                ui.horizontal(|ui| {
-                    ui.label("Command:");
-                    ui.add(
-                        egui::TextEdit::singleline(&mut tool.command_query).desired_width(180.0),
-                    );
-                    if ui.button("Documentation").clicked() {
-                        let name = tool.command_query.trim().to_string();
-                        tool.text = match self.backend.command_doc(&name) {
-                            Ok(Some(doc)) if !doc.is_empty() => doc,
-                            Ok(_) => "(no documentation)".into(),
-                            Err(e) => format!("check {name}: {e}"),
-                        };
-                    }
-                });
-                if !tool.text.is_empty() {
-                    egui::ScrollArea::vertical()
-                        .id_salt(("connection-doc", tool.id))
-                        .show(ui, |ui| {
-                            ui.monospace(&tool.text);
+                        let width = ui.available_width();
+                        let height = ui.available_height();
+                        ui.horizontal(|ui| {
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(width * 0.28, height),
+                                egui::Layout::top_down(egui::Align::Min),
+                                |ui| {
+                                    ui.label("Connections");
+                                    egui::ScrollArea::vertical()
+                                        .id_salt(("connections-list", tool.id))
+                                        .auto_shrink([false, false])
+                                        .show(ui, |ui| {
+                                            for (i, c) in tool.connections.iter().enumerate() {
+                                                if ui
+                                                    .selectable_label(sel == Some(i), &c.name)
+                                                    .clicked()
+                                                {
+                                                    sel = Some(i);
+                                                }
+                                            }
+                                        });
+                                },
+                            );
+                            let right_sel = sel;
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(width * 0.70, height),
+                                egui::Layout::top_down(egui::Align::Min),
+                                |ui| {
+                                    let Some(c) = tool.connections.get(right_sel.unwrap_or(0))
+                                    else {
+                                        ui.label("No connections.");
+                                        return;
+                                    };
+                                    ui.horizontal(|ui| {
+                                        ui.label("Address:");
+                                        ui.add(egui::Label::new(c.address.as_str()).wrap());
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label("Pending:");
+                                        ui.label(c.pending_calls.to_string());
+                                        ui.separator();
+                                        ui.label("Sent:");
+                                        ui.label(c.sent.to_string());
+                                        ui.separator();
+                                        ui.label("Received:");
+                                        ui.label(c.received.to_string());
+                                    });
+                                    ui.separator();
+                                    ui.label("Commands");
+                                    let list_h = (ui.available_height() * 0.45).max(80.0);
+                                    egui::ScrollArea::vertical()
+                                        .id_salt(("connection-commands", tool.id))
+                                        .auto_shrink([false, false])
+                                        .max_height(list_h)
+                                        .show(ui, |ui| {
+                                            if c.commands.is_empty() {
+                                                ui.label("(none)");
+                                            }
+                                            for cmd in &c.commands {
+                                                if ui
+                                                    .selectable_label(
+                                                        tool.command_query == *cmd,
+                                                        cmd,
+                                                    )
+                                                    .clicked()
+                                                {
+                                                    selected_cmd = Some(cmd.clone());
+                                                }
+                                            }
+                                        });
+                                    ui.separator();
+                                    ui.horizontal(|ui| {
+                                        ui.label("Command:");
+                                        ui.add(
+                                            egui::TextEdit::singleline(&mut tool.command_query)
+                                                .desired_width(180.0),
+                                        );
+                                        if ui.button("Documentation").clicked() {
+                                            doc_requested = true;
+                                        }
+                                    });
+                                    ui.separator();
+                                    ui.label("Documentation:");
+                                    egui::ScrollArea::vertical()
+                                        .id_salt(("connection-doc", tool.id))
+                                        .auto_shrink([false, false])
+                                        .show(ui, |ui| {
+                                            if tool.text.is_empty() {
+                                                ui.label("(none)");
+                                            } else {
+                                                ui.add(
+                                                    egui::Label::new(
+                                                        egui::RichText::new(tool.text.clone())
+                                                            .monospace(),
+                                                    )
+                                                    .wrap(),
+                                                );
+                                            }
+                                        });
+                                },
+                            );
                         });
+                    });
+                tool.conn_sel = sel;
+                if let Some(cmd) = selected_cmd {
+                    tool.command_query = cmd.clone();
+                    match self.backend.command_doc(&cmd) {
+                        Ok(Some(doc)) if !doc.is_empty() => tool.text = doc,
+                        Ok(_) => tool.text = "(no documentation)".into(),
+                        Err(e) => tool.text = format!("check {cmd}: {e}"),
+                    }
+                } else if doc_requested {
+                    let name = tool.command_query.trim().to_string();
+                    tool.text = match self.backend.command_doc(&name) {
+                        Ok(Some(doc)) if !doc.is_empty() => doc,
+                        Ok(_) => "(no documentation)".into(),
+                        Err(e) => format!("check {name}: {e}"),
+                    };
                 }
             }
             ToolKind::EventQueue | ToolKind::About => {

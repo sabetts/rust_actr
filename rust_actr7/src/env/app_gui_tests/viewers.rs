@@ -300,6 +300,55 @@ fn connections_load_rows_and_command_documentation() {
 }
 
 #[test]
+fn connections_with_long_command_lists_stay_narrow() {
+    let (mut h, _calls, state) = mock_harness();
+    state.borrow_mut().connections = vec![ConnectionInfo {
+        name: "client".into(),
+        address: "127.0.0.1:2650".into(),
+        sent: 100,
+        received: 100,
+        commands: (0..40)
+            .map(|i| format!("very-long-command-name-{i:02}"))
+            .collect(),
+        ..Default::default()
+    }];
+    state
+        .borrow_mut()
+        .docs
+        .insert("very-long-command-name-00".into(), Some("cmd docs".into()));
+    h.run();
+    h.state_mut().open_tool(ToolKind::Connections);
+    h.run();
+
+    let width = h
+        .state()
+        .settings
+        .tool_geometry
+        .get("Connections & Commands")
+        .map(|g| g[2])
+        .unwrap_or(0.0);
+    assert!(width > 0.0);
+    assert!(width < 800.0, "connections window is too wide: {width}");
+    assert_eq!(
+        tool_after(&h, ToolKind::Connections).connections[0]
+            .commands
+            .len(),
+        40
+    );
+    assert_eq!(tool_after(&h, ToolKind::Connections).conn_sel, Some(0));
+
+    h.get_by_role_and_label(Role::Window, "Connections & Commands")
+        .get_by_label("very-long-command-name-00")
+        .click_accesskit();
+    h.run();
+    assert_eq!(
+        tool_after(&h, ToolKind::Connections).command_query,
+        "very-long-command-name-00"
+    );
+    assert_eq!(tool_after(&h, ToolKind::Connections).text, "cmd docs");
+}
+
+#[test]
 fn event_queue_and_about_refresh_through_the_backend() {
     let (mut h, calls, state) = mock_harness();
     state
