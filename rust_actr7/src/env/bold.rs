@@ -17,17 +17,6 @@ const TWO_PI: f32 = std::f32::consts::PI * 2.0;
 const RHO: f32 = 5.0;
 const DEFAULT_DIST: f32 = 1200.0;
 
-pub(crate) const COLORS_2D: [egui::Color32; 8] = [
-    egui::Color32::from_rgb(255, 0, 0),
-    egui::Color32::from_rgb(0, 255, 0),
-    egui::Color32::from_rgb(0, 0, 255),
-    egui::Color32::from_rgb(255, 255, 0),
-    egui::Color32::from_rgb(255, 0, 255),
-    egui::Color32::from_rgb(255, 128, 0),
-    egui::Color32::from_rgb(0, 255, 0),
-    egui::Color32::from_rgb(0, 0, 255),
-];
-
 pub(crate) const COLORS_3D: [egui::Color32; 8] = [
     egui::Color32::from_rgb(255, 0, 0),
     egui::Color32::from_rgb(0, 153, 0),
@@ -38,6 +27,8 @@ pub(crate) const COLORS_3D: [egui::Color32; 8] = [
     egui::Color32::from_rgb(0, 238, 0),
     egui::Color32::from_rgb(51, 102, 170),
 ];
+
+pub(crate) const COLORS_2D: [egui::Color32; 8] = COLORS_3D;
 
 pub(crate) struct BoldRow {
     pub(crate) name: String,
@@ -524,7 +515,8 @@ mod tests {
     }
 
     #[test]
-    fn procedural_has_its_own_2d_color() {
+    fn two_d_uses_the_three_d_module_palette() {
+        assert_eq!(COLORS_2D, COLORS_3D);
         assert_ne!(COLORS_2D[4], COLORS_2D[5]);
     }
 
