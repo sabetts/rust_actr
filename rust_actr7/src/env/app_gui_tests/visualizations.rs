@@ -167,20 +167,15 @@ fn bold_views_render_seeded_records_and_scale_controls() {
     {
         let app = h.state_mut();
         app.open_tool(ToolKind::BoldGraph);
-        app.open_tool(ToolKind::Bold2D);
-        app.open_tool(ToolKind::Bold3D);
-        for kind in [ToolKind::BoldGraph, ToolKind::Bold2D, ToolKind::Bold3D] {
-            let tool = app.tools.iter_mut().find(|t| t.kind == kind).unwrap();
-            tool.refresh_pending = false;
-            tool.history_records = bold_records();
-        }
+        let tool = app
+            .tools
+            .iter_mut()
+            .find(|t| t.kind == ToolKind::BoldGraph)
+            .unwrap();
+        tool.refresh_pending = false;
+        tool.history_records = bold_records();
     }
     h.run();
-
-    assert!(h.query_by_label("2D brain view").is_some());
-    assert!(h
-        .query_by_label("Simplified 3D brain view (scan values as voxel grid)")
-        .is_some());
 
     h.get_by_role_and_label(Role::Window, "BOLD Graph (COUNT)")
         .get_by_role(Role::ComboBox)
@@ -190,4 +185,22 @@ fn bold_views_render_seeded_records_and_scale_controls() {
         .click_accesskit();
     h.run();
     assert_eq!(find_tool(&h, ToolKind::BoldGraph).bold_scale, 1);
+
+    {
+        let app = h.state_mut();
+        app.open_tool(ToolKind::Bold2D);
+        app.open_tool(ToolKind::Bold3D);
+        for kind in [ToolKind::Bold2D, ToolKind::Bold3D] {
+            let tool = app.tools.iter_mut().find(|t| t.kind == kind).unwrap();
+            tool.refresh_pending = false;
+            tool.history_records = bold_records();
+        }
+    }
+    h.run();
+
+    h.get_by_role_and_label(Role::Window, "BOLD 2D Brain (COUNT)");
+    h.get_by_role_and_label(Role::Window, "BOLD 3D Brain (COUNT)");
+    assert!(h.query_all_by_label("Scan #").count() >= 2);
+    assert!(!find_tool(&h, ToolKind::Bold2D).history_records.is_empty());
+    assert!(!find_tool(&h, ToolKind::Bold3D).history_records.is_empty());
 }

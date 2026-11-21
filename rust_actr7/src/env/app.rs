@@ -11,6 +11,7 @@ use crate::engine::{ProductionGraph, ProductionGraphMode};
 use crate::json::Json;
 
 use super::backend::{result_text, BackendEvent, EnvBackend, TraceStream};
+use super::bold::{self, BoldData};
 use super::debug::env_debug;
 use super::export;
 use super::graph_parse;
@@ -276,6 +277,7 @@ struct ToolWindow {
     picker_selected: Vec<bool>,
     bold_scan: usize,
     bold_scale: usize,
+    bold_camera: bold::Camera,
     grid_hide_empty: bool,
     grid_scale: f32,
     grid_detail_title: String,
@@ -343,6 +345,7 @@ impl ToolWindow {
             picker_selected: Vec::new(),
             bold_scan: 0,
             bold_scale: 0,
+            bold_camera: bold::Camera::default(),
             grid_hide_empty: false,
             grid_scale: 1.0,
             grid_detail_title: String::new(),
@@ -599,6 +602,9 @@ pub struct App {
     stepper: StepperState,
     /// Reference counts for `record-history` sources shared by viewers.
     recorded_history: HashMap<(Option<String>, String), usize>,
+    /// Decoded 2D BOLD brain image, loaded on first use.
+    bold_texture: Option<egui::TextureHandle>,
+    bold_texture_error: Option<String>,
     /// The visible experiment windows the engine is displaying.
     windows: Vec<VisWin>,
     /// Floating tool windows (viewers, Event Queue, Connections, About, …).
@@ -652,6 +658,8 @@ impl App {
             trace_filter: [true; 4],
             stepper: StepperState::default(),
             recorded_history: HashMap::new(),
+            bold_texture: None,
+            bold_texture_error: None,
             windows: Vec::new(),
             tools: Vec::new(),
             next_tool_id: 1,
@@ -871,10 +879,20 @@ impl App {
             if tool.kind.history().is_some() {
                 win = win.min_size([420.0, 180.0]);
             }
+            if matches!(tool.kind, ToolKind::Bold2D | ToolKind::Bold3D) {
+                win = win.min_size([420.0, 300.0]);
+            }
+            let default_size = match tool.kind {
+                ToolKind::Bold2D => [760.0, 790.0],
+                ToolKind::Bold3D => [670.0, 650.0],
+                _ => [520.0, 360.0],
+            };
             if let Some([x, y, w, h]) = self.settings.tool_geometry.get(&tool.title).copied() {
                 win = win.default_pos([x, y]).default_size([w, h]);
             } else {
-                win = win.default_width(520.0).default_height(360.0);
+                win = win
+                    .default_width(default_size[0])
+                    .default_height(default_size[1]);
             }
             let shown = win.show(ctx, |ui| self.tool_body(ui, &mut tool));
             if let Some(inner) = shown {
@@ -1465,13 +1483,15 @@ impl App {
     fn save_history(&mut self, tool: &ToolWindow, path: &std::path::Path) {
         let kind = tool.kind.history().expect("history tool");
         let target = Self::history_target(kind, tool.model.clone());
+        let comment = match tool.kind {
+            ToolKind::Bold2D => "Data saved from BOLD 2D brain window".to_string(),
+            ToolKind::Bold3D => "Data saved from BOLD 3D brain window".to_string(),
+            _ => format!("Data saved from the {} History window", kind.label()),
+        };
         let mut args = vec![
             Json::Str(kind.processor().into()),
             Json::Str(path.to_string_lossy().into_owned()),
-            Json::Str(format!(
-                "Data saved from the {} History window",
-                kind.label()
-            )),
+            Json::Str(comment),
         ];
         if kind == HistoryKind::Trace {
             args.push(
@@ -4103,22 +4123,12 @@ impl App {
     }
 
     fn bold_panel(&mut self, tool: &mut ToolWindow, ui: &mut egui::Ui) {
-        let mut times: Vec<f64> = Vec::new();
-        let mut rows: Vec<(String, Vec<f64>)> = Vec::new();
-        for record in &tool.history_records {
-            let Json::Arr(f) = record else { continue };
-            let name = f.first().and_then(|x| x.as_str()).unwrap_or("");
-            let values: Vec<f64> = f.iter().skip(1).filter_map(|x| x.as_f64()).collect();
-            if name.eq_ignore_ascii_case("time") {
-                times = values;
-            } else {
-                rows.push((name.to_string(), values));
-            }
+        let data = BoldData::parse(&tool.history_records);
+        let max_scan = data.max_scan();
+        if tool.bold_scan > max_scan {
+            tool.bold_scan = max_scan;
         }
-        if times.is_empty() || rows.is_empty() {
-            ui.label("No BOLD data yet. Record BOLD buffers or buffer-trace, run, then Refresh.");
-            return;
-        }
+
         if tool.kind == ToolKind::BoldGraph {
             ui.horizontal(|ui| {
                 ui.label("Scale:");
@@ -4132,30 +4142,90 @@ impl App {
                         }
                     });
             });
-            self.draw_bold_graph(ui, tool, &times, &rows);
-        } else {
-            let max_scan = times.len().saturating_sub(1);
-            if tool.bold_scan > max_scan {
-                tool.bold_scan = max_scan;
+            self.draw_bold_graph(ui, tool, &data);
+            return;
+        }
+
+        egui::Panel::bottom(("bold-footer", tool.id)).show(ui, |ui| {
+            self.bold_footer(ui, tool, &data, max_scan);
+        });
+        egui::ScrollArea::both()
+            .id_salt(("bold-canvas", tool.id))
+            .auto_shrink([false, false])
+            .show(ui, |ui| match tool.kind {
+                ToolKind::Bold2D => self.draw_bold_brain_2d(ui, tool, &data),
+                _ => bold::draw_3d(ui, &data, tool.bold_scan, &mut tool.bold_camera),
+            });
+    }
+
+    fn bold_footer(
+        &mut self,
+        ui: &mut egui::Ui,
+        tool: &mut ToolWindow,
+        data: &BoldData,
+        max_scan: usize,
+    ) {
+        ui.add(egui::Slider::new(&mut tool.bold_scan, 0..=max_scan).text("Scan #"));
+        if !tool.history_comment.is_empty() {
+            ui.label(&tool.history_comment);
+        } else if data.is_empty() {
+            ui.label("No Data available");
+        }
+        ui.horizontal(|ui| {
+            if ui.button("Get History").clicked() {
+                tool.refresh_pending = true;
             }
-            ui.add(egui::Slider::new(&mut tool.bold_scan, 0..=max_scan).text("Scan #"));
-            ui.separator();
-            self.draw_bold_brain(ui, tool, &times, &rows);
+            if ui.button("Save History").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("History", &["txt", "log", "json"])
+                    .save_file()
+                {
+                    self.save_history(tool, &path);
+                }
+            }
+            if ui.button("Load History").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("History", &["txt", "log", "json"])
+                    .pick_file()
+                {
+                    self.load_history(tool, &path);
+                }
+            }
+        });
+    }
+
+    fn draw_bold_brain_2d(&mut self, ui: &mut egui::Ui, tool: &ToolWindow, data: &BoldData) {
+        self.ensure_bold_texture(ui.ctx());
+        bold::draw_2d(
+            ui,
+            data,
+            tool.bold_scan,
+            self.bold_texture.as_ref(),
+            self.bold_texture_error.as_deref(),
+        );
+    }
+
+    fn ensure_bold_texture(&mut self, ctx: &egui::Context) {
+        if self.bold_texture.is_some() || self.bold_texture_error.is_some() {
+            return;
+        }
+        match bold::decode_brain_image() {
+            Ok(image) => {
+                self.bold_texture =
+                    Some(ctx.load_texture("bold-2d-brain", image, egui::TextureOptions::LINEAR));
+            }
+            Err(error) => self.bold_texture_error = Some(error),
         }
     }
 
-    fn draw_bold_graph(
-        &self,
-        ui: &mut egui::Ui,
-        tool: &ToolWindow,
-        times: &[f64],
-        rows: &[(String, Vec<f64>)],
-    ) {
-        let global_max = rows
+    fn draw_bold_graph(&self, ui: &mut egui::Ui, tool: &ToolWindow, data: &BoldData) {
+        let global_max = data
+            .rows
             .iter()
-            .flat_map(|(_, v)| v.iter())
-            .fold(0.0f64, |m, v| m.max(v.abs()))
-            .max(1e-6);
+            .flat_map(|r| r.values.iter().flatten())
+            .fold(0.0f32, |m, v| m.max(v.abs()))
+            .max(1e-6) as f64;
+        let times = &data.times;
         let width = (times.len() as f32 * 60.0).max(600.0);
         let height = 280.0;
         egui::ScrollArea::horizontal()
@@ -4187,8 +4257,13 @@ impl App {
                         );
                     }
                 }
-                for (r, (name, values)) in rows.iter().enumerate() {
-                    let row_max = values.iter().fold(0.0f64, |m, v| m.max(v.abs())).max(1e-6);
+                for (r, row) in data.rows.iter().enumerate() {
+                    let row_max = row
+                        .values
+                        .iter()
+                        .flatten()
+                        .fold(0.0f32, |m, v| m.max(v.abs()))
+                        .max(1e-6) as f64;
                     let scale = match tool.bold_scale {
                         1 => row_max,
                         2 => global_max,
@@ -4196,8 +4271,12 @@ impl App {
                     };
                     let color = palette(r);
                     let mut last = None;
-                    for (i, value) in values.iter().enumerate().take(times.len()) {
-                        let point = egui::pos2(x_at(i), y_at(*value, scale));
+                    for (i, value) in row.values.iter().enumerate().take(times.len()) {
+                        let Some(value) = value else {
+                            last = None;
+                            continue;
+                        };
+                        let point = egui::pos2(x_at(i), y_at(*value as f64, scale));
                         if let Some(prev) = last {
                             p.line_segment([prev, point], egui::Stroke::new(1.5, color));
                         }
@@ -4206,72 +4285,10 @@ impl App {
                     p.text(
                         egui::pos2(rect.min.x + 4.0, rect.min.y + 8.0 + r as f32 * 13.0),
                         egui::Align2::LEFT_TOP,
-                        name,
+                        &row.name,
                         egui::FontId::monospace(10.0),
                         color,
                     );
-                }
-            });
-    }
-
-    fn draw_bold_brain(
-        &self,
-        ui: &mut egui::Ui,
-        tool: &ToolWindow,
-        _times: &[f64],
-        rows: &[(String, Vec<f64>)],
-    ) {
-        const MODULES: [&str; 8] = [
-            "manual",
-            "goal",
-            "vocal",
-            "imaginal",
-            "retrieval",
-            "procedural",
-            "aural",
-            "visual",
-        ];
-        let colors = [
-            egui::Color32::RED,
-            egui::Color32::GREEN,
-            egui::Color32::BLUE,
-            egui::Color32::YELLOW,
-            egui::Color32::MAGENTA,
-            egui::Color32::MAGENTA,
-            egui::Color32::GREEN,
-            egui::Color32::BLUE,
-        ];
-        let scan = tool.bold_scan;
-        ui.label(if tool.kind == ToolKind::Bold3D {
-            "Simplified 3D brain view (scan values as voxel grid)"
-        } else {
-            "2D brain view"
-        });
-        egui::Grid::new(("bold-brain", tool.id))
-            .num_columns(4)
-            .show(ui, |ui| {
-                for (i, module) in MODULES.iter().enumerate() {
-                    let value = rows
-                        .iter()
-                        .find(|(n, _)| n.eq_ignore_ascii_case(module))
-                        .and_then(|(_, v)| v.get(scan))
-                        .copied()
-                        .unwrap_or(0.0);
-                    let shade = value.clamp(0.0, 1.0);
-                    let color = colors[i].gamma_multiply(0.25 + 0.75 * shade as f32);
-                    let (rect, _) =
-                        ui.allocate_exact_size(egui::vec2(120.0, 54.0), egui::Sense::hover());
-                    ui.painter().rect_filled(rect, 4.0, color);
-                    ui.painter().text(
-                        rect.center(),
-                        egui::Align2::CENTER_CENTER,
-                        format!("{module}\n{value:.2}"),
-                        egui::FontId::proportional(11.0),
-                        egui::Color32::BLACK,
-                    );
-                    if i % 4 == 3 {
-                        ui.end_row();
-                    }
                 }
             });
     }

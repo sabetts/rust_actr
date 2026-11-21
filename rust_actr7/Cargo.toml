@@ -14,9 +14,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 eframe = { version = "0.37.0", optional = true }
 egui_kittest = { version = "0.37.0", features = ["eframe"], optional = true }
+image = { version = "0.25", optional = true, default-features = false, features = ["gif"] }
 rfd = { version = "0.17.2", optional = true }
 
 [features]
 # The native Environment GUI (`actr env`). Off by default so the core
 # engine, the trace test suites, and the wasm cdylib stay dependency-free.
-env = ["dep:eframe", "dep:egui_kittest", "dep:rfd"]
+env = ["dep:eframe", "dep:egui_kittest", "dep:image", "dep:rfd"]

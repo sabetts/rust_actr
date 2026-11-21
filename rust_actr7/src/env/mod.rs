@@ -13,6 +13,8 @@
 
 mod app;
 mod backend;
+mod bold;
+mod bold_data;
 mod client;
 mod connection;
 mod debug;
