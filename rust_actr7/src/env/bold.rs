@@ -341,9 +341,30 @@ fn distance(a: [f32; 3], b: [f32; 3]) -> f32 {
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
+fn signed_area(points: &[egui::Pos2]) -> f32 {
+    let mut area = 0.0;
+    for i in 0..points.len() {
+        let a = points[i];
+        let b = points[(i + 1) % points.len()];
+        area += a.x * b.y - b.x * a.y;
+    }
+    area * 0.5
+}
+
+fn surface_shade(normal: [f32; 3]) -> egui::Color32 {
+    let light = [0.35, 0.55, 0.76];
+    let diffuse = (normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2])
+        .abs()
+        .clamp(0.0, 1.0);
+    let value = 0.15 + 0.45 * diffuse;
+    egui::Color32::from_gray((value * 255.0).round() as u8)
+}
+
 struct PaintedFace {
     distance: f32,
+    index: usize,
     points: Vec<egui::Pos2>,
+    normal: [f32; 3],
     module: Option<u8>,
 }
 
@@ -370,13 +391,9 @@ pub(crate) fn draw_3d(ui: &mut egui::Ui, data: &BoldData, scan: usize, camera: &
 
     let matrix = viewing_transform(camera.theta, camera.phi);
     let eye = eye_point(camera.theta, camera.phi);
-    let mut faces = Vec::with_capacity(BOLD_3D_FACES.len());
-    for face in BOLD_3D_FACES {
-        let v1 = BOLD_3D_VERTICES[face.verts[0]];
-        let line_of_sight = [eye[0] - v1[0], eye[1] - v1[1], eye[2] - v1[2]];
-        if dot(face.normal, line_of_sight) < 0.0 && face.module.is_none() {
-            continue;
-        }
+    let mut surface = Vec::new();
+    let mut modules = Vec::new();
+    for (index, face) in BOLD_3D_FACES.iter().enumerate() {
         let mut points = Vec::with_capacity(face.len as usize);
         let mut total_distance = 0.0;
         for i in 0..face.len as usize {
@@ -384,29 +401,47 @@ pub(crate) fn draw_3d(ui: &mut egui::Ui, data: &BoldData, scan: usize, camera: &
             points.push(rect.min + project_point(&matrix, camera, vertex).to_vec2());
             total_distance += distance(vertex, eye);
         }
-        faces.push(PaintedFace {
+        // Module cubes have consistent winding, so reject their backfaces.
+        // The brain shell has a handful of inconsistent faces; drawing it as
+        // opaque, depth-sorted faces lets the front shell hide the back shell
+        // without punching holes in the surface.
+        if face.module.is_some() && signed_area(&points) >= -0.01 {
+            continue;
+        }
+        let painted = PaintedFace {
             distance: total_distance / face.len as f32,
+            index,
             points,
+            normal: face.normal,
             module: face.module,
-        });
-    }
-    faces.sort_by(|a, b| b.distance.total_cmp(&a.distance));
-
-    for face in &faces {
-        let (fill, stroke) = match face.module {
-            Some(module) => (
-                gray(data.value(module as usize, scan)),
-                egui::Stroke::new(3.0, COLORS_3D[module as usize]),
-            ),
-            None => (
-                egui::Color32::TRANSPARENT,
-                egui::Stroke::new(1.0, egui::Color32::from_gray(0x8f)),
-            ),
         };
+        if face.module.is_none() {
+            surface.push(painted);
+        } else {
+            modules.push(painted);
+        }
+    }
+    let far_to_near = |a: &PaintedFace, b: &PaintedFace| {
+        b.distance
+            .total_cmp(&a.distance)
+            .then_with(|| a.index.cmp(&b.index))
+    };
+    surface.sort_by(far_to_near);
+    modules.sort_by(far_to_near);
+
+    for face in surface {
         painter.add(egui::Shape::convex_polygon(
-            face.points.clone(),
-            fill,
-            stroke,
+            face.points,
+            surface_shade(face.normal),
+            egui::Stroke::NONE,
+        ));
+    }
+    for face in modules {
+        let module = face.module.expect("module face");
+        painter.add(egui::Shape::convex_polygon(
+            face.points,
+            gray(data.value(module as usize, scan)),
+            egui::Stroke::new(1.5, COLORS_3D[module as usize]),
         ));
     }
 
@@ -518,6 +553,26 @@ mod tests {
     fn two_d_uses_the_three_d_module_palette() {
         assert_eq!(COLORS_2D, COLORS_3D);
         assert_ne!(COLORS_2D[4], COLORS_2D[5]);
+    }
+
+    #[test]
+    fn projected_winding_identifies_backfaces() {
+        let front = [
+            egui::pos2(0.0, 0.0),
+            egui::pos2(0.0, 10.0),
+            egui::pos2(10.0, 0.0),
+        ];
+        assert!(signed_area(&front) < 0.0);
+        let back = [front[0], front[2], front[1]];
+        assert!(signed_area(&back) > 0.0);
+    }
+
+    #[test]
+    fn surface_shading_stays_visible() {
+        for normal in [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]] {
+            let value = surface_shade(normal).r();
+            assert!((38..=153).contains(&value), "shade {value}");
+        }
     }
 
     #[test]
