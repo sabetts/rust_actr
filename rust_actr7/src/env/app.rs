@@ -906,113 +906,100 @@ impl App {
                 let mut sel = tool.conn_sel;
                 let mut selected_cmd: Option<String> = None;
                 let mut doc_requested = false;
-                egui::ScrollArea::both()
-                    .id_salt(("connections-body", tool.id))
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        let width = ui.available_width();
-                        let height = ui.available_height();
-                        ui.horizontal(|ui| {
-                            ui.allocate_ui_with_layout(
-                                egui::vec2(width * 0.28, height),
-                                egui::Layout::top_down(egui::Align::Min),
-                                |ui| {
-                                    ui.label("Connections");
-                                    egui::ScrollArea::both()
-                                        .id_salt(("connections-list", tool.id))
-                                        .auto_shrink([false, false])
-                                        .show(ui, |ui| {
-                                            for (i, c) in tool.connections.iter().enumerate() {
-                                                if ui
-                                                    .selectable_label(sel == Some(i), &c.name)
-                                                    .clicked()
-                                                {
-                                                    sel = Some(i);
-                                                }
-                                            }
-                                        });
-                                },
-                            );
-                            let right_sel = sel;
-                            ui.allocate_ui_with_layout(
-                                egui::vec2(width * 0.70, height),
-                                egui::Layout::top_down(egui::Align::Min),
-                                |ui| {
-                                    let Some(c) = tool.connections.get(right_sel.unwrap_or(0))
-                                    else {
-                                        ui.label("No connections.");
-                                        return;
-                                    };
-                                    ui.horizontal(|ui| {
-                                        ui.label("Address:");
-                                        ui.add(egui::Label::new(c.address.as_str()).wrap());
-                                    });
-                                    ui.horizontal(|ui| {
-                                        ui.label("Pending:");
-                                        ui.label(c.pending_calls.to_string());
-                                        ui.separator();
-                                        ui.label("Sent:");
-                                        ui.label(c.sent.to_string());
-                                        ui.separator();
-                                        ui.label("Received:");
-                                        ui.label(c.received.to_string());
-                                    });
-                                    ui.separator();
-                                    let bottom_h = 48.0 + tool.conn_doc_h;
-                                    let list_h = (ui.available_height()
-                                        - bottom_h
-                                        - ui.spacing().item_spacing.y)
-                                        .max(80.0);
-                                    ui.label("Commands");
-                                    if c.commands.is_empty() {
-                                        ui.label("(none)");
-                                    } else {
-                                        let row_h = ui.text_style_height(&egui::TextStyle::Body)
-                                            + ui.spacing().item_spacing.y;
-                                        egui::ScrollArea::both()
-                                            .id_salt(("connection-commands", tool.id))
-                                            .auto_shrink([false, false])
-                                            .max_height(list_h)
-                                            .show_rows(ui, row_h, c.commands.len(), |ui, range| {
-                                                for i in range {
-                                                    let cmd = &c.commands[i];
-                                                    if ui
-                                                        .selectable_label(
-                                                            tool.command_query == *cmd,
-                                                            cmd,
-                                                        )
-                                                        .clicked()
-                                                    {
-                                                        selected_cmd = Some(cmd.clone());
-                                                    }
-                                                }
-                                            });
+                let width = ui.available_width();
+                let height = ui.available_height();
+                ui.horizontal(|ui| {
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(width * 0.28, height),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
+                            ui.label("Connections");
+                            egui::ScrollArea::both()
+                                .id_salt(("connections-list", tool.id))
+                                .auto_shrink([false, false])
+                                .show(ui, |ui| {
+                                    for (i, c) in tool.connections.iter().enumerate() {
+                                        if ui.selectable_label(sel == Some(i), &c.name).clicked() {
+                                            sel = Some(i);
+                                        }
                                     }
-                                    ui.separator();
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label("Command:");
-                                        ui.add(
-                                            egui::TextEdit::singleline(&mut tool.command_query)
-                                                .desired_width(140.0),
-                                        );
-                                        if ui.button("Documentation").clicked() {
-                                            doc_requested = true;
+                                });
+                        },
+                    );
+                    let right_sel = sel;
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(width * 0.70, height),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
+                            let Some(c) = tool.connections.get(right_sel.unwrap_or(0)) else {
+                                ui.label("No connections.");
+                                return;
+                            };
+                            ui.horizontal(|ui| {
+                                ui.label("Address:");
+                                ui.add(egui::Label::new(c.address.as_str()).wrap());
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Pending:");
+                                ui.label(c.pending_calls.to_string());
+                                ui.separator();
+                                ui.label("Sent:");
+                                ui.label(c.sent.to_string());
+                                ui.separator();
+                                ui.label("Received:");
+                                ui.label(c.received.to_string());
+                            });
+                            ui.separator();
+                            let bottom_h = 48.0 + tool.conn_doc_h;
+                            ui.label("Commands");
+                            let list_h =
+                                (ui.available_height() - bottom_h - ui.spacing().item_spacing.y)
+                                    .max(80.0);
+                            if c.commands.is_empty() {
+                                ui.label("(none)");
+                            } else {
+                                let row_h = ui.text_style_height(&egui::TextStyle::Body)
+                                    + ui.spacing().item_spacing.y;
+                                egui::ScrollArea::both()
+                                    .id_salt(("connection-commands", tool.id))
+                                    .auto_shrink([false, false])
+                                    .max_height(list_h)
+                                    .show_rows(ui, row_h, c.commands.len(), |ui, range| {
+                                        for i in range {
+                                            let cmd = &c.commands[i];
+                                            if ui
+                                                .selectable_label(tool.command_query == *cmd, cmd)
+                                                .clicked()
+                                            {
+                                                selected_cmd = Some(cmd.clone());
+                                            }
                                         }
                                     });
-                                    if !tool.text.is_empty() {
-                                        ui.separator();
-                                        ui.label("Documentation:");
-                                        egui::ScrollArea::both()
-                                            .id_salt(("connection-doc", tool.id))
-                                            .auto_shrink([false, false])
-                                            .show(ui, |ui| {
-                                                ui.monospace(&tool.text);
-                                            });
-                                    }
-                                },
-                            );
-                        });
-                    });
+                            }
+                            ui.separator();
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label("Command:");
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut tool.command_query)
+                                        .desired_width(140.0),
+                                );
+                                if ui.button("Documentation").clicked() {
+                                    doc_requested = true;
+                                }
+                            });
+                            if !tool.text.is_empty() {
+                                ui.separator();
+                                ui.label("Documentation:");
+                                egui::ScrollArea::both()
+                                    .id_salt(("connection-doc", tool.id))
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        ui.monospace(&tool.text);
+                                    });
+                            }
+                        },
+                    );
+                });
                 tool.conn_sel = sel;
                 if let Some(cmd) = selected_cmd {
                     tool.command_query = cmd.clone();

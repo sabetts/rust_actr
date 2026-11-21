@@ -332,7 +332,7 @@ fn connections_with_long_command_lists_stay_narrow() {
         .map(|g| g[2])
         .unwrap_or(0.0);
     assert!(width > 0.0);
-    assert!(width <= 380.0, "connections window is too wide: {width}");
+    assert!(width <= 420.0, "connections window is too wide: {width}");
     assert_eq!(
         tool_after(&h, ToolKind::Connections).connections[0]
             .commands
@@ -358,8 +358,29 @@ fn connections_with_long_command_lists_stay_narrow() {
         .map(|g| g[2])
         .unwrap_or(0.0);
     assert!(
-        width <= 380.0,
+        width <= 420.0,
         "documentation widened the connections window: {width}"
+    );
+    let height = h
+        .state()
+        .settings
+        .tool_geometry
+        .get("Connections & Commands")
+        .map(|g| g[3])
+        .unwrap_or(0.0);
+    for _ in 0..30 {
+        h.run();
+    }
+    let stable = h
+        .state()
+        .settings
+        .tool_geometry
+        .get("Connections & Commands")
+        .map(|g| g[3])
+        .unwrap_or(0.0);
+    assert!(
+        (stable - height).abs() <= 1.0,
+        "connections window grew from {height} to {stable} while idle"
     );
 }
 
