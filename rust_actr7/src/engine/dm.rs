@@ -1075,10 +1075,17 @@ pub(super) fn ol_str(ol: &Ol) -> String {
 }
 
 /// Generalized base-level decay (`compute-references`,
-/// declarative-memory.lisp:2695), all single-float. Pure: takes the
-/// clock, reference/creation times in ms, decay, OL flag and the
+/// declarative-memory.lisp:2695). Pure: takes the clock,
+/// reference/creation times in ms, decay, OL flag and the
 /// `:bll`-derived act-scale. Chunks with zero references never reach
 /// here (the caller returns -999999.0 with a warning instead).
+///
+/// Every result is a single-float and the sums/differences stay in
+/// single precision, but `expt` and `log` go through double and round,
+/// matching `expt-coerced`/`log-coerced` in SBCL. Going through the host
+/// `f32::powf`/`f32::ln` instead ties the trace to the local libm, and
+/// libms disagree by an ulp on these inputs (macOS arm64's `logf` does
+/// for the `:ol 3` block of `base-level-safety-check`).
 pub(super) fn bl_equation(
     now_ms: i64,
     refs: &[i64],
@@ -1092,21 +1099,22 @@ pub(super) fn bl_equation(
     let mut last_ref = 0i64;
     for r in refs {
         let lag = (now_ms - r).max(50);
-        value += (lag as f32).powf(-decay);
+        value += expt_coerced(lag as f32, -decay);
         last_ref = *r;
     }
     match ol {
-        Ol::Off => value.ln() + act_scale,
+        Ol::Off => log_coerced(value) + act_scale,
         Ol::Num(ol) => {
             if count as f64 > *ol {
                 // (+ 1.0 minus-decay)
                 let denom = 1.0f32 - decay;
                 let a = (now_ms - creation_ms).max(0) as f32;
                 let b = (now_ms - last_ref).max(0) as f32;
-                value += ((count - *ol as f32) * (a.powf(denom) - b.powf(denom)))
+                value += ((count - *ol as f32)
+                    * (expt_coerced(a, denom) - expt_coerced(b, denom)))
                     / ((last_ref - creation_ms).max(50) as f32 * denom);
             }
-            value.ln() + act_scale
+            log_coerced(value) + act_scale
         }
         Ol::On => {
             // NOTE: unlike the other branches, this one adds NO
@@ -1116,11 +1124,8 @@ pub(super) fn bl_equation(
             // clear the list but keep counting).
             let t = ((now_ms - creation_ms).max(0) as f32 / 1000.0).max(0.05);
             let denom = 1.0f32 - decay;
-            // `expt-coerced` (`misc-utils.lisp:515`): SBCL's `expt` on singles
-            // goes through the double `(exp (* y (log x)))` and coerces, which
-            // differs from Rust's `f32::powf` by an ulp (the refs adjudicate).
-            let p = ((-decay as f64) * (t as f64).ln()).exp() as f32;
-            (((count * p / denom) as f64).ln()) as f32
+            let p = expt_coerced(t, -decay);
+            log_coerced(count * p / denom)
         }
     }
 }
@@ -1136,6 +1141,24 @@ pub(super) fn exp_coerced(x: f32) -> f32 {
 /// computes in double and rounds.
 pub(super) fn log_coerced(x: f32) -> f32 {
     ((x as f64).ln()) as f32
+}
+
+/// `expt-coerced` (`misc-utils.lisp:515`): SBCL's `expt` on a single-float
+/// goes through the double `(exp (* y (log x)))` and rounds. Kept in this
+/// exact form rather than `f64::powf` so the result matches SBCL, and in
+/// double rather than `f32::powf` so it does not depend on the host libm.
+pub(super) fn expt_coerced(x: f32, y: f32) -> f32 {
+    if x == 0.0 {
+        // The log form would compute `0 * -inf` = NaN here; mirror `expt`.
+        return if y == 0.0 {
+            1.0
+        } else if y > 0.0 {
+            0.0
+        } else {
+            f32::INFINITY
+        };
+    }
+    (((y as f64) * (x as f64).ln()).exp()) as f32
 }
 
 /// `needed-times` (`associative-learning.lisp:704`): with `:ol t` the history
