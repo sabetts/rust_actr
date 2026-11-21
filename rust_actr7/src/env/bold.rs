@@ -173,14 +173,35 @@ pub(crate) fn draw_2d(
     painter.rect_filled(rect, 0.0, egui::Color32::GRAY);
 
     if let Some(texture) = texture {
+        let image_rect = egui::Rect::from_min_size(
+            rect.min + egui::vec2(BOLD_2D_IMAGE_POS[0], BOLD_2D_IMAGE_POS[1]),
+            egui::vec2(BOLD_2D_IMAGE_SIZE[0], BOLD_2D_IMAGE_SIZE[1]),
+        );
         painter.image(
             texture.id(),
-            egui::Rect::from_min_size(
-                rect.min + egui::vec2(BOLD_2D_IMAGE_POS[0], BOLD_2D_IMAGE_POS[1]),
-                egui::vec2(BOLD_2D_IMAGE_SIZE[0], BOLD_2D_IMAGE_SIZE[1]),
-            ),
+            image_rect,
             egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
             egui::Color32::WHITE,
+        );
+        // The source GIF has white tile grid lines on every tile's top/left
+        // edge, but no right/bottom border on the last column and row. Draw
+        // those missing edges just inside the canvas so the montage is framed.
+        let border = egui::Stroke::new(1.0, egui::Color32::WHITE);
+        let right = image_rect.max.x - 0.5;
+        let bottom = image_rect.max.y - 0.5;
+        painter.line_segment(
+            [
+                egui::pos2(right, image_rect.min.y),
+                egui::pos2(right, bottom),
+            ],
+            border,
+        );
+        painter.line_segment(
+            [
+                egui::pos2(image_rect.min.x, bottom),
+                egui::pos2(right, bottom),
+            ],
+            border,
         );
     } else if let Some(error) = image_error {
         painter.text(
