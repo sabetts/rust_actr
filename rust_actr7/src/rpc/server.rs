@@ -24,13 +24,6 @@ use crate::rpc::{
     callback, parse_reply, parse_request, reply_err, reply_ok, write_message, Method,
 };
 
-/// Events processed between servicing client requests while a `run` is in
-/// flight. Keep this small: a debug build on a slow CI runner can spend long
-/// enough in a 500-event chunk that a Stop request waits past the client's
-/// read timeout. Ten events still amortizes the channel check while making
-/// Stop/stepper/inspector requests responsive.
-const RUN_PUMP_EVENTS: u64 = 10;
-
 /// Serve clients on `addr` (TCP).  Model and task files are loaded from
 /// filesystem paths supplied by the client.
 pub fn serve(addr: &str, seed: (u64, u64)) -> std::io::Result<()> {
@@ -757,10 +750,7 @@ impl Actor {
             return reply_err(id, &e);
         }
         loop {
-            let stop = match self
-                .session
-                .run_slice_reason_capped(limit, full, RUN_PUMP_EVENTS)
-            {
+            let stop = match self.session.run_slice_reason_capped(limit, full, 500) {
                 Ok(stop) => stop,
                 Err(e) => return reply_err(id, &e),
             };
