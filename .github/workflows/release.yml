@@ -11,7 +11,7 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -215,6 +215,8 @@ jobs:
       - windows
       - macos
       - linux
+    permissions:
+      contents: write
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
