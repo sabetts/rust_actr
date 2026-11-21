@@ -22,9 +22,9 @@ jobs:
     name: verify version
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -38,9 +38,9 @@ jobs:
     needs: verify
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -92,11 +92,11 @@ jobs:
   macos:
     name: build (macos-universal)
     needs: verify
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -160,9 +160,9 @@ jobs:
     needs: verify
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -183,6 +183,8 @@ jobs:
             libegl1-mesa-dev \
             libfontconfig1-dev \
             libgl1-mesa-dev \
+            libgtk-3-dev \
+            libssl-dev \
             libvulkan-dev \
             libwayland-dev \
             libx11-dev \
