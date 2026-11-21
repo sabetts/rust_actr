@@ -11,6 +11,14 @@ Bump:
 Check (used by the release workflow):
     python scripts/bump_version.py --check
     python scripts/bump_version.py --check --tag v0.1.1
+
+Full release steps:
+    1. python scripts/bump_version.py 0.1.1
+    2. git add -A
+       git commit -m "release: v0.1.1"
+       git push origin main
+    3. git tag v0.1.1
+       git push origin v0.1.1
 """
 
 from __future__ import annotations
@@ -171,11 +179,22 @@ def bump(version: str, dry_run: bool) -> None:
         return
 
     check(None)
-    print("next: commit the manifests and lockfiles, then tag v" + version)
+    # Release steps: commit the manifests and lockfiles, push main, then tag
+    # and push the tag. The release workflow verifies that v<version> matches
+    # the manifests before building anything.
+    print("next:")
+    print("  git add -A")
+    print(f'  git commit -m "release: v{version}"')
+    print("  git push origin main")
+    print(f"  git tag v{version}")
+    print(f"  git push origin v{version}")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("version", nargs="?", help="new version, e.g. 0.1.1")
     parser.add_argument("--check", action="store_true", help="verify manifests and lockfiles")
     parser.add_argument("--tag", help="tag to compare with --check, e.g. v0.1.1")
