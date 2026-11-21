@@ -315,8 +315,12 @@ fn connections_with_long_command_lists_stay_narrow() {
     state
         .borrow_mut()
         .docs
-        .insert("very-long-command-name-00".into(), Some("cmd docs".into()));
+        .insert("very-long-command-name-00".into(), Some("x".repeat(200)));
     h.run();
+    h.state_mut()
+        .settings
+        .tool_geometry
+        .insert("Connections & Commands".into(), [40.0, 40.0, 320.0, 360.0]);
     h.state_mut().open_tool(ToolKind::Connections);
     h.run();
 
@@ -328,7 +332,7 @@ fn connections_with_long_command_lists_stay_narrow() {
         .map(|g| g[2])
         .unwrap_or(0.0);
     assert!(width > 0.0);
-    assert!(width < 800.0, "connections window is too wide: {width}");
+    assert!(width <= 380.0, "connections window is too wide: {width}");
     assert_eq!(
         tool_after(&h, ToolKind::Connections).connections[0]
             .commands
@@ -345,7 +349,18 @@ fn connections_with_long_command_lists_stay_narrow() {
         tool_after(&h, ToolKind::Connections).command_query,
         "very-long-command-name-00"
     );
-    assert_eq!(tool_after(&h, ToolKind::Connections).text, "cmd docs");
+    assert_eq!(tool_after(&h, ToolKind::Connections).text, "x".repeat(200));
+    let width = h
+        .state()
+        .settings
+        .tool_geometry
+        .get("Connections & Commands")
+        .map(|g| g[2])
+        .unwrap_or(0.0);
+    assert!(
+        width <= 380.0,
+        "documentation widened the connections window: {width}"
+    );
 }
 
 #[test]

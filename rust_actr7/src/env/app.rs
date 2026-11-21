@@ -895,7 +895,7 @@ impl App {
                 let mut sel = tool.conn_sel;
                 let mut selected_cmd: Option<String> = None;
                 let mut doc_requested = false;
-                egui::ScrollArea::vertical()
+                egui::ScrollArea::both()
                     .id_salt(("connections-body", tool.id))
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
@@ -907,7 +907,7 @@ impl App {
                                 egui::Layout::top_down(egui::Align::Min),
                                 |ui| {
                                     ui.label("Connections");
-                                    egui::ScrollArea::vertical()
+                                    egui::ScrollArea::both()
                                         .id_salt(("connections-list", tool.id))
                                         .auto_shrink([false, false])
                                         .show(ui, |ui| {
@@ -947,12 +947,49 @@ impl App {
                                         ui.label(c.received.to_string());
                                     });
                                     ui.separator();
+                                    let bottom_h = if tool.text.is_empty() { 80.0 } else { 200.0 };
+                                    egui::Panel::bottom(("connection-bottom", tool.id))
+                                        .resizable(false)
+                                        .exact_size(bottom_h)
+                                        .frame(egui::Frame::NONE)
+                                        .show(ui, |ui| {
+                                            ui.separator();
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Command:");
+                                                ui.add(
+                                                    egui::TextEdit::singleline(
+                                                        &mut tool.command_query,
+                                                    )
+                                                    .desired_width(140.0),
+                                                );
+                                                if ui.button("Documentation").clicked() {
+                                                    doc_requested = true;
+                                                }
+                                            });
+                                            if !tool.text.is_empty() {
+                                                ui.separator();
+                                                ui.label("Documentation:");
+                                                egui::ScrollArea::both()
+                                                    .id_salt(("connection-doc", tool.id))
+                                                    .auto_shrink([false, false])
+                                                    .show(ui, |ui| {
+                                                        ui.add(
+                                                            egui::Label::new(
+                                                                egui::RichText::new(
+                                                                    tool.text.clone(),
+                                                                )
+                                                                .monospace(),
+                                                            )
+                                                            .wrap(),
+                                                        );
+                                                    });
+                                            }
+                                        });
+                                    ui.separator();
                                     ui.label("Commands");
-                                    let list_h = (ui.available_height() * 0.45).max(80.0);
-                                    egui::ScrollArea::vertical()
+                                    egui::ScrollArea::both()
                                         .id_salt(("connection-commands", tool.id))
                                         .auto_shrink([false, false])
-                                        .max_height(list_h)
                                         .show(ui, |ui| {
                                             if c.commands.is_empty() {
                                                 ui.label("(none)");
@@ -967,35 +1004,6 @@ impl App {
                                                 {
                                                     selected_cmd = Some(cmd.clone());
                                                 }
-                                            }
-                                        });
-                                    ui.separator();
-                                    ui.horizontal(|ui| {
-                                        ui.label("Command:");
-                                        ui.add(
-                                            egui::TextEdit::singleline(&mut tool.command_query)
-                                                .desired_width(180.0),
-                                        );
-                                        if ui.button("Documentation").clicked() {
-                                            doc_requested = true;
-                                        }
-                                    });
-                                    ui.separator();
-                                    ui.label("Documentation:");
-                                    egui::ScrollArea::vertical()
-                                        .id_salt(("connection-doc", tool.id))
-                                        .auto_shrink([false, false])
-                                        .show(ui, |ui| {
-                                            if tool.text.is_empty() {
-                                                ui.label("(none)");
-                                            } else {
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        egui::RichText::new(tool.text.clone())
-                                                            .monospace(),
-                                                    )
-                                                    .wrap(),
-                                                );
                                             }
                                         });
                                 },
