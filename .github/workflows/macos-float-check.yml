@@ -1,0 +1,64 @@
+name: macos-float-check
+
+# Quick, manually triggered check for platform-dependent float output in the
+# engine's trace comparisons. Runs a single byte-exact ref case on macOS arm64
+# (the image the release job tests on) and on macOS x64 for contrast, instead
+# of the whole release pipeline.
+#
+# A/B a float-math change without needing a new commit for the old side: the
+# workflow definition comes from the dispatched ref, while `ref` selects the
+# code that gets checked out.
+#
+#   gh workflow run macos-float-check.yml --ref mybranch -f ref=$(git rev-parse HEAD^)
+#   gh workflow run macos-float-check.yml --ref mybranch -f ref=$(git rev-parse HEAD)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref/SHA to check out (defaults to the dispatched ref)"
+        required: false
+        type: string
+      test:
+        description: "Exact test path inside tests/test_models.rs"
+        required: false
+        default: "cases::base_level_safety_check::base_level_safety_check"
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  base-level:
+    name: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-15 is arm64 (the release job tests on this image);
+        # macos-15-intel is x64, where Apple's libm happens to agree with
+        # glibc/SBCL on the case that fails on arm64.
+        runner: [macos-15, macos-15-intel]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust_actr7
+
+      - name: show platform
+        run: |
+          uname -m
+          rustc -vV
+
+      - name: exact trace case
+        run: |
+          cargo test --locked --manifest-path rust_actr7/Cargo.toml \
+            --test test_models -- --exact "${{ inputs.test }}"
