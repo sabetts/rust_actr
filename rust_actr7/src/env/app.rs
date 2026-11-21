@@ -2372,6 +2372,9 @@ impl App {
                     self.stepper.tutorable =
                         args.get(2).and_then(|x| x.as_str()).map(str::to_string);
                     self.stepper.selected = None;
+                    self.stepper.params.clear();
+                    self.stepper.bindings.clear();
+                    self.stepper.display.clear();
                     if self.settings.update_when_stepped {
                         for tool in &mut self.tools {
                             tool.refresh_pending = true;
@@ -3174,6 +3177,9 @@ impl App {
         self.stepper.last.clear();
         self.stepper.items.clear();
         self.stepper.selected = None;
+        self.stepper.params.clear();
+        self.stepper.bindings.clear();
+        self.stepper.display.clear();
     }
 
     fn stepper_command(&mut self, cmd: &str, mut args: Vec<Json>) {

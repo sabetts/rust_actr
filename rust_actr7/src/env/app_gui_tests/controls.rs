@@ -177,6 +177,53 @@ fn run_step_and_stop_use_the_expected_backend_paths() {
 }
 
 #[test]
+fn stepper_update_and_stop_clear_selected_details() {
+    let (mut h, _calls, state) = mock_harness();
+    {
+        let app = h.state_mut();
+        app.stepper.id = Some("STEPPER1".into());
+        app.stepper.selected = Some(0);
+        app.stepper.params = "params".into();
+        app.stepper.bindings = "bindings".into();
+        app.stepper.display = "display".into();
+    }
+    state.borrow_mut().event(BackendEvent::StepperUpdate {
+        model: None,
+        command: "env-update-event".into(),
+        args: vec![
+            Json::Str("last".into()),
+            Json::Arr(vec![Json::Str("chunk".into())]),
+            Json::Null,
+        ],
+    });
+    h.run();
+    {
+        let app = h.state();
+        assert_eq!(app.stepper.selected, None);
+        assert!(app.stepper.params.is_empty());
+        assert!(app.stepper.bindings.is_empty());
+        assert!(app.stepper.display.is_empty());
+        assert_eq!(app.stepper.last, "last");
+        assert_eq!(app.stepper.items, vec!["chunk".to_string()]);
+    }
+
+    {
+        let app = h.state_mut();
+        app.stepper.selected = Some(0);
+        app.stepper.params = "params".into();
+        app.stepper.bindings = "bindings".into();
+        app.stepper.display = "display".into();
+        app.stop_stepper();
+    }
+    let app = h.state();
+    assert_eq!(app.stepper.selected, None);
+    assert!(app.stepper.params.is_empty());
+    assert!(app.stepper.bindings.is_empty());
+    assert!(app.stepper.display.is_empty());
+    assert!(app.stepper.id.is_none());
+}
+
+#[test]
 fn reset_reload_and_clear_trace_are_wired() {
     let (mut h, calls, _state) = mock_harness();
     h.run();
