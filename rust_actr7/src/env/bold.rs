@@ -299,16 +299,6 @@ fn viewing_transform(theta: f32, phi: f32) -> [[f32; 4]; 4] {
     ]
 }
 
-fn eye_point(theta: f32, phi: f32) -> [f32; 3] {
-    let sinph = phi.sin();
-    let cosph = phi.cos();
-    [
-        RHO * sinph * theta.cos(),
-        RHO * sinph * theta.sin(),
-        RHO * cosph,
-    ]
-}
-
 fn transform_point(m: &[[f32; 4]; 4], point: [f32; 3]) -> [f32; 4] {
     let mut out = [0.0; 4];
     for (k, slot) in out.iter_mut().enumerate() {
@@ -317,28 +307,8 @@ fn transform_point(m: &[[f32; 4]; 4], point: [f32; 3]) -> [f32; 4] {
     out
 }
 
-fn project_point(m: &[[f32; 4]; 4], camera: &Camera, point: [f32; 3]) -> egui::Pos2 {
-    let transformed = transform_point(m, point);
-    let z = if transformed[2].abs() < 1e-6 {
-        1e-6
-    } else {
-        transformed[2]
-    };
-    egui::pos2(
-        BOLD_3D_SCREEN[0] / 2.0 + camera.dist * transformed[0] / z + camera.pan.x,
-        BOLD_3D_SCREEN[1] / 2.0 - camera.dist * transformed[1] / z - camera.pan.y,
-    )
-}
-
 fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn distance(a: [f32; 3], b: [f32; 3]) -> f32 {
-    let dx = a[0] - b[0];
-    let dy = a[1] - b[1];
-    let dz = a[2] - b[2];
-    (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
 fn signed_area(points: &[egui::Pos2]) -> f32 {
@@ -358,15 +328,306 @@ fn surface_shade(normal: [f32; 3]) -> egui::Color32 {
     egui::Color32::from_gray((value * 255.0).round() as u8)
 }
 
-struct PaintedFace {
-    distance: f32,
-    index: usize,
-    points: Vec<egui::Pos2>,
-    normal: [f32; 3],
-    module: Option<u8>,
+#[derive(Clone, Copy)]
+struct RasterVertex {
+    pos: egui::Pos2,
+    inv_z: f32,
+    color: egui::Color32,
 }
 
-pub(crate) fn draw_3d(ui: &mut egui::Ui, data: &BoldData, scan: usize, camera: &mut Camera) {
+fn project_vertex(m: &[[f32; 4]; 4], camera: &Camera, vertex: [f32; 3]) -> Option<RasterVertex> {
+    let transformed = transform_point(m, vertex);
+    let z = transformed[2];
+    if z <= 0.1 {
+        return None;
+    }
+    Some(RasterVertex {
+        pos: egui::pos2(
+            BOLD_3D_SCREEN[0] / 2.0 + camera.dist * transformed[0] / z + camera.pan.x,
+            BOLD_3D_SCREEN[1] / 2.0 - camera.dist * transformed[1] / z - camera.pan.y,
+        ),
+        inv_z: 1.0 / z,
+        color: egui::Color32::BLACK,
+    })
+}
+
+fn edge(a: egui::Pos2, b: egui::Pos2, p: egui::Pos2) -> f32 {
+    (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)
+}
+
+fn raster_triangle(
+    pixels: &mut [egui::Color32],
+    depth: &mut [f32],
+    width: usize,
+    height: usize,
+    a: RasterVertex,
+    b: RasterVertex,
+    c: RasterVertex,
+) {
+    let min_x = a.pos.x.min(b.pos.x).min(c.pos.x);
+    let max_x = a.pos.x.max(b.pos.x).max(c.pos.x);
+    let min_y = a.pos.y.min(b.pos.y).min(c.pos.y);
+    let max_y = a.pos.y.max(b.pos.y).max(c.pos.y);
+    if max_x < 0.0 || max_y < 0.0 || min_x >= width as f32 || min_y >= height as f32 {
+        return;
+    }
+    let x0 = min_x.floor().max(0.0) as usize;
+    let x1 = max_x.ceil().min((width - 1) as f32) as usize;
+    let y0 = min_y.floor().max(0.0) as usize;
+    let y1 = max_y.ceil().min((height - 1) as f32) as usize;
+    let area = edge(a.pos, b.pos, c.pos);
+    if area.abs() < 1e-6 {
+        return;
+    }
+
+    for y in y0..=y1 {
+        let py = y as f32 + 0.5;
+        for x in x0..=x1 {
+            let p = egui::pos2(x as f32 + 0.5, py);
+            let w0 = edge(b.pos, c.pos, p) / area;
+            let w1 = edge(c.pos, a.pos, p) / area;
+            let w2 = edge(a.pos, b.pos, p) / area;
+            if w0 < -1e-4 || w1 < -1e-4 || w2 < -1e-4 {
+                continue;
+            }
+            let index = y * width + x;
+            let inv_z = w0 * a.inv_z + w1 * b.inv_z + w2 * c.inv_z;
+            if inv_z <= depth[index] {
+                continue;
+            }
+            depth[index] = inv_z;
+            let mix = |ca: u8, cb: u8, cc: u8| {
+                (w0 * ca as f32 + w1 * cb as f32 + w2 * cc as f32)
+                    .round()
+                    .clamp(0.0, 255.0) as u8
+            };
+            pixels[index] = egui::Color32::from_rgb(
+                mix(a.color.r(), b.color.r(), c.color.r()),
+                mix(a.color.g(), b.color.g(), c.color.g()),
+                mix(a.color.b(), b.color.b(), c.color.b()),
+            );
+        }
+    }
+}
+
+fn plot_line_pixel(
+    pixels: &mut [egui::Color32],
+    depth: &mut [f32],
+    width: usize,
+    height: usize,
+    x: isize,
+    y: isize,
+    inv_z: f32,
+    color: egui::Color32,
+) {
+    if x < 0 || y < 0 || x >= width as isize || y >= height as isize {
+        return;
+    }
+    let index = y as usize * width + x as usize;
+    if inv_z + 0.002 < depth[index] {
+        return;
+    }
+    pixels[index] = color;
+    if inv_z > depth[index] {
+        depth[index] = inv_z;
+    }
+}
+
+fn draw_line(
+    pixels: &mut [egui::Color32],
+    depth: &mut [f32],
+    width: usize,
+    height: usize,
+    a: RasterVertex,
+    b: RasterVertex,
+    color: egui::Color32,
+) {
+    let steps = (b.pos.x - a.pos.x)
+        .abs()
+        .max((b.pos.y - a.pos.y).abs())
+        .ceil() as usize;
+    let steps = steps.max(1);
+    for step in 0..=steps {
+        let t = step as f32 / steps as f32;
+        let x = (a.pos.x + (b.pos.x - a.pos.x) * t).round() as isize;
+        let y = (a.pos.y + (b.pos.y - a.pos.y) * t).round() as isize;
+        let inv_z = a.inv_z + (b.inv_z - a.inv_z) * t;
+        for (ox, oy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+            plot_line_pixel(pixels, depth, width, height, x + ox, y + oy, inv_z, color);
+        }
+    }
+}
+
+fn convex_hull(mut points: Vec<egui::Pos2>) -> Vec<egui::Pos2> {
+    points.sort_by(|a, b| a.x.total_cmp(&b.x).then_with(|| a.y.total_cmp(&b.y)));
+    points.dedup_by(|a, b| a.x == b.x && a.y == b.y);
+    if points.len() <= 2 {
+        return points;
+    }
+    let cross = |o: egui::Pos2, a: egui::Pos2, b: egui::Pos2| {
+        (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
+    };
+    let mut lower = Vec::new();
+    for &point in &points {
+        while lower.len() >= 2
+            && cross(lower[lower.len() - 2], lower[lower.len() - 1], point) <= 0.0
+        {
+            lower.pop();
+        }
+        lower.push(point);
+    }
+    let mut upper = Vec::new();
+    for &point in points.iter().rev() {
+        while upper.len() >= 2
+            && cross(upper[upper.len() - 2], upper[upper.len() - 1], point) <= 0.0
+        {
+            upper.pop();
+        }
+        upper.push(point);
+    }
+    lower.pop();
+    upper.pop();
+    lower.extend(upper);
+    lower
+}
+
+fn render_3d_image(data: &BoldData, scan: usize, camera: &Camera) -> egui::ColorImage {
+    const WIDTH: usize = 650;
+    const HEIGHT: usize = 500;
+    let mut pixels = vec![egui::Color32::BLACK; WIDTH * HEIGHT];
+    let mut depth = vec![f32::NEG_INFINITY; WIDTH * HEIGHT];
+    let matrix = viewing_transform(camera.theta, camera.phi);
+
+    // The Tcl shell is a set of surface strips, which leaves visible seams in
+    // a solid render. Use its projected silhouette as a smooth-shaded shell
+    // instead; the module voxels are drawn over it in a separate pass.
+    let mut silhouette = Vec::new();
+    for face in BOLD_3D_FACES.iter().filter(|face| face.module.is_none()) {
+        for i in 0..face.len as usize {
+            if let Some(vertex) = project_vertex(&matrix, camera, BOLD_3D_VERTICES[face.verts[i]]) {
+                silhouette.push(vertex.pos);
+            }
+        }
+    }
+    let hull = convex_hull(silhouette);
+    if hull.len() >= 3 {
+        let center = egui::pos2(
+            hull.iter().map(|p| p.x).sum::<f32>() / hull.len() as f32,
+            hull.iter().map(|p| p.y).sum::<f32>() / hull.len() as f32,
+        );
+        let radius_x = hull
+            .iter()
+            .map(|p| (p.x - center.x).abs())
+            .fold(1.0f32, f32::max)
+            .max(1.0);
+        let radius_y = hull
+            .iter()
+            .map(|p| (p.y - center.y).abs())
+            .fold(1.0f32, f32::max)
+            .max(1.0);
+        let shell_vertex = |point: egui::Pos2| {
+            let x = (point.x - center.x) / radius_x;
+            let y = (point.y - center.y) / radius_y;
+            let z = (1.0 - x * x - y * y).max(0.0).sqrt();
+            RasterVertex {
+                pos: point,
+                inv_z: 0.0,
+                color: surface_shade([x, y, z]),
+            }
+        };
+        let shell: Vec<_> = hull.iter().map(|&point| shell_vertex(point)).collect();
+        for i in 1..shell.len() - 1 {
+            raster_triangle(
+                &mut pixels,
+                &mut depth,
+                WIDTH,
+                HEIGHT,
+                shell[0],
+                shell[i],
+                shell[i + 1],
+            );
+        }
+    }
+
+    // Draw the module voxels in a second, separate depth pass so they remain
+    // visible through the solid shell.
+    depth.fill(0.0);
+    for face in BOLD_3D_FACES.iter().filter(|face| face.module.is_some()) {
+        let module = face.module.expect("module face");
+        let color = gray(data.value(module as usize, scan));
+        let mut vertices = Vec::with_capacity(face.len as usize);
+        let mut visible = true;
+        for i in 0..face.len as usize {
+            match project_vertex(&matrix, camera, BOLD_3D_VERTICES[face.verts[i]]) {
+                Some(mut vertex) => {
+                    vertex.color = color;
+                    vertices.push(vertex);
+                }
+                None => {
+                    visible = false;
+                    break;
+                }
+            }
+        }
+        if !visible {
+            continue;
+        }
+        for i in 1..vertices.len() - 1 {
+            raster_triangle(
+                &mut pixels,
+                &mut depth,
+                WIDTH,
+                HEIGHT,
+                vertices[0],
+                vertices[i],
+                vertices[i + 1],
+            );
+        }
+    }
+
+    for face in BOLD_3D_FACES.iter().filter(|face| face.module.is_some()) {
+        let module = face.module.expect("module face");
+        let mut vertices = Vec::with_capacity(face.len as usize);
+        let mut visible = true;
+        for i in 0..face.len as usize {
+            match project_vertex(&matrix, camera, BOLD_3D_VERTICES[face.verts[i]]) {
+                Some(vertex) => vertices.push(vertex),
+                None => {
+                    visible = false;
+                    break;
+                }
+            }
+        }
+        if !visible {
+            continue;
+        }
+        let points: Vec<_> = vertices.iter().map(|v| v.pos).collect();
+        if signed_area(&points) >= -0.01 {
+            continue;
+        }
+        for i in 0..vertices.len() {
+            draw_line(
+                &mut pixels,
+                &mut depth,
+                WIDTH,
+                HEIGHT,
+                vertices[i],
+                vertices[(i + 1) % vertices.len()],
+                COLORS_3D[module as usize],
+            );
+        }
+    }
+
+    egui::ColorImage::new([WIDTH, HEIGHT], pixels)
+}
+
+pub(crate) fn draw_3d(
+    ui: &mut egui::Ui,
+    data: &BoldData,
+    scan: usize,
+    camera: &mut Camera,
+    texture: &mut Option<egui::TextureHandle>,
+) {
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(BOLD_3D_CANVAS[0], BOLD_3D_CANVAS[1]),
         egui::Sense::click_and_drag(),
@@ -384,63 +645,26 @@ pub(crate) fn draw_3d(ui: &mut egui::Ui, data: &BoldData, scan: usize, camera: &
         camera.dist += -delta.y * 2.0;
     }
 
+    let image = render_3d_image(data, scan, camera);
+    if let Some(handle) = texture.as_mut() {
+        handle.set(image, egui::TextureOptions::LINEAR);
+    } else {
+        *texture = Some(ui.ctx().load_texture(
+            "bold-3d-brain",
+            image,
+            egui::TextureOptions::LINEAR,
+        ));
+    }
+
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, egui::Color32::BLACK);
-
-    let matrix = viewing_transform(camera.theta, camera.phi);
-    let eye = eye_point(camera.theta, camera.phi);
-    let mut surface = Vec::new();
-    let mut modules = Vec::new();
-    for (index, face) in BOLD_3D_FACES.iter().enumerate() {
-        let mut points = Vec::with_capacity(face.len as usize);
-        let mut total_distance = 0.0;
-        for i in 0..face.len as usize {
-            let vertex = BOLD_3D_VERTICES[face.verts[i]];
-            points.push(rect.min + project_point(&matrix, camera, vertex).to_vec2());
-            total_distance += distance(vertex, eye);
-        }
-        // Module cubes have consistent winding, so reject their backfaces.
-        // The brain shell has a handful of inconsistent faces; drawing it as
-        // opaque, depth-sorted faces lets the front shell hide the back shell
-        // without punching holes in the surface.
-        if face.module.is_some() && signed_area(&points) >= -0.01 {
-            continue;
-        }
-        let painted = PaintedFace {
-            distance: total_distance / face.len as f32,
-            index,
-            points,
-            normal: face.normal,
-            module: face.module,
-        };
-        if face.module.is_none() {
-            surface.push(painted);
-        } else {
-            modules.push(painted);
-        }
-    }
-    let far_to_near = |a: &PaintedFace, b: &PaintedFace| {
-        b.distance
-            .total_cmp(&a.distance)
-            .then_with(|| a.index.cmp(&b.index))
-    };
-    surface.sort_by(far_to_near);
-    modules.sort_by(far_to_near);
-
-    for face in surface {
-        painter.add(egui::Shape::convex_polygon(
-            face.points,
-            surface_shade(face.normal),
-            egui::Stroke::NONE,
-        ));
-    }
-    for face in modules {
-        let module = face.module.expect("module face");
-        painter.add(egui::Shape::convex_polygon(
-            face.points,
-            gray(data.value(module as usize, scan)),
-            egui::Stroke::new(1.5, COLORS_3D[module as usize]),
-        ));
+    if let Some(handle) = texture.as_ref() {
+        painter.image(
+            handle.id(),
+            rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
     }
 
     for (module, &name) in MODULES.iter().enumerate() {
@@ -526,7 +750,9 @@ mod tests {
     fn projection_matches_tcl_center_and_rotates() {
         let camera = Camera::default();
         let matrix = viewing_transform(camera.theta, camera.phi);
-        let center = project_point(&matrix, &camera, [0.0, 0.0, 0.0]);
+        let center = project_vertex(&matrix, &camera, [0.0, 0.0, 0.0])
+            .expect("center")
+            .pos;
         assert!((center.x - 375.0).abs() < 0.01);
         assert!((center.y - 250.0).abs() < 0.01);
 
@@ -535,7 +761,9 @@ mod tests {
             ..Camera::default()
         };
         let matrix = viewing_transform(rotated.theta, rotated.phi);
-        let moved = project_point(&matrix, &rotated, [0.5, 0.0, 0.0]);
+        let moved = project_vertex(&matrix, &rotated, [0.5, 0.0, 0.0])
+            .expect("rotated point")
+            .pos;
         assert!((moved.x - center.x).abs() > 1.0);
     }
 
@@ -593,10 +821,70 @@ mod tests {
             for &index in &face.verts[..face.len as usize] {
                 assert!(index < BOLD_3D_VERTICES.len());
             }
-            let mag = dot(face.normal, face.normal);
-            assert!((mag - 1.0).abs() < 1e-4, "normal magnitude {mag}");
         }
         let module_faces = BOLD_3D_FACES.iter().filter(|f| f.module.is_some()).count();
         assert_eq!(module_faces, 96);
+    }
+
+    #[test]
+    fn software_rasterizer_fills_and_depth_tests() {
+        let mut pixels = vec![egui::Color32::BLACK; 16 * 16];
+        let mut depth = vec![0.0f32; 16 * 16];
+        let far = RasterVertex {
+            pos: egui::pos2(0.0, 0.0),
+            inv_z: 0.1,
+            color: egui::Color32::RED,
+        };
+        let mut triangle = [
+            far,
+            RasterVertex {
+                pos: egui::pos2(15.0, 0.0),
+                inv_z: 0.1,
+                color: egui::Color32::RED,
+            },
+            RasterVertex {
+                pos: egui::pos2(0.0, 15.0),
+                inv_z: 0.1,
+                color: egui::Color32::RED,
+            },
+        ];
+        raster_triangle(
+            &mut pixels,
+            &mut depth,
+            16,
+            16,
+            triangle[0],
+            triangle[1],
+            triangle[2],
+        );
+        assert_eq!(pixels[8 * 16 + 3], egui::Color32::RED);
+
+        triangle[0].inv_z = 0.2;
+        triangle[1].inv_z = 0.2;
+        triangle[2].inv_z = 0.2;
+        triangle[0].color = egui::Color32::BLUE;
+        triangle[1].color = egui::Color32::BLUE;
+        triangle[2].color = egui::Color32::BLUE;
+        raster_triangle(
+            &mut pixels,
+            &mut depth,
+            16,
+            16,
+            triangle[0],
+            triangle[1],
+            triangle[2],
+        );
+        assert_eq!(pixels[8 * 16 + 3], egui::Color32::BLUE);
+    }
+
+    #[test]
+    fn software_renderer_produces_the_3d_canvas() {
+        let data = BoldData::parse(&[]);
+        let image = render_3d_image(&data, 0, &Camera::default());
+        assert_eq!(image.size, [650, 500]);
+        assert!(image
+            .pixels
+            .iter()
+            .any(|pixel| *pixel != egui::Color32::BLACK));
     }
 }

@@ -278,6 +278,7 @@ struct ToolWindow {
     bold_scan: usize,
     bold_scale: usize,
     bold_camera: bold::Camera,
+    bold_3d_texture: Option<egui::TextureHandle>,
     grid_hide_empty: bool,
     grid_scale: f32,
     grid_detail_title: String,
@@ -346,6 +347,7 @@ impl ToolWindow {
             bold_scan: 0,
             bold_scale: 0,
             bold_camera: bold::Camera::default(),
+            bold_3d_texture: None,
             grid_hide_empty: false,
             grid_scale: 1.0,
             grid_detail_title: String::new(),
@@ -4154,7 +4156,13 @@ impl App {
             .auto_shrink([false, false])
             .show(ui, |ui| match tool.kind {
                 ToolKind::Bold2D => self.draw_bold_brain_2d(ui, tool, &data),
-                _ => bold::draw_3d(ui, &data, tool.bold_scan, &mut tool.bold_camera),
+                _ => bold::draw_3d(
+                    ui,
+                    &data,
+                    tool.bold_scan,
+                    &mut tool.bold_camera,
+                    &mut tool.bold_3d_texture,
+                ),
             });
     }
 
