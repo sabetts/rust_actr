@@ -15,6 +15,10 @@ struct Client {
     stream: TcpStream,
     next_id: i64,
     callbacks: Vec<(String, Option<String>, Vec<Json>)>,
+    /// Replies received while waiting for another id. A client may have more
+    /// than one request outstanding (`run` plus Stop), and the server answers
+    /// them in request order, so an earlier reply can arrive first.
+    pending: Vec<Json>,
 }
 
 impl Client {
@@ -25,6 +29,7 @@ impl Client {
             stream,
             next_id: 1,
             callbacks: Vec::new(),
+            pending: Vec::new(),
         })
     }
 
@@ -53,6 +58,13 @@ impl Client {
     }
 
     fn wait(&mut self, id: i64) -> Result<Vec<Json>, String> {
+        if let Some(pos) = self
+            .pending
+            .iter()
+            .position(|msg| reply_id(msg) == Some(id))
+        {
+            return parse_reply(&self.pending.remove(pos));
+        }
         loop {
             let msg = read_message(&mut self.stream)
                 .expect("read message")
@@ -77,12 +89,10 @@ impl Client {
                     continue;
                 }
             }
-            if msg.get("id").and_then(|i| match i {
-                Json::Int(n) => Some(*n),
-                _ => None,
-            }) == Some(id)
-            {
-                return parse_reply(&msg);
+            match reply_id(&msg) {
+                Some(got) if got == id => return parse_reply(&msg),
+                Some(_) => self.pending.push(msg),
+                None => {}
             }
         }
     }
@@ -167,6 +177,22 @@ impl Client {
         self.wait(id).expect("list-commands")
     }
 }
+
+fn reply_id(msg: &Json) -> Option<i64> {
+    match msg.get("id") {
+        Some(Json::Int(n)) => Some(*n),
+        _ => None,
+    }
+}
+
+/// A budget for the interrupt tests: long enough that the whole run cannot
+/// finish before the Stop request reaches the actor. Stop is sent as a second
+/// request and only gets to the dispatcher after the per-connection reader
+/// thread has read it (milliseconds), while `(run 60)` on the looping
+/// `run-control` fixture finishes in a handful of milliseconds. Six thousand
+/// model seconds is roughly 600k events, well past that delivery latency while
+/// still bounded if a real interrupt regression makes the run go the distance.
+const INTERRUPTIBLE_RUN_SECS: f64 = 6000.0;
 
 fn model(name: &str) -> String {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -358,7 +384,11 @@ fn stop_request_interrupts_a_running_request() {
     // the Stop request between run slices instead of blocking on `run`.
     let run_id = c.send(
         Method::Evaluate,
-        vec![Json::Str("run".into()), Json::Null, Json::Float(60.0)],
+        vec![
+            Json::Str("run".into()),
+            Json::Null,
+            Json::Float(INTERRUPTIBLE_RUN_SECS),
+        ],
     );
     let stop_id = c.send(
         Method::Evaluate,
@@ -370,9 +400,12 @@ fn stop_request_interrupts_a_running_request() {
     );
     c.wait(stop_id).expect("schedule-break-relative");
     let run = c.wait(run_id).expect("run");
-    let time = run.first().and_then(|x| x.as_f64()).unwrap_or(60.0);
+    let time = run
+        .first()
+        .and_then(|x| x.as_f64())
+        .unwrap_or(INTERRUPTIBLE_RUN_SECS);
     assert!(
-        time < 60.0,
+        time < INTERRUPTIBLE_RUN_SECS,
         "run should stop early after schedule-break-relative, got {time}"
     );
 }
@@ -427,7 +460,11 @@ fn one_connection_can_stop_another_connection_run() {
 
     let run_id = runner.send(
         Method::Evaluate,
-        vec![Json::Str("run".into()), Json::Null, Json::Float(60.0)],
+        vec![
+            Json::Str("run".into()),
+            Json::Null,
+            Json::Float(INTERRUPTIBLE_RUN_SECS),
+        ],
     );
     let stop_id = env.send(
         Method::Evaluate,
@@ -439,9 +476,12 @@ fn one_connection_can_stop_another_connection_run() {
     );
     env.wait(stop_id).expect("schedule-break-relative");
     let run = runner.wait(run_id).expect("run");
-    let time = run.first().and_then(|x| x.as_f64()).unwrap_or(60.0);
+    let time = run
+        .first()
+        .and_then(|x| x.as_f64())
+        .unwrap_or(INTERRUPTIBLE_RUN_SECS);
     assert!(
-        time < 60.0,
+        time < INTERRUPTIBLE_RUN_SECS,
         "shared run should stop early after another connection breaks it, got {time}"
     );
 }
