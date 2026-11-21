@@ -187,6 +187,11 @@ fn every_control_panel_tool_button_opens_and_closes() {
 fn opening_stepper_uses_a_clean_window_title() {
     let mut h = inproc_harness();
     h.run();
+    {
+        let app = h.state_mut();
+        load_model(app, &stepper_model());
+    }
+    h.run();
     h.get_by_label("Stepper").click();
     h.run();
 

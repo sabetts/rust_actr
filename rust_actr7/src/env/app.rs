@@ -356,6 +356,16 @@ impl ToolWindow {
     }
 }
 
+/// Run Until types in the same order as the Tcl stepper
+/// (`21-stepper.tcl`): Time, Production, Module. The index doubles as the
+/// `run_type` value, so 0 is Time and the default.
+const STEPPER_RUN_TYPES: [&str; 3] = ["Time", "Production", "Module"];
+const STEPPER_RUN_KINDS: [&str; 3] = ["time", "production", "module"];
+
+fn stepper_kind(run_type: usize) -> &'static str {
+    STEPPER_RUN_KINDS[run_type.min(STEPPER_RUN_KINDS.len() - 1)]
+}
+
 #[derive(Default)]
 struct StepperState {
     id: Option<String>,
@@ -371,6 +381,8 @@ struct StepperState {
     tutorable: Option<String>,
     run_type: usize,
     run_value: String,
+    productions: Vec<String>,
+    modules: Vec<String>,
 }
 
 fn hex_color(text: &str) -> egui::Color32 {
@@ -655,9 +667,9 @@ impl App {
         }
         self.tools.push(tool);
         if kind == ToolKind::Stepper {
-            // The control-panel Stepper button starts in step-all mode; Pause
-            // also forces step-all on (21-stepper.tcl).
-            self.stepper.step_all = true;
+            // Match the Tcl Stepper button: start in normal stepping mode,
+            // not step-all. Run Until clears Step all when it needs to skip.
+            self.stepper.step_all = false;
             self.start_stepper();
         }
     }
@@ -3111,6 +3123,7 @@ impl App {
         match result.as_slice() {
             [Json::Bool(true), Json::Str(id), ..] => {
                 self.stepper.id = Some(id.clone());
+                self.load_stepper_options();
                 self.eval("set-stepper-ready", vec![Json::Str(id.clone())]);
             }
             [_, Json::Str(err), ..] => self.error = Some(err.clone()),
@@ -3142,12 +3155,133 @@ impl App {
         }
     }
 
+    /// Load the names shown in the Run Until production/module menus.
+    fn load_stepper_options(&mut self) {
+        let model = self
+            .selected_model
+            .clone()
+            .or_else(|| self.backend.current_model())
+            .or_else(|| self.models.last().cloned());
+        let mut productions = model
+            .map(|m| self.list_for(Some(m), "all-productions", Vec::new()))
+            .unwrap_or_default();
+        if self.settings.sort_lists {
+            productions.sort();
+        }
+        let mut modules = self.list_for(None, "sorted-module-names", Vec::new());
+        if self.settings.sort_lists {
+            modules.sort();
+        }
+        self.stepper.productions = productions;
+        self.stepper.modules = modules;
+    }
+
+    /// Send Run Until. Validates the value and turns Step all off so it cannot
+    /// silently override the production/module/time filter.
+    fn run_until(&mut self) {
+        let value = self.stepper.run_value.trim().to_string();
+        let kind = stepper_kind(self.stepper.run_type);
+        if value.is_empty() {
+            self.error = Some("Enter a value for Run until.".into());
+            return;
+        }
+        match self.stepper.run_type.min(STEPPER_RUN_TYPES.len() - 1) {
+            0 => {
+                if value.parse::<f64>().is_err() {
+                    self.error = Some("Step type Time requires a number in seconds.".into());
+                    return;
+                }
+            }
+            1 => {
+                if !self.stepper.productions.is_empty()
+                    && !self
+                        .stepper
+                        .productions
+                        .iter()
+                        .any(|p| p.eq_ignore_ascii_case(&value))
+                {
+                    self.error = Some("Choose a production from the list.".into());
+                    return;
+                }
+            }
+            _ => {
+                if !self.stepper.modules.is_empty()
+                    && !self
+                        .stepper
+                        .modules
+                        .iter()
+                        .any(|m| m.eq_ignore_ascii_case(&value))
+                {
+                    self.error = Some("Choose a module from the list.".into());
+                    return;
+                }
+            }
+        }
+        if self.stepper.step_all {
+            self.stepper.step_all = false;
+            self.stepper_command("set-stepper-step-all", vec![Json::Bool(false)]);
+        }
+        self.stepper_command(
+            "step-stepper",
+            vec![Json::Bool(false), Json::Str(kind.into()), Json::Str(value)],
+        );
+    }
+
+    /// A production/module selector, falling back to a text edit when the
+    /// backend did not provide a list.
+    fn stepper_value_combo(&mut self, ui: &mut egui::Ui, production: bool) {
+        let (id, options, hint) = if production {
+            (
+                "run-production",
+                self.stepper.productions.clone(),
+                "production name",
+            )
+        } else {
+            ("run-module", self.stepper.modules.clone(), "module name")
+        };
+        if options.is_empty() {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.stepper.run_value)
+                    .desired_width(120.0)
+                    .hint_text(hint),
+            );
+            return;
+        }
+        let mut value = self.stepper.run_value.clone();
+        let selected = if value.is_empty() {
+            "select".to_string()
+        } else {
+            value.clone()
+        };
+        egui::ComboBox::from_id_salt(id)
+            .selected_text(selected)
+            .width(150.0)
+            .show_ui(ui, |ui| {
+                for name in &options {
+                    if ui
+                        .selectable_label(value.eq_ignore_ascii_case(name), name)
+                        .clicked()
+                    {
+                        value = name.clone();
+                    }
+                }
+            });
+        self.stepper.run_value = value;
+    }
+
     fn stepper_panel(&mut self, _tool: &mut ToolWindow, ui: &mut egui::Ui) {
         if self.stepper.id.is_none() {
-            if ui.button("Start stepper").clicked() {
-                self.start_stepper();
-            }
+            ui.horizontal(|ui| {
+                if ui.button("Start stepper").clicked() {
+                    self.start_stepper();
+                }
+                if ui.button("Pause").clicked() {
+                    self.stepper.step_all = true;
+                    self.start_stepper();
+                }
+            });
             ui.label("The stepper pauses events before they execute.");
+            ui.label("Pause stops on every event, even when trace is off.");
             return;
         }
         ui.horizontal(|ui| {
@@ -3157,34 +3291,38 @@ impl App {
             if ui.button("Stop").clicked() {
                 self.stop_stepper();
             }
-            let types = ["Production", "Time", "Module"];
+            let mut chosen_type = None;
             egui::ComboBox::from_id_salt("step-type")
-                .selected_text(types[self.stepper.run_type.min(2)])
+                .selected_text(STEPPER_RUN_TYPES[self.stepper.run_type.min(2)])
                 .show_ui(ui, |ui| {
-                    for (i, label) in types.iter().enumerate() {
+                    for (i, label) in STEPPER_RUN_TYPES.iter().enumerate() {
                         if ui
                             .selectable_label(self.stepper.run_type == i, *label)
                             .clicked()
                         {
-                            self.stepper.run_type = i;
+                            chosen_type = Some(i);
                         }
                     }
                 });
-            ui.add(
-                egui::TextEdit::singleline(&mut self.stepper.run_value)
-                    .desired_width(90.0)
-                    .hint_text("value"),
-            );
+            if let Some(i) = chosen_type {
+                if self.stepper.run_type != i {
+                    self.stepper.run_type = i;
+                    self.stepper.run_value.clear();
+                }
+            }
+            match self.stepper.run_type.min(2) {
+                0 => {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.stepper.run_value)
+                            .desired_width(90.0)
+                            .hint_text("seconds (absolute)"),
+                    );
+                }
+                1 => self.stepper_value_combo(ui, true),
+                _ => self.stepper_value_combo(ui, false),
+            }
             if ui.button("Run until").clicked() {
-                let kind = ["production", "time", "module"][self.stepper.run_type.min(2)];
-                self.stepper_command(
-                    "step-stepper",
-                    vec![
-                        Json::Bool(false),
-                        Json::Str(kind.into()),
-                        Json::Str(self.stepper.run_value.clone()),
-                    ],
-                );
+                self.run_until();
             }
         });
         ui.horizontal(|ui| {
@@ -4293,6 +4431,16 @@ mod tests {
         app.eval("load-act-r-model", vec![Json::Str(model)]);
     }
 
+    fn load_stepper_model(app: &mut App) {
+        let model = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("stepper")
+            .join("stepper-model.lisp")
+            .to_string_lossy()
+            .into_owned();
+        app.eval("load-act-r-model", vec![Json::Str(model)]);
+    }
+
     #[test]
     fn tool_windows_are_per_model() {
         let mut app = test_app();
@@ -4385,6 +4533,78 @@ mod tests {
                 .all(|t| t.refresh_pending),
             "update_when_stepped did not refresh inspector tools"
         );
+        app.stop_stepper();
+    }
+
+    #[test]
+    fn stepper_defaults_to_time_and_lists_valid_values() {
+        let mut app = test_app();
+        app.backend.set_real_time(false);
+        load_stepper_model(&mut app);
+        app.open_tool(ToolKind::Stepper);
+        assert!(app.stepper.id.is_some(), "stepper should start");
+        assert_eq!(stepper_kind(app.stepper.run_type), "time");
+        assert!(
+            !app.stepper.step_all,
+            "stepper should not start in step-all mode"
+        );
+        assert!(
+            app.stepper
+                .productions
+                .iter()
+                .any(|p| p.eq_ignore_ascii_case("begin")),
+            "productions: {:?}",
+            app.stepper.productions
+        );
+        assert!(
+            app.stepper
+                .modules
+                .iter()
+                .any(|m| m.eq_ignore_ascii_case("goal")),
+            "modules: {:?}",
+            app.stepper.modules
+        );
+        app.stop_stepper();
+    }
+
+    #[test]
+    fn run_until_clears_step_all_and_rejects_invalid_values() {
+        let mut app = test_app();
+        app.backend.set_real_time(false);
+        load_stepper_model(&mut app);
+        app.open_tool(ToolKind::Stepper);
+        assert!(app.stepper.id.is_some(), "stepper should start");
+
+        app.stepper.step_all = true;
+        app.stepper.run_type = 0;
+        app.stepper.run_value = "1".into();
+        app.run_until();
+        assert!(!app.stepper.step_all, "Run until should clear Step all");
+        assert!(app.error.is_none(), "unexpected error: {:?}", app.error);
+
+        app.stepper.run_type = 2;
+        app.stepper.run_value = "goal".into();
+        app.run_until();
+        assert!(app.error.is_none(), "unexpected error: {:?}", app.error);
+
+        app.stepper.run_type = 1;
+        app.stepper.run_value = "begin".into();
+        app.run_until();
+        assert!(app.error.is_none(), "unexpected error: {:?}", app.error);
+
+        app.stepper.run_type = 2;
+        app.stepper.run_value = "1".into();
+        app.run_until();
+        assert!(app.error.is_some(), "module mode should reject a number");
+
+        app.stepper.run_type = 1;
+        app.stepper.run_value = "no-such-production".into();
+        app.run_until();
+        assert!(
+            app.error.is_some(),
+            "production mode should reject an unknown name"
+        );
+
         app.stop_stepper();
     }
 
