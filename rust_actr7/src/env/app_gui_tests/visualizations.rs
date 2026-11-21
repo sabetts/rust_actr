@@ -201,6 +201,9 @@ fn bold_views_render_seeded_records_and_scale_controls() {
     h.get_by_role_and_label(Role::Window, "BOLD 2D Brain (COUNT)");
     h.get_by_role_and_label(Role::Window, "BOLD 3D Brain (COUNT)");
     assert!(h.query_all_by_label("Scan #").count() >= 2);
+    assert!(h.query_all_by_label("Get History").count() >= 2);
+    assert!(h.query_all_by_label("Save History").count() >= 2);
+    assert!(h.query_all_by_label("Load History").count() >= 2);
     assert!(!find_tool(&h, ToolKind::Bold2D).history_records.is_empty());
     assert!(!find_tool(&h, ToolKind::Bold3D).history_records.is_empty());
 }

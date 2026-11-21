@@ -277,12 +277,12 @@ Completed:
   a colored decision grid, with unselected-column hiding and hover times.
 - Horizontal and vertical buffer graphic traces rendered from the existing
   `horizontal-graphic-trace` / `vertical-graphic-trace` processors.
-- BOLD graph (raw / scale-each / scale-all), BOLD 2D module view, and a
-  simplified BOLD 3D voxel-grid view with a scan slider.
+- BOLD graph (raw / scale-each / scale-all), BOLD 2D brain image with the Tcl
+  module regions, and the BOLD 3D Tcl voxel mesh with rotation, pan, zoom, and
+  a scan slider.
 - Production colors come from persisted settings.
 
-Verified: env tests 14 passed; `cargo test --lib` 86 passed; `environment_rpc`
-10 passed; `stepper_rpc` 2 passed; `cargo fmt --check` clean.
+Verified: env tests 222 passed, 6 ignored; `cargo fmt --check` clean.
 
 Follow-ups (M4 polish):
 
@@ -293,7 +293,6 @@ Follow-ups (M4 polish):
   selected flags, and per-cell production/why-not popups.
 - Graphic traces lack zoom, hide-text/hide-grid, hover readouts, and EPS/PS
   export.
-- BOLD 3D is a scan-driven module grid, not the Tcl voxel mesh with rotation.
 - Multi-pane history splits remain combined text.
 
 ### M5 — Stepper parity (initial)
