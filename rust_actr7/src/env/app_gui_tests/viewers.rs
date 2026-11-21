@@ -320,9 +320,18 @@ fn connections_with_long_command_lists_stay_narrow() {
     h.state_mut()
         .settings
         .tool_geometry
-        .insert("Connections & Commands".into(), [40.0, 40.0, 320.0, 360.0]);
+        .insert("Connections & Commands".into(), [40.0, 40.0, 320.0, 240.0]);
     h.state_mut().open_tool(ToolKind::Connections);
     h.run();
+
+    let height = h
+        .state()
+        .settings
+        .tool_geometry
+        .get("Connections & Commands")
+        .map(|g| g[3])
+        .unwrap_or(0.0);
+    assert!(height <= 260.0, "connections window grew to {height}");
 
     let width = h
         .state()
