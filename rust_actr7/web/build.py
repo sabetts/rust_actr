@@ -124,6 +124,34 @@ MODEL_GROUPS = (
             ),
         ),
     },
+    {
+        "id": "unit8",
+        "label": "Unit 8",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit8",
+        "models": (
+            ("simple-ppm", "Simple PPM", "simple-ppm-model.lisp", None),
+            (
+                "bst-ppm",
+                "Building Sticks (PPM)",
+                "bst-ppm-model.lisp",
+                "bst-ppm",
+            ),
+            ("simple-dynamic", "Simple Dynamic", "simple-dynamic-model.lisp", None),
+            (
+                "semantic-dynamic",
+                "Semantic Network (Dynamic)",
+                "semantic-dynamic-model.lisp",
+                "semantic-dynamic",
+            ),
+            (
+                "paired-dynamic",
+                "Paired Associate (Dynamic)",
+                "paired-dynamic-model.lisp",
+                "paired",
+            ),
+            ("categorize", "Categorize (starter)", "categorize-model.lisp", "categorize"),
+        ),
+    },
 )
 
 

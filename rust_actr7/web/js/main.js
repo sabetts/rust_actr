@@ -60,7 +60,9 @@ function summaryText(result) {
   }
   if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
-  if (result.kind === "bst") return "Building Sticks: experiment complete";
+  if (result.kind === "bst") {
+    return `${result.label || "Building Sticks"}: experiment complete`;
+  }
   if (result.kind === "choice") return "Choice: experiment complete";
   if (result.kind === "paired") {
     return result.mode === "human"
@@ -76,6 +78,10 @@ function summaryText(result) {
   if (result.kind === "past-tense") return "Past Tense: block report complete";
   if (result.kind === "ul-issues") return "Utility Learning: run complete";
   if (result.kind === "pcomp-issues") return "Production Compilation: games complete";
+  if (result.kind === "categorize") {
+    return `Categorize: ${result.answered}/${result.total} responded`;
+  }
+  if (result.kind === "semantic-dynamic") return "Semantic Network: run complete";
   if (result.kind === "onehit") {
     return result.mode === "play" ? "1-Hit Blackjack: played against model" : "1-Hit Blackjack: learning run complete";
   }

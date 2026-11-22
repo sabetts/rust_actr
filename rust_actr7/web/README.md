@@ -1,7 +1,7 @@
 # ACT-R 7 Tutorial Models
 
 A static browser page that runs the Rust ACT-R engine as WebAssembly. It loads
-canonical tutorial model source and drives Units 1-7 through a browser AGI
+canonical tutorial model source and drives Units 1-8 through a browser AGI
 runtime.
 
 ## Build + run
@@ -88,9 +88,19 @@ The menu is generated from `web/models/manifest.json`.
 - `actr7.x/tutorial/unit7/utility-learning-issues-model.lisp` - Utility Learning Issues
 - `actr7.x/tutorial/unit7/production-compilation-issues-model.lisp` - Production Compilation Issues (starter)
 
-Unit 4 and Unit 7 use separate paired-associate models but share the same JS
-task implementation. The Unit 7 model starts by clearing the loaded Unit 4
-model and substituting its own productions; the experiment task is unchanged.
+### Unit 8
+
+- `actr7.x/tutorial/unit8/simple-ppm-model.lisp` - Simple PPM
+- `actr7.x/tutorial/unit8/bst-ppm-model.lisp` - Building Sticks (PPM)
+- `actr7.x/tutorial/unit8/simple-dynamic-model.lisp` - Simple Dynamic
+- `actr7.x/tutorial/unit8/semantic-dynamic-model.lisp` - Semantic Network (Dynamic)
+- `actr7.x/tutorial/unit8/paired-dynamic-model.lisp` - Paired Associate (Dynamic)
+- `actr7.x/tutorial/unit8/categorize-model.lisp` - Categorize (starter)
+
+Unit 4, Unit 7, and Unit 8 use separate paired-associate models but share the
+same JS task implementation. The Unit 7 and Unit 8 models start by clearing the
+loaded Unit 4 model and substituting their own productions; the experiment task
+is unchanged.
 
 The canonical model sources stay in `actr7.x/tutorial/`; the `web/models/` copies
 are generated and ignored by git. Selecting a model replaces the textarea
@@ -112,7 +122,9 @@ in `rust_actr7/python`:
 - `web/js/tasks/unit2.js`, `sperling.js`, `pm-issues.js`, `subitize.js`,
   `paired.js`, `zbrodoff.js`, `fan.js`, `grouped.js`, `siegler.js`,
   `onehit.js`, `bst.js`, `choice.js`, `past-tense.js`, `ul-issues.js`,
-  `pcomp-issues.js` - JS ports of the tutorial experiment code.
+  `pcomp-issues.js`, `categorize.js`, `semantic-dynamic.js` - JS ports of the
+  tutorial experiment code. `bst.js` exports both the Unit 6 task and the
+  Unit 8 PPM variant.
 - `web/js/tasks/index.js` - task registry with controls and default run times.
 - `web/js/main.js` - model menu, editor, task controls, reports, and run wiring.
 
@@ -120,9 +132,13 @@ Task Lisp/Python is translated to JS; it is not evaluated in wasm. The task
 code still calls the same AGI/RPC commands as the Lisp/Python tasks, including
 `open-exp-window`, `add-text-to-exp-window`, `install-device`, `run`,
 `add-act-r-command`, and `monitor-command`. Randomized setup uses the engine's
-`permute-list` and `act-r-random`, so seeded behavior matches ACT-R. Tasks may
-also supply a small model-support `defun` before the model source; 1-Hit
-Blackjack uses this for its numeric `:sim-hook`.
+`permute-list` and `act-r-random`, so seeded behavior matches ACT-R. The wasm
+bridge also exposes synchronous `:sim-hook` and `:ppm-hook` callbacks plus the
+imaginal-action host request, so a JS command can fill the same role as a
+Python hook. The facade installs the callback when the model's hook name
+matches the registered command. A task can still prepend a small Lisp `defun`
+before the model source; Categorize uses this for `create-example-memories`,
+which the model invokes from its body.
 
 Runs are cooperative. The JS runner slices every model through the engine's
 `run-chunk` API, batches events when no callbacks are needed, and yields to the
@@ -146,13 +162,15 @@ are:
 - Fan / Fan no PM: both retrieval terms, person only, or location only
 - Siegler: number of sets (10 by default)
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
-- Building Sticks: report, visible demo, or human mode; report runs and demo problem
+- Building Sticks / Building Sticks (PPM): report, visible demo, or human mode; report runs and demo problem
 - Choice: model or human mode, model runs, and visible-window toggle
 - Paired Associate: model or human mode, pairs, blocks, runs, and model trace
 - Alpha-Arithmetic: experiment, block, set, or single-problem mode; experiment runs and problem fields
 - Past Tense: trial count and block size
 - Utility Learning Issues: uses the global run-time field
 - Production Compilation Issues: games and compilation toggle
+- Categorize: experiment runs
+- Semantic Network: question (`g1`, `g2`, `g3`, or all)
 
 Controls initialize to task defaults and are disabled while a task runs.
 Switching tasks restores the values last used for that task. Controls can be
@@ -161,8 +179,8 @@ hidden when the selected task mode does not use them.
 The global run-time input follows the selected task. It is labeled "Trial
 time" when the value applies to each trial. For tasks with fixed trial timing,
 such as Paired Associate, Alpha-Arithmetic, Past Tense, 1-Hit Blackjack,
-Choice, and Production Compilation Issues, the input is disabled and a help
-tooltip explains why.
+Choice, Production Compilation Issues, Categorize, and Semantic Network, the
+input is disabled and a help tooltip explains why.
 
 ## Notes
 
@@ -171,11 +189,11 @@ tooltip explains why.
   delivered to the ACT-R audio module but are not played through browser audio.
 - The Unit 2 Assignment, Subitize, and 1-Hit Blackjack models are intentionally
   incomplete starters, so their results are not tutorial solutions.
-- Paired Associate runs the Unit 4 experiment task against either the Unit 4 or
-  Unit 7 model. The Unit 4 model is traced off by default for full runs; enable
-  the task Trace control for short runs. In human mode, type the paired digit
-  (0-9) while the word is shown; no click is needed. The visible guide labels
-  the recall and study phases.
+- Paired Associate runs the Unit 4 experiment task against the Unit 4, Unit 7,
+  or Unit 8 model. The Unit 4 model is traced off by default for full runs;
+  enable the task Trace control for short runs. In human mode, type the paired
+  digit (0-9) while the word is shown; no click is needed. The visible guide
+  labels the recall and study phases.
 - Alpha-Arithmetic is the Unit 4 assignment starter: it counts through the
   alphabet and does not retrieve learned additions. Its poor fit is expected.
 - Past Tense is the Unit 7 assignment starter, so it produces no inflections,
@@ -201,14 +219,30 @@ tooltip explains why.
   by default; demo and human modes use the tutorial demo problems.
 - Choice is a starter harness: the empty model produces no responses until
   productions are added. Human mode accepts `h`/`t` keys.
+- Building Sticks (PPM) uses the JS `:sim-hook` and imaginal-action callbacks to
+  supply `bst-number-sims` and `bst-compute-difference`. Its report defaults to
+  10 runs; demo and human modes use the tutorial demo problems.
+- Simple PPM and Simple Dynamic have no task panel; running them shows the
+  tutorial trace.
+- Semantic Network runs the tutorial `g1` -> `g2` -> `g2` -> `g3` sequence and
+  reports each answer, or runs a single selected question.
+- Paired Associate (Dynamic) uses the shared paired-associate task and enables
+  production compilation in the model.
+- Categorize is the Unit 8 starter: its model has no productions. The task
+  prelude creates the example memories and supplies the Gaussian
+  `size-similarities` hook, so the report shows the empty response columns and
+  explains that no category responses are expected.
 - The engine is deterministic given the seed, so equal inputs give equal traces.
 
 ## Limits
 
 - Task Lisp/Python is translated to JS; arbitrary Lisp task evaluation is not
-  supported. A task can prepend a small support `defun` for a model hook.
-- Human interaction is implemented for 1-Hit Blackjack, Building Sticks,
-  Choice, and the shared paired-associate task; other tasks run models only.
+  supported. Embedder hooks (`:sim-hook`, `:ppm-hook`, imaginal actions) may be
+  JS commands; a model-body `call-act-r-command` still needs a Lisp `defun`
+  prelude.
+- Human interaction is implemented for 1-Hit Blackjack, Building Sticks
+  (including the PPM variant), Choice, and the shared paired-associate task;
+  other tasks run models only.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
 - Runs happen on the browser main thread. The runner yields for progress and
@@ -218,10 +252,13 @@ tooltip explains why.
   task/setup file are not supported yet.
 - 1-Hit Blackjack uses the default tutorial deck and opponent. Alternate decks
   and the stacked `game1` scenario are not exposed in the UI.
+- Categorize's canonical model is a starter with no productions. Producing the
+  tutorial's categorization fit needs the protected solution model, which is
+  not in the repository.
 - The Tutor starter model is intentionally incomplete, Broken Addition is
   intentionally broken, and the 1-Hit Blackjack, Choice, Alpha-Arithmetic,
-  Past Tense, and Production Compilation Issues starters are not tutorial
-  solutions.
+  Past Tense, Production Compilation Issues, and Categorize starters are not
+  tutorial solutions.
 - Tutorial/regression experiment drivers in the Rust engine are test oracles,
   not browser features. See `planning/TUTORIAL-TEST-DRIVERS.md` for the cleanup
   backlog.
