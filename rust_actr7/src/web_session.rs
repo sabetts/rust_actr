@@ -75,6 +75,25 @@ impl WebSession {
         result
     }
 
+    pub fn run_begin(&mut self, name: &str, secs: f64) -> (i64, bool, bool) {
+        let result = self.session.run_begin(name, secs);
+        self.collect();
+        result
+    }
+
+    pub fn run_chunk(
+        &mut self,
+        limit_ms: i64,
+        full: bool,
+        max_events: u64,
+    ) -> Result<bool, String> {
+        let result = self
+            .session
+            .run_chunk(limit_ms, full, Some(max_events), None);
+        self.collect();
+        result
+    }
+
     pub fn take_events(&mut self) -> Vec<Json> {
         std::mem::take(&mut self.events)
     }
@@ -99,6 +118,14 @@ impl WebSession {
                     "args".into(),
                     Json::Arr(args.into_iter().map(Json::Str).collect()),
                 ),
+            ]));
+        }
+
+        for (name, args) in self.session.take_pending_device_actions() {
+            self.events.push(Json::Obj(vec![
+                ("type".into(), Json::Str("device-action".into())),
+                ("name".into(), Json::Str(name)),
+                ("args".into(), Json::Arr(args)),
             ]));
         }
 
@@ -168,6 +195,44 @@ mod tests {
             .unwrap();
         assert!(!session.take_events().is_empty());
         assert!(session.take_events().is_empty());
+    }
+
+    #[test]
+    fn stepped_run_dispatches_task_commands() {
+        let mut session = session();
+        session
+            .eval("add-act-r-command", &[Json::Str("test-cmd".into())])
+            .unwrap();
+        session
+            .eval(
+                "schedule-event-relative",
+                &[
+                    Json::Float(0.05),
+                    Json::Str("test-cmd".into()),
+                    Json::Obj(vec![(
+                        "params".into(),
+                        Json::Arr(vec![Json::Obj(vec![(
+                            "str".into(),
+                            Json::Str("hello".into()),
+                        )])]),
+                    )]),
+                ],
+            )
+            .unwrap();
+
+        let (limit, full, should_run) = session.run_begin("run", 0.2);
+        assert!(should_run);
+        for _ in 0..16 {
+            let more = session.run_chunk(limit, full, 1).unwrap();
+            if !more {
+                break;
+            }
+        }
+
+        let events = Json::Arr(session.take_events()).write();
+        assert!(events.contains("task-command"), "{events}");
+        assert!(events.contains("test-cmd"), "{events}");
+        assert!(events.contains("hello"), "{events}");
     }
 
     #[test]

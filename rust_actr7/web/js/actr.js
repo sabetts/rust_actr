@@ -10,6 +10,14 @@ function optionPairs(options) {
   return Object.entries(options || {});
 }
 
+function commandValue(value) {
+  if (typeof value !== "string") return value;
+  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1).replace(/\\"/g, '"');
+  }
+  return value;
+}
+
 export async function loadWasm(url = "./actr_engine.wasm") {
   const res = await fetch(url);
   if (!res.ok) {
@@ -27,7 +35,14 @@ export function nextPaint() {
 
 class WasmSession {
   constructor(wasm) {
-    for (const name of ["session_init", "session_load_source", "session_eval", "session_take_events"]) {
+    for (const name of [
+      "session_init",
+      "session_load_source",
+      "session_eval",
+      "session_take_events",
+      "session_run_begin",
+      "session_run_chunk",
+    ]) {
       if (typeof wasm[name] !== "function") {
         throw new Error(`actr_engine.wasm is missing ${name}; rebuild it with web/build.py`);
       }
@@ -92,6 +107,22 @@ class WasmSession {
     return payload.result || [];
   }
 
+  runBegin(name, secs) {
+    return this.callWithText(name, (ptr, len) => {
+      const status = this.wasm.session_run_begin(ptr, len, secs);
+      const text = this.resultText();
+      if (status !== 0) throw new Error(text || "session_run_begin failed");
+      return JSON.parse(text);
+    });
+  }
+
+  runChunk(limitMs, full, maxEvents) {
+    const status = this.wasm.session_run_chunk(limitMs, full ? 1 : 0, maxEvents);
+    const text = this.resultText();
+    if (status !== 0) throw new Error(text || "session_run_chunk failed");
+    return JSON.parse(text).more === true;
+  }
+
   takeEvents() {
     const status = this.wasm.session_take_events();
     const text = this.resultText();
@@ -127,8 +158,22 @@ export class Actr {
     return this.eval("reset");
   }
 
-  run(seconds) {
-    return this.eval("run", seconds);
+  async run(seconds) {
+    if (this.commands.size === 0 && this.monitors.size === 0) {
+      this.eval("run", seconds);
+      return;
+    }
+
+    const begin = this.session.runBegin("run", seconds);
+    this.drain();
+    if (!begin.shouldRun) return;
+
+    for (;;) {
+      const more = this.session.runChunk(begin.limit, begin.full, 1);
+      const state = this.drain();
+      if (state.painted) await nextPaint();
+      if (!more && state.handled === 0) break;
+    }
   }
 
   addCommand(name, fn) {
@@ -208,36 +253,79 @@ export class Actr {
     return first(this.eval("act-r-random", limit));
   }
 
+  getTime(modelTime = true) {
+    return first(this.eval("get-time", Boolean(modelTime)));
+  }
+
+  newToneSound(freq, duration, onset = 0, timeInMs = false) {
+    return this.eval("new-tone-sound", freq, duration, onset, timeInMs);
+  }
+
+  scheduleEventRelative(delay, action, params = [], timeInMs = false) {
+    const seconds = timeInMs ? delay / 1000.0 : delay;
+    const encoded = (params || []).map((value) =>
+      typeof value === "string" ? { str: value } : value
+    );
+    return this.eval("schedule-event-relative", seconds, action, {
+      params: encoded,
+    });
+  }
+
+  correlation(data, reference, output = false) {
+    return first(this.eval("correlation", data, reference, output));
+  }
+
+  meanDeviation(data, reference, output = false) {
+    return first(this.eval("mean-deviation", data, reference, output));
+  }
+
   drain() {
-    if (this.draining) return;
+    if (this.draining) return { handled: 0, painted: false };
     this.draining = true;
+    let handled = 0;
+    let painted = false;
     try {
       for (;;) {
         const events = this.session.takeEvents();
         if (!events.length) break;
-        for (const event of events) this.handleEvent(event);
+        for (const event of events) {
+          const result = this.handleEvent(event);
+          handled += result.handled ? 1 : 0;
+          painted = painted || result.painted;
+        }
       }
     } finally {
       this.draining = false;
     }
+    return { handled, painted };
   }
 
   handleEvent(event) {
     switch (event.type) {
       case "window":
         if (this.window) this.window.handle(event.args);
-        break;
+        return { handled: false, painted: true };
       case "trace":
         this.trace.push(event.line);
-        break;
+        return { handled: false, painted: false };
       case "command":
         this.fire(event.name, [event.model, event.key]);
-        break;
-      case "task-command":
-        this.fire(event.name, event.args);
-        break;
+        return { handled: true, painted: false };
+      case "task-command": {
+        const args = event.args.map(commandValue);
+        const fn = this.commands.get(String(event.name).toUpperCase());
+        if (fn) fn(...args);
+        this.fire(event.name, args);
+        return { handled: true, painted: true };
+      }
+      case "device-action": {
+        const args = event.args.map(commandValue);
+        const fn = this.commands.get(String(event.name).toUpperCase());
+        if (fn) fn(...args);
+        return { handled: true, painted: true };
+      }
       default:
-        break;
+        return { handled: false, painted: false };
     }
   }
 

@@ -1,9 +1,9 @@
 import { Actr, loadWasm, nextPaint } from "./actr.js";
 import { AgiWindow } from "./agi-window.js";
-import { unit2Tasks } from "./tasks/unit2.js";
+import { TASKS } from "./tasks/index.js";
 
 const $ = (id) => document.getElementById(id);
-const TASKS = { ...unit2Tasks };
+const controlState = new Map();
 
 let wasm = null;
 let models = new Map();
@@ -11,11 +11,15 @@ let selectedModel = null;
 let modelReady = false;
 let modelRequest = 0;
 
+function taskDescriptor(model) {
+  return model?.task ? TASKS[model.task] || null : null;
+}
+
 function updateRunButton() {
   $("run").disabled = !(wasm && modelReady);
 }
 
-function resultText(result) {
+function summaryText(result) {
   if (!result) return "";
   if (result.kind === "demo2") {
     if (result.response == null) return `Target: ${result.target} · no response`;
@@ -25,15 +29,121 @@ function resultText(result) {
     if (result.response == null) return `Target: ${result.target} · no response (starter model)`;
     return `Target: ${result.target} · response: ${result.response} · ${result.correct ? "true" : "false"}`;
   }
+  if (result.kind === "pm-issues") {
+    return `Prompt: ${result.prompt} · letter: ${result.letter} · response: ${result.response.join(" ") || "none"} · ${result.correct ? "correct" : "incorrect"}`;
+  }
+  if (result.kind === "sperling") return `Sperling: ${result.data.length} onset conditions`;
+  if (result.kind === "subitize") return `Subitize: ${result.results.length} trial(s)`;
   return "";
 }
 
+function renderResult(result) {
+  $("task-result").textContent = summaryText(result);
+  const report = result?.report || "";
+  $("task-report").textContent = report;
+  $("task-report").hidden = !report;
+}
+
+function controlStateFor(taskId, descriptor) {
+  if (!controlState.has(taskId)) {
+    const values = {};
+    for (const control of descriptor?.controls || []) {
+      values[control.id] = control.default;
+    }
+    controlState.set(taskId, values);
+  }
+  return controlState.get(taskId);
+}
+
+function renderTaskControls(taskId, descriptor) {
+  const host = $("task-controls");
+  host.replaceChildren();
+  if (!taskId || !descriptor?.controls?.length) {
+    host.hidden = true;
+    return;
+  }
+
+  const values = controlStateFor(taskId, descriptor);
+  host.hidden = false;
+  for (const control of descriptor.controls) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "task-control";
+    const label = document.createElement("label");
+    label.htmlFor = `task-control-${taskId}-${control.id}`;
+    label.textContent = control.label;
+
+    let input;
+    if (control.type === "select") {
+      input = document.createElement("select");
+      for (const [value, text] of control.options || []) {
+        const option = document.createElement("option");
+        option.value = String(value);
+        option.textContent = String(text);
+        input.append(option);
+      }
+      input.value = String(values[control.id] ?? control.default);
+      input.addEventListener("change", () => {
+        values[control.id] = input.value;
+      });
+    } else if (control.type === "checkbox") {
+      input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = Boolean(values[control.id]);
+      input.addEventListener("change", () => {
+        values[control.id] = input.checked;
+      });
+    } else {
+      input = document.createElement("input");
+      input.type = "number";
+      if (control.min != null) input.min = String(control.min);
+      if (control.max != null) input.max = String(control.max);
+      if (control.step != null) input.step = String(control.step);
+      input.value = String(values[control.id] ?? control.default);
+      input.addEventListener("input", () => {
+        values[control.id] = input.value;
+      });
+    }
+
+    input.id = `task-control-${taskId}-${control.id}`;
+    wrapper.append(label, input);
+    host.append(wrapper);
+  }
+}
+
+function readControls(taskId, descriptor) {
+  const source = controlStateFor(taskId, descriptor);
+  const values = {};
+  for (const control of descriptor?.controls || []) {
+    const value = source[control.id] ?? control.default;
+    if (control.type === "number") {
+      values[control.id] = Number(value);
+    } else if (control.type === "checkbox") {
+      values[control.id] = Boolean(value);
+    } else {
+      values[control.id] = String(value);
+    }
+  }
+  return values;
+}
+
+function setControlsDisabled(disabled) {
+  for (const input of $("task-controls").querySelectorAll("input, select")) {
+    input.disabled = disabled;
+  }
+}
+
 function showTaskPanel(model) {
-  const task = model?.task && TASKS[model.task] ? model.task : null;
-  $("task-panel").hidden = !task;
+  const descriptor = taskDescriptor(model);
+  $("task-panel").hidden = !descriptor;
   $("task-result").textContent = "";
+  $("task-report").textContent = "";
+  $("task-report").hidden = true;
   const window = new AgiWindow($("agi-window"));
   window.reset();
+  renderTaskControls(model?.task, descriptor);
+  if (descriptor?.runSeconds != null) {
+    $("secs").value = String(descriptor.runSeconds);
+  }
 }
 
 function readResult() {
@@ -55,29 +165,37 @@ function runModelInWasm(source, seed0, seed1, secs) {
   return { ok: status === 0, out: readResult() };
 }
 
-async function runTask(model, source, seed0, seed1, secs) {
+async function runTask(model, descriptor, source, seed0, seed1, secs) {
   const window = new AgiWindow($("agi-window"));
   const actr = new Actr(wasm, seed0, seed1, window);
   actr.loadSource(source);
-  const result = await TASKS[model.task](actr, { secs, paint: nextPaint });
-  $("task-result").textContent = resultText(result);
+  const controls = readControls(model.task, descriptor);
+  const result = await descriptor.run(actr, {
+    secs,
+    runSeconds: secs,
+    controls,
+    paint: nextPaint,
+  });
+  renderResult(result);
   return { ok: true, out: actr.trace.join("\n") };
 }
 
 async function run() {
   if (!wasm || !selectedModel) return;
   const model = selectedModel;
+  const descriptor = taskDescriptor(model);
   const source = $("model").value;
   const seed0 = Math.trunc(Number($("seed0").value) || 0);
   const seed1 = Math.trunc(Number($("seed1").value) || 0);
   const secs = Number($("secs").value) || 0;
 
   $("run").disabled = true;
+  setControlsDisabled(true);
   $("status").textContent = "running…";
   const t0 = performance.now();
   try {
-    const { ok, out } = model.task
-      ? await runTask(model, source, seed0, seed1, secs)
+    const { ok, out } = descriptor
+      ? await runTask(model, descriptor, source, seed0, seed1, secs)
       : runModelInWasm(source, seed0, seed1, secs);
     $("output").value = out;
     $("output").classList.toggle("err", !ok);
@@ -89,6 +207,7 @@ async function run() {
     $("output").classList.add("err");
     $("status").textContent = "error";
   } finally {
+    setControlsDisabled(false);
     updateRunButton();
   }
 }

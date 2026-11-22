@@ -24,7 +24,7 @@ async function demo2(actr, ctx) {
   actr.installDevice(window);
 
   await ctx.paint();
-  actr.run(ctx.secs);
+  await actr.run(ctx.secs);
 
   actr.removeCommandMonitor("output-key", "demo2-key-press");
   actr.removeCommand("demo2-key-press");
@@ -61,7 +61,7 @@ async function assignment(actr, ctx) {
   actr.installDevice(window);
 
   await ctx.paint();
-  actr.run(ctx.secs);
+  await actr.run(ctx.secs);
 
   actr.removeCommandMonitor("output-key", "unit2-key-press");
   actr.removeCommand("unit2-key-press");
@@ -77,6 +77,6 @@ async function assignment(actr, ctx) {
 }
 
 export const unit2Tasks = {
-  "unit2-demo2": demo2,
-  "unit2-assignment": assignment,
+  "unit2-demo2": { run: demo2, controls: [], runSeconds: 10 },
+  "unit2-assignment": { run: assignment, controls: [], runSeconds: 10 },
 };

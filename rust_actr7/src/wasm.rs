@@ -233,6 +233,67 @@ pub extern "C" fn session_take_events() -> u32 {
     }
 }
 
+/// Prepare a stepped run in the current AGI session.
+///
+/// # Safety
+/// `name_ptr` must point to `name_len` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn session_run_begin(name_ptr: *const u8, name_len: usize, secs: f64) -> u32 {
+    let name = match unsafe { read_text(name_ptr, name_len) } {
+        Ok(text) => text,
+        Err(e) => {
+            set_result(&format!("error: {e}"));
+            return 1;
+        }
+    };
+    let result = SESSION.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some(session) = slot.as_mut() else {
+            return Err("session is not initialized".to_string());
+        };
+        Ok(session.run_begin(&name, secs))
+    });
+    match result {
+        Ok((limit, full, should_run)) => {
+            set_result(
+                &Json::Obj(vec![
+                    ("limit".into(), Json::Int(limit)),
+                    ("full".into(), Json::Bool(full)),
+                    ("shouldRun".into(), Json::Bool(should_run)),
+                ])
+                .write(),
+            );
+            0
+        }
+        Err(e) => {
+            set_result(&format!("error: {e}"));
+            1
+        }
+    }
+}
+
+/// Run one AGI session slice.
+#[no_mangle]
+pub extern "C" fn session_run_chunk(limit_ms: f64, full: u32, max_events: u32) -> u32 {
+    let result = SESSION.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some(session) = slot.as_mut() else {
+            return Err("session is not initialized".to_string());
+        };
+        session.run_chunk(limit_ms.round() as i64, full != 0, max_events as u64)
+    });
+    match result {
+        Ok(more) => {
+            set_result(&Json::Obj(vec![("more".into(), Json::Bool(more))]).write());
+            0
+        }
+        Err(e) => {
+            set_result(&format!("error: {e}"));
+            1
+        }
+    }
+}
+
 unsafe fn read_text(ptr: *const u8, len: usize) -> Result<String, String> {
     if len == 0 {
         return Ok(String::new());

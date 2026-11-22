@@ -42,6 +42,21 @@ MODEL_GROUPS = (
             ),
         ),
     },
+    {
+        "id": "unit3",
+        "label": "Unit 3",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit3",
+        "models": (
+            ("sperling", "Sperling", "sperling-model.lisp", "sperling"),
+            (
+                "perceptual-motor-issues",
+                "Perceptual-Motor Issues",
+                "perceptual-motor-issues-model.lisp",
+                "pm-issues",
+            ),
+            ("subitize", "Subitize (starter)", "subitize-model.lisp", "subitize"),
+        ),
+    },
 )
 
 
