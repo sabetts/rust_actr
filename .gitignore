@@ -10,6 +10,11 @@ rust_actr7/python/target/
 # assets staged by rust_actr7/web/build.py
 rust_actr7/web/actr_engine.wasm
 rust_actr7/web/models/
+# web browser-test tooling and Pages staging
+rust_actr7/web/node_modules/
+rust_actr7/web/playwright-report/
+rust_actr7/web/test-results/
+_site/
 __pycache__/
 *.pyc
 # local scratch (spec-regeneration probes)

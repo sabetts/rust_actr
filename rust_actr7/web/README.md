@@ -45,6 +45,22 @@ node test/bridge_test.mjs
 node test/unit8_test.mjs
 ```
 
+Browser smoke test (Node 20+ and Playwright Chromium, after `build.py`):
+
+```sh
+cd rust_actr7/web
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+The `.github/workflows/web.yml` workflow builds the wasm, runs the Node and
+browser smoke tests on pull requests, and deploys the page to GitHub Pages from
+`main`. Enable it once under Settings -> Pages -> Build and deployment ->
+Source: GitHub Actions. The deployed site is the project's Pages URL (for
+example `https://<owner>.github.io/<repo>/`); all fetches are relative, so it
+works under that subpath.
+
 ## Models
 
 The menu is generated from `web/models/manifest.json`.

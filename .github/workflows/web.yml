@@ -1,0 +1,104 @@
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/web.yml"
+      - "rust_actr7/web/**"
+      - "rust_actr7/src/**"
+      - "rust_actr7/Cargo.toml"
+      - "rust_actr7/Cargo.lock"
+      - "rust_actr7/fixtures/**"
+      - "actr7.x/tutorial/**"
+  pull_request:
+    paths:
+      - ".github/workflows/web.yml"
+      - "rust_actr7/web/**"
+      - "rust_actr7/src/**"
+      - "rust_actr7/Cargo.toml"
+      - "rust_actr7/Cargo.lock"
+      - "rust_actr7/fixtures/**"
+      - "actr7.x/tutorial/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: build and test web page
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: rust_actr7/web/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust_actr7
+
+      - name: build wasm and stage models
+        run: python rust_actr7/web/build.py
+
+      - name: node bridge smoke tests
+        run: |
+          node rust_actr7/web/test/bridge_test.mjs
+          node rust_actr7/web/test/unit8_test.mjs
+
+      - name: browser smoke test
+        working-directory: rust_actr7/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+
+      - name: stage pages site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p _site
+          cp rust_actr7/web/index.html _site/
+          cp -r rust_actr7/web/js _site/
+          cp -r rust_actr7/web/models _site/
+          cp rust_actr7/web/actr_engine.wasm _site/
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          path: _site
+
+  deploy:
+    name: deploy to GitHub Pages
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

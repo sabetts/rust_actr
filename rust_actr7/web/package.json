@@ -1,0 +1,15 @@
+{
+  "name": "actr7-web",
+  "private": true,
+  "type": "module",
+  "description": "ACT-R 7 tutorial web page tests",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test:e2e": "node test/e2e_test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
+}
