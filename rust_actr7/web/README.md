@@ -180,7 +180,10 @@ host request:
 similarity table. Hooks run synchronously inside the engine, so they must not
 call back into wasm (no `actr.eval`, `run`, etc.). The web page is single-model:
 one active hook per kind per session. A model-body `call-act-r-command` still
-needs a Lisp `defun` prelude; it does not dispatch to a JS command.
+needs a Lisp `defun` prelude; it does not dispatch to a JS command. Dispatching
+model-body commands to JS is a known follow-up (see the parity audit's
+known follow-ups), and it would also need a reset-cleared runtime DM add to
+avoid duplicate examples.
 
 Runs are cooperative. The JS runner slices every model through the engine's
 `run-chunk` API, batches events when no callbacks are needed, and yields to the
@@ -284,7 +287,8 @@ input is disabled and a help tooltip explains why.
 - Task Lisp/Python is translated to JS; arbitrary Lisp task evaluation is not
   supported. Embedder hooks (`:sim-hook`, `:ppm-hook`, imaginal actions) may be
   JS commands; a model-body `call-act-r-command` still needs a Lisp `defun`
-  prelude.
+  prelude. The generic host-command bridge is a known follow-up; it would also
+  need a reset-cleared runtime DM add.
 - Human interaction is implemented for 1-Hit Blackjack, Building Sticks
   (including the PPM variant), Choice, and the shared paired-associate task;
   other tasks run models only.

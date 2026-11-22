@@ -362,6 +362,12 @@ sources and the environment-gated RPC test.
 9. **Notebook human-mode cells.** Interactive `human=True` cells need the
    pending Python-to-Environment bridge; they are tagged `rust-actr-skip` and
    documented instead of run headlessly.
+10. **Model-body host commands.** `call-act-r-command` forms in a model body
+    resolve only through Lisp defuns; Python task commands are not dispatched.
+    The categorize port works around this from the task. A generic bridge would
+    queue host-owned model-body commands and run them after `_ensure_session`
+    and reset, and it would also need a reset-cleared runtime DM add (or
+    removal) to avoid duplicate examples; see `PARITY-AUDIT.md`.
 
 ## 9. Milestone commits
 

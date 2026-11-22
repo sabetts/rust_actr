@@ -138,6 +138,19 @@ requests (a stale `named` copy previously won), adding the partial-matching
 component once (Lisp's float result), and the missing `trigger-reward` RPC
 command used by the choice surrogate.
 
+## Known follow-ups
+
+- **Generic model-body host commands.** `Engine::apply_model_commands`
+  (`engine/commands.rs`) resolves `call-act-r-command` only through Lisp
+  `user_fns`; host-owned Python/JS `task_commands` are not dispatched. The web
+  and Python ports work around this with a Lisp `defun` prelude (web) or
+  task-side example setup (Python). A generic bridge would queue host-owned
+  model-body commands and run them after load/reset. It also needs a
+  reset-cleared runtime `add-dm` (or a DM removal command) so repeated
+  model-body calls do not duplicate example chunks, and the web needs a
+  pre-load command-registration hook. This is optional; it is not required for
+  current tutorial parity.
+
 ## Exit criteria
 
 - Unknown parameters fail loudly; every corpus `sgp` key is either handled or

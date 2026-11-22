@@ -6591,3 +6591,8 @@ Verification: Python **91 passed**; Node `unit8_test.mjs` covers default,
 custom-slot/offset, and invalid-slot fallback categorize runs; the Playwright
 test drives the new controls. The categorize model remains a starter, so the
 report still shows no category responses until the protected solution is added.
+
+Follow-up: a generic model-body host-command bridge would remove the web
+`create-example-memories` prelude and the Python task-side example setup; it
+also needs a reset-cleared runtime DM add. See `PARITY-AUDIT.md`'s known
+follow-ups.

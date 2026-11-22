@@ -265,10 +265,12 @@ Port status:
   receive `(production, [(buffer, slot, expected, actual, similarity), ...])`.
   Python `imaginal-action` callbacks are bridged through a host-yield step.
 - The Rust engine resolves model-body `call-act-r-command` forms through Lisp
-  defuns only. `categorize` therefore adds its example chunks from the task
-  after the model loads. `categorize.experiment` also supports the tutorial's
-  offset and alternate feature slot names; changing the slots rebuilds the
-  model and regenerates the examples.
+  defuns only. A generic host-command bridge is a known follow-up; it would
+  also need a reset-cleared runtime DM add to avoid duplicate examples.
+  `categorize` therefore adds its example chunks from the task after the model
+  loads. `categorize.experiment` also supports the tutorial's offset and
+  alternate feature slot names; changing the slots rebuilds the model and
+  regenerates the examples.
 - `tutorial/unit8/categorize.py` is a hand-maintained Rust-port override
   (`tools/task_overrides/categorize.py`); `port_tutorial.py` copies it instead
   of regenerating it from the upstream task.
