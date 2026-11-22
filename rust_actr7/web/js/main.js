@@ -44,6 +44,7 @@ function summaryText(result) {
   }
   return "";
 }
+
 function renderResult(result) {
   $("task-result").textContent = summaryText(result);
   const report = result?.report || "";
@@ -205,7 +206,7 @@ async function run() {
 
   $("run").disabled = true;
   setControlsDisabled(true);
-  $("status").textContent = "runningâ€¦";
+  $("status").textContent = "running...";
   const t0 = performance.now();
   try {
     const { ok, out } = descriptor
@@ -215,7 +216,7 @@ async function run() {
     $("output").classList.toggle("err", !ok);
     const ms = Math.round(performance.now() - t0);
     const lines = out ? out.split("\n").length : 0;
-    $("status").textContent = `${ok ? "ok" : "error"} Â· ${ms} ms Â· ${lines} lines`;
+    $("status").textContent = `${ok ? "ok" : "error"} - ${ms} ms - ${lines} lines`;
   } catch (e) {
     $("output").value = "error: " + e;
     $("output").classList.add("err");
@@ -235,7 +236,7 @@ async function loadSelectedModel() {
   const request = ++modelRequest;
   modelReady = false;
   updateRunButton();
-  $("status").textContent = "loading modelâ€¦";
+  $("status").textContent = "loading model...";
   $("output").value = "";
   $("output").classList.remove("err");
 
@@ -305,7 +306,7 @@ async function loadModels() {
   });
 
   try {
-    $("status").textContent = "loading wasmâ€¦";
+    $("status").textContent = "loading wasm...";
     wasm = await loadWasm();
   } catch (e) {
     $("status").textContent = "wasm failed to load";
@@ -317,7 +318,7 @@ async function loadModels() {
   }
 
   try {
-    $("status").textContent = "loading modelsâ€¦";
+    $("status").textContent = "loading models...";
     await loadModels();
   } catch (e) {
     $("status").textContent = "models failed to load";

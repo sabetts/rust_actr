@@ -265,7 +265,7 @@ function reportLearning(games, blocks, wins) {
   perBlock.forEach((value, i) => lines.push(`${String(i + 1).padStart(2)}                  ${value.toFixed(1)}`));
   lines.push("", "Four blocks of 25 hands");
   four.forEach((value, i) => lines.push(`${i + 1}: ${value.toFixed(1)}%`));
-  lines.push("", `Overall model wins: ${wins}`);
+  lines.push("", `Overall model wins: ${wins} / ${games * 100} (${((wins / (games * 100)) * 100).toFixed(1)}%)`);
   return lines.join("\n");
 }
 
