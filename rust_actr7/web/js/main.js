@@ -1,6 +1,24 @@
 import { Actr, RunCancelled, loadWasm, nextPaint } from "./actr.js";
 import { AgiWindow } from "./agi-window.js";
 import { TASKS } from "./tasks/index.js";
+import { RECOMMENDED_START } from "./catalog.js";
+import {
+  createEditor,
+  createModelBrowser,
+  renderAboutContent,
+  renderModelInfo,
+  setRunState,
+  setStatus,
+  setTaskHeader,
+  setupDialogs,
+  setupGlobalShortcuts,
+  setupTabs,
+  setupTheme,
+  setupToolbar,
+  setupTraceView,
+  setupWelcome,
+  showToast,
+} from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const controlState = new Map();
@@ -11,6 +29,11 @@ let selectedModel = null;
 let modelReady = false;
 let modelRequest = 0;
 let activeRun = null;
+let browser = null;
+let tabs = null;
+
+const editor = createEditor();
+const trace = setupTraceView();
 
 function taskDescriptor(model) {
   return model?.task ? TASKS[model.task] || null : null;
@@ -234,22 +257,25 @@ function showTaskPanel(model) {
   const descriptor = taskDescriptor(model);
   $("task-panel").hidden = !descriptor;
   clearTaskResult();
-  const window = new AgiWindow($("agi-window"));
-  window.reset();
+  const agiWindow = new AgiWindow($("agi-window"));
+  agiWindow.reset();
   renderTaskControls(model?.task, descriptor);
   if (descriptor?.runSeconds != null) {
     $("secs").value = String(descriptor.runSeconds);
   }
   updateRunTimeControl(model);
+  setTaskHeader({ model, descriptor });
+  tabs.setTaskEnabled(Boolean(descriptor));
+  tabs.activate(descriptor ? "task" : "source");
 }
 
 function progress(text) {
-  if (activeRun) $("status").textContent = text;
+  if (activeRun) setStatus(text, "running");
 }
 
 async function runTask(model, descriptor, source, seed0, seed1, secs, signal) {
-  const window = new AgiWindow($("agi-window"));
-  const actr = new Actr(wasm, seed0, seed1, window);
+  const agiWindow = new AgiWindow($("agi-window"));
+  const actr = new Actr(wasm, seed0, seed1, agiWindow);
   const controls = readControls(model.task, descriptor);
   const prelude =
     typeof descriptor.prelude === "function"
@@ -307,33 +333,40 @@ async function run() {
   $("cancel").disabled = false;
   clearTaskResult();
   setControlsDisabled(true);
-  $("status").textContent = "running...";
+  setRunState(true);
+  setStatus("running...", "running");
+  if (!descriptor && tabs.current() === "source") tabs.activate("trace");
   const t0 = performance.now();
   try {
     const result = descriptor
       ? await runTask(model, descriptor, source, seed0, seed1, secs, controller.signal)
       : await runGenericModel(source, seed0, seed1, secs, controller.signal);
-    $("output").value = result.out;
-    $("output").classList.toggle("err", !result.ok && !result.cancelled);
+    trace.set(result.out, { error: !result.ok && !result.cancelled });
     const ms = Math.round(performance.now() - t0);
     const lines = result.out ? result.out.split("\n").length : 0;
-    $("status").textContent = result.cancelled
-      ? `cancelled - ${ms} ms - ${lines} lines`
-      : `${result.ok ? "ok" : "error"} - ${ms} ms - ${lines} lines`;
+    if (result.cancelled) {
+      setStatus(`cancelled - ${ms} ms - ${lines} lines`, "cancelled");
+    } else {
+      setStatus(`${result.ok ? "ok" : "error"} - ${ms} ms - ${lines} lines`, result.ok ? "ok" : "error");
+    }
   } catch (e) {
-    $("output").value = "error: " + e;
-    $("output").classList.add("err");
-    $("status").textContent = "error";
+    trace.set("error: " + e, { error: true });
+    setStatus("error", "error");
   } finally {
     activeRun = null;
     $("cancel").hidden = true;
     setControlsDisabled(false);
+    setRunState(false);
     updateRunButton();
   }
 }
 
 async function loadSelectedModel() {
   const select = $("model-preset");
+  if (activeRun) {
+    if (selectedModel) select.value = selectedModel.id;
+    return;
+  }
   const option = select.selectedOptions[0];
   const model = option ? models.get(option.value) : null;
   if (!model) return;
@@ -341,9 +374,9 @@ async function loadSelectedModel() {
   const request = ++modelRequest;
   modelReady = false;
   updateRunButton();
-  $("status").textContent = "loading model...";
-  $("output").value = "";
-  $("output").classList.remove("err");
+  setStatus("loading model...", "running");
+  trace.clear();
+  $("reset-source").disabled = true;
 
   try {
     const res = await fetch(`./models/${model.path}`, { cache: "no-store" });
@@ -352,17 +385,26 @@ async function loadSelectedModel() {
     }
     const source = await res.text();
     if (request !== modelRequest) return;
-    $("model").value = source;
+    editor.setSource(source);
+    $("reset-source").disabled = false;
     selectedModel = model;
     modelReady = true;
     showTaskPanel(model);
-    $("status").textContent = "";
+    browser?.markSelected(model.id);
+    renderModelInfo({ model, unitId: model.unitId, descriptor: taskDescriptor(model) });
+    setStatus("", "idle");
   } catch (e) {
     if (request !== modelRequest) return;
     selectedModel = null;
-    $("status").textContent = "model failed to load";
-    $("output").value = String(e) + "\n\nDid you run web/build.py --models-only?";
-    $("output").classList.add("err");
+    modelReady = false;
+    $("reset-source").disabled = true;
+    tabs.setTaskEnabled(false);
+    tabs.activate("trace");
+    $("task-panel").hidden = true;
+    browser?.markSelected("");
+    renderModelInfo({ model: null });
+    setStatus("model failed to load", "error");
+    trace.set(String(e) + "\n\nDid you run web/build.py --models-only?", { error: true });
   } finally {
     if (request === modelRequest) updateRunButton();
   }
@@ -385,10 +427,11 @@ async function loadModels() {
     optgroup.label = String(group.label || group.id);
     for (const model of Array.isArray(group.models) ? group.models : []) {
       if (!model || !model.id || !model.path) continue;
+      const entry = { ...model, unitId: group.id };
       const option = document.createElement("option");
       option.value = String(model.id);
       option.textContent = String(model.label || model.id);
-      models.set(option.value, model);
+      models.set(option.value, entry);
       optgroup.append(option);
     }
     if (optgroup.children.length) select.append(optgroup);
@@ -402,37 +445,60 @@ async function loadModels() {
   } else {
     select.selectedIndex = 0;
   }
+
+  browser = createModelBrowser({ groups });
   await loadSelectedModel();
+  browser.markSelected(selectedModel?.id || select.value);
 }
 
 (async function main() {
+  setupTheme();
+  setupDialogs();
+  renderAboutContent();
+  tabs = setupTabs();
+  setupToolbar({ editor, trace, getModelId: () => selectedModel?.id });
+  setupGlobalShortcuts({ run: () => void run(), trace });
+
+  setupWelcome({
+    onStart: () => browser?.choose(RECOMMENDED_START),
+    onExplore: () => browser?.focusSearch(),
+  });
+
   $("model-preset").addEventListener("change", () => {
     void loadSelectedModel();
   });
 
+  $("reset-source").addEventListener("click", () => {
+    editor.setSource(editor.getOriginal());
+    showToast("Model source restored");
+  });
+
   try {
-    $("status").textContent = "loading wasm...";
+    setStatus("loading wasm...", "running");
     wasm = await loadWasm();
   } catch (e) {
-    $("status").textContent = "wasm failed to load";
-    $("output").value =
-      String(e) + "\n\nDid you run web/build.py, and serve this folder over HTTP?\n" +
-      "  cd web && python -m http.server 8000";
-    $("output").classList.add("err");
+    setStatus("wasm failed to load", "error");
+    trace.set(
+      String(e) +
+        "\n\nDid you run web/build.py, and serve this folder over HTTP?\n" +
+        "  cd web && python -m http.server 8000",
+      { error: true }
+    );
+    tabs.activate("trace");
     return;
   }
 
   try {
-    $("status").textContent = "loading models...";
+    setStatus("loading models...", "running");
     await loadModels();
   } catch (e) {
-    $("status").textContent = "models failed to load";
-    $("output").value = String(e) + "\n\nDid you run web/build.py --models-only?";
-    $("output").classList.add("err");
+    setStatus("models failed to load", "error");
+    trace.set(String(e) + "\n\nDid you run web/build.py --models-only?", { error: true });
+    tabs.activate("trace");
     return;
   }
 
-  $("status").textContent = modelReady ? "" : "model failed to load";
+  setStatus(modelReady ? "" : "model failed to load", modelReady ? "idle" : "error");
   updateRunButton();
   $("run").addEventListener("click", () => {
     void run();
@@ -440,13 +506,7 @@ async function loadModels() {
   $("cancel").addEventListener("click", () => {
     if (!activeRun) return;
     $("cancel").disabled = true;
-    $("status").textContent = "cancelling...";
+    setStatus("cancelling...", "running");
     activeRun.abort();
-  });
-  document.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      void run();
-    }
   });
 })();

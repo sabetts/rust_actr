@@ -77,6 +77,7 @@ jobs:
         run: |
           mkdir -p _site
           cp rust_actr7/web/index.html _site/
+          cp -r rust_actr7/web/css _site/
           cp -r rust_actr7/web/js _site/
           cp -r rust_actr7/web/models _site/
           cp rust_actr7/web/actr_engine.wasm _site/

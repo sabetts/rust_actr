@@ -94,7 +94,15 @@ async function main() {
   });
 
   const selectModel = async (id, token) => {
-    await page.selectOption("#model-preset", id);
+    await page.evaluate((modelId) => {
+      const row = document.querySelector(`[data-model-id="${modelId}"]`);
+      if (!row) return;
+      const unit = row.closest(".unit");
+      if (unit && unit.dataset.open !== "true") {
+        unit.querySelector(".unit-head")?.click();
+      }
+    }, id);
+    await page.locator(`[data-model-id="${id}"]`).click();
     await page.waitForFunction(
       (expected) => {
         const model = document.getElementById("model");
@@ -143,6 +151,69 @@ async function main() {
       { timeout: 30000 }
     );
 
+    if (await page.locator("#welcome-card").isHidden()) {
+      throw new Error("first-run welcome card should be visible");
+    }
+    const initialTheme = await page.evaluate(
+      () => document.documentElement.dataset.theme
+    );
+    await page.click("#theme-toggle");
+    await page.waitForFunction(
+      (previous) => document.documentElement.dataset.theme !== previous,
+      initialTheme,
+      { timeout: 3000 }
+    );
+    await page.click("#theme-toggle");
+
+    const defaultTitle = (await page.locator("#model-info h2").textContent()) || "";
+    if (!defaultTitle.includes("Count")) {
+      throw new Error(`default model info looks wrong: ${defaultTitle}`);
+    }
+    const highlighted = (await page.locator("#editor-highlight").textContent()) || "";
+    if (!highlighted.includes("define-model")) {
+      throw new Error("syntax-highlighted source is missing define-model");
+    }
+    if (await page.locator("#model-outline").isHidden()) {
+      throw new Error("model outline should be visible");
+    }
+
+    await page.click("#tab-trace");
+    if (!(await page.locator("#panel-trace").isVisible())) {
+      throw new Error("Trace tab did not open");
+    }
+    if (!(await page.locator("#panel-source").isHidden())) {
+      throw new Error("Model source panel should hide when Trace is selected");
+    }
+    await page.click("#tab-source");
+
+    await page.click('[data-dialog-open="about-dialog"]');
+    if (!(await page.locator("#about-dialog").evaluate((dialog) => dialog.open))) {
+      throw new Error("ACT-R help dialog did not open");
+    }
+    const glossaryItems = await page.locator("#glossary-grid .glossary-item").count();
+    if (glossaryItems < 4) {
+      throw new Error(`ACT-R glossary is too small: ${glossaryItems}`);
+    }
+    await page.keyboard.press("Escape");
+    if (await page.locator("#about-dialog").evaluate((dialog) => dialog.open)) {
+      throw new Error("ACT-R help dialog did not close");
+    }
+
+    await page.fill("#model-search", "categorize");
+    await page.waitForFunction(() => {
+      const visible = [...document.querySelectorAll("[data-model-id]")].filter((row) => {
+        const rect = row.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      return visible.length === 1 && visible[0].dataset.modelId === "unit8-categorize";
+    });
+    await page.fill("#model-search", "");
+
+    await page.click("#welcome-dismiss");
+    if (!(await page.locator("#welcome-card").isHidden())) {
+      throw new Error("welcome card did not dismiss");
+    }
+
     await selectModel("unit8-simple-ppm", "define-model test-ppm");
     if (!(await page.locator("#task-panel").isHidden())) {
       throw new Error("Simple PPM should not show a task panel");
@@ -151,6 +222,17 @@ async function main() {
     const simpleOutput = await page.inputValue("#output");
     if (!simpleOutput.includes("SMALL")) {
       throw new Error(`Simple PPM trace missing SMALL:\n${simpleOutput}`);
+    }
+    if (!(await page.locator("#panel-trace").isVisible())) {
+      throw new Error("generic model run should switch to the Trace tab");
+    }
+    const traceView = (await page.locator("#trace-view").textContent()) || "";
+    if (!traceView.includes("SMALL")) {
+      throw new Error(`colorized trace missing SMALL:\n${traceView}`);
+    }
+    const traceMeta = (await page.locator("#trace-meta").textContent()) || "";
+    if (traceMeta === "No run yet") {
+      throw new Error("trace metadata did not update");
     }
 
     await selectModel("unit8-semantic-dynamic", "define-model semantic");
