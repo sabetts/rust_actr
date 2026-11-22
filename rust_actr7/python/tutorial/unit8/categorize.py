@@ -1,3 +1,5 @@
+# Rust-port task override: tools/port_tutorial.py copies this file to
+# tutorial/unit8/categorize.py.
 """Python port of ACT-R:tutorial;unit8;categorize-model.lisp plus the categorize task."""
 
 from __future__ import annotations
@@ -152,6 +154,7 @@ def stimulus(a,b,c,d):
 
     offset = 0
     slots = ["eh", "es", "nl", "mh"]
+    _ensure_model_slots()
     result,response = trial(a,b,c,d)
     if response:
         return (result)
@@ -185,31 +188,20 @@ def attribute(name,value):
 # each item, reports the fit to the experimental data, and prints
 # out the proportion of choices for category 1.
 
-def experiment(n,new_offset=0,s1="eh",s2="es",s3="nl",s4="mh"):
-    global offset,slots
+def _ensure_model_slots():
+    global MODEL, _model_slots
 
-    if all(list(map(lambda x: isinstance(x,str),[s1,s2,s3,s4]))):
-        s1 = s1.lower()
-        s2 = s2.lower()
-        s3 = s3.lower()
-        s4 = s4.lower()
+    if tuple(slots) == _model_slots:
+        return
 
-        if s1 in [s2,s3,s4] or s2 in [s1,s3,s4] or s3 in [s1,s2,s4] or s4 in [s1, s2, s3]:
-            actr.print_warning("Duplicate slot names provided. Using default slots.")
-            slots = ["eh", "es", "nl", "mh"]
-        elif 'category' in [s1,s2,s3,s4]:
-            actr.print_warning("Slot named category cannot be used. Using default slots.")
-            slots = ["eh", "es", "nl", "mh"]
-        else:
-            slots=[s1,s2,s3,s4]
-    else:
-        actr.print_warning("Not all slot names provided are strings. Using default slots.")
-        slots = ["eh", "es", "nl", "mh"]
+    MODEL = actr.use(build(MODEL.seed))
+    actr.bind_module(globals(), MODEL)
+    _model_slots = tuple(slots)
+    create_example_memories()
 
-    if isinstance(new_offset,numbers.Number):
-        offset = new_offset
-    else:
-        offset = 0
+
+def _run_experiment(n):
+    global offset
 
     trials = len(cat_data)
 
@@ -241,6 +233,36 @@ def experiment(n,new_offset=0,s1="eh",s2="es",s3="nl",s4="mh"):
     for i in range(trials):
         print("%7.3f" % results[i],end="")
     print()
+
+
+def experiment(n,new_offset=0,s1="eh",s2="es",s3="nl",s4="mh"):
+    global offset,slots
+
+    if all(list(map(lambda x: isinstance(x,str),[s1,s2,s3,s4]))):
+        s1 = s1.lower()
+        s2 = s2.lower()
+        s3 = s3.lower()
+        s4 = s4.lower()
+
+        if s1 in [s2,s3,s4] or s2 in [s1,s3,s4] or s3 in [s1,s2,s4] or s4 in [s1, s2, s3]:
+            actr.print_warning("Duplicate slot names provided. Using default slots.")
+            slots = ["eh", "es", "nl", "mh"]
+        elif 'category' in [s1,s2,s3,s4]:
+            actr.print_warning("Slot named category cannot be used. Using default slots.")
+            slots = ["eh", "es", "nl", "mh"]
+        else:
+            slots=[s1,s2,s3,s4]
+    else:
+        actr.print_warning("Not all slot names provided are strings. Using default slots.")
+        slots = ["eh", "es", "nl", "mh"]
+
+    if isinstance(new_offset,numbers.Number):
+        offset = new_offset
+    else:
+        offset = 0
+
+    _ensure_model_slots()
+    _run_experiment(n)
 
 def do_experiment():
     category_one = []
@@ -291,13 +313,12 @@ def trial(*features):
 # running the experiment or alternate names were
 # not provided.
 
-_examples_loaded = False
+_examples_models = set()
 
 
 def create_example_memories():
 
-    global _examples_loaded
-    if _examples_loaded:
+    if MODEL in _examples_models:
         return
 
     for s in slots:
@@ -312,16 +333,17 @@ def create_example_memories():
         slots_for_chunk = {"category": 2, **dict(zip(slots, c))}
         actr.add_dm(actr.Chunk(f"example{len(cat1) + i}", "example", slots_for_chunk))
 
-    _examples_loaded = True
+    _examples_models.add(MODEL)
 
 actr.add_command("create-example-memories",create_example_memories,"Categorize task function to add the initial example chunks to simulate the training process.")
 
 # Load the model, then add the training examples once.  The `add-dm` RPC
 # command updates the model definition, so the chunks survive later resets.
+# Custom feature slot names rebuild the model and regenerate the examples.
 
 MODEL = actr.use(build())
-
 actr.bind_module(globals(), MODEL)
+_model_slots = tuple(slots)
 create_example_memories()
 
 

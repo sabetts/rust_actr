@@ -194,6 +194,38 @@ class Unit8Tests(unittest.TestCase):
         self.assertIsNone(module["experiment"](1))
         self.assertEqual(len(examples()), 10)
 
+    def test_categorize_offset_and_custom_slots(self):
+        module = load("unit8/categorize.py")
+        model = module["MODEL"]
+
+        # The hook subtracts the offset, so presenting a shifted value is
+        # equivalent to presenting the original value.
+        hook = module["size_similarities"]
+        hook_globals = getattr(hook, "__wrapped__", hook).__globals__
+        hook_globals["offset"] = 0.5
+        shifted = hook("small", 0.5)
+        hook_globals["offset"] = 0
+        self.assertAlmostEqual(shifted, hook("small", 0.0))
+
+        hook_globals["offset"] = 0.5
+        module["attribute"]("eh", 0.0)
+        self.assertAlmostEqual(model.chunk_slot_value("goal", "value"), 0.5)
+        hook_globals["offset"] = 0
+
+        # Changing slots rebuilds the current model and regenerates its
+        # examples.
+        module["experiment"](1, 0, "size", "shape", "texture", "color")
+        rebuilt = client.current_model()
+        self.assertIsNot(rebuilt, model)
+        self.assertEqual(rebuilt.chunk_slot_value("example0", "size"), "SMALL")
+        self.assertIsNone(rebuilt.chunk_slot_value("example0", "eh"))
+
+        # Invalid slot names fall back to the default feature slots.
+        module["experiment"](1, 0, "dup", "dup", "x", "y")
+        fallback = client.current_model()
+        self.assertEqual(fallback.chunk_slot_value("example0", "eh"), "SMALL")
+        self.assertIsNone(fallback.chunk_slot_value("example0", "size"))
+
     def test_simple_ppm_model(self):
         module = load("unit8/simple_ppm_model.py")
         _, trace = run_model(module, 0.5)

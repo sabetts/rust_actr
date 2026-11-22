@@ -102,7 +102,11 @@ def _bound(model: Any, function: Any) -> Any:
         try:
             return function(*args, **kwargs)
         finally:
-            _current = previous
+            # A nested ``use()`` may deliberately switch models (the
+            # categorize task rebuilds when its feature slots change); keep
+            # that replacement instead of restoring the stale model.
+            if _current is model:
+                _current = previous
 
     return wrapper
 

@@ -4,7 +4,9 @@
 Model-only modules build ``m = actr.Model(...)`` and run top to bottom.  A
 model with a vendored task script instead gets a ``build()`` function plus
 that task's code.  The modules are checked in and can be edited directly;
-re-run this script after changing a vendored source.
+re-run this script after changing a vendored source.  Tasks in
+``TASK_OVERRIDES`` are copied from ``tools/task_overrides/`` instead, for ports
+whose Rust API needs differ from the upstream task source.
 
 Usage:
     python tools/port_tutorial.py [--actr DIR]
@@ -559,6 +561,12 @@ TASK_DEFAULTS: dict[str, tuple[str | None, list]] = {
     "ul_issues": (None, []),
 }
 
+# Rust-port-only task modules that cannot be regenerated from the vendored
+# upstream task source.  The override is copied to tutorial/<unit>/<name>.py.
+TASK_OVERRIDES: dict[str, pathlib.Path] = {
+    "categorize": ROOT / "tools" / "task_overrides" / "categorize.py",
+}
+
 LOAD_MODEL_RE = re.compile(
     r"""actr\.load_act_r_model\s*\(\s*["']([^"']+)["']\s*\)"""
 )
@@ -765,9 +773,15 @@ def main() -> int:
         if task is not None:
             function, arguments = TASK_DEFAULTS.get(task.stem, (None, []))
             target = OUT / unit / f"{task.stem}.py"
-            source = task_module(
-                logical, name, body, productions, task, function, arguments
-            )
+            override = TASK_OVERRIDES.get(task.stem)
+            if override is not None:
+                if not override.is_file():
+                    raise SystemExit(f"missing task override: {override}")
+                source = override.read_text(encoding="utf-8")
+            else:
+                source = task_module(
+                    logical, name, body, productions, task, function, arguments
+                )
         else:
             target = OUT / unit / f"{model_stem_name(logical)}.py"
             source = model_only_module(logical, name, body, productions)
