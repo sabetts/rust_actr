@@ -112,4 +112,5 @@ export const subitizeTask = {
     },
   ],
   runSeconds: 30,
+  runTimeMode: "per-trial",
 };

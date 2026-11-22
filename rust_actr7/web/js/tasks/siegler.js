@@ -112,4 +112,5 @@ export const sieglerTask = {
     },
   ],
   runSeconds: 30,
+  runTimeMode: "per-trial",
 };

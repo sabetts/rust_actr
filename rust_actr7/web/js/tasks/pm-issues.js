@@ -78,4 +78,5 @@ export const pmIssuesTask = {
     },
   ],
   runSeconds: 10,
+  runTimeMode: "per-trial",
 };

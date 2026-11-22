@@ -133,7 +133,12 @@ are:
 - Choice: model or human mode, model runs, and visible-window toggle
 
 Controls initialize to task defaults and are disabled while a task runs.
-Switching tasks restores the values last used for that task.
+Switching tasks restores the values last used for that task. Controls can be
+hidden when the selected task mode does not use them.
+
+The global run-time input follows the selected task. It is labeled "Trial
+time" when the value applies to each trial, and is hidden for tasks with fixed
+trial timing, such as 1-Hit Blackjack and Choice.
 
 ## Notes
 

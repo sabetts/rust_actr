@@ -386,6 +386,7 @@ async function onehit(actr, ctx) {
 export const onehitTask = {
   run: onehit,
   prelude: NUMERIC_SIM_HOOK,
+  runTimeMode: "unused",
   controls: [
     {
       id: "mode",

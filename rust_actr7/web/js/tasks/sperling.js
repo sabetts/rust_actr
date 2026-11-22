@@ -99,4 +99,5 @@ export const sperlingTask = {
     { id: "blocks", label: "Blocks", type: "number", min: 1, max: 5, step: 1, default: 1 },
   ],
   runSeconds: 30,
+  runTimeMode: "per-trial",
 };

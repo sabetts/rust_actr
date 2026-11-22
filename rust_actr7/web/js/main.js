@@ -16,6 +16,26 @@ function taskDescriptor(model) {
   return model?.task ? TASKS[model.task] || null : null;
 }
 
+function runTimeModeFor(model) {
+  const descriptor = taskDescriptor(model);
+  if (!descriptor) return "used";
+  const mode = descriptor.runTimeMode;
+  if (typeof mode === "function") {
+    return mode(controlStateFor(model.task, descriptor)) || "used";
+  }
+  return mode || "used";
+}
+
+function updateRunTimeControl(model = selectedModel) {
+  const mode = runTimeModeFor(model);
+  const wrapper = $("run-time-control");
+  const note = $("run-time-note");
+  const label = $("run-time-label");
+  wrapper.hidden = mode === "unused";
+  note.hidden = mode !== "unused";
+  label.textContent = mode === "per-trial" ? "Trial time (s)" : "Run time (s)";
+}
+
 function updateRunButton() {
   $("run").disabled = !(wasm && modelReady);
 }
@@ -78,6 +98,7 @@ function syncTaskControlVisibility(taskId, descriptor) {
     const control = descriptor?.controls?.find((item) => item.id === wrapper.dataset.controlId);
     if (control) wrapper.hidden = !controlApplies(control, values);
   }
+  if (selectedModel) updateRunTimeControl(selectedModel);
 }
 
 function renderTaskControls(taskId, descriptor) {
@@ -179,6 +200,7 @@ function showTaskPanel(model) {
   if (descriptor?.runSeconds != null) {
     $("secs").value = String(descriptor.runSeconds);
   }
+  updateRunTimeControl(model);
 }
 
 function progress(text) {

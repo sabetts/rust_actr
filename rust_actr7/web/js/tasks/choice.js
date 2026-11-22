@@ -258,4 +258,5 @@ export const choiceTask = {
     },
   ],
   runSeconds: 5,
+  runTimeMode: "unused",
 };

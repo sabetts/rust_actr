@@ -182,10 +182,12 @@ export const fanTask = {
   run: (actr, ctx) => fan(actr, ctx, false),
   controls,
   runSeconds: 30,
+  runTimeMode: "per-trial",
 };
 
 export const fanNoPmTask = {
   run: (actr, ctx) => fan(actr, ctx, true),
   controls,
   runSeconds: 30,
+  runTimeMode: "per-trial",
 };

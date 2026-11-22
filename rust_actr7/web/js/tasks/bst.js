@@ -297,4 +297,5 @@ export const bstTask = {
     },
   ],
   runSeconds: 60,
+  runTimeMode: (values) => (values.mode === "human" ? "unused" : "per-trial"),
 };

@@ -77,6 +77,6 @@ async function assignment(actr, ctx) {
 }
 
 export const unit2Tasks = {
-  "unit2-demo2": { run: demo2, controls: [], runSeconds: 10 },
-  "unit2-assignment": { run: assignment, controls: [], runSeconds: 10 },
+  "unit2-demo2": { run: demo2, controls: [], runSeconds: 10, runTimeMode: "per-trial" },
+  "unit2-assignment": { run: assignment, controls: [], runSeconds: 10, runTimeMode: "per-trial" },
 };
