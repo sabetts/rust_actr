@@ -1,7 +1,7 @@
 # ACT-R in the browser
 
 A static browser page that runs the Rust ACT-R engine as WebAssembly. It loads
-canonical tutorial model source and drives Units 1-5 through a browser AGI
+canonical tutorial model source and drives Units 1-6 through a browser AGI
 runtime.
 
 ## Build + run
@@ -71,6 +71,11 @@ The menu is generated from `web/models/manifest.json`.
 - `actr7.x/tutorial/unit5/1hit-blackjack-model.lisp` - 1-Hit Blackjack (starter)
 - `actr7.x/tutorial/unit5/declarative-issues.lisp` - Declarative Issues
 
+### Unit 6
+
+- `actr7.x/tutorial/unit6/bst-model.lisp` - Building Sticks
+- `actr7.x/tutorial/unit6/choice-model.lisp` - Choice (starter)
+
 The canonical model sources stay in `actr7.x/tutorial/`; the `web/models/` copies
 are generated and ignored by git. Selecting a model replaces the textarea
 contents; it does not run automatically. Declarative Issues has no task panel;
@@ -89,7 +94,7 @@ in `rust_actr7/python`:
 - `web/js/agi-window.js` - HTML visible-window renderer for AGI text, buttons,
   lines, images, attention, and cursor events.
 - `web/js/tasks/unit2.js`, `sperling.js`, `pm-issues.js`, `subitize.js`,
-  `fan.js`, `grouped.js`, `siegler.js`, `onehit.js` - JS ports of the tutorial
+  `fan.js`, `grouped.js`, `siegler.js`, `onehit.js`, `bst.js`, `choice.js` - JS ports of the tutorial
   experiment code.
 - `web/js/tasks/index.js` - task registry with controls and default run times.
 - `web/js/main.js` - model menu, editor, task controls, reports, and run wiring.
@@ -118,6 +123,8 @@ are:
 - Fan / Fan no PM: both retrieval terms, person only, or location only
 - Siegler: number of sets (10 by default)
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
+- Building Sticks: report, visible demo, or human mode; report runs and demo problem
+- Choice: model or human mode, model runs, and visible-window toggle
 
 Controls initialize to task defaults and are disabled while a task runs.
 Switching tasks restores the values last used for that task.
@@ -139,14 +146,19 @@ Switching tasks restores the values last used for that task.
 - 1-Hit Blackjack can run automated learning blocks or a human-vs-model game.
   The play mode supports Hit/Stay buttons and the `h`/`s` keys, with a Stay
   fallback on timeout. The default deck and opponent are the tutorial defaults.
+- Building Sticks runs its model experiment in JS so the browser does not
+  depend on the engine's test-only native BST driver. Report mode uses 100 runs
+  by default; demo and human modes use the tutorial demo problems.
+- Choice is a starter harness: the empty model produces no responses until
+  productions are added. Human mode accepts `h`/`t` keys.
 - The engine is deterministic given the seed, so equal inputs give equal traces.
 
 ## Limits
 
 - Task Lisp/Python is translated to JS; arbitrary Lisp task evaluation is not
   supported. A task can prepend a small support `defun` for a model hook.
-- Human interaction is implemented for 1-Hit Blackjack only; other tasks run
-  models only.
+- Human interaction is implemented for 1-Hit Blackjack, Building Sticks, and
+  Choice; other tasks run models only.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
 - Runs happen on the browser main thread. Stepped runs yield for repaints, but
@@ -156,4 +168,8 @@ Switching tasks restores the values last used for that task.
 - 1-Hit Blackjack uses the default tutorial deck and opponent. Alternate decks
   and the stacked `game1` scenario are not exposed in the UI.
 - The Tutor starter model is intentionally incomplete, Broken Addition is
-  intentionally broken, and the 1-Hit Blackjack starter learns poorly.
+  intentionally broken, and the 1-Hit Blackjack and Choice starters are not
+  tutorial solutions.
+- Tutorial/regression experiment drivers in the Rust engine are test oracles,
+  not browser features. See `planning/TUTORIAL-TEST-DRIVERS.md` for the cleanup
+  backlog.

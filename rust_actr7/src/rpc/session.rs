@@ -1,4 +1,4 @@
-﻿//! RPC session: the command registry plus driving the Rust engine in response
+//! RPC session: the command registry plus driving the Rust engine in response
 //! to `evaluate <name> <args>` calls from a client.
 //!
 //! The registry mirrors ACT-R's `dispatcher-command-table`
@@ -3530,6 +3530,22 @@ impl Session {
                 if let Some(eng) = &mut self.engine {
                     eng.modify_window_line(&key, start, end, color);
                 }
+                let model = self.current_model.clone().unwrap_or_default();
+                let title = self.vwin_title();
+                self.vwin_send_to(
+                    &model,
+                    &[
+                        Json::Str("modifyline".into()),
+                        Json::Str(title),
+                        Json::Str(key),
+                        Json::Int(start.0),
+                        Json::Int(start.1),
+                        Json::Int(end.0),
+                        Json::Int(end.1),
+                        color.map(|c| Json::Str(c.into())).unwrap_or(Json::Null),
+                    ],
+                    remote,
+                );
                 Ok(vec![Json::Null])
             }
             "install-device" => {
@@ -3544,7 +3560,13 @@ impl Session {
                 Ok(vec![Json::Null])
             }
             "visible-virtuals-available?" => Ok(vec![Json::Bool(!self.vwin_handlers.is_empty())]),
-            "start-hand-at-mouse" | "process-events" => Ok(vec![Json::Null]),
+            "start-hand-at-mouse" => {
+                if let Some(eng) = &mut self.engine {
+                    eng.start_hand_at_mouse();
+                }
+                Ok(vec![Json::Null])
+            }
+            "process-events" => Ok(vec![Json::Null]),
             // Window key presses are forwarded by the Environment; the Rust
             // Window key presses are forwarded by the Environment; the Rust
             // task layer has no Lisp output-key handler to invoke, so accept

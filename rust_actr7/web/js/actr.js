@@ -1,4 +1,4 @@
-﻿const encoder = new TextEncoder();
+const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function first(values) {
@@ -196,12 +196,13 @@ export class Actr {
     return first(this.eval("buffer-slot-value", buffer, slot));
   }
 
-  async run(seconds) {
+  async run(seconds, options = {}) {
     if (this.commands.size === 0 && this.monitors.size === 0) {
       this.eval("run", seconds);
       return;
     }
 
+    const paint = options.paint !== false;
     const begin = this.session.runBegin("run", seconds);
     this.drain();
     if (!begin.shouldRun) return;
@@ -209,7 +210,7 @@ export class Actr {
     for (;;) {
       const more = this.session.runChunk(begin.limit, begin.full, 1);
       const state = this.drain();
-      if (state.painted) await nextPaint();
+      if (paint && state.painted) await nextPaint();
       if (!more && state.handled === 0) break;
     }
   }
@@ -263,6 +264,28 @@ export class Actr {
     );
   }
 
+  addButtonToExpWindow(window, options = {}) {
+    return first(this.eval(
+      "add-button-to-exp-window",
+      window || this.currentWindow || "",
+      optionPairs(options)
+    ));
+  }
+
+  addLineToExpWindow(window, start, end, color = "black") {
+    return first(this.eval(
+      "add-line-to-exp-window",
+      window || this.currentWindow || "",
+      start,
+      end,
+      color
+    ));
+  }
+
+  modifyLineForExpWindow(key, start, end, color = null) {
+    return this.eval("modify-line-for-exp-window", key, start, end, color);
+  }
+
   removeItemsFromExpWindow(window, ...items) {
     return this.eval(
       "remove-items-from-exp-window",
@@ -273,6 +296,14 @@ export class Actr {
 
   installDevice(device = null) {
     return this.eval("install-device", device ?? this.currentWindow ?? "");
+  }
+
+  startHandAtMouse() {
+    return this.eval("start-hand-at-mouse");
+  }
+
+  productionUtility(name, key = ":u") {
+    return first(first(first(this.eval("spp", name, key))));
   }
 
   visibleVirtualsAvailable() {

@@ -3655,6 +3655,12 @@ impl Engine {
 
     /// `(start-hand-at-mouse)` (`mouse.lisp:554`): put the right hand at the
     /// mouse cursor's current position.
+    pub fn start_hand_at_mouse(&mut self) {
+        self.zz_start_hand_at_mouse();
+    }
+
+    /// `(start-hand-at-mouse)` (`mouse.lisp:554`): put the right hand at the
+    /// mouse cursor's current position.
     pub(super) fn zz_start_hand_at_mouse(&mut self) {
         let (mx, my) = self.zz_mouse_cursor;
         self.zz_hands[1].loc = (mx, my);

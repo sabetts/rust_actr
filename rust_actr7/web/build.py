@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 import argparse
 import json
 import shutil
@@ -73,6 +73,15 @@ MODEL_GROUPS = (
                 "onehit",
             ),
             ("declarative-issues", "Declarative Issues", "declarative-issues.lisp", None),
+        ),
+    },
+    {
+        "id": "unit6",
+        "label": "Unit 6",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit6",
+        "models": (
+            ("bst", "Building Sticks", "bst-model.lisp", "bst"),
+            ("choice", "Choice (starter)", "choice-model.lisp", "choice"),
         ),
     },
 )

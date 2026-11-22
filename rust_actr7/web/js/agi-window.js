@@ -5,6 +5,8 @@ export class AgiWindow {
     this.surface = root.querySelector(".agi-surface");
     this.items = new Map();
     this.markers = new Map();
+    this.onButton = null;
+    this.headless = false;
     this.reset();
   }
 
@@ -21,6 +23,10 @@ export class AgiWindow {
   handle(args) {
     if (!Array.isArray(args) || !args.length) return;
     const [op] = args;
+    if (this.headless) {
+      if (op === "open") this.root.hidden = true;
+      return;
+    }
     switch (op) {
       case "open":
         this.open(args[1], args[2], args[3], args[4], args[5]);
@@ -42,6 +48,9 @@ export class AgiWindow {
         break;
       case "line":
         this.line(args[2], args[3], args[4], args[5], args[6], args[7]);
+        break;
+      case "modifyline":
+        this.modifyLine(args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
         break;
       case "image":
         this.image(args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
@@ -100,6 +109,9 @@ export class AgiWindow {
     element.style.width = `${Number(width) || 75}px`;
     element.style.height = `${Number(height) || 20}px`;
     element.style.background = String(color || "gray");
+    element.addEventListener("click", () => {
+      if (this.onButton) this.onButton(String(name ?? ""), String(text ?? ""));
+    });
     this.addItem(name, element);
   }
 
@@ -118,6 +130,34 @@ export class AgiWindow {
     element.style.background = String(color || "black");
     element.style.transform = `rotate(${angle}rad)`;
     this.addItem(name, element);
+  }
+
+  modifyLine(name, x1, y1, x2, y2, color) {
+    const element = this.items.get(String(name ?? ""));
+    if (!element) return;
+    const left = Math.min(Number(x1) || 0, Number(x2) || 0);
+    const top = Math.min(Number(y1) || 0, Number(y2) || 0);
+    const dx = (Number(x2) || 0) - (Number(x1) || 0);
+    const dy = (Number(y2) || 0) - (Number(y1) || 0);
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+    element.style.width = `${Math.hypot(dx, dy)}px`;
+    element.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+    if (color != null && color !== "") element.style.background = String(color);
+  }
+
+  modifyLine(name, x1, y1, x2, y2, color) {
+    const element = this.items.get(String(name ?? ""));
+    if (!element) return;
+    const left = Math.min(Number(x1) || 0, Number(x2) || 0);
+    const top = Math.min(Number(y1) || 0, Number(y2) || 0);
+    const dx = (Number(x2) || 0) - (Number(x1) || 0);
+    const dy = (Number(y2) || 0) - (Number(y1) || 0);
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+    element.style.width = `${Math.hypot(dx, dy)}px`;
+    element.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+    if (color != null && color !== "") element.style.background = String(color);
   }
 
   image(name, x, y, file, width, height) {

@@ -1,4 +1,4 @@
-﻿import { Actr, loadWasm, nextPaint } from "./actr.js";
+import { Actr, loadWasm, nextPaint } from "./actr.js";
 import { AgiWindow } from "./agi-window.js";
 import { TASKS } from "./tasks/index.js";
 
@@ -39,6 +39,8 @@ function summaryText(result) {
   }
   if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
+  if (result.kind === "bst") return "Building Sticks: experiment complete";
+  if (result.kind === "choice") return "Choice: experiment complete";
   if (result.kind === "onehit") {
     return result.mode === "play" ? "1-Hit Blackjack: played against model" : "1-Hit Blackjack: learning run complete";
   }
