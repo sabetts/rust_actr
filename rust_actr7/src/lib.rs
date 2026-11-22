@@ -30,10 +30,10 @@ pub mod rand;
 pub mod rpc;
 pub mod sexpr;
 pub mod trace;
-pub mod web_session;
 /// WebAssembly entry points (compiled only for `wasm32-unknown-unknown`).
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
+pub mod web_session;
 
 pub use engine::module::{
     BufferSpec, ChunkTypeSpec, Module, ModuleCtx, ModuleDescriptor, ModuleError, ModuleEvent,

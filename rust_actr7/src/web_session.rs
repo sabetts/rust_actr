@@ -29,7 +29,10 @@ impl Remote for WebRemote {
         }
         self.events.push(Json::Obj(vec![
             ("type".into(), Json::Str("window".into())),
-            ("model".into(), model.map(|m| Json::Str(m.into())).unwrap_or(Json::Null)),
+            (
+                "model".into(),
+                model.map(|m| Json::Str(m.into())).unwrap_or(Json::Null),
+            ),
             ("args".into(), Json::Arr(args)),
         ]));
         Ok(vec![Json::Bool(true)])
@@ -198,9 +201,9 @@ mod tests {
                 &[
                     Json::Str("Letter recognition".into()),
                     Json::Str(text.into()),
-                    Json::Obj(vec![
-                        ("x".into(), Json::Int(125)),
-                        ("y".into(), Json::Int(150)),
+                    Json::Arr(vec![
+                        Json::Arr(vec![Json::Str("x".into()), Json::Int(125)]),
+                        Json::Arr(vec![Json::Str("y".into()), Json::Int(150)]),
                     ]),
                 ],
             )
@@ -214,5 +217,6 @@ mod tests {
         assert!(events.contains("output-key DEMO2 v"), "{events}");
         assert!(events.contains("Letter recognition"), "{events}");
         assert!(events.contains("\"text\""), "{events}");
+        assert!(events.contains("125,150"), "{events}");
     }
 }

@@ -130,7 +130,10 @@ pub unsafe extern "C" fn session_load_source(src_ptr: *const u8, len: usize) -> 
             0
         }
         Err(e) => {
-            set_result(&format!("{{\"ok\":false,\"error\":{}}}", Json::Str(e).write()));
+            set_result(&format!(
+                "{{\"ok\":false,\"error\":{}}}",
+                Json::Str(e).write()
+            ));
             1
         }
     }
