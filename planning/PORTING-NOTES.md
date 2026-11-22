@@ -6556,3 +6556,38 @@ Verification:
 - Browser: `cd rust_actr7/web && npm run test:e2e` (Playwright/Chromium).
 - `.github/workflows/web.yml` builds the wasm, runs the Node and browser
   tests, and deploys `_site` to GitHub Pages from `main`.
+
+## 375. Categorize offset and custom feature slots
+
+The tutorial task's `categorize-experiment` accepts an offset and four feature
+slot names. Both Rust ports now support them.
+
+Python:
+
+- `create_example_memories` is keyed by the current model object instead of a
+  one-shot boolean, so examples can be regenerated for a new slot set.
+- `experiment(n, new_offset, s1..s4)` validates the slots like the tutorial
+  (four, unique, not `category`; otherwise defaults) and rebuilds the model
+  with `actr.use(build(MODEL.seed))` plus `bind_module` when the slots change.
+  Offset-only runs reuse the model.
+- `_ensure_model_slots`/`_run_experiment` are underscore helpers so
+  `bind_module` does not wrap them; the facade's `_bound` wrapper now keeps a
+  nested `use()` replacement instead of restoring the stale model.
+- `tutorial/unit8/categorize.py` is generated from
+  `tools/task_overrides/categorize.py`; `port_tutorial.py` copies the override
+  instead of regenerating the task from upstream.
+
+Web:
+
+- `main.js` reads controls before loading the model and resolves a
+  `descriptor.prelude` function with those controls.
+- Categorize exposes runs, offset, and four text slot controls. The prelude
+  regenerates the example chunks for the chosen slots; `size-similarities`
+  subtracts the offset and `attribute` adds it. Invalid/duplicate slots fall
+  back to `eh/es/nl/mh` with a report warning.
+- Added a `text` control type and input styling.
+
+Verification: Python **91 passed**; Node `unit8_test.mjs` covers default,
+custom-slot/offset, and invalid-slot fallback categorize runs; the Playwright
+test drives the new controls. The categorize model remains a starter, so the
+report still shows no category responses until the protected solution is added.

@@ -211,7 +211,7 @@ are:
 - Past Tense: trial count and block size
 - Utility Learning Issues: uses the global run-time field
 - Production Compilation Issues: games and compilation toggle
-- Categorize: experiment runs
+- Categorize: experiment runs, offset, and four feature slot names
 - Semantic Network: question (`g1`, `g2`, `g3`, or all)
 
 Controls initialize to task defaults and are disabled while a task runs.
@@ -273,8 +273,10 @@ input is disabled and a help tooltip explains why.
 - Categorize is the Unit 8 starter: its model has no productions. The task
   prelude creates the example memories and supplies the Gaussian
   `size-similarities` hook, so the report shows the empty response columns and
-  explains that no category responses are expected. It uses the default feature
-  slots (`eh`, `es`, `nl`, `mh`) and zero offset.
+  explains that no category responses are expected. It accepts the tutorial's
+  offset and alternate feature slot names; invalid or duplicate slots fall
+  back to `eh`, `es`, `nl`, `mh` with a report warning, and the example
+  memories are regenerated for the chosen slots.
 - The engine is deterministic given the seed, so equal inputs give equal traces.
 
 ## Limits

@@ -156,8 +156,10 @@ its vendored `.ref`. Protected solution models (Zbrodoff, choice, categorize,
 subitize) remain unavailable upstream.
 
 The categorize starter creates its 10 example chunks from the task after load
-because model-body `call-act-r-command` only resolves Lisp defuns; custom
-feature slot names are not recreated.
+because model-body `call-act-r-command` only resolves Lisp defuns.
+`categorize.experiment` supports the tutorial's offset and alternate feature
+slot names; changing slots rebuilds the model and regenerates the examples.
+The checked-in module is copied from `tools/task_overrides/categorize.py`.
 
 ### 3.4 Tutorial notebooks
 
@@ -236,6 +238,7 @@ semantics (which continue to use `chunk_name_slot`).
 | `rust_actr7/python/python/rust_actr/actr.py` | tutorial `actr` façade (`use`, `clear_state`) |
 | `rust_actr7/python/tutorial/` | self-contained tutorial model/task scripts and notebooks |
 | `rust_actr7/python/tools/port_tutorial.py` | model/task port generator |
+| `rust_actr7/python/tools/task_overrides/categorize.py` | hand-maintained categorize task source copied by the generator |
 | `rust_actr7/python/tools/port_notebooks.py` | notebook port generator |
 | `rust_actr7/python/tools/run_notebook.py` | headless notebook executor |
 | `rust_actr7/python/tests/test_model.py` | builder/runtime/device unit tests |
@@ -294,7 +297,7 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **90 tests passing**. It covers:
+Current Python suite: **91 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices
@@ -307,6 +310,7 @@ Current Python suite: **90 tests passing**. It covers:
 - `zbrodoff` set/block
 - `bst-ppm` live task
 - categorize example-memory creation
+- categorize offset and custom-slot regeneration
 - per-unit smoke coverage for every ported unit 1-8 model/task script
   (`tests/test_tutorial_units.py`)
 - notebook reload/rebind and history helpers
@@ -343,8 +347,9 @@ sources and the environment-gated RPC test.
    are modeled, but no waveform/voice playback is produced.
 5. **Protected/starting models.** `choice` and the full `categorize` solution
    are not available upstream; `subitize`/unit2 assignment are starting models.
-   The categorize starter creates its 10 example memories from the task; only
-   the protected solution productions are missing.
+   The categorize starter creates its 10 example memories from the task and
+   supports offset/custom feature slots; only the protected solution productions
+   are missing.
 6. **Performance.** The JSON command bridge and one-event stepping are chosen
    for correctness; a typed bridge or batched stepping would be useful for
    large experiments.
@@ -400,3 +405,4 @@ sources and the environment-gated RPC test.
 - `0a7cec8` python: expose ppm-hook callback and bind pending hooks
 - `0ab3f25` python: add categorize example memories from the task
 - `6c52ee5` test: cover embedder hooks and host actions
+- `fb5d3d3` python: support categorize offsets and custom slots

@@ -266,7 +266,12 @@ Port status:
   Python `imaginal-action` callbacks are bridged through a host-yield step.
 - The Rust engine resolves model-body `call-act-r-command` forms through Lisp
   defuns only. `categorize` therefore adds its example chunks from the task
-  after the model loads; custom feature slot names are not recreated.
+  after the model loads. `categorize.experiment` also supports the tutorial's
+  offset and alternate feature slot names; changing the slots rebuilds the
+  model and regenerates the examples.
+- `tutorial/unit8/categorize.py` is a hand-maintained Rust-port override
+  (`tools/task_overrides/categorize.py`); `port_tutorial.py` copies it instead
+  of regenerating it from the upstream task.
 - Starting models (no/partial productions by design): unit2 assignment,
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
