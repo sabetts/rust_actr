@@ -32,7 +32,10 @@ parameter the engine silently accepts are invisible to the default suite.
 - **Task logic outside the engine.** 67 cases replay task RNG with
   `ConsumeRng`, 9 use recovered `.spec` drivers, and 14 use device sidecars.
   This is intentional for external task code, but it means task-RNG and device
-  ordering are not what those cases exercise.
+  ordering are not what those cases exercise. The tutorial experiment drivers
+  embedded in `src/engine` are tracked separately in
+  `planning/TUTORIAL-TEST-DRIVERS.md`; they are test oracles and should be
+  feature-gated out of production builds.
 - **Trace-limited observation.** 86 case files use filtered hooks (148
   explicit `trace(false)` calls), 22 model fixtures set `:v nil`, and only
   about 179 engine case files touch `:ACT` at all. `sdp` prints three
