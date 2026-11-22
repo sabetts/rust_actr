@@ -2,7 +2,8 @@
 
 A static browser page that runs the Rust ACT-R engine as WebAssembly. It loads
 canonical tutorial model source and drives Units 1-8 through a browser AGI
-runtime.
+runtime. The page is designed as a first-time tour of ACT-R: pick a model, run
+it, and read the trace or experiment window.
 
 ## Build + run
 
@@ -56,10 +57,44 @@ npm run test:e2e
 
 The `.github/workflows/web.yml` workflow builds the wasm, runs the Node and
 browser smoke tests on pull requests, and deploys the page to GitHub Pages from
-`main`. Enable it once under Settings -> Pages -> Build and deployment ->
-Source: GitHub Actions. The deployed site is the project's Pages URL (for
-example `https://<owner>.github.io/<repo>/`); all fetches are relative, so it
-works under that subpath.
+`main`. The Pages staging step copies `index.html`, `css/`, `js/`, `models/`,
+and `actr_engine.wasm`, so keep new static assets in one of those directories
+and add them to the workflow if you introduce another top-level folder. Enable
+Pages once under Settings -> Pages -> Build and deployment -> Source: GitHub
+Actions. The deployed site is the project's Pages URL (for example
+`https://<owner>.github.io/<repo>/`); all fetches are relative, so it works
+under that subpath.
+
+## Page UI
+
+The page is a no-build, dependency-free app shell over the same wasm model
+runner:
+
+- **Model browser** (`web/js/catalog.js`): searchable Units 1-8 with unit
+  blurbs, per-model descriptions, and `Starter`, `Solution`, `Broken`, and
+  `Demo` badges. A hidden native `<select id="model-preset">` stays populated
+  for compatibility and test selectors.
+- **Run bar**: sticky across the top of the page, with run time, seed pair
+  under "Seed & advanced", live status pill, Run, and Cancel.
+- **Workspace tabs**: `Task` (task models only), `Model source`, and `Trace`.
+  Task models open on the Task tab; trace-only models open on the source and
+  switch to the trace when run.
+- **Model source**: line-number gutter, lightweight Lisp syntax highlighting,
+  and a production/chunk outline that jumps to a form. `Reset` restores the
+  loaded source and `Copy` copies it.
+- **Trace**: colorized timestamps, modules, events, output, warnings, and
+  errors; filter, wrap/follow toggles, copy, and save. The raw trace stays in
+  the hidden `#output` textarea for tooling and tests.
+- **First-run guidance**: a dismissible welcome card, an "What is ACT-R?"
+  dialog with a short workflow and glossary, and inline help for seeds and
+  fixed-timing tasks.
+- **Theme and accessibility**: light/dark theme persisted in `localStorage`,
+  keyboard tabs, visible focus rings, reduced-motion support, and a sticky run
+  bar that keeps the primary action reachable on mobile.
+
+Keyboard shortcuts: `Ctrl`/`Cmd` + `Enter` runs the model, `Ctrl`/`Cmd` + `K`
+focuses the model search, and `Ctrl`/`Cmd` + `F` filters the trace when the
+trace tab is open. `Esc` closes dialogs.
 
 ## Models
 
