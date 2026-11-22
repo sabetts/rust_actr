@@ -183,6 +183,22 @@ export class Actr {
     return this.eval("reset");
   }
 
+  setParameterValue(key, value) {
+    return this.eval("set-parameter-value", key, value);
+  }
+
+  setBufferChunk(buffer, spec) {
+    return this.eval("set-buffer-chunk", buffer, chunkSpec(spec));
+  }
+
+  clearBuffer(buffer) {
+    return this.eval("clear-buffer", buffer);
+  }
+
+  defineChunks(...names) {
+    return this.eval("define-chunks", ...names.map((name) => [name]));
+  }
+
   pdisable(...names) {
     return this.eval("pdisable", ...names);
   }

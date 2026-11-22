@@ -5,6 +5,11 @@ import { sieglerTask } from "./siegler.js";
 import { onehitTask } from "./onehit.js";
 import { bstTask } from "./bst.js";
 import { choiceTask } from "./choice.js";
+import { pairedTask } from "./paired.js";
+import { zbrodoffTask } from "./zbrodoff.js";
+import { pastTenseTask } from "./past-tense.js";
+import { ulIssuesTask } from "./ul-issues.js";
+import { pcompIssuesTask } from "./pcomp-issues.js";
 import { sperlingTask } from "./sperling.js";
 import { pmIssuesTask } from "./pm-issues.js";
 import { subitizeTask } from "./subitize.js";
@@ -21,4 +26,9 @@ export const TASKS = {
   onehit: onehitTask,
   bst: bstTask,
   choice: choiceTask,
+  paired: pairedTask,
+  zbrodoff: zbrodoffTask,
+  "past-tense": pastTenseTask,
+  "ul-issues": ulIssuesTask,
+  "pcomp-issues": pcompIssuesTask,
 };

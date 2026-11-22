@@ -58,6 +58,20 @@ MODEL_GROUPS = (
         ),
     },
     {
+        "id": "unit4",
+        "label": "Unit 4",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit4",
+        "models": (
+            ("paired", "Paired Associate", "paired-model.lisp", "paired"),
+            (
+                "zbrodoff",
+                "Alpha-Arithmetic (starter)",
+                "zbrodoff-model.lisp",
+                "zbrodoff",
+            ),
+        ),
+    },
+    {
         "id": "unit5",
         "label": "Unit 5",
         "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit5",
@@ -82,6 +96,32 @@ MODEL_GROUPS = (
         "models": (
             ("bst", "Building Sticks", "bst-model.lisp", "bst"),
             ("choice", "Choice (starter)", "choice-model.lisp", "choice"),
+        ),
+    },
+    {
+        "id": "unit7",
+        "label": "Unit 7",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit7",
+        "models": (
+            (
+                "paired-learning",
+                "Paired Associate Learning",
+                "paired-learning-model.lisp",
+                "paired",
+            ),
+            ("past-tense", "Past Tense (starter)", "past-tense-model.lisp", "past-tense"),
+            (
+                "utility-learning-issues",
+                "Utility Learning Issues",
+                "utility-learning-issues-model.lisp",
+                "ul-issues",
+            ),
+            (
+                "production-compilation-issues",
+                "Production Compilation Issues (starter)",
+                "production-compilation-issues-model.lisp",
+                "pcomp-issues",
+            ),
         ),
     },
 )

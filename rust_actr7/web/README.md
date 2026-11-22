@@ -1,7 +1,7 @@
 # ACT-R 7 Tutorial Models
 
 A static browser page that runs the Rust ACT-R engine as WebAssembly. It loads
-canonical tutorial model source and drives Units 1-6 through a browser AGI
+canonical tutorial model source and drives Units 1-7 through a browser AGI
 runtime.
 
 ## Build + run
@@ -62,6 +62,11 @@ The menu is generated from `web/models/manifest.json`.
 - `actr7.x/tutorial/unit3/perceptual-motor-issues-model.lisp` - Perceptual-Motor Issues
 - `actr7.x/tutorial/unit3/subitize-model.lisp` - Subitize (starter)
 
+### Unit 4
+
+- `actr7.x/tutorial/unit4/paired-model.lisp` - Paired Associate
+- `actr7.x/tutorial/unit4/zbrodoff-model.lisp` - Alpha-Arithmetic (starter)
+
 ### Unit 5
 
 - `actr7.x/tutorial/unit5/fan-model.lisp` - Fan Effect
@@ -75,6 +80,17 @@ The menu is generated from `web/models/manifest.json`.
 
 - `actr7.x/tutorial/unit6/bst-model.lisp` - Building Sticks
 - `actr7.x/tutorial/unit6/choice-model.lisp` - Choice (starter)
+
+### Unit 7
+
+- `actr7.x/tutorial/unit7/paired-learning-model.lisp` - Paired Associate Learning
+- `actr7.x/tutorial/unit7/past-tense-model.lisp` - Past Tense (starter)
+- `actr7.x/tutorial/unit7/utility-learning-issues-model.lisp` - Utility Learning Issues
+- `actr7.x/tutorial/unit7/production-compilation-issues-model.lisp` - Production Compilation Issues (starter)
+
+Unit 4 and Unit 7 use separate paired-associate models but share the same JS
+task implementation. The Unit 7 model starts by clearing the loaded Unit 4
+model and substituting its own productions; the experiment task is unchanged.
 
 The canonical model sources stay in `actr7.x/tutorial/`; the `web/models/` copies
 are generated and ignored by git. Selecting a model replaces the textarea
@@ -94,8 +110,9 @@ in `rust_actr7/python`:
 - `web/js/agi-window.js` - HTML visible-window renderer for AGI text, buttons,
   lines, images, attention, and cursor events.
 - `web/js/tasks/unit2.js`, `sperling.js`, `pm-issues.js`, `subitize.js`,
-  `fan.js`, `grouped.js`, `siegler.js`, `onehit.js`, `bst.js`, `choice.js` - JS ports of the tutorial
-  experiment code.
+  `paired.js`, `zbrodoff.js`, `fan.js`, `grouped.js`, `siegler.js`,
+  `onehit.js`, `bst.js`, `choice.js`, `past-tense.js`, `ul-issues.js`,
+  `pcomp-issues.js` - JS ports of the tutorial experiment code.
 - `web/js/tasks/index.js` - task registry with controls and default run times.
 - `web/js/main.js` - model menu, editor, task controls, reports, and run wiring.
 
@@ -131,6 +148,11 @@ are:
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
 - Building Sticks: report, visible demo, or human mode; report runs and demo problem
 - Choice: model or human mode, model runs, and visible-window toggle
+- Paired Associate: model or human mode, pairs, blocks, runs, and model trace
+- Alpha-Arithmetic: experiment, block, set, or single-problem mode; experiment runs and problem fields
+- Past Tense: trial count and block size
+- Utility Learning Issues: uses the global run-time field
+- Production Compilation Issues: games and compilation toggle
 
 Controls initialize to task defaults and are disabled while a task runs.
 Switching tasks restores the values last used for that task. Controls can be
@@ -138,8 +160,9 @@ hidden when the selected task mode does not use them.
 
 The global run-time input follows the selected task. It is labeled "Trial
 time" when the value applies to each trial. For tasks with fixed trial timing,
-such as 1-Hit Blackjack and Choice, the input is disabled and a help tooltip
-explains why.
+such as Paired Associate, Alpha-Arithmetic, Past Tense, 1-Hit Blackjack,
+Choice, and Production Compilation Issues, the input is disabled and a help
+tooltip explains why.
 
 ## Notes
 
@@ -148,6 +171,19 @@ explains why.
   delivered to the ACT-R audio module but are not played through browser audio.
 - The Unit 2 Assignment, Subitize, and 1-Hit Blackjack models are intentionally
   incomplete starters, so their results are not tutorial solutions.
+- Paired Associate runs the Unit 4 experiment task against either the Unit 4 or
+  Unit 7 model. The Unit 4 model is traced off by default for full runs; enable
+  the task Trace control for short runs.
+- Alpha-Arithmetic is the Unit 4 assignment starter: it counts through the
+  alphabet and does not retrieve learned additions. Its poor fit is expected.
+- Past Tense is the Unit 7 assignment starter, so it produces no inflections,
+  no rewards, and no U-shaped learning. The block table and chart diagnose that
+  state rather than presenting a solution.
+- Utility Learning Issues uses its own fixed seed and begins from a
+  model-scheduled event, so it is not reset with the page seed.
+- Production Compilation Issues runs the canonical starter. The compilation
+  toggle applies `:epl`; the tutorial's later utility and reward edits are not
+  baked into the model.
 - The Perceptual-Motor Issues task is presented as in the tutorial.
 - Fan reports response times and correctness for the target and foil probes,
   with correlation and mean deviation against the tutorial data.
@@ -169,8 +205,8 @@ explains why.
 
 - Task Lisp/Python is translated to JS; arbitrary Lisp task evaluation is not
   supported. A task can prepend a small support `defun` for a model hook.
-- Human interaction is implemented for 1-Hit Blackjack, Building Sticks, and
-  Choice; other tasks run models only.
+- Human interaction is implemented for 1-Hit Blackjack, Building Sticks,
+  Choice, and the shared paired-associate task; other tasks run models only.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
 - Runs happen on the browser main thread. The runner yields for progress and
@@ -181,8 +217,9 @@ explains why.
 - 1-Hit Blackjack uses the default tutorial deck and opponent. Alternate decks
   and the stacked `game1` scenario are not exposed in the UI.
 - The Tutor starter model is intentionally incomplete, Broken Addition is
-  intentionally broken, and the 1-Hit Blackjack and Choice starters are not
-  tutorial solutions.
+  intentionally broken, and the 1-Hit Blackjack, Choice, Alpha-Arithmetic,
+  Past Tense, and Production Compilation Issues starters are not tutorial
+  solutions.
 - Tutorial/regression experiment drivers in the Rust engine are test oracles,
   not browser features. See `planning/TUTORIAL-TEST-DRIVERS.md` for the cleanup
   backlog.

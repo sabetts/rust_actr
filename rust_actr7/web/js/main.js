@@ -62,6 +62,11 @@ function summaryText(result) {
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
   if (result.kind === "bst") return "Building Sticks: experiment complete";
   if (result.kind === "choice") return "Choice: experiment complete";
+  if (result.kind === "paired") return "Paired Associate: experiment complete";
+  if (result.kind === "zbrodoff") return "Alpha-Arithmetic: experiment complete";
+  if (result.kind === "past-tense") return "Past Tense: block report complete";
+  if (result.kind === "ul-issues") return "Utility Learning: run complete";
+  if (result.kind === "pcomp-issues") return "Production Compilation: games complete";
   if (result.kind === "onehit") {
     return result.mode === "play" ? "1-Hit Blackjack: played against model" : "1-Hit Blackjack: learning run complete";
   }
@@ -194,6 +199,7 @@ function showTaskPanel(model) {
   const stage = $("task-stage");
   if (stage) {
     stage.replaceChildren();
+    stage.className = "task-stage";
     stage.hidden = true;
   }
   renderTaskControls(model?.task, descriptor);

@@ -2202,6 +2202,11 @@ impl Engine {
                     Reward::Other(_) => None,
                 };
                 self.p_hist_reward(reward_num);
+                self.fired_commands.push((
+                    "trigger-reward".to_string(),
+                    self.model.name.clone(),
+                    value.trace_text(),
+                ));
                 match value {
                     Reward::Num(value) => {
                         // Rewards apply only with subsymbolics + learning on;
