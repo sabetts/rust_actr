@@ -38,6 +38,13 @@ The page loads `./actr_engine.wasm` and the generated `./models/` files, so
 serve the `web/` folder over HTTP. Opening `index.html` as `file://` fails on
 the fetches.
 
+Optional bridge smoke tests (Node 18+, after `build.py`):
+
+```sh
+node test/bridge_test.mjs
+node test/unit8_test.mjs
+```
+
 ## Models
 
 The menu is generated from `web/models/manifest.json`.
@@ -140,6 +147,25 @@ matches the registered command. A task can still prepend a small Lisp `defun`
 before the model source; Categorize uses this for `create-example-memories`,
 which the model invokes from its body.
 
+### Embedder hooks
+
+The wasm bridge exposes the synchronous value hooks and the imaginal-action
+host request:
+
+- `:sim-hook`: register a command named by the model's `:sim-hook` with
+  `actr.addCommand(name, (a, b) => number | null)`.
+- `:ppm-hook`: register a command named by the model's `:ppm-hook` with
+  `actr.addCommand(name, (production, rows) => number | null)`. Each row is
+  `[buffer, slot, expected, actual, similarity]`.
+- Imaginal actions: a pending `+imaginal-action>` runs the registered command;
+  return a chunk name, a flat `[slot, value, ...]` list, or `null`.
+
+`null`, `NaN`, and `false` mean “no value, fall through” to the Lisp hook and
+similarity table. Hooks run synchronously inside the engine, so they must not
+call back into wasm (no `actr.eval`, `run`, etc.). The web page is single-model:
+one active hook per kind per session. A model-body `call-act-r-command` still
+needs a Lisp `defun` prelude; it does not dispatch to a JS command.
+
 Runs are cooperative. The JS runner slices every model through the engine's
 `run-chunk` API, batches events when no callbacks are needed, and yields to the
 browser every few milliseconds. Models with commands or monitors still step
@@ -231,7 +257,8 @@ input is disabled and a help tooltip explains why.
 - Categorize is the Unit 8 starter: its model has no productions. The task
   prelude creates the example memories and supplies the Gaussian
   `size-similarities` hook, so the report shows the empty response columns and
-  explains that no category responses are expected.
+  explains that no category responses are expected. It uses the default feature
+  slots (`eh`, `es`, `nl`, `mh`) and zero offset.
 - The engine is deterministic given the seed, so equal inputs give equal traces.
 
 ## Limits

@@ -259,9 +259,14 @@ Port status:
   model), `paired-learning`, `past-tense`, `pcomp-issues`, `ul-issues`,
   `bst-ppm`, `categorize` (starting model), and the dynamic models that do not
   need task-side hooks.
-- Python `:sim-hook` functions are wired for `1hit`, `bst-ppm`, and
-  `categorize`. Python `imaginal-action` callbacks are also bridged through a
-  host-yield step.
+- Python `:sim-hook` and `:ppm-hook` callbacks are supported. Register them
+  with `actr.add_command` (the facade auto-installs the matching hook) or call
+  `model.set_sim_hook` / `model.set_ppm_hook` directly. `:ppm-hook` callables
+  receive `(production, [(buffer, slot, expected, actual, similarity), ...])`.
+  Python `imaginal-action` callbacks are bridged through a host-yield step.
+- The Rust engine resolves model-body `call-act-r-command` forms through Lisp
+  defuns only. `categorize` therefore adds its example chunks from the task
+  after the model loads; custom feature slot names are not recreated.
 - Starting models (no/partial productions by design): unit2 assignment,
   `subitize`, `choice`, `categorize`.
 - `unit1/broken-addition.lisp` is intentionally malformed (the unit uses it
