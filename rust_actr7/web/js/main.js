@@ -39,6 +39,9 @@ function summaryText(result) {
   }
   if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
+  if (result.kind === "onehit") {
+    return result.mode === "play" ? "1-Hit Blackjack: played against model" : "1-Hit Blackjack: learning run complete";
+  }
   return "";
 }
 function renderResult(result) {

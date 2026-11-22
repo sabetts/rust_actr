@@ -2,6 +2,7 @@
 import { fanTask, fanNoPmTask } from "./fan.js";
 import { groupedTask } from "./grouped.js";
 import { sieglerTask } from "./siegler.js";
+import { onehitTask } from "./onehit.js";
 import { sperlingTask } from "./sperling.js";
 import { pmIssuesTask } from "./pm-issues.js";
 import { subitizeTask } from "./subitize.js";
@@ -15,4 +16,5 @@ export const TASKS = {
   "fan-no-pm": fanNoPmTask,
   grouped: groupedTask,
   siegler: sieglerTask,
+  onehit: onehitTask,
 };
