@@ -173,7 +173,9 @@ tooltip explains why.
   incomplete starters, so their results are not tutorial solutions.
 - Paired Associate runs the Unit 4 experiment task against either the Unit 4 or
   Unit 7 model. The Unit 4 model is traced off by default for full runs; enable
-  the task Trace control for short runs.
+  the task Trace control for short runs. In human mode, type the paired digit
+  (0-9) while the word is shown; no click is needed. The visible guide labels
+  the recall and study phases.
 - Alpha-Arithmetic is the Unit 4 assignment starter: it counts through the
   alphabet and does not retrieve learned additions. Its poor fit is expected.
 - Past Tense is the Unit 7 assignment starter, so it produces no inflections,

@@ -33,7 +33,39 @@ function waitReal(ms, signal) {
   });
 }
 
-function waitForHumanResponse(ctx, ms) {
+function renderHumanGuide(ctx, phase, detail) {
+  const stage = ctx.stage;
+  if (!stage) return;
+  stage.hidden = false;
+  stage.classList.add("paired-stage");
+  stage.replaceChildren();
+
+  const box = document.createElement("div");
+  box.className = "paired-guide";
+  const heading = document.createElement("div");
+  heading.className = "paired-guide-heading";
+  heading.textContent = "Paired Associate — Human";
+  const phaseLine = document.createElement("div");
+  phaseLine.className = "paired-guide-phase";
+  phaseLine.textContent = phase === "study"
+    ? "Study phase"
+    : phase === "done"
+      ? "Run complete"
+      : "Recall phase";
+  const word = document.createElement("div");
+  word.className = "paired-guide-word";
+  word.textContent = detail.word;
+  const hint = document.createElement("div");
+  hint.className = "paired-guide-hint";
+  hint.textContent = detail.hint;
+  const progress = document.createElement("div");
+  progress.className = "paired-guide-progress";
+  progress.textContent = detail.progress;
+  box.append(heading, phaseLine, word, hint, progress);
+  stage.append(box);
+}
+
+function waitForHumanResponse(ctx, ms, onResponse) {
   return new Promise((resolve, reject) => {
     let done = false;
     let response = null;
@@ -63,6 +95,7 @@ function waitForHumanResponse(ctx, ms) {
       event.preventDefault();
       response = event.key;
       responseTime = performance.now();
+      onResponse?.(response);
     };
     const timer = setTimeout(finish, ms);
     document.addEventListener("keydown", onKey, true);
@@ -163,16 +196,31 @@ async function humanPass(actr, ctx, size, blocks) {
     width: 300,
     height: 300,
   });
+  const total = size * blocks;
+  let pairIndex = 0;
   const rows = [];
   for (let block = 0; block < blocks; block += 1) {
     let score = 0;
     let time = 0;
     for (const [prompt, associate] of actr.permuteList(PAIRS.slice(PAIRS.length - size))) {
+      const progress = `Block ${block + 1}/${blocks} · Pair ${pairIndex + 1}/${total}`;
       actr.clearExpWindow(window);
       addText(actr, prompt);
+      renderHumanGuide(ctx, "recall", {
+        word: prompt,
+        hint: "Type the digit paired with this word, then wait. Press 0–9; no click needed.",
+        progress,
+      });
       await ctx.paint();
       const start = performance.now();
-      const answer = await waitForHumanResponse(ctx, 5000);
+      const answer = await waitForHumanResponse(ctx, 5000, (key) => {
+        renderHumanGuide(ctx, "recall", {
+          word: prompt,
+          hint: `Recorded ${key}. Waiting for the study phase...`,
+          progress,
+        });
+        void ctx.paint();
+      });
       if (sameKey(answer.response, associate)) {
         score += 1;
         time += answer.responseTime - start;
@@ -180,8 +228,16 @@ async function humanPass(actr, ctx, size, blocks) {
 
       actr.clearExpWindow(window);
       addText(actr, associate);
+      renderHumanGuide(ctx, "study", {
+        word: `${prompt} → ${associate}`,
+        hint: answer.response == null
+          ? "No response recorded. Study this pair for the next trial."
+          : "Study this pair. The next trial starts in 5 seconds.",
+        progress,
+      });
       await ctx.paint();
       await waitReal(5000, ctx.signal);
+      pairIndex += 1;
     }
     rows.push({
       accuracy: score / size,
@@ -189,6 +245,11 @@ async function humanPass(actr, ctx, size, blocks) {
     });
     ctx.progress?.(`running... block ${block + 1}/${blocks}`);
   }
+  renderHumanGuide(ctx, "done", {
+    word: "All trials complete",
+    hint: "The report is shown below.",
+    progress: `${total} trials`,
+  });
   actr.closeExpWindow(window);
   return rows;
 }
