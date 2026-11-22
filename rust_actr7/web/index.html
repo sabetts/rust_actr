@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -47,6 +47,19 @@
                                 border-radius: 50%; transform: translate(-50%, -50%);
                                 pointer-events: none; }
   .agi-attention { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 30%, transparent); }
+  .task-stage { display: flex; flex-direction: column; gap: .55rem; min-width: 22rem; }
+  .bj-table { border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+              border-radius: .4rem; padding: .7rem; background: #0b5d3b; color: #fff; }
+  .bj-row { display: flex; align-items: center; gap: .5rem; min-height: 2.2rem; }
+  .bj-label { width: 3.5rem; font-weight: 700; }
+  .bj-card { display: inline-flex; align-items: center; justify-content: center;
+             min-width: 2.2rem; height: 3rem; padding: 0 .35rem;
+             border-radius: .25rem; background: #fff; color: #111;
+             font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bj-card.hidden-card { background: repeating-linear-gradient(45deg,#1d4ed8,#1d4ed8 6px,#fff 6px,#fff 12px); color: transparent; }
+  .bj-result { min-height: 1.4rem; font-weight: 700; }
+  .bj-actions { display: flex; gap: .6rem; align-items: center; }
+  .bj-status { opacity: .8; }
   .task-result { font-variant-numeric: tabular-nums; opacity: .85; padding-top: .2rem; }
   .task-controls { display: flex; gap: .85rem; align-items: flex-end; flex-wrap: wrap; }
   .task-control label { margin-bottom: .15rem; }
@@ -59,13 +72,13 @@
 </style>
 </head>
 <body>
-  <h1>ACT-R 7 — run a model in the browser</h1>
+  <h1>ACT-R 7 â€” run a model in the browser</h1>
 
   <div class="controls">
     <div>
       <label for="model-preset">Model</label>
       <select id="model-preset" disabled>
-        <option>Loading models…</option>
+        <option>Loading modelsâ€¦</option>
       </select>
     </div>
     <div>
@@ -82,11 +95,12 @@
       <input id="secs" type="number" value="10" min="0" step="0.5">
     </div>
     <button id="run" disabled>Run model</button>
-    <span id="status">loading wasm…</span>
+    <span id="status">loading wasmâ€¦</span>
   </div>
 
   <section id="task-panel" class="task-panel" hidden>
     <div id="task-controls" class="task-controls" hidden></div>
+    <div id="task-stage" class="task-stage" hidden></div>
     <div id="agi-window" class="agi-window" hidden>
       <div class="agi-title"></div>
       <div class="agi-surface"></div>
@@ -98,7 +112,7 @@
   <div class="grid">
     <div>
       <label for="model">Model source</label>
-      <textarea id="model" spellcheck="false" placeholder="Loading model…"></textarea>
+      <textarea id="model" spellcheck="false" placeholder="Loading modelâ€¦"></textarea>
     </div>
     <div>
       <label for="output">Trace</label>

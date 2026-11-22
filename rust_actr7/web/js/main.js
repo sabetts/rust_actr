@@ -1,4 +1,4 @@
-import { Actr, loadWasm, nextPaint } from "./actr.js";
+﻿import { Actr, loadWasm, nextPaint } from "./actr.js";
 import { AgiWindow } from "./agi-window.js";
 import { TASKS } from "./tasks/index.js";
 
@@ -22,21 +22,24 @@ function updateRunButton() {
 function summaryText(result) {
   if (!result) return "";
   if (result.kind === "demo2") {
-    if (result.response == null) return `Target: ${result.target} · no response`;
-    return `Target: ${result.target} · response: ${result.response} · ${result.correct ? "correct" : "incorrect"}`;
+    if (result.response == null) return `Target: ${result.target} - no response`;
+    return `Target: ${result.target} - response: ${result.response} - ${result.correct ? "correct" : "incorrect"}`;
   }
   if (result.kind === "assignment") {
-    if (result.response == null) return `Target: ${result.target} · no response (starter model)`;
-    return `Target: ${result.target} · response: ${result.response} · ${result.correct ? "true" : "false"}`;
+    if (result.response == null) return `Target: ${result.target} - no response (starter model)`;
+    return `Target: ${result.target} - response: ${result.response} - ${result.correct ? "true" : "false"}`;
   }
   if (result.kind === "pm-issues") {
-    return `Prompt: ${result.prompt} · letter: ${result.letter} · response: ${result.response.join(" ") || "none"} · ${result.correct ? "correct" : "incorrect"}`;
+    return `Prompt: ${result.prompt} - letter: ${result.letter} - response: ${result.response.join(" ") || "none"} - ${result.correct ? "correct" : "incorrect"}`;
   }
   if (result.kind === "sperling") return `Sperling: ${result.data.length} onset conditions`;
   if (result.kind === "subitize") return `Subitize: ${result.results.length} trial(s)`;
+  if (result.kind === "fan" || result.kind === "fan-no-pm") {
+    return `Fan: correlation ${Number(result.correlation).toFixed(3)} - mean deviation ${Number(result.meanDeviation).toFixed(3)}`;
+  }
+  if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
   return "";
 }
-
 function renderResult(result) {
   $("task-result").textContent = summaryText(result);
   const report = result?.report || "";
@@ -140,6 +143,11 @@ function showTaskPanel(model) {
   $("task-report").hidden = true;
   const window = new AgiWindow($("agi-window"));
   window.reset();
+  const stage = $("task-stage");
+  if (stage) {
+    stage.replaceChildren();
+    stage.hidden = true;
+  }
   renderTaskControls(model?.task, descriptor);
   if (descriptor?.runSeconds != null) {
     $("secs").value = String(descriptor.runSeconds);
@@ -168,13 +176,15 @@ function runModelInWasm(source, seed0, seed1, secs) {
 async function runTask(model, descriptor, source, seed0, seed1, secs) {
   const window = new AgiWindow($("agi-window"));
   const actr = new Actr(wasm, seed0, seed1, window);
-  actr.loadSource(source);
+  const taskSource = descriptor.prelude ? `${descriptor.prelude}\n${source}` : source;
+  actr.loadSource(taskSource);
   const controls = readControls(model.task, descriptor);
   const result = await descriptor.run(actr, {
     secs,
     runSeconds: secs,
     controls,
     paint: nextPaint,
+    stage: $("task-stage"),
   });
   renderResult(result);
   return { ok: true, out: actr.trace.join("\n") };
@@ -191,7 +201,7 @@ async function run() {
 
   $("run").disabled = true;
   setControlsDisabled(true);
-  $("status").textContent = "running…";
+  $("status").textContent = "runningâ€¦";
   const t0 = performance.now();
   try {
     const { ok, out } = descriptor
@@ -201,7 +211,7 @@ async function run() {
     $("output").classList.toggle("err", !ok);
     const ms = Math.round(performance.now() - t0);
     const lines = out ? out.split("\n").length : 0;
-    $("status").textContent = `${ok ? "ok" : "error"} · ${ms} ms · ${lines} lines`;
+    $("status").textContent = `${ok ? "ok" : "error"} Â· ${ms} ms Â· ${lines} lines`;
   } catch (e) {
     $("output").value = "error: " + e;
     $("output").classList.add("err");
@@ -221,7 +231,7 @@ async function loadSelectedModel() {
   const request = ++modelRequest;
   modelReady = false;
   updateRunButton();
-  $("status").textContent = "loading model…";
+  $("status").textContent = "loading modelâ€¦";
   $("output").value = "";
   $("output").classList.remove("err");
 
@@ -291,7 +301,7 @@ async function loadModels() {
   });
 
   try {
-    $("status").textContent = "loading wasm…";
+    $("status").textContent = "loading wasmâ€¦";
     wasm = await loadWasm();
   } catch (e) {
     $("status").textContent = "wasm failed to load";
@@ -303,7 +313,7 @@ async function loadModels() {
   }
 
   try {
-    $("status").textContent = "loading models…";
+    $("status").textContent = "loading modelsâ€¦";
     await loadModels();
   } catch (e) {
     $("status").textContent = "models failed to load";
