@@ -40,7 +40,9 @@
   .agi-surface { position: relative; overflow: hidden; background: #fff; }
   .agi-text { position: absolute; white-space: pre; line-height: 1.2;
               font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .agi-button { position: absolute; font: inherit; font-size: 12px;
+  .agi-button { position: absolute; display: inline-flex;
+                align-items: center; justify-content: center;
+                padding: 0; line-height: 1; font: inherit; font-size: 12px;
                 border: 1px solid #555; color: #000; }
   .agi-line { position: absolute; height: 1px; transform-origin: 0 0; }
   .agi-image { position: absolute; object-fit: contain; }
