@@ -20,12 +20,26 @@ MODEL_GROUPS = (
         "label": "Unit 1",
         "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit1",
         "models": (
-            ("count", "Count", "count.lisp"),
-            ("addition", "Addition", "addition.lisp"),
-            ("semantic", "Semantic", "semantic.lisp"),
-            ("tutor-model", "Tutor Model (starter)", "tutor-model.lisp"),
-            ("tutor-model-solution", "Tutor Model (solution)", "tutor-model-solution.lisp"),
-            ("broken-addition", "Broken Addition (intentionally broken)", "broken-addition.lisp"),
+            ("count", "Count", "count.lisp", None),
+            ("addition", "Addition", "addition.lisp", None),
+            ("semantic", "Semantic", "semantic.lisp", None),
+            ("tutor-model", "Tutor Model (starter)", "tutor-model.lisp", None),
+            ("tutor-model-solution", "Tutor Model (solution)", "tutor-model-solution.lisp", None),
+            ("broken-addition", "Broken Addition (intentionally broken)", "broken-addition.lisp", None),
+        ),
+    },
+    {
+        "id": "unit2",
+        "label": "Unit 2",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit2",
+        "models": (
+            ("demo2", "Demo2", "demo2-model.lisp", "unit2-demo2"),
+            (
+                "unit2-assignment",
+                "Unit 2 Assignment (starter)",
+                "unit2-assignment-model.lisp",
+                "unit2-assignment",
+            ),
         ),
     },
 )
@@ -33,7 +47,7 @@ MODEL_GROUPS = (
 
 def stage_models() -> None:
     for group in MODEL_GROUPS:
-        for _, _, filename in group["models"]:
+        for _, _, filename, _ in group["models"]:
             source = group["source"] / filename
             if not source.is_file():
                 raise SystemExit(f"missing model source: {source}")
@@ -47,15 +61,16 @@ def stage_models() -> None:
         group_dir = MODELS_DIR / group["id"]
         group_dir.mkdir()
         models = []
-        for model_id, label, filename in group["models"]:
+        for model_id, label, filename, task in group["models"]:
             shutil.copyfile(group["source"] / filename, group_dir / filename)
-            models.append(
-                {
-                    "id": f'{group["id"]}-{model_id}',
-                    "label": label,
-                    "path": f'{group["id"]}/{filename}',
-                }
-            )
+            entry = {
+                "id": f'{group["id"]}-{model_id}',
+                "label": label,
+                "path": f'{group["id"]}/{filename}',
+            }
+            if task is not None:
+                entry["task"] = task
+            models.append(entry)
         groups.append({"id": group["id"], "label": group["label"], "models": models})
 
     manifest = {"default": groups[0]["models"][0]["id"], "groups": groups}

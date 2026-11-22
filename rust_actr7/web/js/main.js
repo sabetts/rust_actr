@@ -1,0 +1,207 @@
+import { Actr, loadWasm, nextPaint } from "./actr.js";
+import { AgiWindow } from "./agi-window.js";
+import { unit2Tasks } from "./tasks/unit2.js";
+
+const $ = (id) => document.getElementById(id);
+const TASKS = { ...unit2Tasks };
+
+let wasm = null;
+let models = new Map();
+let selectedModel = null;
+let modelReady = false;
+let modelRequest = 0;
+
+function updateRunButton() {
+  $("run").disabled = !(wasm && modelReady);
+}
+
+function resultText(result) {
+  if (!result) return "";
+  if (result.kind === "demo2") {
+    if (result.response == null) return `Target: ${result.target} · no response`;
+    return `Target: ${result.target} · response: ${result.response} · ${result.correct ? "correct" : "incorrect"}`;
+  }
+  if (result.kind === "assignment") {
+    if (result.response == null) return `Target: ${result.target} · no response (starter model)`;
+    return `Target: ${result.target} · response: ${result.response} · ${result.correct ? "true" : "false"}`;
+  }
+  return "";
+}
+
+function showTaskPanel(model) {
+  const task = model?.task && TASKS[model.task] ? model.task : null;
+  $("task-panel").hidden = !task;
+  $("task-result").textContent = "";
+  const window = new AgiWindow($("agi-window"));
+  window.reset();
+}
+
+function readResult() {
+  const ptr = wasm.result_ptr();
+  const len = wasm.result_len();
+  return new TextDecoder().decode(new Uint8Array(wasm.memory.buffer, ptr, len));
+}
+
+function runModelInWasm(source, seed0, seed1, secs) {
+  const bytes = new TextEncoder().encode(source);
+  const ptr = wasm.alloc(bytes.length);
+  let status;
+  try {
+    new Uint8Array(wasm.memory.buffer, ptr, bytes.length).set(bytes);
+    status = wasm.run_model(ptr, bytes.length, BigInt(seed0), BigInt(seed1), secs);
+  } finally {
+    wasm.dealloc(ptr, bytes.length);
+  }
+  return { ok: status === 0, out: readResult() };
+}
+
+async function runTask(model, source, seed0, seed1, secs) {
+  const window = new AgiWindow($("agi-window"));
+  const actr = new Actr(wasm, seed0, seed1, window);
+  actr.loadSource(source);
+  const result = await TASKS[model.task](actr, { secs, paint: nextPaint });
+  $("task-result").textContent = resultText(result);
+  return { ok: true, out: actr.trace.join("\n") };
+}
+
+async function run() {
+  if (!wasm || !selectedModel) return;
+  const model = selectedModel;
+  const source = $("model").value;
+  const seed0 = Math.trunc(Number($("seed0").value) || 0);
+  const seed1 = Math.trunc(Number($("seed1").value) || 0);
+  const secs = Number($("secs").value) || 0;
+
+  $("run").disabled = true;
+  $("status").textContent = "running…";
+  const t0 = performance.now();
+  try {
+    const { ok, out } = model.task
+      ? await runTask(model, source, seed0, seed1, secs)
+      : runModelInWasm(source, seed0, seed1, secs);
+    $("output").value = out;
+    $("output").classList.toggle("err", !ok);
+    const ms = Math.round(performance.now() - t0);
+    const lines = out ? out.split("\n").length : 0;
+    $("status").textContent = `${ok ? "ok" : "error"} · ${ms} ms · ${lines} lines`;
+  } catch (e) {
+    $("output").value = "error: " + e;
+    $("output").classList.add("err");
+    $("status").textContent = "error";
+  } finally {
+    updateRunButton();
+  }
+}
+
+async function loadSelectedModel() {
+  const select = $("model-preset");
+  const option = select.selectedOptions[0];
+  const model = option ? models.get(option.value) : null;
+  if (!model) return;
+
+  const request = ++modelRequest;
+  modelReady = false;
+  updateRunButton();
+  $("status").textContent = "loading model…";
+  $("output").value = "";
+  $("output").classList.remove("err");
+
+  try {
+    const res = await fetch(`./models/${model.path}`, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`fetch models/${model.path}: ${res.status} ${res.statusText}`);
+    }
+    const source = await res.text();
+    if (request !== modelRequest) return;
+    $("model").value = source;
+    selectedModel = model;
+    modelReady = true;
+    showTaskPanel(model);
+    $("status").textContent = "";
+  } catch (e) {
+    if (request !== modelRequest) return;
+    selectedModel = null;
+    $("status").textContent = "model failed to load";
+    $("output").value = String(e) + "\n\nDid you run web/build.py --models-only?";
+    $("output").classList.add("err");
+  } finally {
+    if (request === modelRequest) updateRunButton();
+  }
+}
+
+async function loadModels() {
+  const select = $("model-preset");
+  const res = await fetch("./models/manifest.json", { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`fetch models/manifest.json: ${res.status} ${res.statusText}`);
+  }
+  const manifest = await res.json();
+  const groups = Array.isArray(manifest.groups) ? manifest.groups : [];
+  if (!groups.length) throw new Error("model manifest has no groups");
+
+  select.replaceChildren();
+  models = new Map();
+  for (const group of groups) {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = String(group.label || group.id);
+    for (const model of Array.isArray(group.models) ? group.models : []) {
+      if (!model || !model.id || !model.path) continue;
+      const option = document.createElement("option");
+      option.value = String(model.id);
+      option.textContent = String(model.label || model.id);
+      models.set(option.value, model);
+      optgroup.append(option);
+    }
+    if (optgroup.children.length) select.append(optgroup);
+  }
+  if (!select.options.length) throw new Error("model manifest has no models");
+
+  select.disabled = false;
+  const defaultId = String(manifest.default || "");
+  if ([...select.options].some((option) => option.value === defaultId)) {
+    select.value = defaultId;
+  } else {
+    select.selectedIndex = 0;
+  }
+  await loadSelectedModel();
+}
+
+(async function main() {
+  $("model-preset").addEventListener("change", () => {
+    void loadSelectedModel();
+  });
+
+  try {
+    $("status").textContent = "loading wasm…";
+    wasm = await loadWasm();
+  } catch (e) {
+    $("status").textContent = "wasm failed to load";
+    $("output").value =
+      String(e) + "\n\nDid you run web/build.py, and serve this folder over HTTP?\n" +
+      "  cd web && python -m http.server 8000";
+    $("output").classList.add("err");
+    return;
+  }
+
+  try {
+    $("status").textContent = "loading models…";
+    await loadModels();
+  } catch (e) {
+    $("status").textContent = "models failed to load";
+    $("output").value = String(e) + "\n\nDid you run web/build.py --models-only?";
+    $("output").classList.add("err");
+    return;
+  }
+
+  $("status").textContent = modelReady ? "" : "model failed to load";
+  updateRunButton();
+  $("run").addEventListener("click", () => {
+    void run();
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      void run();
+    }
+  });
+})();
