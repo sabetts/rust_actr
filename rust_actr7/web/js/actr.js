@@ -1,4 +1,4 @@
-const encoder = new TextEncoder();
+﻿const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function first(values) {
@@ -8,6 +8,16 @@ function first(values) {
 function optionPairs(options) {
   if (Array.isArray(options)) return options;
   return Object.entries(options || {});
+}
+
+function flatPairs(pairs) {
+  if (Array.isArray(pairs)) return pairs;
+  return Object.entries(pairs || {}).flatMap(([key, value]) => [key, value]);
+}
+
+function chunkSpec(spec) {
+  if (Array.isArray(spec) || typeof spec === "string") return spec;
+  return Object.entries(spec || {}).flatMap(([key, value]) => [key, value]);
 }
 
 function commandValue(value) {
@@ -158,6 +168,34 @@ export class Actr {
     return this.eval("reset");
   }
 
+  runFullTime(seconds) {
+    return this.eval("run-full-time", seconds);
+  }
+
+  pdisable(...names) {
+    return this.eval("pdisable", ...names);
+  }
+
+  penable(...names) {
+    return this.eval("penable", ...names);
+  }
+
+  goalFocus(spec) {
+    return this.eval("goal-focus", chunkSpec(spec));
+  }
+
+  modFocus(pairs) {
+    return this.eval("mod-focus", flatPairs(pairs));
+  }
+
+  bufferRead(buffer) {
+    return first(this.eval("buffer-read", buffer));
+  }
+
+  bufferSlotValue(buffer, slot) {
+    return first(this.eval("buffer-slot-value", buffer, slot));
+  }
+
   async run(seconds) {
     if (this.commands.size === 0 && this.monitors.size === 0) {
       this.eval("run", seconds);
@@ -233,8 +271,8 @@ export class Actr {
     );
   }
 
-  installDevice(window = null) {
-    return this.eval("install-device", window || this.currentWindow || "");
+  installDevice(device = null) {
+    return this.eval("install-device", device ?? this.currentWindow ?? "");
   }
 
   visibleVirtualsAvailable() {
@@ -259,6 +297,10 @@ export class Actr {
 
   newToneSound(freq, duration, onset = 0, timeInMs = false) {
     return this.eval("new-tone-sound", freq, duration, onset, timeInMs);
+  }
+
+  newDigitSound(digit, onset = 0, timeInMs = false) {
+    return this.eval("new-digit-sound", digit, onset, timeInMs);
   }
 
   scheduleEventRelative(delay, action, params = [], timeInMs = false) {

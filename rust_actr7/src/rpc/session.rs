@@ -1,4 +1,4 @@
-//! RPC session: the command registry plus driving the Rust engine in response
+﻿//! RPC session: the command registry plus driving the Rust engine in response
 //! to `evaluate <name> <args>` calls from a client.
 //!
 //! The registry mirrors ACT-R's `dispatcher-command-table`
@@ -251,7 +251,7 @@ pub const BUILTINS: &[&str] = &[
     "visible-virtuals-available?",
     "start-hand-at-mouse",
     // The model's own command output: the motor module calls these, and a
-    // task monitors them (`monitor-command "output-key" …`). The engine
+    // task monitors them (`monitor-command "output-key" â€¦`). The engine
     // records each press and the server dispatches it to its monitors.
     "output-key",
     "output-speech",
@@ -324,9 +324,9 @@ pub struct Session {
     current_model: Option<String>,
     trace_pos: usize,
     seed: (u64, u64),
-    /// `(new-symbol …)` counter, as in ACT-R's `new-symbol`.
+    /// `(new-symbol â€¦)` counter, as in ACT-R's `new-symbol`.
     symbol_count: u64,
-    /// `set-system-parameter-value` settings (`:starting-parameters`, …),
+    /// `set-system-parameter-value` settings (`:starting-parameters`, â€¦),
     /// re-applied on reset (`central-parameters.lisp:140`).
     system_params: std::collections::BTreeMap<String, Json>,
     /// A `:testing-function` that lives on the client, deferred to the
@@ -1212,7 +1212,7 @@ impl Session {
     }
 
     /// The trace since the last call as an output string, in the same shape as
-    /// [`Engine::output`] — the trailing newline is included so a final blank
+    /// [`Engine::output`] â€” the trailing newline is included so a final blank
     /// trace line survives `str::lines`. A command whose output ends with
     /// `command-output`'s newline (e.g. `pprint-chunks`) leaves that blank line.
     pub fn take_trace_output(&mut self) -> String {
@@ -1815,12 +1815,12 @@ impl Session {
                 }
                 Ok(vec![Json::Bool(true)])
             }
-            // `(sgp :key …)`: a getter when every arg is a keyword, else a
+            // `(sgp :key â€¦)`: a getter when every arg is a keyword, else a
             // setter (`framework/printing.lisp`). `spp`/`sdp` getters are the
             // per-production/sub-symbolic forms; production params are
             // returned as NIL for now.
             "sgp" | "sdp" => {
-                // `sdp <chunk…>` prints each chunk's declarative parameter
+                // `sdp <chunkâ€¦>` prints each chunk's declarative parameter
                 // block. Keyword-only `sdp` remains the parameter getter.
                 if name == "sdp"
                     && (args.is_empty()
@@ -1877,10 +1877,10 @@ impl Session {
                 }
             }
             // `spp-fct` (`utility-and-reward-1.lisp:800`): "production
-            // :key [value] …". A key followed by a non-key is a *set* — the
+            // :key [value] â€¦". A key followed by a non-key is a *set* â€” the
             // engine has no per-production store, so those fall through to
             // `apply_sgp` as before. Otherwise it is a read: ACT-R returns one
-            // value list per production, so the reply is `[[values…]…]` and the
+            // value list per production, so the reply is `[[valuesâ€¦]â€¦]` and the
             // client's `no_output("spp", prod, ":u")[0][0]` indexes three deep
             // (`tutorial/python/bst.py:299`).
             "spp" => {
@@ -1921,7 +1921,7 @@ impl Session {
                     return Ok(vec![Json::Null]);
                 }
                 if keys.is_empty() {
-                    // `(spp <name>…)`: print the full parameter block for each
+                    // `(spp <name>â€¦)`: print the full parameter block for each
                     // named (or every) production (`production-parameter-fct`,
                     // `utility-and-reward-1.lisp:678`). The RPC client wraps
                     // this in `no-output`, which drops the printed lines.
@@ -1969,7 +1969,7 @@ impl Session {
                     .to_string();
                 let sub_args: Vec<Json> = args.iter().skip(1).cloned().collect();
                 // The suppressed command's trace must not reach the client's
-                // monitors — but only *its* lines. ACT-R's `no-output` binds the
+                // monitors â€” but only *its* lines. ACT-R's `no-output` binds the
                 // output stream to nothing for the duration of the call, so
                 // anything queued before it stays; dropping the whole pending
                 // trace instead erased earlier output (a `no-output spp` per
@@ -1985,7 +1985,7 @@ impl Session {
                 out
             }
             "add-dm" | "add-dm-fct" | "define-chunks" | "define-chunks-fct" => {
-                // `(add-dm (name isa type …) …)`; a `-fct` variant takes one
+                // `(add-dm (name isa type â€¦) â€¦)`; a `-fct` variant takes one
                 // list of chunk definitions.
                 let is_fct = name.ends_with("-fct");
                 let is_dm = name.starts_with("add-dm");
@@ -2301,7 +2301,7 @@ impl Session {
                 let out = match self.engine.as_mut() {
                     // ACT-R's `permute-list` (`random.lisp:562`) picks a random
                     // element each pass and removes it, and the step form runs
-                    // *before* the end test — so the final single-element pass
+                    // *before* the end test â€” so the final single-element pass
                     // still draws (`(nth (act-r-random (length temp)) temp)`)
                     // and an n-element list consumes n draws. Fisher-Yates
                     // consumes n-1, which left the stream one draw behind.
@@ -2882,7 +2882,7 @@ impl Session {
                 Ok(vec![Json::Str(text)])
             }
             // --- R4 device / vision / motor ---------------------------------
-            // Each feature arg is a flat `[slot, value, …]` list.
+            // Each feature arg is a flat `[slot, value, â€¦]` list.
             "add-visicon-features" => {
                 let specs: Vec<Vec<(String, Sexp)>> = args.iter().map(flat_slots).collect();
                 let names: Vec<Json> = specs
@@ -2962,7 +2962,7 @@ impl Session {
                 // (`audio.lisp:778`): the last argument says whether *both*
                 // numbers are milliseconds; otherwise they are seconds
                 // (`safe-seconds->ms`). Duration is not optional-passed in ms
-                // here — `(new-tone-sound 100 .1)` is 100 ms, so truncating
+                // here â€” `(new-tone-sound 100 .1)` is 100 ms, so truncating
                 // the seconds value to an integer gave a zero-length sound and
                 // its `audio-event-ended` landed before the buffer was stuffed.
                 let freq = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
@@ -3348,7 +3348,7 @@ impl Session {
                 let title = args.first().and_then(|a| a.as_str()).unwrap_or("");
                 let x = args.get(1).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
                 let y = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0) as i64;
-                // Window-relative → global coordinates (`x-pos`/`y-pos`).
+                // Window-relative â†’ global coordinates (`x-pos`/`y-pos`).
                 let owner = self.window_owner_by_title(title);
                 let (ox, oy) = owner
                     .as_deref()
@@ -3558,7 +3558,7 @@ impl Session {
                 } else {
                     mean_deviation(&a, &b)
                 };
-                // `{output}` defaults to t: `command-output "…: ~6,3F"`.
+                // `{output}` defaults to t: `command-output "â€¦: ~6,3F"`.
                 let output = !matches!(args.get(2), Some(Json::Null) | Some(Json::Bool(false)));
                 if output {
                     let label = if name == "correlation" {
@@ -4499,6 +4499,13 @@ impl Session {
     /// Task-file `defun`s are not parsed; Python callbacks are registered
     /// through [`Session::add_remote`] and the fired-command bridge.
     pub fn load_source(&mut self, source: &str) -> Result<(), String> {
+        self.user_fns.extend(model::parse_defuns(source));
+        self.user_vars.extend(model::parse_task_globals(source));
+        for (cmd, fname) in model::parse_commands(source) {
+            if let Some(def) = self.user_fns.get(&fname).cloned() {
+                self.user_fns.insert(cmd, def);
+            }
+        }
         let modules = self.module_set();
         let loaded = crate::model::load_models_from_str_with_modules(source, &modules)
             .map_err(|e| e.to_string())?;
@@ -4599,7 +4606,7 @@ impl Session {
             // applying each pair here. Only that path records the entries in
             // `starting_params`, which is what makes `reset` re-apply them
             // (`central-parameters.lisp:131`). Applying them pair-by-pair set
-            // e.g. `:seed` once at load and then lost it at every reset —
+            // e.g. `:seed` once at load and then lost it at every reset â€”
             // `paired-learning` needs the seed re-applied at the task boundary
             // so its RNG stream restarts where ACT-R's does.
             //
@@ -4614,13 +4621,13 @@ impl Session {
     }
 
     /// `:starting-parameters` replayed from a spec's `(:SGP :STARTING-PARAMETERS
-    /// …)` step. Routing it through the session (rather than straight to the
+    /// â€¦)` step. Routing it through the session (rather than straight to the
     /// engine) is what lets the reset hook see its `:testing-function`.
     pub fn set_starting_params(&mut self, val: &Sexp) {
         self.set_system_param(":STARTING-PARAMETERS", sexp_to_json(val));
     }
 
-    /// Reset the model and run the `:testing-function` hook — the path the RPC
+    /// Reset the model and run the `:testing-function` hook â€” the path the RPC
     /// `reset` command takes (`invoke_testing_fn`). The test harness replays a
     /// spec's `(:RESET)` through this rather than the engine directly, or a spec
     /// whose runs depend on the hook (the fan stubs' `trace-fan-run`, which sets
@@ -4645,7 +4652,7 @@ impl Session {
     }
 
     /// The `:testing-function` from `:starting-parameters`, quotes stripped
-    /// (`"'python-set-testing-traces'"` → `python-set-testing-traces`).
+    /// (`"'python-set-testing-traces'"` â†’ `python-set-testing-traces`).
     fn testing_fn(&self) -> Option<String> {
         let items = match self.system_params.get(":STARTING-PARAMETERS") {
             Some(Json::Arr(a)) => a,
@@ -4776,7 +4783,7 @@ impl Session {
 
     /// (Re)build the engine from the loaded models.
     /// Rebuild the engine after an in-place definition change (`chunk-type`,
-    /// `add-dm`, …).
+    /// `add-dm`, â€¦).
     ///
     /// A fresh engine's construction reset arms device run 0, so a device
     /// task's script for the run in progress would be dropped and the run
@@ -4872,7 +4879,7 @@ impl Session {
         self.rebuild_global_trace();
         self.trace_pos = 0;
         // `set-system-parameter-value` settings are global in ACT-R and
-        // survive a model (re)load — `:starting-parameters` is re-applied by
+        // survive a model (re)load â€” `:starting-parameters` is re-applied by
         // the central-parameters reset hook (`central-parameters.lisp:131`).
         // The engine is rebuilt from scratch here, so replay them, or a
         // `load_act_r_model` after `set-system-parameter-value` would silently
@@ -4921,7 +4928,7 @@ fn filesystem_path(path: &str) -> Result<PathBuf, String> {
     Ok(PathBuf::from(path))
 }
 
-/// JSON → the engine's `Sexp`. Strings become symbols (the Python client
+/// JSON â†’ the engine's `Sexp`. Strings become symbols (the Python client
 /// sends names/values as strings, which ACT-R `decode-string`s).
 pub fn json_to_sexp(j: &Json) -> Sexp {
     match j {
@@ -4932,7 +4939,7 @@ pub fn json_to_sexp(j: &Json) -> Sexp {
         Json::Float(x) => Sexp::Float(*x),
         Json::Str(s) => Sexp::Sym(s.to_uppercase()),
         Json::Arr(items) => Sexp::List(items.iter().map(json_to_sexp).collect()),
-        // The spec harness wraps a *string* argument in `{"str": …}` because
+        // The spec harness wraps a *string* argument in `{"str": â€¦}` because
         // JSON cannot distinguish a Lisp string from a symbol name, and the
         // generic command path would otherwise turn `"changed"` into `CHANGED`.
         Json::Obj(o) => match o.iter().find(|(k, _)| k == "str") {
@@ -4942,7 +4949,7 @@ pub fn json_to_sexp(j: &Json) -> Sexp {
     }
 }
 
-/// The engine's `Sexp` → JSON, the inverse of [`json_to_sexp`], for replaying a
+/// The engine's `Sexp` â†’ JSON, the inverse of [`json_to_sexp`], for replaying a
 /// recorded command step's arguments through [`Session::evaluate`]. `NIL`/`T`
 /// become `null`/`true`; other symbols and strings become JSON strings (what
 /// the client sends for names).
@@ -4964,7 +4971,7 @@ pub fn sexp_to_json(s: &Sexp) -> Json {
     }
 }
 
-/// Look up an option in the `[["key",value], …]` list the Python client
+/// Look up an option in the `[["key",value], â€¦]` list the Python client
 /// passes to `schedule-event-*` (`actr.py:924`).
 fn option<'a>(options: Option<&'a Json>, key: &str) -> Option<&'a Json> {
     let arr = match options {
@@ -4986,7 +4993,7 @@ fn option<'a>(options: Option<&'a Json>, key: &str) -> Option<&'a Json> {
     None
 }
 
-/// An integer option from an `[["key",value], …]` list.
+/// An integer option from an `[["key",value], â€¦]` list.
 fn opt_i(options: Option<&Json>, key: &str, default: i64) -> i64 {
     option(options, key)
         .and_then(|j| j.as_f64())
@@ -5008,8 +5015,8 @@ fn parse_action(a: Option<&Json>) -> Option<(String, Vec<Json>)> {
     }
 }
 
-/// A string option from an `[["key",value], …]` list.
-/// A boolean option (`:visible`): absent → `default`; `nil`/`false` → false.
+/// A string option from an `[["key",value], â€¦]` list.
+/// A boolean option (`:visible`): absent â†’ `default`; `nil`/`false` â†’ false.
 fn opt_bool(options: Option<&Json>, key: &str, default: bool) -> bool {
     match option(options, key) {
         None => default,
@@ -5039,7 +5046,7 @@ fn pair(j: Option<&Json>) -> (i64, i64) {
     }
 }
 
-/// JSON → display text (for `model-output`/`print-warning`).
+/// JSON â†’ display text (for `model-output`/`print-warning`).
 pub fn json_to_text(j: &Json) -> String {
     match j {
         Json::Null => String::new(),
@@ -5161,7 +5168,7 @@ fn filter_history_records(
 }
 
 /// One `retrieval-history` record as JSON:
-/// `[time_ms, request, [[name, text, params, activation-trace], …]]`
+/// `[time_ms, request, [[name, text, params, activation-trace], â€¦]]`
 /// (`other-files/retrieval-history.lisp`).
 fn retrieval_record(r: &crate::engine::RetrievalRecord) -> String {
     let chunks: Vec<Json> = r
@@ -5184,7 +5191,7 @@ fn retrieval_record(r: &crate::engine::RetrievalRecord) -> String {
     .write()
 }
 
-/// One `buffer-history` segment as JSON: `[time_ms, [[row, …], …]]`
+/// One `buffer-history` segment as JSON: `[time_ms, [[row, â€¦], â€¦]]`
 /// (`other-files/buffer-history.lisp`).
 fn buffer_history_record(time_ms: i64, rows: &[Vec<String>]) -> String {
     let rows: Vec<Json> = rows
@@ -5194,7 +5201,7 @@ fn buffer_history_record(time_ms: i64, rows: &[Vec<String>]) -> String {
     Json::Arr(vec![Json::Int(time_ms), Json::Arr(rows)]).write()
 }
 
-/// One `visicon-history` entry as JSON: `[time_ms, snapshot, …]`
+/// One `visicon-history` entry as JSON: `[time_ms, snapshot, â€¦]`
 /// (`other-files/perceptual-history.lisp`).
 fn visicon_history_record(time_ms: i64, items: &[String]) -> String {
     let mut fields = vec![Json::Int(time_ms)];
@@ -5202,7 +5209,7 @@ fn visicon_history_record(time_ms: i64, items: &[String]) -> String {
     Json::Arr(fields).write()
 }
 
-/// One `buffer-trace` record as JSON: `[time_ms, [summary, …]]` where each
+/// One `buffer-trace` record as JSON: `[time_ms, [summary, â€¦]]` where each
 /// summary is `[name, busy, cleared, busy->free, error, error->clear, full,
 /// modified, request, chunk-name, notes]` (`tools/buffer-trace.lisp`).
 fn buffer_trace_record(time_ms: i64, rows: &[crate::engine::BufSummary]) -> String {
@@ -5245,7 +5252,7 @@ fn nonempty(s: Option<&str>) -> bool {
 
 /// `parse-trace-list` (`other-files/env-graphic-trace.lisp:186`): turn the
 /// `buffer-trace` records into the graphic-trace canvas items. The first item
-/// is `("size" N)`; the rest are `("rectangle" …)` / `("label" …)`.
+/// is `("size" N)`; the rest are `("rectangle" â€¦)` / `("label" â€¦)`.
 fn graphic_trace_items(
     trace: &[(i64, Vec<crate::engine::BufSummary>)],
     vertical: bool,
@@ -5386,7 +5393,7 @@ fn graphic_trace_items(
 }
 
 /// The `production-history` info summary (`get-p-history-data`'s first row):
-/// `[0, "info", why-not-list, [[production, printed-text], …]]`.
+/// `[0, "info", why-not-list, [[production, printed-text], â€¦]]`.
 fn production_info_summary(e: &crate::engine::Engine) -> Json {
     let why: Vec<Json> = e
         .production_history_why_not()
@@ -5410,7 +5417,7 @@ fn production_info_summary(e: &crate::engine::Engine) -> Json {
 }
 
 /// The recorded `production-history` records as JSON (`get-p-history-data`),
-/// `[info, …records oldest-first]`.
+/// `[info, â€¦records oldest-first]`.
 fn production_history_records(e: &crate::engine::Engine) -> Vec<String> {
     use crate::engine::PHistTag;
     let mut out = vec![production_info_summary(e)];
@@ -5669,7 +5676,7 @@ fn strings(v: Option<Vec<String>>) -> Vec<Json> {
     v.unwrap_or_default().into_iter().map(Json::Str).collect()
 }
 
-/// A flat `[slot, value, …]` list (a visicon feature spec) → engine slot pairs.
+/// A flat `[slot, value, â€¦]` list (a visicon feature spec) â†’ engine slot pairs.
 fn flat_slots(j: &Json) -> Vec<(String, Sexp)> {
     let items = match j {
         Json::Arr(a) => a,
@@ -7943,6 +7950,23 @@ mod tests {
     }
 
     #[test]
+    fn load_source_installs_task_defuns_before_model_load() {
+        let mut s = Session::new((100, 0));
+        s.load_source(
+            r#"
+(defun web-number-sims (a b)
+  (if (and (numberp a) (numberp b))
+      (- (/ (abs (- a b)) (max a b)))
+      nil))
+(define-model web-sim-test
+  (sgp :v nil :sim-hook "web-number-sims"))
+"#,
+        )
+        .unwrap();
+        assert!(s.user_fns.contains_key("WEB-NUMBER-SIMS"));
+    }
+
+    #[test]
     fn multi_buffer_goal_chunks_are_exposed() {
         let root = fixture_root();
         if !root.is_dir() {
@@ -8455,7 +8479,7 @@ mod tests {
     }
 }
 
-/// A `goal-focus` argument: a flat `["ISA","type","slot","val", …]` list (a
+/// A `goal-focus` argument: a flat `["ISA","type","slot","val", â€¦]` list (a
 /// chunk spec) or a chunk name string.
 /// `decode-string-names` (`dispatcher.lisp:2413`) for one remote argument:
 /// `mod-focus-external` (`goal.lisp:375`) applies it to every slot/value.
