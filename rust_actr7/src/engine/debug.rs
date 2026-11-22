@@ -2587,6 +2587,12 @@ impl Engine {
             ":MD" => self.cfg.md.to_string(),
             ":MS" => self.cfg.ms.to_string(),
             ":SIM-HOOK" => self.cfg.sim_hook.clone().unwrap_or_else(|| "NIL".into()),
+            ":PPM" => self
+                .cfg
+                .ppm
+                .map(|x| x.to_string())
+                .unwrap_or_else(|| "NIL".into()),
+            ":PPM-HOOK" => self.cfg.ppm_hook.clone().unwrap_or_else(|| "NIL".into()),
             ":SYLLABLE-RATE" => format!("{}", self.cfg.syllable_rate_ms as f64 / 1000.0),
             ":CHAR-PER-SYLLABLE" => self.cfg.char_per_syllable.to_string(),
             ":USE-SYLLABLE-TABLE" => b(self.cfg.use_syllable_table),

@@ -1,6 +1,113 @@
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+let wasmMemory = null;
+const commandFns = new Map();
+let hookError = null;
+
+function resetHookState() {
+  commandFns.clear();
+  hookError = null;
+}
+
+function decodeString(ptr, len) {
+  if (!len || !wasmMemory) return "";
+  return decoder.decode(new Uint8Array(wasmMemory.buffer, ptr, len));
+}
+
+function hookValue(kind, num, ptr, len) {
+  switch (kind) {
+    case 1:
+    case 4:
+      return decodeString(ptr, len);
+    case 2:
+    case 3:
+      return num;
+    default:
+      return null;
+  }
+}
+
+function taggedValue(value) {
+  if (!value) return null;
+  switch (value.k) {
+    case "sym":
+    case "str":
+      return value.v;
+    case "int":
+    case "num":
+      return value.v;
+    default:
+      return null;
+  }
+}
+
+function recordHookError(error) {
+  if (hookError == null) hookError = error;
+}
+
+function callSimHook(
+  namePtr,
+  nameLen,
+  aKind,
+  aNum,
+  aPtr,
+  aLen,
+  bKind,
+  bNum,
+  bPtr,
+  bLen
+) {
+  try {
+    const name = decodeString(namePtr, nameLen).toUpperCase();
+    const fn = commandFns.get(name);
+    if (!fn) return Number.NaN;
+    const a = hookValue(aKind, aNum, aPtr, aLen);
+    const b = hookValue(bKind, bNum, bPtr, bLen);
+    const result = Number(fn(a, b));
+    return Number.isFinite(result) ? result : Number.NaN;
+  } catch (error) {
+    recordHookError(error);
+    return Number.NaN;
+  }
+}
+
+function callPpmHook(namePtr, nameLen, payloadPtr, payloadLen) {
+  try {
+    const name = decodeString(namePtr, nameLen).toUpperCase();
+    const fn = commandFns.get(name);
+    if (!fn) return Number.NaN;
+    const payload = JSON.parse(decodeString(payloadPtr, payloadLen));
+    const rows = (payload.mismatches || []).map((row) => [
+      row.buffer,
+      row.slot,
+      taggedValue(row.expected),
+      taggedValue(row.actual),
+      row.similarity,
+    ]);
+    const result = Number(fn(payload.production, rows));
+    return Number.isFinite(result) ? result : Number.NaN;
+  } catch (error) {
+    recordHookError(error);
+    return Number.NaN;
+  }
+}
+
+function actionResultText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return "(" + value.map((item) => String(item)).join(" ") + ")";
+  }
+  return String(value);
+}
+
+function nameOrEmpty(value) {
+  if (value == null) return "";
+  const text = String(value);
+  return text.toUpperCase() === "NIL" ? "" : text.toUpperCase();
+}
+
 function first(values) {
   return Array.isArray(values) && values.length ? values[0] : null;
 }
@@ -33,7 +140,17 @@ export async function loadWasm(url = "./actr_engine.wasm") {
   if (!res.ok) {
     throw new Error(`fetch actr_engine.wasm: ${res.status} ${res.statusText}`);
   }
-  const { instance } = await WebAssembly.instantiate(await res.arrayBuffer(), {});
+  const imports = {
+    env: {
+      js_sim_hook: callSimHook,
+      js_ppm_hook: callPpmHook,
+    },
+  };
+  const { instance } = await WebAssembly.instantiate(
+    await res.arrayBuffer(),
+    imports
+  );
+  wasmMemory = instance.exports.memory;
   return instance.exports;
 }
 
@@ -93,8 +210,55 @@ class WasmSession {
   }
 
   init(seed0, seed1) {
+    resetHookState();
     const status = this.wasm.session_init(BigInt(seed0), BigInt(seed1));
     if (status !== 0) throw new Error(this.resultText());
+  }
+
+  setHook(kind, name, enabled) {
+    if (typeof this.wasm.session_set_hook !== "function") {
+      throw new Error(
+        "actr_engine.wasm is missing session_set_hook; rebuild it with web/build.py"
+      );
+    }
+    this.callWithText(name, (ptr, len) => {
+      const status = this.wasm.session_set_hook(kind, ptr, len, enabled ? 1 : 0);
+      if (status !== 0) throw new Error(this.resultText() || "session_set_hook failed");
+    });
+  }
+
+  takeHostAction() {
+    if (typeof this.wasm.session_take_host_action !== "function") return null;
+    const status = this.wasm.session_take_host_action();
+    const text = this.resultText();
+    if (status !== 0) {
+      throw new Error(text || "session_take_host_action failed");
+    }
+    return text && text !== "null" ? JSON.parse(text) : null;
+  }
+
+  completeHostAction(result, simple) {
+    if (typeof this.wasm.session_complete_host_action !== "function") {
+      throw new Error(
+        "actr_engine.wasm is missing session_complete_host_action; rebuild it with web/build.py"
+      );
+    }
+    const text = result == null ? "" : String(result);
+    if (text.length === 0) {
+      const status = this.wasm.session_complete_host_action(0, 0, simple ? 1 : 0);
+      if (status !== 0) {
+        throw new Error(this.resultText() || "session_complete_host_action failed");
+      }
+      return;
+    }
+    this.callWithText(text, (ptr, len) => {
+      const status = this.wasm.session_complete_host_action(ptr, len, simple ? 1 : 0);
+      if (status !== 0) {
+        throw new Error(
+          this.resultText() || "session_complete_host_action failed"
+        );
+      }
+    });
   }
 
   loadSource(source) {
@@ -166,11 +330,14 @@ export class Actr {
     this.trace = [];
     this.currentWindow = null;
     this.draining = false;
+    this.simHookName = "";
+    this.ppmHookName = "";
   }
 
   loadSource(source) {
     this.session.loadSource(source);
     this.drain();
+    this.refreshHooks();
   }
 
   eval(name, ...args) {
@@ -179,12 +346,57 @@ export class Actr {
     return result;
   }
 
+  getParameterValue(key) {
+    return first(this.eval("get-parameter-value", key));
+  }
+
   reset() {
     return this.eval("reset");
   }
 
   setParameterValue(key, value) {
-    return this.eval("set-parameter-value", key, value);
+    const result = this.eval("set-parameter-value", key, value);
+    const upper = String(key).toUpperCase();
+    if (upper === ":SIM-HOOK" || upper === ":PPM-HOOK") {
+      this.refreshHooks();
+    }
+    return result;
+  }
+
+  refreshHooks() {
+    const hasExport = typeof this.session.setHook === "function";
+    if (hasExport) {
+      if (this.simHookName) {
+        this.session.setHook(0, this.simHookName, false);
+      }
+      if (this.ppmHookName) {
+        this.session.setHook(1, this.ppmHookName, false);
+      }
+    }
+    this.simHookName = nameOrEmpty(this.getParameterValue(":sim-hook"));
+    this.ppmHookName = nameOrEmpty(this.getParameterValue(":ppm-hook"));
+    if (!hasExport) {
+      if (this.simHookName || this.ppmHookName) {
+        throw new Error(
+          "actr_engine.wasm is missing session_set_hook; rebuild it with web/build.py"
+        );
+      }
+      return;
+    }
+    this.syncHook(this.simHookName);
+    this.syncHook(this.ppmHookName);
+  }
+
+  syncHook(name) {
+    if (!name || typeof this.session.setHook !== "function") return;
+    const upper = String(name).toUpperCase();
+    const fn = this.commands.get(upper);
+    if (upper === this.simHookName) {
+      this.session.setHook(0, upper, Boolean(fn));
+    }
+    if (upper === this.ppmHookName) {
+      this.session.setHook(1, upper, Boolean(fn));
+    }
   }
 
   setBufferChunk(buffer, spec) {
@@ -223,6 +435,18 @@ export class Actr {
     return first(this.eval("buffer-slot-value", buffer, slot));
   }
 
+  copyChunk(name) {
+    return first(this.eval("copy-chunk", name));
+  }
+
+  chunkSlotValue(name, slot) {
+    return first(this.eval("chunk-slot-value", name, slot));
+  }
+
+  modChunk(name, pairs) {
+    return this.eval("mod-chunk", name, flatPairs(pairs));
+  }
+
   async _runStepped(name, seconds, options = {}) {
     const signal = options.signal;
     throwIfAborted(signal);
@@ -242,6 +466,12 @@ export class Actr {
       throwIfAborted(signal);
       const more = this.session.runChunk(begin.limit, begin.full, batch);
       const state = this.drain();
+      const hostHandled = this.completeHostAction();
+      if (hookError) {
+        const error = hookError;
+        hookError = null;
+        throw error;
+      }
 
       if (paint && state.painted) {
         await nextPaint();
@@ -252,9 +482,29 @@ export class Actr {
         throwIfAborted(signal);
       }
 
-      if (!more && state.handled === 0) break;
+      if (!more && state.handled === 0 && !hostHandled) break;
     }
     throwIfAborted(signal);
+  }
+
+  completeHostAction() {
+    if (typeof this.session.takeHostAction !== "function") return false;
+    const action = this.session.takeHostAction();
+    if (!action) return false;
+    const fn = this.commands.get(String(action.name).toUpperCase());
+    let result = null;
+    if (fn) {
+      try {
+        result = fn(...(action.args || []));
+      } catch {
+        result = null;
+      }
+    }
+    this.session.completeHostAction(
+      actionResultText(result),
+      Boolean(action.simple)
+    );
+    return true;
   }
 
   run(seconds, options = {}) {
@@ -266,13 +516,21 @@ export class Actr {
   }
 
   addCommand(name, fn) {
-    this.commands.set(name.toUpperCase(), fn);
-    return this.eval("add-act-r-command", name);
+    const key = name.toUpperCase();
+    this.commands.set(key, fn);
+    commandFns.set(key, fn);
+    const result = this.eval("add-act-r-command", name);
+    this.syncHook(key);
+    return result;
   }
 
   removeCommand(name) {
-    this.commands.delete(name.toUpperCase());
-    return this.eval("remove-act-r-command", name);
+    const key = name.toUpperCase();
+    this.commands.delete(key);
+    commandFns.delete(key);
+    const result = this.eval("remove-act-r-command", name);
+    this.syncHook(key);
+    return result;
   }
 
   monitorCommand(original, monitor) {

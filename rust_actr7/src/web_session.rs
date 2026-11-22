@@ -1,6 +1,6 @@
 //! Browser-facing session bridge over the RPC/AGI command layer.
 
-use crate::engine::TraceKind;
+use crate::engine::{HookValue, PpmHookFn, TraceKind};
 use crate::json::Json;
 use crate::rpc::session::{Remote, Session};
 
@@ -96,6 +96,33 @@ impl WebSession {
 
     pub fn take_events(&mut self) -> Vec<Json> {
         std::mem::take(&mut self.events)
+    }
+
+    /// Install (or clear) the session-wide embedder `:sim-hook`.
+    pub fn set_sim_hook(
+        &mut self,
+        hook: Option<std::rc::Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>>,
+    ) {
+        self.session.set_sim_hook(hook);
+    }
+
+    /// Install (or clear) the session-wide embedder `:ppm-hook`.
+    pub fn set_ppm_hook(&mut self, hook: Option<PpmHookFn>) {
+        self.session.set_ppm_hook(hook);
+    }
+
+    /// A pending host `imaginal-action`, as `(command, args, simple)`.
+    pub fn take_pending_host_action(&mut self) -> Option<(String, Vec<String>, bool)> {
+        self.session.take_pending_host_action()
+    }
+
+    /// Complete a pending host `imaginal-action`.
+    pub fn complete_host_action(
+        &mut self,
+        result: Option<&str>,
+        simple: bool,
+    ) -> Result<(), String> {
+        self.session.complete_host_action(result, simple)
     }
 
     fn collect(&mut self) {

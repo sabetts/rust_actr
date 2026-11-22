@@ -18,16 +18,178 @@
 //! `RefCell` — no locks, no synchronization.
 
 use std::cell::RefCell;
+use std::rc::Rc;
 
+use crate::engine::{HookValue, PpmHookFn, PpmHookRow};
 use crate::json::Json;
 use crate::web_session::WebSession;
 use crate::{run_from_source, DeviceSetup};
 
 thread_local! {
-    /// The most recent trace (or `error: �?�` text), read back via
+    /// The most recent trace (or `error: ���?���` text), read back via
     /// [`result_ptr`]/[`result_len`]. Reused across runs (capacity kept).
     static RESULT: RefCell<Vec<u8>> = RefCell::new(Vec::new());
     static SESSION: RefCell<Option<WebSession>> = RefCell::new(None);
+    /// The active hook names, and scratch buffers for their arguments.
+    static SIM_NAME: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static PPM_NAME: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static SIM_A: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static SIM_B: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static PPM_PAYLOAD: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+}
+
+#[link(wasm_import_module = "env")]
+extern "C" {
+    /// The host's `:sim-hook`.  String values are read from wasm memory; the
+    /// return value is a similarity, or NaN for "no value" (fall through).
+    fn js_sim_hook(
+        name_ptr: *const u8,
+        name_len: usize,
+        a_kind: u32,
+        a_num: f64,
+        a_ptr: *const u8,
+        a_len: usize,
+        b_kind: u32,
+        b_num: f64,
+        b_ptr: *const u8,
+        b_len: usize,
+    ) -> f64;
+    /// The host's `:ppm-hook`.  `payload` is a JSON object describing the
+    /// production and its partial-match rows.
+    fn js_ppm_hook(
+        name_ptr: *const u8,
+        name_len: usize,
+        payload_ptr: *const u8,
+        payload_len: usize,
+    ) -> f64;
+}
+
+const HOOK_NIL: u32 = 0;
+const HOOK_SYM: u32 = 1;
+const HOOK_INT: u32 = 2;
+const HOOK_NUM: u32 = 3;
+const HOOK_STR: u32 = 4;
+
+/// Encode one value for the sim-hook ABI.  Returns `(kind, num, ptr, len)`.
+fn encode_hook_value(
+    value: &HookValue,
+    buf: &RefCell<Vec<u8>>,
+) -> (u32, f64, *const u8, usize) {
+    let mut out = buf.borrow_mut();
+    out.clear();
+    match value {
+        HookValue::Sym(s) => {
+            out.extend_from_slice(s.as_bytes());
+            (HOOK_SYM, 0.0, out.as_ptr(), out.len())
+        }
+        HookValue::Str(s) => {
+            out.extend_from_slice(s.as_bytes());
+            (HOOK_STR, 0.0, out.as_ptr(), out.len())
+        }
+        HookValue::Int(i) => (HOOK_INT, *i as f64, out.as_ptr(), 0),
+        HookValue::Num(x) => (HOOK_NUM, *x, out.as_ptr(), 0),
+        HookValue::Nil => (HOOK_NIL, 0.0, out.as_ptr(), 0),
+    }
+}
+
+fn hook_value_json(value: &HookValue) -> Json {
+    match value {
+        HookValue::Sym(s) => Json::Obj(vec![
+            ("k".into(), Json::Str("sym".into())),
+            ("v".into(), Json::Str(s.clone())),
+        ]),
+        HookValue::Str(s) => Json::Obj(vec![
+            ("k".into(), Json::Str("str".into())),
+            ("v".into(), Json::Str(s.clone())),
+        ]),
+        HookValue::Int(i) => Json::Obj(vec![
+            ("k".into(), Json::Str("int".into())),
+            ("v".into(), Json::Int(*i)),
+        ]),
+        HookValue::Num(x) => Json::Obj(vec![
+            ("k".into(), Json::Str("num".into())),
+            ("v".into(), Json::Float(*x)),
+        ]),
+        HookValue::Nil => Json::Obj(vec![("k".into(), Json::Str("nil".into()))]),
+    }
+}
+
+fn ppm_payload(production: &str, rows: &[PpmHookRow]) -> String {
+    let rows = rows
+        .iter()
+        .map(|row| {
+            Json::Obj(vec![
+                ("buffer".into(), Json::Str(row.buffer.clone())),
+                ("slot".into(), Json::Str(row.slot.clone())),
+                ("expected".into(), hook_value_json(&row.expected)),
+                ("actual".into(), hook_value_json(&row.actual)),
+                ("similarity".into(), Json::Float(row.similarity as f64)),
+            ])
+        })
+        .collect();
+    Json::Obj(vec![
+        ("production".into(), Json::Str(production.to_string())),
+        ("mismatches".into(), Json::Arr(rows)),
+    ])
+    .write()
+}
+
+fn make_sim_hook() -> Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>> {
+    Rc::new(|a: &HookValue, b: &HookValue| {
+        let (a_kind, a_num, a_ptr, a_len) = SIM_A.with(|buf| encode_hook_value(a, buf));
+        let (b_kind, b_num, b_ptr, b_len) = SIM_B.with(|buf| encode_hook_value(b, buf));
+        let result = SIM_NAME.with(|name| {
+            let name = name.borrow();
+            // SAFETY: the import only reads the buffers while this frame runs.
+            unsafe {
+                js_sim_hook(
+                    name.as_ptr(),
+                    name.len(),
+                    a_kind,
+                    a_num,
+                    a_ptr,
+                    a_len,
+                    b_kind,
+                    b_num,
+                    b_ptr,
+                    b_len,
+                )
+            }
+        });
+        if result.is_nan() {
+            None
+        } else {
+            Some(result as f32)
+        }
+    })
+}
+
+fn make_ppm_hook() -> PpmHookFn {
+    Rc::new(|production: &str, rows: &[PpmHookRow]| {
+        let payload = ppm_payload(production, rows);
+        let result = PPM_PAYLOAD.with(|buf| {
+            let mut payload_buf = buf.borrow_mut();
+            payload_buf.clear();
+            payload_buf.extend_from_slice(payload.as_bytes());
+            PPM_NAME.with(|name| {
+                let name = name.borrow();
+                // SAFETY: the import only reads the buffers while this frame runs.
+                unsafe {
+                    js_ppm_hook(
+                        name.as_ptr(),
+                        name.len(),
+                        payload_buf.as_ptr(),
+                        payload_buf.len(),
+                    )
+                }
+            })
+        });
+        if result.is_nan() {
+            None
+        } else {
+            Some(result as f32)
+        }
+    })
 }
 
 /// Allocate `len` bytes in wasm memory and return the pointer. JavaScript
@@ -289,6 +451,154 @@ pub extern "C" fn session_run_chunk(limit_ms: f64, full: u32, max_events: u32) -
         }
         Err(e) => {
             set_result(&format!("error: {e}"));
+            1
+        }
+    }
+}
+
+/// Install (or clear) an embedder hook.  `kind`: 0 = `:sim-hook`,
+/// 1 = `:ppm-hook`.  The host dispatches by the hook name.
+///
+/// # Safety
+/// `name_ptr` must point to `name_len` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn session_set_hook(
+    kind: u32,
+    name_ptr: *const u8,
+    name_len: usize,
+    enabled: u32,
+) -> u32 {
+    let name = match unsafe { read_text(name_ptr, name_len) } {
+        Ok(text) => text,
+        Err(e) => {
+            set_result(&format!("error: {e}"));
+            return 1;
+        }
+    };
+    let result = SESSION.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some(session) = slot.as_mut() else {
+            return Err("session is not initialized".to_string());
+        };
+        match kind {
+            0 => {
+                if enabled != 0 {
+                    SIM_NAME.with(|buf| {
+                        let mut name_buf = buf.borrow_mut();
+                        name_buf.clear();
+                        name_buf.extend_from_slice(name.as_bytes());
+                    });
+                    session.set_sim_hook(Some(make_sim_hook()));
+                } else {
+                    session.set_sim_hook(None);
+                }
+            }
+            1 => {
+                if enabled != 0 {
+                    PPM_NAME.with(|buf| {
+                        let mut name_buf = buf.borrow_mut();
+                        name_buf.clear();
+                        name_buf.extend_from_slice(name.as_bytes());
+                    });
+                    session.set_ppm_hook(Some(make_ppm_hook()));
+                } else {
+                    session.set_ppm_hook(None);
+                }
+            }
+            other => return Err(format!("unknown hook kind {other}")),
+        }
+        Ok(())
+    });
+    match result {
+        Ok(()) => {
+            set_result("{\"ok\":true}");
+            0
+        }
+        Err(e) => {
+            set_result(&format!(
+                "{{\"ok\":false,\"error\":{}}}",
+                Json::Str(e).write()
+            ));
+            1
+        }
+    }
+}
+
+/// Take a pending host `imaginal-action` as JSON, or `null`.
+#[no_mangle]
+pub extern "C" fn session_take_host_action() -> u32 {
+    let result = SESSION.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some(session) = slot.as_mut() else {
+            return Err("session is not initialized".to_string());
+        };
+        Ok(session.take_pending_host_action())
+    });
+    match result {
+        Ok(Some((name, args, simple))) => {
+            set_result(
+                &Json::Obj(vec![
+                    ("name".into(), Json::Str(name)),
+                    (
+                        "args".into(),
+                        Json::Arr(args.into_iter().map(Json::Str).collect()),
+                    ),
+                    ("simple".into(), Json::Bool(simple)),
+                ])
+                .write(),
+            );
+            0
+        }
+        Ok(None) => {
+            set_result("null");
+            0
+        }
+        Err(e) => {
+            set_result(&format!("error: {e}"));
+            1
+        }
+    }
+}
+
+/// Complete a pending host `imaginal-action`.  An empty result is `nil`.
+///
+/// # Safety
+/// `result_ptr` must point to `result_len` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn session_complete_host_action(
+    result_ptr: *const u8,
+    result_len: usize,
+    simple: u32,
+) -> u32 {
+    let result = match unsafe { read_text(result_ptr, result_len) } {
+        Ok(text) => text,
+        Err(e) => {
+            set_result(&format!("error: {e}"));
+            return 1;
+        }
+    };
+    let outcome = SESSION.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some(session) = slot.as_mut() else {
+            return Err("session is not initialized".to_string());
+        };
+        let value = if result.trim().is_empty() || result.eq_ignore_ascii_case("nil") {
+            None
+        } else {
+            Some(result.as_str())
+        };
+        session.complete_host_action(value, simple != 0)
+    });
+    match outcome {
+        Ok(()) => {
+            set_result("{\"ok\":true}");
+            0
+        }
+        Err(e) => {
+            set_result(&format!(
+                "{{\"ok\":false,\"error\":{}}}",
+                Json::Str(e).write()
+            ));
             1
         }
     }
