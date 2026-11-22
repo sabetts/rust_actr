@@ -14,7 +14,7 @@
   .controls { display: flex; gap: 1.25rem; align-items: flex-end;
               flex-wrap: wrap; margin-bottom: .75rem; }
   label { display: block; font-weight: 600; margin-bottom: .2rem; }
-  input[type=number], select { padding: .3rem; font: inherit; }
+  input[type=number], input[type=text], select { padding: .3rem; font: inherit; }
   input[type=number] { width: 5.5rem; }
   select { min-width: 15rem; }
   button { padding: .5rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer; }
@@ -68,6 +68,7 @@
   .task-controls { display: flex; gap: .85rem; align-items: flex-end; flex-wrap: wrap; }
   .task-control label { margin-bottom: .15rem; }
   .task-control input[type=number] { width: 5.5rem; }
+  .task-control input[type=text] { width: 6rem; }
   .task-control select { min-width: 10rem; }
   .task-report { white-space: pre-wrap; margin: 0; padding: .4rem;
                  background: color-mix(in srgb, currentColor 6%, transparent);

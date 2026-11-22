@@ -53,11 +53,16 @@ async function runTask(taskId, modelFile, overrides = {}) {
   if (!descriptor) fail(`missing task ${taskId}`);
   const source = sourceFor(modelFile);
   const actr = new Actr(wasm, 100, 0, null);
-  actr.loadSource(descriptor.prelude ? `${descriptor.prelude}\n${source}` : source);
+  const controls = controlsFor(descriptor, overrides);
+  const prelude =
+    typeof descriptor.prelude === "function"
+      ? descriptor.prelude(controls)
+      : descriptor.prelude;
+  actr.loadSource(prelude ? `${prelude}\n${source}` : source);
   const result = await descriptor.run(actr, {
     secs: 60,
     runSeconds: 60,
-    controls: controlsFor(descriptor, overrides),
+    controls,
     paint: async () => {},
     stage: null,
     signal: null,
@@ -105,6 +110,38 @@ if (cat.result.answered !== 0) {
 }
 if (!cat.result.report.includes("starter")) {
   fail(`categorize report missing starter note:\n${cat.result.report}`);
+}
+
+const catCustom = await runTask("categorize", "unit8/categorize-model.lisp", {
+  runs: 1,
+  offset: 0.5,
+  slot1: "size",
+  slot2: "shape",
+  slot3: "texture",
+  slot4: "color",
+});
+if (!catCustom.result.report.includes("Offset: 0.5")) {
+  fail(`categorize report missing offset:\n${catCustom.result.report}`);
+}
+if (!catCustom.result.report.includes("Slots: size, shape, texture, color")) {
+  fail(`categorize report missing custom slots:\n${catCustom.result.report}`);
+}
+if (catCustom.actr.chunkSlotValue("example0", "size") == null) {
+  fail("categorize custom-slot examples missing size");
+}
+if (catCustom.actr.chunkSlotValue("example0", "eh") != null) {
+  fail("categorize custom-slot examples still have eh");
+}
+
+const catFallback = await runTask("categorize", "unit8/categorize-model.lisp", {
+  runs: 1,
+  slot1: "dup",
+  slot2: "dup",
+  slot3: "x",
+  slot4: "y",
+});
+if (!catFallback.result.report.includes("Warning:")) {
+  fail(`categorize invalid slots did not warn:\n${catFallback.result.report}`);
 }
 
 const semantic = await runTask("semantic-dynamic", "unit8/semantic-dynamic-model.lisp", {

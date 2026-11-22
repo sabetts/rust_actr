@@ -36,56 +36,80 @@ const STIMS = [
   [0.704, -0.287, -0.164, 0.178],
 ];
 
-const SLOTS = ["eh", "es", "nl", "mh"];
+const DEFAULT_SLOTS = ["eh", "es", "nl", "mh"];
+const SLOT_PATTERN = /^[a-z][a-z0-9-]*$/i;
 
-function exampleForm(name, category, values) {
+function normalizeSlots(controls) {
+  const slots = ["slot1", "slot2", "slot3", "slot4"].map((id) =>
+    String(controls[id] ?? "").trim().toLowerCase()
+  );
+
+  let warning = "";
+  if (slots.some((slot) => !slot)) {
+    warning = "Slot names must be non-empty. Using default slots.";
+  } else if (slots.some((slot) => !SLOT_PATTERN.test(slot))) {
+    warning = "Slot names must be simple symbols. Using default slots.";
+  } else if (new Set(slots).size !== 4) {
+    warning = "Slot names must be unique. Using default slots.";
+  } else if (slots.includes("category")) {
+    warning = "Slot name category cannot be used. Using default slots.";
+  }
+
+  return warning
+    ? { slots: DEFAULT_SLOTS.slice(), warning }
+    : { slots, warning: "" };
+}
+
+function normalizeOffset(controls) {
+  const value = Number(controls.offset);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function exampleForm(name, category, values, slots) {
   return (
     `      (list '${name} 'isa 'example 'category ${category}` +
-    values.map((value, i) => ` '${SLOTS[i]} '${value}`).join("") +
+    values.map((value, index) => ` '${slots[index]} '${value}`).join("") +
     ")"
   );
 }
 
-const EXAMPLES = [
-  ...CAT1.map((values, i) => exampleForm(`example${i}`, 1, values)),
-  ...CAT2.map((values, i) => exampleForm(`example${i + CAT1.length}`, 2, values)),
-];
-
-const PRELUDE = `
+function buildPrelude(slots) {
+  const examples = [
+    ...CAT1.map((values, index) => exampleForm(`example${index}`, 1, values, slots)),
+    ...CAT2.map((values, index) =>
+      exampleForm(`example${index + CAT1.length}`, 2, values, slots)
+    ),
+  ];
+  return `
 (defun create-example-memories ()
-  (extend-possible-slots 'eh)
-  (extend-possible-slots 'es)
-  (extend-possible-slots 'nl)
-  (extend-possible-slots 'mh)
-  (define-chunks (eh isa chunk))
-  (define-chunks (es isa chunk))
-  (define-chunks (nl isa chunk))
-  (define-chunks (mh isa chunk))
+${slots.map((slot) => `  (extend-possible-slots '${slot})`).join("\n")}
+${slots.map((slot) => `  (define-chunks (${slot} isa chunk))`).join("\n")}
   (add-dm-fct
     (list
-${EXAMPLES.join("\n")})))
+${examples.join("\n")})))
 `;
+}
 
-function sizeSimilarities(a, b) {
+function sizeSimilarities(a, b, offset) {
   if (typeof b !== "number") return null;
   const name = String(a ?? "").toLowerCase();
   const anchor =
     name === "small" ? -0.9 : name === "medium" ? 0 : name === "large" ? 0.9 : null;
   if (anchor == null) return null;
-  const spread = b - anchor;
+  const spread = b - offset - anchor;
   return Math.exp(-(spread * spread) / 0.3) - 1;
 }
 
-async function attribute(actr, ctx, slot, value) {
-  actr.goalFocus(["state", "add-attribute", "name", slot, "value", value]);
+async function attribute(actr, ctx, slot, value, offset) {
+  actr.goalFocus(["state", "add-attribute", "name", slot, "value", value + offset]);
   await actr.run(20, { paint: false, signal: ctx.signal });
 }
 
-async function trial(actr, ctx, features) {
+async function trial(actr, ctx, features, slots, offset) {
   actr.reset();
-  const pairs = actr.permuteList(SLOTS.map((slot, index) => [slot, features[index]]));
+  const pairs = actr.permuteList(slots.map((slot, index) => [slot, features[index]]));
   for (const [slot, value] of pairs) {
-    await attribute(actr, ctx, slot, value);
+    await attribute(actr, ctx, slot, value, offset);
   }
   actr.goalFocus(["state", "categorize"]);
   await actr.run(20, { paint: false, signal: ctx.signal });
@@ -98,14 +122,22 @@ async function trial(actr, ctx, features) {
 
 async function categorize(actr, ctx) {
   const runs = Math.max(1, Number(ctx.controls.runs) || 5);
-  actr.addCommand("size-similarities", sizeSimilarities);
+  const { slots, warning } = normalizeSlots(ctx.controls);
+  const offset = normalizeOffset(ctx.controls);
+  actr.addCommand("size-similarities", (a, b) => sizeSimilarities(a, b, offset));
   try {
     const results = Array(STIMS.length).fill(0);
     const counts = Array(STIMS.length).fill(0);
 
     for (let run = 0; run < runs; run += 1) {
       for (let i = 0; i < STIMS.length; i += 1) {
-        const { category, answered } = await trial(actr, ctx, STIMS[i]);
+        const { category, answered } = await trial(
+          actr,
+          ctx,
+          STIMS[i],
+          slots,
+          offset
+        );
         if (category === 1) results[i] += 1;
         if (answered) counts[i] += 1;
       }
@@ -117,8 +149,11 @@ async function categorize(actr, ctx) {
     const total = STIMS.length * runs;
     const report = [
       `Mode: experiment (${runs} run${runs === 1 ? "" : "s"})`,
-      `Answered: ${answered}/${total}`,
+      `Offset: ${offset}`,
+      `Slots: ${slots.join(", ")}`,
     ];
+    if (warning) report.push(`Warning: ${warning}`);
+    report.push(`Answered: ${answered}/${total}`);
     if (answered > 0) {
       report.push(
         `CORRELATION: ${Number(actr.correlation(proportions, CAT_DATA, false)).toFixed(3)}`,
@@ -151,7 +186,7 @@ async function categorize(actr, ctx) {
 
 export const categorizeTask = {
   run: categorize,
-  prelude: PRELUDE,
+  prelude: (controls) => buildPrelude(normalizeSlots(controls).slots),
   controls: [
     {
       id: "runs",
@@ -162,6 +197,19 @@ export const categorizeTask = {
       step: 1,
       default: 5,
     },
+    {
+      id: "offset",
+      label: "Offset",
+      type: "number",
+      min: -2,
+      max: 2,
+      step: 0.1,
+      default: 0,
+    },
+    { id: "slot1", label: "Slot 1", type: "text", default: "eh" },
+    { id: "slot2", label: "Slot 2", type: "text", default: "es" },
+    { id: "slot3", label: "Slot 3", type: "text", default: "nl" },
+    { id: "slot4", label: "Slot 4", type: "text", default: "mh" },
   ],
   runSeconds: 20,
   runTimeMode: "unused",

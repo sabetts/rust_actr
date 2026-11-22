@@ -178,6 +178,11 @@ async function main() {
       throw new Error("Categorize should disable the run-time input");
     }
     await page.fill("#task-control-categorize-runs", "1");
+    await page.fill("#task-control-categorize-offset", "0.5");
+    await page.fill("#task-control-categorize-slot1", "size");
+    await page.fill("#task-control-categorize-slot2", "shape");
+    await page.fill("#task-control-categorize-slot3", "texture");
+    await page.fill("#task-control-categorize-slot4", "color");
     await runModel();
     const categorizeResult =
       (await page.locator("#task-result").textContent()) || "";
@@ -188,6 +193,12 @@ async function main() {
     }
     if (!categorizeReport.includes("starter")) {
       throw new Error(`Categorize report missing starter note:\n${categorizeReport}`);
+    }
+    if (!categorizeReport.includes("Offset: 0.5")) {
+      throw new Error(`Categorize report missing offset:\n${categorizeReport}`);
+    }
+    if (!categorizeReport.includes("Slots: size, shape, texture, color")) {
+      throw new Error(`Categorize report missing custom slots:\n${categorizeReport}`);
     }
 
     if (errors.length) {

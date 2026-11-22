@@ -178,6 +178,15 @@ function renderTaskControls(taskId, descriptor) {
         clearTaskResult();
         syncTaskControlVisibility(taskId, descriptor);
       });
+    } else if (control.type === "text") {
+      input = document.createElement("input");
+      input.type = "text";
+      input.value = String(values[control.id] ?? control.default);
+      input.addEventListener("input", () => {
+        values[control.id] = input.value;
+        clearTaskResult();
+        syncTaskControlVisibility(taskId, descriptor);
+      });
     } else {
       input = document.createElement("input");
       input.type = "number";
@@ -241,10 +250,14 @@ function progress(text) {
 async function runTask(model, descriptor, source, seed0, seed1, secs, signal) {
   const window = new AgiWindow($("agi-window"));
   const actr = new Actr(wasm, seed0, seed1, window);
-  const taskSource = descriptor.prelude ? `${descriptor.prelude}\n${source}` : source;
+  const controls = readControls(model.task, descriptor);
+  const prelude =
+    typeof descriptor.prelude === "function"
+      ? descriptor.prelude(controls)
+      : descriptor.prelude;
+  const taskSource = prelude ? `${prelude}\n${source}` : source;
   try {
     actr.loadSource(taskSource);
-    const controls = readControls(model.task, descriptor);
     const result = await descriptor.run(actr, {
       secs,
       runSeconds: secs,
