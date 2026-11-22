@@ -48,7 +48,7 @@ async function trial(actr, ctx, onset) {
   );
 
   await ctx.paint();
-  await actr.run(ctx.runSeconds ?? 30);
+  await actr.run(ctx.runSeconds ?? 30, { signal: ctx.signal });
 
   actr.removeCommandMonitor("output-key", "sperling-response");
   actr.removeCommand("sperling-response");

@@ -37,7 +37,7 @@ async function trial(actr, ctx, n) {
   actr.installDevice(window);
 
   await ctx.paint();
-  await actr.run(ctx.runSeconds ?? 30);
+  await actr.run(ctx.runSeconds ?? 30, { signal: ctx.signal });
 
   actr.removeCommandMonitor("output-speech", "subitize-response");
   actr.removeCommand("subitize-response");

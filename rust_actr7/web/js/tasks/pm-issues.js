@@ -33,7 +33,7 @@ async function pmIssues(actr, ctx) {
   actr.scheduleEventRelative(time, "pm-issue-display", [window, prompt], true);
 
   await ctx.paint();
-  await actr.run(ctx.runSeconds ?? 10);
+  await actr.run(ctx.runSeconds ?? 10, { signal: ctx.signal });
 
   actr.removeCommand("pm-issue-display");
   actr.removeCommandMonitor("output-key", "pm-issues-response");

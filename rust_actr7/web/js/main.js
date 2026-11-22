@@ -1,4 +1,4 @@
-import { Actr, loadWasm, nextPaint } from "./actr.js";
+import { Actr, RunCancelled, loadWasm, nextPaint } from "./actr.js";
 import { AgiWindow } from "./agi-window.js";
 import { TASKS } from "./tasks/index.js";
 
@@ -10,6 +10,7 @@ let models = new Map();
 let selectedModel = null;
 let modelReady = false;
 let modelRequest = 0;
+let activeRun = null;
 
 function taskDescriptor(model) {
   return model?.task ? TASKS[model.task] || null : null;
@@ -161,69 +162,85 @@ function showTaskPanel(model) {
   }
 }
 
-function readResult() {
-  const ptr = wasm.result_ptr();
-  const len = wasm.result_len();
-  return new TextDecoder().decode(new Uint8Array(wasm.memory.buffer, ptr, len));
+function progress(text) {
+  if (activeRun) $("status").textContent = text;
 }
 
-function runModelInWasm(source, seed0, seed1, secs) {
-  const bytes = new TextEncoder().encode(source);
-  const ptr = wasm.alloc(bytes.length);
-  let status;
-  try {
-    new Uint8Array(wasm.memory.buffer, ptr, bytes.length).set(bytes);
-    status = wasm.run_model(ptr, bytes.length, BigInt(seed0), BigInt(seed1), secs);
-  } finally {
-    wasm.dealloc(ptr, bytes.length);
-  }
-  return { ok: status === 0, out: readResult() };
-}
-
-async function runTask(model, descriptor, source, seed0, seed1, secs) {
+async function runTask(model, descriptor, source, seed0, seed1, secs, signal) {
   const window = new AgiWindow($("agi-window"));
   const actr = new Actr(wasm, seed0, seed1, window);
   const taskSource = descriptor.prelude ? `${descriptor.prelude}\n${source}` : source;
-  actr.loadSource(taskSource);
-  const controls = readControls(model.task, descriptor);
-  const result = await descriptor.run(actr, {
-    secs,
-    runSeconds: secs,
-    controls,
-    paint: nextPaint,
-    stage: $("task-stage"),
-  });
-  renderResult(result);
-  return { ok: true, out: actr.trace.join("\n") };
+  try {
+    actr.loadSource(taskSource);
+    const controls = readControls(model.task, descriptor);
+    const result = await descriptor.run(actr, {
+      secs,
+      runSeconds: secs,
+      controls,
+      paint: nextPaint,
+      stage: $("task-stage"),
+      signal,
+      progress,
+    });
+    renderResult(result);
+    return { ok: true, out: actr.trace.join("\n") };
+  } catch (e) {
+    if (e instanceof RunCancelled || e?.name === "RunCancelled") {
+      return { ok: false, cancelled: true, out: actr.trace.join("\n") };
+    }
+    throw e;
+  }
+}
+
+async function runGenericModel(source, seed0, seed1, secs, signal) {
+  const actr = new Actr(wasm, seed0, seed1, null);
+  try {
+    actr.loadSource(source);
+    await actr.run(secs, { signal, paint: false });
+    return { ok: true, out: actr.trace.join("\n") };
+  } catch (e) {
+    if (e instanceof RunCancelled || e?.name === "RunCancelled") {
+      return { ok: false, cancelled: true, out: actr.trace.join("\n") };
+    }
+    throw e;
+  }
 }
 
 async function run() {
-  if (!wasm || !selectedModel) return;
+  if (!wasm || !selectedModel || activeRun) return;
   const model = selectedModel;
   const descriptor = taskDescriptor(model);
   const source = $("model").value;
   const seed0 = Math.trunc(Number($("seed0").value) || 0);
   const seed1 = Math.trunc(Number($("seed1").value) || 0);
   const secs = Number($("secs").value) || 0;
+  const controller = new AbortController();
+  activeRun = controller;
 
   $("run").disabled = true;
+  $("cancel").hidden = false;
+  $("cancel").disabled = false;
   setControlsDisabled(true);
   $("status").textContent = "running...";
   const t0 = performance.now();
   try {
-    const { ok, out } = descriptor
-      ? await runTask(model, descriptor, source, seed0, seed1, secs)
-      : runModelInWasm(source, seed0, seed1, secs);
-    $("output").value = out;
-    $("output").classList.toggle("err", !ok);
+    const result = descriptor
+      ? await runTask(model, descriptor, source, seed0, seed1, secs, controller.signal)
+      : await runGenericModel(source, seed0, seed1, secs, controller.signal);
+    $("output").value = result.out;
+    $("output").classList.toggle("err", !result.ok && !result.cancelled);
     const ms = Math.round(performance.now() - t0);
-    const lines = out ? out.split("\n").length : 0;
-    $("status").textContent = `${ok ? "ok" : "error"} - ${ms} ms - ${lines} lines`;
+    const lines = result.out ? result.out.split("\n").length : 0;
+    $("status").textContent = result.cancelled
+      ? `cancelled - ${ms} ms - ${lines} lines`
+      : `${result.ok ? "ok" : "error"} - ${ms} ms - ${lines} lines`;
   } catch (e) {
     $("output").value = "error: " + e;
     $("output").classList.add("err");
     $("status").textContent = "error";
   } finally {
+    activeRun = null;
+    $("cancel").hidden = true;
     setControlsDisabled(false);
     updateRunButton();
   }
@@ -333,6 +350,12 @@ async function loadModels() {
   updateRunButton();
   $("run").addEventListener("click", () => {
     void run();
+  });
+  $("cancel").addEventListener("click", () => {
+    if (!activeRun) return;
+    $("cancel").disabled = true;
+    $("status").textContent = "cancelling...";
+    activeRun.abort();
   });
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {

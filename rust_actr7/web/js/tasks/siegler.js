@@ -1,4 +1,4 @@
-﻿const SIEGLER_DATA = [
+const SIEGLER_DATA = [
   [0, 0.05, 0.86, 0, 0.02, 0, 0.02, 0, 0, 0.06],
   [0, 0.04, 0.07, 0.75, 0.04, 0, 0.02, 0, 0, 0.09],
   [0, 0.02, 0, 0.10, 0.75, 0.05, 0.01, 0.03, 0, 0.06],
@@ -34,7 +34,7 @@ async function trial(actr, ctx, arg1, arg2, response) {
   actr.newDigitSound(arg1);
   actr.newDigitSound(arg2, 0.75);
   response.value = null;
-  await actr.run(ctx.runSeconds ?? 30);
+  await actr.run(ctx.runSeconds ?? 30, { signal: ctx.signal });
   return response.value;
 }
 

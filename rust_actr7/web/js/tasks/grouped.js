@@ -1,4 +1,4 @@
-﻿const EXPECTED = ["1", "2", "3", "4", "6", "5", "7", "8"];
+const EXPECTED = ["1", "2", "3", "4", "6", "5", "7", "8"];
 
 async function grouped(actr, ctx) {
   const responses = [];
@@ -8,7 +8,7 @@ async function grouped(actr, ctx) {
 
   try {
     actr.reset();
-    await actr.run(ctx.runSeconds ?? 20);
+    await actr.run(ctx.runSeconds ?? 20, { signal: ctx.signal });
   } finally {
     actr.removeCommand("grouped-response");
   }

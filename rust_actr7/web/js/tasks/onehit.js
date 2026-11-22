@@ -1,4 +1,6 @@
-﻿const NUMERIC_SIM_HOOK = `
+import { RunCancelled } from "../actr.js";
+
+const NUMERIC_SIM_HOOK = `
 (defun 1hit-bj-number-sims (a b)
   (if (and (numberp a) (numberp b))
       (- (/ (abs (- a b)) (max a b)))
@@ -86,20 +88,33 @@ function renderStage(ctx, state) {
 }
 
 function waitForChoice(ctx, seconds) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const stage = ctx.stage;
     let done = false;
     let timer = null;
 
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("keydown", onKey, true);
+      ctx.signal?.removeEventListener("abort", abort);
+    };
     const finish = (choice) => {
       if (done) return;
       done = true;
-      if (timer) clearTimeout(timer);
-      document.removeEventListener("keydown", onKey, true);
+      cleanup();
       stage.querySelectorAll("button[data-choice]").forEach((button) => {
         button.disabled = true;
       });
       resolve(choice);
+    };
+    const abort = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      stage.querySelectorAll("button[data-choice]").forEach((button) => {
+        button.disabled = true;
+      });
+      reject(new RunCancelled());
     };
     const onKey = (event) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
@@ -116,22 +131,39 @@ function waitForChoice(ctx, seconds) {
       button.addEventListener("click", () => finish(button.dataset.choice));
     });
     document.addEventListener("keydown", onKey, true);
+    ctx.signal?.addEventListener("abort", abort, { once: true });
+    if (ctx.signal?.aborted) abort();
     timer = setTimeout(() => finish("s"), Math.max(1, seconds) * 1000);
   });
 }
 
 function waitForNext(ctx, seconds) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const stage = ctx.stage;
     let done = false;
+    let timer = null;
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("keydown", onKey, true);
+      ctx.signal?.removeEventListener("abort", abort);
+    };
     const finish = () => {
       if (done) return;
       done = true;
-      document.removeEventListener("keydown", onKey, true);
+      cleanup();
       stage.querySelectorAll("button[data-next]").forEach((button) => {
         button.disabled = true;
       });
       resolve();
+    };
+    const abort = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      stage.querySelectorAll("button[data-next]").forEach((button) => {
+        button.disabled = true;
+      });
+      reject(new RunCancelled());
     };
     const onKey = (event) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -143,7 +175,9 @@ function waitForNext(ctx, seconds) {
       button.addEventListener("click", finish);
     });
     document.addEventListener("keydown", onKey, true);
-    setTimeout(finish, Math.max(0, seconds) * 1000);
+    ctx.signal?.addEventListener("abort", abort, { once: true });
+    if (ctx.signal?.aborted) abort();
+    timer = setTimeout(finish, Math.max(0, seconds) * 1000);
   });
 }
 
@@ -196,7 +230,7 @@ async function playHand(actr, goal, monitor, ctx, human, seconds, more) {
   const ocards = deal(actr);
   showModelCards(actr, goal, mcards, ocards[0]);
   monitor.action = "s";
-  actr.runFullTime(10);
+  await actr.runFullTime(10, { signal: ctx.signal });
   const mchoice = monitor.action;
   let hchoice = "s";
 
@@ -222,7 +256,7 @@ async function playHand(actr, goal, monitor, ctx, human, seconds, more) {
   const hres = computeOutcome(humanFinal, mfinal);
 
   showModelResults(actr, goal, mfinal, humanFinal, mres, hres);
-  actr.runFullTime(10);
+  await actr.runFullTime(10, { signal: ctx.signal });
 
   const mtot = scoreCards(mfinal);
   const htot = scoreCards(humanFinal);

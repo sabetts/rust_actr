@@ -1,3 +1,5 @@
+import { RunCancelled } from "../actr.js";
+
 const EXP_DATA = [0.664, 0.778, 0.804, 0.818];
 const TRIALS = 48;
 const BLOCK = 12;
@@ -20,14 +22,25 @@ function addFeedback(actr, window, answer) {
 }
 
 function waitForKey(ctx, timeoutMs = 5000) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let done = false;
+    let timer = null;
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("keydown", onKey, true);
+      ctx.signal?.removeEventListener("abort", abort);
+    };
     const finish = (key) => {
       if (done) return;
       done = true;
-      clearTimeout(timer);
-      document.removeEventListener("keydown", onKey, true);
+      cleanup();
       resolve(key);
+    };
+    const abort = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new RunCancelled());
     };
     const onKey = (event) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
@@ -39,13 +52,35 @@ function waitForKey(ctx, timeoutMs = 5000) {
         finish(key);
       }
     };
-    const timer = setTimeout(() => finish(""), timeoutMs);
     document.addEventListener("keydown", onKey, true);
+    ctx.signal?.addEventListener("abort", abort, { once: true });
+    if (ctx.signal?.aborted) abort();
+    timer = setTimeout(() => finish(""), timeoutMs);
   });
 }
 
-async function waitReal(ms) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+async function waitReal(ms, signal) {
+  await new Promise((resolve, reject) => {
+    let done = false;
+    let timer = null;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    };
+    const abort = () => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      reject(new RunCancelled());
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
+    timer = setTimeout(finish, ms);
+  });
 }
 
 async function modelPass(actr, ctx, visible, response) {
@@ -64,7 +99,7 @@ async function modelPass(actr, ctx, visible, response) {
     addChoose(actr, window);
     response.value = "";
     if (visible) await ctx.paint();
-    await actr.run(5, { paint: visible });
+    await actr.run(5, { paint: visible, signal: ctx.signal });
     const key = String(response.value || "").toLowerCase();
     blocks[Math.floor(trial / BLOCK)].push(key === "h");
 
@@ -72,7 +107,7 @@ async function modelPass(actr, ctx, visible, response) {
     const answer = Number(actr.random(1.0)) < 0.9 ? "heads" : "tails";
     addFeedback(actr, window, answer);
     if (visible) await ctx.paint();
-    await actr.run(1, { paint: visible });
+    await actr.run(1, { paint: visible, signal: ctx.signal });
   }
   return blocks;
 }
@@ -88,6 +123,7 @@ async function humanPass(actr, ctx) {
   const blocks = Array.from({ length: 4 }, () => []);
 
   for (let trial = 0; trial < TRIALS; trial += 1) {
+    if (ctx.signal?.aborted) throw new RunCancelled();
     actr.clearExpWindow(window);
     addChoose(actr, window);
     await ctx.paint();
@@ -98,7 +134,7 @@ async function humanPass(actr, ctx) {
     const answer = Number(actr.random(1.0)) < 0.9 ? "heads" : "tails";
     addFeedback(actr, window, answer);
     await ctx.paint();
-    await waitReal(1000);
+    await waitReal(1000, ctx.signal);
   }
   return blocks;
 }
@@ -165,6 +201,7 @@ async function choice(actr, ctx) {
       for (let i = 0; i < 4; i += 1) {
         totals[i] += blocks[i].filter(Boolean).length / BLOCK;
       }
+      ctx.progress?.(`running... ${run + 1}/${runs}`);
     }
   } finally {
     actr.removeCommandMonitor("output-key", "choice-response");

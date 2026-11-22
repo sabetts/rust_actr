@@ -1,4 +1,4 @@
-﻿const PERSON_LOCATION_DATA = [
+const PERSON_LOCATION_DATA = [
   1.11, 1.17, 1.22,
   1.17, 1.20, 1.22,
   1.15, 1.23, 1.36,
@@ -61,7 +61,7 @@ async function visualSentence(actr, ctx, person, location, target, term) {
 
   try {
     await ctx.paint();
-    await actr.run(ctx.runSeconds ?? 30);
+    await actr.run(ctx.runSeconds ?? 30, { signal: ctx.signal });
   } finally {
     actr.removeCommandMonitor("output-key", "fan-response");
     actr.removeCommand("fan-response");
@@ -84,7 +84,7 @@ async function goalSentence(actr, ctx, person, location, target, term) {
     arg2: quoted(location),
   });
 
-  await actr.run(ctx.runSeconds ?? 30);
+  await actr.run(ctx.runSeconds ?? 30, { signal: ctx.signal });
   const response = actr.bufferSlotValue("goal", "state");
   if (response == null) return { rt: 30, correct: false };
   return {

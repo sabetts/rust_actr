@@ -43,6 +43,21 @@ export function nextPaint() {
   });
 }
 
+export class RunCancelled extends Error {
+  constructor() {
+    super("run cancelled");
+    this.name = "RunCancelled";
+  }
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw new RunCancelled();
+}
+
+function yieldToBrowser() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 class WasmSession {
   constructor(wasm) {
     for (const name of [
@@ -168,10 +183,6 @@ export class Actr {
     return this.eval("reset");
   }
 
-  runFullTime(seconds) {
-    return this.eval("run-full-time", seconds);
-  }
-
   pdisable(...names) {
     return this.eval("pdisable", ...names);
   }
@@ -196,23 +207,46 @@ export class Actr {
     return first(this.eval("buffer-slot-value", buffer, slot));
   }
 
-  async run(seconds, options = {}) {
-    if (this.commands.size === 0 && this.monitors.size === 0) {
-      this.eval("run", seconds);
-      return;
-    }
+  async _runStepped(name, seconds, options = {}) {
+    const signal = options.signal;
+    throwIfAborted(signal);
 
     const paint = options.paint !== false;
-    const begin = this.session.runBegin("run", seconds);
+    const needsCallbacks = this.commands.size > 0 || this.monitors.size > 0;
+    const batch = options.maxEvents
+      ?? (needsCallbacks || (paint && this.window) ? 1 : 256);
+    const yieldEveryMs = options.yieldEveryMs ?? 16;
+
+    const begin = this.session.runBegin(name, seconds);
     this.drain();
     if (!begin.shouldRun) return;
 
+    let lastYield = performance.now();
     for (;;) {
-      const more = this.session.runChunk(begin.limit, begin.full, 1);
+      throwIfAborted(signal);
+      const more = this.session.runChunk(begin.limit, begin.full, batch);
       const state = this.drain();
-      if (paint && state.painted) await nextPaint();
+
+      if (paint && state.painted) {
+        await nextPaint();
+        lastYield = performance.now();
+      } else if (yieldEveryMs > 0 && performance.now() - lastYield >= yieldEveryMs) {
+        await yieldToBrowser();
+        lastYield = performance.now();
+        throwIfAborted(signal);
+      }
+
       if (!more && state.handled === 0) break;
     }
+    throwIfAborted(signal);
+  }
+
+  run(seconds, options = {}) {
+    return this._runStepped("run", seconds, options);
+  }
+
+  runFullTime(seconds, options = {}) {
+    return this._runStepped("run-full-time", seconds, options);
   }
 
   addCommand(name, fn) {

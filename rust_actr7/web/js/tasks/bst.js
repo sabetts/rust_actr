@@ -1,3 +1,5 @@
+import { RunCancelled } from "../actr.js";
+
 const EXP_DATA = [20, 67, 20, 47, 87, 20, 80, 93, 83, 13, 29, 27, 80, 73, 53];
 
 const EXP_STIMS = [
@@ -133,14 +135,23 @@ async function modelTrial(actr, ctx, stims, visible) {
   actr.installDevice(display.window);
   actr.startHandAtMouse();
   if (visible) await ctx.paint();
-  await actr.run(ctx.runSeconds ?? 60, { paint: visible });
+  await actr.run(ctx.runSeconds ?? 60, { paint: visible, signal: ctx.signal });
   return state;
 }
 
 async function humanTrial(actr, ctx, stims) {
   const state = newState(stims);
-  const done = new Promise((resolve) => {
-    state.onDone = resolve;
+  const done = new Promise((resolve, reject) => {
+    const abort = () => reject(new RunCancelled());
+    state.onDone = () => {
+      ctx.signal?.removeEventListener("abort", abort);
+      resolve();
+    };
+    if (ctx.signal?.aborted) {
+      abort();
+      return;
+    }
+    ctx.signal?.addEventListener("abort", abort, { once: true });
   });
   if (actr.window) {
     actr.window.onButton = (_name, text) => {
@@ -217,6 +228,7 @@ async function bst(actr, ctx) {
       for (const name of Object.keys(utilities)) {
         utilities[name] += Number(actr.productionUtility(name)) || 0;
       }
+      ctx.progress?.(`running... ${run + 1}/${runs}`);
     }
 
     const percentages = counts.map((count) => (100 * count) / runs);

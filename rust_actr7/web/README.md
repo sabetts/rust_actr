@@ -107,10 +107,16 @@ code still calls the same AGI/RPC commands as the Lisp/Python tasks, including
 also supply a small model-support `defun` before the model source; 1-Hit
 Blackjack uses this for its numeric `:sim-hook`.
 
-Runs with commands or monitors are stepped one engine event at a time. This
-lets scheduled task callbacks run mid-run and lets the page repaint when a
-window changes, as in PM Issues and Sperling. Tasks that only need feedback
-between phases, such as blackjack, use full-time model runs.
+Runs are cooperative. The JS runner slices every model through the engine's
+`run-chunk` API, batches events when no callbacks are needed, and yields to the
+browser every few milliseconds. Models with commands or monitors still step
+one event at a time so task callbacks run in order. Visible windows repaint
+between events; long hidden runs, such as the BST report, remain responsive.
+
+The Run control disables while a run is active and a Cancel button appears.
+Cancellation aborts the current model/task run, keeps any partial trace, and
+marks the status as `cancelled`. Human waits in the browser tasks also listen
+for cancellation.
 
 ## Task controls
 
@@ -161,8 +167,9 @@ Switching tasks restores the values last used for that task.
   Choice; other tasks run models only.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
-- Runs happen on the browser main thread. Stepped runs yield for repaints, but
-  a pathological model can still block the tab.
+- Runs happen on the browser main thread. The runner yields for progress and
+  repaints, but an individual long engine event can still block briefly.
+  Cancel stops the run at the next chunk boundary.
 - One self-contained model file at a time. Models that need an external
   task/setup file are not supported yet.
 - 1-Hit Blackjack uses the default tutorial deck and opponent. Alternate decks
