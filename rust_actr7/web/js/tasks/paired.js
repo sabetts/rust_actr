@@ -33,9 +33,9 @@ function waitReal(ms, signal) {
   });
 }
 
-function renderHumanGuide(ctx, phase, detail) {
+function createHumanGuide(ctx) {
   const stage = ctx.stage;
-  if (!stage) return;
+  if (!stage) return null;
   stage.hidden = false;
   stage.classList.add("paired-stage");
   stage.replaceChildren();
@@ -45,24 +45,38 @@ function renderHumanGuide(ctx, phase, detail) {
   const heading = document.createElement("div");
   heading.className = "paired-guide-heading";
   heading.textContent = "Paired Associate — Human";
+
+  const instructions = document.createElement("div");
+  instructions.className = "paired-guide-instructions";
+  const recallInstruction = document.createElement("div");
+  recallInstruction.textContent = "When you see a word, type the digit associated with it.";
+  const studyInstruction = document.createElement("div");
+  studyInstruction.textContent = "When you see a number, it is paired with the previous word. Remember it.";
+  instructions.append(recallInstruction, studyInstruction);
+
   const phaseLine = document.createElement("div");
   phaseLine.className = "paired-guide-phase";
-  phaseLine.textContent = phase === "study"
+  const word = document.createElement("div");
+  word.className = "paired-guide-word";
+  const hint = document.createElement("div");
+  hint.className = "paired-guide-hint";
+  const progress = document.createElement("div");
+  progress.className = "paired-guide-progress";
+  box.append(heading, instructions, phaseLine, word, hint, progress);
+  stage.append(box);
+  return { phaseLine, word, hint, progress };
+}
+
+function updateHumanGuide(guide, phase, detail) {
+  if (!guide) return;
+  guide.phaseLine.textContent = phase === "study"
     ? "Study phase"
     : phase === "done"
       ? "Run complete"
       : "Recall phase";
-  const word = document.createElement("div");
-  word.className = "paired-guide-word";
-  word.textContent = detail.word;
-  const hint = document.createElement("div");
-  hint.className = "paired-guide-hint";
-  hint.textContent = detail.hint;
-  const progress = document.createElement("div");
-  progress.className = "paired-guide-progress";
-  progress.textContent = detail.progress;
-  box.append(heading, phaseLine, word, hint, progress);
-  stage.append(box);
+  guide.word.textContent = detail.word;
+  guide.hint.textContent = detail.hint;
+  guide.progress.textContent = detail.progress;
 }
 
 function waitForHumanResponse(ctx, ms, onResponse) {
@@ -196,6 +210,7 @@ async function humanPass(actr, ctx, size, blocks) {
     width: 300,
     height: 300,
   });
+  const guide = createHumanGuide(ctx);
   const total = size * blocks;
   let pairIndex = 0;
   const rows = [];
@@ -206,15 +221,15 @@ async function humanPass(actr, ctx, size, blocks) {
       const progress = `Block ${block + 1}/${blocks} · Pair ${pairIndex + 1}/${total}`;
       actr.clearExpWindow(window);
       addText(actr, prompt);
-      renderHumanGuide(ctx, "recall", {
+      updateHumanGuide(guide, "recall", {
         word: prompt,
-        hint: "Type the digit paired with this word, then wait. Press 0–9; no click needed.",
+        hint: "Waiting for your response.",
         progress,
       });
       await ctx.paint();
       const start = performance.now();
       const answer = await waitForHumanResponse(ctx, 5000, (key) => {
-        renderHumanGuide(ctx, "recall", {
+        updateHumanGuide(guide, "recall", {
           word: prompt,
           hint: `Recorded ${key}. Waiting for the study phase...`,
           progress,
@@ -228,7 +243,7 @@ async function humanPass(actr, ctx, size, blocks) {
 
       actr.clearExpWindow(window);
       addText(actr, associate);
-      renderHumanGuide(ctx, "study", {
+      updateHumanGuide(guide, "study", {
         word: `${prompt} → ${associate}`,
         hint: answer.response == null
           ? "No response recorded. Study this pair for the next trial."
@@ -245,7 +260,7 @@ async function humanPass(actr, ctx, size, blocks) {
     });
     ctx.progress?.(`running... block ${block + 1}/${blocks}`);
   }
-  renderHumanGuide(ctx, "done", {
+  updateHumanGuide(guide, "done", {
     word: "All trials complete",
     hint: "The report is shown below.",
     progress: `${total} trials`,
