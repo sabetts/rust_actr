@@ -399,21 +399,23 @@ export const onehitTask = {
     },
     {
       id: "games",
-      label: "Games (learn)",
+      label: "Games",
       type: "number",
       min: 1,
       max: 50,
       step: 1,
       default: 1,
+      showWhen: (values) => values.mode === "learn",
     },
     {
       id: "hands",
-      label: "Hands (play)",
+      label: "Hands",
       type: "number",
       min: 1,
       max: 50,
       step: 1,
       default: 5,
+      showWhen: (values) => values.mode === "play",
     },
     {
       id: "seconds",
@@ -423,6 +425,7 @@ export const onehitTask = {
       max: 30,
       step: 1,
       default: 10,
+      showWhen: (values) => values.mode === "play",
     },
   ],
 };
