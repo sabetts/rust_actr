@@ -23,9 +23,10 @@ changes.
 
 Rust changes are committed through `d56c398`. Priority 0, Priority 1, and
 Priority 2 are complete. Final verified state: `cargo fmt --check` clean;
-`cargo test` passed (`116` library/unit tests plus `560` model cases, `0`
+`cargo test` passed (`129` library/unit tests plus `560` model cases, `0`
 failed, `8` ignored model cases); all 16 differential cases pass with
-`--isolate`.
+`--isolate`. Later embedder-hook and web work is recorded in `PORTING-NOTES`
+#374.
 
 Full Rust test suite:
 
@@ -35,7 +36,7 @@ cargo fmt --check
 cargo test
 ```
 
-Last result: `116` library/unit tests plus `560` model cases passed, `0`
+Last result: `129` library/unit tests plus `560` model cases passed, `0`
 failed, `8` ignored model cases.
 
 Differential harness (requires SBCL, Python 3, and a built Rust binary):
@@ -654,7 +655,7 @@ Execution decisions:
   the processed-event count. The count will not be normalized or hidden.
 
 **Priority 2 status: complete.** All reopened gaps are closed and the final
-verification is green: `cargo fmt --check` clean, `cargo test` green (`116`
+verification is green: `cargo fmt --check` clean, `cargo test` green (`129`
 library/unit tests plus `560` model cases, `8` ignored model cases), and all
 16 differential cases `DIFF-OK` under `--isolate`.
 

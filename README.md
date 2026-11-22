@@ -17,7 +17,7 @@ harmful to your health. Please wear appropriate PPE.
 | `rust_actr7/src/bin/actr.rs` | CLI: `actr run <model>`, `actr server [--env [model]]`, `actr env` |
 | `rust_actr7/tests/` | integration suites (below) |
 | `rust_actr7/fixtures/` | test oracles + regen scripts — see `fixtures/README.md` |
-| `rust_actr7/web/` | browser (wasm) build — see `web/README.md` |
+| `rust_actr7/web/` | browser (wasm) build of the Units 1-8 tutorial page, with Node/Playwright smoke tests and a Pages workflow — see `web/README.md` |
 | `rust_actr7/python/` | in-process Python interface (`import rust_actr`) — see `python/README.md` |
 | `benchmarking/` | Lisp-vs-Rust-vs-Python benchmark harness — see `benchmarking/README.md` |
 | `actr7.x/` | upstream Lisp ACT-R sources (reference/regen; tests use vendored copies) |

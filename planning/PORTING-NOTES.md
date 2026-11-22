@@ -3145,7 +3145,9 @@ slot.
 
 `test-ppm` is the oracle for both. Its remaining diff is the third section,
 `:PPM-HOOK SHOW-PPM-VALUES` — a stub-defined Lisp callback, which `actr.py`
-cannot supply (the documented "no arbitrary Lisp" divergence).
+cannot supply (the documented "no arbitrary Lisp" divergence). This was
+resolved later: `:PPM-HOOK` is evaluated by the bounded task evaluator (#338)
+and Python/JS embedder callbacks are available (#374).
 
 ## 204. A scheduled command's trace module is the schedule-time `:module`
 
@@ -4421,7 +4423,9 @@ then partially matches at `-0.23 > :md` (default `-1.0`), where the default
 `md` similarity `-1.0 > -1.0` would have failed and the production would never
 fire. The hook is a task command (`add-act-r-command`), so the engine resolves
 it through `user_fns` and evaluates it with the bounded evaluator (which now
-understands `when`/`unless`/`numberp`/`symbolp`/`stringp`).
+understands `when`/`unless`/`numberp`/`symbolp`/`stringp`). An embedder
+callback (`Engine::set_sim_hook`) now takes precedence over this Lisp path; see
+#374.
 
 ## 264. A production may carry a documentation string after its name
 
@@ -5017,6 +5021,10 @@ changed. The 46 fall into these buckets:
 | Production compilation | 2 | dynamic compiled-production trace/result (#154) |
 | Numerical summary mismatch | 10 | six Siegler experiments, Sperling experiment, three paired summaries |
 | Base-level activation trace | 1 | repeated seeded `:ol` histories |
+
+The PPM row in this historical table was resolved in #338 (`:PPM-HOOK` is a
+live parameter evaluated by the bounded task evaluator) and gained an embedder
+callback in #374. `:BL-HOOK`/`:NOISE-HOOK` remain `:UAN`-driven.
 
 The missing debug printers are the clearest quick wins: they account for nine
 cases and are independent of model timing. Run
@@ -5771,6 +5779,9 @@ available as a task function.
 the engine's retrieval activations need permanent-noise/hook parity before its
 hardcoded result oracle can be replaced by engine output.
 
+`Engine::set_ppm_hook`/`PpmHookRow` now let Python and JS supply this hook
+directly; the Lisp task-function path remains the fallback (#374).
+
 Corpus: **537 passed / 30 ignored**.
 
 ## 339. Adaptive-noise request timeline
@@ -6505,3 +6516,43 @@ from `start-incremental-history-data` plus `get-incremental-history-data`,
 concatenating the chunks into the JSON string Lisp returns.
 `saved-activation-history` is a new session command over the engine's
 `sact_traces`, returning `[time, [chunk names]]` rows sorted by time.
+
+## 374. Embedder sim/ppm hooks, web Unit 8, and browser CI
+
+The engine now has a typed embedder hook layer beside the Lisp task-function
+path:
+
+- `PpmHookRow`/`PpmHookFn` are public; `Engine::set_ppm_hook` installs a
+  callback that `ppm_hook_offset` checks before `:ppm-hook`'s Lisp
+  `user_fns`. `Engine::similarity` already checked `sim_hook_fn` first.
+- `Session::set_sim_hook`/`set_ppm_hook` apply to the selected engine,
+  inactive engines, and every future `make_engine`, so hooks survive model
+  loads. `:PPM` and `:PPM-HOOK` are readable via `get-parameter-value`.
+- Python: `_native.Session.set_ppm_hook`, `Model.set_ppm_hook`/
+  `ppm_hook_name`. `actr.use`/`add_command` auto-bind pending sim/ppm hooks;
+  `remove_command` clears them. `:ppm-hook` callables receive
+  `(production, [(buffer, slot, expected, actual, similarity), ...])` with
+  typed values, and `None`/`False` falls through.
+- wasm/JS: `env.js_sim_hook`/`env.js_ppm_hook` imports, `session_set_hook`,
+  `session_take_host_action`, and `session_complete_host_action`. `actr.js`
+  auto-wires `addCommand` to the model's hook names, treats
+  `null`/`NaN`/`false` as no value, completes imaginal actions in the stepped
+  runner, and adds `copyChunk`/`chunkSlotValue`/`modChunk`.
+- Python categorize: model-body `call-act-r-command` only resolves Lisp
+  defuns, so the port creates its 10 example chunks from the task after load
+  (idempotently) instead of relying on the model-body command.
+- Web: Unit 8 adds Simple PPM, Building Sticks (PPM), Simple Dynamic,
+  Semantic Network, Paired Associate (Dynamic), and Categorize (starter).
+  The paired task is shared across units 4/7/8; Simple PPM/Simple Dynamic are
+  trace-only; Categorize uses a Lisp `create-example-memories` prelude. The
+  page also gained a `[hidden]` CSS fix so task panels hide correctly.
+
+Verification:
+
+- `cargo test`: **765 passed / 10 ignored** (129 library/unit tests plus 560
+  model cases and the other integration binaries).
+- Python: **90 passed** (`python -m unittest discover -s tests`).
+- Node: `rust_actr7/web/test/bridge_test.mjs` and `unit8_test.mjs`.
+- Browser: `cd rust_actr7/web && npm run test:e2e` (Playwright/Chromium).
+- `.github/workflows/web.yml` builds the wasm, runs the Node and browser
+  tests, and deploys `_site` to GitHub Pages from `main`.

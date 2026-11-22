@@ -52,6 +52,9 @@ Last full verification:
 - `stepper_rpc`: 2 passed.
 - `cargo fmt --check`: clean.
 
+These are the milestone counts. Later engine/web work is recorded in
+`PORTING-NOTES` #374, which has the current corpus and full-suite totals.
+
 ## Remaining polish backlog
 
 These are the known gaps after the initial M1-M7 implementations. They are

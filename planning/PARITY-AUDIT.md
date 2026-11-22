@@ -1,6 +1,6 @@
 # Parity Audit (post-corpus)
 
-The regression corpus is complete: **559 passed / 8 ignored**, with 14
+The regression corpus is complete: **560 passed / 8 ignored**, with 14
 project-authored compilation-unit tests and `pcomp` at 66/66. Green means the
 printed traces match; it does not mean the engine is in full parity with the
 Lisp implementation.
@@ -27,6 +27,12 @@ parameter the engine silently accepts are invisible to the default suite.
   `tutorial-unit1modeling-warnings` is engine-driven (item 5);
   `undefined-slots` and one `act-touch` case still emit literal warning
   strings.
+- **Embedder hooks.** `:sim-hook` and `:ppm-hook` now have typed embedder
+  callbacks (`sim_hook_fn`/`ppm_hook_fn`, `PpmHookRow`) in addition to the
+  Lisp task-function path. Session-level setters apply to the selected engine,
+  inactive engines, and models loaded later; the Python and wasm/JS bindings
+  expose both hooks and the imaginal-action host request. The Lisp
+  `:ppm-hook` remains the fallback when the callback returns no value.
 - **Source echoes.** 177 of 567 tests are `source_case!` source checks that
   never run the engine (about 31% of the green count).
 - **Task logic outside the engine.** 67 cases replay task RNG with
@@ -50,7 +56,9 @@ parameter the engine silently accepts are invisible to the default suite.
   ignored. That is the right failure mode, but the features are still absent.
 - **No coverage.** The protected Zbrodoff/choice/categorize solution variants
   and the subitize-results scrape source remain ignored with named reasons;
-  `rpc_conformance` is environment-gated.
+  `rpc_conformance` is environment-gated. The categorize starter now creates
+  its example chunks from the task, so only the protected solution productions
+  remain unavailable.
 
 Not a defect list: the upstream refs are independent oracles compared
 line-by-line, 366 case files do drive the engine, 72 unit tests include
@@ -119,6 +127,11 @@ The surrogates are project-authored models under
 `fixtures/surrogates/traces/` and are compared byte-exact. They do not replace
 the upstream refs or match their protected models.
 
+The categorize starter no longer depends on the protected model for task setup:
+the Python port creates its 10 example chunks from the task after load, and the
+web task supplies them through a Lisp prelude. The surrogate still covers the
+protected solution's engine paths.
+
 The categorize surrogate exposed and fixed four engine gaps: `if` in the
 bounded user-function evaluator, live-buffer chunk lookup for indirect
 requests (a stale `named` copy previously won), adding the partial-matching
@@ -137,3 +150,5 @@ command used by the choice surrogate.
   `PORTING-NOTES.md`.
 - `PORTING-PLAN.md` and `PORTING-NOTES.md` reflect the new status; ignored
   cases still carry named reasons.
+- Embedder `:sim-hook`/`:ppm-hook` callbacks and imaginal-action host requests
+  have Rust, Python, Node, and browser coverage.

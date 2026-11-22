@@ -1,8 +1,8 @@
 # Rust ACT-R Python Interface — Current State
 
-Last updated: 2026-11-01
+Last updated: 2026-11-22
 Branch: `main`
-Latest relevant commit: `fc8fa75 history: preserve trace detail and expand blending history`
+Latest relevant commit: `0ab3f25 python: add categorize example memories from the task`
 
 This document records the Python-interface work added on top of the Rust
 `actr-engine`: what exists, how it fits together, what is verified, and what
@@ -30,7 +30,8 @@ events.
   `evaluate(name, args_json)`, `run_begin`, `run_chunk`, `run_slice`,
   `step_once`, `take_trace`, `take_fired_commands`,
   `take_fired_task_commands`, `take_pending_device_actions`,
-  `take_pending_host_action`, `complete_host_action`, `set_sim_hook`, command
+  `take_pending_host_action`, `complete_host_action`,
+  `set_sim_hook`/`set_ppm_hook` (session-wide), command
   registration/monitors, and model time/event counts.
 
 The native command protocol is JSON over `Session::evaluate`, matching the RPC
@@ -95,6 +96,10 @@ the live session.
 - Python `:sim-hook` functions are supported. They receive typed Python values
   (numbers as numbers, strings as strings), can return `None`/`False` for
   "no similarity", and are auto-bound by `actr.use()`.
+- Python `:ppm-hook` functions are supported. They receive
+  `(production, [(buffer, slot, expected, actual, similarity), ...])` with
+  typed values, can return `None`/`False` to fall through to the Lisp hook or
+  default offset, and are auto-bound by `actr.use()`/`actr.add_command`.
 - Python `imaginal-action` callbacks use a host-yield step: the engine pauses,
   Python runs the action with model access, then the engine places the result.
 - Scheduled task commands (`schedule-event-relative` and friends) registered
@@ -150,6 +155,10 @@ ported scripts execute; it does not compare every experiment summary against
 its vendored `.ref`. Protected solution models (Zbrodoff, choice, categorize,
 subitize) remain unavailable upstream.
 
+The categorize starter creates its 10 example chunks from the task after load
+because model-body `call-act-r-command` only resolves Lisp defuns; custom
+feature slot names are not recreated.
+
 ### 3.4 Tutorial notebooks
 
 The tutorial notebooks are ported next to the unit scripts:
@@ -194,13 +203,20 @@ experiments are tagged `rust-actr-skip`. `broken-addition` remains Lisp-only.
   the stepping loop re-enters the engine after handling them.
 - Nested `run` from a callback is rejected; other commands are allowed.
 
-### 4.3 Similarity hooks
+### 4.3 Similarity and PPM hooks
 
 `Engine::set_sim_hook` receives an `Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>`.
 `HookValue` is a public typed value (`Sym`, `Int`, `Num`, `Str`, `Nil`).
-The Python binding converts to native Python values. Python `False`/`None` is
-treated as "no numeric result" rather than `0.0`; otherwise procedural partial
-matching accepts every mismatch.
+`Engine::set_ppm_hook` receives an `Rc<dyn Fn(&str, &[PpmHookRow]) -> Option<f32>>`;
+each `PpmHookRow` carries the buffer, slot, typed expected/actual values, and
+similarity. `Session::set_sim_hook`/`set_ppm_hook` apply the hook to the
+selected engine, inactive engines, and models loaded later.
+
+The Python binding converts both hooks to native Python values. Python
+`False`/`None` is treated as "no numeric result" rather than `0.0`; otherwise
+procedural partial matching accepts every mismatch. The Lisp `:sim-hook`/
+`:ppm-hook` task-function path remains the fallback when the callback returns
+no value.
 
 ### 4.4 Live buffer reads
 
@@ -223,7 +239,8 @@ semantics (which continue to use `chunk_name_slot`).
 | `rust_actr7/python/tools/port_notebooks.py` | notebook port generator |
 | `rust_actr7/python/tools/run_notebook.py` | headless notebook executor |
 | `rust_actr7/python/tests/test_model.py` | builder/runtime/device unit tests |
-| `rust_actr7/python/tests/test_execution.py` | stepping, callbacks, sim-hook, bst-ppm, siegler |
+| `rust_actr7/python/tests/test_execution.py` | stepping, callbacks, sim/ppm hooks, bst-ppm, categorize examples, siegler |
+| `rust_actr7/python/tests/test_tutorial_units.py` | per-unit smoke matrix for every ported unit 1-8 script |
 | `rust_actr7/python/tests/test_notebook_support.py` | reload, rebind, history helpers |
 | `rust_actr7/python/tests/test_notebooks.py` | notebook smoke tests |
 | `rust_actr7/python/tests/test_tutorial.py` | model compile, CLI smoke tests |
@@ -245,6 +262,7 @@ python tutorial/unit2/demo2.py
 python tutorial/unit5/grouped.py
 python tutorial/unit5/onehit.py hands 2
 python tutorial/unit8/bst_ppm.py experiment 1
+python tutorial/unit8/categorize.py experiment 1
 ```
 
 Direct Python:
@@ -276,18 +294,19 @@ cd rust_actr7/python
 python -m unittest discover -s tests -q
 ```
 
-Current Python suite: **87 tests passing**. It covers:
+Current Python suite: **90 tests passing**. It covers:
 
 - builder source and runtime values
 - runtime DM/buffers, callbacks, devices
 - stepped-vs-fast trace equality
 - mid-run callback timing
-- Python sim-hooks
+- Python sim-hooks and ppm-hooks (explicit and auto-bound)
 - `mod-chunk`
 - imaginal-action host yield
 - `siegler` digit/speech
 - `zbrodoff` set/block
 - `bst-ppm` live task
+- categorize example-memory creation
 - per-unit smoke coverage for every ported unit 1-8 model/task script
   (`tests/test_tutorial_units.py`)
 - notebook reload/rebind and history helpers
@@ -303,9 +322,10 @@ cd rust_actr7
 cargo test
 ```
 
-Current result: **710 passed / 9 ignored** across the engine and
-model-regression suites. The ignored cases are the protected/blocked upstream
-solution sources and the environment-gated RPC test.
+Current result: **765 passed / 10 ignored** across the full `cargo test`
+run: 129 library/unit tests, 560 model cases, and the other integration
+binaries. The ignored cases are the protected/blocked upstream solution
+sources and the environment-gated RPC test.
 
 ## 8. Known limitations and next steps
 
@@ -313,7 +333,9 @@ solution sources and the environment-gated RPC test.
    per-unit smoke tests now exist; expanding tests to compare every tutorial
    experiment against its vendored reference is the next verification step.
 2. **Arbitrary Lisp.** The engine supports the tutorial's bounded Lisp
-   evaluator, not arbitrary Lisp. Python callbacks cover the gaps.
+   evaluator, not arbitrary Lisp. Python callbacks cover the gaps. Model-body
+   `call-act-r-command` forms still resolve only Lisp defuns; categorize
+   therefore adds its examples from the task.
 3. **Multiple models.** The Python façade binds tutorial modules to their own
    models, but it still targets one current model at a time; multi-model files
    remain out of scope.
@@ -321,6 +343,8 @@ solution sources and the environment-gated RPC test.
    are modeled, but no waveform/voice playback is produced.
 5. **Protected/starting models.** `choice` and the full `categorize` solution
    are not available upstream; `subitize`/unit2 assignment are starting models.
+   The categorize starter creates its 10 example memories from the task; only
+   the protected solution productions are missing.
 6. **Performance.** The JSON command bridge and one-event stepping are chosen
    for correctness; a typed bridge or batched stepping would be useful for
    large experiments.
@@ -372,3 +396,7 @@ solution sources and the environment-gated RPC test.
 - `865019a` tests: cover multi-model stepper callbacks
 - `858ad0d` rpc: route multi-model windows and device actions
 - `fc8fa75` history: preserve trace detail and expand blending history
+- `27cf483` engine: add embedder ppm-hook callback and session hooks
+- `0a7cec8` python: expose ppm-hook callback and bind pending hooks
+- `0ab3f25` python: add categorize example memories from the task
+- `6c52ee5` test: cover embedder hooks and host actions

@@ -16,7 +16,7 @@ weakening the oracle:
 - Repo: `C:\Users\sabetts\src4\actr7.x_rust`
 - Crate: `rust_actr7`
 - Latest commit: see `git log -1` (Wave 7: spacing-effect)
-- Full suite: **559 passed / 8 ignored / 0 failed**
+- Full suite: **560 passed / 8 ignored / 0 failed**
 - Separate environment-gated test: `rpc_conformance` (1 ignored; needs
   Python, bash, and a local ACT-R checkout).
 
@@ -335,6 +335,9 @@ Completed:
   retrieval requests and the result rows. The result strings remain
   task-provided for now; the adaptive base-level/noise hook formulas still
   need parity work before the oracle can be engine-generated.
+- [x] Embedder callbacks for both `:sim-hook` and `:ppm-hook` were added for
+  Python and JS (#374). The bounded Lisp task-function path remains the
+  fallback.
 - [x] Full suite green at **538 passed / 29 ignored**.
 
 ### Wave 5 - Residual Engine Features
@@ -528,7 +531,7 @@ Completed:
   `run_model_source_steps` (test 4's model is extracted from the upstream
   `defun`). `sdp`'s `:Last-Retrieval-Time` now uses the upstream
   `~6/print-time-in-seconds/` field width.
-- [x] Full suite green at **559 passed / 8 ignored**, with 14 project-authored
+- [x] Full suite green at **560 passed / 8 ignored**, with 14 project-authored
   compilation-unit tests and `pcomp` at 66/66.
 
 Next steps: none for the regression corpus; only externally blocked,

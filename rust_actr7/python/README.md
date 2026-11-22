@@ -154,11 +154,11 @@ a `WORD` sound using the same articulation-time calculation.
 ## Current limits
 
 The interface covers model construction, runtime buffer/DM commands, windows
-and devices, command monitors, mid-run task callbacks, Python similarity hooks,
-`mod-chunk`/`copy-chunk`, word/tone/digit sounds, the speech articulation and
-syllable-count commands, and Python-defined modules. Runtime model loading uses
-filesystem paths only; arbitrary Lisp evaluation and multiple-model files are
-still out of scope.
+and devices, command monitors, mid-run task callbacks, Python similarity/PPM
+hooks, `mod-chunk`/`copy-chunk`, word/tone/digit sounds, the speech articulation
+and syllable-count commands, and Python-defined modules. Runtime model loading
+uses filesystem paths only; arbitrary Lisp evaluation and multiple-model files
+are still out of scope.
 
 Custom modules support buffers, chunk types, requests and modification
 requests, queries, owned parameters, lifecycle hooks, and named scheduled

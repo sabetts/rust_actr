@@ -40,6 +40,9 @@ Last verified results:
 - `cargo test --features env --quiet --lib env::tests`: **3 passed**
 - `cargo fmt --check`: clean
 
+These are the milestone counts. Later engine/web work is recorded in
+`PORTING-NOTES` #374, which has the current corpus and full-suite totals.
+
 Only the pre-existing untracked
 `actr7.x/environment/gui/init/05-current-net.tcl` is present.
 
