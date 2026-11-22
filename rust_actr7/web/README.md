@@ -137,8 +137,9 @@ Switching tasks restores the values last used for that task. Controls can be
 hidden when the selected task mode does not use them.
 
 The global run-time input follows the selected task. It is labeled "Trial
-time" when the value applies to each trial, and is hidden for tasks with fixed
-trial timing, such as 1-Hit Blackjack and Choice.
+time" when the value applies to each trial. For tasks with fixed trial timing,
+such as 1-Hit Blackjack and Choice, the input is disabled and a help tooltip
+explains why.
 
 ## Notes
 

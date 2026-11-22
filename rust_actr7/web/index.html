@@ -30,7 +30,6 @@
   #output { background: color-mix(in srgb, currentColor 6%, transparent); }
   #output.err { color: #b00020; }
   .help { cursor: help; border-bottom: 1px dotted currentColor; }
-  .run-time-note { opacity: .7; font-size: 12px; }
   .task-panel { display: flex; gap: 1rem; align-items: flex-start;
                 flex-wrap: wrap; margin-bottom: .75rem; }
   .agi-window { border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
@@ -94,10 +93,11 @@
       <input id="seed1" type="number" value="0">
     </div>
     <div id="run-time-control">
-      <label for="secs" id="run-time-label">Run time (s)</label>
+      <label for="secs"><span id="run-time-label-text">Run time (s)</span><span
+        id="run-time-help" class="help" hidden
+        title="This task uses fixed trial timing; the run-time input is not used."> (?)</span></label>
       <input id="secs" type="number" value="10" min="0" step="0.5">
     </div>
-    <span id="run-time-note" class="run-time-note" hidden>Task uses fixed trial timing</span>
     <button id="run" disabled>Run model</button>
     <button id="cancel" hidden>Cancel</button>
     <span id="status">loading wasm...</span>

@@ -28,11 +28,11 @@ function runTimeModeFor(model) {
 
 function updateRunTimeControl(model = selectedModel) {
   const mode = runTimeModeFor(model);
-  const wrapper = $("run-time-control");
-  const note = $("run-time-note");
-  const label = $("run-time-label");
-  wrapper.hidden = mode === "unused";
-  note.hidden = mode !== "unused";
+  const input = $("secs");
+  const label = $("run-time-label-text");
+  const help = $("run-time-help");
+  input.disabled = mode === "unused";
+  help.hidden = mode !== "unused";
   label.textContent = mode === "per-trial" ? "Trial time (s)" : "Run time (s)";
 }
 
