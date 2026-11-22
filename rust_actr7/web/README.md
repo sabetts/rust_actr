@@ -1,4 +1,4 @@
-# ACT-R in the browser
+# ACT-R 7 Tutorial Models
 
 A static browser page that runs the Rust ACT-R engine as WebAssembly. It loads
 canonical tutorial model source and drives Units 1-6 through a browser AGI
