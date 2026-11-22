@@ -38,7 +38,9 @@ def build(seed=(100, 0)) -> actr.Model:
     m.define_chunks('categorize')
     m.define_chunks('add-attribute')
 
-    m.call_act_r_command('create-example-memories')
+    # The Rust engine resolves model-body `call-act-r-command` forms through
+    # Lisp task defuns.  This port supplies the examples from the task instead
+    # (at load and after every reset).
     m.set_similarities([('small', 'medium', -0.4), ('medium', 'large', -0.4), ('small', 'large', -0.8)])
     m.form('(set-buffer-chunk (quote imaginal) (quote (category unknown)))')
     m.declare_buffer_usage('goal', 'goal', all_slots=True)
@@ -289,35 +291,38 @@ def trial(*features):
 # running the experiment or alternate names were
 # not provided.
 
+_examples_loaded = False
+
+
 def create_example_memories():
+
+    global _examples_loaded
+    if _examples_loaded:
+        return
 
     for s in slots:
         actr.extend_possible_slots(s,False)
-        actr.define_chunks([s,"isa","chunk"])
+        actr.define_chunks(actr.Chunk(s, "chunk"))
 
-    for c in cat1:
-        chunk = ["isa","example","category",1]
-        for slot,value in list(zip(slots,c)):
-            chunk.append(slot)
-            chunk.append(value)
-        actr.add_dm(chunk)
+    for i, c in enumerate(cat1):
+        slots_for_chunk = {"category": 1, **dict(zip(slots, c))}
+        actr.add_dm(actr.Chunk(f"example{i}", "example", slots_for_chunk))
 
-    for c in cat2:
-        chunk = ["isa","example","category",2]
-        for slot,value in list(zip(slots,c)):
-            chunk.append(slot)
-            chunk.append(value)
-        actr.add_dm(chunk)
+    for i, c in enumerate(cat2):
+        slots_for_chunk = {"category": 2, **dict(zip(slots, c))}
+        actr.add_dm(actr.Chunk(f"example{len(cat1) + i}", "example", slots_for_chunk))
+
+    _examples_loaded = True
 
 actr.add_command("create-example-memories",create_example_memories,"Categorize task function to add the initial example chunks to simulate the training process.")
 
-# Need to load the model after the "create-example-memories" command
-# has been added since that command is called during the model
-# creation.
+# Load the model, then add the training examples once.  The `add-dm` RPC
+# command updates the model definition, so the chunks survive later resets.
 
 MODEL = actr.use(build())
 
 actr.bind_module(globals(), MODEL)
+create_example_memories()
 
 
 def _value(text):

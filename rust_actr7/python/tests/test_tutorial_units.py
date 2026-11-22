@@ -182,7 +182,17 @@ class Unit8Tests(unittest.TestCase):
 
     def test_categorize_experiment(self):
         module = load("unit8/categorize.py")
+        model = module["MODEL"]
+
+        def examples():
+            names = model._eval("dm")[0] or []
+            return [
+                name for name in names if str(name).upper().startswith("EXAMPLE")
+            ]
+
+        self.assertEqual(len(examples()), 10)
         self.assertIsNone(module["experiment"](1))
+        self.assertEqual(len(examples()), 10)
 
     def test_simple_ppm_model(self):
         module = load("unit8/simple_ppm_model.py")
