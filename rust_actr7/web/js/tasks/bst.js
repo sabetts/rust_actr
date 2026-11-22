@@ -25,6 +25,13 @@ const DEMO_STIMS = [
   [10, 200, 29, 132],
 ];
 
+function problemStims(value) {
+  const index = Number(value) || 1;
+  if (index === 2) return DEMO_STIMS[1];
+  if (index === 3) return EXP_STIMS[0];
+  return DEMO_STIMS[0];
+}
+
 function scoreList(values) {
   return values.map((value) => Number(value));
 }
@@ -182,7 +189,7 @@ async function bst(actr, ctx) {
   installCommands(actr, () => currentState);
   try {
     if (mode === "human") {
-      const stims = DEMO_STIMS[Number(ctx.controls.problem) === 2 ? 1 : 0];
+      const stims = problemStims(ctx.controls.problem);
       const state = await humanTrial(actr, ctx, stims);
       return {
         kind: "bst",
@@ -196,8 +203,7 @@ async function bst(actr, ctx) {
     }
 
     if (mode === "demo") {
-      const index = Number(ctx.controls.problem) || 1;
-      const stims = index === 2 ? DEMO_STIMS[1] : index === 3 ? EXP_STIMS[0] : DEMO_STIMS[0];
+      const stims = problemStims(ctx.controls.problem);
       const state = await modelTrial(actr, ctx, stims, true);
       return {
         kind: "bst",
@@ -261,7 +267,7 @@ export const bstTask = {
       label: "Mode",
       type: "select",
       options: [
-        ["report", "Report (100 runs)"],
+        ["report", "Report"],
         ["demo", "Visible demo"],
         ["human", "Human"],
       ],
@@ -269,7 +275,7 @@ export const bstTask = {
     },
     {
       id: "problem",
-      label: "Demo problem",
+      label: "Problem",
       type: "select",
       options: [
         ["1", "Demo 1"],
@@ -277,15 +283,17 @@ export const bstTask = {
         ["3", "Experiment 1"],
       ],
       default: "1",
+      showWhen: (values) => values.mode === "demo" || values.mode === "human",
     },
     {
       id: "runs",
-      label: "Runs",
+      label: "Report runs",
       type: "number",
       min: 1,
       max: 100,
       step: 1,
       default: 100,
+      showWhen: (values) => values.mode === "report",
     },
   ],
   runSeconds: 60,

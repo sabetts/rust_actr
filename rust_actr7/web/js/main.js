@@ -66,6 +66,20 @@ function controlStateFor(taskId, descriptor) {
   return controlState.get(taskId);
 }
 
+function controlApplies(control, values) {
+  if (typeof control.showWhen === "function") return Boolean(control.showWhen(values));
+  if (Array.isArray(control.showWhen)) return control.showWhen.includes(values[control.id]);
+  return true;
+}
+
+function syncTaskControlVisibility(taskId, descriptor) {
+  const values = controlStateFor(taskId, descriptor);
+  for (const wrapper of $("task-controls").querySelectorAll(".task-control")) {
+    const control = descriptor?.controls?.find((item) => item.id === wrapper.dataset.controlId);
+    if (control) wrapper.hidden = !controlApplies(control, values);
+  }
+}
+
 function renderTaskControls(taskId, descriptor) {
   const host = $("task-controls");
   host.replaceChildren();
@@ -79,6 +93,7 @@ function renderTaskControls(taskId, descriptor) {
   for (const control of descriptor.controls) {
     const wrapper = document.createElement("div");
     wrapper.className = "task-control";
+    wrapper.dataset.controlId = control.id;
     const label = document.createElement("label");
     label.htmlFor = `task-control-${taskId}-${control.id}`;
     label.textContent = control.label;
@@ -95,6 +110,7 @@ function renderTaskControls(taskId, descriptor) {
       input.value = String(values[control.id] ?? control.default);
       input.addEventListener("change", () => {
         values[control.id] = input.value;
+        syncTaskControlVisibility(taskId, descriptor);
       });
     } else if (control.type === "checkbox") {
       input = document.createElement("input");
@@ -102,6 +118,7 @@ function renderTaskControls(taskId, descriptor) {
       input.checked = Boolean(values[control.id]);
       input.addEventListener("change", () => {
         values[control.id] = input.checked;
+        syncTaskControlVisibility(taskId, descriptor);
       });
     } else {
       input = document.createElement("input");
@@ -112,6 +129,7 @@ function renderTaskControls(taskId, descriptor) {
       input.value = String(values[control.id] ?? control.default);
       input.addEventListener("input", () => {
         values[control.id] = input.value;
+        syncTaskControlVisibility(taskId, descriptor);
       });
     }
 
@@ -119,6 +137,7 @@ function renderTaskControls(taskId, descriptor) {
     wrapper.append(label, input);
     host.append(wrapper);
   }
+  syncTaskControlVisibility(taskId, descriptor);
 }
 
 function readControls(taskId, descriptor) {
