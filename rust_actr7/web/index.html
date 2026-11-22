@@ -67,7 +67,7 @@
   </div>
 </header>
 
-<main id="workspace" class="app-shell">
+<main id="workspace" class="app-shell" tabindex="-1">
   <section class="surface run-bar" aria-label="Run controls">
     <div class="run-bar-main">
       <div class="run-bar-title">
@@ -93,6 +93,7 @@
               title="The seed is a pair (S C), as in ACT-R's (sgp :seed (S C)): S initializes the random generator, and C discards that many draws before the first real one (0 = fresh start). Same model and seed gives an identical trace; change either number and the noise comes out differently.">?</span></label>
             <input id="seed1" type="number" value="0">
           </div>
+          <p class="run-note">Seed (S, C) controls the noise. The same model and seed always give the same trace.</p>
         </div>
       </details>
     </div>

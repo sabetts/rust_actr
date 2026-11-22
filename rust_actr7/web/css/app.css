@@ -1245,6 +1245,10 @@ select.input {
   padding: 0 11px 11px;
 }
 
+.run-settings-body .run-note {
+  grid-column: 1 / -1;
+}
+
 .run-note {
   color: var(--faint);
   font-size: 11px;
@@ -2561,7 +2565,6 @@ kbd {
     max-height: 700px;
   }
 
-  .editor-gutter,
   .trace-line {
     grid-template-columns: 42px minmax(0, 1fr);
   }
