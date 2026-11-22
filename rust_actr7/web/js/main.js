@@ -38,6 +38,7 @@ function summaryText(result) {
     return `Fan: correlation ${Number(result.correlation).toFixed(3)} - mean deviation ${Number(result.meanDeviation).toFixed(3)}`;
   }
   if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
+  if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
   return "";
 }
 function renderResult(result) {
