@@ -86,6 +86,15 @@ function clearTaskResult() {
   $("task-result").textContent = "";
   $("task-report").textContent = "";
   $("task-report").hidden = true;
+  clearTaskStage();
+}
+
+function clearTaskStage() {
+  const stage = $("task-stage");
+  if (!stage) return;
+  stage.replaceChildren();
+  stage.className = "task-stage";
+  stage.hidden = true;
 }
 
 function renderResult(result) {
@@ -212,12 +221,6 @@ function showTaskPanel(model) {
   clearTaskResult();
   const window = new AgiWindow($("agi-window"));
   window.reset();
-  const stage = $("task-stage");
-  if (stage) {
-    stage.replaceChildren();
-    stage.className = "task-stage";
-    stage.hidden = true;
-  }
   renderTaskControls(model?.task, descriptor);
   if (descriptor?.runSeconds != null) {
     $("secs").value = String(descriptor.runSeconds);
