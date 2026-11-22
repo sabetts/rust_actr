@@ -311,4 +311,56 @@ mod tests {
         assert!(events.contains("\"text\""), "{events}");
         assert!(events.contains("125,150"), "{events}");
     }
+
+    #[test]
+    fn host_action_round_trips() {
+        let mut session = WebSession::new((100, 0)).unwrap();
+        session
+            .load_source(
+                r#"
+(clear-all)
+(define-model host-action-test
+  (sgp :v t :esc t)
+  (chunk-type goal state)
+  (chunk-type result data)
+  (goal-focus (isa goal state start))
+  (p start
+     =goal> isa goal state start
+     ?imaginal> state free buffer empty
+     ==>
+     =goal> state wait
+     +imaginal-action> action "test-action" simple t)
+  (p done
+     =goal> isa goal state wait
+     =imaginal> isa result data 42
+     ==>
+     !output! GOT
+     =goal> state done))
+"#,
+            )
+            .unwrap();
+        session
+            .eval("add-act-r-command", &[Json::Str("test-action".into())])
+            .unwrap();
+
+        let (limit, full, should_run) = session.run_begin("run", 2.0);
+        assert!(should_run);
+        let mut completed = false;
+        for _ in 0..1000 {
+            let more = session.run_chunk(limit, full, 1).unwrap();
+            if let Some((name, _args, simple)) = session.take_pending_host_action() {
+                assert!(name.eq_ignore_ascii_case("test-action"));
+                session
+                    .complete_host_action(Some("(isa result data 42)"), simple)
+                    .unwrap();
+                completed = true;
+            }
+            if !more {
+                break;
+            }
+        }
+        assert!(completed, "host action was not requested");
+        let events = Json::Arr(session.take_events()).write();
+        assert!(events.contains("GOT"), "{events}");
+    }
 }

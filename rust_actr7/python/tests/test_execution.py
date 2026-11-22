@@ -137,6 +137,32 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(rows[0][3], "STATEA")
         self.assertAlmostEqual(rows[0][4], -0.5)
 
+    def test_python_ppm_hook_autobinds(self):
+        client.clear_state()
+        calls = []
+
+        def hook(production, rows):
+            calls.append((production, rows))
+            return 0.0
+
+        model = actr.Model("ppm-autobind", seed=(100, 0))
+        model.sgp(":ppm", 1)
+        model.sgp(":ppm-hook", actr.String("py-ppm-hook"))
+        model.chunk_type("goal", "state")
+        model.add_chunk("g", "goal", state="stateA")
+        model.set_similarities([("stateB", "stateA", -0.5)])
+        model.goal_focus("g")
+        model.add_production(
+            "(p choose =goal> isa goal state stateB ==> -goal>)"
+        )
+        client.add_command("py-ppm-hook", hook)
+        client.use(model)
+        model.run(1.0)
+
+        self.assertTrue(calls)
+        self.assertEqual(calls[0][0], "CHOOSE")
+        client.clear_state()
+
     def test_mod_chunk(self):
         model = actr.Model("mod", seed=(100, 0))
         model.chunk_type("item", "value")

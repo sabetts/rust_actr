@@ -8049,6 +8049,32 @@ mod tests {
             &mut remote,
         )
         .unwrap();
+        s.evaluate(
+            "sgp",
+            None,
+            &[Json::Str(":PPM-HOOK".into()), Json::Str("SHOW-PPM-VALUES".into())],
+            &mut remote,
+        )
+        .unwrap();
+
+        let ppm = s
+            .evaluate(
+                "get-parameter-value",
+                None,
+                &[Json::Str(":PPM".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(ppm[0], Json::Str("1".into()));
+        let hook = s
+            .evaluate(
+                "get-parameter-value",
+                None,
+                &[Json::Str(":PPM-HOOK".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(hook[0], Json::Str("SHOW-PPM-VALUES".into()));
 
         let calls = Rc::new(RefCell::new(Vec::new()));
         let recorded = calls.clone();

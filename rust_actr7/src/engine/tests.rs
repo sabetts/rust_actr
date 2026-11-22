@@ -464,6 +464,7 @@ fn ppm_hook_callback_receives_rows() {
     // `reset` rebuilds `Config` from the model, so set PPM afterwards.
     e.reset().unwrap();
     e.apply_sgp(":PPM", &sexp("1")).unwrap();
+    e.apply_sgp(":EGS", &sexp("0")).unwrap();
     e.apply_sgp(":UTILITY-OFFSETS", &sexp("PPM-OFFSET"))
         .unwrap();
 
@@ -489,6 +490,15 @@ fn ppm_hook_callback_receives_rows() {
     assert_eq!(row.expected, HookValue::Sym("STATE1".to_string()));
     assert_eq!(row.actual, HookValue::Sym("STATEA".to_string()));
     assert!((row.similarity - -0.1).abs() < 1e-6);
+
+    // The hook's value replaces the default `:ppm * Σ similarity` offset.
+    let index = e
+        .model
+        .productions
+        .iter()
+        .position(|p| p.name.eq_ignore_ascii_case("CONSTANT-SLOT-TEST"))
+        .unwrap();
+    assert_eq!(e.production_utility[index], Some(-0.42));
 }
 
 /// `render_production` reproduces the `:cst` instantiation block
