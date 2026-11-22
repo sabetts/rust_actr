@@ -12,7 +12,9 @@
   .controls { display: flex; gap: 1.25rem; align-items: flex-end;
               flex-wrap: wrap; margin-bottom: .75rem; }
   label { display: block; font-weight: 600; margin-bottom: .2rem; }
-  input[type=number] { width: 5.5rem; padding: .3rem; font: inherit; }
+  input[type=number], select { padding: .3rem; font: inherit; }
+  input[type=number] { width: 5.5rem; }
+  select { min-width: 15rem; }
   button { padding: .5rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer; }
   button:disabled { cursor: default; opacity: .6; }
   #status { margin-left: auto; opacity: .7; font-variant-numeric: tabular-nums; }
@@ -34,6 +36,12 @@
 
   <div class="controls">
     <div>
+      <label for="model-preset">Model</label>
+      <select id="model-preset" disabled>
+        <option>Loading models…</option>
+      </select>
+    </div>
+    <div>
       <label for="seed0">Seed</label>
       <input id="seed0" type="number" value="100">
     </div>
@@ -52,72 +60,8 @@
 
   <div class="grid">
     <div>
-      <label for="model">Model</label>
-      <textarea id="model" spellcheck="false">(clear-all)
-
-(define-model count
-
-(sgp :esc t :lf .05 :trace-detail high)
-
-
-(chunk-type number number next)
-(chunk-type count-from start end count)
-
-(add-dm
- (one ISA number number one next two)
- (two ISA number number two next three)
- (three ISA number number three next four)
- (four ISA number number four next five)
- (five ISA number number five))
-
-(goal-focus (ISA count-from start two end four))
-
-(p start
-   =goal>
-      ISA         count-from
-      start       =num1
-      count       nil
- ==>
-   =goal>
-      ISA         count-from
-      count       =num1
-   +retrieval>
-      ISA         number
-      number      =num1
-   )
-
-(p increment
-   =goal>
-      ISA         count-from
-      count       =num1
-    - end         =num1
-   =retrieval>
-      ISA         number
-      number      =num1
-      next        =num2
- ==>
-   =goal>
-      ISA         count-from
-      count       =num2
-   +retrieval>
-      ISA         number
-      number      =num2
-   !output!       (=num1)
-   )
-
-(p stop
-   =goal>
-      ISA         count-from
-      count       =num
-      end         =num
-   =retrieval>
-      ISA         number
-      number      =num
- ==>
-   -goal>
-   !output!       (=num)
-   )
-)</textarea>
+      <label for="model">Model source</label>
+      <textarea id="model" spellcheck="false" placeholder="Loading model…"></textarea>
     </div>
     <div>
       <label for="output">Trace</label>
@@ -130,6 +74,12 @@
 
 const $ = (id) => document.getElementById(id);
 let wasm = null;
+let modelReady = false;
+let modelRequest = 0;
+
+function updateRunButton() {
+  $("run").disabled = !(wasm && modelReady);
+}
 
 // Load the C-ABI module. `arrayBuffer` + `instantiate` (not streaming) so it
 // works regardless of the `.wasm` MIME type the static server sends.
@@ -157,7 +107,77 @@ function runModelInWasm(source, seed0, seed1, secs) {
   return { ok: status === 0, out };
 }
 
+async function loadSelectedModel() {
+  const select = $("model-preset");
+  const option = select.selectedOptions[0];
+  if (!option || !option.dataset.path) return;
+
+  const request = ++modelRequest;
+  modelReady = false;
+  updateRunButton();
+  $("status").textContent = "loading model…";
+  $("output").value = "";
+  $("output").classList.remove("err");
+
+  try {
+    const res = await fetch(`./models/${option.dataset.path}`, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`fetch models/${option.dataset.path}: ${res.status} ${res.statusText}`);
+    }
+    const source = await res.text();
+    if (request !== modelRequest) return;
+    $("model").value = source;
+    modelReady = true;
+    $("status").textContent = "";
+  } catch (e) {
+    if (request !== modelRequest) return;
+    $("status").textContent = "model failed to load";
+    $("output").value = String(e) + "\n\nDid you run web/build.py --models-only?";
+    $("output").classList.add("err");
+  } finally {
+    if (request === modelRequest) updateRunButton();
+  }
+}
+
+async function loadModels() {
+  const select = $("model-preset");
+  const res = await fetch("./models/manifest.json", { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`fetch models/manifest.json: ${res.status} ${res.statusText}`);
+  }
+  const manifest = await res.json();
+  const groups = Array.isArray(manifest.groups) ? manifest.groups : [];
+  if (!groups.length) throw new Error("model manifest has no groups");
+
+  select.replaceChildren();
+  for (const group of groups) {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = String(group.label || group.id);
+    for (const model of Array.isArray(group.models) ? group.models : []) {
+      if (!model || !model.id || !model.path) continue;
+      const option = document.createElement("option");
+      option.value = String(model.id);
+      option.textContent = String(model.label || model.id);
+      option.dataset.path = String(model.path);
+      optgroup.append(option);
+    }
+    if (optgroup.children.length) select.append(optgroup);
+  }
+  if (!select.options.length) throw new Error("model manifest has no models");
+
+  select.disabled = false;
+  const defaultId = String(manifest.default || "");
+  if ([...select.options].some((option) => option.value === defaultId)) {
+    select.value = defaultId;
+  } else {
+    select.selectedIndex = 0;
+  }
+  await loadSelectedModel();
+}
+
 function run() {
+  if (!wasm || !modelReady) return;
+
   const source = $("model").value;
   const seed0 = Math.trunc(Number($("seed0").value) || 0);
   const seed1 = Math.trunc(Number($("seed1").value) || 0);
@@ -178,23 +198,39 @@ function run() {
     $("output").classList.add("err");
     $("status").textContent = "error";
   } finally {
-    $("run").disabled = false;
+    updateRunButton();
   }
 }
 
 (async function main() {
+  $("model-preset").addEventListener("change", () => {
+    void loadSelectedModel();
+  });
+
   try {
+    $("status").textContent = "loading models…";
+    await loadModels();
+  } catch (e) {
+    $("status").textContent = "models failed to load";
+    $("output").value = String(e) + "\n\nDid you run web/build.py --models-only?";
+    $("output").classList.add("err");
+    return;
+  }
+
+  try {
+    $("status").textContent = "loading wasm…";
     wasm = await loadWasm();
   } catch (e) {
     $("status").textContent = "wasm failed to load";
     $("output").value =
-      String(e) + "\n\nDid you run web/build.sh, and serve this folder over HTTP?\n" +
-      "  cd web && python3 -m http.server 8000";
+      String(e) + "\n\nDid you run web/build.py, and serve this folder over HTTP?\n" +
+      "  cd web && python -m http.server 8000";
     $("output").classList.add("err");
     return;
   }
-  $("run").disabled = false;
-  $("status").textContent = "";
+
+  $("status").textContent = modelReady ? "" : "model failed to load";
+  updateRunButton();
   $("run").addEventListener("click", run);
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
