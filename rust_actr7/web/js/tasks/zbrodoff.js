@@ -105,6 +105,7 @@ async function collectResponses(actr, ctx, trials, visible) {
   const results = [];
   let current = queue.shift();
   presentTrial(actr, window, current);
+  if (visible) await ctx.paint();
 
   actr.addCommand("zbrodoff-response", (_model, key) => {
     if (!current) return;
@@ -118,12 +119,18 @@ async function collectResponses(actr, ctx, trials, visible) {
   });
   actr.monitorCommand("output-key", "zbrodoff-response");
 
+  let keepWindow = false;
   try {
     await actr.run(10 * trials.length, { signal: ctx.signal });
+    keepWindow = visible;
   } finally {
     actr.removeCommandMonitor("output-key", "zbrodoff-response");
     actr.removeCommand("zbrodoff-response");
-    actr.closeExpWindow(window);
+    if (!keepWindow) actr.closeExpWindow(window);
+  }
+  if (keepWindow) {
+    await ctx.paint();
+    actr.window?.root.scrollIntoView({ block: "center" });
   }
   return results;
 }
