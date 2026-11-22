@@ -208,7 +208,7 @@ async function paired(actr, ctx) {
       ...resultsLines(actr, rows.map((row) => row.latency), LATENCIES, "Latency:"),
       ...resultsLines(actr, rows.map((row) => row.accuracy), PROBABILITIES, "Accuracy:"),
     ].join("\n");
-    return { kind: "paired", report };
+    return { kind: "paired", mode: "human", report };
   }
 
   const totals = Array.from({ length: blocks }, () => ({ accuracy: 0, latency: 0 }));
@@ -223,7 +223,7 @@ async function paired(actr, ctx) {
     ...resultsLines(actr, rows.map((row) => row.latency), LATENCIES, "Latency:"),
     ...resultsLines(actr, rows.map((row) => row.accuracy), PROBABILITIES, "Accuracy:"),
   ].join("\n");
-  return { kind: "paired", report };
+  return { kind: "paired", mode: "model", report };
 }
 
 export const pairedTask = {

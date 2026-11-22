@@ -186,6 +186,7 @@ async function zbrodoff(actr, ctx) {
     );
     return {
       kind: "zbrodoff",
+      mode: "problem",
       report: reportFor(actr, "problem", analyze(results), 1),
     };
   }
@@ -227,6 +228,7 @@ async function zbrodoff(actr, ctx) {
 
   return {
     kind: "zbrodoff",
+    mode,
     report: reportFor(actr, mode, totals, runs),
   };
 }

@@ -62,8 +62,17 @@ function summaryText(result) {
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
   if (result.kind === "bst") return "Building Sticks: experiment complete";
   if (result.kind === "choice") return "Choice: experiment complete";
-  if (result.kind === "paired") return "Paired Associate: experiment complete";
-  if (result.kind === "zbrodoff") return "Alpha-Arithmetic: experiment complete";
+  if (result.kind === "paired") {
+    return result.mode === "human"
+      ? "Paired Associate: human run complete"
+      : "Paired Associate: model run complete";
+  }
+  if (result.kind === "zbrodoff") {
+    if (result.mode === "problem") return "Alpha-Arithmetic: single problem complete";
+    if (result.mode === "set") return "Alpha-Arithmetic: set complete";
+    if (result.mode === "block") return "Alpha-Arithmetic: block complete";
+    return "Alpha-Arithmetic: experiment complete";
+  }
   if (result.kind === "past-tense") return "Past Tense: block report complete";
   if (result.kind === "ul-issues") return "Utility Learning: run complete";
   if (result.kind === "pcomp-issues") return "Production Compilation: games complete";
@@ -71,6 +80,12 @@ function summaryText(result) {
     return result.mode === "play" ? "1-Hit Blackjack: played against model" : "1-Hit Blackjack: learning run complete";
   }
   return "";
+}
+
+function clearTaskResult() {
+  $("task-result").textContent = "";
+  $("task-report").textContent = "";
+  $("task-report").hidden = true;
 }
 
 function renderResult(result) {
@@ -136,6 +151,7 @@ function renderTaskControls(taskId, descriptor) {
       input.value = String(values[control.id] ?? control.default);
       input.addEventListener("change", () => {
         values[control.id] = input.value;
+        clearTaskResult();
         syncTaskControlVisibility(taskId, descriptor);
       });
     } else if (control.type === "checkbox") {
@@ -144,6 +160,7 @@ function renderTaskControls(taskId, descriptor) {
       input.checked = Boolean(values[control.id]);
       input.addEventListener("change", () => {
         values[control.id] = input.checked;
+        clearTaskResult();
         syncTaskControlVisibility(taskId, descriptor);
       });
     } else {
@@ -155,6 +172,7 @@ function renderTaskControls(taskId, descriptor) {
       input.value = String(values[control.id] ?? control.default);
       input.addEventListener("input", () => {
         values[control.id] = input.value;
+        clearTaskResult();
         syncTaskControlVisibility(taskId, descriptor);
       });
     }
@@ -191,9 +209,7 @@ function setControlsDisabled(disabled) {
 function showTaskPanel(model) {
   const descriptor = taskDescriptor(model);
   $("task-panel").hidden = !descriptor;
-  $("task-result").textContent = "";
-  $("task-report").textContent = "";
-  $("task-report").hidden = true;
+  clearTaskResult();
   const window = new AgiWindow($("agi-window"));
   window.reset();
   const stage = $("task-stage");
@@ -267,6 +283,7 @@ async function run() {
   $("run").disabled = true;
   $("cancel").hidden = false;
   $("cancel").disabled = false;
+  clearTaskResult();
   setControlsDisabled(true);
   $("status").textContent = "running...";
   const t0 = performance.now();
