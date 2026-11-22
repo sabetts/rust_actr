@@ -46,6 +46,12 @@ function recordHookError(error) {
   if (hookError == null) hookError = error;
 }
 
+function hookResult(value) {
+  if (value == null || typeof value === "boolean") return Number.NaN;
+  const result = Number(value);
+  return Number.isFinite(result) ? result : Number.NaN;
+}
+
 function callSimHook(
   namePtr,
   nameLen,
@@ -64,8 +70,7 @@ function callSimHook(
     if (!fn) return Number.NaN;
     const a = hookValue(aKind, aNum, aPtr, aLen);
     const b = hookValue(bKind, bNum, bPtr, bLen);
-    const result = Number(fn(a, b));
-    return Number.isFinite(result) ? result : Number.NaN;
+    return hookResult(fn(a, b));
   } catch (error) {
     recordHookError(error);
     return Number.NaN;
@@ -85,8 +90,7 @@ function callPpmHook(namePtr, nameLen, payloadPtr, payloadLen) {
       taggedValue(row.actual),
       row.similarity,
     ]);
-    const result = Number(fn(payload.production, rows));
-    return Number.isFinite(result) ? result : Number.NaN;
+    return hookResult(fn(payload.production, rows));
   } catch (error) {
     recordHookError(error);
     return Number.NaN;
