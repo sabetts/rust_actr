@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 import argparse
 import json
 import shutil
@@ -55,6 +55,24 @@ MODEL_GROUPS = (
                 "pm-issues",
             ),
             ("subitize", "Subitize (starter)", "subitize-model.lisp", "subitize"),
+        ),
+    },
+    {
+        "id": "unit5",
+        "label": "Unit 5",
+        "source": REPO_ROOT / "actr7.x" / "tutorial" / "unit5",
+        "models": (
+            ("fan", "Fan Effect", "fan-model.lisp", "fan"),
+            ("fan-no-pm", "Fan Effect (no PM)", "fan-no-pm-model.lisp", "fan-no-pm"),
+            ("grouped", "Grouped Recall", "grouped-model.lisp", "grouped"),
+            ("siegler", "Siegler Addition", "siegler-model.lisp", "siegler"),
+            (
+                "onehit",
+                "1-Hit Blackjack (starter)",
+                "1hit-blackjack-model.lisp",
+                "onehit",
+            ),
+            ("declarative-issues", "Declarative Issues", "declarative-issues.lisp", None),
         ),
     },
 )
