@@ -133,6 +133,12 @@ impl Engine {
         self.sim_hook_fn = hook;
     }
 
+    /// Install an embedder `:ppm-hook`.  A numeric result overrides the Lisp
+    /// `:ppm-hook` and the default `:ppm * Σ similarity` offset.
+    pub fn set_ppm_hook(&mut self, hook: Option<crate::engine::PpmHookFn>) {
+        self.ppm_hook_fn = hook;
+    }
+
     /// Mark a speech/microphone device as installed: speech notifications go
     /// to the host (`output-speech`) instead of a traced `SPEAK` line.
     pub fn set_speech_device(&mut self, enabled: bool) {

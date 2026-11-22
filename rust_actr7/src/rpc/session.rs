@@ -14,8 +14,8 @@ use std::rc::Rc;
 
 use crate::engine::module::{ModuleFactory, ModuleSet};
 use crate::engine::{
-    DeviceSetup, Engine, EngineError, EventHook, EventView, PreResult, ProductionGraphMode,
-    StepperSnapshot, TraceKind,
+    DeviceSetup, Engine, EngineError, EventHook, EventView, HookValue, PpmHookFn, PreResult,
+    ProductionGraphMode, StepperSnapshot, TraceKind,
 };
 use crate::json::Json;
 use crate::model::{self, ChunkDesc, Model, UserDefun};
@@ -309,6 +309,10 @@ pub struct Session {
     engine: Option<Engine>,
     /// All non-selected model engines, in load order.
     inactive: Vec<NamedEngine>,
+    /// Embedder `:sim-hook` (Python/JS callback), applied to every engine.
+    sim_hook: Option<Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>>,
+    /// Embedder `:ppm-hook` (Python/JS callback), applied to every engine.
+    ppm_hook: Option<PpmHookFn>,
     /// Model order for `mp-models` and the Environment menu.
     model_order: Vec<String>,
     /// Regression-harness compatibility: each model-bearing file replaces the
@@ -532,6 +536,8 @@ impl Session {
             commands,
             engine: None,
             inactive: Vec::new(),
+            sim_hook: None,
+            ppm_hook: None,
             model_order: Vec::new(),
             load_replaces_models: false,
             shared_seq: Rc::new(Cell::new(0)),
@@ -662,6 +668,8 @@ impl Session {
         }
         eng.set_user_fns(self.user_fns.clone());
         eng.set_user_vars(self.user_vars.clone());
+        eng.set_sim_hook(self.sim_hook.clone());
+        eng.set_ppm_hook(self.ppm_hook.clone());
         eng.use_shared_sequence(self.shared_seq.clone());
         eng.apply_model_commands().map_err(|e| e.to_string())?;
         if self.has_any_trace_monitor() {
@@ -1238,6 +1246,33 @@ impl Session {
     /// engine level while routing commands through [`Session::evaluate`].
     pub fn engine_mut(&mut self) -> Option<&mut Engine> {
         self.engine.as_mut()
+    }
+
+    /// Install (or clear) the session-wide embedder `:sim-hook`.  The hook is
+    /// applied to the selected engine, every inactive engine, and any model
+    /// loaded later.
+    pub fn set_sim_hook(
+        &mut self,
+        hook: Option<Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>>,
+    ) {
+        self.sim_hook = hook.clone();
+        if let Some(eng) = &mut self.engine {
+            eng.set_sim_hook(hook.clone());
+        }
+        for model in &mut self.inactive {
+            model.engine.set_sim_hook(hook.clone());
+        }
+    }
+
+    /// Install (or clear) the session-wide embedder `:ppm-hook`.
+    pub fn set_ppm_hook(&mut self, hook: Option<PpmHookFn>) {
+        self.ppm_hook = hook.clone();
+        if let Some(eng) = &mut self.engine {
+            eng.set_ppm_hook(hook.clone());
+        }
+        for model in &mut self.inactive {
+            model.engine.set_ppm_hook(hook.clone());
+        }
     }
 
     /// Whether more than one model is loaded.
@@ -7986,6 +8021,53 @@ mod tests {
         )
         .unwrap();
         assert!(s.user_fns.contains_key("WEB-NUMBER-SIMS"));
+    }
+
+    #[test]
+    fn session_ppm_hook_applies_to_loaded_model() {
+        use crate::engine::PpmHookRow;
+        let root = fixture_root();
+        if !root.is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model(
+                "test-models;models;test-ppm.lisp",
+            ))],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("reset", None, &[], &mut remote).unwrap();
+        s.evaluate(
+            "sgp",
+            None,
+            &[Json::Str(":PPM".into()), Json::Int(1)],
+            &mut remote,
+        )
+        .unwrap();
+
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        let recorded = calls.clone();
+        s.set_ppm_hook(Some(Rc::new(
+            move |production: &str, rows: &[PpmHookRow]| {
+                recorded
+                    .borrow_mut()
+                    .push((production.to_string(), rows.len()));
+                Some(-0.42)
+            },
+        )));
+
+        s.evaluate("run", None, &[Json::Int(10)], &mut remote)
+            .unwrap();
+
+        let calls = calls.borrow();
+        assert!(!calls.is_empty(), "session ppm hook was not called");
+        assert_eq!(calls[0].0, "CONSTANT-SLOT-TEST");
+        assert_eq!(calls[0].1, 1);
     }
 
     #[test]

@@ -444,6 +444,53 @@ fn eval_user_defun() {
     );
 }
 
+/// An embedder `:ppm-hook` receives the production and its partial-match rows,
+/// and can override the default `:ppm * Σ similarity` offset.
+#[test]
+fn ppm_hook_callback_receives_rows() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("fixtures/models/test-models/models/test-ppm.lisp");
+    let source = std::fs::read_to_string(path).unwrap();
+    let model = crate::model::load_models_from_str(&source)
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut e = Engine::new(model, (100, 0), 10.0, DeviceSetup::default()).unwrap();
+    let sexp = |s: &str| crate::sexpr::parse_all(s).unwrap().pop().unwrap();
+    // `reset` rebuilds `Config` from the model, so set PPM afterwards.
+    e.reset().unwrap();
+    e.apply_sgp(":PPM", &sexp("1")).unwrap();
+    e.apply_sgp(":UTILITY-OFFSETS", &sexp("PPM-OFFSET"))
+        .unwrap();
+
+    let calls = Rc::new(RefCell::new(Vec::new()));
+    let recorded = calls.clone();
+    e.set_ppm_hook(Some(Rc::new(
+        move |production: &str, rows: &[PpmHookRow]| {
+            recorded
+                .borrow_mut()
+                .push((production.to_string(), rows.to_vec()));
+            Some(-0.42)
+        },
+    )));
+
+    e.run_secs(10.0).unwrap();
+
+    let calls = calls.borrow();
+    assert!(!calls.is_empty(), "ppm hook was not called");
+    assert_eq!(calls[0].0, "CONSTANT-SLOT-TEST");
+    let row = &calls[0].1[0];
+    assert_eq!(row.buffer, "GOAL");
+    assert_eq!(row.slot, "STATE");
+    assert_eq!(row.expected, HookValue::Sym("STATE1".to_string()));
+    assert_eq!(row.actual, HookValue::Sym("STATEA".to_string()));
+    assert!((row.similarity - -0.1).abs() < 1e-6);
+}
+
 /// `render_production` reproduces the `:cst` instantiation block
 /// (`tutorial-unit8-simple-ppm-model-initial-run.ref`).
 #[test]

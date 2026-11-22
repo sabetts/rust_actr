@@ -42,7 +42,7 @@ pub use engine::module::{
 pub use engine::params::{sgp_support, SgpSupport};
 pub use engine::{
     DeviceSetup, DeviceText, EngineError, EventHook, EventView, HookEffect, HookValue, MultiEngine,
-    PreResult, Verdict,
+    PpmHookFn, PpmHookRow, PreResult, Verdict,
 };
 pub use model::{load_models, ChunkDesc, Model};
 

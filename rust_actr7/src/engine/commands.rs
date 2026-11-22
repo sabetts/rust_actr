@@ -87,6 +87,23 @@ impl Engine {
         production: &str,
         mismatches: &[PpmMismatch],
     ) -> Option<f32> {
+        // An embedder hook (the Python/JS callback) gets the typed values and
+        // overrides the Lisp hook when it returns a number.
+        if let Some(hook) = &self.ppm_hook_fn {
+            let rows: Vec<PpmHookRow> = mismatches
+                .iter()
+                .map(|(buffer, slot, want, got, sim)| PpmHookRow {
+                    buffer: buffer.clone(),
+                    slot: slot.clone(),
+                    expected: HookValue::from_value(want),
+                    actual: HookValue::from_value(got),
+                    similarity: *sim,
+                })
+                .collect();
+            if let Some(v) = hook(production, &rows) {
+                return Some(v);
+            }
+        }
         let hook = self.cfg.ppm_hook.clone()?;
         let def = self.user_fns.get(&hook.to_uppercase())?.clone();
         let p = Value::Sym(production.to_uppercase());

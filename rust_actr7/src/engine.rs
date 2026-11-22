@@ -362,6 +362,24 @@ impl HookValue {
     }
 }
 
+/// One partial-match row passed to an embedder `:ppm-hook`.
+///
+/// The fields mirror the Lisp `(buffer slot expected actual similarity)`
+/// list.  `expected` is the value the production asked for and `actual` the
+/// value in the buffer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PpmHookRow {
+    pub buffer: String,
+    pub slot: String,
+    pub expected: HookValue,
+    pub actual: HookValue,
+    pub similarity: f32,
+}
+
+/// An embedder `:ppm-hook`: receives the production name and its partial-match
+/// rows; a numeric result overrides the default `:ppm * Σ similarity` offset.
+pub type PpmHookFn = std::rc::Rc<dyn Fn(&str, &[PpmHookRow]) -> Option<f32>>;
+
 type Bindings = HashMap<String, Value>;
 
 /// `(buffer, slot, requested, actual, similarity)` recorded by procedural
@@ -2751,6 +2769,10 @@ pub struct Engine {
     /// the two values' printed forms and returns a numeric similarity; `None`
     /// falls through to the Lisp hook/table.
     sim_hook_fn: Option<Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>>,
+    /// An embedder-provided `:ppm-hook` (the Python/JS callback).  It receives
+    /// the production name and partial-match rows; `None` falls through to the
+    /// Lisp hook.
+    ppm_hook_fn: Option<PpmHookFn>,
     /// An `imaginal-action` that names an embedder command; the host runs it
     /// between engine events and returns the resulting chunk.
     pending_host_action: Option<(String, Vec<String>, bool)>,
@@ -3367,6 +3389,7 @@ impl Engine {
                 .map(|(a, b, v)| ((a.clone(), b.clone()), *v))
                 .collect(),
             sim_hook_fn: None,
+            ppm_hook_fn: None,
             pending_host_action: None,
             valid_slots,
             pending_texts: {
