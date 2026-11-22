@@ -328,6 +328,21 @@ class Model(RuntimeMixin):
         self._ensure_session().set_sim_hook(callable)
         return self
 
+    @property
+    def ppm_hook_name(self) -> Optional[str]:
+        """The model's ``:ppm-hook`` function name, if any."""
+        for key, value in self._sgp:
+            if key.upper() == ":PPM-HOOK":
+                if isinstance(value, LispString):
+                    return value.value
+                return str(value)
+        return None
+
+    def set_ppm_hook(self, callable: Any) -> "Model":
+        """Install a pure Python procedural partial-matching hook."""
+        self._ensure_session().set_ppm_hook(callable)
+        return self
+
     def chunk_type(
         self,
         name: str,

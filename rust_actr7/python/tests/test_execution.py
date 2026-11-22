@@ -108,6 +108,35 @@ class ExecutionTests(unittest.TestCase):
         self.assertTrue(calls)
         self.assertEqual(model.buffer_slot_value("retrieval", "kind"), "2")
 
+    def test_python_ppm_hook_receives_rows(self):
+        calls = []
+
+        def hook(production, rows):
+            calls.append((production, rows))
+            return 0.0
+
+        model = actr.Model("ppm-hook", seed=(100, 0))
+        model.sgp(":ppm", 1)
+        model.sgp(":ppm-hook", actr.String("py-ppm-hook"))
+        model.chunk_type("goal", "state")
+        model.add_chunk("g", "goal", state="stateA")
+        model.set_similarities([("stateB", "stateA", -0.5)])
+        model.goal_focus("g")
+        model.add_production(
+            "(p choose =goal> isa goal state stateB ==> -goal>)"
+        )
+        model.set_ppm_hook(hook)
+        model.run(1.0)
+
+        self.assertTrue(calls)
+        production, rows = calls[0]
+        self.assertEqual(production, "CHOOSE")
+        self.assertEqual(rows[0][0], "GOAL")
+        self.assertEqual(rows[0][1], "STATE")
+        self.assertEqual(rows[0][2], "STATEB")
+        self.assertEqual(rows[0][3], "STATEA")
+        self.assertAlmostEqual(rows[0][4], -0.5)
+
     def test_mod_chunk(self):
         model = actr.Model("mod", seed=(100, 0))
         model.chunk_type("item", "value")

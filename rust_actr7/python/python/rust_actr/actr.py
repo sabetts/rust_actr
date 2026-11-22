@@ -50,6 +50,10 @@ def use(model: Any) -> Any:
     hook_fn = _pending_commands.get(hook.upper()) if hook else None
     if hook_fn is not None:
         _current.set_sim_hook(hook_fn)
+    ppm_hook = getattr(_current, "ppm_hook_name", None)
+    ppm_fn = _pending_commands.get(ppm_hook.upper()) if ppm_hook else None
+    if ppm_fn is not None:
+        _current.set_ppm_hook(ppm_fn)
     return model
 
 
@@ -142,6 +146,9 @@ def add_command(
     hook = getattr(_current, "sim_hook_name", None)
     if function is not None and hook and name.upper() == hook.upper():
         _current.set_sim_hook(function)
+    ppm_hook = getattr(_current, "ppm_hook_name", None)
+    if function is not None and ppm_hook and name.upper() == ppm_hook.upper():
+        _current.set_ppm_hook(function)
     return result
 
 
@@ -149,7 +156,17 @@ def remove_command(name: str) -> Any:
     _pending_commands.pop(name.upper(), None)
     if _current is None:
         return True
-    return _current.remove_command(name)
+    result = _current.remove_command(name)
+    for name_attr, setter_attr in (
+        ("sim_hook_name", "set_sim_hook"),
+        ("ppm_hook_name", "set_ppm_hook"),
+    ):
+        hook = getattr(_current, name_attr, None)
+        if hook and name.upper() == hook.upper():
+            setter = getattr(_current, setter_attr, None)
+            if setter is not None:
+                setter(None)
+    return result
 
 
 def monitor_command(original: str, monitor: str) -> Any:

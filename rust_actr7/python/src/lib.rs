@@ -8,6 +8,7 @@ use actr_engine::rpc::session::{MonitorWhen, Remote, Session as CoreSession};
 use actr_engine::trace::MODULE_WIDTH;
 use actr_engine::DeviceSetup;
 use actr_engine::HookValue;
+use actr_engine::PpmHookRow;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -202,10 +203,6 @@ impl Session {
     /// values and returns a number (or `None` to fall through).  It must not
     /// call back into the model.
     fn set_sim_hook(&mut self, callable: Option<Py<PyAny>>) -> PyResult<()> {
-        let engine = self
-            .inner
-            .engine_mut()
-            .ok_or_else(|| PyRuntimeError::new_err("no model loaded"))?;
         let hook = callable.map(|callable| {
             Rc::new(move |a: &HookValue, b: &HookValue| {
                 Python::attach(|py| {
@@ -223,7 +220,40 @@ impl Session {
                 })
             }) as Rc<dyn Fn(&HookValue, &HookValue) -> Option<f32>>
         });
-        engine.set_sim_hook(hook);
+        self.inner.set_sim_hook(hook);
+        Ok(())
+    }
+
+    /// Install a Python `:ppm-hook`.  The callable receives the production
+    /// name and `[(buffer, slot, expected, actual, similarity), ...]` rows and
+    /// returns a number (or `None`/`False` to fall through).  It must not call
+    /// back into the model.
+    fn set_ppm_hook(&mut self, callable: Option<Py<PyAny>>) -> PyResult<()> {
+        let hook = callable.map(|callable| {
+            Rc::new(move |production: &str, rows: &[PpmHookRow]| {
+                Python::attach(|py| {
+                    let py_rows = pyo3::types::PyList::empty(py);
+                    for row in rows {
+                        let items = pyo3::types::PyList::empty(py);
+                        items.append(&row.buffer).ok()?;
+                        items.append(&row.slot).ok()?;
+                        let expected = hook_arg(py, &row.expected).ok()?;
+                        items.append(expected.bind(py)).ok()?;
+                        let actual = hook_arg(py, &row.actual).ok()?;
+                        items.append(actual.bind(py)).ok()?;
+                        items.append(row.similarity).ok()?;
+                        py_rows.append(items).ok()?;
+                    }
+                    let result = callable.call1(py, (production, py_rows)).ok()?;
+                    let bound = result.bind(py);
+                    if bound.is_none() || bound.is_instance_of::<pyo3::types::PyBool>() {
+                        return None;
+                    }
+                    bound.extract::<f32>().ok()
+                })
+            }) as Rc<dyn Fn(&str, &[PpmHookRow]) -> Option<f32>>
+        });
+        self.inner.set_ppm_hook(hook);
         Ok(())
     }
 

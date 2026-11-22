@@ -328,6 +328,32 @@ class ModelTests(unittest.TestCase):
         self.assertIn(("hook", hook), calls)
         client.clear_state()
 
+    def test_use_binds_pending_ppm_hook(self):
+        client.clear_state()
+        calls = []
+
+        class FakeModel:
+            ppm_hook_name = "PY-PPM-HOOK"
+
+            def add_command(self, name, function):
+                calls.append(("add", name.upper()))
+
+            def monitor_command(self, original, monitor):
+                calls.append(("monitor", original.upper(), monitor.upper()))
+
+            def set_ppm_hook(self, function):
+                calls.append(("ppm-hook", function))
+
+        def hook(production, rows):
+            return 0.0
+
+        client.add_command("py-ppm-hook", hook)
+        client.use(FakeModel())
+
+        self.assertIn(("add", "PY-PPM-HOOK"), calls)
+        self.assertIn(("ppm-hook", hook), calls)
+        client.clear_state()
+
 
 if __name__ == "__main__":
     unittest.main()
