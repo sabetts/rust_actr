@@ -83,7 +83,7 @@ function renderStage(ctx, state) {
       button.textContent = label;
       actions.append(button);
     }
-    stage.append(actions);
+    table.append(actions);
   }
 }
 
