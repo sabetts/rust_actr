@@ -83,8 +83,9 @@ runner:
   and a production/chunk outline that jumps to a form. `Reset` restores the
   loaded source and `Copy` copies it.
 - **Trace**: colorized timestamps, modules, events, output, warnings, and
-  errors; filter, wrap/follow toggles, copy, and save. The raw trace stays in
-  the hidden `#output` textarea for tooling and tests.
+  errors; filter, wrap/follow toggles, copy, and save. Traces up to 12,000
+  lines are colorized; larger runs use a plain, line-numbered fallback. The raw
+  trace stays in the hidden `#output` textarea for tooling and tests.
 - **First-run guidance**: a dismissible welcome card, an "What is ACT-R?"
   dialog with a short workflow and glossary, and inline help for seeds and
   fixed-timing tasks.

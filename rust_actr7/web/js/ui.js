@@ -9,7 +9,9 @@ const $ = (id) => document.getElementById(id);
 
 const THEME_KEY = "actr-web-theme";
 const WELCOME_KEY = "actr-web-welcome-dismissed";
-const MAX_HIGHLIGHT_LINES = 4000;
+const MAX_HIGHLIGHT_LINES = 12000;
+const TRACE_TIMESTAMP_RE =
+  /^(\s*)(\d+(?:\.\d+)?)(\s{2,})(\S+)(\s{2,})(\S+)(.*)$/;
 
 const KEYWORD_FORMS = new Set([
   "clear-all",
@@ -492,7 +494,7 @@ export function setupTraceView({ onCountChange } = {}) {
   };
 
   const appendTimestampLine = (text, fragment) => {
-    const match = text.match(/^(\s*)(\d+(?:\.\d+)?)(\s{2,})(\S+)(\s{2,})(\S+)(.*)$/);
+    const match = text.match(TRACE_TIMESTAMP_RE);
     if (!match) return false;
     const [, lead, time, gap1, module, gap2, event, rest] = match;
     fragment.append(lead);
@@ -532,7 +534,12 @@ export function setupTraceView({ onCountChange } = {}) {
         if (!highlight || !appendTimestampLine(line, text)) {
           text.textContent = line;
           if (!line.trim()) row.classList.add("trace-blank");
-          else if (/^[A-Z0-9 _().<>-]+$/.test(line.trim())) row.classList.add("trace-output");
+          else if (
+            !TRACE_TIMESTAMP_RE.test(line) &&
+            /^[A-Z0-9 _().<>-]+$/.test(line.trim())
+          ) {
+            row.classList.add("trace-output");
+          }
         }
         row.append(text);
         frag.append(row);

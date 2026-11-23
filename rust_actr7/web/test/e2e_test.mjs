@@ -301,6 +301,16 @@ async function main() {
     if (filledLines < 1000) {
       throw new Error(`long trace rendered only ${filledLines} filled lines`);
     }
+    const coloredTimes = await page.locator("#trace-view .trace-time").count();
+    if (coloredTimes < 1000) {
+      throw new Error(`long trace was not colorized: ${coloredTimes} time spans`);
+    }
+    const outputLines = await page.locator("#trace-view .trace-line.trace-output").count();
+    if (outputLines > pairedCount * 0.25) {
+      throw new Error(
+        `too many lines misclassified as output: ${outputLines}/${pairedCount}`
+      );
+    }
 
     if (errors.length) {
       throw new Error(`browser errors:\n${errors.join("\n")}`);
