@@ -147,7 +147,7 @@ finsts. </p>
 text items created by the experiment window device (other devices may
 use different slots to represent locations):</p>
 <div>
-<pre><code>  (chunk-type visual-location screen-x screen-y distance kind color value height width size)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> visual-location screen-x screen-y distance kind color value height width size<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those slots hold the location information for the features in the
 visicon shown above and that chunk-type could be used to declare the
@@ -479,24 +479,24 @@ model is <strong>attend-medium</strong>:</p>
 </div>
 <p>Here is the definition of that production:</p>
 <div>
-<pre><code>(p attend-medium
-   =goal&gt;
-     isa       read-letters
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> attend-medium
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>       read-letters
      step      attending
-   =visual-location&gt;
-     isa       visual-location
-   &gt; screen-y  450
-   &lt; screen-y  470
+   <span class="tok-buffer">=visual-location&gt;</span>
+     <span class="tok-isa">isa</span>       visual-location
+   &gt; screen-y  <span class="tok-number">450</span>
+   &lt; screen-y  <span class="tok-number">470</span>
    
    ?visual&gt;
      state     free
-==&gt;
-   =goal&gt;
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
      location  medium
      step      encode
-   +visual&gt;
+   <span class="tok-buffer">+visual&gt;</span>
      cmd       move-attention
-     screen-pos =visual-location)</code></pre>
+     screen-pos =visual-location<span class="tok-paren">)</span></code></pre>
 </div>
 <p>On its LHS it has a test for a chunk in the
 <strong>visual-location</strong> buffer, and it matches and fires even
@@ -568,24 +568,24 @@ text in a range of positions to indicate which row it occupies.</p>
 representation of that object. It modifies that chunk to indicate which
 row it is in and requests the next location:</p>
 <div>
-<pre><code>(p encode-row-and-find
-   =goal&gt;
-     isa      read-letters
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-row-and-find
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>      read-letters
      location =pos
      upper-y  =uy
      lower-y  =ly
-   =visual&gt;
-==&gt;
-   =visual&gt;
+   <span class="tok-buffer">=visual&gt;</span>
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=visual&gt;</span>
      status   =pos
-   -visual&gt;
-   =goal&gt;
+   <span class="tok-buffer">-visual&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
      location nil
      step     attending
-   +visual-location&gt;
+   <span class="tok-buffer">+visual-location&gt;</span>
      :attended nil
    &gt; screen-y =uy 
-   &lt; screen-y =ly)</code></pre>
+   &lt; screen-y =ly<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The production places the row of the letter, the value of the
 variable =pos which gets bound to the value from the location slot of
@@ -596,7 +596,7 @@ itself to recalling items from only the target row. The status slot is
 used because the AGI defines this chunk-type which has the slots it uses
 to create the chunks for the <strong>visual</strong> buffer:</p>
 <div>
-<pre><code>  (chunk-type visual-object screen-pos value status color height width)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> visual-object screen-pos value status color height width<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The AGI does not actually use the status slot when it creates the
 chunk and leaves that slot available for the modeler to use as needed.
@@ -623,7 +623,7 @@ chunk in the <strong>goal</strong> buffer. The initial values for the
 upper-y and lower-y slots are shown in the initial goal created for the
 model:</p>
 <div>
-<pre><code>(goal-focus (isa read-letters step attending upper-y 400 lower-y 600))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> <span class="tok-paren">(</span><span class="tok-isa">isa</span> read-letters step attending upper-y <span class="tok-number">400</span> lower-y <span class="tok-number">600</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those values cover the whole window, thus the location of any letter
 that is unattended will be potentially chosen initially. When the tone
@@ -658,13 +658,13 @@ sound is 0.050 seconds. The <strong>detected-sound</strong> production
 responds to the appearance of an audio-event in the
 <strong>aural-location</strong> buffer:</p>
 <div>
-<pre><code>(p detected-sound
-   =aural-location&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> detected-sound
+   <span class="tok-buffer">=aural-location&gt;</span>
    ?aural&gt;
      state  free
-   ==&gt;
-   +aural&gt;
-     event  =aural-location)</code></pre>
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+aural&gt;</span>
+     event  =aural-location<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Notice that this production does not test the <strong>goal</strong>
 buffer. If there is a chunk in the <strong>aural-location</strong>
@@ -676,7 +676,7 @@ result of that encoding will be a chunk with slots specified by the
 chunk-type sound being placed into the <strong>aural</strong>
 buffer:</p>
 <div>
-<pre><code>  (chunk-type sound kind content event)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> sound kind content event<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The kind slot is used to indicate the type of sound encoded which
 could be tone, digit, or word for the built-in sounds, but custom kinds
@@ -690,18 +690,18 @@ the audio-event information that was used to attend the sound.</p>
 the encoded sound chunks, one for each of the high, medium, and low
 tones. The following is the production for the low tone:</p>
 <div>
-<pre><code>(p sound-respond-low
-   =goal&gt;
-     isa     read-letters
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> sound-respond-low
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     read-letters
      tone    nil
-   =aural&gt;
-     isa     sound
-     content 500
-==&gt;
-   =goal&gt;
+   <span class="tok-buffer">=aural&gt;</span>
+     <span class="tok-isa">isa</span>     sound
+     content <span class="tok-number">500</span>
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
      tone    low
-     upper-y 500
-     lower-y 520)</code></pre>
+     upper-y <span class="tok-number">500</span>
+     lower-y <span class="tok-number">520</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>For this experiment a 500 Hertz sound is considered low, a 1000 Hertz
 sound medium, and a 2000 Hertz sound high. On the RHS this production
@@ -789,18 +789,18 @@ on the processing of the visual array.</p>
 <p>After encoding as many letters as it can the model must respond, and
 this is the production which initiates that:</p>
 <div>
-<pre><code>(P start-report
-   =goal&gt;
-     isa    read-letters
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> start-report
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>    read-letters
      tone   =tone
    ?visual&gt;
      state  free
-   ==&gt;
-   +goal&gt;
-     isa    report-row
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+goal&gt;</span>
+     <span class="tok-isa">isa</span>    report-row
      row    =tone
-   +retrieval&gt;
-     status =tone)</code></pre>
+   <span class="tok-buffer">+retrieval&gt;</span>
+     status =tone<span class="tok-paren">)</span></code></pre>
 </div>
 <p>It makes a request for the goal module to create a new chunk to be
 placed into the <strong>goal</strong> buffer rather than just modifying
@@ -828,7 +828,7 @@ a production is set with the :u parameter, so the following call found
 in the model sets the utility of the <strong>start-report</strong>
 production to -2:</p>
 <div>
-<pre><code>(spp start-report :u -2)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>spp start-report :u <span class="tok-number">-2</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The default utility for productions is 0. Because of that, the
 <strong>start-report</strong> production will not be selected as long as
@@ -839,10 +839,10 @@ encode the screen. </p>
 <p>You may also notice that the productions that process the sound are
 given higher utility values than the default in the model:</p>
 <div>
-<pre><code>(spp detected-sound :u 10)
-(spp sound-respond-low :u 10)
-(spp sound-respond-medium :u 10)
-(spp sound-respond-high :u 10)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>spp detected-sound :u <span class="tok-number">10</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp sound-respond-low :u <span class="tok-number">10</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp sound-respond-medium :u <span class="tok-number">10</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp sound-respond-high :u <span class="tok-number">10</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>That is so that the sound will be processed as soon as possible –
 these productions will be preferred over others that match at the same
@@ -851,22 +851,22 @@ time. </p>
 production is responsible for reporting all of the letters recalled from
 the target row:</p>
 <div>
-<pre><code>(P do-report
-   =goal&gt;
-     isa     report-row
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> do-report
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     report-row
      row     =tone
-   =retrieval&gt;
+   <span class="tok-buffer">=retrieval&gt;</span>
      status  =tone
      value   =val
    ?manual&gt;
      state   free
-   ==&gt;
-   +manual&gt;             
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+manual&gt;</span>             
      cmd     press-key    
      key     =val
-   +retrieval&gt;
+   <span class="tok-buffer">+retrieval&gt;</span>
      status  =tone
-     :recently-retrieved nil)</code></pre>
+     :recently-retrieved nil<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This production fires when an item has been retrieved and the motor
 module is free. As actions, it presses the key corresponding to the
@@ -889,19 +889,19 @@ production firing twice in succession:</p>
 retrieve any more letters from the target row), the following production
 applies to indicate it is done by pressing the space bar:</p>
 <div>
-<pre><code>(p stop-report 
-   =goal&gt;
-     isa    report-row
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> stop-report 
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>    report-row
      row    =row
    ?retrieval&gt;
      buffer failure
    ?manual&gt;
      state  free
-==&gt;
-   +manual&gt;             
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+manual&gt;</span>             
      cmd    press-key      
      key    space
-   -goal&gt;)</code></pre>
+   <span class="tok-buffer">-goal&gt;</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>It also clears the chunk from the <strong>goal</strong> buffer which
 results in no more productions being able to match causing the run to
@@ -924,22 +924,22 @@ the :recently-retrieved request parameter in a
 <strong>retrieval</strong> request as shown in the <strong>do-report
 </strong>production:</p>
 <div>
-<pre><code>(P do-report
-   =goal&gt;
-     isa     report-row
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> do-report
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     report-row
      row     =tone
-   =retrieval&gt;
+   <span class="tok-buffer">=retrieval&gt;</span>
      status  =tone
      value   =val
    ?manual&gt;
      state   free
-   ==&gt;
-   +manual&gt;             
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+manual&gt;</span>             
      cmd     press-key    
      key     =val
-   +retrieval&gt;
+   <span class="tok-buffer">+retrieval&gt;</span>
      status  =tone
-     :recently-retrieved nil)</code></pre>
+     :recently-retrieved nil<span class="tok-paren">)</span></code></pre>
 </div>
 <p>If <strong>:recently-retrieved</strong> is specified as
 <strong>nil</strong>, then only a chunk that has not been recently
@@ -985,7 +985,7 @@ the ACT-R trace so that it does not have to print out all of the events
 as they are occurring, which is done by setting the :v parameter in the
 model to <strong>nil </strong>instead of <strong>t</strong>:</p>
 <div>
-<pre><code>(sgp :v nil :declarative-finst-span 10)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :v nil :declarative-finst-span <span class="tok-number">10</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>There are also some changes which should be made to the experiment
 code to significantly reduce the time it takes to run the experiment.
@@ -1003,26 +1003,26 @@ data with respect to the number of items correctly recalled in the
 different tone onset time conditions. Here are the results from a run of
 100 trials in both the Lisp and Python implementations:</p>
 <div>
-<pre><code>? (sperling-experiment 100)
-CORRELATION: 0.996
-MEAN DEVIATION: 0.139
+<pre class="lisp"><code>? <span class="tok-paren">(</span>sperling-experiment <span class="tok-number">100</span><span class="tok-paren">)</span>
+CORRELATION: <span class="tok-number">0.996</span>
+MEAN DEVIATION: <span class="tok-number">0.139</span>
 
 Condition   Current Participant  Original Experiment
- 0.00 sec.           3.09                 3.03
- 0.15 sec.           2.47                 2.40
- 0.30 sec.           2.11                 2.03
- 1.00 sec.           1.75                 1.50
+ <span class="tok-number">0.00</span> sec.           <span class="tok-number">3.09</span>                 <span class="tok-number">3.03</span>
+ <span class="tok-number">0.15</span> sec.           <span class="tok-number">2.47</span>                 <span class="tok-number">2.40</span>
+ <span class="tok-number">0.30</span> sec.           <span class="tok-number">2.11</span>                 <span class="tok-number">2.03</span>
+ <span class="tok-number">1.00</span> sec.           <span class="tok-number">1.75</span>                 <span class="tok-number">1.50</span>
 
 
-&gt;&gt;&gt; sperling.experiment(100)
-CORRELATION: 0.993
-MEAN DEVIATION: 0.208
+&gt;&gt;&gt; sperling.experiment<span class="tok-paren">(</span><span class="tok-number">100</span><span class="tok-paren">)</span>
+CORRELATION: <span class="tok-number">0.993</span>
+MEAN DEVIATION: <span class="tok-number">0.208</span>
 
 Condition   Current Participant  Original Experiment
- 0.00 sec.           3.25                 3.03
- 0.15 sec.           2.57                 2.40
- 0.30 sec.           2.14                 2.03
- 1.00 sec.           1.79                 1.50</code></pre>
+ <span class="tok-number">0.00</span> sec.           <span class="tok-number">3.25</span>                 <span class="tok-number">3.03</span>
+ <span class="tok-number">0.15</span> sec.           <span class="tok-number">2.57</span>                 <span class="tok-number">2.40</span>
+ <span class="tok-number">0.30</span> sec.           <span class="tok-number">2.14</span>                 <span class="tok-number">2.03</span>
+ <span class="tok-number">1.00</span> sec.           <span class="tok-number">1.79</span>                 <span class="tok-number">1.50</span></code></pre>
 </div>
 <p>When it is done running the model through the experiment it prints
 out the correlation and mean deviation between the experimental data and
@@ -1087,41 +1087,41 @@ requests to the motor module through the <strong>manual</strong> buffer
 which we have already seen. </p>
 <p>Here is a production from the sperling model that presses a key:</p>
 <div>
-<pre><code>(P do-report
-   =goal&gt;
-     isa     report-row
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> do-report
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     report-row
      row     =tone
-   =retrieval&gt;
+   <span class="tok-buffer">=retrieval&gt;</span>
      status  =tone
      value   =val
    ?manual&gt;
      state   free
-   ==&gt;
-   +manual&gt;             
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+manual&gt;</span>             
      cmd     press-key    
      key     =val
-   +retrieval&gt;
+   <span class="tok-buffer">+retrieval&gt;</span>
      status  =tone
-     :recently-retrieved nil)</code></pre>
+     :recently-retrieved nil<span class="tok-paren">)</span></code></pre>
 </div>
 <p>With the following changes it would speak the response instead (note
 however that the <strong>sperling </strong>experiment is not written to
 accept a vocal response so it would not properly score those responses
 if you attempted to run the model after making these modifications):</p>
-<pre><code>(P do-report
-   =goal&gt;
-     isa     report-row
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> do-report
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     report-row
      row     =tone
-   =retrieval&gt;
+   <span class="tok-buffer">=retrieval&gt;</span>
      status  =tone
      value   =val
    ?vocal&gt;
      state   free
-   ==&gt;
-   +vocal&gt;             
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+vocal&gt;</span>             
      cmd     speak    
      string  =val
-   +retrieval&gt;
+   <span class="tok-buffer">+retrieval&gt;</span>
      status  =tone</code></pre>
 <p> :recently-retrieved nil)</p>
 <p>The primary change is that instead of the <strong>manual</strong>
@@ -1217,19 +1217,19 @@ model defines chunks that encode numbers and their ordering from 0 to 10
 similar to the count and addition models from unit 1 of the
 tutorial:</p>
 <div>
-<pre><code>(add-dm (zero isa number number zero next one vocal-rep &quot;zero&quot;)
-        (one isa number number one next two vocal-rep &quot;one&quot;)
-        (two isa number number two next three vocal-rep &quot;two&quot;)
-        (three isa number number three next four vocal-rep &quot;three&quot;)
-        (four isa number number four next five vocal-rep &quot;four&quot;)
-        (five isa number number five next six vocal-rep &quot;five&quot;)
-        (six isa number number six next seven vocal-rep &quot;six&quot;)
-        (seven isa number number seven next eight vocal-rep &quot;seven&quot;)
-        (eight isa number number eight next nine vocal-rep &quot;eight&quot;)
-        (nine isa number number nine next ten vocal-rep &quot;nine&quot;)
-        (ten isa number number ten next eleven vocal-rep &quot;ten&quot;)
-        (eleven isa number number eleven)
-        (start))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">add-dm</span> <span class="tok-paren">(</span>zero <span class="tok-isa">isa</span> number number zero next one vocal-rep <span class="tok-string">"zero"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>one <span class="tok-isa">isa</span> number number one next two vocal-rep <span class="tok-string">"one"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>two <span class="tok-isa">isa</span> number number two next three vocal-rep <span class="tok-string">"two"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>three <span class="tok-isa">isa</span> number number three next four vocal-rep <span class="tok-string">"three"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>four <span class="tok-isa">isa</span> number number four next five vocal-rep <span class="tok-string">"four"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>five <span class="tok-isa">isa</span> number number five next six vocal-rep <span class="tok-string">"five"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>six <span class="tok-isa">isa</span> number number six next seven vocal-rep <span class="tok-string">"six"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>seven <span class="tok-isa">isa</span> number number seven next eight vocal-rep <span class="tok-string">"seven"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>eight <span class="tok-isa">isa</span> number number eight next nine vocal-rep <span class="tok-string">"eight"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>nine <span class="tok-isa">isa</span> number number nine next ten vocal-rep <span class="tok-string">"nine"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>ten <span class="tok-isa">isa</span> number number ten next eleven vocal-rep <span class="tok-string">"ten"</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>eleven <span class="tok-isa">isa</span> number number eleven<span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>start<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>In addition to the number and next slots that were used for the
 numbers in unit 1, the number chunks also contain a slot called
@@ -1238,7 +1238,7 @@ the model to speak it. </p>
 <p>The model also defines a chunk-type which can be used for maintaining
 control information in the <strong>goal </strong>buffer:</p>
 <div>
-<pre><code>(chunk-type count count step)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> count count step<span class="tok-paren">)</span></code></pre>
 </div>
 <p>It has a slot to maintain the current count and a slot to hold an
 indication of the current step. An initial chunk with a step slot value

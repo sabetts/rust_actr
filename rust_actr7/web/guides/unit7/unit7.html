@@ -41,54 +41,54 @@ to the specific act of combining two productions as a composition.</p>
 the two that fire in succession to retrieve a paired associate in the
 <strong>paired</strong> model from Unit 4:</p>
 <div>
-<pre><code>(p read-probe                     (p recall
-    =goal&gt;                            =goal&gt;
-      isa     goal                     isa     goal 
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> read-probe                     <span class="tok-paren">(</span><span class="tok-keyword">p</span> recall
+    <span class="tok-buffer">=goal&gt;</span>                            <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal                     <span class="tok-isa">isa</span>     goal 
       step    attending-probe          step    testing
-    =visual&gt;                          =retrieval&gt;
-      isa     visual-object            isa     pair
+    <span class="tok-buffer">=visual&gt;</span>                          <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">isa</span>     visual-object            <span class="tok-isa">isa</span>     pair
       value   =val                     answer  =ans
     ?imaginal&gt;                        ?manual&gt;  
       state   free                     state   free
-   ==&gt;                                ?visual&gt;
-    +imaginal&gt;                          state   free
-      isa     pair                  ==&gt;
-      probe   =val                   +manual&gt;             
-    +retrieval&gt;                         cmd     press-key    
-      isa     pair                     key     =ans
-      probe   =val                   =goal&gt;
-    =goal&gt;                              step    read-study-item
-      step    testing                +visual&gt;
-)                                       cmd     clear
-                                   )</code></pre>
+   <span class="tok-arrow">==&gt;</span>                                ?visual&gt;
+    <span class="tok-buffer">+imaginal&gt;</span>                          state   free
+      <span class="tok-isa">isa</span>     pair                  <span class="tok-arrow">==&gt;</span>
+      probe   =val                   <span class="tok-buffer">+manual&gt;</span>             
+    <span class="tok-buffer">+retrieval&gt;</span>                         cmd     press-key    
+      <span class="tok-isa">isa</span>     pair                     key     =ans
+      probe   =val                   <span class="tok-buffer">=goal&gt;</span>
+    <span class="tok-buffer">=goal&gt;</span>                              step    read-study-item
+      step    testing                <span class="tok-buffer">+visual&gt;</span>
+<span class="tok-paren">)</span>                                       cmd     clear
+                                   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>If these two productions fired and retrieved the chunk for the pair
 of zinc &amp; 9, production compilation would compose these two rules
 into the following single production:</p>
 <div>
-<pre><code>(P PRODUCTION0
-  &quot;READ-PROBE &amp; RECALL - IMAGINAL-CHUNK0-0&quot;
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION0
+  <span class="tok-string">"READ-PROBE &amp; RECALL - IMAGINAL-CHUNK0-0"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STEP ATTENDING-PROBE
-   =VISUAL&gt;
-       VALUE &quot;zinc&quot;
+   <span class="tok-buffer">=VISUAL&gt;</span>
+       VALUE <span class="tok-string">"zinc"</span>
    ?VISUAL&gt;
        STATE FREE
    ?MANUAL&gt;
        STATE FREE
    ?IMAGINAL&gt;
        STATE FREE
- ==&gt;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STEP READ-STUDY-ITEM
-   +VISUAL&gt;
+   <span class="tok-buffer">+VISUAL&gt;</span>
        CMD CLEAR
-   +MANUAL&gt;
+   <span class="tok-buffer">+MANUAL&gt;</span>
        CMD PRESS-KEY
-       KEY &quot;9&quot;
-   +IMAGINAL&gt;
-       PROBE &quot;zinc&quot;
-)</code></pre>
+       KEY <span class="tok-string">"9"</span>
+   <span class="tok-buffer">+IMAGINAL&gt;</span>
+       PROBE <span class="tok-string">"zinc"</span>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This production combines the work of the two productions and has
 built into it the paired associate components. In the next two
@@ -330,12 +330,12 @@ of our work we have built productions that read the instructions from
 the screen and build these chunks but we are skipping that step here to
 focus on the mechanisms of this unit):</p>
 <div>
-<pre><code>  (op1 isa operator pre start action read arg1 create post stimulus-read)
-  (op2 isa operator pre stimulus-read action associate arg1 filled arg2 fill post recalled)
-  (op3 isa operator pre recalled action test-arg2 arg1 respond arg2 wait)
-  (op4 isa operator pre respond action type arg2 response post wait)
-  (op5 isa operator pre wait action read arg2 fill post new-trial)
-  (op6 isa operator pre new-trial action complete-task post start)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>op1 <span class="tok-isa">isa</span> operator pre start action read arg1 create post stimulus-read<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>op2 <span class="tok-isa">isa</span> operator pre stimulus-read action associate arg1 filled arg2 fill post recalled<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>op3 <span class="tok-isa">isa</span> operator pre recalled action test-arg2 arg1 respond arg2 wait<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>op4 <span class="tok-isa">isa</span> operator pre respond action type arg2 response post wait<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>op5 <span class="tok-isa">isa</span> operator pre wait action read arg2 fill post new-trial<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>op6 <span class="tok-isa">isa</span> operator pre new-trial action complete-task post start<span class="tok-paren">)</span></code></pre>
 </div>
 <p>These are represented as operators that indicate what to do in
 various states during the course of a paired-associate trial. They
@@ -368,17 +368,17 @@ to the current state to determine what to do, and in this simple model
 we really just need one production which requests the retrieval of an
 operator relevant to the current state:</p>
 <div>
-<pre><code>(p retrieve-operator
-   =goal&gt;          
-     isa   task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieve-operator
+   <span class="tok-buffer">=goal&gt;</span>          
+     <span class="tok-isa">isa</span>   task
      state =state
      step  ready
-  ==&gt;
-   +retrieval&gt;
-     isa   operator
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+retrieval&gt;</span>
+     <span class="tok-isa">isa</span>   operator
      pre   =state
-   =goal&gt;
-     step  retrieving-operator)</code></pre>
+   <span class="tok-buffer">=goal&gt;</span>
+     step  retrieving-operator<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The particular actions specified in the operators (read, associate,
 test-arg2, type, and complete-task) are all general actions not specific
@@ -389,48 +389,48 @@ following two productions are responsible for reading an item and
 creating a chunk in the <strong>imaginal</strong> buffer which encodes
 the item into the <strong>arg1</strong> slot of that chunk:</p>
 <div>
-<pre><code>(p read-arg1
-   =goal&gt;
-     isa       task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> read-arg1
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>       task
      step      retrieving-operator
-   =retrieval&gt;
-     isa       operator
+   <span class="tok-buffer">=retrieval&gt;</span>
+     <span class="tok-isa">isa</span>       operator
      action    read
      arg1      create
      post      =state
-   =visual-location&gt;
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
      state     free
    ?imaginal&gt;
      state     free
-  ==&gt;
-   +imaginal&gt;
-     isa       args
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+imaginal&gt;</span>
+     <span class="tok-isa">isa</span>       args
      arg1      fill
-   +visual&gt;
+   <span class="tok-buffer">+visual&gt;</span>
      cmd       move-attention
      screen-pos =visual-location
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
      step      attending
-     state     =state)
+     state     =state<span class="tok-paren">)</span>
 
-(p encode-arg1
-   =goal&gt;
-     isa    task
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-arg1
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>    task
      step   attending
-   =visual&gt;
-     isa    text
+   <span class="tok-buffer">=visual&gt;</span>
+     <span class="tok-isa">isa</span>    text
      value  =val
-   =imaginal&gt;
-     isa    args
+   <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-isa">isa</span>    args
      arg1   fill
    ?imaginal&gt;
      state  free
-  ==&gt;
-   *imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">*imaginal&gt;</span>
      arg1   =val
-   =goal&gt;
-     step   ready)
+   <span class="tok-buffer">=goal&gt;</span>
+     step   ready<span class="tok-paren">)</span>
 </code></pre>
 </div>
 <p>The first production responds to the retrieval of the operator and
@@ -583,23 +583,23 @@ Parameters for production PRODUCTION1:
 <p>The production that is learned, <strong>production1</strong>, is a
 composition of these two productions:</p>
 <div>
-<pre><code>(p encode-arg1                      (p retrieve-operator
-   =goal&gt;                              =goal&gt;          
-     isa    task                        isa   task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-arg1                      <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieve-operator
+   <span class="tok-buffer">=goal&gt;</span>                              <span class="tok-buffer">=goal&gt;</span>          
+     <span class="tok-isa">isa</span>    task                        <span class="tok-isa">isa</span>   task
      step   attending                   state =state
-   =visual&gt;                              step  ready
-     isa    text                     ==&gt;
-     value  =val                      +retrieval&gt;
-   =imaginal&gt;                            isa   operator
-     isa    args                        pre   =state
-     arg1   fill                      =goal&gt;
-   ?imaginal&gt;                            step  retrieving-operator)
+   <span class="tok-buffer">=visual&gt;</span>                              step  ready
+     <span class="tok-isa">isa</span>    text                     <span class="tok-arrow">==&gt;</span>
+     value  =val                      <span class="tok-buffer">+retrieval&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>                            <span class="tok-isa">isa</span>   operator
+     <span class="tok-isa">isa</span>    args                        pre   =state
+     arg1   fill                      <span class="tok-buffer">=goal&gt;</span>
+   ?imaginal&gt;                            step  retrieving-operator<span class="tok-paren">)</span>
      state  free                    
-  ==&gt;                                
-   *imaginal&gt;                        
+  <span class="tok-arrow">==&gt;</span>                                
+   <span class="tok-buffer">*imaginal&gt;</span>                        
      arg1   =val                    
-   =goal&gt;                            
-     step   ready)                  </code></pre>
+   <span class="tok-buffer">=goal&gt;</span>                            
+     step   ready<span class="tok-paren">)</span>                  </code></pre>
 </div>
 <p>The first production, <strong>encode-arg1</strong>, encodes the
 stimulus, and sets the goal to retrieve the next operator. This is
@@ -753,7 +753,7 @@ generate.</p>
 <p>The past tense of verbs are encoded in chunks using the slots of this
 chunk-type:</p>
 <div>
-<pre><code>  (chunk-type past-tense verb stem suffix)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> past-tense verb stem suffix<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Where the verb slot holds the base form of the verb and the
 combination of the stem and suffix slots forms the past tense. The value

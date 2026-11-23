@@ -5,6 +5,7 @@ import { RECOMMENDED_START } from "./catalog.js";
 import { locateErrorAnchor } from "./lisp-scan.js";
 import {
   createEditor,
+  createGuideViewer,
   createModelBrowser,
   renderAboutContent,
   renderModelInfo,
@@ -32,6 +33,7 @@ let modelRequest = 0;
 let activeRun = null;
 let browser = null;
 let tabs = null;
+let guideViewer = null;
 
 const editor = createEditor();
 const trace = setupTraceView();
@@ -515,7 +517,11 @@ async function loadModels() {
     select.selectedIndex = 0;
   }
 
-  browser = createModelBrowser({ groups, guides });
+  browser = createModelBrowser({
+    groups,
+    guides,
+    onOpenGuide: (payload) => guideViewer?.open(payload),
+  });
   await loadSelectedModel();
   browser.markSelected(selectedModel?.id || select.value);
 }
@@ -525,6 +531,7 @@ async function loadModels() {
   setupDialogs();
   renderAboutContent();
   tabs = setupTabs();
+  guideViewer = createGuideViewer({ tabs });
   setupToolbar({ editor, trace, getModelId: () => selectedModel?.id });
   setupGlobalShortcuts({ run: () => void run(), trace });
 

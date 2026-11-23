@@ -33,19 +33,19 @@ Components</strong></h2>
 <p>We have seen <strong>retrieval</strong> requests in productions many
 times in the tutorial, like this one from the count model in unit 1:</p>
 <div>
-<pre><code>(p start
-   =goal&gt;
-      ISA        count-from
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> start
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       start      =num1
       count      nil
- ==&gt;
-   =goal&gt;
-      ISA        count-from
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       count      =num1
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-   )</code></pre>
+   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>In this case an attempt is being made to retrieve a chunk with a
 particular number (bound to <strong>=num1</strong>) in its
@@ -442,36 +442,36 @@ productions will only match once buffer stuffing places a chunk into the
 <strong>attend-probe</strong> and <strong>detect-study-item</strong>
 productions for reference:</p>
 <div>
-<pre><code>(p attend-probe
-    =goal&gt;
-      isa     goal
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> attend-probe
+    <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal
       step    start
-    =visual-location&gt;
+    <span class="tok-buffer">=visual-location&gt;</span>
     ?visual&gt;
      state    free
-   ==&gt;
-    +visual&gt;              
+   <span class="tok-arrow">==&gt;</span>
+    <span class="tok-buffer">+visual&gt;</span>              
       cmd     move-attention
       screen-pos =visual-location
-    =goal&gt;
+    <span class="tok-buffer">=goal&gt;</span>
       step    attending-probe
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <div>
-<pre><code>(p detect-study-item
-    =goal&gt;
-      isa     goal
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> detect-study-item
+    <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal
       step    read-study-item
-   =visual-location&gt;
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
       state   free
-   ==&gt;
-   +visual&gt;              
+   <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+visual&gt;</span>              
       cmd     move-attention
       screen-pos =visual-location
-    =goal&gt;
+    <span class="tok-buffer">=goal&gt;</span>
       step    attending-target
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Because the buffer is cleared automatically by strict harvesting and
 no later productions issue a request for a visual-location these
@@ -485,25 +485,25 @@ to the probe with the <strong>read-probe</strong> production two actions
 are taken (in addition to the updating of the <strong>goal</strong>
 state):</p>
 <div>
-<pre><code>(p read-probe
-    =goal&gt;
-      isa     goal
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> read-probe
+    <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal
       step    attending-probe
-    =visual&gt;
-      isa     visual-object
+    <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>     visual-object
       value   =val
     ?imaginal&gt;
       state   free
-   ==&gt;
-    +imaginal&gt;
-      isa     pair
+   <span class="tok-arrow">==&gt;</span>
+    <span class="tok-buffer">+imaginal&gt;</span>
+      <span class="tok-isa">isa</span>     pair
       probe   =val
-    +retrieval&gt;
-      isa     pair
+    <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">isa</span>     pair
       probe   =val
-    =goal&gt;
+    <span class="tok-buffer">=goal&gt;</span>
       step    testing
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>It makes a request to the <strong>imaginal</strong> buffer to create
 a chunk which will hold the value read from the screen in the probe
@@ -516,27 +516,27 @@ pair of items in the <strong>imaginal</strong> buffer. </p>
 <p>The <strong>associate</strong> production fires after the model reads
 the number which is associated with the probe:</p>
 <div>
-<pre><code>(p associate
-    =goal&gt;
-      isa     goal
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> associate
+    <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal
       step    attending-target
-   =visual&gt;
-      isa     visual-object
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>     visual-object
       value   =val
-   =imaginal&gt;
-      isa     pair
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>     pair
       probe   =probe
    ?visual&gt;
       state   free
-  ==&gt;
-   =imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
       answer  =val
-   -imaginal&gt;
-   =goal&gt;
+   <span class="tok-buffer">-imaginal&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       step    start 
-   +visual&gt;
+   <span class="tok-buffer">+visual&gt;</span>
       cmd     clear
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This production sets the answer slot of the chunk in the
 <strong>imaginal</strong> buffer to the answer which was read from the
@@ -584,42 +584,42 @@ whether a chunk can be retrieved, one of two production rules may apply
 corresponding to either the successful retrieval of such a chunk or the
 failure to retrieve a matching chunk:</p>
 <div>
-<pre><code>(p recall
-    =goal&gt;
-      isa     goal 
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> recall
+    <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal 
       step    testing
-    =retrieval&gt;
-      isa     pair
+    <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">isa</span>     pair
       answer  =ans
     ?manual&gt;  
       state   free
     ?visual&gt;
       state   free
-   ==&gt;
-    +manual&gt;             
+   <span class="tok-arrow">==&gt;</span>
+    <span class="tok-buffer">+manual&gt;</span>             
       cmd     press-key    
       key     =ans
-    =goal&gt;
+    <span class="tok-buffer">=goal&gt;</span>
       step    read-study-item
-    +visual&gt;
+    <span class="tok-buffer">+visual&gt;</span>
       cmd     clear
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <div>
-<pre><code>(p cannot-recall
-    =goal&gt;
-      isa     goal 
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> cannot-recall
+    <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     goal 
       step    testing
     ?retrieval&gt;
       buffer  failure
     ?visual&gt;
       state   free
-   ==&gt;
-    =goal&gt;
+   <span class="tok-arrow">==&gt;</span>
+    <span class="tok-buffer">=goal&gt;</span>
      step    read-study-item
-    +visual&gt;
+    <span class="tok-buffer">+visual&gt;</span>
      cmd     clear
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The probability of the recall production firing and the mean latency
 for the recall will be determined by the activation of the corresponding
@@ -641,22 +641,22 @@ more runs and to generate that many runs in a reasonable amount of time
 one must turn off the trace and remove the seed parameter to allow for
 differences from run to run):</p>
 <div>
-<pre><code>? (paired-experiment 100)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>paired-experiment <span class="tok-number">100</span><span class="tok-paren">)</span>
 
-&gt;&gt;&gt; paired.experiment(100)
+&gt;&gt;&gt; paired.experiment<span class="tok-paren">(</span><span class="tok-number">100</span><span class="tok-paren">)</span>
 
 
 Latency:
-CORRELATION: 0.996
-MEAN DEVIATION: 0.099
-Trial   1      2      3      4      5      6      7      8
-        0.000  2.173  1.856  1.682  1.531  1.435  1.362  1.289
+CORRELATION: <span class="tok-number">0.996</span>
+MEAN DEVIATION: <span class="tok-number">0.099</span>
+Trial   <span class="tok-number">1</span>      <span class="tok-number">2</span>      <span class="tok-number">3</span>      <span class="tok-number">4</span>      <span class="tok-number">5</span>      <span class="tok-number">6</span>      <span class="tok-number">7</span>      <span class="tok-number">8</span>
+        <span class="tok-number">0.000</span>  <span class="tok-number">2.173</span>  <span class="tok-number">1.856</span>  <span class="tok-number">1.682</span>  <span class="tok-number">1.531</span>  <span class="tok-number">1.435</span>  <span class="tok-number">1.362</span>  <span class="tok-number">1.289</span>
 
 Accuracy:
-CORRELATION: 0.994
-MEAN DEVIATION: 0.042
-Trial   1      2      3      4      5      6      7      8
-        0.000  0.555  0.764  0.858  0.905  0.935  0.952  0.964</code></pre>
+CORRELATION: <span class="tok-number">0.994</span>
+MEAN DEVIATION: <span class="tok-number">0.042</span>
+Trial   <span class="tok-number">1</span>      <span class="tok-number">2</span>      <span class="tok-number">3</span>      <span class="tok-number">4</span>      <span class="tok-number">5</span>      <span class="tok-number">6</span>      <span class="tok-number">7</span>      <span class="tok-number">8</span>
+        <span class="tok-number">0.000</span>  <span class="tok-number">0.555</span>  <span class="tok-number">0.764</span>  <span class="tok-number">0.858</span>  <span class="tok-number">0.905</span>  <span class="tok-number">0.935</span>  <span class="tok-number">0.952</span>  <span class="tok-number">0.964</span></code></pre>
 </div>
 <h2 id="parameter-estimation">4.8 Parameter estimation</h2>
 <p>To get the model to fit the data requires not only writing a
@@ -1007,15 +1007,15 @@ The block function runs through 192 trials, which is 8 repetitions of
 the 24 trial set. Here are examples of running a set of trials in Lisp
 and a block in Python:</p>
 <div>
-<pre><code>? (zbrodoff-set)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>zbrodoff-set<span class="tok-paren">)</span>
 
-              2 ( 8)     3 ( 8)     4 ( 8)
-Block 1 2.395 ( 8) 3.045 ( 8) 3.657 ( 8)
+              <span class="tok-number">2</span> <span class="tok-paren">(</span> <span class="tok-number">8</span><span class="tok-paren">)</span>     <span class="tok-number">3</span> <span class="tok-paren">(</span> <span class="tok-number">8</span><span class="tok-paren">)</span>     <span class="tok-number">4</span> <span class="tok-paren">(</span> <span class="tok-number">8</span><span class="tok-paren">)</span>
+Block <span class="tok-number">1</span> <span class="tok-number">2.395</span> <span class="tok-paren">(</span> <span class="tok-number">8</span><span class="tok-paren">)</span> <span class="tok-number">3.045</span> <span class="tok-paren">(</span> <span class="tok-number">8</span><span class="tok-paren">)</span> <span class="tok-number">3.657</span> <span class="tok-paren">(</span> <span class="tok-number">8</span><span class="tok-paren">)</span>
 
-&gt;&gt;&gt; zbrodoff.block()
+&gt;&gt;&gt; zbrodoff.block<span class="tok-paren">(</span><span class="tok-paren">)</span>
 
-              2 (64)     3 (64)     4 (64)
-Block 1 2.393 (64) 3.047 (64) 3.643 (64)</code></pre>
+              <span class="tok-number">2</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>     <span class="tok-number">3</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>     <span class="tok-number">4</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">1</span> <span class="tok-number">2.393</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.047</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.643</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>After making sure the model can successfully complete a set and block
 of trials then you will want to test it with the function which resets
@@ -1027,15 +1027,15 @@ visible or not, and the second determines whether the results are
 printed. The defaults are to not show the window and to show the
 results, which is probably how you want to run it:</p>
 <div>
-<pre><code>? (zbrodoff-experiment)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>zbrodoff-experiment<span class="tok-paren">)</span>
 
-&gt;&gt;&gt; zbrodoff.experiment()
+&gt;&gt;&gt; zbrodoff.experiment<span class="tok-paren">(</span><span class="tok-paren">)</span>
 
 
-              2 (64)     3 (64)     4 (64)
-Block 1 2.406 (64) 3.045 (64) 3.643 (64)
-Block 2 2.395 (64) 3.043 (64) 3.658 (64)
-Block 3 2.392 (64) 3.047 (64) 3.643 (64)</code></pre>
+              <span class="tok-number">2</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>     <span class="tok-number">3</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>     <span class="tok-number">4</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">1</span> <span class="tok-number">2.406</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.045</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.643</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">2</span> <span class="tok-number">2.395</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.043</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.658</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">3</span> <span class="tok-number">2.392</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.047</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.643</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>If the model is able to successfully complete the experiment you can
 move on to the function that runs the experiment multiple times,
@@ -1045,17 +1045,17 @@ in the zbrodoff module in Python. Those functions take one parameter
 indicating the number of times to run the full experiment. It may take a
 while to run, especially if you request a lot of runs to average:</p>
 <div>
-<pre><code>? (zbrodoff-compare 10)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>zbrodoff-compare <span class="tok-number">10</span><span class="tok-paren">)</span>
 
-&gt;&gt;&gt; zbrodoff.compare(10)
+&gt;&gt;&gt; zbrodoff.compare<span class="tok-paren">(</span><span class="tok-number">10</span><span class="tok-paren">)</span>
 
-CORRELATION: 0.288
-MEAN DEVIATION: 1.540
+CORRELATION: <span class="tok-number">0.288</span>
+MEAN DEVIATION: <span class="tok-number">1.540</span>
 
-              2 (64)     3 (64)     4 (64)
-Block 1 2.406 (64) 3.045 (64) 3.643 (64)
-Block 2 2.395 (64) 3.043 (64) 3.658 (64)
-Block 3 2.392 (64) 3.047 (64) 3.643 (64)</code></pre>
+              <span class="tok-number">2</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>     <span class="tok-number">3</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>     <span class="tok-number">4</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">1</span> <span class="tok-number">2.406</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.045</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.643</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">2</span> <span class="tok-number">2.395</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.043</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.658</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span>
+Block <span class="tok-number">3</span> <span class="tok-number">2.392</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.047</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span> <span class="tok-number">3.643</span> <span class="tok-paren">(</span><span class="tok-number">64</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>An important thing to note is that among those functions the only
 ones that reset the model are the ones that run the full experiment. So
@@ -1070,7 +1070,7 @@ was reset (or loaded) in its declarative memory.</p>
 setting near the end of the model definition which you have not seen
 before:</p>
 <div>
-<pre><code>(set-all-base-levels 100000 -1000)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>set-all-base-levels <span class="tok-number">100000</span> <span class="tok-number">-1000</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>This sets the base-level activation of all of the chunks in
 declarative memory that exist when it is called (which are the number

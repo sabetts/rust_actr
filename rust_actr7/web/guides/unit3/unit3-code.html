@@ -211,33 +211,33 @@ not true (<strong>nil </strong>in Lisp and <strong>False </strong>in
 Python).</p>
 <p>Here are the current lines from the sperling experiment files:</p>
 <div>
-<pre><code>         (window (open-exp-window &quot;Sperling Experiment&quot; :visible t))
+<pre class="lisp"><code>         <span class="tok-paren">(</span>window <span class="tok-paren">(</span>open-exp-window <span class="tok-string">"Sperling Experiment"</span> :visible t<span class="tok-paren">)</span><span class="tok-paren">)</span>
 
-    window = actr.open_exp_window(&quot;Sperling Experiment&quot;, visible=True)</code></pre>
+    window = actr.open_exp_window<span class="tok-paren">(</span><span class="tok-string">"Sperling Experiment"</span>, visible=True<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Here in red is what would need to be changed to make those virtual
 windows instead:</p>
 
-<pre><code>         (window (open-exp-window &quot;Sperling Experiment&quot; :visible nil))
+<pre class="lisp"><code>         <span class="tok-paren">(</span>window <span class="tok-paren">(</span>open-exp-window <span class="tok-string">"Sperling Experiment"</span> :visible nil<span class="tok-paren">)</span><span class="tok-paren">)</span>
 
-    window = actr.open_exp_window(&quot;Sperling Experiment&quot;, visible=False)</code></pre>
+    window = actr.open_exp_window<span class="tok-paren">(</span><span class="tok-string">"Sperling Experiment"</span>, visible=False<span class="tok-paren">)</span></code></pre>
 <p>A similar change could be made in the subitize experiment from this
 unit.</p>
 <p>To change the code to run the models in simulated time requires not
 specifying the second parameter as true in the call to run.</p>
 <p>Here are the calls that currently exists in the sperling files:</p>
 <div>
-<pre><code>    (run 30 t)
+<pre class="lisp"><code>    <span class="tok-paren">(</span>run <span class="tok-number">30</span> t<span class="tok-paren">)</span>
 
-    actr.run(30,True)   </code></pre>
+    actr.run<span class="tok-paren">(</span>30,True<span class="tok-paren">)</span>   </code></pre>
 </div>
 
 <p>Removing that second parameter will run the models in simulated time
 instead of real time:</p>
-<pre><code>
-    (run 30)
+<pre class="lisp"><code>
+    <span class="tok-paren">(</span>run <span class="tok-number">30</span><span class="tok-paren">)</span>
 
-    actr.run(30)   
+    actr.run<span class="tok-paren">(</span><span class="tok-number">30</span><span class="tok-paren">)</span>   
 </code></pre>
 <p>Something else which can improve the time it takes to run a task is
 to turn off any output which it generates. As was mentioned in the unit

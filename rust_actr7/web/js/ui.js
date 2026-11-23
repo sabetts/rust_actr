@@ -237,14 +237,26 @@ export function setupTabs() {
     }
   };
 
+  const setGuideEnabled = (enabled) => {
+    const guideTab = $("tab-guide");
+    if (!guideTab) return;
+    guideTab.hidden = !enabled;
+    if (!enabled) {
+      const panel = $("panel-guide");
+      if (panel) panel.hidden = true;
+      if (current() === "guide") activate("source");
+    }
+  };
+
   const initial = tabs.find((tab) => tab.getAttribute("aria-selected") === "true");
   activate(initial?.dataset.tab || "source");
   setTaskEnabled(!$("tab-task")?.hidden);
+  setGuideEnabled(!$("tab-guide")?.hidden);
 
-  return { activate, current, setTaskEnabled };
+  return { activate, current, setTaskEnabled, setGuideEnabled };
 }
 
-export function createModelBrowser({ groups, guides = {} }) {
+export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
   const list = $("model-list");
   const search = $("model-search");
   const select = $("model-preset");
@@ -293,18 +305,40 @@ export function createModelBrowser({ groups, guides = {} }) {
     block.append(element("div", "unit-guides-label", "Guides"));
     for (const guide of unitGuides) {
       if (!guide || !guide.path || !guide.label) continue;
+      const row = element("div", "unit-guide-row");
       const link = document.createElement("a");
       link.className = "unit-guide";
       link.href = `./${guide.path}`;
-      link.target = "_blank";
-      link.rel = "noopener";
       link.title = `${info.title} · ${guide.label}`;
+      link.dataset.guideId = guide.id || "";
+      link.addEventListener("click", (event) => {
+        if (
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey ||
+          !onOpenGuide
+        ) {
+          return;
+        }
+        event.preventDefault();
+        onOpenGuide({ guide, group, info });
+      });
       link.append(guideIcon(guide.kind));
       link.append(element("span", "unit-guide-label", guide.label));
-      const open = element("span", "unit-guide-open", "↗");
-      open.setAttribute("aria-hidden", "true");
-      link.append(open);
-      block.append(link);
+
+      const open = document.createElement("a");
+      open.className = "unit-guide-open";
+      open.href = `./${guide.path}`;
+      open.target = "_blank";
+      open.rel = "noopener";
+      open.title = `Open ${guide.label} for ${info.title} in a new tab`;
+      open.setAttribute("aria-label", `Open ${guide.label} for ${info.title} in a new tab`);
+      open.textContent = "↗";
+
+      row.append(link, open);
+      block.append(row);
     }
     return block.children.length > 1 ? block : null;
   };
@@ -427,6 +461,88 @@ export function createModelBrowser({ groups, guides = {} }) {
       search?.select();
     },
   };
+}
+
+export function createGuideViewer({ tabs }) {
+  const frame = $("guide-frame");
+  const title = $("guide-title");
+  const meta = $("guide-meta");
+  const tabLabel = $("tab-guide-label");
+  const closeButton = $("guide-close");
+  if (!frame || !tabs) return { open() {}, close() {} };
+
+  let previousTab = "source";
+
+  const syncFrame = () => {
+    let doc = null;
+    try {
+      doc = frame.contentDocument;
+    } catch {
+      return;
+    }
+    if (!doc?.documentElement) return;
+    doc.documentElement.classList.add("embedded");
+    doc.documentElement.dataset.theme =
+      document.documentElement.dataset.theme || "light";
+    for (const link of doc.querySelectorAll('a[href^="http://"], a[href^="https://"]')) {
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+    }
+  };
+
+  frame.addEventListener("load", syncFrame);
+
+  const themeObserver = new MutationObserver(() => {
+    let doc = null;
+    try {
+      doc = frame.contentDocument;
+    } catch {
+      return;
+    }
+    if (doc?.documentElement) {
+      doc.documentElement.dataset.theme =
+        document.documentElement.dataset.theme || "light";
+    }
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+
+  const open = ({ guide, group, info }) => {
+    if (!guide?.path) return;
+    const current = tabs.current();
+    if (current && current !== "guide") previousTab = current;
+    if (title) title.textContent = guide.label;
+    if (meta) {
+      meta.textContent = `${group?.label || group?.id || "Unit"} · ${info?.title || ""}`.replace(
+        / · $/,
+        ""
+      );
+    }
+    if (tabLabel) tabLabel.textContent = guide.label;
+    frame.title = `${info?.title || group?.label || "Unit"} · ${guide.label}`;
+    frame.src = `./${guide.path}`;
+    tabs.setGuideEnabled(true);
+    tabs.activate("guide", { focus: true });
+  };
+
+  const close = () => {
+    tabs.setGuideEnabled(false);
+    const fallback = document.getElementById(`tab-${previousTab}`);
+    tabs.activate(fallback && !fallback.hidden ? previousTab : "source", {
+      focus: true,
+    });
+    frame.src = "about:blank";
+    frame.title = "Unit guide";
+    if (title) title.textContent = "Guide";
+    if (meta) meta.textContent = "";
+    if (tabLabel) tabLabel.textContent = "Guide";
+  };
+
+  closeButton?.addEventListener("click", close);
+
+  return { open, close };
 }
 
 export function renderModelInfo({ model, unitId, descriptor }) {
@@ -822,7 +938,7 @@ export function createEditor({ onChange } = {}) {
         continue;
       }
       let end = index;
-      while (end < length && !/[\s();"#|]/.test(text[end])) end += 1;
+      while (end < length && !/[\s();"]/.test(text[end])) end += 1;
       const word = text.slice(index, end);
       const kind = classifyWord(word);
       out += kind ? `<span class="${kind}">${escape(word)}</span>` : escape(word);

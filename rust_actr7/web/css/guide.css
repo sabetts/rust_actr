@@ -16,8 +16,17 @@
   --accent-soft: #e9edff;
   --teal: #0f766e;
   --red: #b42318;
+  --amber: #b45309;
   --code-bg: #fbfcfe;
   --code-ink: #1f2937;
+  --code-comment: #7c899c;
+  --code-string: #0f7a5a;
+  --code-keyword: #6d43c7;
+  --code-buffer: #1d5fd0;
+  --code-number: #b45309;
+  --code-output: #a33a00;
+  --code-arrow: #b42318;
+  --code-paren: #7b8798;
   --shadow-md: 0 8px 24px rgba(17, 24, 39, 0.08), 0 2px 6px rgba(17, 24, 39, 0.04);
   --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.06), 0 2px 6px rgba(17, 24, 39, 0.04);
 }
@@ -38,8 +47,17 @@
   --accent-soft: #1c2a4d;
   --teal: #5eead4;
   --red: #ff8b80;
+  --amber: #f2b35c;
   --code-bg: #0f1721;
   --code-ink: #dbe5f2;
+  --code-comment: #74849a;
+  --code-string: #76d9b3;
+  --code-keyword: #c4a9ff;
+  --code-buffer: #82b4ff;
+  --code-number: #f2b35c;
+  --code-output: #ffb38a;
+  --code-arrow: #ff9d94;
+  --code-paren: #8293aa;
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
@@ -54,8 +72,11 @@ html {
 }
 
 body {
+  width: 100%;
+  max-width: none;
   min-height: 100vh;
   margin: 0;
+  padding: 0;
   background:
     radial-gradient(1000px 480px at 8% -12%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
     radial-gradient(900px 500px at 102% 4%, color-mix(in srgb, var(--teal) 8%, transparent), transparent 62%),
@@ -242,6 +263,7 @@ body {
   font-size: 0.85rem;
   line-height: 1.55;
   overflow: auto;
+  white-space: pre;
   scrollbar-width: thin;
 }
 
@@ -250,6 +272,44 @@ body {
   background: transparent;
   color: inherit;
   font-size: inherit;
+}
+
+.guide-body pre code {
+  font-family: var(--font-mono);
+  white-space: pre;
+}
+
+.guide-body .tok-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.guide-body .tok-string {
+  color: var(--code-string);
+}
+
+.guide-body .tok-keyword,
+.guide-body .tok-isa {
+  color: var(--code-keyword);
+  font-weight: 650;
+}
+
+.guide-body .tok-buffer {
+  color: var(--code-buffer);
+  font-weight: 650;
+}
+
+.guide-body .tok-number {
+  color: var(--code-number);
+}
+
+.guide-body .tok-paren {
+  color: var(--code-paren);
+}
+
+.guide-body .tok-arrow {
+  color: var(--code-arrow);
+  font-weight: 700;
 }
 
 .guide-body table {
@@ -325,6 +385,28 @@ body {
   font-family: var(--font-ui);
   font-size: 0.82em;
   font-weight: 650;
+}
+
+html.embedded {
+  background: var(--surface);
+}
+
+html.embedded body {
+  background: var(--surface);
+}
+
+html.embedded .guide-bar {
+  display: none;
+}
+
+html.embedded .guide-body {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 44px) clamp(18px, 3vw, 32px) 48px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 @media (max-width: 640px) {

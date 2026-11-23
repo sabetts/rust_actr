@@ -202,75 +202,75 @@ that later). Here are examples which can be run to produce the trace
 below for the sentence “The lawyer is in the store” which is true (it is
 in the study set):</p>
 <div>
-<pre><code>? (fan-sentence &quot;lawyer&quot; &quot;store&quot; t &#39;person)
-&gt;&gt;&gt; fan.sentence(&#39;lawyer&#39;,&#39;store&#39;,True,&#39;person&#39;)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>fan-sentence <span class="tok-string">"lawyer"</span> <span class="tok-string">"store"</span> t 'person<span class="tok-paren">)</span>
+&gt;&gt;&gt; fan.sentence<span class="tok-paren">(</span>'lawyer','store',True,'person'<span class="tok-paren">)</span>
 
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-PERSON
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  VISION                Find-location
-     0.050  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  PROCEDURAL            PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
-     0.100  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.100  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.185  VISION                Encoding-complete VISUAL-LOCATION0-1 NIL
-     0.185  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.185  PROCEDURAL            CONFLICT-RESOLUTION
-     0.235  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-MEANING
-     0.235  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.235  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.235  DECLARATIVE           start-retrieval
-     0.235  DECLARATIVE           RETRIEVED-CHUNK LAWYER
-     0.235  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL LAWYER
-     0.235  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-PERSON
-     0.300  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.300  VISION                Find-location
-     0.300  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     0.350  PROCEDURAL            PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
-     0.350  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.350  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.350  PROCEDURAL            CONFLICT-RESOLUTION
-     0.435  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     0.435  VISION                SET-BUFFER-CHUNK VISUAL TEXT1
-     0.435  PROCEDURAL            CONFLICT-RESOLUTION
-     0.485  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-MEANING
-     0.485  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.485  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.485  DECLARATIVE           start-retrieval
-     0.485  DECLARATIVE           RETRIEVED-CHUNK STORE
-     0.485  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL STORE
-     0.485  PROCEDURAL            CONFLICT-RESOLUTION
-     0.535  PROCEDURAL            PRODUCTION-FIRED ENCODE-LOCATION
-     0.535  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.535  PROCEDURAL            CONFLICT-RESOLUTION
-     0.585  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-FROM-PERSON
-     0.585  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.585  DECLARATIVE           start-retrieval
-     0.585  PROCEDURAL            CONFLICT-RESOLUTION
-     0.839  DECLARATIVE           RETRIEVED-CHUNK P13
-     0.839  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P13
-     0.839  PROCEDURAL            CONFLICT-RESOLUTION
-     0.889  PROCEDURAL            PRODUCTION-FIRED YES
-     0.889  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.889  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.889  PROCEDURAL            CLEAR-BUFFER MANUAL
-     0.889  MOTOR                 PRESS-KEY KEY k
-     0.889  PROCEDURAL            CONFLICT-RESOLUTION
-     1.039  PROCEDURAL            CONFLICT-RESOLUTION
-     1.089  PROCEDURAL            CONFLICT-RESOLUTION
-     1.099  PROCEDURAL            CONFLICT-RESOLUTION
-     1.189  PROCEDURAL            CONFLICT-RESOLUTION
-     1.189  ------                Stopped because no events left to process</code></pre>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-PERSON
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  VISION                Find-location
+     <span class="tok-number">0.050</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
+     <span class="tok-number">0.100</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.100</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.185</span>  VISION                Encoding-complete VISUAL-LOCATION0-1 NIL
+     <span class="tok-number">0.185</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.185</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.235</span>  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-MEANING
+     <span class="tok-number">0.235</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.235</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.235</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.235</span>  DECLARATIVE           RETRIEVED-CHUNK LAWYER
+     <span class="tok-number">0.235</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL LAWYER
+     <span class="tok-number">0.235</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-PERSON
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.300</span>  VISION                Find-location
+     <span class="tok-number">0.300</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.350</span>  PROCEDURAL            PRODUCTION-FIRED ATTEND-VISUAL-LOCATION
+     <span class="tok-number">0.350</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.350</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.350</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.435</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">0.435</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1
+     <span class="tok-number">0.435</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.485</span>  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-MEANING
+     <span class="tok-number">0.485</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.485</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.485</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.485</span>  DECLARATIVE           RETRIEVED-CHUNK STORE
+     <span class="tok-number">0.485</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL STORE
+     <span class="tok-number">0.485</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.535</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LOCATION
+     <span class="tok-number">0.535</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.535</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.585</span>  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-FROM-PERSON
+     <span class="tok-number">0.585</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.585</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.585</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.839</span>  DECLARATIVE           RETRIEVED-CHUNK P13
+     <span class="tok-number">0.839</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P13
+     <span class="tok-number">0.839</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.889</span>  PROCEDURAL            PRODUCTION-FIRED YES
+     <span class="tok-number">0.889</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.889</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.889</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">0.889</span>  MOTOR                 PRESS-KEY KEY k
+     <span class="tok-number">0.889</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.039</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.089</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.099</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.189</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.189</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>The model can also be run over each of the conditions to produce the
 results for the whole experiment using the <strong>fan-experiment
@@ -310,21 +310,21 @@ effects in the data.</p>
 <p>The study sentences are encoded in chunks placed into the model’s
 declarative memory like this:</p>
 <div>
-<pre><code>  (add-dm
-   (p1 ISA comprehend-sentence relation in arg1 hippie arg2 park)
-   (p2 ISA comprehend-sentence relation in arg1 hippie arg2 church)
-   (p3 ISA comprehend-sentence relation in arg1 hippie arg2 bank)
-   (p4 ISA comprehend-sentence relation in arg1 captain arg2 park)
-   (p5 ISA comprehend-sentence relation in arg1 captain arg2 cave)
-   (p6 ISA comprehend-sentence relation in arg1 debutante arg2 bank)
-   (p7 ISA comprehend-sentence relation in arg1 fireman arg2 park)
-   (p8 ISA comprehend-sentence relation in arg1 giant arg2 beach)
-   (p9 ISA comprehend-sentence relation in arg1 giant arg2 castle)
-   (p10 ISA comprehend-sentence relation in arg1 giant arg2 dungeon)
-   (p11 ISA comprehend-sentence relation in arg1 earl arg2 castle)
-   (p12 ISA comprehend-sentence relation in arg1 earl arg2 forest)
-   (p13 ISA comprehend-sentence relation in arg1 lawyer arg2 store)
-   ...)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">add-dm</span>
+   <span class="tok-paren">(</span>p1 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 hippie arg2 park<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p2 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 hippie arg2 church<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p3 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 hippie arg2 bank<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p4 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 captain arg2 park<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p5 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 captain arg2 cave<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p6 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 debutante arg2 bank<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p7 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 fireman arg2 park<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p8 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 giant arg2 beach<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p9 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 giant arg2 castle<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p10 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 giant arg2 dungeon<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p11 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 earl arg2 castle<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p12 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 earl arg2 forest<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>p13 <span class="tok-isa">ISA</span> comprehend-sentence relation in arg1 lawyer arg2 store<span class="tok-paren">)</span>
+   ...<span class="tok-paren">)</span></code></pre>
 </div>
 <p>They represent the items from the study portion of the experiment in
 the form of an association among the concepts e.g. p13 is encoding the
@@ -333,8 +333,8 @@ sentence “The lawyer is in the store”.</p>
 display to the concepts. For instance, relevant to chunk p13 above we
 have:</p>
 <div>
-<pre><code>   (lawyer ISA meaning word &quot;lawyer&quot;)
-   (store ISA meaning word &quot;store&quot;)</code></pre>
+<pre class="lisp"><code>   <span class="tok-paren">(</span>lawyer <span class="tok-isa">ISA</span> meaning word <span class="tok-string">"lawyer"</span><span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>store <span class="tok-isa">ISA</span> meaning word <span class="tok-string">"store"</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The base-level activations of these meaning chunks have been set to
 10 to reflect the fact that they are well practiced and should not fail
@@ -363,17 +363,17 @@ and encode the words the model goes through a four step process.</p>
 also requests that the imaginal module create a new chunk to hold the
 sentence being read from the screen:</p>
 <div>
-<pre><code>  (P find-person
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> find-person
      ?visual-location&gt;
         buffer     unrequested
      ?imaginal&gt;
         state      free
-     ==&gt;
-     +imaginal&gt;
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+imaginal&gt;</span>
   
-     +visual-location&gt;
-        ISA        visual-location
-        screen-x   lowest)</code></pre>
+     <span class="tok-buffer">+visual-location&gt;</span>
+        <span class="tok-isa">ISA</span>        visual-location
+        screen-x   lowest<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The first query on the LHS of that production has not been used
 previously in the tutorial. The check that the
@@ -389,47 +389,47 @@ change and the <strong>imaginal </strong>module is currently free.</p>
 <strong>visual-location</strong> and requests a shift of attention to
 it:</p>
 <div>
-<pre><code>  (P attend-visual-location
-     =visual-location&gt;
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> attend-visual-location
+     <span class="tok-buffer">=visual-location&gt;</span>
    
      ?visual-location&gt;
         buffer     requested
      ?visual&gt;
         state      free
-     ==&gt;
-     +visual&gt;
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+visual&gt;</span>
         cmd        move-attention
-        screen-pos =visual-location)</code></pre>
+        screen-pos =visual-location<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Then the chunk in the <strong>visual </strong>buffer is harvested and
 a <strong>retrieval</strong> request is made to request the chunk that
 represents the meaning of that word:</p>
 <div>
-<pre><code>  (P retrieve-meaning
-     =visual&gt;
-        ISA        visual-object
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> retrieve-meaning
+     <span class="tok-buffer">=visual&gt;</span>
+        <span class="tok-isa">ISA</span>        visual-object
         value      =word
-     ==&gt;
-     +retrieval&gt;
-        ISA        meaning
-        word       =word)</code></pre>
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        meaning
+        word       =word<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Finally, the retrieved chunk is harvested and the meaning chunk is
 placed into a slot of the chunk in the <strong>imaginal</strong>
 buffer:</p>
 <div>
-<pre><code>  (P encode-person
-     =retrieval&gt;
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> encode-person
+     <span class="tok-buffer">=retrieval&gt;</span>
    
-     =imaginal&gt;
-        ISA        comprehend-sentence
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       nil
-     ==&gt;
-     =imaginal&gt;
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
         arg1       =retrieval
-     +visual-location&gt;
-        ISA        visual-location
-        screen-x   highest)</code></pre>
+     <span class="tok-buffer">+visual-location&gt;</span>
+        <span class="tok-isa">ISA</span>        visual-location
+        screen-x   highest<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This production also issues the <strong>visual-location
 </strong>request to find the location word and the same sequence of
@@ -448,33 +448,33 @@ IMAGINAL-CHUNK0
 <p>At that point one of these two productions will be selected and fired
 to retrieve a study sentence:</p>
 <div>
-<pre><code>  (P retrieve-from-person
-     =imaginal&gt;
-        ISA        comprehend-sentence
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> retrieve-from-person
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
      ?retrieval&gt;
         state      free
         buffer     empty 
-     ==&gt;
-     =imaginal&gt;
-     +retrieval&gt;
-        ISA        comprehend-sentence
-        arg1       =person)
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
+        arg1       =person<span class="tok-paren">)</span>
 
-  (P retrieve-from-location
-     =imaginal&gt;
-        ISA        comprehend-sentence
+  <span class="tok-paren">(</span><span class="tok-keyword">P</span> retrieve-from-location
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
      ?retrieval&gt;
         state      free
         buffer     empty 
-     ==&gt;
-     =imaginal&gt;
-     +retrieval&gt;
-        ISA        comprehend-sentence
-        arg2       =location)</code></pre>
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
+        arg2       =location<span class="tok-paren">)</span></code></pre>
 </div>
 <p>A thorough model of the task would have those two productions
 competing and one would randomly be selected. However, to simplify
@@ -495,51 +495,51 @@ items affects the time to respond to both targets and foils.</p>
 trial will be retrieved and one of the following productions will fire
 to produce a response:</p>
 <div>
-<pre><code>  (P yes
-     =imaginal&gt;
-        ISA        comprehend-sentence
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> yes
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
-     =retrieval&gt;
-        ISA        comprehend-sentence
+     <span class="tok-buffer">=retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
      ?manual&gt;  
         state      free  
-     ==&gt;
-     +manual&gt;
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+manual&gt;</span>
         cmd        press-key
-        key        &quot;k&quot;)
+        key        <span class="tok-string">"k"</span><span class="tok-paren">)</span>
 
-  (P mismatch-person
-     =imaginal&gt;
-        ISA        comprehend-sentence
+  <span class="tok-paren">(</span><span class="tok-keyword">P</span> mismatch-person
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
-     =retrieval&gt;
-        ISA        comprehend-sentence
+     <span class="tok-buffer">=retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
       - arg1       =person
      ?manual&gt;  
         state      free  
-     ==&gt;
-     +manual&gt;
-        ISA        press-key
-        key        &quot;d&quot;)
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+manual&gt;</span>
+        <span class="tok-isa">ISA</span>        press-key
+        key        <span class="tok-string">"d"</span><span class="tok-paren">)</span>
 
-  (P mismatch-location
-     =imaginal&gt;
-        ISA        comprehend-sentence
+  <span class="tok-paren">(</span><span class="tok-keyword">P</span> mismatch-location
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
-     =retrieval&gt;
-        ISA        comprehend-sentence
+     <span class="tok-buffer">=retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
       - arg2       =location
      ?manual&gt;  
         state      free  
-     ==&gt;
-     +manual&gt;
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+manual&gt;</span>
         cmd        press-key
-        key        &quot;d&quot;)</code></pre>
+        key        <span class="tok-string">"d"</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>If the retrieved sentence matches the probe then the model responds
 with the true response, “k”, and if either one of the components does
@@ -950,19 +950,19 @@ chunk has activation above the retrieval threshold.</p>
 <p>We will continue to look at productions from the fan model for now.
 In particular, this production requests the retrieval of a chunk:</p>
 <div>
-<pre><code>  (P retrieve-from-person
-     =imaginal&gt;
-        ISA        comprehend-sentence
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">P</span> retrieve-from-person
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
         arg1       =person
         arg2       =location
      ?retrieval&gt;
         state      free
         buffer     empty 
-     ==&gt;
-     =imaginal&gt;
-     +retrieval&gt;
-        ISA        comprehend-sentence
-        arg1       =person)</code></pre>
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span>
+        <span class="tok-isa">ISA</span>        comprehend-sentence
+        arg1       =person<span class="tok-paren">)</span></code></pre>
 </div>
 <p>In this case an attempt is being made to retrieve a chunk with a
 particular person (the value bound to =person) that had been studied. If
@@ -1146,9 +1146,9 @@ error.</p>
 <p>The similarities between the different positions are defined in the
 model using the set-similarities command:</p>
 <div>
-<pre><code>(set-similarities 
- (first second -0.5)
- (second third -0.5))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>set-similarities 
+ <span class="tok-paren">(</span>first second <span class="tok-number">-0.5</span><span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>second third <span class="tok-number">-0.5</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Similarity values are symmetric, thus it is not necessary to also
 specify (second first -0.5). The similarity between a chunk and itself
@@ -1254,16 +1254,16 @@ may be helpful to go through.</p>
 <strong>imaginal</strong> buffer which has not been discussed previously
 in the tutorial:</p>
 <div>
-<pre><code>(p harvest-arg2
-   =retrieval&gt;
-   =imaginal&gt;
-     isa         plus-fact
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> harvest-arg2
+   <span class="tok-buffer">=retrieval&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-isa">isa</span>         plus-fact
      addend2     nil
    ?imaginal&gt; 
      state       free
-  ==&gt;
-   *imaginal&gt;
-     addend2     =retrieval)</code></pre>
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">*imaginal&gt;</span>
+     addend2     =retrieval<span class="tok-paren">)</span></code></pre>
 </div>
 <p>An action for a buffer which begins with a * is called a modification
 request. It works similarly to a request which is specified with a + in
@@ -1281,19 +1281,19 @@ difference between an =goal action and a *goal action will be which
 module is credited with the action. Consider this production from the
 count model in unit1:</p>
 <div>
-<pre><code>(p start
-   =goal&gt;
-      ISA        count-from
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> start
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       start      =num1
       count      nil
- ==&gt;
-   =goal&gt;
-      ISA        count-from
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       count      =num1
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-   )</code></pre>
+   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>The =goal action in that production results in this output in the
 trace:</p>
@@ -1328,16 +1328,16 @@ production were instead using the <strong>imaginal</strong> buffer
 retrieval request since all we care about here is the
 <strong>imaginal</strong> buffer action):</p>
 <div>
-<pre><code>  (p start
-     =imaginal&gt;
-        ISA     count-from
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> start
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>     count-from
         start   =num1
         count   nil
-   ==&gt;
-     =imaginal&gt;
-        ISA     count-from
+   <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>     count-from
         count   =num1 
-  ) </code></pre>
+  <span class="tok-paren">)</span> </code></pre>
 </div>
 <p>We would see this trace for the =imaginal action:</p>
 <div>
@@ -1349,16 +1349,16 @@ also include a query to test that the module is not busy but for this
 example we are relying on the strict safety mechanism to add it
 automatically):</p>
 <div>
-<pre><code>  (p start
-     =imaginal&gt;
-        ISA     count-from
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> start
+     <span class="tok-buffer">=imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>     count-from
         start   =num1
         count   nil
-   ==&gt;
-     *imaginal&gt;
-        ISA     count-from
+   <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">*imaginal&gt;</span>
+        <span class="tok-isa">ISA</span>     count-from
         count   =num1 
-  ) </code></pre>
+  <span class="tok-paren">)</span> </code></pre>
 </div>
 <p>Then we would see this sequence of events in the trace:</p>
 <div>
@@ -1380,18 +1380,18 @@ simplicity as has been done up to this point in the tutorial.</p>
 request using syntax that has not been discussed previously in the
 tutorial:</p>
 <div>
-<pre><code>(P harvest-answer
-   =retrieval&gt;
-      ISA        plus-fact
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> harvest-answer
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        plus-fact
       sum        =number
-   =imaginal&gt;
-      isa        plus-fact
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>        plus-fact
    ?imaginal&gt;
       state      free
-  ==&gt;
-   *imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">*imaginal&gt;</span>
       sum        =number
-   +retrieval&gt;   =number)</code></pre>
+   <span class="tok-buffer">+retrieval&gt;</span>   =number<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This production harvests the chunk in the <strong>retrieval</strong>
 buffer and uses the value from the sum slot of that chunk in a
@@ -1408,7 +1408,7 @@ done is constructed as if all of the slots and values of that chunk were
 specified explicitly. Thus, if in the production above =number were
 bound to the chunk eight from the model:</p>
 <div>
-<pre><code> (eight ISA number aural-rep 8 vocal-rep &quot;eight&quot;)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>eight <span class="tok-isa">ISA</span> number aural-rep <span class="tok-number">8</span> vocal-rep <span class="tok-string">"eight"</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Then that retrieval request would be equivalent to this:</p>
 <p> +retrieval&gt; </p>
@@ -1533,8 +1533,8 @@ between the feedback and the next hand will also be 10 seconds.</p>
 <p>Here is the chunk-type definition which specifies the slots used for
 the chunk that will be placed into the <strong>goal</strong> buffer:</p>
 <div>
-<pre><code>  (chunk-type game-state
-     mc1 mc2 mc3 mstart mtot mresult oc1 oc2 oc3 ostart otot oresult state)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> game-state
+     mc1 mc2 mc3 mstart mtot mresult oc1 oc2 oc3 ostart otot oresult state<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The slots of the chunk in the <strong>goal</strong> buffer will be
 set by the game playing code for the model as follows:</p>
@@ -1623,23 +1623,23 @@ it should be clear what they are doing. However, there is one action in
 the remember-game production which has not been used previously in the
 tutorial:</p>
 <div>
-<pre><code>  (p remember-game
-     =goal&gt;
-       isa game-state
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> remember-game
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> game-state
        state retrieving
-     =retrieval&gt;
-       isa learned-info
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> learned-info
        action =act
      ?manual&gt;
        state free
-    ==&gt;
-     =goal&gt;
+    <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=goal&gt;</span>
        state nil
-     +manual&gt;
+     <span class="tok-buffer">+manual&gt;</span>
        cmd press-key
        key =act
      
-     @retrieval&gt;)</code></pre>
+     @retrieval&gt;<span class="tok-paren">)</span></code></pre>
 </div>
 <p>On its RHS we see this action:</p>
 <pre><code>
@@ -1727,8 +1727,8 @@ enabled and how the system operates), and the second set is those which
 control the parameters of the mechanisms used in the model. This is the
 first set of parameters:</p>
 <div>
-<pre><code>  (sgp :esc t :bll .5 :ol t :sim-hook &quot;1hit-bj-number-sims&quot; 
-       :cache-sim-hook-results t :er t :lf 0)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :esc t :bll .5 :ol t :sim-hook <span class="tok-string">"1hit-bj-number-sims"</span> 
+       :cache-sim-hook-results t :er t :lf <span class="tok-number">0</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>It enables the subsymbolic components of ACT-R. It turns on the
 base-level learning for declarative memory with a decay of 0.5 (the
@@ -1747,7 +1747,7 @@ also be used in the assignment model which you write.</p>
 <p>The other set of parameters in the starting model specifies the
 things which you may want to modify: </p>
 <div>
-<pre><code>  (sgp :v nil :ans .2 :mp 10.0 :rt -60)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :v nil :ans .2 :mp <span class="tok-number">10.0</span> :rt <span class="tok-number">-60</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>In addition to the :v flag to control the trace it sets the
 activation noise to a reasonable value. The mismatch penalty for partial
@@ -1844,8 +1844,8 @@ times when both players bust, and the times when they are tied.</p>
 <p>Here is an example of running it in Lisp without the optional
 parameter:</p>
 <div>
-<pre><code>? (onehit-hands 5)
-(2 3 0 0)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>onehit-hands <span class="tok-number">5</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-number">2</span> <span class="tok-number">3</span> <span class="tok-number">0</span> <span class="tok-number">0</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Here is an example of running it in Python with the optional
 parameter to show the details of the hands played:</p>
@@ -1870,8 +1870,8 @@ where each block is represented by a list as returned by the function
 for running hands shown above. Here is an example with running two
 blocks of 5 hands each in both Lisp and Python:</p>
 <div>
-<pre><code>? (onehit-blocks 2 5)
-((2 3 0 0) (3 2 0 0))</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>onehit-blocks <span class="tok-number">2</span> <span class="tok-number">5</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-paren">(</span><span class="tok-number">2</span> <span class="tok-number">3</span> <span class="tok-number">0</span> <span class="tok-number">0</span><span class="tok-paren">)</span> <span class="tok-paren">(</span><span class="tok-number">3</span> <span class="tok-number">2</span> <span class="tok-number">0</span> <span class="tok-number">0</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <div>
 <pre><code>&gt;&gt;&gt; onehit.blocks(2,5)
@@ -1899,8 +1899,8 @@ experiment window will be opened and the detailed win data will be
 displayed in a graph. Here is an example call and resulting graph of a
 run of the example model:</p>
 <div>
-<pre><code>? (onehit-learning 50)
-((0.30159998 0.30800003 0.3 0.3152) (0.332 0.264 0.308 0.336 0.268 0.324 0.328 0.28 0.34 0.268 0.308 0.3 0.31199998 0.292 0.28800002 0.296 0.344 0.3 0.332 0.304))</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>onehit-learning <span class="tok-number">50</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-paren">(</span><span class="tok-number">0.30159998</span> <span class="tok-number">0.30800003</span> <span class="tok-number">0.3</span> <span class="tok-number">0.3152</span><span class="tok-paren">)</span> <span class="tok-paren">(</span><span class="tok-number">0.332</span> <span class="tok-number">0.264</span> <span class="tok-number">0.308</span> <span class="tok-number">0.336</span> <span class="tok-number">0.268</span> <span class="tok-number">0.324</span> <span class="tok-number">0.328</span> <span class="tok-number">0.28</span> <span class="tok-number">0.34</span> <span class="tok-number">0.268</span> <span class="tok-number">0.308</span> <span class="tok-number">0.3</span> <span class="tok-number">0.31199998</span> <span class="tok-number">0.292</span> <span class="tok-number">0.28800002</span> <span class="tok-number">0.296</span> <span class="tok-number">0.344</span> <span class="tok-number">0.3</span> <span class="tok-number">0.332</span> <span class="tok-number">0.304</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <div>
 <pre><code>&gt;&gt;&gt; onehit.learning(50)

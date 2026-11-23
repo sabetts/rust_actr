@@ -121,12 +121,14 @@
 }
 
 html {
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: clip;
   background:
     radial-gradient(1100px 500px at 8% -12%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 60%),
     radial-gradient(900px 520px at 102% 4%, color-mix(in srgb, var(--teal) 9%, transparent), transparent 62%),
@@ -698,6 +700,21 @@ select.input {
   gap: var(--space-3);
 }
 
+.model-browser-panel,
+.model-browser-panel .panel-body,
+.model-browser,
+.model-list,
+.unit,
+.unit-body,
+.unit-head,
+.unit-head-text,
+.unit-guides,
+.unit-guide-row,
+.model-row,
+.model-search input {
+  min-width: 0;
+}
+
 .model-search {
   position: relative;
 }
@@ -952,10 +969,19 @@ select.input {
   text-transform: uppercase;
 }
 
-.unit-guide {
+.unit-guide-row {
   display: flex;
   align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.unit-guide {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
   min-height: 30px;
   padding: 5px 9px;
   border: 1px solid transparent;
@@ -993,9 +1019,30 @@ select.input {
 }
 
 .unit-guide-open {
-  margin-left: auto;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   color: var(--faint);
   font-size: 11px;
+  line-height: 1;
+  text-decoration: none;
+  transition: background var(--speed), border-color var(--speed), color var(--speed);
+}
+
+.unit-guide-open:hover {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.unit-guide-open:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .model-empty {
@@ -1409,6 +1456,15 @@ select.input {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+}
+
+.guide-frame {
+  display: block;
+  width: 100%;
+  height: min(72vh, 900px);
+  min-height: 520px;
+  border: 0;
+  background: var(--surface);
 }
 
 .card-toolbar {
@@ -2640,6 +2696,7 @@ kbd {
   .sidebar {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .model-list {
@@ -2696,6 +2753,11 @@ kbd {
   .editor-shell,
   .trace-shell {
     min-height: 440px;
+  }
+
+  .guide-frame {
+    height: 68vh;
+    min-height: 460px;
   }
 
   #model,

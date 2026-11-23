@@ -123,30 +123,30 @@ fan-no-pm.lisp and fan_no_pm.py files, and then describe what was done
 differently with the model.</p>
 <h3 id="functions-to-run-a-trial">Functions to run a trial</h3>
 <div>
-<pre><code>(defun fan-sentence (person location target term)
-  (reset)
+<pre class="lisp"><code><span class="tok-paren">(</span>defun fan-sentence <span class="tok-paren">(</span>person location target term<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>reset<span class="tok-paren">)</span>
   
-  ; disable the production that isn&#39;t being used for retrieval
+  <span class="tok-comment">; disable the production that isn't being used for retrieval</span>
   
-  (case term 
-    (person (pdisable retrieve-from-location))
-    (location (pdisable retrieve-from-person)))
+  <span class="tok-paren">(</span>case term 
+    <span class="tok-paren">(</span>person <span class="tok-paren">(</span><span class="tok-keyword">pdisable</span> retrieve-from-location<span class="tok-paren">)</span><span class="tok-paren">)</span>
+    <span class="tok-paren">(</span>location <span class="tok-paren">(</span><span class="tok-keyword">pdisable</span> retrieve-from-person<span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
   
-  ; modify the chunk in the goal buffer to set the 
-  ; arg1 and arg2 slots to the probe items 
+  <span class="tok-comment">; modify the chunk in the goal buffer to set the </span>
+  <span class="tok-comment">; arg1 and arg2 slots to the probe items </span>
   
-  (mod-focus-fct (list &#39;arg1 person &#39;arg2 location))
+  <span class="tok-paren">(</span>mod-focus-fct <span class="tok-paren">(</span>list 'arg1 person 'arg2 location<span class="tok-paren">)</span><span class="tok-paren">)</span>
   
-  ; run the model recording the time spent running
-  ; and get the value from the state slot of the goal buffer representing the
-  ; model&#39;s response to the task
+  <span class="tok-comment">; run the model recording the time spent running</span>
+  <span class="tok-comment">; and get the value from the state slot of the goal buffer representing the</span>
+  <span class="tok-comment">; model's response to the task</span>
   
-  (let ((response-time (run 30.0))
-        (response (buffer-slot-value &#39;goal &#39;state)))
+  <span class="tok-paren">(</span>let <span class="tok-paren">(</span><span class="tok-paren">(</span>response-time <span class="tok-paren">(</span>run <span class="tok-number">30.0</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+        <span class="tok-paren">(</span>response <span class="tok-paren">(</span><span class="tok-keyword">buffer-slot-value</span> 'goal 'state<span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
       
-    (list response-time
-          (or (and target (string-equal response &quot;k&quot;))
-              (and (null target) (string-equal response &quot;d&quot;))))))</code></pre>
+    <span class="tok-paren">(</span>list response-time
+          <span class="tok-paren">(</span>or <span class="tok-paren">(</span>and target <span class="tok-paren">(</span>string-equal response <span class="tok-string">"k"</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+              <span class="tok-paren">(</span>and <span class="tok-paren">(</span>null target<span class="tok-paren">)</span> <span class="tok-paren">(</span>string-equal response <span class="tok-string">"d"</span><span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <pre><code>
 </code></pre>
@@ -237,11 +237,11 @@ utility of the productions. These settings at the end of the model file
 adjust the :at value (action time) of the productions which controls how
 long they take to fire:</p>
 <div>
-<pre><code>  (spp mismatch-location-no :at .21)
-  (spp mismatch-person-no :at .21)
-  (spp respond-yes :at .21)
-  (spp start :at .250)
-  (spp harvest-person :at .285)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>spp mismatch-location-no :at .21<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp mismatch-person-no :at .21<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp respond-yes :at .21<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp start :at .250<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp harvest-person :at .285<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those settings are free parameters in the model, and they are not
 unique – there are many ways to set them to get the same results and it
@@ -282,23 +282,23 @@ experiment code. That is done in the harvest-first-item,
 harvest-second-item, and harvest-third-item productions. Here is the
 harvest-first-item production.</p>
 <div>
-<pre><code>(p harvest-first-item
-   =goal&gt;
-      isa     recall-list
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> harvest-first-item
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     recall-list
       element first
       group   =group
-   =retrieval&gt;
-      isa     item
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">isa</span>     item
       name    =name
-  ==&gt;
-   =goal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       element second
-   +retrieval&gt;
-      isa     item
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">isa</span>     item
       group   =group
       position second 
       :recently-retrieved nil
-   !eval! (&quot;grouped-response&quot; =name))</code></pre>
+   !eval! <span class="tok-paren">(</span><span class="tok-string">"grouped-response"</span> =name<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The new operation shown in that production is !eval!. [The ‘!’ is
 called bang in Lisp, so that’s pronounced bang-eval-bang.] It can be
@@ -405,7 +405,7 @@ command. Details on those new commands will be provided later.</p>
 were described in the main unit text, there are some new commands used
 in the model definition. The first is this one:</p>
 <div>
-<pre><code>  (declare-buffer-usage goal game-state :all)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>declare-buffer-usage goal game-state :all<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That command is there to avoid the style warnings from the procedural
 module because the <strong>goal</strong> buffer is being tested for
@@ -431,7 +431,7 @@ could just turn off the warnings, but that is not recommended because
 with the warnings off one may miss other serious problems.</p>
 <p>The next new command used is this one:</p>
 <div>
-<pre><code>  (define-chunks win lose bust retrieving start results)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">define-chunks</span> win lose bust retrieving start results<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That command provides a way to create chunks without putting them in
 declarative memory (as add-dm does) or directly into the goal buffer
@@ -445,7 +445,7 @@ we can simply specify names to create them.</p>
 previous experiments, but this time we have included it in the model in
 a slightly different form:</p>
 <div>
-<pre><code>  (install-device &#39;(&quot;motor&quot; &quot;keyboard&quot;))</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>install-device '<span class="tok-paren">(</span><span class="tok-string">"motor"</span> <span class="tok-string">"keyboard"</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Previously we have seen install-device used to have the model
 interact with a window in a task. It is more general than that however,
@@ -491,7 +491,7 @@ being returned. The buffer-chunk function shown in unit2 as a good
 example where the Lisp version used symbols and the Python version used
 strings:</p>
 <div>
-<pre><code>? (buffer-chunk goal visual)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal visual<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 FIVE
@@ -499,7 +499,7 @@ GOAL-CHUNK0
    SUM SEVEN
 
 VISUAL: NIL 
-(GOAL-CHUNK0 NIL)</code></pre>
+<span class="tok-paren">(</span>GOAL-CHUNK0 NIL<span class="tok-paren">)</span></code></pre>
 </div>
 <div>
 <pre><code>&gt;&gt;&gt; actr.buffer_chunk(&#39;goal&#39;,&#39;visual&#39;)
@@ -546,11 +546,11 @@ chunk that has the value of the *number* variable in one of its slots,
 using the add-dm macro will not work as shown here using the dm command
 discussed in unit1 for printing a chunk from declarative memory:</p>
 <div>
-<pre><code>? (defvar *number* 3)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>defvar *number* <span class="tok-number">3</span><span class="tok-paren">)</span>
 *NUMBER*
-? (add-dm (foo size *number*))
-(FOO)
-? (dm foo)
+? <span class="tok-paren">(</span><span class="tok-keyword">add-dm</span> <span class="tok-paren">(</span>foo size *number*<span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>FOO<span class="tok-paren">)</span>
+? <span class="tok-paren">(</span>dm foo<span class="tok-paren">)</span>
 FOO
    SIZE *NUMBER*
 </code></pre>
@@ -570,11 +570,11 @@ be in a list for the function. For example, add-dm-fct requires a list
 of lists as its only parameter instead of an arbitrary number of lists.
 Here is the code that would generate the chunk as desired above:</p>
 <div>
-<pre><code>? (add-dm-fct (list (list &#39;foo &#39;size *number*)))
-(FOO)
-? (dm foo)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>add-dm-fct <span class="tok-paren">(</span>list <span class="tok-paren">(</span>list 'foo 'size *number*<span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>FOO<span class="tok-paren">)</span>
+? <span class="tok-paren">(</span>dm foo<span class="tok-paren">)</span>
 FOO
-   SIZE 3
+   SIZE <span class="tok-number">3</span>
 </code></pre>
 </div>
 <p>Not all of the ACT-R commands have both a macro and function
@@ -908,7 +908,7 @@ occasionally retrieve the wrong chunk for the critical request of a
 plus-fact chunk like this one based on the addend1 and addend2
 slots:</p>
 <div>
-<pre><code> (f13 ISA plus-fact addend1 one addend2 three sum four)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>f13 <span class="tok-isa">ISA</span> plus-fact addend1 one addend2 three sum four<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Thus, the items which will need to be similar to result in mismatches
 are the number chunks which are used as addends, and that is where we
@@ -941,12 +941,12 @@ with addends from 0-5 we only need to set the similarities for the
 chunks which are relevant to the task. Thus, here are the initial
 similarity values set in the model:</p>
 <div>
-<pre><code>(Set-similarities
-  (zero one -0.1) (one two -0.1) (two three -0.1) (three four -0.1) (four five -0.1)
-  (zero two -0.2)(one three -0.2)(two four -0.2)(three five -0.2)
-  (zero three -0.3)(one four -0.3) (two five -0.3)
-  (zero four -0.4)(one five -0.4)
-  (zero five -0.5))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>Set-similarities
+  <span class="tok-paren">(</span>zero one <span class="tok-number">-0.1</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>one two <span class="tok-number">-0.1</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>two three <span class="tok-number">-0.1</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>three four <span class="tok-number">-0.1</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>four five <span class="tok-number">-0.1</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>zero two <span class="tok-number">-0.2</span><span class="tok-paren">)</span><span class="tok-paren">(</span>one three <span class="tok-number">-0.2</span><span class="tok-paren">)</span><span class="tok-paren">(</span>two four <span class="tok-number">-0.2</span><span class="tok-paren">)</span><span class="tok-paren">(</span>three five <span class="tok-number">-0.2</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>zero three <span class="tok-number">-0.3</span><span class="tok-paren">)</span><span class="tok-paren">(</span>one four <span class="tok-number">-0.3</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>two five <span class="tok-number">-0.3</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>zero four <span class="tok-number">-0.4</span><span class="tok-paren">)</span><span class="tok-paren">(</span>one five <span class="tok-number">-0.4</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>zero five <span class="tok-number">-0.5</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>In addition to the similarities, we will also need to set the
 mismatch penalty parameter for the model. Adjusting the mismatch penalty
@@ -1050,9 +1050,9 @@ which should result in no failures for retrieving number chunks. When we
 increase the retrieval threshold later we may need to adjust this value,
 but for now we will add these settings to the model:</p>
 <div>
-<pre><code>(set-base-levels 
-  (zero 10) (one 10) (two 10) (three 10) (four 10) (five 10)
-  (six 10) (seven 10) (eight 10) (nine 10))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>set-base-levels 
+  <span class="tok-paren">(</span>zero <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>one <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>two <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>three <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>four <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>five <span class="tok-number">10</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>six <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>seven <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>eight <span class="tok-number">10</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>nine <span class="tok-number">10</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Unlike the similarities where we only needed to set the values for
 the numbers from 0-5 based on the task, here we need to set all of the

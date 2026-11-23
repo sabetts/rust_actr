@@ -44,7 +44,7 @@ perception and action, but for this unit all of the models have the same
 basic structure as shown here in a solution to the multi-column addition
 model assignment from the unit1 text:</p>
 <div>
-<pre><code>(clear-all)  (define-model tutor-model   (sgp :esc t :lf .05 :trace-detail medium)  ;; Add Chunk-types here  (chunk-type addition-fact addend1 addend2 sum) (chunk-type add-pair one1 ten1 one2 ten2 ten-ans one-ans carry)  ;; Add Chunks here  (add-dm (fact17 isa addition-fact addend1 1 addend2 7 sum 8) (fact34 isa addition-fact addend1 3 addend2 4 sum 7) (fact67 isa addition-fact addend1 6 addend2 7 sum 13) (fact103 isa addition-fact addend1 10 addend2 3 sum 13))  ;; Add productions here   (p start-pair =goal&gt;   ISA add-pair   one1 =num1   one2 =num2   one-ans nil ==&gt; =goal&gt;   one-ans busy +retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2)  (p add-ones =goal&gt;   ISA add-pair   one-ans busy   one1 =num1   one2 =num2 =retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2   sum =sum ==&gt; =goal&gt;   one-ans =sum   carry busy +retrieval&gt;   ISA addition-fact   addend1 10   sum =sum)  (p process-carry =goal&gt;   ISA add-pair   ten1 =num1   ten2 =num2   carry busy   one-ans =ones =retrieval&gt;   ISA addition-fact   addend1 10   sum =ones   addend2 =remainder ==&gt; =goal&gt;   carry 1   ten-ans busy   one-ans =remainder +retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2)  (p no-carry =goal&gt;   ISA add-pair   ten1 =num1   ten2 =num2   carry busy ?retrieval&gt;   buffer failure ==&gt; =goal&gt;   carry nil   ten-ans busy +retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2)  (p add-tens-done =goal&gt;   ISA add-pair   ten-ans busy   carry nil =retrieval&gt;   ISA addition-fact   sum =sum ==&gt; =goal&gt;   ten-ans =sum)  (p add-tens-carry =goal&gt;   ISA add-pair   carry 1   ten-ans busy =retrieval&gt;   ISA addition-fact   sum =sum ==&gt; =goal&gt;   carry nil +retrieval&gt;   ISA addition-fact   addend1 1   addend2 =sum)  (goal-focus (isa add-pair ten1 3 one1 6 ten2 4 one2 7)) ) </code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">clear-all</span><span class="tok-paren">)</span>  <span class="tok-paren">(</span><span class="tok-keyword">define-model</span> tutor-model   <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :esc t :lf .05 :trace-detail medium<span class="tok-paren">)</span>  <span class="tok-comment">;; Add Chunk-types here  (chunk-type addition-fact addend1 addend2 sum) (chunk-type add-pair one1 ten1 one2 ten2 ten-ans one-ans carry)  ;; Add Chunks here  (add-dm (fact17 isa addition-fact addend1 1 addend2 7 sum 8) (fact34 isa addition-fact addend1 3 addend2 4 sum 7) (fact67 isa addition-fact addend1 6 addend2 7 sum 13) (fact103 isa addition-fact addend1 10 addend2 3 sum 13))  ;; Add productions here   (p start-pair =goal&gt;   ISA add-pair   one1 =num1   one2 =num2   one-ans nil ==&gt; =goal&gt;   one-ans busy +retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2)  (p add-ones =goal&gt;   ISA add-pair   one-ans busy   one1 =num1   one2 =num2 =retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2   sum =sum ==&gt; =goal&gt;   one-ans =sum   carry busy +retrieval&gt;   ISA addition-fact   addend1 10   sum =sum)  (p process-carry =goal&gt;   ISA add-pair   ten1 =num1   ten2 =num2   carry busy   one-ans =ones =retrieval&gt;   ISA addition-fact   addend1 10   sum =ones   addend2 =remainder ==&gt; =goal&gt;   carry 1   ten-ans busy   one-ans =remainder +retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2)  (p no-carry =goal&gt;   ISA add-pair   ten1 =num1   ten2 =num2   carry busy ?retrieval&gt;   buffer failure ==&gt; =goal&gt;   carry nil   ten-ans busy +retrieval&gt;   ISA addition-fact   addend1 =num1   addend2 =num2)  (p add-tens-done =goal&gt;   ISA add-pair   ten-ans busy   carry nil =retrieval&gt;   ISA addition-fact   sum =sum ==&gt; =goal&gt;   ten-ans =sum)  (p add-tens-carry =goal&gt;   ISA add-pair   carry 1   ten-ans busy =retrieval&gt;   ISA addition-fact   sum =sum ==&gt; =goal&gt;   carry nil +retrieval&gt;   ISA addition-fact   addend1 1   addend2 =sum)  (goal-focus (isa add-pair ten1 3 one1 6 ten2 4 one2 7)) ) </span></code></pre>
 </div>
 <p>It starts with a call to a function called <strong>clear-all</strong>
 followed by a call to the command <strong>define-model</strong>. Inside
@@ -106,7 +106,7 @@ single call to <strong>sgp</strong>. All of the parameters in ACT-R
 begin with a “:” (in Lisp syntax they are called keywords). All of the
 unit1 models have a call to <strong>sgp </strong>similar to this:</p>
 <div>
-<pre><code>(sgp :esc t :lf .05 :trace-detail medium)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :esc t :lf .05 :trace-detail medium<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That is setting three parameters<strong>: :esc</strong>,
 <strong>:lf</strong>, and <strong>:trace-detail</strong>. The first two
@@ -257,9 +257,9 @@ inspector in the Environment for doing so). Here is an example which is
 checking the values of the <strong>:trace-detail </strong>and
 <strong>:lf </strong>parameters:</p>
 <div>
-<pre><code>? (sgp :trace-detail :lf)
-:TRACE-DETAIL MEDIUM (default MEDIUM) : Determines which events show in the trace
-:LF 0.05 (default 1.0) : Latency Factor</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :trace-detail :lf<span class="tok-paren">)</span>
+:TRACE-DETAIL MEDIUM <span class="tok-paren">(</span>default MEDIUM<span class="tok-paren">)</span> : Determines which events show in the trace
+:LF <span class="tok-number">0.05</span> <span class="tok-paren">(</span>default <span class="tok-number">1.0</span><span class="tok-paren">)</span> : Latency Factor</code></pre>
 </div>
 <p>If no parameters are provided to <strong>sgp</strong> then it will
 print out all of the parameters and their details.</p>
@@ -319,22 +319,22 @@ that will run the model as needed. Here is an example of using the
 <strong>run</strong> command at the prompt after loading the semantic
 model:</p>
 <div>
-<pre><code>? (run 1)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY BIRD) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK P14
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.150  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
-     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.150  PROCEDURAL            CONFLICT-RESOLUTION
-     0.150  ------                Stopped because no events left to process
-0.15
-24
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> IS-MEMBER OBJECT CANARY CATEGORY BIRD<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK P14
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P14
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
+     <span class="tok-number">0.150</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.150</span>  ------                Stopped because no events left to process
+<span class="tok-number">0.15</span>
+<span class="tok-number">24</span>
 NIL</code></pre>
 </div>
 <p>After the trace there are multiple return values shown from the run
@@ -355,7 +355,7 @@ chunks they contain returning a list of lists with a buffer name and the
 name of the chunk in that buffer if it has one. Here is an example after
 running the semantic model:</p>
 <div>
-<pre><code>? (buffer-chunk)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk<span class="tok-paren">)</span>
 AURAL: NIL 
 AURAL-LOCATION: NIL 
 GOAL: GOAL-CHUNK0 
@@ -368,14 +368,14 @@ TEMPORAL: NIL
 VISUAL: NIL 
 VISUAL-LOCATION: NIL 
 VOCAL: NIL 
-((AURAL) (AURAL-LOCATION) (GOAL GOAL-CHUNK0) (IMAGINAL) (IMAGINAL-ACTION) (MANUAL) (PRODUCTION) (RETRIEVAL) (TEMPORAL) (VISUAL) (VISUAL-LOCATION) (VOCAL))</code></pre>
+<span class="tok-paren">(</span><span class="tok-paren">(</span>AURAL<span class="tok-paren">)</span> <span class="tok-paren">(</span>AURAL-LOCATION<span class="tok-paren">)</span> <span class="tok-paren">(</span>GOAL GOAL-CHUNK0<span class="tok-paren">)</span> <span class="tok-paren">(</span>IMAGINAL<span class="tok-paren">)</span> <span class="tok-paren">(</span>IMAGINAL-ACTION<span class="tok-paren">)</span> <span class="tok-paren">(</span>MANUAL<span class="tok-paren">)</span> <span class="tok-paren">(</span>PRODUCTION<span class="tok-paren">)</span> <span class="tok-paren">(</span>RETRIEVAL<span class="tok-paren">)</span> <span class="tok-paren">(</span>TEMPORAL<span class="tok-paren">)</span> <span class="tok-paren">(</span>VISUAL<span class="tok-paren">)</span> <span class="tok-paren">(</span>VISUAL-LOCATION<span class="tok-paren">)</span> <span class="tok-paren">(</span>VOCAL<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>If you call it with the name of a buffer (or multiple buffers), then
 it will print out the chunks in the named buffers and return a list of
 the names of the chunks in those buffers in the order they were provided
 (or nil if it does not have a chunk):</p>
 <div>
-<pre><code>? (buffer-chunk retrieval goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk retrieval goal<span class="tok-paren">)</span>
 RETRIEVAL: NIL 
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
@@ -383,7 +383,7 @@ GOAL-CHUNK0
    CATEGORY BIRD
    JUDGMENT YES
 
-(NIL GOAL-CHUNK0)</code></pre>
+<span class="tok-paren">(</span>NIL GOAL-CHUNK0<span class="tok-paren">)</span></code></pre>
 </div>
 <h3 id="declarative-memory">Declarative Memory</h3>
 <p>You can also inspect declarative memory from the command prompt. The
@@ -393,7 +393,7 @@ chunks. You can also specify the names of chunks as parameters to the
 <strong>dm </strong>command and only those chunks will be printed. Here
 are some examples using the count model:</p>
 <div>
-<pre><code>? (dm)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>dm<span class="tok-paren">)</span>
 FIVE
    NUMBER FIVE
 
@@ -413,9 +413,9 @@ ONE
    NUMBER ONE
    NEXT TWO
 
-(FIVE FOUR THREE TWO ONE)
+<span class="tok-paren">(</span>FIVE FOUR THREE TWO ONE<span class="tok-paren">)</span>
 
-? (dm four one)
+? <span class="tok-paren">(</span>dm four one<span class="tok-paren">)</span>
 FOUR
    NUMBER FOUR
    NEXT FIVE
@@ -424,7 +424,7 @@ ONE
    NUMBER ONE
    NEXT TWO
 
-(FOUR ONE)</code></pre>
+<span class="tok-paren">(</span>FOUR ONE<span class="tok-paren">)</span></code></pre>
 </div>
 <p>It is also possible to search declarative memory using the command
 <strong>sdm</strong>. Its parameters are a chunk specification just as
@@ -434,7 +434,7 @@ chunks from the model’s declarative memory which match that
 specification and returns the list of their names. Here are some
 examples using the semantic model:</p>
 <div>
-<pre><code>? (sdm object shark)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>sdm object shark<span class="tok-paren">)</span>
 P1
    OBJECT SHARK
    VALUE TRUE
@@ -450,9 +450,9 @@ P3
    VALUE FISH
    ATTRIBUTE CATEGORY
 
-(P1 P2 P3)
+<span class="tok-paren">(</span>P1 P2 P3<span class="tok-paren">)</span>
 
-? (sdm - attribute category - attribute nil)
+? <span class="tok-paren">(</span>sdm - attribute category - attribute nil<span class="tok-paren">)</span>
 P1
    OBJECT SHARK
    VALUE TRUE
@@ -523,16 +523,16 @@ P19
    VALUE FLYING
    ATTRIBUTE LOCOMOTION
 
-(P1 P2 P4 P5 P7 P8 P10 P11 P12 P13 P15 P16 P18 P19)</code></pre>
+<span class="tok-paren">(</span>P1 P2 P4 P5 P7 P8 P10 P11 P12 P13 P15 P16 P18 P19<span class="tok-paren">)</span></code></pre>
 </div>
 <p>One thing to note about the second example is that it specifies both
 that the attribute slot is not category and also not nil (which means
 the chunk must have some value for the slot). Here is what it returns if
 it were to only specify that the attribute slot is not category:</p>
 <div>
-<pre><code>? (sdm - attribute category)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>sdm - attribute category<span class="tok-paren">)</span>
 ...
-(P1 P2 P4 P5 P7 P8 P10 P11 P12 P13 P15 P16 P18 P19 SHARK DANGEROUS LOCOMOTION SWIMMING FISH SALMON EDIBLE BREATHE GILLS ANIMAL MOVES SKIN CANARY COLOR SINGS BIRD OSTRICH FLIES HEIGHT TALL WINGS FLYING TRUE FALSE)</code></pre>
+<span class="tok-paren">(</span>P1 P2 P4 P5 P7 P8 P10 P11 P12 P13 P15 P16 P18 P19 SHARK DANGEROUS LOCOMOTION SWIMMING FISH SALMON EDIBLE BREATHE GILLS ANIMAL MOVES SKIN CANARY COLOR SINGS BIRD OSTRICH FLIES HEIGHT TALL WINGS FLYING TRUE FALSE<span class="tok-paren">)</span></code></pre>
 </div>
 <p>In this case it also finds all of the chunks which do not have an
 attribute slot because chunks without the slot fail the “attribute
@@ -550,37 +550,37 @@ returns a list of the names of the productions which do match the
 current state. Here is an example using productions from the semantic
 model after it has been reset:</p>
 <div>
-<pre><code>? (whynot direct-verify fail)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>whynot direct-verify fail<span class="tok-paren">)</span>
 
 Production DIRECT-VERIFY does NOT match.
-(P DIRECT-VERIFY
-   =GOAL&gt;
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> DIRECT-VERIFY
+   <span class="tok-buffer">=GOAL&gt;</span>
        OBJECT =OBJ
        CATEGORY =CAT
        JUDGMENT PENDING
-   =RETRIEVAL&gt;
+   <span class="tok-buffer">=RETRIEVAL&gt;</span>
        OBJECT =OBJ
        ATTRIBUTE CATEGORY
        VALUE =CAT
- ==&gt;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        JUDGMENT YES
-)
+<span class="tok-paren">)</span>
 It fails because: 
 The GOAL buffer is empty.
 
 Production FAIL does NOT match.
-(P FAIL
-   =GOAL&gt;
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> FAIL
+   <span class="tok-buffer">=GOAL&gt;</span>
        OBJECT =OBJ1
        CATEGORY =CAT
        JUDGMENT PENDING
    ?RETRIEVAL&gt;
        BUFFER FAILURE
- ==&gt;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        JUDGMENT NO
-)
+<span class="tok-paren">)</span>
 It fails because: 
 The GOAL buffer is empty.
 NIL</code></pre>
@@ -598,80 +598,80 @@ and reloading it to switch the goals one could have run the different
 goals sequentially by just calling goal-focus to change the chunk in the
 goal buffer and then run it again:</p>
 <div>
-<pre><code>? (run 1)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY BIRD) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK P14
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.150  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
-     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.150  PROCEDURAL            CONFLICT-RESOLUTION
-     0.150  ------                Stopped because no events left to process
-0.15
-24
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> IS-MEMBER OBJECT CANARY CATEGORY BIRD<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK P14
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P14
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
+     <span class="tok-number">0.150</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.150</span>  ------                Stopped because no events left to process
+<span class="tok-number">0.15</span>
+<span class="tok-number">24</span>
 NIL
-? (goal-focus (ISA is-member object canary category animal))
-(ISA IS-MEMBER OBJECT CANARY CATEGORY ANIMAL)
-? (run 1)
-     0.150  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY ANIMAL) NIL
-     0.150  PROCEDURAL            CONFLICT-RESOLUTION
-     0.200  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
-     0.200  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.200  DECLARATIVE           start-retrieval
-     0.200  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  DECLARATIVE           RETRIEVED-CHUNK P14
-     0.250  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
-     0.300  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.300  DECLARATIVE           start-retrieval
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     0.350  DECLARATIVE           RETRIEVED-CHUNK P20
-     0.350  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P20
-     0.350  PROCEDURAL            CONFLICT-RESOLUTION
-     0.400  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
-     0.400  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.400  PROCEDURAL            CONFLICT-RESOLUTION
-     0.400  ------                Stopped because no events left to process
-0.25
-36
+? <span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> <span class="tok-paren">(</span><span class="tok-isa">ISA</span> is-member object canary category animal<span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-isa">ISA</span> IS-MEMBER OBJECT CANARY CATEGORY ANIMAL<span class="tok-paren">)</span>
+? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.150</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> IS-MEMBER OBJECT CANARY CATEGORY ANIMAL<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.150</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.200</span>  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     <span class="tok-number">0.200</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.200</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.200</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  DECLARATIVE           RETRIEVED-CHUNK P14
+     <span class="tok-number">0.250</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P14
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.300</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.350</span>  DECLARATIVE           RETRIEVED-CHUNK P20
+     <span class="tok-number">0.350</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P20
+     <span class="tok-number">0.350</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.400</span>  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
+     <span class="tok-number">0.400</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.400</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.400</span>  ------                Stopped because no events left to process
+<span class="tok-number">0.25</span>
+<span class="tok-number">36</span>
 NIL
-? (goal-focus (ISA is-member object canary category fish))
-(ISA IS-MEMBER OBJECT CANARY CATEGORY FISH)
-? (run 1)
-     0.400  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY FISH) NIL
-     0.400  PROCEDURAL            CONFLICT-RESOLUTION
-     0.450  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
-     0.450  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.450  DECLARATIVE           start-retrieval
-     0.450  PROCEDURAL            CONFLICT-RESOLUTION
-     0.500  DECLARATIVE           RETRIEVED-CHUNK P14
-     0.500  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
-     0.500  PROCEDURAL            CONFLICT-RESOLUTION
-     0.550  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
-     0.550  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.550  DECLARATIVE           start-retrieval
-     0.550  PROCEDURAL            CONFLICT-RESOLUTION
-     0.600  DECLARATIVE           RETRIEVED-CHUNK P20
-     0.600  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P20
-     0.600  PROCEDURAL            CONFLICT-RESOLUTION
-     0.650  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
-     0.650  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.650  DECLARATIVE           start-retrieval
-     0.650  PROCEDURAL            CONFLICT-RESOLUTION
-     0.700  DECLARATIVE           RETRIEVAL-FAILURE
-     0.700  PROCEDURAL            CONFLICT-RESOLUTION
-     0.750  PROCEDURAL            PRODUCTION-FIRED FAIL
-     0.750  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.750  PROCEDURAL            CONFLICT-RESOLUTION
-     0.750  ------                Stopped because no events left to process
-0.35
-48
+? <span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> <span class="tok-paren">(</span><span class="tok-isa">ISA</span> is-member object canary category fish<span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-isa">ISA</span> IS-MEMBER OBJECT CANARY CATEGORY FISH<span class="tok-paren">)</span>
+? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.400</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> IS-MEMBER OBJECT CANARY CATEGORY FISH<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.400</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.450</span>  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     <span class="tok-number">0.450</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.450</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.450</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.500</span>  DECLARATIVE           RETRIEVED-CHUNK P14
+     <span class="tok-number">0.500</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P14
+     <span class="tok-number">0.500</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.550</span>  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
+     <span class="tok-number">0.550</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.550</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.550</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.600</span>  DECLARATIVE           RETRIEVED-CHUNK P20
+     <span class="tok-number">0.600</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P20
+     <span class="tok-number">0.600</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.650</span>  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
+     <span class="tok-number">0.650</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.650</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.650</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.700</span>  DECLARATIVE           RETRIEVAL-FAILURE
+     <span class="tok-number">0.700</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.750</span>  PROCEDURAL            PRODUCTION-FIRED FAIL
+     <span class="tok-number">0.750</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.750</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.750</span>  ------                Stopped because no events left to process
+<span class="tok-number">0.35</span>
+<span class="tok-number">48</span>
 NIL</code></pre>
 </div>
 <section id="footnotes" class="footnotes footnotes-end-of-document"

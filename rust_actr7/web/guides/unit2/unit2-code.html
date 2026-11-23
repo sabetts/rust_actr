@@ -43,8 +43,8 @@ information about the new parameters which were used in the models for
 this unit. All of the new parameters were used in the demo2 model and
 were set like this:</p>
 <div>
-<pre><code>(sgp :seed (123456 0))
-(sgp :v t :show-focus t :trace-detail high)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :seed <span class="tok-paren">(</span><span class="tok-number">123456</span> <span class="tok-number">0</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :v t :show-focus t :trace-detail high<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The first <strong>sgp</strong> command is used to set the :seed
 parameter. This parameter controls the starting point for the
@@ -233,7 +233,7 @@ without any additional syntactic markers, for example, here is the
 the <strong>goal</strong> and <strong>visual</strong> buffers at the end
 of running the addition model from unit 1:</p>
 <div>
-<pre><code>? (buffer-chunk goal visual)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal visual<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 FIVE
@@ -241,7 +241,7 @@ GOAL-CHUNK0
    SUM SEVEN
 
 VISUAL: NIL 
-(GOAL-CHUNK0 NIL)</code></pre>
+<span class="tok-paren">(</span>GOAL-CHUNK0 NIL<span class="tok-paren">)</span></code></pre>
 </div>
 <p>From Python however we must specify the arguments that are names
 (goal and visual in this case) as strings. Here is the corresponding use
@@ -409,7 +409,7 @@ print out the current status information for the queries of those
 buffers. Here are examples of calling it at the ACT-R prompt and in
 Python.</p>
 <div>
-<pre><code>? (buffer-status goal visual)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-status goal visual<span class="tok-paren">)</span>
 GOAL:
   buffer empty         : T
   buffer full          : NIL
@@ -437,7 +437,7 @@ VISUAL:
   last-command         : NONE
   scene-change         : NIL
   scene-change-value   : NIL
-(GOAL VISUAL)</code></pre>
+<span class="tok-paren">(</span>GOAL VISUAL<span class="tok-paren">)</span></code></pre>
 </div>
 <div>
 <pre><code>&gt;&gt;&gt; actr.buffer_status(&#39;goal&#39;,&#39;visual&#39;)

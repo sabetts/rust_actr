@@ -131,73 +131,73 @@ screen and selecting sticks. However, the critical behavior of the model
 is controlled by four productions that make the decision as to whether
 to apply the overshoot or the undershoot strategy. </p>
 <div>
-<pre><code>(p decide-over
-   =goal&gt;
-      isa      try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> decide-over
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>      try-strategy
       state    choose-strategy
       strategy nil
-   =imaginal&gt;
-      isa      encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>      encoding
       under    =under
       over     =over
-   !eval! (&lt; =over (- =under 25))
-  ==&gt;
-   =imaginal&gt;
-   =goal&gt;
+   !eval! <span class="tok-paren">(</span>&lt; =over <span class="tok-paren">(</span>- =under <span class="tok-number">25</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       state    prepare-mouse
       strategy over
-   +visual-location&gt;
-      isa      visual-location
+   <span class="tok-buffer">+visual-location&gt;</span>
+      <span class="tok-isa">isa</span>      visual-location
       kind     oval
-      value    &quot;b&quot;)
+      value    <span class="tok-string">"b"</span><span class="tok-paren">)</span>
 
-(p force-over
-   =goal&gt;
-      isa      try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> force-over
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>      try-strategy
       state    choose-strategy
     - strategy over
-  ==&gt;
-   =goal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       state    prepare-mouse
       strategy over
-   +visual-location&gt;
-      isa      visual-location
+   <span class="tok-buffer">+visual-location&gt;</span>
+      <span class="tok-isa">isa</span>      visual-location
       kind     oval
-      value    &quot;b&quot;)
+      value    <span class="tok-string">"b"</span><span class="tok-paren">)</span>
 
-(p decide-under
-   =goal&gt;
-      isa      try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> decide-under
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>      try-strategy
       state    choose-strategy
       strategy nil
-   =imaginal&gt;
-      isa      encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>      encoding
       over     =over
       under    =under
-   !eval! (&lt; =under (- =over 25))
-  ==&gt;
-   =imaginal&gt;
-   =goal&gt;
+   !eval! <span class="tok-paren">(</span>&lt; =under <span class="tok-paren">(</span>- =over <span class="tok-number">25</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       state    prepare-mouse
       strategy under
-   +visual-location&gt;
-      isa      visual-location
+   <span class="tok-buffer">+visual-location&gt;</span>
+      <span class="tok-isa">isa</span>      visual-location
       kind     oval
-      value    &quot;c&quot;)
+      value    <span class="tok-string">"c"</span><span class="tok-paren">)</span>
 
-(p force-under
-   =goal&gt;
-      isa      try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> force-under
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>      try-strategy
       state    choose-strategy
     - strategy under
-  ==&gt;
-   =goal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       state    prepare-mouse
       strategy under
-   +visual-location&gt;
-      isa      visual-location
+   <span class="tok-buffer">+visual-location&gt;</span>
+      <span class="tok-isa">isa</span>      visual-location
       kind     oval
-      value    &quot;c&quot;)
+      value    <span class="tok-string">"c"</span><span class="tok-paren">)</span>
 </code></pre>
 </div>
 <p>The key information is in the over and under slots of the chunk in
@@ -218,42 +218,42 @@ relative utilities which we can see using the Procedural tool in the
 ACT-R Environment, or by using the spp command (called before running
 the task here):</p>
 <div>
-<pre><code>? (spp force-over force-under decide-over decide-under)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>spp force-over force-under decide-over decide-under<span class="tok-paren">)</span>
 
-&gt;&gt;&gt; actr.spp(&#39;force-over&#39;, &#39;force-under&#39;, &#39;decide-over&#39;, &#39;decide-under&#39;)
+&gt;&gt;&gt; actr.spp<span class="tok-paren">(</span>'force-over', 'force-under', 'decide-over', 'decide-under'<span class="tok-paren">)</span>
 
 Parameters for production FORCE-OVER:
  :utility   NIL
- :u 10.000
- :at 0.050
+ :u <span class="tok-number">10.000</span>
+ :at <span class="tok-number">0.050</span>
  :reward   NIL
  :fixed-utility   NIL
 Parameters for production FORCE-UNDER:
  :utility   NIL
- :u 10.000
- :at 0.050
+ :u <span class="tok-number">10.000</span>
+ :at <span class="tok-number">0.050</span>
  :reward   NIL
  :fixed-utility   NIL
 Parameters for production DECIDE-OVER:
  :utility   NIL
- :u 13.000
- :at 0.050
+ :u <span class="tok-number">13.000</span>
+ :at <span class="tok-number">0.050</span>
  :reward   NIL
  :fixed-utility   NIL
 Parameters for production DECIDE-UNDER:
  :utility   NIL
- :u 13.000
- :at 0.050
+ :u <span class="tok-number">13.000</span>
+ :at <span class="tok-number">0.050</span>
  :reward   NIL
  :fixed-utility   NIL</code></pre>
 </div>
 <p>The productions’ current utility values, labeled :u, are set in the
 model using the spp command:</p>
 <div>
-<pre><code>(spp decide-over :u 13)
-(spp decide-under :u 13)
-(spp force-over :u 10)
-(spp force-under :u 10)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>spp decide-over :u <span class="tok-number">13</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp decide-under :u <span class="tok-number">13</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp force-over :u <span class="tok-number">10</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp force-under :u <span class="tok-number">10</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The :u parameters are set to 10 for the force productions and to 13
 for the decide productions since making the decision based on which one
@@ -358,8 +358,8 @@ pick-another-strategy is responsible for choosing again after resetting.
 One can associate rewards with these outcomes by setting the reward
 values of those productions:</p>
 <div>
-<pre><code>(spp pick-another-strategy :reward 0)
-(spp read-done :reward 20)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span>spp pick-another-strategy :reward <span class="tok-number">0</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>spp read-done :reward <span class="tok-number">20</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>When read-done fires it will propagate a reward of 20 back to the
 previous productions which have been fired, with productions earlier in
@@ -617,41 +617,41 @@ they seem to be missing the cmd slot in the requests to the
 have seen previously, and instead are only declaring a chunk-type with
 an isa:</p>
 <div>
-<pre><code>(p encode-line-goal
-   =goal&gt;
-      isa       try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-line-goal
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>       try-strategy
       state     attending
-   =imaginal&gt;
-      isa       encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>       encoding
       c-loc     =c
       goal-loc  nil
-   =visual&gt;
-      isa       line
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>       line
       screen-pos =pos
       width     =length
    ?visual&gt;
       state     free
-  ==&gt;
-   =imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
       goal-loc  =pos
       length    =length
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
       state     encode-under
-   +visual&gt;
-      isa       move-attention
-      screen-pos =c)
+   <span class="tok-buffer">+visual&gt;</span>
+      <span class="tok-isa">isa</span>       move-attention
+      screen-pos =c<span class="tok-paren">)</span>
 
-(p click-mouse
-   =goal&gt;
-      isa   try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> click-mouse
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>   try-strategy
       state move-mouse
    ?manual&gt;
       state free
-  ==&gt;
-   =goal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       state wait-for-click
-   +manual&gt;
-      isa   click-mouse)
+   <span class="tok-buffer">+manual&gt;</span>
+      <span class="tok-isa">isa</span>   click-mouse<span class="tok-paren">)</span>
 </code></pre>
 </div>
 <p>Also, the isa declarations on the LHS of the encode-line-goal and
@@ -660,41 +660,41 @@ which was previously indicated as the chunk-type that specified the
 slots used for creating the representation of visual objects for the
 <strong>visual</strong> buffer:</p>
 <div>
-<pre><code>(p encode-line-goal
-   =goal&gt;
-      isa       try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-line-goal
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>       try-strategy
       state     attending
-   =imaginal&gt;
-      isa       encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>       encoding
       c-loc     =c
       goal-loc  nil
-   =visual&gt;
-      isa       line
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>       line
       screen-pos =pos
       width     =length
    ?visual&gt;
       state     free
-  ==&gt;
-   =imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
       goal-loc  =pos
       length    =length
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
       state     encode-under
-   +visual&gt;
-      isa       move-attention
-      screen-pos =c)
+   <span class="tok-buffer">+visual&gt;</span>
+      <span class="tok-isa">isa</span>       move-attention
+      screen-pos =c<span class="tok-paren">)</span>
 
-(p read-done
-   =goal&gt;
-      isa   try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> read-done
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>   try-strategy
       state read-done
-   =visual&gt;
-      isa   text
-      value &quot;done&quot;
-  ==&gt;
-   +goal&gt;
-      isa   try-strategy
-      state start)
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>   text
+      value <span class="tok-string">"done"</span>
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+goal&gt;</span>
+      <span class="tok-isa">isa</span>   try-strategy
+      state start<span class="tok-paren">)</span>
 </code></pre>
 </div>
 <p>These productions are relying on two other capabilities that can be

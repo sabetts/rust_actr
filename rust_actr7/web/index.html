@@ -174,6 +174,13 @@
         Trace
         <span class="tab-count" id="trace-count" hidden>0</span>
       </button>
+      <button class="tab" id="tab-guide" type="button" role="tab" aria-controls="panel-guide" aria-selected="false" data-tab="guide" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 0 4 23z" stroke-linejoin="round"></path>
+          <path d="M4 5.5A2.5 2.5 0 0 0 6.5 8H20" stroke-linecap="round"></path>
+        </svg>
+        <span id="tab-guide-label">Guide</span>
+      </button>
     </div>
 
     <div id="panel-task" class="tab-panel" role="tabpanel" aria-labelledby="tab-task" hidden>
@@ -315,6 +322,31 @@
           </div>
           <textarea id="output" class="raw-output" readonly spellcheck="false" tabindex="-1" aria-hidden="true"></textarea>
         </div>
+      </section>
+    </div>
+
+    <div id="panel-guide" class="tab-panel" role="tabpanel" aria-labelledby="tab-guide" hidden>
+      <section class="surface workspace-card guide-card">
+        <div class="card-toolbar">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 0 4 23z" stroke-linejoin="round"></path>
+              <path d="M4 5.5A2.5 2.5 0 0 0 6.5 8H20" stroke-linecap="round"></path>
+            </svg>
+            <span id="guide-title">Guide</span>
+          </div>
+          <span class="card-meta" id="guide-meta"></span>
+          <div class="toolbar-spacer"></div>
+          <div class="toolbar-group">
+            <button class="tool-button" id="guide-close" type="button" title="Close the guide">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"></path>
+              </svg>
+              Close
+            </button>
+          </div>
+        </div>
+        <iframe id="guide-frame" class="guide-frame" title="Unit guide" loading="lazy"></iframe>
       </section>
     </div>
   </section>

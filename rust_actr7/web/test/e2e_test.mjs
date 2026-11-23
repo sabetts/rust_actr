@@ -228,44 +228,104 @@ async function main() {
       throw new Error(`guide manifest check failed: ${JSON.stringify(guideCheck)}`);
     }
 
-    const guideErrors = [];
-    const [guidePage] = await Promise.all([
-      page.waitForEvent("popup"),
-      unit1Guides.first().click(),
-    ]);
-    guidePage.on("pageerror", (error) => guideErrors.push(String(error)));
-    guidePage.on("console", (message) => {
-      if (message.type() === "error") guideErrors.push(message.text());
-    });
-    await guidePage.waitForSelector("main h1", { timeout: 10000 });
-    const guideTitle = await guidePage.title();
-    if (!guideTitle.includes("Unit 1") || !guideTitle.includes("ACT-R 7 Tutorials")) {
-      throw new Error(`unexpected guide title: ${guideTitle}`);
+    const arrow = page.locator('.unit[data-unit="unit1"] .unit-guide-open').first();
+    if ((await arrow.getAttribute("target")) !== "_blank") {
+      throw new Error("guide new-tab arrow is missing target=_blank");
     }
-    const guideHeading = (await guidePage.locator("main h1").first().textContent()) || "";
-    if (!guideHeading.includes("Introduction to ACT-R")) {
-      throw new Error(`unexpected guide heading: ${guideHeading}`);
-    }
-    if ((await guidePage.locator(".guide-back").getAttribute("href")) !== "../../") {
-      throw new Error("guide back link is wrong");
-    }
-    await guidePage.waitForFunction(
+
+    await unit1Guides.first().click();
+    await page.waitForFunction(
       () => {
-        const image = document.querySelector("main img");
-        return Boolean(image && image.complete);
+        const tab = document.getElementById("tab-guide");
+        const panel = document.getElementById("panel-guide");
+        return (
+          tab &&
+          !tab.hidden &&
+          tab.getAttribute("aria-selected") === "true" &&
+          panel &&
+          !panel.hidden
+        );
       },
       null,
       { timeout: 10000 }
     );
-    const guideImageWidth = await guidePage
+    const guideSrc = (await page.locator("#guide-frame").getAttribute("src")) || "";
+    if (!guideSrc.endsWith("guides/unit1/unit1.html")) {
+      throw new Error(`unexpected in-app guide src: ${guideSrc}`);
+    }
+    if ((await page.locator("#tab-guide-label").textContent()) !== "Unit guide") {
+      throw new Error("guide tab label did not update");
+    }
+
+    const guideFrame = page.frameLocator("#guide-frame");
+    await guideFrame.locator("main h1").first().waitFor({ timeout: 10000 });
+    const guideHeading = (await guideFrame.locator("main h1").first().textContent()) || "";
+    if (!guideHeading.includes("Introduction to ACT-R")) {
+      throw new Error(`unexpected guide heading: ${guideHeading}`);
+    }
+    const frameClass = (await guideFrame.locator("html").getAttribute("class")) || "";
+    if (!frameClass.includes("embedded")) {
+      throw new Error("guide iframe was not switched to embedded mode");
+    }
+    if (!(await guideFrame.locator(".guide-bar").isHidden())) {
+      throw new Error("embedded guide bar should be hidden");
+    }
+    await guideFrame.locator("main img").first().waitFor({ timeout: 10000 });
+    const guideImageWidth = await guideFrame
       .locator("main img")
       .first()
       .evaluate((image) => image.naturalWidth);
     if (!guideImageWidth) throw new Error("guide image did not load");
-    await guidePage.close();
-    if (guideErrors.length) {
-      throw new Error(`guide page errors:\n${guideErrors.join("\n")}`);
+    if ((await guideFrame.locator("pre.lisp").count()) === 0) {
+      throw new Error("guide has no syntax-highlighted code blocks");
     }
+    if ((await guideFrame.locator("pre.lisp .tok-keyword").count()) === 0) {
+      throw new Error("guide code blocks have no keyword spans");
+    }
+    const codeStyle = await guideFrame
+      .locator("pre.lisp code")
+      .first()
+      .evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { fontFamily: style.fontFamily, whiteSpace: style.whiteSpace };
+      });
+    if (!/mono/i.test(codeStyle.fontFamily) || codeStyle.whiteSpace !== "pre") {
+      throw new Error(`guide code block is not fixed width: ${JSON.stringify(codeStyle)}`);
+    }
+
+    const themeBefore = await guideFrame.locator("html").getAttribute("data-theme");
+    await page.click("#theme-toggle");
+    await page.waitForFunction(
+      (previous) => {
+        const frame = document.getElementById("guide-frame");
+        const doc = frame?.contentDocument;
+        return (
+          doc?.documentElement?.dataset.theme &&
+          doc.documentElement.dataset.theme !== previous
+        );
+      },
+      themeBefore,
+      { timeout: 3000 }
+    );
+    await page.click("#theme-toggle");
+
+    await page.click("#guide-close");
+    if (!(await page.locator("#tab-guide").isHidden())) {
+      throw new Error("guide tab did not hide after close");
+    }
+    if (!(await page.locator("#panel-source").isVisible())) {
+      throw new Error("closing the guide did not return to the source tab");
+    }
+
+    const [guidePage] = await Promise.all([
+      page.waitForEvent("popup"),
+      arrow.click(),
+    ]);
+    await guidePage.waitForLoadState("domcontentloaded");
+    if (!(await guidePage.title()).includes("Unit 1")) {
+      throw new Error("new-tab guide did not open");
+    }
+    await guidePage.close();
 
     const defaultTitle = (await page.locator("#model-info h2").textContent()) || "";
     if (!defaultTitle.includes("Count")) {

@@ -109,10 +109,10 @@ defines those slots and use those slots to create chunks for the
 letters. Here is the chunk-type definition from the model along with the
 representation for the letter B:</p>
 <div>
-<pre><code>(chunk-type letter name next previous)
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> letter name next previous<span class="tok-paren">)</span>
 
 
- (b isa letter name &quot;b&quot; next &quot;c&quot; previous &quot;a&quot;)</code></pre>
+ <span class="tok-paren">(</span>b <span class="tok-isa">isa</span> letter name <span class="tok-string">"b"</span> next <span class="tok-string">"c"</span> previous <span class="tok-string">"a"</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>A more plausible model would likely represent the next and previous
 values with a reference to the other chunks instead of directly encoding
@@ -132,7 +132,7 @@ imaginal</strong> buffer. Since that letter is the only information we
 need in that chunk, we will define a chunk-type with one slot for a
 letter:</p>
 <div>
-<pre><code>(chunk-type task letter)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> task letter<span class="tok-paren">)</span></code></pre>
 </div>
 <h2 id="actions-to-perform">Actions to perform</h2>
 <p>Now we will describe how we want our model to perform the task. As
@@ -200,46 +200,46 @@ functions as appropriate (for the remainder of the tests we will only
 show the Lisp call for simplicity, but one can still use the Python
 version to get the same result):</p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-&gt;&gt;&gt; pm_issues.task(&#39;next&#39;)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+&gt;&gt;&gt; pm_issues.task<span class="tok-paren">(</span>'next'<span class="tok-paren">)</span>
 
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.285  NONE                  pm-issue-display (vision exp-window Simple task) next
-     2.285  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.285  VISION                visicon-update
-     2.285  PROCEDURAL            CONFLICT-RESOLUTION
-     2.370  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.370  VISION                SET-BUFFER-CHUNK VISUAL TEXT1 NIL
-     2.370  PROCEDURAL            CONFLICT-RESOLUTION
-     2.420  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.420  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     2.420  PROCEDURAL            CONFLICT-RESOLUTION
-     2.505  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.505  VISION                SET-BUFFER-CHUNK VISUAL TEXT2
-     2.505  PROCEDURAL            CONFLICT-RESOLUTION
-     2.620  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     2.620  PROCEDURAL            CONFLICT-RESOLUTION
-     2.670  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     2.670  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.670  PROCEDURAL            CONFLICT-RESOLUTION
-     2.670  ------                Stopped because no events left to process</code></pre>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.285</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">2.285</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.285</span>  VISION                visicon-update
+     <span class="tok-number">2.285</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.370</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.370</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1 NIL
+     <span class="tok-number">2.370</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.420</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.505</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.505</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT2
+     <span class="tok-number">2.505</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.620</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">2.620</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.670</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">2.670</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.670</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.670</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>The return values from either of those indicates that it did not
 respond correctly because the second value is not true, with the Lisp
@@ -251,16 +251,16 @@ deviated from our plan and address that first.</p>
 <p>The first issue appears to be at time 2.42 when find-letter fires a
 second time. Here is the find-letter production:</p>
 <div>
-<pre><code>(p find-letter
-   =visual-location&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> find-letter
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
      state      free
- ==&gt;
-   +visual&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+visual&gt;</span>
      cmd        move-attention
      screen-pos =visual-location
-   +imaginal&gt;
-)</code></pre>
+   <span class="tok-buffer">+imaginal&gt;</span>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Before trying to fix the production we should make sure we understand
 why it fired again. If we look at the conditions of the production all
@@ -334,18 +334,18 @@ IMAGINAL-CHUNK0
 empty to find-letter should help. Here is the new find-letter production
 with a query for the <strong>imaginal</strong> buffer being empty
 added:</p>
-<pre><code>(p find-letter
-   =visual-location&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> find-letter
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
      state      free
    ?imaginal&gt;
      buffer     empty
- ==&gt;
-   +visual&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+visual&gt;</span>
      cmd        move-attention
      screen-pos =visual-location
-   +imaginal&gt;
-)</code></pre>
+   <span class="tok-buffer">+imaginal&gt;</span>
+<span class="tok-paren">)</span></code></pre>
 <p> </p>
 <p>We need to save that change and then reload the model. </p>
 <h2 id="second-version-of-the-model">Second version of the model</h2>
@@ -440,67 +440,67 @@ to free in the production, save the model, and reload it.</p>
 <h2 id="model-version-3">Model version 3</h2>
 <p>Here is the trace we get from running the model now:</p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.285  NONE                  pm-issue-display (vision exp-window Simple task) next
-     2.285  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.285  VISION                visicon-update
-     2.285  PROCEDURAL            CONFLICT-RESOLUTION
-     2.370  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.370  VISION                SET-BUFFER-CHUNK VISUAL TEXT1 NIL
-     2.370  PROCEDURAL            CONFLICT-RESOLUTION
-     2.420  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.420  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.420  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.420  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.420  MOTOR                 PRESS-KEY KEY l
-     2.420  DECLARATIVE           start-retrieval
-     2.420  DECLARATIVE           RETRIEVED-CHUNK M
-     2.420  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL M
-     2.420  PROCEDURAL            CONFLICT-RESOLUTION
-     2.470  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     2.470  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     2.470  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.470  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     2.470  PROCEDURAL            CONFLICT-RESOLUTION
-     2.555  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.555  VISION                SET-BUFFER-CHUNK VISUAL TEXT2
-     2.555  PROCEDURAL            CONFLICT-RESOLUTION
-     2.570  PROCEDURAL            CONFLICT-RESOLUTION
-     2.620  PROCEDURAL            CONFLICT-RESOLUTION
-     2.630  PROCEDURAL            CONFLICT-RESOLUTION
-     2.670  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     2.670  PROCEDURAL            CONFLICT-RESOLUTION
-     2.720  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     2.720  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.720  PROCEDURAL            CONFLICT-RESOLUTION
-     2.770  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     2.770  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.770  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.770  MOTOR                 PRESS-KEY KEY m
-     2.770  PROCEDURAL            CONFLICT-RESOLUTION
-     3.020  PROCEDURAL            CONFLICT-RESOLUTION
-     3.070  PROCEDURAL            CONFLICT-RESOLUTION
-     3.170  PROCEDURAL            CONFLICT-RESOLUTION
-     3.320  PROCEDURAL            CONFLICT-RESOLUTION
-     3.320  ------                Stopped because no events left to process
-(next T)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.285</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">2.285</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.285</span>  VISION                visicon-update
+     <span class="tok-number">2.285</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.370</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.370</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1 NIL
+     <span class="tok-number">2.370</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.420</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.420</span>  MOTOR                 PRESS-KEY KEY l
+     <span class="tok-number">2.420</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.420</span>  DECLARATIVE           RETRIEVED-CHUNK M
+     <span class="tok-number">2.420</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL M
+     <span class="tok-number">2.420</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.470</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">2.470</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">2.470</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.470</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">2.470</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.555</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.555</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT2
+     <span class="tok-number">2.555</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.570</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.620</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.630</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.670</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">2.670</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.720</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">2.720</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.720</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.770</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">2.770</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.770</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.770</span>  MOTOR                 PRESS-KEY KEY m
+     <span class="tok-number">2.770</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.020</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.070</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.170</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.320</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.320</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>next T<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The return value indicates that the model performed the task
 correctly. However, if we look at the trace thoroughly we see that there
@@ -512,18 +512,18 @@ into why find-letter is firing unexpectedly.</p>
 constraint that the <strong>imaginal</strong> buffer is empty that we
 added to prevent it from firing when we didn’t want it to:</p>
 <div>
-<pre><code>(p find-letter
-   =visual-location&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> find-letter
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
      state      free
    ?imaginal&gt;
      buffer     empty
- ==&gt;
-   +visual&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+visual&gt;</span>
      cmd        move-attention
      screen-pos =visual-location
-   +imaginal&gt;
-   )</code></pre>
+   <span class="tok-buffer">+imaginal&gt;</span>
+   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>So the question is why is it now firing at time 2.47? We could use
 the Stepper to get the model up to that point and watch what happens
@@ -546,23 +546,23 @@ the trace, the respond-next production is the one which caused that
 action to occur because it’s the production which fired at the same time
 as the buffer was cleared. Here is the text of that production:</p>
 <div>
-<pre><code>(p respond-next
-   =imaginal&gt;
-     isa        task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> respond-next
+   <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-isa">isa</span>        task
      letter     =letter
-   =visual&gt;
-     isa        visual-object
-     value      &quot;next&quot;
+   <span class="tok-buffer">=visual&gt;</span>
+     <span class="tok-isa">isa</span>        visual-object
+     value      <span class="tok-string">"next"</span>
    ?manual&gt;
      state      free
- ==&gt;
-   +retrieval&gt;
-     isa        letter
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+retrieval&gt;</span>
+     <span class="tok-isa">isa</span>        letter
      previous   =letter
-   +manual&gt;
+   <span class="tok-buffer">+manual&gt;</span>
      cmd        press-key
      key        =letter
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The reason why that causes the <strong>imaginal</strong> buffer to be
 cleared is the strict harvesting mechanism – if a production tests a
@@ -629,21 +629,21 @@ a production is allowed to make what’s called an empty modification for
 exactly this purpose. To do that one just adds an = buffer action on the
 RHS without specifying any slots and values to modify. Here is what the
 updated respond-next production looks like:</p>
-<pre><code>(p respond-next
-   =imaginal&gt;
-     isa        task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> respond-next
+   <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-isa">isa</span>        task
      letter     =letter
-   =visual&gt;
-     isa        visual-object
-     value      &quot;next&quot;
+   <span class="tok-buffer">=visual&gt;</span>
+     <span class="tok-isa">isa</span>        visual-object
+     value      <span class="tok-string">"next"</span>
    ?manual&gt;
      state      free
- ==&gt;
-   =imaginal&gt;
-   +retrieval&gt;
-     isa        letter
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
+   <span class="tok-buffer">+retrieval&gt;</span>
+     <span class="tok-isa">isa</span>        letter
      previous   =letter
-   +manual&gt;
+   <span class="tok-buffer">+manual&gt;</span>
      cmd        press-key
      key        =letter</code></pre>
 <p>)</p>
@@ -662,55 +662,55 @@ then require the model to explicitly clear that buffer when needed.</p>
 <h2 id="model-version-4">Model version 4</h2>
 <p>This is what the trace looks like now when we run it:</p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.285  NONE                  pm-issue-display (vision exp-window Simple task) next
-     2.285  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.285  VISION                visicon-update
-     2.285  PROCEDURAL            CONFLICT-RESOLUTION
-     2.370  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.370  VISION                SET-BUFFER-CHUNK VISUAL TEXT1 NIL
-     2.370  PROCEDURAL            CONFLICT-RESOLUTION
-     2.420  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.420  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.420  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.420  MOTOR                 PRESS-KEY KEY l
-     2.420  DECLARATIVE           start-retrieval
-     2.420  DECLARATIVE           RETRIEVED-CHUNK M
-     2.420  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL M
-     2.420  PROCEDURAL            CONFLICT-RESOLUTION
-     2.570  PROCEDURAL            CONFLICT-RESOLUTION
-     2.620  PROCEDURAL            CONFLICT-RESOLUTION
-     2.630  PROCEDURAL            CONFLICT-RESOLUTION
-     2.720  PROCEDURAL            CONFLICT-RESOLUTION
-     2.770  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     2.770  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.770  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.770  MOTOR                 PRESS-KEY KEY m
-     2.770  PROCEDURAL            CONFLICT-RESOLUTION
-     2.785  PROCEDURAL            CONFLICT-RESOLUTION
-     3.020  PROCEDURAL            CONFLICT-RESOLUTION
-     3.070  PROCEDURAL            CONFLICT-RESOLUTION
-     3.170  PROCEDURAL            CONFLICT-RESOLUTION
-     3.320  PROCEDURAL            CONFLICT-RESOLUTION
-     3.320  ------                Stopped because no events left to process
-(next T)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.285</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">2.285</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.285</span>  VISION                visicon-update
+     <span class="tok-number">2.285</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.370</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.370</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1 NIL
+     <span class="tok-number">2.370</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.420</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.420</span>  MOTOR                 PRESS-KEY KEY l
+     <span class="tok-number">2.420</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.420</span>  DECLARATIVE           RETRIEVED-CHUNK M
+     <span class="tok-number">2.420</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL M
+     <span class="tok-number">2.420</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.570</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.620</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.630</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.720</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.770</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">2.770</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.770</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.770</span>  MOTOR                 PRESS-KEY KEY m
+     <span class="tok-number">2.770</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.785</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.020</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.070</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.170</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.320</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.320</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>next T<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Here we see that the model has performed the task correctly and that
 it performed the steps which we expected. Before moving on and trying
@@ -742,33 +742,33 @@ and to set the trace-detail level back to medium. After making those
 changes, saving and then loading the model we can run a trial specifying
 previous:</p>
 <div>
-<pre><code>? (pm-issues-task &quot;previous&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.285  NONE                  pm-issue-display (vision exp-window Simple task) previous
-     2.285  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.285  VISION                visicon-update
-     2.285  PROCEDURAL            CONFLICT-RESOLUTION
-     2.370  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.370  VISION                No visual-object found
-     2.370  PROCEDURAL            CONFLICT-RESOLUTION
-     2.785  PROCEDURAL            CONFLICT-RESOLUTION
-     2.785  ------                Stopped because no events left to process
-(previous NIL)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"previous"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.285</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> previous
+     <span class="tok-number">2.285</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.285</span>  VISION                visicon-update
+     <span class="tok-number">2.285</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.370</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.370</span>  VISION                No visual-object found
+     <span class="tok-number">2.370</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.785</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.785</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>previous NIL<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The model failed to do the task correctly so now we need to
 investigate why. The next production which we expect to fire is
@@ -989,17 +989,17 @@ empty since the buffer will have the chunk created by the request in the
 find-letter production, and because of that it also doesn’t need to make
 a request to create one:</p>
 <div>
-<pre><code>(p find-prompt
-   =visual-location&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> find-prompt
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
      state      free
    ?imaginal&gt;
      buffer     full
- ==&gt;
-   +visual&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+visual&gt;</span>
      cmd        move-attention
      screen-pos =visual-location
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Again, we are relying on buffer stuffing to put a chunk into the
 <strong>visual-location</strong> buffer automatically because that is
@@ -1017,122 +1017,122 @@ previously.</p>
 <p>Here is the trace for running the updated model on a trial with
 previous:</p>
 <div>
-<pre><code>? (pm-issues-task &quot;previous&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.285  NONE                  pm-issue-display (vision exp-window Simple task) previous
-     2.285  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.285  VISION                visicon-update
-     2.285  PROCEDURAL            CONFLICT-RESOLUTION
-     2.370  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.370  VISION                No visual-object found
-     2.370  PROCEDURAL            CONFLICT-RESOLUTION
-     2.420  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.420  PROCEDURAL            CONFLICT-RESOLUTION
-     2.505  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.505  VISION                SET-BUFFER-CHUNK VISUAL TEXT1
-     2.505  PROCEDURAL            CONFLICT-RESOLUTION
-     2.555  PROCEDURAL            PRODUCTION-FIRED RESPOND-PREVIOUS
-     2.555  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.555  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.555  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.555  MOTOR                 PRESS-KEY KEY l
-     2.555  DECLARATIVE           start-retrieval
-     2.555  DECLARATIVE           RETRIEVED-CHUNK K
-     2.555  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL K
-     2.555  PROCEDURAL            CONFLICT-RESOLUTION
-     2.705  PROCEDURAL            CONFLICT-RESOLUTION
-     2.755  PROCEDURAL            CONFLICT-RESOLUTION
-     2.765  PROCEDURAL            CONFLICT-RESOLUTION
-     2.855  PROCEDURAL            CONFLICT-RESOLUTION
-     2.905  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     2.905  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.905  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.905  MOTOR                 PRESS-KEY KEY k
-     2.905  PROCEDURAL            CONFLICT-RESOLUTION
-     2.955  PROCEDURAL            CONFLICT-RESOLUTION
-     3.005  PROCEDURAL            CONFLICT-RESOLUTION
-     3.015  PROCEDURAL            CONFLICT-RESOLUTION
-     3.105  PROCEDURAL            CONFLICT-RESOLUTION
-     3.105  ------                Stopped because no events left to process
-(previous T)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"previous"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.285</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> previous
+     <span class="tok-number">2.285</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.285</span>  VISION                visicon-update
+     <span class="tok-number">2.285</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.370</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.370</span>  VISION                No visual-object found
+     <span class="tok-number">2.370</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.420</span>  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.505</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.505</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1
+     <span class="tok-number">2.505</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.555</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-PREVIOUS
+     <span class="tok-number">2.555</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.555</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.555</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.555</span>  MOTOR                 PRESS-KEY KEY l
+     <span class="tok-number">2.555</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.555</span>  DECLARATIVE           RETRIEVED-CHUNK K
+     <span class="tok-number">2.555</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL K
+     <span class="tok-number">2.555</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.705</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.755</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.765</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.855</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.905</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">2.905</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.905</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.905</span>  MOTOR                 PRESS-KEY KEY k
+     <span class="tok-number">2.905</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.955</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.005</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.015</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.105</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.105</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>previous T<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The model successfully completed the task for “previous” and
 performed the steps which we expected it to. Now we should test it on a
 trial for “next” to make sure that it can still do those trials as
 well:</p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.285  NONE                  pm-issue-display (vision exp-window Simple task) next
-     2.285  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.285  VISION                visicon-update
-     2.285  PROCEDURAL            CONFLICT-RESOLUTION
-     2.370  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.370  VISION                SET-BUFFER-CHUNK VISUAL TEXT1 NIL
-     2.370  PROCEDURAL            CONFLICT-RESOLUTION
-     2.420  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     2.420  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.420  PROCEDURAL            CONFLICT-RESOLUTION
-     2.505  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.505  VISION                SET-BUFFER-CHUNK VISUAL TEXT2
-     2.505  PROCEDURAL            CONFLICT-RESOLUTION
-     2.555  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.555  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.555  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.555  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.555  MOTOR                 PRESS-KEY KEY l
-     2.555  DECLARATIVE           start-retrieval
-     2.555  DECLARATIVE           RETRIEVED-CHUNK M
-     2.555  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL M
-     2.555  PROCEDURAL            CONFLICT-RESOLUTION
-     2.705  PROCEDURAL            CONFLICT-RESOLUTION
-     2.755  PROCEDURAL            CONFLICT-RESOLUTION
-     2.765  PROCEDURAL            CONFLICT-RESOLUTION
-     2.855  PROCEDURAL            CONFLICT-RESOLUTION
-     2.905  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     2.905  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.905  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.905  MOTOR                 PRESS-KEY KEY m
-     2.905  PROCEDURAL            CONFLICT-RESOLUTION
-     3.155  PROCEDURAL            CONFLICT-RESOLUTION
-     3.205  PROCEDURAL            CONFLICT-RESOLUTION
-     3.305  PROCEDURAL            CONFLICT-RESOLUTION
-     3.455  PROCEDURAL            CONFLICT-RESOLUTION
-     3.455  ------                Stopped because no events left to process
-(next T)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.285</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">2.285</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.285</span>  VISION                visicon-update
+     <span class="tok-number">2.285</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.370</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.370</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1 NIL
+     <span class="tok-number">2.370</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.420</span>  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">2.420</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.420</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.505</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.505</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT2
+     <span class="tok-number">2.505</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.555</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.555</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.555</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.555</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.555</span>  MOTOR                 PRESS-KEY KEY l
+     <span class="tok-number">2.555</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.555</span>  DECLARATIVE           RETRIEVED-CHUNK M
+     <span class="tok-number">2.555</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL M
+     <span class="tok-number">2.555</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.705</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.755</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.765</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.855</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.905</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">2.905</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.905</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.905</span>  MOTOR                 PRESS-KEY KEY m
+     <span class="tok-number">2.905</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.155</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.205</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.305</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.455</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.455</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>next T<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Here again it did the task correctly and fired the productions which
 we expected. At this point one might consider the model done, but we
@@ -1145,73 +1145,73 @@ model</h2>
 running a few trials, but for next occasionally we get a trial where it
 does not complete the task correctly and looks something like this: </p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     2.090  NONE                  pm-issue-display (vision exp-window Simple task) next
-     2.090  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     2.090  VISION                visicon-update
-     2.090  PROCEDURAL            CONFLICT-RESOLUTION
-     2.175  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.175  VISION                SET-BUFFER-CHUNK VISUAL TEXT1 NIL
-     2.175  PROCEDURAL            CONFLICT-RESOLUTION
-     2.225  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.225  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.225  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.225  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.225  MOTOR                 PRESS-KEY KEY n
-     2.225  DECLARATIVE           start-retrieval
-     2.225  DECLARATIVE           RETRIEVED-CHUNK O
-     2.225  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL O
-     2.225  PROCEDURAL            CONFLICT-RESOLUTION
-     2.275  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
-     2.275  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     2.275  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.275  PROCEDURAL            CONFLICT-RESOLUTION
-     2.360  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.360  VISION                SET-BUFFER-CHUNK VISUAL TEXT2
-     2.360  PROCEDURAL            CONFLICT-RESOLUTION
-     2.475  PROCEDURAL            CONFLICT-RESOLUTION
-     2.525  PROCEDURAL            CONFLICT-RESOLUTION
-     2.625  PROCEDURAL            CONFLICT-RESOLUTION
-     2.775  PROCEDURAL            CONFLICT-RESOLUTION
-     2.825  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.825  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.825  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.825  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.825  MOTOR                 PRESS-KEY KEY n
-     2.825  DECLARATIVE           start-retrieval
-     2.825  DECLARATIVE           RETRIEVED-CHUNK O
-     2.825  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL O
-     2.825  PROCEDURAL            CONFLICT-RESOLUTION
-     2.875  PROCEDURAL            CONFLICT-RESOLUTION
-     2.975  PROCEDURAL            CONFLICT-RESOLUTION
-     3.125  PROCEDURAL            CONFLICT-RESOLUTION
-     3.175  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     3.175  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     3.175  PROCEDURAL            CLEAR-BUFFER MANUAL
-     3.175  MOTOR                 PRESS-KEY KEY o
-     3.175  PROCEDURAL            CONFLICT-RESOLUTION
-     3.325  PROCEDURAL            CONFLICT-RESOLUTION
-     3.375  PROCEDURAL            CONFLICT-RESOLUTION
-     3.475  PROCEDURAL            CONFLICT-RESOLUTION
-     3.625  PROCEDURAL            CONFLICT-RESOLUTION
-     3.625  ------                Stopped because no events left to process
-(next NIL)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.090</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">2.090</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">2.090</span>  VISION                visicon-update
+     <span class="tok-number">2.090</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.175</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.175</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1 NIL
+     <span class="tok-number">2.175</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.225</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.225</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.225</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.225</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.225</span>  MOTOR                 PRESS-KEY KEY n
+     <span class="tok-number">2.225</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.225</span>  DECLARATIVE           RETRIEVED-CHUNK O
+     <span class="tok-number">2.225</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL O
+     <span class="tok-number">2.225</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.275</span>  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
+     <span class="tok-number">2.275</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">2.275</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.275</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.360</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.360</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT2
+     <span class="tok-number">2.360</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.475</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.525</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.625</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.775</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.825</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.825</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.825</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.825</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.825</span>  MOTOR                 PRESS-KEY KEY n
+     <span class="tok-number">2.825</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.825</span>  DECLARATIVE           RETRIEVED-CHUNK O
+     <span class="tok-number">2.825</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL O
+     <span class="tok-number">2.825</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.875</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.975</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.125</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.175</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">3.175</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">3.175</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">3.175</span>  MOTOR                 PRESS-KEY KEY o
+     <span class="tok-number">3.175</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.325</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.375</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.475</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.625</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.625</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>next NIL<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Looking at the trace we see that the respond-next production fired
 when we expected our find-prompt production to fire, and then
@@ -1298,73 +1298,73 @@ investigate it further. The first thing we want to do is turn the trace
 back on and run it to look at what happens. Here is the trace we get
 with the seed found above (147922301412 36):</p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     1.940  NONE                  pm-issue-display (vision exp-window Simple task) next
-     1.940  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     1.940  VISION                visicon-update
-     1.940  PROCEDURAL            CONFLICT-RESOLUTION
-     2.025  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     2.025  VISION                SET-BUFFER-CHUNK VISUAL TEXT1 NIL
-     2.025  PROCEDURAL            CONFLICT-RESOLUTION
-     2.075  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.075  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.075  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.075  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.075  MOTOR                 PRESS-KEY KEY e
-     2.075  DECLARATIVE           start-retrieval
-     2.075  DECLARATIVE           RETRIEVED-CHUNK F
-     2.075  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL F
-     2.075  PROCEDURAL            CONFLICT-RESOLUTION
-     2.125  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
-     2.125  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     2.125  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.125  PROCEDURAL            CONFLICT-RESOLUTION
-     2.210  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.210  VISION                SET-BUFFER-CHUNK VISUAL TEXT2
-     2.210  PROCEDURAL            CONFLICT-RESOLUTION
-     2.325  PROCEDURAL            CONFLICT-RESOLUTION
-     2.375  PROCEDURAL            CONFLICT-RESOLUTION
-     2.475  PROCEDURAL            CONFLICT-RESOLUTION
-     2.625  PROCEDURAL            CONFLICT-RESOLUTION
-     2.675  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.675  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.675  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.675  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.675  MOTOR                 PRESS-KEY KEY e
-     2.675  DECLARATIVE           start-retrieval
-     2.675  DECLARATIVE           RETRIEVED-CHUNK F
-     2.675  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL F
-     2.675  PROCEDURAL            CONFLICT-RESOLUTION
-     2.725  PROCEDURAL            CONFLICT-RESOLUTION
-     2.825  PROCEDURAL            CONFLICT-RESOLUTION
-     2.975  PROCEDURAL            CONFLICT-RESOLUTION
-     3.025  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     3.025  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     3.025  PROCEDURAL            CLEAR-BUFFER MANUAL
-     3.025  MOTOR                 PRESS-KEY KEY f
-     3.025  PROCEDURAL            CONFLICT-RESOLUTION
-     3.175  PROCEDURAL            CONFLICT-RESOLUTION
-     3.225  PROCEDURAL            CONFLICT-RESOLUTION
-     3.235  PROCEDURAL            CONFLICT-RESOLUTION
-     3.325  PROCEDURAL            CONFLICT-RESOLUTION
-     3.325  ------                Stopped because no events left to process
-(next NIL)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.940</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">1.940</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">1.940</span>  VISION                visicon-update
+     <span class="tok-number">1.940</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.025</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">2.025</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1 NIL
+     <span class="tok-number">2.025</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.075</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.075</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.075</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.075</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.075</span>  MOTOR                 PRESS-KEY KEY e
+     <span class="tok-number">2.075</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.075</span>  DECLARATIVE           RETRIEVED-CHUNK F
+     <span class="tok-number">2.075</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL F
+     <span class="tok-number">2.075</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.125</span>  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
+     <span class="tok-number">2.125</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">2.125</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.125</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.210</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.210</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT2
+     <span class="tok-number">2.210</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.325</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.375</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.475</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.625</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.675</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.675</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.675</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.675</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.675</span>  MOTOR                 PRESS-KEY KEY e
+     <span class="tok-number">2.675</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.675</span>  DECLARATIVE           RETRIEVED-CHUNK F
+     <span class="tok-number">2.675</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL F
+     <span class="tok-number">2.675</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.725</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.825</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.975</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.025</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">3.025</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">3.025</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">3.025</span>  MOTOR                 PRESS-KEY KEY f
+     <span class="tok-number">3.025</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.175</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.225</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.235</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.325</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.325</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>next NIL<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The first problem in the trace shows up at time 2.075 when
 respond-next fires but we expect find-prompt to fire. However, stepping
@@ -1513,60 +1513,60 @@ those changes:</p>
 trace we get when running it with the seed we had set for the incorrect
 trial:</p>
 <div>
-<pre><code>? (pm-issues-task &quot;next&quot;)
-     0.000  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION0 NIL
-     0.000  VISION                visicon-update
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     0.050  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.050  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.135  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
-     0.135  VISION                SET-BUFFER-CHUNK VISUAL TEXT0
-     0.135  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (ISA CHUNK)
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
-     0.300  PROCEDURAL            CLEAR-BUFFER VISUAL
-     0.300  VISION                CLEAR
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     0.350  PROCEDURAL            CONFLICT-RESOLUTION
-     1.940  NONE                  pm-issue-display (vision exp-window Simple task) next
-     1.940  VISION                SET-BUFFER-CHUNK VISUAL-LOCATION VISUAL-LOCATION1 NIL
-     1.940  VISION                visicon-update
-     1.940  PROCEDURAL            CONFLICT-RESOLUTION
-     1.990  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
-     1.990  PROCEDURAL            CLEAR-BUFFER VISUAL-LOCATION
-     1.990  PROCEDURAL            CLEAR-BUFFER VISUAL
-     1.990  PROCEDURAL            CONFLICT-RESOLUTION
-     2.075  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
-     2.075  VISION                SET-BUFFER-CHUNK VISUAL TEXT1
-     2.075  PROCEDURAL            CONFLICT-RESOLUTION
-     2.125  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
-     2.125  PROCEDURAL            CLEAR-BUFFER VISUAL
-     2.125  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.125  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.125  MOTOR                 PRESS-KEY KEY e
-     2.125  DECLARATIVE           start-retrieval
-     2.125  DECLARATIVE           RETRIEVED-CHUNK F
-     2.125  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL F
-     2.125  PROCEDURAL            CONFLICT-RESOLUTION
-     2.375  PROCEDURAL            CONFLICT-RESOLUTION
-     2.425  PROCEDURAL            CONFLICT-RESOLUTION
-     2.525  PROCEDURAL            CONFLICT-RESOLUTION
-     2.675  PROCEDURAL            CONFLICT-RESOLUTION
-     2.725  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
-     2.725  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     2.725  PROCEDURAL            CLEAR-BUFFER MANUAL
-     2.725  MOTOR                 PRESS-KEY KEY f
-     2.725  PROCEDURAL            CONFLICT-RESOLUTION
-     2.875  PROCEDURAL            CONFLICT-RESOLUTION
-     2.925  PROCEDURAL            CONFLICT-RESOLUTION
-     2.935  PROCEDURAL            CONFLICT-RESOLUTION
-     3.025  PROCEDURAL            CONFLICT-RESOLUTION
-     3.025  ------                Stopped because no events left to process
-(next T)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pm-issues-task <span class="tok-string">"next"</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION0 NIL
+     <span class="tok-number">0.000</span>  VISION                visicon-update
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED FIND-LETTER
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.135</span>  VISION                Encoding-complete VISUAL-LOCATION0-0 NIL
+     <span class="tok-number">0.135</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT0
+     <span class="tok-number">0.135</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> CHUNK<span class="tok-paren">)</span>
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED ENCODE-LETTER
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">0.300</span>  VISION                CLEAR
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.350</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.940</span>  NONE                  pm-issue-display <span class="tok-paren">(</span>vision exp-window Simple task<span class="tok-paren">)</span> next
+     <span class="tok-number">1.940</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL-LOCATION VISUAL-LOCATION1 NIL
+     <span class="tok-number">1.940</span>  VISION                visicon-update
+     <span class="tok-number">1.940</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">1.990</span>  PROCEDURAL            PRODUCTION-FIRED FIND-PROMPT
+     <span class="tok-number">1.990</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL-LOCATION
+     <span class="tok-number">1.990</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">1.990</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.075</span>  VISION                Encoding-complete VISUAL-LOCATION1-0 NIL
+     <span class="tok-number">2.075</span>  VISION                <span class="tok-keyword">SET-BUFFER-CHUNK</span> VISUAL TEXT1
+     <span class="tok-number">2.075</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.125</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-NEXT
+     <span class="tok-number">2.125</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> VISUAL
+     <span class="tok-number">2.125</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.125</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.125</span>  MOTOR                 PRESS-KEY KEY e
+     <span class="tok-number">2.125</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">2.125</span>  DECLARATIVE           RETRIEVED-CHUNK F
+     <span class="tok-number">2.125</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL F
+     <span class="tok-number">2.125</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.375</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.425</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.525</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.675</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.725</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND-FINAL
+     <span class="tok-number">2.725</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">2.725</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> MANUAL
+     <span class="tok-number">2.725</span>  MOTOR                 PRESS-KEY KEY f
+     <span class="tok-number">2.725</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.875</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.925</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">2.935</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.025</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">3.025</span>  ------                Stopped because no events left to process
+<span class="tok-paren">(</span>next T<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The model successfully completed the task. So, now it looks like the
 model is working correctly, but we should remove the seed parameter

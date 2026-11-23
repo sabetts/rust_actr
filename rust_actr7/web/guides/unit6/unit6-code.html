@@ -187,29 +187,29 @@ encode-over and encode-under productions in the Building Sticks model
 use the !bind! operator to compute the difference between stick lengths
 and store the result in a slot. Here is the encode-under production:</p>
 <div>
-<pre><code>(p encode-under
-   =goal&gt;
-      isa       try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-under
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>       try-strategy
       state     encode-under
-   =imaginal&gt;
-      isa       encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>       encoding
       b-loc     =b
       length    =goal-len
-   =visual&gt;
-      isa       line
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>       line
       width     =c-len
    ?visual&gt;
       state     free
-  ==&gt;
-   !bind! =val  (- =goal-len =c-len)
+  <span class="tok-arrow">==&gt;</span>
+   !bind! =val  <span class="tok-paren">(</span>- =goal-len =c-len<span class="tok-paren">)</span>
 
-   =imaginal&gt;
+   <span class="tok-buffer">=imaginal&gt;</span>
       under     =val
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
       state     encode-over
-   +visual&gt;
-      isa       move-attention
-      screen-pos =b)</code></pre>
+   <span class="tok-buffer">+visual&gt;</span>
+      <span class="tok-isa">isa</span>       move-attention
+      screen-pos =b<span class="tok-paren">)</span></code></pre>
 </div>
 <p>In this case the !bind! operator is using a Lisp expression to be
 evaluated, but like !eval! it can also evaluate an ACT-R command given
@@ -248,41 +248,41 @@ specify the cmd slot in the requests to the <strong>visual</strong> and
 <strong>manual</strong> buffers which we have seen previously, and
 instead are only declaring a chunk-type with an isa:</p>
 <div>
-<pre><code>(p encode-line-goal
-   =goal&gt;
-      isa       try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-line-goal
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>       try-strategy
       state     attending
-   =imaginal&gt;
-      isa       encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>       encoding
       c-loc     =c
       goal-loc  nil
-   =visual&gt;
-      isa       line
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>       line
       screen-pos =pos
       width     =length
    ?visual&gt;
       state     free
-  ==&gt;
-   =imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
       goal-loc  =pos
       length    =length
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
       state     encode-under
-   +visual&gt;
-      isa       move-attention
-      screen-pos =c)
+   <span class="tok-buffer">+visual&gt;</span>
+      <span class="tok-isa">isa</span>       move-attention
+      screen-pos =c<span class="tok-paren">)</span>
 
-(p click-mouse
-   =goal&gt;
-      isa   try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> click-mouse
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>   try-strategy
       state move-mouse
    ?manual&gt;
       state free
-  ==&gt;
-   =goal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       state wait-for-click
-   +manual&gt;
-      isa   click-mouse)
+   <span class="tok-buffer">+manual&gt;</span>
+      <span class="tok-isa">isa</span>   click-mouse<span class="tok-paren">)</span>
 </code></pre>
 </div>
 <p>Up to this point it has been stated that the isa declarations are
@@ -307,9 +307,9 @@ specify a list of two items for the slot where the first item is the
 slot name and the second is the default value, instead of just a slot
 name. Here are some example chunk-types for reference:</p>
 <div>
-<pre><code>  (chunk-type a slot)
-  (chunk-type b (slot 1))
-  (chunk-type c slot (slot2 t))</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> a slot<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> b <span class="tok-paren">(</span>slot <span class="tok-number">1</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> c slot <span class="tok-paren">(</span>slot2 t<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The chunk-type b has a default value of 1 for the slot named slot and
 chunk-type c has a default value of t for the slot named slot2. If we
@@ -318,29 +318,29 @@ value for the slots with default values and others which do not, we can
 see how the default values are filled in for the chunks that do not
 specify those slots:</p>
 <div>
-<pre><code>? (define-chunks
-   (c1 isa a)
-   (c2 isa b)
-   (c3 isa b slot 3)
-   (c4 isa c)
-   (c5 isa c slot2 nil))
-(C1 C2 C3 C4 C5)
+<pre class="lisp"><code>? <span class="tok-paren">(</span><span class="tok-keyword">define-chunks</span>
+   <span class="tok-paren">(</span>c1 <span class="tok-isa">isa</span> a<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>c2 <span class="tok-isa">isa</span> b<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>c3 <span class="tok-isa">isa</span> b slot <span class="tok-number">3</span><span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>c4 <span class="tok-isa">isa</span> c<span class="tok-paren">)</span>
+   <span class="tok-paren">(</span>c5 <span class="tok-isa">isa</span> c slot2 nil<span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>C1 C2 C3 C4 C5<span class="tok-paren">)</span>
 
-? (pprint-chunks c1 c2 c3 c4 c5)
+? <span class="tok-paren">(</span>pprint-chunks c1 c2 c3 c4 c5<span class="tok-paren">)</span>
 C1
 
 C2
-   SLOT 1
+   SLOT <span class="tok-number">1</span>
 
 C3
-   SLOT 3
+   SLOT <span class="tok-number">3</span>
 
 C4
    SLOT2 T
 
 C5
 
-(C1 C2 C3 C4 C5)</code></pre>
+<span class="tok-paren">(</span>C1 C2 C3 C4 C5<span class="tok-paren">)</span></code></pre>
 </div>
 <p>For the slots with default values the chunks which specify the slot
 get the value specified, whereas the ones that do not get the default
@@ -364,29 +364,29 @@ production which the procedural module has for encode-line-goal using
 the Procedural viewer in the ACT-R Environment or by using the pp (print
 production) command:</p>
 <div>
-<pre><code>? (pp encode-line-goal)
-(P ENCODE-LINE-GOAL
-   =GOAL&gt;
+<pre class="lisp"><code>? <span class="tok-paren">(</span>pp encode-line-goal<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> ENCODE-LINE-GOAL
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ATTENDING
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        C-LOC =C
        GOAL-LOC NIL
-   =VISUAL&gt;
+   <span class="tok-buffer">=VISUAL&gt;</span>
        SCREEN-POS =POS
        WIDTH =LENGTH
        LINE T
    ?VISUAL&gt;
        STATE FREE
- ==&gt;
-   =IMAGINAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        GOAL-LOC =POS
        LENGTH =LENGTH
-   =GOAL&gt;
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ENCODE-UNDER
-   +VISUAL&gt;
+   <span class="tok-buffer">+VISUAL&gt;</span>
        SCREEN-POS =C
        CMD MOVE-ATTENTION
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Notice how none of the isa declarations from the original definition
 are part of the actual production representation but the cmd slot has
@@ -398,41 +398,41 @@ a default value being inserted.</p>
 encode-line-goal and read-done productions from the building sticks
 model.</p>
 <div>
-<pre><code>(p encode-line-goal
-   =goal&gt;
-      isa       try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-line-goal
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>       try-strategy
       state     attending
-   =imaginal&gt;
-      isa       encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>       encoding
       c-loc     =c
       goal-loc  nil
-   =visual&gt;
-      isa       line
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>       line
       screen-pos =pos
       width     =length
    ?visual&gt;
       state     free
-  ==&gt;
-   =imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
       goal-loc  =pos
       length    =length
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
       state     encode-under
-   +visual&gt;
-      isa       move-attention
-      screen-pos =c)
+   <span class="tok-buffer">+visual&gt;</span>
+      <span class="tok-isa">isa</span>       move-attention
+      screen-pos =c<span class="tok-paren">)</span>
 
-(p read-done
-   =goal&gt;
-      isa   try-strategy
+<span class="tok-paren">(</span><span class="tok-keyword">p</span> read-done
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>   try-strategy
       state read-done
-   =visual&gt;
-      isa   text
-      value &quot;done&quot;
-  ==&gt;
-   +goal&gt;
-      isa   try-strategy
-      state start)
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>   text
+      value <span class="tok-string">"done"</span>
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+goal&gt;</span>
+      <span class="tok-isa">isa</span>   try-strategy
+      state start<span class="tok-paren">)</span>
 </code></pre>
 </div>
 <p>Previously in the tutorial it was stated that the chunks placed into
@@ -466,18 +466,18 @@ named <strong>c</strong> which is a subtype of chunk-type
 <strong>a</strong>, and a chunk-type <strong>d</strong> which is a
 subtype of both <strong>a</strong> and <strong>b</strong>:</p>
 <div>
-<pre><code>  (chunk-type a slot1)
-  (chunk-type b slot2)
-  (chunk-type (c (:include a)) slot3)
-  (chunk-type (d (:include a) (:include b)) slot4)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> a slot1<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> b slot2<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> <span class="tok-paren">(</span>c <span class="tok-paren">(</span>:include a<span class="tok-paren">)</span><span class="tok-paren">)</span> slot3<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> <span class="tok-paren">(</span>d <span class="tok-paren">(</span>:include a<span class="tok-paren">)</span> <span class="tok-paren">(</span>:include b<span class="tok-paren">)</span><span class="tok-paren">)</span> slot4<span class="tok-paren">)</span></code></pre>
 </div>
 <p>One might think these definitions would be equivalent to those shown
 above:</p>
 <div>
-<pre><code>(chunk-type a slot1)
-(chunk-type b slot2)
-(chunk-type c slot1 slot3)
-(chunk-type d slot1 slot2 slot4)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> a slot1<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> b slot2<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> c slot1 slot3<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> d slot1 slot2 slot4<span class="tok-paren">)</span></code></pre>
 </div>
 <p>However they are not equivalent because the subtyping mechanism is
 also extending the slots which are valid for the parent types as well.
@@ -498,9 +498,9 @@ chunk-type <strong>a</strong> only has the slot1 slot.</p>
 chunk-types which are used to create the <strong>visual</strong> buffer
 chunks for the corresponding AGI items:</p>
 <div>
-<pre><code>  (chunk-type visual-object screen-pos value status color height width)
-  (chunk-type (text (:include visual-object)) (text t))
-  (chunk-type (line (:include visual-object)) (line t) end1-x end1-y end2-x end2-y)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> visual-object screen-pos value status color height width<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> <span class="tok-paren">(</span>text <span class="tok-paren">(</span>:include visual-object<span class="tok-paren">)</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>text t<span class="tok-paren">)</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> <span class="tok-paren">(</span>line <span class="tok-paren">(</span>:include visual-object<span class="tok-paren">)</span><span class="tok-paren">)</span> <span class="tok-paren">(</span>line t<span class="tok-paren">)</span> end1-x end1-y end2-x end2-y<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The text and line chunk-types are subtypes of the visual-object type
 and each includes a new slot with the same name as the type and a
@@ -509,38 +509,38 @@ default value of t. Because of that default slot value, declaring the
 these productions adds that additional condition to the productions as
 we can see when we look at the actual representation of them:</p>
 <div>
-<pre><code>(P ENCODE-LINE-GOAL
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> ENCODE-LINE-GOAL
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ATTENDING
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        C-LOC =C
        GOAL-LOC NIL
-   =VISUAL&gt;
+   <span class="tok-buffer">=VISUAL&gt;</span>
        SCREEN-POS =POS
        WIDTH =LENGTH
        LINE T
    ?VISUAL&gt;
        STATE FREE
- ==&gt;
-   =IMAGINAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        GOAL-LOC =POS
        LENGTH =LENGTH
-   =GOAL&gt;
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ENCODE-UNDER
-   +VISUAL&gt;
+   <span class="tok-buffer">+VISUAL&gt;</span>
        SCREEN-POS =C
        CMD MOVE-ATTENTION
-)
-(P READ-DONE
-   =GOAL&gt;
+<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> READ-DONE
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE READ-DONE
-   =VISUAL&gt;
-       VALUE &quot;done&quot;
+   <span class="tok-buffer">=VISUAL&gt;</span>
+       VALUE <span class="tok-string">"done"</span>
        TEXT T
- ==&gt;
-   +GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+GOAL&gt;</span>
        STATE START
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p><strong></strong></p>
 <p>Those slot tests could have been specified directly, but declaring

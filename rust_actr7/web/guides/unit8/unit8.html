@@ -140,14 +140,14 @@ GOAL-CHUNK0
 the chunk in the <strong>goal </strong>buffer and then output the value
 from that slot:</p>
 <div>
-<pre><code>  (p small                (p medium               (p large
-     =goal&gt;                  =goal&gt;                  =goal&gt;
-       isa test                isa test                isa test
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> small                <span class="tok-paren">(</span><span class="tok-keyword">p</span> medium               <span class="tok-paren">(</span><span class="tok-keyword">p</span> large
+     <span class="tok-buffer">=goal&gt;</span>                  <span class="tok-buffer">=goal&gt;</span>                  <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> test                <span class="tok-isa">isa</span> test                <span class="tok-isa">isa</span> test
        value small             value medium            value large
        value =val              value =val              value =val
-     ==&gt;                     ==&gt;                     ==&gt;
-     !output! =val           !output! =val           !output! =val
-     -goal&gt;)                 -goal&gt;)                 -goal&gt;)</code></pre>
+     <span class="tok-arrow">==&gt;</span>                     <span class="tok-arrow">==&gt;</span>                     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-keyword">!output!</span> =val           <span class="tok-keyword">!output!</span> =val           <span class="tok-keyword">!output!</span> =val
+     <span class="tok-buffer">-goal&gt;</span><span class="tok-paren">)</span>                 <span class="tok-buffer">-goal&gt;</span><span class="tok-paren">)</span>                 <span class="tok-buffer">-goal&gt;</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The starting model has procedural partial matching turned off. If you
 load that model and run it you will see a trace like this:</p>
@@ -233,14 +233,14 @@ we see that the production medium was also a member of the conflict set.
 For a partially matched production the instantiation of the production
 will show additional information about the partial match. Here is the
 instantiation for the production medium from the trace:</p>
-<pre><code>(P MEDIUM
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> MEDIUM
+   <span class="tok-buffer">=GOAL&gt;</span>
        VALUE [MEDIUM, SMALL, -0.5]
        VALUE SMALL
- ==&gt;
-   !OUTPUT! SMALL
-   -GOAL&gt;
-)</code></pre>
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-keyword">!OUTPUT!</span> SMALL
+   <span class="tok-buffer">-GOAL&gt;</span>
+<span class="tok-paren">)</span></code></pre>
 <p>In the first comparison for the value slot, instead of just seeing
 medium as was specified in the production, we see a set of items in
 brackets. That indicates that the test was not a perfect one. The first
@@ -334,24 +334,24 @@ bst_ppm module in Python.</p>
 <p>In this model these are the productions which decide between the
 overshoot and undershoot strategies:</p>
 <div>
-<pre><code>(p decide-over                          (p decide-under
-    =goal&gt;                                  =goal&gt;
-      isa        try-strategy                isa        try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> decide-over                          <span class="tok-paren">(</span><span class="tok-keyword">p</span> decide-under
+    <span class="tok-buffer">=goal&gt;</span>                                  <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>        try-strategy                <span class="tok-isa">isa</span>        try-strategy
       state      choose-strategy             state      choose-strategy
      - strategy  over                      - strategy  under
-    =imaginal&gt;                              =imaginal&gt;
-      isa        encoding                    isa        encoding
+    <span class="tok-buffer">=imaginal&gt;</span>                              <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>        encoding                    <span class="tok-isa">isa</span>        encoding
       goal-length =d                          goal-length =d
       b-len      =d                          c-len      =d
-   ==&gt;                                     ==&gt;
-    =imaginal&gt;                              =imaginal&gt;
-    =goal&gt;                                  =goal&gt;
+   <span class="tok-arrow">==&gt;</span>                                     <span class="tok-arrow">==&gt;</span>
+    <span class="tok-buffer">=imaginal&gt;</span>                              <span class="tok-buffer">=imaginal&gt;</span>
+    <span class="tok-buffer">=goal&gt;</span>                                  <span class="tok-buffer">=goal&gt;</span>
       state   prepare-mouse                  state   prepare-mouse
       strategy over                           strategy under
-    +visual-location&gt;                       +visual-location&gt;
-      isa     visual-location                isa     visual-location
+    <span class="tok-buffer">+visual-location&gt;</span>                       <span class="tok-buffer">+visual-location&gt;</span>
+      <span class="tok-isa">isa</span>     visual-location                <span class="tok-isa">isa</span>     visual-location
       kind    oval                           kind    oval
-      value   &quot;b&quot;)                           value   &quot;c&quot;)</code></pre>
+      value   <span class="tok-string">"b"</span><span class="tok-paren">)</span>                           value   <span class="tok-string">"c"</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>They are essentially a combination of the force and decide
 productions from the previous model for each strategy. Because they test
@@ -363,7 +363,7 @@ the utilities will determine which one is selected.</p>
 between numbers is provided using the sim-hook as it was for the 1hit
 blackjack model using these parameter settings:</p>
 <div>
-<pre><code>  (sgp :ppm 40 :sim-hook &quot;bst-number-sims&quot;)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :ppm <span class="tok-number">40</span> :sim-hook <span class="tok-string">"bst-number-sims"</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The :ppm value of 40 was estimated to produce a good fit to the data.
 The similarities between numbers (the line lengths in pixels) are
@@ -512,22 +512,22 @@ after the strategy choice had been made using a !bind! action in the
 production to do the math and then place that value into a slot of the
 <strong>imaginal</strong> buffer:</p>
 <div>
-<pre><code>(p calculate-difference
-   =goal&gt;
-      isa     try-strategy
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> calculate-difference
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>     try-strategy
       state   calculate-difference
-   =imaginal&gt;
-      isa     encoding
+   <span class="tok-buffer">=imaginal&gt;</span>
+      <span class="tok-isa">isa</span>     encoding
       length  =current-len
-   =visual&gt;
-      isa     line
+   <span class="tok-buffer">=visual&gt;</span>
+      <span class="tok-isa">isa</span>     line
       width   =goal-len
-  ==&gt;
-   !bind! =val (abs (- =current-len =goal-len))
-   =imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   !bind! =val <span class="tok-paren">(</span>abs <span class="tok-paren">(</span>- =current-len =goal-len<span class="tok-paren">)</span><span class="tok-paren">)</span>
+   <span class="tok-buffer">=imaginal&gt;</span>
       length  =val
-   =goal&gt;
-      state   consider-next)</code></pre>
+   <span class="tok-buffer">=goal&gt;</span>
+      state   consider-next<span class="tok-paren">)</span></code></pre>
 </div>
 <p>In many models abstractions like that are easy to justify and do not
 cause any issues for data comparison. However, if one is interested in
@@ -571,26 +571,26 @@ to test arbitrary slots in the conditions of a production. The
 conditions of the productions start and retrieve-first-step from the
 example model show this:</p>
 <div>
-<pre><code>  (p start                          (p retrieve-first-step
-     =goal&gt;                            =goal&gt;
-       isa     fact                     isa    fact
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> start                          <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieve-first-step
+     <span class="tok-buffer">=goal&gt;</span>                            <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span>     fact                     <span class="tok-isa">isa</span>    fact
        context =context                 context =slot
        =context =x                       data   =x
-     ?imaginal&gt;                        =imaginal&gt;
-       state   free                     isa    result
+     ?imaginal&gt;                        <span class="tok-buffer">=imaginal&gt;</span>
+       state   free                     <span class="tok-isa">isa</span>    result
        buffer  empty                    data1  =x
-    ==&gt;                                =retrieval&gt;
-     =goal&gt;                              isa    step
+    <span class="tok-arrow">==&gt;</span>                                <span class="tok-buffer">=retrieval&gt;</span>
+     <span class="tok-buffer">=goal&gt;</span>                              <span class="tok-isa">isa</span>    step
        context destination              =slot  =target
-     +imaginal&gt;                          step   first
-       isa     result                ==&gt;
-       data1   =x                     =goal&gt;
-     +retrieval&gt;                         data   11
-       isa     step                   =imaginal&gt;
-       step    first)                   =target =x
-                                        +retrieval&gt;
-                                          isa    step
-                                          step   second)</code></pre>
+     <span class="tok-buffer">+imaginal&gt;</span>                          step   first
+       <span class="tok-isa">isa</span>     result                <span class="tok-arrow">==&gt;</span>
+       data1   =x                     <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span>                         data   <span class="tok-number">11</span>
+       <span class="tok-isa">isa</span>     step                   <span class="tok-buffer">=imaginal&gt;</span>
+       step    first<span class="tok-paren">)</span>                   =target =x
+                                        <span class="tok-buffer">+retrieval&gt;</span>
+                                          <span class="tok-isa">isa</span>    step
+                                          step   second<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The start production uses a dynamic test in the <strong>goal</strong>
 buffer pattern and the retrieve-first-step production uses a dynamic
@@ -712,23 +712,23 @@ destination and the =x variable will be bound to 10. That
 to the value in the destination slot, which is data2.</p>
 <p>Here is the instantiation of that production from the trace:</p>
 <div>
-<pre><code>(P RETRIEVE-FIRST-STEP
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> RETRIEVE-FIRST-STEP
+   <span class="tok-buffer">=GOAL&gt;</span>
        CONTEXT DESTINATION
-       DATA 10
-   =IMAGINAL&gt;
-       DATA1 10
-   =RETRIEVAL&gt;
+       DATA <span class="tok-number">10</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+       DATA1 <span class="tok-number">10</span>
+   <span class="tok-buffer">=RETRIEVAL&gt;</span>
        DESTINATION DATA2
        STEP FIRST
- ==&gt;
-   =GOAL&gt;
-       DATA 11
-   =IMAGINAL&gt;
-       DATA2 10
-   +RETRIEVAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
+       DATA <span class="tok-number">11</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+       DATA2 <span class="tok-number">10</span>
+   <span class="tok-buffer">+RETRIEVAL&gt;</span>
        STEP SECOND
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Though not shown in these examples, the dynamic conditions may also
 be used with any of the modifiers for a slot test as well as multiple
@@ -799,19 +799,19 @@ slots</h3>
 the final new capability which dynamic pattern matching allows. Here is
 the production:</p>
 <div>
-<pre><code>  (p retrieve-second-step
-     =goal&gt;
-       isa    fact
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieve-second-step
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span>    fact
        context =slot
        data   =x
-     =imaginal&gt;
-     =retrieval&gt;
-       isa    step
+     <span class="tok-buffer">=imaginal&gt;</span>
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span>    step
        =slot  =target
        step   second
-    ==&gt;
-     =imaginal&gt;
-       =target =x)</code></pre>
+    <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
+       =target =x<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The condition of this production is very similar to the
 retrieve-first-step production, and the action of this production is a
@@ -851,9 +851,9 @@ performed by the previous production the interesting thing to note is
 that none of the chunk-types specified for this model have a slot named
 data3:</p>
 <div>
-<pre><code>  (chunk-type fact context data)
-  (chunk-type step step destination)
-  (chunk-type result data1 data2)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> fact context data<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> step step destination<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> result data1 data2<span class="tok-paren">)</span></code></pre>
 </div>
 <p>As we have seen previously in the tutorial, modifications to a buffer
 add slots when the chunk does not have the slot indicated. When a
@@ -885,11 +885,11 @@ as part of the model definition instead of at run time and will also
 generate a warning. For example, if we were to add this production to
 this model:</p>
 <div>
-<pre><code>  (p change-new-slot
-     =goal&gt;
-    ==&gt;
-     =goal&gt;
-      new-slot 10)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> change-new-slot
+     <span class="tok-buffer">=goal&gt;</span>
+    <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=goal&gt;</span>
+      new-slot <span class="tok-number">10</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>That will result in this warning when the model is loaded: </p>
 <pre><code></code></pre>
@@ -962,9 +962,9 @@ will be discussed.</p>
 knowledge in declarative memory specifying slots named attribute and
 value instead of just using slots and values:</p>
 <div>
-<pre><code> (p1 ISA property object shark attribute dangerous value true)
- (p2 ISA property object shark attribute locomotion value swimming)
- (p3 ISA property object shark attribute category value fish)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>p1 <span class="tok-isa">ISA</span> property object shark attribute dangerous value true<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>p2 <span class="tok-isa">ISA</span> property object shark attribute locomotion value swimming<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>p3 <span class="tok-isa">ISA</span> property object shark attribute category value fish<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The reason for that representation at the time was because without
 dynamic pattern matching the model would have required specifying
@@ -973,15 +973,15 @@ lookup. The version in the semantic-dynamic-model.lisp file of this unit
 uses a more natural representation of the chunks which can be searched
 using dynamic pattern matching:</p>
 <div>
-<pre><code> (p1 ISA property object shark dangerous true)
- (p2 ISA property object shark locomotion swimming)
- (p3 ISA property object shark category fish)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>p1 <span class="tok-isa">ISA</span> property object shark dangerous true<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>p2 <span class="tok-isa">ISA</span> property object shark locomotion swimming<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>p3 <span class="tok-isa">ISA</span> property object shark category fish<span class="tok-paren">)</span></code></pre>
 </div>
 <p>To go along with that the model specifies the property chunk-type as
 having all the possible attributes used:</p>
 <div>
-<pre><code>(chunk-type property object category dangerous locomotion edible
-            breathe moves skin color sings flies height wings)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> property object category dangerous locomotion edible
+            breathe moves skin color sings flies height wings<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That is not necessary, because just as with productions, specifying
 new slots when creating chunks in the model definition will
@@ -1011,32 +1011,32 @@ steps – creating the chunk and then putting it into the
 some chunks which the model starts out with as options to test in the
 <strong>goal</strong> buffer:</p>
 <div>
-<pre><code>(define-chunks
- (g1 ISA test-attribute object canary attribute category value bird)
- (g2 ISA test-attribute object canary attribute wings value true)
- (g3 ISA test-attribute object canary attribute dangerous value true))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">define-chunks</span>
+ <span class="tok-paren">(</span>g1 <span class="tok-isa">ISA</span> test-attribute object canary attribute category value bird<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>g2 <span class="tok-isa">ISA</span> test-attribute object canary attribute wings value true<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>g3 <span class="tok-isa">ISA</span> test-attribute object canary attribute dangerous value true<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those chunks contain slots for the attribute and value to indicate
 what is being searched for and here are the productions which use that
 information dynamically to request a retrieval of the desired fact and
 to verify when it has been successfully retrieved:</p>
 <div>
-<pre><code>(p retrieve-attribute                 (P direct-verify
-   =goal&gt;                                =goal&gt;
-     ISA        test-attribute            ISA        test-attribute
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieve-attribute                 <span class="tok-paren">(</span><span class="tok-keyword">P</span> direct-verify
+   <span class="tok-buffer">=goal&gt;</span>                                <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">ISA</span>        test-attribute            <span class="tok-isa">ISA</span>        test-attribute
      object     =obj                      original   nil
      attribute  =attr                     object     =obj
      value      =val                      attribute  =attr
      state      nil                       value      =val
-  ==&gt;                                      state      attr-check
-   =goal&gt;                                =retrieval&gt;
-     state      attr-check                ISA        property
-   +retrieval&gt;                             object     =obj
-     ISA        property                  =attr      =val
-     object     =obj                   ==&gt;
-     - =attr    nil)                    =goal&gt;
+  <span class="tok-arrow">==&gt;</span>                                      state      attr-check
+   <span class="tok-buffer">=goal&gt;</span>                                <span class="tok-buffer">=retrieval&gt;</span>
+     state      attr-check                <span class="tok-isa">ISA</span>        property
+   <span class="tok-buffer">+retrieval&gt;</span>                             object     =obj
+     <span class="tok-isa">ISA</span>        property                  =attr      =val
+     object     =obj                   <span class="tok-arrow">==&gt;</span>
+     - =attr    nil<span class="tok-paren">)</span>                    <span class="tok-buffer">=goal&gt;</span>
                                             answer     yes
-                                            state      done)</code></pre>
+                                            state      done<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The retrieve-attribute production requests the retrieval of a chunk
 which has a value in the slot with the named attribute, and then the
@@ -1071,73 +1071,73 @@ categories again. Here are the traces of two successive runs asking for
 the same fact specified in the g2 chunk provided and using goal-focus to
 set the goal buffer with the name of that chunk:</p>
 <div>
-<pre><code>? (goal-focus g2)
+<pre class="lisp"><code>? <span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> g2<span class="tok-paren">)</span>
 G2
-? (run 1)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL G2 NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-ATTRIBUTE
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVAL-FAILURE
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.150  PROCEDURAL            PRODUCTION-FIRED MISSING-ATTR
-     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.150  DECLARATIVE           start-retrieval
-     0.150  PROCEDURAL            CONFLICT-RESOLUTION
-     0.200  DECLARATIVE           RETRIEVED-CHUNK P14
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
-     0.200  PROCEDURAL            CONFLICT-RESOLUTION
-     0.250  PROCEDURAL            PRODUCTION-FIRED CHAIN-FIRST-CATEGORY
-     0.250  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-ATTRIBUTE
-     0.300  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.300  DECLARATIVE           start-retrieval
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     0.350  DECLARATIVE           RETRIEVED-CHUNK P18
-     0.350  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P18
-     0.350  PROCEDURAL            CONFLICT-RESOLUTION
-     0.400  PROCEDURAL            PRODUCTION-FIRED INDIRECT-VERIFY
-     0.400  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.400  PROCEDURAL            CONFLICT-RESOLUTION
-     0.450  PROCEDURAL            PRODUCTION-FIRED RECORD-RESULT
-     0.450  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.450  PROCEDURAL            CONFLICT-RESOLUTION
-     0.650  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL (OBJECT CANARY WINGS TRUE)
-     0.650  PROCEDURAL            CONFLICT-RESOLUTION
-     0.700  PROCEDURAL            PRODUCTION-FIRED CREATE
-     0.700  PROCEDURAL            CLEAR-BUFFER IMAGINAL
-     0.700  PROCEDURAL            CONFLICT-RESOLUTION
-     0.750  PROCEDURAL            PRODUCTION-FIRED RESPOND
+? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL G2 NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-ATTRIBUTE
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVAL-FAILURE
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED MISSING-ATTR
+     <span class="tok-number">0.150</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.150</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.150</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.200</span>  DECLARATIVE           RETRIEVED-CHUNK P14
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P14
+     <span class="tok-number">0.200</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.250</span>  PROCEDURAL            PRODUCTION-FIRED CHAIN-FIRST-CATEGORY
+     <span class="tok-number">0.250</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-ATTRIBUTE
+     <span class="tok-number">0.300</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.300</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.350</span>  DECLARATIVE           RETRIEVED-CHUNK P18
+     <span class="tok-number">0.350</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL P18
+     <span class="tok-number">0.350</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.400</span>  PROCEDURAL            PRODUCTION-FIRED INDIRECT-VERIFY
+     <span class="tok-number">0.400</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.400</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.450</span>  PROCEDURAL            PRODUCTION-FIRED RECORD-RESULT
+     <span class="tok-number">0.450</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.450</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.650</span>  IMAGINAL              <span class="tok-keyword">SET-BUFFER-CHUNK</span> IMAGINAL <span class="tok-paren">(</span>OBJECT CANARY WINGS TRUE<span class="tok-paren">)</span>
+     <span class="tok-number">0.650</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.700</span>  PROCEDURAL            PRODUCTION-FIRED CREATE
+     <span class="tok-number">0.700</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> IMAGINAL
+     <span class="tok-number">0.700</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.750</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND
 CANARY WINGS TRUE ANSWER IS YES 
-     0.750  PROCEDURAL            CLEAR-BUFFER GOAL
-     0.750  PROCEDURAL            CONFLICT-RESOLUTION
-     0.750  ------                Stopped because no events left to process
-0.75
-84
+     <span class="tok-number">0.750</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> GOAL
+     <span class="tok-number">0.750</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.750</span>  ------                Stopped because no events left to process
+<span class="tok-number">0.75</span>
+<span class="tok-number">84</span>
 NIL
-? (goal-focus g2)
+? <span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> g2<span class="tok-paren">)</span>
 G2
-? (run 1)
-     0.750  GOAL                  SET-BUFFER-CHUNK GOAL G2 NIL
-     0.750  PROCEDURAL            CONFLICT-RESOLUTION
-     0.800  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-ATTRIBUTE
-     0.800  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.800  DECLARATIVE           start-retrieval
-     0.800  PROCEDURAL            CONFLICT-RESOLUTION
-     0.850  DECLARATIVE           RETRIEVED-CHUNK IMAGINAL-CHUNK0-0
-     0.850  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL IMAGINAL-CHUNK0-0
-     0.850  PROCEDURAL            CONFLICT-RESOLUTION
-     0.900  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
-     0.900  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.900  PROCEDURAL            CONFLICT-RESOLUTION
-     0.950  PROCEDURAL            PRODUCTION-FIRED RESPOND
+? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.750</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL G2 NIL
+     <span class="tok-number">0.750</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.800</span>  PROCEDURAL            PRODUCTION-FIRED RETRIEVE-ATTRIBUTE
+     <span class="tok-number">0.800</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.800</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.800</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.850</span>  DECLARATIVE           RETRIEVED-CHUNK IMAGINAL-CHUNK0-0
+     <span class="tok-number">0.850</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL IMAGINAL-CHUNK0-0
+     <span class="tok-number">0.850</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.900</span>  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
+     <span class="tok-number">0.900</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.900</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.950</span>  PROCEDURAL            PRODUCTION-FIRED RESPOND
 CANARY WINGS TRUE ANSWER IS YES 
-     0.950  PROCEDURAL            CLEAR-BUFFER GOAL
-     0.950  PROCEDURAL            CONFLICT-RESOLUTION
-     0.950  ------                Stopped because no events left to process</code></pre>
+     <span class="tok-number">0.950</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> GOAL
+     <span class="tok-number">0.950</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.950</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <h4 id="paired-learning-model">8.2.6.2 Paired-learning Model</h4>
 <p>A new version of the paired associate model is included with this
@@ -1149,12 +1149,12 @@ instead of having two generic slots named arg1 and arg2 which get used
 differently for different subtasks it now uses appropriately named slots
 for each operation:</p>
 <div>
-<pre><code> (op1 isa operator pre start        action read    label word   post stimulus-read)
- (op2 isa operator pre stimulus-read action retrieve required word label number post recalled)
- (op3 isa operator pre recalled     slot  number  success respond           failure wait)
- (op4 isa operator pre respond      action type    required number           post wait)
- (op5 isa operator pre wait         action read    label number post new-trial)
- (op6 isa operator pre new-trial    action complete-task         post start)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>op1 <span class="tok-isa">isa</span> operator pre start        action read    label word   post stimulus-read<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>op2 <span class="tok-isa">isa</span> operator pre stimulus-read action retrieve required word label number post recalled<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>op3 <span class="tok-isa">isa</span> operator pre recalled     slot  number  success respond           failure wait<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>op4 <span class="tok-isa">isa</span> operator pre respond      action type    required number           post wait<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>op5 <span class="tok-isa">isa</span> operator pre wait         action read    label number post new-trial<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>op6 <span class="tok-isa">isa</span> operator pre new-trial    action complete-task         post start<span class="tok-paren">)</span></code></pre>
 </div>
 <p>It also does not specify a chunk-type for the result. Instead, it
 just creates an empty chunk that gets the appropriate slots added to it
@@ -1172,49 +1172,49 @@ name of the slot into which the item should be stored in the
 <strong>read</strong> production storing the label into the context slot
 of the chunk in the <strong>goal</strong> buffer: </p>
 <div>
-<pre><code>(p read
-   =goal&gt;
-     isa       task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> read
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>       task
      step      retrieving-operator
-   =retrieval&gt;
-     isa       operator
+   <span class="tok-buffer">=retrieval&gt;</span>
+     <span class="tok-isa">isa</span>       operator
      action    read
      label     =destination
      post      =state
-   =visual-location&gt;
+   <span class="tok-buffer">=visual-location&gt;</span>
    ?visual&gt;
      state     free
    ?imaginal&gt;
      buffer    full
-  ==&gt;
-   +visual&gt;
-     isa       move-attention
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+visual&gt;</span>
+     <span class="tok-isa">isa</span>       move-attention
      screen-pos =visual-location
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
      context   =destination
      step      process
-     state     =state)</code></pre>
+     state     =state<span class="tok-paren">)</span></code></pre>
 </div>
 <p>and then the <strong>encode</strong> production modifies the chunk in
 the <strong>imaginal</strong> buffer using that value to indicate the
 slot:</p>
 <div>
-<pre><code>(p encode
-   =goal&gt;
-     isa        task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> encode
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>        task
      step       process
      context    =which-slot
-   =visual&gt;
-     isa        text
+   <span class="tok-buffer">=visual&gt;</span>
+     <span class="tok-isa">isa</span>        text
      value      =val
-   =imaginal&gt;
+   <span class="tok-buffer">=imaginal&gt;</span>
    ?imaginal&gt;
      state      free
-  ==&gt;
-   *imaginal&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">*imaginal&gt;</span>
      =which-slot =val
-   =goal&gt;
-     step       ready)</code></pre>
+   <span class="tok-buffer">=goal&gt;</span>
+     step       ready<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That makes this set of instruction following productions more general
 than the previous ones because the representation does not have to be
@@ -1232,49 +1232,49 @@ instructions themselves.</p>
 new version of the model can also perform the retrieval based on a slot
 specified in the instructions:</p>
 <div>
-<pre><code>(p retrieve-associate
-   =goal&gt;
-     isa     task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieve-associate
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     task
      step    retrieving-operator
-   =imaginal&gt;
+   <span class="tok-buffer">=imaginal&gt;</span>
      =target =stimulus
-   =retrieval&gt;
-     isa     operator
+   <span class="tok-buffer">=retrieval&gt;</span>
+     <span class="tok-isa">isa</span>     operator
      action  retrieve
      required =target
      label   =other
      post    =state
-  ==&gt;
-   +retrieval&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+retrieval&gt;</span>
      =target =stimulus
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
      step    retrieving-result
      context =other
-     state   =state)</code></pre>
+     state   =state<span class="tok-paren">)</span></code></pre>
 </div>
 <p>and also respond using an arbitrary slot specified in the
 instructions:</p>
 <div>
-<pre><code>(p type
-   =goal&gt;
-     isa     task
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> type
+   <span class="tok-buffer">=goal&gt;</span>
+     <span class="tok-isa">isa</span>     task
      step    retrieving-operator
-   =imaginal&gt;
+   <span class="tok-buffer">=imaginal&gt;</span>
      =slot   =val
-   =retrieval&gt;
-     isa     operator
+   <span class="tok-buffer">=retrieval&gt;</span>
+     <span class="tok-isa">isa</span>     operator
      action  type
      required =slot
      post    =state
    ?manual&gt;
      state   free
-  ==&gt;
-   +manual&gt;
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">+manual&gt;</span>
      cmd     press-key
      key     =val
-   =goal&gt;
+   <span class="tok-buffer">=goal&gt;</span>
      state   =state
-     step    ready)</code></pre>
+     step    ready<span class="tok-paren">)</span></code></pre>
 </div>
 <h4 id="dynamic-matching-and-production-compilation">8.2.6.3 Dynamic
 matching and production compilation</h4>
@@ -1435,7 +1435,7 @@ model one at a time through the <strong>goal</strong> buffer. The
 experiment code will set the <strong>goal</strong> buffer to a chunk
 which uses the slots specified for the chunk-type named goal:</p>
 <div>
-<pre><code>  (chunk-type goal state name value)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> goal state name value<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The state slot will be set to the value add-attribute, the name slot
 of the chunk will contain a symbol specifying the name of the attribute
@@ -1629,14 +1629,14 @@ provided and a state slot value of add-attribute then run the model to
 perform the encoding. Here are some example calls and the goal chunk
 that will be created:</p>
 <div>
-<pre><code>? (categorize-attribute size -.9)
-&gt;&gt;&gt; categorize.attribute(&#39;size&#39;,-.9)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>categorize-attribute size -.9<span class="tok-paren">)</span>
+&gt;&gt;&gt; categorize.attribute<span class="tok-paren">(</span>'size',-.9<span class="tok-paren">)</span>
 
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    NAME SIZE
    STATE ADD-ATTRIBUTE
-   VALUE -0.9
+   VALUE <span class="tok-number">-0.9</span>
 </code></pre>
 </div>
 <p>That should lead to the model creating a chunk like this in the
@@ -1761,7 +1761,7 @@ you would like to explore the parameters for improving the fit then the
 ones that are recommended to be changed would be these four from the
 model:</p>
 <div>
-<pre><code>  (sgp :mp 1 :ppm 1 :egs .25 :ans .25)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :mp <span class="tok-number">1</span> :ppm <span class="tok-number">1</span> :egs .25 :ans .25<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those are the partial matching scale parameters for declarative and
 procedural partial matching and the noise values for those mechanisms.

@@ -93,15 +93,15 @@ The only learning mechanism enabled in the model is utility learning and
 the model has been given some noise in utilities with these parameter
 settings:</p>
 <div>
-<pre><code>  (sgp :esc t :ul t :egs .5)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :esc t :ul t :egs .5<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The utility learning rate parameter :alpha is not set so it will have
 the default value of 0.2. To allow the model to learn, the productions
 which fire for matching and mismatching the feedback are given the
 following rewards:</p>
 <div>
-<pre><code>  (spp response-matches :reward 4)
-  (spp response-doesnt-match :reward 0)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>spp response-matches :reward <span class="tok-number">4</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp response-doesnt-match :reward <span class="tok-number">0</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The productions are not given any particular starting utilities.
 Therefore, they will all start with the default utility of 0. </p>
@@ -227,13 +227,13 @@ larger than the amount of time that passes until the reward happens, and
 since there are 5.05 seconds between the selection and the reward we
 will adjust the reward for being correct to 6 instead of 4:</p>
 <div>
-<pre><code>  (spp response-matches :reward 6)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>spp response-matches :reward <span class="tok-number">6</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>While we are editing the model file we should also add the :ult
 setting so that we don’t have to keep setting it each time we reset to
 start a new run:</p>
 <div>
-<pre><code>  (sgp :esc t :ul t :egs .5 :ult t)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :esc t :ul t :egs .5 :ult t<span class="tok-paren">)</span></code></pre>
 </div>
 <p>After making that change and saving the model here is the trace of
 the utility learning now:</p>
@@ -377,7 +377,7 @@ code.</p>
 <p>Here is the setting we will add to the model to provide a null reward
 when there is no feedback for a trial:</p>
 <div>
-<pre><code>  (spp unknown-response :reward t)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>spp unknown-response :reward t<span class="tok-paren">)</span></code></pre>
 </div>
 <p>By providing a null reward when the unknown-response production fires
 it will stop the reward from the next trial from propagating back past
@@ -763,10 +763,10 @@ but we will provide some details on how the model represents the
 information it uses to perform the task.</p>
 <p>Here are the chunk-types which the model specifies:</p>
 <div>
-<pre><code>  (chunk-type task state)
-  (chunk-type number visual-rep)
-  (chunk-type response key (is-response t))
-  (chunk-type trial num1 num2 result response)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> task state<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> number visual-rep<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> response key <span class="tok-paren">(</span>is-response t<span class="tok-paren">)</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> trial num1 num2 result response<span class="tok-paren">)</span></code></pre>
 </div>
 <p> </p>
 <p>The task chunk-type is used for the <strong>goal</strong> buffer to
@@ -781,10 +781,10 @@ retrieve a number chunk based on the value which it gets when it attends
 to it on the screen. Here are the initial number chunks which the model
 starts with in its declarative memory:</p>
 <div>
-<pre><code>  (add-dm (zero isa number visual-rep &quot;0&quot;)
-          (one isa number visual-rep &quot;1&quot;)
-          (two isa number visual-rep &quot;2&quot;)
-          (three isa number visual-rep &quot;3&quot;))</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">add-dm</span> <span class="tok-paren">(</span>zero <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"0"</span><span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>one <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"1"</span><span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>two <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"2"</span><span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>three <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"3"</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The base-level of those chunks is set to a high value so that they
 should always be retrieved quickly. There are also similarity values set
@@ -798,9 +798,9 @@ That will make it easy to retrieve a random response in the model by
 just indicating “isa response” in the request. Here are the response
 chunks which the model starts with in its declarative memory:</p>
 <div>
-<pre><code>  (add-dm (response-1 isa response key &quot;s&quot;)
-          (response-2 isa response key &quot;d&quot;)
-          (response-3 isa response key &quot;f&quot;))</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">add-dm</span> <span class="tok-paren">(</span>response-1 <span class="tok-isa">isa</span> response key <span class="tok-string">"s"</span><span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>response-2 <span class="tok-isa">isa</span> response key <span class="tok-string">"d"</span><span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>response-3 <span class="tok-isa">isa</span> response key <span class="tok-string">"f"</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Like the number chunks, those chunks are given a high base-level
 activation as an assumption that the model knows the instructions before
@@ -842,7 +842,7 @@ like this may require the model to account for that strategy
 processing.</p>
 <p>Here are the parameter settings from the model:</p>
 <div>
-<pre><code>  (sgp :esc t :lf .5 :bll .5 :mp 18 :rt -3 :ans .25)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :esc t :lf .5 :bll .5 :mp <span class="tok-number">18</span> :rt <span class="tok-number">-3</span> :ans .25<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Since we do not have data to fit, the parameters for the model were
 either set to recommended values (:bll and :ans) or simply adjusted to
@@ -1136,9 +1136,9 @@ for a draw and win respectively so that there is some distance between
 them and see how that works. Thus, here are the settings which we will
 add to the model:</p>
 <div>
-<pre><code>  (spp encode-feedback-win :reward 18)
-  (spp encode-feedback-lose :reward 12)
-  (spp encode-feedback-draw :reward 15)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span>spp encode-feedback-win :reward <span class="tok-number">18</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp encode-feedback-lose :reward <span class="tok-number">12</span><span class="tok-paren">)</span>
+  <span class="tok-paren">(</span>spp encode-feedback-draw :reward <span class="tok-number">15</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Now we need to choose the starting utility for the initial
 productions. Given the nature of the task and the rewards chosen
@@ -1153,7 +1153,7 @@ issues. We will leave the learning rate, alpha, at its default of 0.2.
 Here are the settings which we need to add to the model now to enable
 utility learning and set those parameters:</p>
 <div>
-<pre><code>  (sgp :ul t :egs 1.0 :iu 15)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :ul t :egs <span class="tok-number">1.0</span> :iu <span class="tok-number">15</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those changes should not affect the operation of the current model
 since it does not have any productions which are currently competing for
@@ -1178,7 +1178,7 @@ also going to turn on the additional trace output it provides so that we
 can see what it does as the model runs. Adding these additional
 parameter settings to the model will turn on those mechanisms:</p>
 <div>
-<pre><code>  (sgp :epl t :pct t)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :epl t :pct t<span class="tok-paren">)</span></code></pre>
 </div>
 <h2 id="testing-the-model-1">Testing the Model</h2>
 <p>Testing a model which uses production compilation typically involves
@@ -1221,7 +1221,7 @@ definition as described in the unit 3 modeling text:</p>
 setting explicit seed values in the model for testing purposes. The
 first seed we will use is:</p>
 <div>
-<pre><code>  (sgp :seed (1 3))</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :seed <span class="tok-paren">(</span><span class="tok-number">1</span> <span class="tok-number">3</span><span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Now we will run the model one trial at a time to look at the results
 of production compilation. It will require multiple trials before we are
@@ -1905,25 +1905,25 @@ original productions. </p>
 <p>The modification to the <strong>imaginal</strong> buffer chunk is an
 action from the respond production:</p>
 <div>
-<pre><code>  (p respond
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> respond
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state respond
-     =retrieval&gt;
-       isa response
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> response
        key =key
      ?manual&gt;
        state free
-     =imaginal&gt;
-       isa trial    
-     ==&gt;
-     =imaginal&gt;
+     <span class="tok-buffer">=imaginal&gt;</span>
+       <span class="tok-isa">isa</span> trial    
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
        response =retrieval
-     +manual&gt;
+     <span class="tok-buffer">+manual&gt;</span>
        cmd press-key
        key =key
-     =goal&gt;
-       state detect-feedback)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state detect-feedback<span class="tok-paren">)</span></code></pre>
 </div>
 <p>In that production the slot is set to the chunk which is currently in
 the <strong>retrieval</strong> buffer. Recall that buffers hold copies
@@ -1964,18 +1964,18 @@ Production Compilation process started for RETRIEVED-A-WIN
 retrieved-a-win production is invalid for compilation purposes because
 it makes an indirect retrieval action. Here is that production:</p>
 <div>
-<pre><code>  (p retrieved-a-win
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieved-a-win
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state process-past-trial
-     =retrieval&gt;
-       isa trial
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> trial
        result win
        response =response
-     ==&gt;
-     +retrieval&gt; =response
-     =goal&gt;
-       state respond)</code></pre>
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span> =response
+     <span class="tok-buffer">=goal&gt;</span>
+       state respond<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The value from the response slot of the trial chunk is being used to
 specify the retrieval, which is done as a consequence of a specific
@@ -1999,58 +1999,58 @@ compatible with production compilation.</p>
 production needs to be changed to save the key slot’s value instead of
 the response chunk itself:</p>
 <div>
-<pre><code>  (p respond
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> respond
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state respond
-     =retrieval&gt;
-       isa response
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> response
        key =key
      ?manual&gt;
        state free
-     =imaginal&gt;
-       isa trial    
-     ==&gt;
-     =imaginal&gt;
+     <span class="tok-buffer">=imaginal&gt;</span>
+       <span class="tok-isa">isa</span> trial    
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
        response =key
-     +manual&gt;
+     <span class="tok-buffer">+manual&gt;</span>
        cmd press-key
        key =key
-     =goal&gt;
-       state detect-feedback)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state detect-feedback<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Then the retrieved-a-win and retrieved-a-non-win productions need to
 be changed so that they retrieve a response chunk based on the key value
 instead of indirectly retrieving the chunk:</p>
 <div>
-<pre><code>  (p retrieved-a-win
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieved-a-win
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state process-past-trial
-     =retrieval&gt;
-       isa trial
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> trial
        result win
        response =response
-     ==&gt;
-     +retrieval&gt; 
-       isa response
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span> 
+       <span class="tok-isa">isa</span> response
        key =response
-     =goal&gt;
-       state respond)
-  (p retrieved-a-non-win
-     =goal&gt;
-       isa task
+     <span class="tok-buffer">=goal&gt;</span>
+       state respond<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieved-a-non-win
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state process-past-trial
-     =retrieval&gt;
-       isa trial
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> trial
       - result win
        response =response
-     ==&gt;
-     +retrieval&gt; 
-       isa response
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span> 
+       <span class="tok-isa">isa</span> response
        key =response
-     =goal&gt;
-       state guess-other)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state guess-other<span class="tok-paren">)</span></code></pre>
 </div>
 <p>After making those changes, we should look at the model to make sure
 that there are not any other changes that should be made while we are
@@ -2095,44 +2095,44 @@ chunk-type to hold the reference we want to use. We will call that slot
 representation and make this change to the chunk-type specification in
 the model:</p>
 <div>
-<pre><code>  (chunk-type number visual-rep representation)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> number visual-rep representation<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That will then require making the following changes to the encoding
 productions to use that slot’s value instead of the chunk in the
 <strong>retrieval</strong> buffer:</p>
 <div>
-<pre><code>  (p encode-num-1
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-num-1
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state encode-num-1
-     =retrieval&gt;
-       isa number
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> number
        representation =number
-     =imaginal&gt;
-       isa trial
-     ==&gt;
-     =imaginal&gt;
+     <span class="tok-buffer">=imaginal&gt;</span>
+       <span class="tok-isa">isa</span> trial
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
        num1 =number
-     =goal&gt;
+     <span class="tok-buffer">=goal&gt;</span>
        state find-num-2
-     +visual-location&gt;
-       isa visual-location
+     <span class="tok-buffer">+visual-location&gt;</span>
+       <span class="tok-isa">isa</span> visual-location
        &gt; screen-x current
-       :attended nil)
-  (p encode-num-2
-     =goal&gt;
-       isa task
+       :attended nil<span class="tok-paren">)</span>
+  <span class="tok-paren">(</span><span class="tok-keyword">p</span> encode-num-2
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state encode-num-2
-     =retrieval&gt;
-       isa number
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> number
        representation =number
-     =imaginal&gt;
-       isa trial
-     ==&gt;
-     =imaginal&gt;
+     <span class="tok-buffer">=imaginal&gt;</span>
+       <span class="tok-isa">isa</span> trial
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">=imaginal&gt;</span>
        num2 =number
-     =goal&gt;
-       state retrieve-past-trial)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state retrieve-past-trial<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Now we have to determine what value to store in that slot. It has to
 be a chunk so that similarities can be set, and there are basically two
@@ -2140,10 +2140,10 @@ ways to handle that. One is to simply store the name of the number chunk
 itself in the representation slot when it is created. That would look
 like this in the current model:</p>
 <div>
-<pre><code>  (add-dm (zero isa number visual-rep &quot;0&quot; representation zero)
-          (one isa number visual-rep &quot;1&quot; representation one)
-          (two isa number visual-rep &quot;2&quot; representation two)
-          (three isa number visual-rep &quot;3&quot; representation three))</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">add-dm</span> <span class="tok-paren">(</span>zero <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"0"</span> representation zero<span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>one <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"1"</span> representation one<span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>two <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"2"</span> representation two<span class="tok-paren">)</span>
+          <span class="tok-paren">(</span>three <span class="tok-isa">isa</span> number visual-rep <span class="tok-string">"3"</span> representation three<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The other option would be to create a more distributed representation
 which involves separate chunks for the visual mapping and the number
@@ -2339,7 +2339,7 @@ the retrieval takes), and as a first pass we will choose 10 so that this
 pair of productions will fire. Thus, we will add this additional
 parameter setting to the model:</p>
 <div>
-<pre><code>  (sgp :epl t :pct t :tt 10)</code></pre>
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">sgp</span> :epl t :pct t :tt <span class="tok-number">10</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>After saving and reloading the model now when it gets to that point
 we see that it creates this production:</p>
@@ -2408,21 +2408,21 @@ the flag.</p>
 action like this to the production to call a command called set-flag
 (which we will add before running it):</p>
 <div>
-<pre><code>  (p retrieved-a-non-win
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieved-a-non-win
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state process-past-trial
-     =retrieval&gt;
-       isa trial
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> trial
       - result win
        response =response
-     ==&gt;
-     !eval! (&quot;set-flag&quot;)
-     +retrieval&gt; 
-       isa response
+     <span class="tok-arrow">==&gt;</span>
+     !eval! <span class="tok-paren">(</span><span class="tok-string">"set-flag"</span><span class="tok-paren">)</span>
+     <span class="tok-buffer">+retrieval&gt;</span> 
+       <span class="tok-isa">isa</span> response
        key =response
-     =goal&gt;
-       state guess-other)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state guess-other<span class="tok-paren">)</span></code></pre>
 </div>
 <p>We also need to remove the :seed parameter setting from the model and
 just add a check of the parameter at the top of the model.</p>
@@ -2504,20 +2504,20 @@ Production Compilation process started for RETRIEVED-A-NON-WIN
 it has modifiers on the slot tests. Here is the production again for
 reference:</p>
 <div>
-<pre><code>  (p retrieved-a-non-win
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieved-a-non-win
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state process-past-trial
-     =retrieval&gt;
-       isa trial
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> trial
       - result win
        response =response
-     ==&gt;
-     +retrieval&gt; 
-       isa response
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span> 
+       <span class="tok-isa">isa</span> response
        key =response
-     =goal&gt;
-       state guess-other)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state guess-other<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The result slot test in the retrieval buffer's condition is the only
 one that has a modifier so that must be what is stopping
@@ -2546,21 +2546,21 @@ use the !safe-eval! operator instead. That could go out through an
 external command, as we used above, but for simplicity we are just going
 to perform the check directly in Lisp code in the production:</p>
 <div>
-<pre><code>  (p retrieved-a-non-win
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> retrieved-a-non-win
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state process-past-trial
-     =retrieval&gt;
-       isa trial
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> trial
        result =result
        response =response
-     !safe-eval! (not (equal =result &#39;win))
-     ==&gt;
-     +retrieval&gt; 
-       isa response
+     !safe-eval! <span class="tok-paren">(</span>not <span class="tok-paren">(</span>equal =result 'win<span class="tok-paren">)</span><span class="tok-paren">)</span>
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span> 
+       <span class="tok-isa">isa</span> response
        key =response
-     =goal&gt;
-       state guess-other)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state guess-other<span class="tok-paren">)</span></code></pre>
 </div>
 <p>If we save that change and run the model to that point again we will
 now see the following production compilation trace result:</p>
@@ -2607,19 +2607,19 @@ after retrieved-a-non-win, guess-other, will retrieve a different
 response to make since the model does not want to make the response that
 did not lead to a win:</p>
 <div>
-<pre><code>  (p guess-other
-     =goal&gt;
-       isa task
+<pre class="lisp"><code>  <span class="tok-paren">(</span><span class="tok-keyword">p</span> guess-other
+     <span class="tok-buffer">=goal&gt;</span>
+       <span class="tok-isa">isa</span> task
        state guess-other
-     =retrieval&gt;
-       isa response
+     <span class="tok-buffer">=retrieval&gt;</span>
+       <span class="tok-isa">isa</span> response
        key =key
-     ==&gt;
-     +retrieval&gt;
-       isa response
+     <span class="tok-arrow">==&gt;</span>
+     <span class="tok-buffer">+retrieval&gt;</span>
+       <span class="tok-isa">isa</span> response
       - key =key
-     =goal&gt;
-       state respond)</code></pre>
+     <span class="tok-buffer">=goal&gt;</span>
+       state respond<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Therefore when it retrieves a non-winning trial it is not going to
 immediately create a new production which performs a specific move.
@@ -2759,8 +2759,8 @@ parameters using the spp command. That allows us to do something like
 this in Lisp to create a list of all the productions which have a
 <strong>nil</strong> :utility parameter setting:</p>
 <div>
-<pre><code>? (mapcar &#39;car (remove-if (lambda (x) x) (no-output (spp :name :utility)) :key &#39;second))
-(RESPOND-WHEN-RESPONSE-FAILURE PRODUCTION0 PRODUCTION4 PRODUCTION5 PRODUCTION11 PRODUCTION12 PRODUCTION21 PRODUCTION22 PRODUCTION23 PRODUCTION25 PRODUCTION32 PRODUCTION35 PRODUCTION42 PRODUCTION60 PRODUCTION80 PRODUCTION116 PRODUCTION529 PRODUCTION530 PRODUCTION589 PRODUCTION600 PRODUCTION646 PRODUCTION671 PRODUCTION745 PRODUCTION775 PRODUCTION785)</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>mapcar 'car <span class="tok-paren">(</span>remove-if <span class="tok-paren">(</span>lambda <span class="tok-paren">(</span>x<span class="tok-paren">)</span> x<span class="tok-paren">)</span> <span class="tok-paren">(</span>no-output <span class="tok-paren">(</span>spp :name :utility<span class="tok-paren">)</span><span class="tok-paren">)</span> :key 'second<span class="tok-paren">)</span><span class="tok-paren">)</span>
+<span class="tok-paren">(</span>RESPOND-WHEN-RESPONSE-FAILURE PRODUCTION0 PRODUCTION4 PRODUCTION5 PRODUCTION11 PRODUCTION12 PRODUCTION21 PRODUCTION22 PRODUCTION23 PRODUCTION25 PRODUCTION32 PRODUCTION35 PRODUCTION42 PRODUCTION60 PRODUCTION80 PRODUCTION116 PRODUCTION529 PRODUCTION530 PRODUCTION589 PRODUCTION600 PRODUCTION646 PRODUCTION671 PRODUCTION745 PRODUCTION775 PRODUCTION785<span class="tok-paren">)</span></code></pre>
 </div>
 <p> </p>
 <p>or something like this in Python:</p>
@@ -2805,46 +2805,46 @@ those productions are not matching because that specific pair of numbers
 is not presented again before the end of the experiment. Here are some
 examples of that:</p>
 <div>
-<pre><code>(P PRODUCTION775
-  &quot;PRODUCTION2 &amp; PRODUCTION29 - IMAGINAL-CHUNK0-5&quot;
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION775
+  <span class="tok-string">"PRODUCTION2 &amp; PRODUCTION29 - IMAGINAL-CHUNK0-5"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ENCODE-NUM-2
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM1 ONE
-   =RETRIEVAL&gt;
+   <span class="tok-buffer">=RETRIEVAL&gt;</span>
        REPRESENTATION TWO
    ?MANUAL&gt;
        STATE FREE
- ==&gt;
-   =IMAGINAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM2 TWO
-       RESPONSE &quot;f&quot;
-   =GOAL&gt;
+       RESPONSE <span class="tok-string">"f"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE DETECT-FEEDBACK
-   +MANUAL&gt;
+   <span class="tok-buffer">+MANUAL&gt;</span>
        CMD PRESS-KEY
-       KEY &quot;f&quot;
-)
-(P PRODUCTION785
-  &quot;PRODUCTION2 &amp; PRODUCTION401 - IMAGINAL-CHUNK0-25&quot;
-   =GOAL&gt;
+       KEY <span class="tok-string">"f"</span>
+<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION785
+  <span class="tok-string">"PRODUCTION2 &amp; PRODUCTION401 - IMAGINAL-CHUNK0-25"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ENCODE-NUM-2
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM1 ONE
-   =RETRIEVAL&gt;
+   <span class="tok-buffer">=RETRIEVAL&gt;</span>
        REPRESENTATION ZERO
    ?MANUAL&gt;
        STATE FREE
- ==&gt;
-   =IMAGINAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM2 ZERO
-       RESPONSE &quot;s&quot;
-   =GOAL&gt;
+       RESPONSE <span class="tok-string">"s"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE DETECT-FEEDBACK
-   +MANUAL&gt;
+   <span class="tok-buffer">+MANUAL&gt;</span>
        CMD PRESS-KEY
-       KEY &quot;s&quot;
-)</code></pre>
+       KEY <span class="tok-string">"s"</span>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Those productions seem to be close to what we wanted the model to be
 learning – mapping specific problems to an action. They are also
@@ -2857,41 +2857,41 @@ such productions, one for each of the numbers retrieved (zero, one, two,
 and three). They all have the same structure and here is one of them for
 reference:</p>
 <div>
-<pre><code>(P PRODUCTION0
-  &quot;ATTEND-NUM-1 &amp; ENCODE-NUM-1 - THREE&quot;
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION0
+  <span class="tok-string">"ATTEND-NUM-1 &amp; ENCODE-NUM-1 - THREE"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ATTEND-NUM-1
-   =IMAGINAL&gt;
-   =VISUAL&gt;
-       VALUE &quot;3&quot;
- ==&gt;
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+   <span class="tok-buffer">=VISUAL&gt;</span>
+       VALUE <span class="tok-string">"3"</span>
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM1 THREE
-   =GOAL&gt;
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE FIND-NUM-2
-   +VISUAL-LOCATION&gt;
+   <span class="tok-buffer">+VISUAL-LOCATION&gt;</span>
        :ATTENDED NIL
     &gt; SCREEN-X CURRENT
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>We discussed this production before and expected it to help the model
 speed up over time, so the question is why isn't it being selected? If
 we look for the similar productions which compose attend-num-2 and
 encode-num-2, like production1:</p>
 <div>
-<pre><code>(P PRODUCTION1
-  &quot;ATTEND-NUM-2 &amp; ENCODE-NUM-2 - THREE&quot;
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION1
+  <span class="tok-string">"ATTEND-NUM-2 &amp; ENCODE-NUM-2 - THREE"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE ATTEND-NUM-2
-   =IMAGINAL&gt;
-   =VISUAL&gt;
-       VALUE &quot;3&quot;
- ==&gt;
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+   <span class="tok-buffer">=VISUAL&gt;</span>
+       VALUE <span class="tok-string">"3"</span>
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM2 THREE
-   =GOAL&gt;
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE RETRIEVE-PAST-TRIAL
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>we find that it is matched multiple times over the course of the
 experiment so it seems odd that production0 is not also matched. To
@@ -2992,25 +2992,25 @@ production401). We expected items of the first type to be created and
 used, but the second type, like production29, are not quite what we were
 looking for:</p>
 <div>
-<pre><code>(P PRODUCTION29
-  &quot;RETRIEVED-A-WIN &amp; RESPOND - RESPONSE-3&quot;
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION29
+  <span class="tok-string">"RETRIEVED-A-WIN &amp; RESPOND - RESPONSE-3"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE PROCESS-PAST-TRIAL
-   =IMAGINAL&gt;
-   =RETRIEVAL&gt;
-       RESPONSE &quot;f&quot;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+   <span class="tok-buffer">=RETRIEVAL&gt;</span>
+       RESPONSE <span class="tok-string">"f"</span>
        RESULT WIN
    ?MANUAL&gt;
        STATE FREE
- ==&gt;
-   =IMAGINAL&gt;
-       RESPONSE &quot;f&quot;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+       RESPONSE <span class="tok-string">"f"</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE DETECT-FEEDBACK
-   +MANUAL&gt;
+   <span class="tok-buffer">+MANUAL&gt;</span>
        CMD PRESS-KEY
-       KEY &quot;f&quot;
-)</code></pre>
+       KEY <span class="tok-string">"f"</span>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That production has removed a retrieval which should reduce the time
 it takes to respond, but it is not the main type of production we were
@@ -3024,22 +3024,22 @@ those and see why they are not being selected. </p>
 <p>Looking through the generated productions we do find instances of the
 productions we want, like production21:</p>
 <div>
-<pre><code>(P PRODUCTION21
-  &quot;RETRIEVE-PAST-TRIAL &amp; RETRIEVED-A-NON-WIN - IMAGINAL-CHUNK0-2&quot;
-   !SAFE-EVAL! (NOT (EQUAL (QUOTE LOSE) (QUOTE WIN)))
-   =GOAL&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> PRODUCTION21
+  <span class="tok-string">"RETRIEVE-PAST-TRIAL &amp; RETRIEVED-A-NON-WIN - IMAGINAL-CHUNK0-2"</span>
+   !SAFE-EVAL! <span class="tok-paren">(</span>NOT <span class="tok-paren">(</span>EQUAL <span class="tok-paren">(</span>QUOTE LOSE<span class="tok-paren">)</span> <span class="tok-paren">(</span>QUOTE WIN<span class="tok-paren">)</span><span class="tok-paren">)</span><span class="tok-paren">)</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE RETRIEVE-PAST-TRIAL
-   =IMAGINAL&gt;
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
        NUM1 TWO
        NUM2 TWO
- ==&gt;
-   =IMAGINAL&gt;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=IMAGINAL&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        STATE GUESS-OTHER
-   +RETRIEVAL&gt;
+   <span class="tok-buffer">+RETRIEVAL&gt;</span>
        IS-RESPONSE T
-       KEY &quot;s&quot;
-)</code></pre>
+       KEY <span class="tok-string">"s"</span>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Looking at the history shows productions like that do match a few
 times, but they are not being recreated enough to raise their utilities

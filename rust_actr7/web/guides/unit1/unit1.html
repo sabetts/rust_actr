@@ -378,18 +378,18 @@ the tutorial that will be described in greater detail later in this
 unit. First, here are the chunk-type specifications used in that
 model:</p>
 <div>
-<pre><code>(chunk-type number number next)
-(chunk-type count-from start end count)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> number number next<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> count-from start end count<span class="tok-paren">)</span></code></pre>
 </div>
 <p>and here is the specification of the initial chunks which are placed
 into that model’s declarative memory:</p>
 <div>
-<pre><code>(add-dm
- (one ISA number number one next two)
- (two ISA number number two next three)
- (three ISA number number three next four)
- (four ISA number number four next five)
- (five ISA number number five))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">add-dm</span>
+ <span class="tok-paren">(</span>one <span class="tok-isa">ISA</span> number number one next two<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>two <span class="tok-isa">ISA</span> number number two next three<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>three <span class="tok-isa">ISA</span> number number three next four<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>four <span class="tok-isa">ISA</span> number number four next five<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>five <span class="tok-isa">ISA</span> number number five<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Each chunk for <strong>add-dm</strong> is specified in a list – a
 sequence of items enclosed in parentheses. The first element of the list
@@ -778,8 +778,8 @@ id="anchor-6"></span>1.5.1 Chunk-types for the Count model</h3>
 <p>The model definition has two specifications for chunk-types used by
 this model:</p>
 <div>
-<pre><code>(chunk-type number number next)
-(chunk-type count-from start end count)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> number number next<span class="tok-paren">)</span>
+<span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> count-from start end count<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The <strong>number</strong> chunk-type specifies the slots that will
 be used to encode the ordering of numbers. It contains a slot named
@@ -796,12 +796,12 @@ for the Count model</h3>
 declarative memory of the model using the <strong>add-dm</strong>
 command:</p>
 <div>
-<pre><code>(add-dm
- (one ISA number number one next two)
- (two ISA number number two next three)
- (three ISA number number three next four)
- (four ISA number number four next five)
- (five ISA number number five))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">add-dm</span>
+ <span class="tok-paren">(</span>one <span class="tok-isa">ISA</span> number number one next two<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>two <span class="tok-isa">ISA</span> number number two next three<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>three <span class="tok-isa">ISA</span> number number three next four<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>four <span class="tok-isa">ISA</span> number number four next five<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>five <span class="tok-isa">ISA</span> number number five<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>Each of the lists in the add-dm command specifies one chunk. The
 first five define chunks named <strong>one</strong>,<strong>
@@ -814,7 +814,7 @@ This is the knowledge that enables the model to count.</p>
 <strong>goal-focus</strong> with the description of a chunk similar to
 what was used in <strong>add-dm</strong>:</p>
 <div>
-<pre><code>(goal-focus (isa count-from start two end four))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> <span class="tok-paren">(</span><span class="tok-isa">isa</span> count-from start two end four<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>The <strong>goal-focus</strong> command allows the modeler to provide
 the description of a chunk to place into the <strong>goal</strong>
@@ -844,19 +844,19 @@ production specifications in detail along with the selection and firing
 of those productions as shown in the trace of the model run above.</p>
 <h4 id="the-start-production">1.5.4.1 The Start Production</h4>
 <div>
-<pre><code>(p start
-   =goal&gt;
-      ISA        count-from
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> start
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       start      =num1
       count      nil
- ==&gt;
-   =goal&gt;
-      ISA        count-from
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       count      =num1
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-   )</code></pre>
+   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>The LHS of the start production tests the <strong>goal</strong>
 buffer. It tests that there is a value in the start slot which it now
@@ -939,24 +939,24 @@ with that chunk.</p>
 <p> 0.100 PROCEDURAL PRODUCTION-SELECTED INCREMENT </p>
 <h4 id="the-increment-production">1.5.4.2 The Increment Production</h4>
 <div>
-<pre><code>(p increment
-   =goal&gt;
-      ISA        count-from
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> increment
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       count      =num1
     - end        =num1
-   =retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
       next       =num2
- ==&gt;
-   =goal&gt;
-      ISA        count-from
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       count      =num2
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num2
-   !output!      (=num1)
-   )</code></pre>
+   <span class="tok-keyword">!output!</span>      <span class="tok-paren">(</span>=num1<span class="tok-paren">)</span>
+   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>On the LHS of this production we see that it tests both the
 <strong>goal</strong> and <strong>retrieval</strong> buffers. In the
@@ -1055,18 +1055,18 @@ production is selected at .3 seconds into the run:</p>
 <p> 0.300 PROCEDURAL PRODUCTION-SELECTED STOP </p>
 <h4 id="the-stop-production">1.5.4.3 The Stop Production</h4>
 <div>
-<pre><code>(p stop
-   =goal&gt;
-      ISA        count-from
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> stop
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        count-from
       count      =num
       end        =num
-   =retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num
- ==&gt;
-   -goal&gt;
-   !output!      (=num)
-   )</code></pre>
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">-goal&gt;</span>
+   <span class="tok-keyword">!output!</span>      <span class="tok-paren">(</span>=num<span class="tok-paren">)</span>
+   <span class="tok-paren">)</span></code></pre>
 </div>
 <p>The stop production matches when the values of the <strong>count
 </strong>and <strong>end</strong> slots of the chunk in the <strong>goal
@@ -1276,9 +1276,9 @@ Network</h3>
 <strong>value</strong>. For instance, the following three chunks encode
 the links involving shark:</p>
 <div>
-<pre><code> (p1 ISA property object shark attribute dangerous value true)
- (p2 ISA property object shark attribute locomotion value swimming)
- (p3 ISA property object shark attribute category value fish)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>p1 <span class="tok-isa">ISA</span> property object shark attribute dangerous value true<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>p2 <span class="tok-isa">ISA</span> property object shark attribute locomotion value swimming<span class="tok-paren">)</span>
+ <span class="tok-paren">(</span>p3 <span class="tok-isa">ISA</span> property object shark attribute category value fish<span class="tok-paren">)</span></code></pre>
 </div>
 <p><strong>p1</strong> encodes that a shark is
 <strong>dangerous</strong> (set in the attribute slot) by setting the
@@ -1325,7 +1325,7 @@ the <strong>goal</strong> buffer has object and category slot values and
 no slot named judgment. The provided starting goal is created like
 this:</p>
 <div>
-<pre><code>(goal-focus (ISA is-member object canary category bird))</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">goal-focus</span> <span class="tok-paren">(</span><span class="tok-isa">ISA</span> is-member object canary category bird<span class="tok-paren">)</span><span class="tok-paren">)</span></code></pre>
 </div>
 <p>which represents a test to determine if a canary is a bird. That
 chunk does not have a judgment slot, and the model will add that slot to
@@ -1360,7 +1360,7 @@ GOAL-CHUNK0
 and only requires the retrieval of this property to determine the
 answer:</p>
 <div>
-<pre><code> (p14 ISA property object canary attribute category value bird)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>p14 <span class="tok-isa">ISA</span> property object canary attribute category value bird<span class="tok-paren">)</span></code></pre>
 </div>
 <p>There are two productions involved. The first,
 <strong>initial-retrieve</strong>, requests the retrieval of categorical
@@ -1368,20 +1368,20 @@ information and the second, <strong>direct-verify,</strong> uses that
 information and sets the <strong>judgment</strong> slot to
 <strong>yes</strong>:</p>
 <div>
-<pre><code>(p initial-retrieve
-   =goal&gt;
-      ISA        is-member
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">p</span> initial-retrieve
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        is-member
       object     =obj
       category   =cat
       judgment   nil
-==&gt;
-   =goal&gt;
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       judgment   pending
-   +retrieval&gt; 
-      ISA        property
+   <span class="tok-buffer">+retrieval&gt;</span> 
+      <span class="tok-isa">ISA</span>        property
       object     =obj
       attribute  category
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p><strong>Initial-retrieve </strong>tests that there are object and
 category slots in the <strong>goal</strong> buffer’s chunk and that it
@@ -1392,21 +1392,21 @@ which indicates a category for the current object.</p>
 <p>After that production fires and the chunk named p14 is retrieved the
 <strong>direct-verify </strong>production matches and fires:</p>
 <div>
-<pre><code>(P direct-verify
-   =goal&gt;
-      ISA        is-member
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> direct-verify
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        is-member
       object     =obj
       category   =cat
       judgment   pending
-   =retrieval&gt;
-      ISA        property
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        property
       object     =obj
       attribute  category
       value      =cat
-==&gt;
-   =goal&gt;
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       judgment   yes
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>That production tests that the chunk in the <strong>goal
 </strong>buffer has values in the object and category slots and a
@@ -1484,26 +1484,26 @@ extra production, <strong>chain-category</strong>, which will attempt to
 retrieve the next category in the case that an attribute has been
 retrieved which does not immediately allow a decision to be made.</p>
 <div>
-<pre><code>(P chain-category
-   =goal&gt;
-      ISA        is-member
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> chain-category
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        is-member
       object     =obj1
       category   =cat
       judgment   pending
-   =retrieval&gt;
-      ISA        property
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        property
       object     =obj1
       attribute  category
       value      =obj2
     - value      =cat
-==&gt;
-   =goal&gt;
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       object     =obj2
-   +retrieval&gt; 
-      ISA        property
+   <span class="tok-buffer">+retrieval&gt;</span> 
+      <span class="tok-isa">ISA</span>        property
       object     =obj2
       attribute  category
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This production tests that the chunk in the <strong>goal
 </strong>buffer has values in the object and category slots and a
@@ -1653,19 +1653,19 @@ request:</p>
 <p>Here is the production that fires in response to a category request
 not being found.</p>
 <div>
-<pre><code>(P fail
-   =goal&gt;
-      ISA        is-member
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> fail
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        is-member
       object     =obj1
       category   =cat 
       judgment   pending
     
    ?retrieval&gt;
       buffer     failure
-==&gt;
-   =goal&gt;
+<span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
       judgment   no
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Note the query for a <strong>retrieval</strong> buffer failure in the
 condition of this production. When a retrieval request does not succeed,

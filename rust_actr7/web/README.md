@@ -76,10 +76,13 @@ under that subpath.
 
 The unit list links to HTML conversions of the tutorial ODTs under
 `actr7.x/tutorial/unitN/`: the main unit guide, code walkthrough, modeling notes
-where present, and the productions summary. The converted pages, media, and
-`guides/manifest.json` are committed under `web/guides/`.
+where present, and the productions summary. Clicking a guide row opens it in the
+workspace Guide tab; the arrow beside the row opens the standalone guide in a
+new tab. The converted pages, media, and `guides/manifest.json` are committed
+under `web/guides/`.
 
-Regenerate them with:
+Lisp code blocks are fixed-width and syntax-highlighted with the same token
+palette as the model editor. Regenerate them with:
 
 ```sh
 python rust_actr7/web/convert_guides.py
@@ -99,8 +102,10 @@ runner:
   `Demo` badges. A hidden native `<select id="model-preset">` stays populated
   for compatibility and test selectors.
 - **Unit guides**: each expanded unit ends with links to its converted HTML
-  guide, code walkthrough, modeling notes, and productions summary. Guides open
-  in a new tab and link back to the tutorial.
+  guide, code walkthrough, modeling notes, and productions summary. A guide row
+  opens in the workspace Guide tab (with a Close button), while its arrow opens
+  the standalone page in a new tab. Guide pages use fixed-width, syntax-
+  highlighted Lisp code blocks.
 - **Run bar**: sticky across the top of the page, with run time, seed pair
   under "Seed & advanced", live status pill, Run, and Cancel.
 - **Workspace tabs**: `Task` (task models only), `Model source`, and `Trace`.

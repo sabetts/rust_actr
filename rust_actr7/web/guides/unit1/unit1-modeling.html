@@ -263,14 +263,14 @@ will use for this model:</p>
 sequencing of numbers by indicating the order for a pair of numbers with
 number preceding next:</p>
 <div>
-<pre><code>(chunk-type number number next)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> number number next<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The add chunk-type will be used to create chunks indicating the goal
 of adding two numbers and it contains slots for holding the two numbers,
 the final sum, and the running count as we progress through the
 additions:</p>
 <div>
-<pre><code>(chunk-type add arg1 arg2 sum count)</code></pre>
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">chunk-type</span> add arg1 arg2 sum count<span class="tok-paren">)</span></code></pre>
 </div>
 <p>The design of a model should also indicate detailed information about
 the starting conditions and the expected end state for the model. Here
@@ -460,56 +460,56 @@ the ACT-R reference manual to find out more information.</p>
 from the goal condition. Here is the initialize-addition production from
 the model:</p>
 <div>
-<pre><code>(P initialize-addition
-   =goal&gt;
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> initialize-addition
+   <span class="tok-buffer">=goal&gt;</span>
       add
       arg1       =num1
       arg2       =num2
       sum        nil
-  ==&gt;
+  <span class="tok-arrow">==&gt;</span>
    =goal
-      ISA        add
+      <span class="tok-isa">ISA</span>        add
       sum        =num1
       count      zero
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>If we add the missing isa to the goal condition like this:</p>
-<pre><code>(P initialize-addition
-   =goal&gt;
-      isa        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> initialize-addition
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>        add
       arg1       =num1
       arg2       =num2
       sum        nil
-  ==&gt;
+  <span class="tok-arrow">==&gt;</span>
    =goal
-      ISA        add
+      <span class="tok-isa">ISA</span>        add
       sum        =num1
       count      zero
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 <p>That should fix the problem. Alternatively, we could just remove add
 from the condition instead since the chunk-type is an optional
 declaration in a buffer test:</p>
-<pre><code>
-(P initialize-addition
-   =goal&gt;
+<pre class="lisp"><code>
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> initialize-addition
+   <span class="tok-buffer">=goal&gt;</span>
       arg1       =num1
       arg2       =num2
       sum        nil
-  ==&gt;
+  <span class="tok-arrow">==&gt;</span>
    =goal
-      ISA        add
+      <span class="tok-isa">ISA</span>        add
       sum        =num1
       count      zero
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 <h2 id="fixing-terminate-addition">Fixing terminate-addition</h2>
 <p>The last warning we have that’s not a style warning is this one:</p>
 <p>#|Warning: Production TERMINATE-ADDITION uses previously undefined
@@ -517,32 +517,32 @@ slots (SUMM). |#</p>
 <p>Here is the text of the terminate-addition production from the
 model:</p>
 <div>
-<pre><code>(P terminate-addition
-   =goal&gt;
-      ISA        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> terminate-addition
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       count      =num
       arg2       =num2
       summ        =answer
-  ==&gt;
-   =goal&gt;
-      ISA        add
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       count      nil
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>This warning seems fairly straight forward. There was a typo in the
 condition of the production and the slot name summ was used instead of
 the correct name sum.</p>
-<pre><code>(P terminate-addition
-   =goal&gt;
-      ISA        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> terminate-addition
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       count      =num
       arg2       =num2
       sum        =answer
-  ==&gt;
-   =goal&gt;
-      ISA        add
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       count      nil
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 <h2 id="fixing-increment-sum">Fixing increment-sum</h2>
 <p>Here is the warning about increment-sum:</p>
 <p>#|Warning: Production INCREMENT-SUM already exists and it is being
@@ -583,21 +583,21 @@ correct.</p>
 a problem with the first action on the RHS of the production, and here
 again is our updated version of the production:</p>
 <div>
-<pre><code>(P initialize-addition
-   =goal&gt;
-      isa        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> initialize-addition
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">isa</span>        add
       arg1       =num1
       arg2       =num2
       sum        nil
-  ==&gt;
+  <span class="tok-arrow">==&gt;</span>
    =goal
-      ISA        add
+      <span class="tok-isa">ISA</span>        add
       sum        =num1
       count      zero
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =num1
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Looking at that closely, we can see that there is a missing “&gt;”
 symbol at the end of the goal modification action above. We will add
@@ -656,14 +656,14 @@ with those values in it. The model as given already has such a chunk
 created called test-goal found along with the other chunks created for
 declarative memory:</p>
 <div>
-<pre><code> (test-goal ISA add arg1 zero arg2 zero)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>test-goal <span class="tok-isa">ISA</span> add arg1 zero arg2 zero<span class="tok-paren">)</span></code></pre>
 </div>
 <p>So, at this point it might seem like a good time to try to run the
 model, and here is what we get when we do:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.000  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.000</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>Nothing happened. While it may be obvious to you why this model did
 not do anything at this point, we are still going to walk through the
@@ -693,21 +693,21 @@ production to be selected we can use the whynot tool now and find out
 why it did not fire in the current model state. Here are the results of
 calling the whynot command for initialize-addition:</p>
 <div>
-<pre><code>? (whynot initialize-addition)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>whynot initialize-addition<span class="tok-paren">)</span>
 
 Production INITIALIZE-ADDITION does NOT match.
-(P INITIALIZE-ADDITION
-   =GOAL&gt;
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> INITIALIZE-ADDITION
+   <span class="tok-buffer">=GOAL&gt;</span>
        ARG1 =NUM1
        ARG2 =NUM2
        SUM NIL
- ==&gt;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        SUM =NUM1
        COUNT ZERO
-   +RETRIEVAL&gt;
+   <span class="tok-buffer">+RETRIEVAL&gt;</span>
        NUMBER =NUM1
-)
+<span class="tok-paren">)</span>
 It fails because: 
 The GOAL buffer is empty.</code></pre>
 </div>
@@ -732,18 +732,18 @@ setting a goal chunk was necessary prior to running it.</p>
 <h3 id="the-second-run">The Second Run</h3>
 <p>Here is what happens when we run it now:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ZERO ARG2 ZERO) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK ZERO
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.100  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ZERO ARG2 ZERO<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK ZERO
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>Looking at that trace, it has fired the productions we would expect
 from our design. First it initializes the addition process, and then it
@@ -767,7 +767,7 @@ which can be useful when comparing the contents of different buffers.
 <p>Here is the output from the buffer-chunk command for the goal
 buffer:</p>
 <div>
-<pre><code>? (buffer-chunk goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ZERO
@@ -793,21 +793,21 @@ the model:</p>
 run it again and here is the result of the run and the chunk from the
 goal buffer:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ZERO) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK ONE
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.100  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ZERO<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK ONE
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <div>
-<pre><code>? (buffer-chunk goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ONE
@@ -831,18 +831,18 @@ update the count value, and then terminate-addition since our count will
 then be equal to 1.</p>
 <p>Here is what we get when we run it:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ONE) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK ONE
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.100  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ONE<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK ONE
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>It does not do what we expected it to do. The first production fired
 as we would expect, but then instead of the increment-sum production
@@ -859,25 +859,25 @@ run it again. </p>
 <p>(sgp :trace-detail high :esc t :lf .05)</p>
 <p> Here is the trace with the detail level set to high:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ONE) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.000  PROCEDURAL            PRODUCTION-SELECTED INITIALIZE-ADDITION
-     0.000  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.050  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.050  PROCEDURAL            MODULE-REQUEST RETRIEVAL
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.050  PROCEDURAL            PRODUCTION-SELECTED TERMINATE-ADDITION
-     0.050  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.100  DECLARATIVE           RETRIEVED-CHUNK ONE
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.100  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     0.100  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ONE<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.000</span>  PROCEDURAL            PRODUCTION-SELECTED INITIALIZE-ADDITION
+     <span class="tok-number">0.000</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            MODULE-REQUEST RETRIEVAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-SELECTED TERMINATE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK ONE
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">0.100</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>Reading through that trace the first thing that seems wrong is the
 selection of terminate-addition at time 0.050 (which doesn’t show up in
@@ -959,17 +959,17 @@ choose to look at it, what you should find is that it is binding three
 different variables to the slots being tested and it is not actually
 comparing any of them:</p>
 <div>
-<pre><code>(P terminate-addition
-   =goal&gt;
-      ISA        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> terminate-addition
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       count      =num
       arg2       =num2
       sum        =answer
-  ==&gt;
-   =goal&gt;
-      ISA        add
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       count      nil
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>So we need to change that so it does the comparison correctly, which
 means using the same variable for both the count and arg2 tests. If we
@@ -988,29 +988,29 @@ that should still be sufficient since it will show all the productions
 that fire. After making that change as well and then reloading here is
 what the model does when we run it:</p>
 <div>
-<pre><code>? (run 1)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ONE) NIL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.350  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.400  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.450  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.500  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.550  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.600  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.650  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.700  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.750  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.800  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.850  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.900  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.950  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.000  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     1.000  ------                Stopped because time limit reached</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ONE<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.350</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.400</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.450</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.500</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.550</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.600</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.650</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.700</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.750</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.800</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.850</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.900</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.950</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.000</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">1.000</span>  ------                Stopped because time limit reached</code></pre>
 </div>
 <p>Now we have a problem where the increment-sum production fires
 repeatedly. Again, one could immediately start looking at the model code
@@ -1024,48 +1024,48 @@ occurs well before the first second is over. So, we will only run the
 model up to time 0.300 since that is after the first repeat of
 increment-sum which we know to be a problem:</p>
 <div>
-<pre><code>? (run .3)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ONE) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.000  PROCEDURAL            PRODUCTION-SELECTED INITIALIZE-ADDITION
-     0.000  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.050  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.050  PROCEDURAL            MODULE-REQUEST RETRIEVAL
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK ONE
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
-     0.100  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.100  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
-     0.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.150  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.150  PROCEDURAL            MODULE-REQUEST RETRIEVAL
-     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.150  DECLARATIVE           start-retrieval
-     0.150  PROCEDURAL            CONFLICT-RESOLUTION
-     0.200  DECLARATIVE           RETRIEVED-CHUNK ZERO
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.200  PROCEDURAL            CONFLICT-RESOLUTION
-     0.200  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
-     0.200  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.200  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
-     0.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.250  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.250  PROCEDURAL            MODULE-REQUEST RETRIEVAL
-     0.250  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.250  DECLARATIVE           start-retrieval
-     0.250  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  DECLARATIVE           RETRIEVED-CHUNK ZERO
-     0.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.300  PROCEDURAL            CONFLICT-RESOLUTION
-     0.300  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
-     0.300  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.300  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
-     0.300  ------                Stopped because time limit reached</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run .3<span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ONE<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.000</span>  PROCEDURAL            PRODUCTION-SELECTED INITIALIZE-ADDITION
+     <span class="tok-number">0.000</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            MODULE-REQUEST RETRIEVAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK ONE
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
+     <span class="tok-number">0.100</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.100</span>  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.150</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            MODULE-REQUEST RETRIEVAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.150</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.150</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.200</span>  DECLARATIVE           RETRIEVED-CHUNK ZERO
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.200</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.200</span>  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
+     <span class="tok-number">0.200</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.200</span>  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
+     <span class="tok-number">0.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.250</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.250</span>  PROCEDURAL            MODULE-REQUEST RETRIEVAL
+     <span class="tok-number">0.250</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.250</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.250</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  DECLARATIVE           RETRIEVED-CHUNK ZERO
+     <span class="tok-number">0.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.300</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
+     <span class="tok-number">0.300</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.300</span>  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
+     <span class="tok-number">0.300</span>  ------                Stopped because time limit reached</code></pre>
 </div>
 <p>As with the last problem, here again the issue looks to be an
 incorrect production selection since we expect increment-count to follow
@@ -1111,23 +1111,23 @@ which it makes thus allowing it to continuously match (and of course it
 is also possible that both of those are true). Here is the production
 from the model for reference:</p>
 <div>
-<pre><code>(P increment-sum
-   =goal&gt;
-      ISA        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> increment-sum
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       sum        =sum
       count      =count
     - arg2       =count
-   =retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       next       =newsum
-  ==&gt;
-   =goal&gt;
-      ISA        add
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       sum        =newsum
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =count
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 </div>
 <p>We will start by looking at the action of the production. It modifies
 the sum slot of the goal to be the next value based on the retrieved
@@ -1160,55 +1160,55 @@ number chunks are set up, what we need to test is that the value in the
 number slot of the chunk in the retrieval buffer matches the value in
 the sum slot of the chunk in the goal buffer. Adding that constraint to
 the production like this:</p>
-<pre><code>(P increment-sum
-   =goal&gt;
-      ISA        add
+<pre class="lisp"><code><span class="tok-paren">(</span><span class="tok-keyword">P</span> increment-sum
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       sum        =sum
       count      =count
     - arg2       =count
-   =retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">=retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =sum
       next       =newsum
-  ==&gt;
-   =goal&gt;
-      ISA        add
+  <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=goal&gt;</span>
+      <span class="tok-isa">ISA</span>        add
       sum        =newsum
-   +retrieval&gt;
-      ISA        number
+   <span class="tok-buffer">+retrieval&gt;</span>
+      <span class="tok-isa">ISA</span>        number
       number     =count
-)</code></pre>
+<span class="tok-paren">)</span></code></pre>
 <p>seems like the right thing to do, and we can now save, load, and
 retest the model.</p>
 <p>Here is the trace we get now:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ONE) NIL
-     0.000  PROCEDURAL            CONFLICT-RESOLUTION
-     0.000  PROCEDURAL            PRODUCTION-SELECTED INITIALIZE-ADDITION
-     0.000  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.050  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.050  PROCEDURAL            MODULE-REQUEST RETRIEVAL
-     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.050  DECLARATIVE           start-retrieval
-     0.050  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  DECLARATIVE           RETRIEVED-CHUNK ONE
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.100  PROCEDURAL            CONFLICT-RESOLUTION
-     0.100  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
-     0.100  PROCEDURAL            BUFFER-READ-ACTION GOAL
-     0.100  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
-     0.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.150  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
-     0.150  PROCEDURAL            MODULE-REQUEST RETRIEVAL
-     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
-     0.150  DECLARATIVE           start-retrieval
-     0.150  PROCEDURAL            CONFLICT-RESOLUTION
-     0.200  DECLARATIVE           RETRIEVED-CHUNK ZERO
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.200  PROCEDURAL            CONFLICT-RESOLUTION
-     0.200  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ONE<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.000</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.000</span>  PROCEDURAL            PRODUCTION-SELECTED INITIALIZE-ADDITION
+     <span class="tok-number">0.000</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.050</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            MODULE-REQUEST RETRIEVAL
+     <span class="tok-number">0.050</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.050</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.050</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  DECLARATIVE           RETRIEVED-CHUNK ONE
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.100</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-SELECTED INCREMENT-SUM
+     <span class="tok-number">0.100</span>  PROCEDURAL            BUFFER-READ-ACTION GOAL
+     <span class="tok-number">0.100</span>  PROCEDURAL            BUFFER-READ-ACTION RETRIEVAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.150</span>  PROCEDURAL            MOD-BUFFER-CHUNK GOAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            MODULE-REQUEST RETRIEVAL
+     <span class="tok-number">0.150</span>  PROCEDURAL            <span class="tok-keyword">CLEAR-BUFFER</span> RETRIEVAL
+     <span class="tok-number">0.150</span>  DECLARATIVE           start-retrieval
+     <span class="tok-number">0.150</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.200</span>  DECLARATIVE           RETRIEVED-CHUNK ZERO
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.200</span>  PROCEDURAL            CONFLICT-RESOLUTION
+     <span class="tok-number">0.200</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <p>It does not have increment-sum selected and firing again after the
 first time. So, now we need to determine why increment-count, which we
@@ -1219,22 +1219,22 @@ it is not being selected, and to do that we will use the whynot tool
 again, either from the command prompt or in the procedural viewer. Here
 is what we get from calling the whynot command for increment-count:</p>
 <div>
-<pre><code>? (whynot increment-count)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>whynot increment-count<span class="tok-paren">)</span>
 
 Production INCREMENT-COUNT does NOT match.
-(P INCREMENT-COUNT
-   =GOAL&gt;
+<span class="tok-paren">(</span><span class="tok-keyword">P</span> INCREMENT-COUNT
+   <span class="tok-buffer">=GOAL&gt;</span>
        SUM =SUM
        COUNT =COUNT
-   =RETRIEVAL&gt;
+   <span class="tok-buffer">=RETRIEVAL&gt;</span>
        NUMBER =SUM
        NEXT =NEWCOUNT
- ==&gt;
-   =GOAL&gt;
+ <span class="tok-arrow">==&gt;</span>
+   <span class="tok-buffer">=GOAL&gt;</span>
        COUNT =NEWCOUNT
-   +RETRIEVAL&gt;
+   <span class="tok-buffer">+RETRIEVAL&gt;</span>
        NUMBER =SUM
-)
+<span class="tok-paren">)</span>
 It fails because: 
 The value in the NUMBER slot of the chunk in the RETRIEVAL buffer does not satisfy the constraints.</code></pre>
 </div>
@@ -1245,7 +1245,7 @@ on the number slot is that its value must match the value of the sum
 slot of the chunk in the goal buffer. Here are the chunks in the goal
 and retrieval buffers:</p>
 <div>
-<pre><code>? (buffer-chunk goal retrieval)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal retrieval<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ONE
@@ -1290,19 +1290,19 @@ next test to make it easier to follow the production sequence. Here is
 what we see when running the model again along with the chunk in the
 goal buffer at the end:</p>
 <div>
-<pre><code>? (run 1)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ONE) NIL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TWO
-     0.300  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     0.300  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ONE<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TWO
+     <span class="tok-number">0.300</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">0.300</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <div>
-<pre><code>? (buffer-chunk goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ONE
@@ -1323,15 +1323,15 @@ correctly. Thus, to be safe we should probably retest at least one of
 those to make sure that adding zero still works correctly and was not
 just a fluke. Here is the result of testing 1+0 again:</p>
 <div>
-<pre><code>? (run 1)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ONE ARG2 ZERO) NIL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.100  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     0.100  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">1</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ONE ARG2 ZERO<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.100</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">0.100</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <div>
-<pre><code>? (buffer-chunk goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ONE
@@ -1357,51 +1357,51 @@ is expected to be able to do. To run the test we again need to change
 the goal to represent that problem, save it, load it, and then run it.
 Here are the trace and resulting goal chunk:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ZERO ARG2 TEN) NIL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.350  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.400  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.450  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.500  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TWO
-     0.550  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.600  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TWO
-     0.650  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.700  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL THREE
-     0.750  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.800  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL THREE
-     0.850  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.900  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FOUR
-     0.950  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.000  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FOUR
-     1.050  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FIVE
-     1.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FIVE
-     1.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL SIX
-     1.350  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.400  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL SIX
-     1.450  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.500  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL EIGHT
-     1.550  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.600  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL EIGHT
-     1.650  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.700  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL NINE
-     1.750  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.800  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL NINE
-     1.850  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.900  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TEN
-     1.900  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     1.900  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ZERO ARG2 TEN<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.350</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.400</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.450</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.500</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TWO
+     <span class="tok-number">0.550</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.600</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TWO
+     <span class="tok-number">0.650</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.700</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL THREE
+     <span class="tok-number">0.750</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.800</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL THREE
+     <span class="tok-number">0.850</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.900</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FOUR
+     <span class="tok-number">0.950</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.000</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FOUR
+     <span class="tok-number">1.050</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FIVE
+     <span class="tok-number">1.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FIVE
+     <span class="tok-number">1.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL SIX
+     <span class="tok-number">1.350</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.400</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL SIX
+     <span class="tok-number">1.450</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.500</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL EIGHT
+     <span class="tok-number">1.550</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.600</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL EIGHT
+     <span class="tok-number">1.650</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.700</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL NINE
+     <span class="tok-number">1.750</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.800</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL NINE
+     <span class="tok-number">1.850</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.900</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TEN
+     <span class="tok-number">1.900</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">1.900</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <div>
-<pre><code>? (buffer-chunk goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ZERO
@@ -1444,65 +1444,65 @@ test it is best to make sure that it is completely successful before
 moving on to test other values.</p>
 <p>To correct the problem we need to change the chunk six:</p>
 <div>
-<pre><code> (six isa number number six next eight)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>six <span class="tok-isa">isa</span> number number six next eight<span class="tok-paren">)</span></code></pre>
 </div>
 <p>Looking at the other declarative memory chunks there is already a
 chunk for seven so all we need to do is change the value of next in
 chunk six to seven instead of eight:</p>
-<pre><code> (six isa number number six next seven)</code></pre>
+<pre class="lisp"><code> <span class="tok-paren">(</span>six <span class="tok-isa">isa</span> number number six next seven<span class="tok-paren">)</span></code></pre>
 <p>If we save that and run it again we get this trace and resulting goal
 chunk which shows the correct sum and which takes the correct number of
 steps to get there:</p>
 <div>
-<pre><code>? (run 10)
-     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA ADD ARG1 ZERO ARG2 TEN) NIL
-     0.050  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
-     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ZERO
-     0.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.350  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.400  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL ONE
-     0.450  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.500  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TWO
-     0.550  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.600  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TWO
-     0.650  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.700  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL THREE
-     0.750  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     0.800  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL THREE
-     0.850  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     0.900  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FOUR
-     0.950  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.000  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FOUR
-     1.050  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FIVE
-     1.150  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL FIVE
-     1.250  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.300  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL SIX
-     1.350  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.400  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL SIX
-     1.450  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.500  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL SEVEN
-     1.550  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.600  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL SEVEN
-     1.650  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.700  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL EIGHT
-     1.750  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     1.800  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL EIGHT
-     1.850  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     1.900  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL NINE
-     1.950  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
-     2.000  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL NINE
-     2.050  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
-     2.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL TEN
-     2.100  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
-     2.100  ------                Stopped because no events left to process</code></pre>
+<pre class="lisp"><code>? <span class="tok-paren">(</span>run <span class="tok-number">10</span><span class="tok-paren">)</span>
+     <span class="tok-number">0.000</span>  GOAL                  <span class="tok-keyword">SET-BUFFER-CHUNK</span> GOAL <span class="tok-paren">(</span><span class="tok-isa">ISA</span> ADD ARG1 ZERO ARG2 TEN<span class="tok-paren">)</span> NIL
+     <span class="tok-number">0.050</span>  PROCEDURAL            PRODUCTION-FIRED INITIALIZE-ADDITION
+     <span class="tok-number">0.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ZERO
+     <span class="tok-number">0.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.350</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.400</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL ONE
+     <span class="tok-number">0.450</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.500</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TWO
+     <span class="tok-number">0.550</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.600</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TWO
+     <span class="tok-number">0.650</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.700</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL THREE
+     <span class="tok-number">0.750</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">0.800</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL THREE
+     <span class="tok-number">0.850</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">0.900</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FOUR
+     <span class="tok-number">0.950</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.000</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FOUR
+     <span class="tok-number">1.050</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FIVE
+     <span class="tok-number">1.150</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.200</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL FIVE
+     <span class="tok-number">1.250</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.300</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL SIX
+     <span class="tok-number">1.350</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.400</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL SIX
+     <span class="tok-number">1.450</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.500</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL SEVEN
+     <span class="tok-number">1.550</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.600</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL SEVEN
+     <span class="tok-number">1.650</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.700</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL EIGHT
+     <span class="tok-number">1.750</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">1.800</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL EIGHT
+     <span class="tok-number">1.850</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">1.900</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL NINE
+     <span class="tok-number">1.950</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-SUM
+     <span class="tok-number">2.000</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL NINE
+     <span class="tok-number">2.050</span>  PROCEDURAL            PRODUCTION-FIRED INCREMENT-COUNT
+     <span class="tok-number">2.100</span>  DECLARATIVE           <span class="tok-keyword">SET-BUFFER-CHUNK</span> RETRIEVAL TEN
+     <span class="tok-number">2.100</span>  PROCEDURAL            PRODUCTION-FIRED TERMINATE-ADDITION
+     <span class="tok-number">2.100</span>  ------                Stopped because no events left to process</code></pre>
 </div>
 <div>
-<pre><code>? (buffer-chunk goal)
+<pre class="lisp"><code>? <span class="tok-paren">(</span>buffer-chunk goal<span class="tok-paren">)</span>
 GOAL: GOAL-CHUNK0 
 GOAL-CHUNK0
    ARG1 ZERO
