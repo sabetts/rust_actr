@@ -206,7 +206,7 @@ async function main() {
       throw new Error(`unexpected Unit 1 guide count: ${await unit1Guides.count()}`);
     }
     const firstGuideHref = await unit1Guides.first().getAttribute("href");
-    if (firstGuideHref !== "./guides/unit1/unit1.html") {
+    if (!firstGuideHref.includes("./guides/unit1/unit1.html?v=")) {
       throw new Error(`unexpected first guide href: ${firstGuideHref}`);
     }
     const guideCheck = await page.evaluate(async () => {
@@ -250,7 +250,7 @@ async function main() {
       { timeout: 10000 }
     );
     const guideSrc = (await page.locator("#guide-frame").getAttribute("src")) || "";
-    if (!guideSrc.endsWith("guides/unit1/unit1.html")) {
+    if (!guideSrc.includes("guides/unit1/unit1.html?v=")) {
       throw new Error(`unexpected in-app guide src: ${guideSrc}`);
     }
     if ((await page.locator("#tab-guide-label").textContent()) !== "Unit guide") {

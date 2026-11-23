@@ -10,6 +10,7 @@ const $ = (id) => document.getElementById(id);
 
 const THEME_KEY = "actr-web-theme";
 const WELCOME_KEY = "actr-web-welcome-dismissed";
+const GUIDE_VERSION = "20261123";
 const MAX_HIGHLIGHT_LINES = 12000;
 const TRACE_TIMESTAMP_RE =
   /^(\s*)(\d+(?:\.\d+)?)(\s{2,})(\S+)(\s{2,})(\S+)(.*)$/;
@@ -308,7 +309,7 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
       const row = element("div", "unit-guide-row");
       const link = document.createElement("a");
       link.className = "unit-guide";
-      link.href = `./${guide.path}`;
+      link.href = `./${guide.path}?v=${GUIDE_VERSION}`;
       link.title = `${info.title} · ${guide.label}`;
       link.dataset.guideId = guide.id || "";
       link.addEventListener("click", (event) => {
@@ -330,7 +331,7 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
 
       const open = document.createElement("a");
       open.className = "unit-guide-open";
-      open.href = `./${guide.path}`;
+      open.href = `./${guide.path}?v=${GUIDE_VERSION}`;
       open.target = "_blank";
       open.rel = "noopener";
       open.title = `Open ${guide.label} for ${info.title} in a new tab`;
@@ -522,7 +523,7 @@ export function createGuideViewer({ tabs }) {
     }
     if (tabLabel) tabLabel.textContent = guide.label;
     frame.title = `${info?.title || group?.label || "Unit"} · ${guide.label}`;
-    frame.src = `./${guide.path}`;
+    frame.src = `./${guide.path}?v=${GUIDE_VERSION}`;
     tabs.setGuideEnabled(true);
     tabs.activate("guide", { focus: true });
   };
