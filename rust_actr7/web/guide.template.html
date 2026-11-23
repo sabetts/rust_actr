@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$pagetitle$ · ACT-R 7 Tutorials</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem("actr-web-theme");
+    if (stored !== "light" && stored !== "dark") {
+      stored = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.dataset.theme = stored;
+  } catch (error) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+</script>
+<link rel="icon" type="image/png" href="../../assets/actr-head.png">
+<link rel="stylesheet" href="../../css/guide.css">
+</head>
+<body>
+<header class="guide-bar">
+  <a class="guide-back" href="../../">← <span>ACT-R 7 Tutorials</span></a>
+  <span class="guide-unit">$unit$</span>
+</header>
+<main class="guide-body">
+$body$
+</main>
+</body>
+</html>

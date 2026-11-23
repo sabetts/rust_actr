@@ -1,0 +1,2095 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit 1 · Unit guide · ACT-R 7 Tutorials</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem("actr-web-theme");
+    if (stored !== "light" && stored !== "dark") {
+      stored = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.dataset.theme = stored;
+  } catch (error) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+</script>
+<link rel="icon" type="image/png" href="../../assets/actr-head.png">
+<link rel="stylesheet" href="../../css/guide.css">
+</head>
+<body>
+<header class="guide-bar">
+  <a class="guide-back" href="../../">← <span>ACT-R 7 Tutorials</span></a>
+  <span class="guide-unit">Unit 1 · Unit guide</span>
+</header>
+<main class="guide-body">
+<h1 id="unit-1-introduction-to-act-r">Unit 1: Introduction to ACT-R</h1>
+<p>ACT-R is a cognitive architecture. It is a theory of the structure of
+the brain at a level of abstraction that explains how it achieves human
+cognition. That theory is instantiated in the ACT-R software which
+allows one to create models which may be used to explain performance in
+a task and also to predict performance in other tasks. This tutorial
+will describe how to use the ACT-R software for modeling and provide
+some of the important details about the ACT-R theory. Detailed
+information on the ACT-R theory can be found in the paper “<a
+href="http://act-r.psy.cmu.edu/?post_type=publications&amp;p=13623"><em>An
+integrated theory of the mind</em></a>” and the book “How Can the Human
+Mind Occur in the Physical Universe?”. More information on the ACT-R
+software can be found in the reference manual which is included in the
+docs directory of the <a
+href="http://act-r.psy.cmu.edu/software/"><em>ACT-R
+software</em></a>.</p>
+<h2 id="knowledge-representations">1.1 Knowledge Representations</h2>
+<p>There are two types of knowledge representation in ACT-R --
+<strong>declarative</strong> knowledge and <strong>procedural
+</strong>knowledge. Declarative knowledge corresponds to things we are
+aware we know and can usually describe to others. Examples of
+declarative knowledge include “George Washington was the first president
+of the United States” and “An atom is like the solar system”. Procedural
+knowledge is knowledge which we display in our behavior but which we are
+not conscious of. For instance, no one can describe the rules by which
+we speak a language and yet we do. In ACT-R, declarative knowledge is
+represented in structures called <strong>chunks</strong> and procedural
+knowledge is represented as rules called <strong>productions</strong>.
+Chunks and productions are the basic building blocks of an ACT-R
+model.</p>
+<h3 id="chunks-in-act-r">1.1.1 Chunks in ACT-R</h3>
+<p>In ACT-R, elements of declarative knowledge are called
+<strong>chunks</strong>. Chunks represent knowledge that a person might
+be expected to have when they solve a problem. A chunk is a collection
+of attributes and values. The attributes of a chunk are called
+<strong>slots</strong>. Each slot in a chunk has a single value. A chunk
+also has a name which can be used to reference it, but that name is only
+a convenience for using the ACT-R software and is not considered to be a
+part of the chunk itself. Below are some representations of chunks that
+encode the facts that <em>the dog chased the cat</em> and that
+<em>4+3=7</em>. The chunks are displayed as a name followed by the slot
+and value pairs. The name of the first chunk is
+<strong>action023</strong> and its slots are <strong>verb</strong>,
+<strong>agent, </strong>and <strong>object</strong>, which have values
+of chase, dog, and cat respectively. The second chunk is named
+<strong>fact3+4 </strong>and its slots are <strong>addend1</strong>,
+<strong>addend2</strong>, and <strong>sum</strong>, with values three,
+four, and seven.</p>
+<p>Action023<br />
+verb chase<br />
+agent dog<br />
+object cat</p>
+<p>Fact3+4<br />
+addend1 three<br />
+addend2 four<br />
+sum seven</p>
+
+
+<h3 id="productions-in-act-r">1.1.2 Productions in ACT-R</h3>
+<p>A production is a statement of a particular contingency that controls
+behavior. They can be represented as if-then rules and some examples
+might be:</p>
+<p>IF the goal is to classify a person</p>
+<p> and he is unmarried</p>
+<p>THEN classify him as a bachelor</p>
+<p>IF the goal is to add two digits d1 and d2 in a column</p>
+<p> and d1 + d2 = d3</p>
+<p>THEN create a goal to write d3 in the column</p>
+<p>The condition of a production (the IF part) consists of a conjunction
+of features which must be true for the production to apply. The action
+of a production (the THEN part) consists of the actions the model should
+perform when the production is selected and used. The above are informal
+English specifications of productions. They give an overview of when the
+productions apply and what actions they should perform, but do not
+specify sufficient detail to actually implement a production in
+ACT-R.</p>
+<h2 id="the-act-r-architecture">1.2 The ACT-R Architecture</h2>
+<p>The ACT-R architecture consists of a set of <strong>modules</strong>.
+Each module performs a particular cognitive function and operates
+independently of other modules. We will introduce three modules in this
+unit and describe their basic operations. Later units will provide more
+details on the operations of these modules and also introduce other
+modules. </p>
+<p>The modules communicate through an interface we call a
+<strong>buffer</strong>. Each module may have any number of buffers for
+communicating with other modules. A buffer relays requests to its module
+to perform actions, it responds to queries about the status of the
+module and the buffer itself, and it can hold one chunk at a time which
+is usually placed into the buffer as the result of an action which was
+requested. The chunk in a buffer is available for all modules to see and
+modify, and the set of chunks in all of the buffers is the information
+that is immediately available to the model.</p>
+<h3 id="goal-module">1.2.1 Goal Module</h3>
+<p>The goal module is the simplest of the modules in ACT-R. It has one
+buffer named <strong>goal </strong>which is used to hold a chunk which
+contains the current control information the model needs for performing
+its current task. The only request to which the module responds is for
+the creation of a new goal chunk. It responds to the request by
+immediately creating a chunk with the information contained in the
+request and placing it into the <strong>goal </strong>buffer.</p>
+
+<h3 id="declarative-module">1.2.2 Declarative Module</h3>
+<p>The declarative module stores all of the chunks which represent the
+declarative knowledge the model has which is often referred to as the
+model’s declarative memory. It has one buffer named
+<strong>retrieval</strong>. The declarative module responds to requests
+by searching through declarative memory to find the chunk which best
+matches the information specified in the request and then placing that
+chunk into the <strong>retrieval</strong> buffer. In later units we will
+cover that process in more detail to describe how it determines the best
+match and how long the process takes. For the models in this unit, there
+will never be more than one chunk which matches the request and the time
+cost will be fixed in the models at 50 milliseconds per request.</p>
+<p>The declarative memory in a model consists of the chunks which are
+placed there initially by the modeler when defining the model and the
+knowledge which it learns as it runs. The learned knowledge is collected
+from the buffers of all of the modules. The declarative module monitors
+all of the buffers, and whenever a chunk is cleared from one of them the
+declarative module stores that chunk for possible later use.</p>
+<h3 id="procedural-module">1.2.3 Procedural Module</h3>
+<p><span id="anchor"></span><span id="anchor-1"></span>The procedural
+module holds all of the productions which represent the model’s
+procedural knowledge. It does not have a buffer of its own<a href="#fn1"
+class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>,
+and unlike other modules the procedural module does not take requests
+for actions. Instead, it is constantly monitoring the activity of all
+the buffers looking for patterns which satisfy the condition of some
+production. When it finds a production which has its condition met then
+it will execute the actions of that production, which we refer to as
+“firing” the production. Only one production can fire at a time and it
+takes 50 milliseconds from the time the production was matched to the
+current state until the actions happen. In later units we will look at
+what happens if more than one production matches at the same time, but
+for this unit all of the productions in the models will have their
+conditions specified so that at most one will match at any point in
+time.</p>
+<h3 id="overview">1.2.4 Overview</h3>
+<p>These three modules are used in almost every model which is written
+in ACT-R, and early versions of ACT-R consisted entirely of just these
+three components. Here is a diagram showing how they fit together in the
+architecture with the rectangles representing the modules and the ovals
+representing the buffers:</p>
+<p><img src="media/unit1/Pictures/10000000000001E0000001312F5E22CF.png"
+style="width:3.5638in;height:2.0228in" /></p>
+<p>The blue arrows show which modules read the information from another
+module’s buffer, and the red arrows show which modules make requests to
+another module’s buffer or directly modify the chunk it contains. As we
+introduce new modules and buffers in the tutorial, each of the buffers
+will have the same interface as shown for the goal buffer – both the
+procedural and declarative modules will read the buffer information and
+the procedural module will modify and make requests to the buffer.</p>
+<h2 id="act-r-software-and-models">1.3 ACT-R Software and Models</h2>
+<p>Now that we have described the basic components in ACT-R, we will
+step back and describe the ACT-R software and how one creates and runs a
+model using it. This tutorial is written for version 7.28 (or newer) of
+the ACT-R software. Current versions of the ACT-R software are
+distributed primarily as applications and the tutorial instructions will
+assume that the user is running one of those applications, but like the
+previous versions, the source code is available for those that prefer to
+run from sources. The main ACT-R software is implemented in the ANSI
+Common Lisp programming language, but it is not necessary to know how to
+program in Lisp to be able to use ACT-R because it is essentially its
+own language which will be described in the tutorial. In prior versions
+of the software it was necessary to interact with ACT-R through Lisp
+code, and one had to write Lisp code to build experiments or other tasks
+for the model to perform. However, starting with version 7.6, ACT-R
+provides a remote interface that can be used to interact with ACT-R from
+essentially any programming language, and the tutorial materials include
+a Python module (in the Python use of the term module not the ACT-R use
+as a cognitive component of the architecture) which provides functions
+for accessing ACT-R through that remote interface<sup><a href="#fn2"
+class="footnote-ref" id="fnref2"
+role="doc-noteref"><sup>2</sup></a></sup>. Using that Python module, all
+of the tasks for the models in the tutorial are implemented in Python as
+well as in Lisp, and either version can be used with the models of the
+tutorial (the models do not depend upon which version of the task is
+being used). There are also examples of connecting other programming
+languages included with the ACT-R software, but only Lisp and Python
+will be used directly in the tutorial.</p>
+
+<h3 id="starting-act-r">1.3.1 Starting ACT-R</h3>
+<p>To run the ACT-R software you need to run the startup script named
+<em>run-act-r</em> that is included with the standalone version for your
+operating system (versions are available for Linux, macOS, and Windows).
+That will open two windows for the ACT-R software. The one titled
+“ACT-R” is an interactive Lisp session which contains the main ACT-R
+system and can be used to interact with ACT-R directly. The other
+window, titled “Control Panel”, contains a set of GUI tools called the
+ACT-R Environment<a href="#fn3" class="footnote-ref" id="fnref3"
+role="doc-noteref"><sup>3</sup></a>. The ACT-R Environment is an
+optional set of tools for interacting with the ACT-R system and the use
+of some of those tools will be described during the tutorial. Additional
+information on running the software can be found in the readme.txt file
+and there are short videos on the <a
+href="http://act-r.psy.cmu.edu/software/"><em>ACT-R software
+site</em></a> showing the typical OS protection warnings one may need to
+respond to the first time it is run. More information on the Environment
+tools can be found in the Environment’s manual included in the docs
+directory of the software. You may close the ACT-R Environment window if
+you do not wish to use those tools (note however that the Environment
+tools are necessary to perform the tutored model running exercises
+described in this unit and it should not be closed now). Closing the
+ACT-R window will exit the software.</p>
+<p>For this unit there are no tasks for the models to interact with, and
+all of the interaction with the software can be done through the ACT-R
+Environment. For that reason, we will not describe how to use the Python
+module yet since there is no need for it, but it will be described in
+the next unit which includes interactive tasks for the models to
+perform.</p>
+<h3 id="interacting-with-lisp">1.3.2 Interacting with Lisp</h3>
+<p>Although it is not necessary to use the Lisp interface for ACT-R, it
+can be convenient and some familiarity with Lisp syntax can be helpful
+since the syntax for creating ACT-R models is based on Lisp syntax. Lisp
+is an interactive language and provides a prompt at which the user can
+issue commands and evaluate code. The prompt in the ACT-R software
+window is the “?” character. To evaluate (also sometimes referred to as
+“calling”) a command in Lisp at the prompt requires placing it between
+parentheses along with any parameters which it requires separated by
+whitespace and then hitting enter or return. As an example, to evaluate
+the command to add the numbers 3 and 4 requires calling the command
+named “+” with those parameters. That means one would type this at the
+prompt:</p>
+<p>(+ 3 4)</p>
+<p>and then hit the enter or return key. The system will then print the
+result of evaluating that command and display a new prompt:</p>
+<p>? (+ 3 4)</p>
+<p>7 </p>
+<p>?</p>
+<p>One minor issue to note is that sometimes the output from the ACT-R
+system will overwrite the prompt character and it will not be visible in
+the ACT-R window. When that happens you can still evaluate commands by
+entering them at the bottom of the window and pressing enter or
+return.</p>
+<h3 id="act-r-models">1.3.3 ACT-R models</h3>
+<p>An ACT-R model is a simulated cognitive agent. A model is typically
+written in a text file that contains the ACT-R commands that specify how
+the model works, and that model file can be opened and edited in any
+application that can operate on text files. Because the ACT-R model
+syntax is based on Lisp syntax using an editor which provides additional
+support for Lisp formatting, like matching parentheses and automatic
+indenting, can be useful but is not necessary. There is a very simple
+text editor included with the ACT-R Environment which will do
+parenthesis matching, but beyond that it is a very limited text
+editor.</p>
+<p>As we progress through the tutorial we will describe the ACT-R
+commands which one can use to create models. Later in this unit we will
+introduce the commands for initializing a model and creating the
+knowledge structures described above (chunks and productions).</p>
+<h3 id="loading-a-model">1.3.4 Loading a model</h3>
+<p>To use an ACT-R model file it must be “loaded” into ACT-R. There are
+many ways to do so, but for this unit we will simply use the button in
+the ACT-R Environment labeled “Load ACT-R code”. In the next unit we
+will show how to load a model using an ACT-R command that can be called
+from the Lisp prompt or from an external connection, like the Python
+module. When the model file is loaded, the commands it contains are
+evaluated in order from the top down.</p>
+<h3 id="running-a-model">1.3.5 Running a model</h3>
+<p>Once a model has been loaded, you can run it. Models that do not
+interact with a task can typically be run by just calling the ACT-R
+<strong>run</strong> command. The <strong>run</strong> command requires
+one parameter, which is the maximum length of simulated time to run the
+model measured in seconds. Again, for this unit we will be using the
+tool in the ACT-R Environment instead of using the command itself. That
+tool is the “Run” button in the Environment and the text entry box to
+its right is where the time to run the model can be entered. The default
+time in that box is 10.0 which means pressing the “Run” button will run
+the model for up to 10 simulated seconds.</p>
+<p>In later units, where the models will be interacting with various
+tasks, just pressing the “Run” button or calling the
+<strong>run</strong> command may not be sufficient because one might
+also have to run the task itself. When that is the case the tutorial
+will describe what is necessary to run the model and the task, and there
+is an additional text included with each unit which provides additional
+information about how the tasks are implemented and the ACT-R commands
+involved (those are the texts with a name that ends with “_code”).</p>
+<h2 id="creating-an-act-r-model">1.4 Creating an ACT-R Model</h2>
+<p>Creating an ACT-R model requires writing the text file which contains
+the ACT-R commands to specify the details of the model and the initial
+knowledge it contains. Also, in addition to the model’s details, one
+often includes commands for controlling the general state of the ACT-R
+system itself.</p>
+
+
+<h3 id="act-r-control-commands">1.4.1 ACT-R control commands</h3>
+<p>When creating an ACT-R model, there are two ACT-R commands for
+controlling the system which will almost always occur in the model file,
+and we will describe those commands first.</p>
+<h4 id="clear-all">1.4.1.1 clear-all</h4>
+<p>The <strong>clear-all</strong> command will usually occur at the top
+of every model file. This command requires no parameters and tells ACT-R
+that it should remove any models which currently exist and return ACT-R
+to its initial state. It is not necessary to call
+<strong>clear-all</strong> in a model file, but unless one is planning
+on running multiple models together it is strongly recommended that it
+occur as the first command to make sure that the model starts with the
+system in a properly initialized state.</p>
+<h4 id="define-model">1.4.1.2 define-model</h4>
+<p>The <strong>define-model</strong> command is how one actually creates
+an ACT-R model. Within the call to <strong>define-model</strong> one
+specifies a name for the model and then includes all of the calls to
+ACT-R commands that will provide the initial conditions and knowledge
+for that model. When the model file is loaded, define-model will create
+the model with the conditions specified, and then whenever ACT-R is
+reset that model will be returned to that same initial state.</p>
+<h3 id="chunk-types"><span id="anchor-2"></span>1.4.2 Chunk-Types</h3>
+<p>Before describing the commands for creating the model’s initial
+knowledge with chunks and productions, we will first describe an
+additional component of the software which can be useful when creating a
+model. There is an optional capability available in the ACT-R software
+called a <strong>chunk-type</strong>. A chunk-type<strong> </strong>is a
+way for the modeler to specify categories for the knowledge in the model
+by indicating a set of slots which will be used together in the creation
+and testing of chunks. A chunk-type consists of a name for the
+chunk-type and a set of slot names. That chunk-type name may then be
+used as a declaration when creating chunks and productions in the model.
+</p>
+<p>The command for creating a chunk type is called
+<strong>chunk-type</strong>. It requires a name for the new chunk-type
+to create and then any number of slot names. The general chunk-type
+specification looks like this:</p>
+<p>(chunk-type type-name slot-name-1 slot-name-2 … slot-name-n)</p>
+<p>and here are some examples which could have been used in a model
+which created the example chunks shown earlier:</p>
+<p>(chunk-type action verb agent object)<br />
+(chunk-type addition-fact addend1 addend2 sum)</p>
+<p>The first creates a chunk-type named action which includes the slots
+verb, agent, and object. The other creates a chunk-type named
+addition-fact with slots addend1, addend2, and sum. </p>
+<p>It is important to note that using a chunk-type declaration does not
+directly affect the operation of the model itself – the chunk-type is
+not a component of the ACT-R architecture. They exist in the software to
+help the modeler specify the model components. Creating and using
+meaningful chunk-types can make a model easier to read and understand.
+They also allow the ACT-R software to verify that the specification of
+chunks and productions in a model is consistent with the chunk-types
+that were created for that model which allows it to provide warnings
+when inconsistencies or problems are found relative to the chunk-types
+which are specified. </p>
+<p>Although chunk-types are not required when writing an ACT-R model,
+most of the models in the tutorial will be written with chunk-type
+declarations included, and using chunk-types is strongly recommended.
+</p>
+<h3 id="creating-chunks"><span id="anchor-3"></span>1.4.3 Creating
+Chunks</h3>
+<p>The command to create a set of chunks and place those chunks into the
+model’s declarative memory is called <strong>add-dm</strong>. It takes
+any number of chunk specifications as its arguments. As an example, we
+will show the chunks from the <strong>count</strong> model included with
+the tutorial that will be described in greater detail later in this
+unit. First, here are the chunk-type specifications used in that
+model:</p>
+<div>
+<pre><code>(chunk-type number number next)
+(chunk-type count-from start end count)</code></pre>
+</div>
+<p>and here is the specification of the initial chunks which are placed
+into that model’s declarative memory:</p>
+<div>
+<pre><code>(add-dm
+ (one ISA number number one next two)
+ (two ISA number number two next three)
+ (three ISA number number three next four)
+ (four ISA number number four next five)
+ (five ISA number number five))</code></pre>
+</div>
+<p>Each chunk for <strong>add-dm</strong> is specified in a list – a
+sequence of items enclosed in parentheses. The first element of the list
+is the name of the chunk. The name may be anything which is not already
+used as the name of a chunk as long as it starts with an alphanumeric
+character and is a valid Lisp symbol (essentially a continuous sequence
+of characters which does not contain any of the symbols: period, comma,
+single quote, double quote, back quote, left or right parenthesis,
+backslash, or semicolon). In the example above the names are
+<strong>one</strong>, <strong>two</strong>,<strong>
+three</strong>,<strong> four</strong>,<strong> </strong>and
+<strong>five</strong>. The purpose of the name is to provide a way for
+the modeler to refer to the chunk. The name is not considered to be a
+part of the chunk, and it can in fact be omitted, which will result in
+the system automatically generating a unique name for the chunk.</p>
+<p>The next component of the chunk specification is the optional
+declaration of a chunk-type to describe the chunk being created. That
+consists of the symbol <strong>isa</strong> followed by the name of a
+chunk-type. Note that here we have capitalized the isa symbol to help
+distinguish it from the actual slots of the chunk, but that is not
+necessary and in most cases the symbols and names used in ACT-R commands
+are not case sensitive. </p>
+<p>The rest of the chunk specification is pairs of a slot name and a
+value for that slot. The slot-value pairs can be specified in any order
+and the order does not matter. When a chunk-type declaration is
+provided, it is not necessary to specify a value for every slot
+indicated in that chunk-type, but if a slot which is not specified in
+that chunk-type is provided ACT-R will generate a warning to indicate
+the potential problem to the modeler.</p>
+
+<h3 id="creating-productions"><span id="anchor-4"></span><span
+id="anchor-5"></span>1.4.4 Creating Productions</h3>
+<p>As indicated above, each production is a condition-action rule. Those
+rules are used by the procedural module to monitor the buffers of all
+the other modules to determine when to perform actions. The condition
+specifies tests for the contents of the buffers as well as the general
+state of the buffers and their modules. The action of a production
+specifies the set of operations to perform when the production is fired,
+and will consist of changes to be made to the chunks in buffers along
+with new requests to be sent to the modules.</p>
+<p>The command for creating a production in ACT-R is called
+<strong>p</strong>, and the general format for creating a production
+is:</p>
+<p><strong></strong></p>
+<p>(p Name "optional documentation string"<br />
+<em>buffer tests</em></p>
+<p>==&gt;<br />
+<em>buffer changes and requests</em></p>
+<p>)</p>
+<p>Each production must have a unique name and may also have an optional
+documentation string to describe it. That is followed by the condition
+for the production. The <em>buffer tests</em> in the condition of the
+production are patterns to match against the current buffers’ contents
+and queries of the buffers for buffer and module state information. The
+condition of the production is separated from the action of the
+production by the three character sequence ==&gt;. The production’s
+action consists of any buffer changes and requests which the production
+will make. </p>
+<p>In separate subsections to follow we will describe the syntax
+involved in specifying the condition and the action of a production. In
+doing so we will use an example production that counts from one number
+to the next based on a chunk which has been retrieved from the model’s
+declarative memory. It is similar to those used in the example models
+for this unit, but is slightly simpler than they are for example
+purposes. Here is the specification of the chunk-types used in the
+example production:</p>
+<p>(chunk-type number number next)</p>
+<p>(chunk-type count state current)</p>
+<p>Here is the example production, which is named counting-example:</p>
+<p>(P counting-example </p>
+<p> "example production for counting in tutorial unit 1 text"</p>
+<p> =goal&gt;</p>
+<p> ISA count</p>
+<p> state incrementing</p>
+<p> current =num1</p>
+<p> =retrieval&gt;</p>
+<p> number =num1</p>
+<p> next =num2</p>
+<p>==&gt;</p>
+<p> =goal&gt;</p>
+<p> ISA count</p>
+<p> current =num2</p>
+<p> +retrieval&gt;</p>
+<p> ISA number</p>
+<p> number =num2</p>
+<p>)</p>
+<p>It is not necessary to space the production definition out over
+multiple lines or indent the components as shown above. It could be
+written on one line with only a single space between each symbol and
+still be a valid production for ACT-R. Because of that, the condition of
+the production is also often referred to as the left-hand side (or LHS)
+and the action as the right-hand side (or RHS), because of their
+positions relative to the ==&gt; separator. However, since adding
+additional white space characters between the items does not affect the
+definition of a production, they are typically written spaced out over
+several lines to make them easier to read. </p>
+<p>The symbols used in the production definition are also not case
+sensitive. The symbol ISA is only capitalized for emphasis in the
+example and it could have been written as isa, Isa, or any other
+combination of capital and lowercase letters with the same result.</p>
+<h4 id="production-condition-buffer-pattern-matching">1.4.4.1 Production
+Condition: Buffer Pattern Matching</h4>
+<p>The condition of the <strong>counting-example</strong> production
+specifies a pattern to match to the <strong>goal</strong> buffer and a
+pattern to match to the <strong>retrieval</strong> buffer. A buffer
+pattern begins with a symbol that starts with the character “=” and ends
+with the character “&gt;”. Between those characters is the name of the
+buffer to which the pattern is applied. Thus, the symbol =goal&gt;
+indicates a pattern used to test the chunk in the <strong>goal</strong>
+buffer and the symbol =retrieval&gt; indicates a pattern to test the
+chunk in the <strong>retrieval</strong> buffer. For a production’s
+condition to match, the first thing that must be true is that there be a
+chunk in each of the buffers being tested. Thus, if there is no chunk in
+either the <strong>goal</strong> or <strong>retrieval</strong> buffer,
+often referred to as the buffer being empty or cleared, this example
+production cannot match.</p>
+<p>After indicating which buffer to test, an optional declaration may be
+made using the symbol isa and the name of a chunk-type to provide a
+declaration of the set of slots which are being used in the test. In the
+example production, the <strong>goal</strong> buffer pattern includes a
+declaration that the slots being tested are from the count chunk-type,
+but the <strong>retrieval</strong> buffer pattern does not declare a
+type for the set of slots specified. It is recommended that one create
+chunk-types and use the isa declarations when writing productions, but
+this one has been omitted for demonstration purposes. The important
+thing to remember is that the isa declaration is not a part of the
+pattern to be tested – it is only a declaration to allow the ACT-R
+software to verify that the slots used in the pattern are consistent
+with the chunk-type indicated.</p>
+<p>The remainder of the pattern consists of slot tests for the chunk in
+the specified buffer. A slot test consists of an optional modifier
+(which is not used in any of the tests in this example production), the
+name of a slot for the chunk in the buffer, and a specification of the
+value that slot of the chunk in the buffer must have. The value may be
+specific as a constant value, a variable, or the Lisp symbol
+<strong>nil</strong>. </p>
+<p>Here is the <strong>goal</strong> buffer pattern from the example
+production again for reference:</p>
+<p>=goal&gt;</p>
+<p> ISA count</p>
+<p> state incrementing</p>
+<p> current =num1 </p>
+<p>The first slot test in the pattern is for a slot named
+<strong>state</strong> with a constant value of
+<strong>incrementing</strong>. Therefore for this production to match,
+the chunk in the <strong>goal</strong> buffer must have a slot named
+<strong>state</strong> which has the value
+<strong>incrementing</strong>. The next slot test in the pattern
+involves the slot named <strong>current</strong> and a variable value.
+</p>
+<p>The “=” prefix on a symbol in a production is used to indicate a
+variable. The name of the variable can be any symbol, and it is
+recommended that the variable names be chosen to help make the
+production easier for a person reading it to understand. Variables are
+used in a production to generalize the condition and action, and they
+have two basic purposes. In the condition, variables can be used to
+compare the values in different slots, for instance that they have the
+same value or different values, without needing to know all of the
+possible values those slots could have. The other purpose for a variable
+is to copy a value from a slot specified in the condition to another
+slot specified in the action of the production. </p>
+<p>There are two properties of variables used in productions which are
+important. Every slot tested with a variable in the condition must exist
+in the chunk in the buffer for the pattern to match. Also, a variable is
+only meaningful within a specific production—using the same variable
+name in different productions does not create any relation between those
+productions. </p>
+<p>Given that, we could describe this production’s test for the
+<strong>goal</strong> buffer like this: </p>
+<p>There must be a chunk in the goal buffer. It must have a slot named
+state with the value incrementing, and it must have a slot named current
+whose value we will refer to using the variable =num1.</p>
+<p>Now, we will look at the <strong>retrieval</strong> buffer’s pattern
+in detail:</p>
+<p> =retrieval&gt;</p>
+<p> number =num1</p>
+<p> next =num2</p>
+<p>The first slot test it has tests the slot named
+<strong>number</strong> with the variable <strong>=num1</strong>. Since
+the variable <strong>=num1</strong> was also used in the
+<strong>goal</strong> buffer test, this is testing that the
+<strong>number</strong> slot of the chunk in the
+<strong>retrieval</strong> buffer has the same value as the
+<strong>current</strong> slot of the chunk in the <strong>goal</strong>
+buffer. The other slot test for the <strong>retrieval</strong> buffer is
+for the slot named <strong>next</strong> using a variable named
+<strong>=num2</strong>.</p>
+<p>Therefore, the test for the <strong>retrieval</strong> buffer can be
+described as:</p>
+<p>There must be a chunk in the retrieval buffer. It must have a slot
+named number which has the same value as the slot named current of the
+chunk in the goal buffer, and it must have a slot named next whose value
+we will refer to using the variable =num2.</p>
+<p>This example production did not include all of the possible items
+which one may need in writing the condition for a production, but it
+does cover the basics of the pattern matching applied to chunks in
+buffers. We will describe how one queries the buffer and module state
+later in this unit, and additional production condition details will be
+introduced in future units.</p>
+<h4 id="production-action">1.4.4.2 Production Action</h4>
+<p>The action of a production consists of a set of operations which
+affect the buffers. Here is the RHS from the example production
+again:</p>
+<p> =goal&gt;</p>
+<p> ISA count</p>
+<p> current =num2</p>
+<p> +retrieval&gt;</p>
+<p> ISA number</p>
+<p> number =num2</p>
+<p>The RHS of a production is specified much like the LHS with actions
+to perform on particular buffers. An action for a buffer is specified by
+a symbol which starts with a character that indicates the action to
+take, followed by the name of the buffer, and then the character "&gt;".
+That is followed by an optional chunk-type declaration using isa and a
+chunk-type name and then the specification of slots and values to detail
+the action to perform. There are five different operations that can be
+performed with a buffer. The three most common will be described in this
+unit. The other operations will be described later in the tutorial.</p>
+<h4 id="a-buffer-modifications-the-action">1.4.4.2.a Buffer
+Modifications, the = action</h4>
+<p>If the buffer name is prefixed with the character "=" then the action
+is for the production to immediately modify the chunk currently in that
+buffer. Each slot specified in a buffer modification action indicates a
+change to make to the chunk in the buffer. If the chunk already has such
+a slot its value is changed to the one specified. If the chunk does not
+currently have that slot then that slot is added to the chunk with the
+value specified. </p>
+<p>Here is the action for the <strong>goal</strong> buffer from the
+example production:</p>
+<p> =goal&gt;</p>
+<p> ISA count</p>
+<p> current =num2</p>
+<p>It starts with the character "=" therefore this is a modification to
+the buffer. It will change the value of the <strong>current</strong>
+slot of the chunk in the <strong>goal</strong> buffer (since we know
+that it has such a slot because it was tested in the condition of the
+production) to the value referred to by the variable
+<strong>=num2</strong> (which is the value that the
+<strong>next</strong> slot of the chunk in the
+<strong>retrieval</strong> buffer had in the condition). This is an
+instance of a variable being used to copy a value from one slot to
+another.</p>
+<p>An important constraint on the use of the modification action is that
+a production can only use it for buffers that were matched to a pattern
+in the condition of the production – the production must test that there
+is a chunk in the buffer before it can modify it.</p>
+<h4 id="b-buffer-requests-the-action">1.4.4.2.b Buffer Requests, the +
+action</h4>
+<p>If the buffer name is prefixed with the character "+", then the
+action is a request to that buffer’s module, and we will often refer to
+such an action as a “<em>buffer </em>request” where <em>buffer</em> is
+the name of the buffer indicated e.g. a retrieval request or a goal
+request. Typically a request results in the module replacing the chunk
+in the buffer with a different one, but not all modules handle requests
+the same way. As was noted above, the goal module handles requests by
+creating new chunks and the declarative module uses the request to find
+a matching chunk in the model’s declarative memory to place into the
+buffer. In later units of the tutorial we will also describe modules
+that perform perceptual and motor actions in response to requests. </p>
+<p>Here is the retrieval request from the example production:</p>
+<p> +retrieval&gt;</p>
+<p> ISA number</p>
+<p> number =num2</p>
+<p>It is asking the declarative module to find a chunk that has a slot
+named <strong>number</strong> that has the same value as
+<strong>=num2</strong>. If such a chunk exists in the model’s
+declarative memory it will be placed into the <strong>retrieval</strong>
+buffer. </p>
+<h4 id="c-buffer-clearing-the---action">1.4.4.2.c Buffer Clearing, the -
+action</h4>
+<p>A third type of action that can be performed with a buffer is to
+explicitly clear the chunk from the buffer. This is done by placing the
+"-" character before the buffer name in the action. Thus, this action on
+the RHS of a production would clear the chunk from the
+<strong>retrieval</strong> buffer:</p>
+<p> -retrieval&gt;</p>
+<p>Clearing a buffer occurs immediately and results in the buffer being
+empty and the declarative module storing the chunk which was in the
+buffer in the model’s declarative memory.</p>
+<h4 id="d-implicit-clearing">1.4.4.2.d Implicit Clearing</h4>
+<p>In addition to the explicit clearing action one can make, there are
+situations which will implicitly clear a buffer. Any buffer request with
+a “+” action will also cause that buffer to be cleared. Therefore, the
+retrieval request from the example production will also result in the
+<strong>retrieval</strong> buffer being automatically cleared at the
+time the request is made. We will see another situation where implicit
+clearing occurs later in the unit.</p>
+<h2 id="the-count-model">1.5 The Count Model</h2>
+<p>The first model we will run is a simple one that counts up from one
+number to another, for example it will count up from 2 to 4 – 2,3,4. It
+is included with the tutorial files for unit 1 in the file named
+“count.lisp”. You should now start the ACT-R software if you have not
+done so already, and then load the count model by pressing the “Load
+ACT-R code” button on the ACT-R Environment Control Panel and selecting
+the “count.lisp” file.</p>
+<p>When you do that, you should see a window open up which says
+“Successful Load”, with no other text in the window. You should press
+the “Ok” button on that window to continue. If there had been any
+problems when loading the file then details about those issues would
+have been shown in that window.</p>
+<p>Now you should run the model by pressing the “Run” button in the
+ACT-R Environment Control Panel. That will run the model for up to 10
+seconds, since the default time shown next to the button is 10.0. When
+you do that, you should see the following output in the ACT-R
+window:</p>
+<div>
+<pre><code>     0.000  GOAL         SET-BUFFER-CHUNK GOAL (ISA COUNT-FROM START TWO END FOUR) NIL
+     0.000  PROCEDURAL   CONFLICT-RESOLUTION
+     0.000  PROCEDURAL   PRODUCTION-SELECTED START
+     0.000  PROCEDURAL   BUFFER-READ-ACTION GOAL
+     0.050  PROCEDURAL   PRODUCTION-FIRED START
+     0.050  PROCEDURAL   MOD-BUFFER-CHUNK GOAL
+     0.050  PROCEDURAL   MODULE-REQUEST RETRIEVAL
+     0.050  PROCEDURAL   CLEAR-BUFFER RETRIEVAL
+     0.050  DECLARATIVE  start-retrieval
+     0.050  PROCEDURAL   CONFLICT-RESOLUTION
+     0.100  DECLARATIVE  RETRIEVED-CHUNK TWO
+     0.100  DECLARATIVE  SET-BUFFER-CHUNK RETRIEVAL TWO
+     0.100  PROCEDURAL   CONFLICT-RESOLUTION
+     0.100  PROCEDURAL   PRODUCTION-SELECTED INCREMENT
+     0.100  PROCEDURAL   BUFFER-READ-ACTION GOAL
+     0.100  PROCEDURAL   BUFFER-READ-ACTION RETRIEVAL
+     0.150  PROCEDURAL   PRODUCTION-FIRED INCREMENT
+TWO 
+     0.150  PROCEDURAL   MOD-BUFFER-CHUNK GOAL
+     0.150  PROCEDURAL   MODULE-REQUEST RETRIEVAL
+     0.150  PROCEDURAL   CLEAR-BUFFER RETRIEVAL
+     0.150  DECLARATIVE  start-retrieval
+     0.150  PROCEDURAL   CONFLICT-RESOLUTION
+     0.200  DECLARATIVE  RETRIEVED-CHUNK THREE
+     0.200  DECLARATIVE  SET-BUFFER-CHUNK RETRIEVAL THREE
+     0.200  PROCEDURAL   CONFLICT-RESOLUTION
+     0.200  PROCEDURAL   PRODUCTION-SELECTED INCREMENT
+     0.200  PROCEDURAL   BUFFER-READ-ACTION GOAL
+     0.200  PROCEDURAL   BUFFER-READ-ACTION RETRIEVAL
+     0.250  PROCEDURAL   PRODUCTION-FIRED INCREMENT
+THREE 
+     0.250  PROCEDURAL   MOD-BUFFER-CHUNK GOAL
+     0.250  PROCEDURAL   MODULE-REQUEST RETRIEVAL
+     0.250  PROCEDURAL   CLEAR-BUFFER RETRIEVAL
+     0.250  DECLARATIVE  start-retrieval
+     0.250  PROCEDURAL   CONFLICT-RESOLUTION
+     0.300  DECLARATIVE  RETRIEVED-CHUNK FOUR
+     0.300  DECLARATIVE  SET-BUFFER-CHUNK RETRIEVAL FOUR
+     0.300  PROCEDURAL   CONFLICT-RESOLUTION
+     0.300  PROCEDURAL   PRODUCTION-SELECTED STOP
+     0.300  PROCEDURAL   BUFFER-READ-ACTION GOAL
+     0.300  PROCEDURAL   BUFFER-READ-ACTION RETRIEVAL
+     0.350  PROCEDURAL   PRODUCTION-FIRED STOP
+FOUR 
+     0.350  PROCEDURAL   CLEAR-BUFFER GOAL
+     0.350  PROCEDURAL   CLEAR-BUFFER RETRIEVAL
+     0.350  PROCEDURAL   CONFLICT-RESOLUTION
+     0.350  ------       Stopped because no events left to process</code></pre>
+</div>
+<p>This output is called the trace of the model. Each line of the trace
+represents one event that occurred during the running of the model. Each
+event shows the time in seconds at which it happened, the ACT-R
+mechanism that generated the event (typically the name of a module), and
+some details describing the event. Any output generated by the model is
+also shown in the trace. The level of detail provided in the trace can
+be changed to see more or less information as needed<a href="#fn4"
+class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>,
+and this model is set to show the most information possible. That is
+more information than is typically needed, but some of the steps that
+will help to understand how the system works are only shown at this
+level of detail. </p>
+<p>You should now open the count model in a text editor (if you have not
+already) to begin looking at how the model is specified. Since we will
+not be editing the file, the simple editor provided by the ACT-R
+Environment is sufficient to see the model definition, and you can use
+that by pressing the “Open File” button on the Control Panel.</p>
+<p>The first two commands used in the model file are
+<strong>clear-all</strong> and <strong>define-model</strong> as
+described above, and the rest of the file contains the model definition
+within the <strong>define-model</strong> call. </p>
+<p>The first item in the model definition is a call to the<strong>
+sgp</strong> command which is used to set parameters for the model. We
+will not describe that here, but it is covered in the code description
+document. The rest of the model definition contains the chunks and
+productions for performing this task, and we will look at those in
+detail.</p>
+
+<h3 id="chunk-types-for-the-count-model"><span
+id="anchor-6"></span>1.5.1 Chunk-types for the Count model</h3>
+<p>The model definition has two specifications for chunk-types used by
+this model:</p>
+<div>
+<pre><code>(chunk-type number number next)
+(chunk-type count-from start end count)</code></pre>
+</div>
+<p>The <strong>number</strong> chunk-type specifies the slots that will
+be used to encode the ordering of numbers. It contains a slot named
+number which indicates the current number and a slot named next which
+indicates the next number in order.<sup><a href="#fn5"
+class="footnote-ref" id="fnref5"
+role="doc-noteref"><sup>5</sup></a></sup> The <strong>count-from
+</strong>chunk type specifies the slots that will be used for the
+<strong>goal</strong> buffer chunk of the model, and it has slots to
+hold the starting number, the ending number, and the current count.</p>
+<h3 id="declarative-memory-for-the-count-model">1.5.2 Declarative Memory
+for the Count model</h3>
+<p>After the chunk-types we find the initial chunks placed into the
+declarative memory of the model using the <strong>add-dm</strong>
+command:</p>
+<div>
+<pre><code>(add-dm
+ (one ISA number number one next two)
+ (two ISA number number two next three)
+ (three ISA number number three next four)
+ (four ISA number number four next five)
+ (five ISA number number five))</code></pre>
+</div>
+<p>Each of the lists in the add-dm command specifies one chunk. The
+first five define chunks named <strong>one</strong>,<strong>
+two</strong>,<strong> three</strong>,<strong> four</strong>, and
+<strong>five</strong>. Each chunk represents a number, and contains
+slots indicating the number it represents and the next number in order.
+This is the knowledge that enables the model to count.</p>
+<h3 id="setting-the-initial-goal">1.5.3 Setting the Initial Goal</h3>
+<p>The next thing we see is a call to the command
+<strong>goal-focus</strong> with the description of a chunk similar to
+what was used in <strong>add-dm</strong>:</p>
+<div>
+<pre><code>(goal-focus (isa count-from start two end four))</code></pre>
+</div>
+<p>The <strong>goal-focus</strong> command allows the modeler to provide
+the description of a chunk to place into the <strong>goal</strong>
+buffer when the model starts to run. The chunk described there encodes
+the goal of counting from two (in slot <strong>start</strong>) to four
+(in slot <strong>end</strong>). Note that the chunk-type
+<strong>count-from</strong> has another slot called
+<strong>count</strong> which is not used in the goal chunk description.
+Because the <strong>count</strong> slot is not included the chunk will
+not have a slot named <strong>count</strong>. When the model starts to
+run, the results of that command can be seen in the first line of the
+trace shown above and copied here with color coding for reference:</p>
+<p>0.000 GOAL SET-BUFFER-CHUNK GOAL (ISA COUNT-FROM START TWO END FOUR)
+NIL</p>
+<p>It shows that at time 0.000 the goal module performed the
+set-buffer-chunk action (the ACT-R command for placing a chunk into a
+buffer) for the goal buffer with the chunk description (ISA COUNT-FROM
+START TWO END FOUR) that was in the goal-focus command. It also
+indicates that this action was not requested by a production in the
+model (the NIL at the end of the event details). </p>
+
+<h3 id="the-productions"><span id="anchor-7"></span>1.5.4 The
+Productions</h3>
+<p>The rest of the model definition is the productions which can use the
+chunks from declarative memory to count, and we will look at each of the
+production specifications in detail along with the selection and firing
+of those productions as shown in the trace of the model run above.</p>
+<h4 id="the-start-production">1.5.4.1 The Start Production</h4>
+<div>
+<pre><code>(p start
+   =goal&gt;
+      ISA        count-from
+      start      =num1
+      count      nil
+ ==&gt;
+   =goal&gt;
+      ISA        count-from
+      count      =num1
+   +retrieval&gt;
+      ISA        number
+      number     =num1
+   )</code></pre>
+</div>
+<p>The LHS of the start production tests the <strong>goal</strong>
+buffer. It tests that there is a value in the start slot which it now
+references with the variable <strong>=num1</strong>. This is often
+referred to as binding the variable, as in, <strong>=num1</strong> is
+bound to the value that is in the start slot. It also tests the count
+slot for the value <strong>nil</strong>. The value <strong>nil
+</strong>is a special value that can be used when testing and setting
+slots. <strong>Nil </strong>is the Lisp symbol which represents both the
+boolean false and null (the empty list). Its use in a slot test is to
+check that the slot does not exist in the chunk. Thus, that is testing
+that the chunk in the <strong>goal</strong> buffer does not have a slot
+named count. </p>
+<p>The RHS of the start production performs two actions. The first is a
+modification of the chunk in the <strong>goal</strong> buffer. That
+modification will add the slot named count to the chunk in the
+<strong>goal</strong> buffer (since the condition tested that it does
+not have such a slot) with the value that is bound to
+<strong>=num1</strong>. The other action is a request of the retrieval
+buffer. All requests to the declarative module (the retrieval buffer’s
+module) perform a search of the chunks in declarative memory to find one
+that matches the information provided and then place that chunk into the
+<strong>retrieval</strong> buffer. This request is asking the
+declarative module to find a chunk that has the value which is bound to
+<strong>=num1</strong> in its number slot.</p>
+<p>Looking at the model trace, we see that the first production that
+gets selected and fired by the model is the production
+<strong>start</strong>:</p>
+<p> 0.000 PROCEDURAL CONFLICT-RESOLUTION </p>
+<p> 0.000 PROCEDURAL PRODUCTION-SELECTED START </p>
+<p> 0.000 PROCEDURAL BUFFER-READ-ACTION GOAL</p>
+<p> 0.050 PROCEDURAL PRODUCTION-FIRED START</p>
+<p>The first line shows that the procedural module is performing an
+action called conflict-resolution. That action is the process which the
+procedural module uses to select which of the productions that matches
+the current state (if any) to fire next. The next line shows that among
+those that matched, the <strong>start</strong> production was selected.
+The important thing to remember is that the production was selected
+because its condition was satisfied. It did not get selected because it
+was the first production listed in the model or because it has the name
+start. The third line shows that the selected production’s condition
+tested the chunk in the <strong>goal</strong> buffer. That last line,
+which happens 50 milliseconds later (time 0.050), shows that the
+<strong>start </strong>production has now fired and its actions will
+take effect. The 50ms time is a parameter of the procedural module, and
+by default every production will take 50ms between the time it is
+selected and when it fires.</p>
+<p>The actions of the production are seen as the next two lines of the
+trace:</p>
+<p> 0.050 PROCEDURAL MOD-BUFFER-CHUNK GOAL </p>
+<p> 0.050 PROCEDURAL MODULE-REQUEST RETRIEVAL </p>
+<p>Mod-buffer-chunk is the action which modifies a chunk in a buffer, in
+this case the <strong>goal</strong> buffer, and module-request indicates
+that a request is being sent to a module through the indicated
+buffer.</p>
+<p>The next line of the trace is also a result of the RHS of the
+<strong>start </strong>production:</p>
+<p> 0.050 PROCEDURAL CLEAR-BUFFER RETRIEVAL </p>
+<p>That is the implicit clearing of the buffer which happens because of
+the request that was made.</p>
+<p>The next line in the trace is a notification from the declarative
+module that it has received a request and has started the chunk
+retrieval process:</p>
+<p> 0.050 DECLARATIVE start-retrieval </p>
+<p>That is followed by the procedural system now trying to find a new
+production to fire:</p>
+<p> 0.050 PROCEDURAL CONFLICT-RESOLUTION </p>
+<p>However, it is not followed by a notification of a production being
+selected, because there is no production whose condition is satisfied at
+this time. </p>
+<p>The following two lines show the successful completion of the
+retrieval request by the declarative module after another 50ms have
+passed and then the setting of the <strong>retrieval</strong> buffer
+with that chunk.</p>
+<p> 0.100 DECLARATIVE RETRIEVED-CHUNK TWO </p>
+<p> 0.100 DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL TWO</p>
+<p>Now we see conflict resolution occurring again and this time the
+<strong>increment </strong>production is selected. </p>
+<p> 0.100 PROCEDURAL CONFLICT-RESOLUTION </p>
+<p> 0.100 PROCEDURAL PRODUCTION-SELECTED INCREMENT </p>
+<h4 id="the-increment-production">1.5.4.2 The Increment Production</h4>
+<div>
+<pre><code>(p increment
+   =goal&gt;
+      ISA        count-from
+      count      =num1
+    - end        =num1
+   =retrieval&gt;
+      ISA        number
+      number     =num1
+      next       =num2
+ ==&gt;
+   =goal&gt;
+      ISA        count-from
+      count      =num2
+   +retrieval&gt;
+      ISA        number
+      number     =num2
+   !output!      (=num1)
+   )</code></pre>
+</div>
+<p>On the LHS of this production we see that it tests both the
+<strong>goal</strong> and <strong>retrieval</strong> buffers. In the
+test of the <strong>goal</strong> buffer it uses a modifier in the
+testing of the <strong>end </strong>slot:</p>
+<p> =goal&gt;</p>
+<p> ISA count-from</p>
+<p> count =num1</p>
+<p> - end =num1</p>
+<p>The “-” in front of the slot is the negative test modifier. It means
+that the following slot test must <strong>not</strong> be true for the
+test to be successful. The test is that the <strong>end</strong> slot of
+the chunk in the <strong>goal</strong> buffer have the value bound to
+the <strong>=num1</strong> variable (which is the value from the
+<strong>count</strong> slot of the chunk in the buffer). Thus, this test
+is true if the <strong>end</strong> slot of the chunk in the
+<strong>goal</strong> buffer does <strong>not</strong> have the same
+value as the <strong>count</strong> slot since they are tested with the
+same variable <strong>=num1</strong>. Note that the negation of the
+<strong>end</strong> slot test would also be true if the chunk in the
+<strong>goal</strong> buffer did not have a slot named
+<strong>end</strong> because a test for a slot value in a slot which
+does not exist is false, and thus the negation of that would be
+true.</p>
+<p>The <strong>retrieval</strong> buffer test checks that there is a
+chunk in the <strong>retrieval</strong> buffer which has a value in its
+<strong>number</strong> slot that matches the current
+<strong>count</strong> slot from the <strong>goal</strong> buffer chunk
+and binds the variable <strong>=num2</strong> to the value of its
+<strong>next</strong> slot:</p>
+<p> =retrieval&gt;</p>
+<p> ISA number</p>
+<p> number =num1</p>
+<p> next =num2</p>
+<p>We can see that these two buffers were tested by the production in
+the next two lines of the trace:</p>
+<p> 0.100 PROCEDURAL BUFFER-READ-ACTION GOAL </p>
+<p> 0.100 PROCEDURAL BUFFER-READ-ACTION RETRIEVAL </p>
+<p>Now we will look at the RHS of this production:</p>
+<p> </p>
+<p> =goal&gt;</p>
+<p> ISA count-from</p>
+<p> count =num2</p>
+<p> +retrieval&gt;</p>
+<p> ISA number</p>
+<p> number =num2</p>
+<p> !output! (=num1)</p>
+<p>The first two actions are very similar to those in the
+<strong>start</strong> production. It modifies the chunk in the
+<strong>goal</strong> buffer to change the value of the
+<strong>count</strong> slot to the next number, which is the value of
+the <strong>=num2</strong> variable, and it makes a retrieval request to
+get the chunk representing that next number. The third action is a
+special command that can be used in the actions of a production:</p>
+<p> !output! (=num1)</p>
+<p><strong>!output!</strong> (pronounced bang-output-bang) can be used
+on the RHS of a production to display information in the trace. It is
+followed by items in parentheses and those items will be printed in the
+trace when the production fires. In this production it is used to
+display the numbers as the model counts. The results of the
+<strong>!output!</strong> in the first firing of
+<strong>increment</strong> can be seen in the trace after the production
+fires:</p>
+<p> 0.150 PROCEDURAL PRODUCTION-FIRED INCREMENT </p>
+<p>TWO </p>
+<p>The output is displayed on one line in the trace after the notice
+that the production has fired. The items in the list to output can be
+variables as is the case here (=num1), constant items like (stopping),
+or a combination of the two e.g. (the number is =num). When a variable
+is included in the items to output the value to which it was bound in
+the production will be used in the output displayed. That is why the
+trace shows TWO instead of =num1.</p>
+<p>The next few lines of the trace show the actions initiated by the
+<strong>increment</strong> production and they look very much like the
+actions that the<strong> start</strong> production generated. The
+<strong>goal</strong> buffer is modified, a retrieval request is made, a
+chunk is retrieved, and then that chunk is placed into the
+<strong>retrieval</strong> buffer:</p>
+<p> 0.150 PROCEDURAL MOD-BUFFER-CHUNK GOAL </p>
+<p> 0.150 PROCEDURAL MODULE-REQUEST RETRIEVAL </p>
+<p> 0.150 PROCEDURAL CLEAR-BUFFER RETRIEVAL </p>
+<p> 0.150 DECLARATIVE start-retrieval </p>
+<p> 0.150 PROCEDURAL CONFLICT-RESOLUTION </p>
+<p> 0.200 DECLARATIVE RETRIEVED-CHUNK THREE </p>
+<p> 0.200 DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL THREE</p>
+<p>We then see that the <strong>increment </strong>production is
+selected again:</p>
+<p> 0.200 PROCEDURAL CONFLICT-RESOLUTION </p>
+<p> 0.200 PROCEDURAL PRODUCTION-SELECTED INCREMENT </p>
+<p>It will continue to be selected and fired until the value of the
+<strong>count </strong>and <strong>end </strong>slots of the goal chunk
+are the same, at which time its test of the <strong>goal</strong> buffer
+will fail. We see that it fires twice in the trace and then a different
+production is selected at .3 seconds into the run:</p>
+<p> 0.300 PROCEDURAL CONFLICT-RESOLUTION </p>
+<p> 0.300 PROCEDURAL PRODUCTION-SELECTED STOP </p>
+<h4 id="the-stop-production">1.5.4.3 The Stop Production</h4>
+<div>
+<pre><code>(p stop
+   =goal&gt;
+      ISA        count-from
+      count      =num
+      end        =num
+   =retrieval&gt;
+      ISA        number
+      number     =num
+ ==&gt;
+   -goal&gt;
+   !output!      (=num)
+   )</code></pre>
+</div>
+<p>The stop production matches when the values of the <strong>count
+</strong>and <strong>end</strong> slots of the chunk in the <strong>goal
+</strong>buffer are the same and they also match the value in the
+<strong>number</strong> slot of the chunk in the <strong>retrieval
+</strong>buffer. The action it takes is to again print out the current
+number and to also clear the chunk from the <strong>goal</strong>
+buffer:</p>
+<p> 0.350 PROCEDURAL PRODUCTION-FIRED STOP </p>
+<p>FOUR </p>
+<p> 0.350 PROCEDURAL CLEAR-BUFFER GOAL </p>
+<p>The final event that happens in the run is conflict-resolution by the
+procedural module. No productions are found to match and no other events
+of any module are pending at this time (for instance a retrieval request
+being completed) so there is nothing more for the model to do and it
+stops running.</p>
+<p> 0.350 PROCEDURAL CONFLICT-RESOLUTION</p>
+<p> 0.350 ------ Stopped because no events left to process</p>
+<h2 id="basic-model-operations-exercise">1.6 Basic <strong>Model
+Operations Exercise</strong></h2>
+<p>To help you understand how an ACT-R model runs, this section contains
+an exercise in which you will be asked to perform the operations of the
+procedural and declarative modules. You will be looking at the contents
+of the buffers to perform the conflict resolution process (determining
+which productions match the current state, if any), assigning the
+variables in the selected production to the values they have from the
+buffer chunks (called instantiating the production), and determining
+which chunks in the model’s declarative memory, if any, match the
+<strong>retrieval</strong> buffer requests that the productions makes.
+This will require using two of the tools in the Control Panel while
+running the count model described in the previous section.</p>
+<h3 id="load-or-reset-the-model-if-necessary">1.6.1 Load or reset the
+model if necessary</h3>
+<p>If you have not yet loaded the count model then you need to press the
+“Load ACT-R code” button on the ACT-R Environment Control Panel and
+select the “count.lisp” file in the tutorial/unit1 directory. If you
+have already loaded the model and run it, then you need to reset it to
+its initial conditions so that you can run it again. To reset the model
+you should press the “Reset” button on the Control Panel.</p>
+<h3 id="the-stepper">1.6.2 The Stepper</h3>
+<p>Press the “Stepper” button on the Control Panel<strong> </strong>to
+open the Stepper tool. When the model is run, for each event that shows
+as a line in the trace, the stepper will pause the model to wait for
+your confirmation before handling that event. That provides you with the
+opportunity to inspect all of the components of the model as it
+progresses and can be a very useful tool when developing and debugging
+models. For some events, the stepper will also show additional
+information after it happens. The production-selected and
+production-fired events will show the text of the production, the
+bindings for the variables as they matched that production, and a set of
+parameters for that production (which we will describe later in the
+tutorial). After a retrieval request completes, the Stepper will show
+the details of the chunk it retrieved and the corresponding parameters
+that lead to that chunk being the one retrieved (more on that in a later
+unit).</p>
+<p>For this exercise, you should click the “Tutor Mode<strong>”
+</strong>checkbox at the top of the Stepper window. That will enable the
+additional interactions which you will be asked to perform for the
+conflict-resolution, production-selected, and start-retrieval
+events.</p>
+<h3 id="the-buffers-tool">1.6.3 The Buffers tool</h3>
+<p>Press the “Buffers”<strong> </strong>button in the Control Panel to
+bring up a new buffer inspection window.<strong> </strong>That will
+display a list of all the buffers for the existing modules. Selecting
+one from the list will display the chunk that is in that buffer in the
+text window to the right of the list by default. If you press the
+“Status” button the display will switch to show the information about
+queries for the buffer, and pressing the “Contents” button will switch
+it back to showing the chunk. At this point all of the buffers are
+empty, but that will change as the model runs.</p>
+<h3 id="running-with-the-stepper">1.6.4 Running with the Stepper</h3>
+<p>Now you should run the model by pressing the “Run” button in the
+Control Panel. When you do that you will notice that unlike before
+nothing shows up in the ACT-R window. Instead, the first action that
+will occur, the setting of the chunk in the <strong>goal</strong>
+buffer, now shows at the top of the Stepper window after “Next Step:”.
+That is the next action which will occur, but it is delayed until you
+press the “Step” button in the Stepper window to allow that action to
+occur. You should press it now, and then you will see that line printed
+out in the model trace. The Stepper now shows that event as “Last
+Stepped:” and a new event, conflict-resolution, is shown as the next
+step. In the Buffers tool window you can now see that there is a chunk
+in the <strong>goal</strong> buffer which has the slots and values that
+were specified with the goal-focus command:</p>
+<p>The chunk in the <strong>goal</strong> buffer looks like this:</p>
+<div>
+<pre><code>GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   START TWO
+   END FOUR
+</code></pre>
+</div>
+<h3 id="conflict-resolution">1.6.5 Conflict-resolution</h3>
+<p>You should press the Step button again to allow the
+conflict-resolution action to occur. When you do so, the tutoring mode
+will open another window. In that window the conditions of the
+productions in the model are shown, and it is your task to pick which,
+if any, match the current state. To determine that you will need to use
+the Buffers tool to look at the chunks in the buffers and compare them
+to the patterns that are specified in the productions. Once you have
+chosen the item or items that you think match the current state you
+should press the “Check” button to have your choices compared to what
+the procedural model did during conflict resolution. If all of your
+choices were correct the window will close and you can continue stepping
+through the run. If any of your choices were incorrect then the conflict
+resolution window will show those incorrect choices, and if one of the
+choices does not match there will be a short description of the reason
+that it does not match. You will then need to press the “Ok” button to
+close the window and continue.</p>
+<h3 id="production-selection">1.6.6 <strong>Production
+Selection</strong></h3>
+<p>The next step shown is now production-selected, and you should press
+the Step button to allow that to happen. When a production-selected
+event happens the Stepper shows additional information about the
+selected production, which in this case, is the <strong>start
+</strong>production. In tutor mode, the production is shown in the
+bottom right pane of the Stepper window with all of the variables
+highlighted. Your task is to replace all of the variables with the
+values to which they are bound in the matching of this production. When
+you click on a highlighted variable in the production display of the
+Stepper a new window will open in which you can enter the value for that
+variable. You must enter the value for every variable in the production
+(including multiple occurrences of the same variable) before it will
+allow you to progress to the next event.</p>
+<p>You will again need the information from the Buffers tool to be able
+to instantiate the production. One thing to remember is that a variable
+which names the buffer, for example the variable <strong>=goal</strong>
+in the =goal&gt; condition, will always bind to the name of the chunk in
+the corresponding buffer. The bindings for the other variables will
+correspond to the value of the indicated slot of the tested buffer. A
+variable will have the same value everywhere in a production that has
+been selected<sup><a href="#fn6" class="footnote-ref" id="fnref6"
+role="doc-noteref"><sup>6</sup></a></sup>, and the bound values are
+displayed in the Stepper window as you enter them. Thus once you find
+the binding for a variable you can just refer to the Stepper to get the
+value for other occurrences of the variable in that production.</p>
+<p>At any point in time, you can ask the tutor for help in binding a
+variable by hitting either the Hint<strong> </strong>or Help button of
+the entry dialog. A hint will instruct you on where to find the correct
+answer and help will just give you the correct answer.</p>
+<p>Once the production is completely instantiated, you can continue
+stepping through the model run with the Step button. You should step the
+model to start-retrieval event which is the next part of the tutored
+exercise.</p>
+<h3 id="declarative-retrieval">1.6.8 Declarative retrieval</h3>
+<p>The start-retrieval event is an indication from the declarative
+memory module that it has retrieved a request to find a chunk in memory.
+If you press the Step button now it will open another window which is
+similar to the conflict resolution selection window. In this window you
+are shown the retrieval request which the production made and all of the
+chunks in the model’s declarative memory. Your task is to select the
+chunks which match the request that was made. Once you have made your
+choices you should press the “Check” button. If you correctly chose the
+chunk or chunks which matched the request the window will close and you
+can continue stepping through the model. If you made any incorrect
+selections then those items will be shown and you will need to press the
+“Ok” button to continue.</p>
+<h3 id="the-retrieved-chunk">1.6.9 The Retrieved Chunk</h3>
+<p>If you now step to the retrieved-chunk event you will see that the
+model has retrieved the chunk named <strong>two</strong>, and if you
+step again you will see a set-buffer-chunk action for the retrieval
+buffer with the chunk <strong>two</strong>. If we then use the Buffers
+tool to look at the chunk in the <strong>retrieval </strong>buffer we
+will see this:</p>
+<div>
+<pre><code>RETRIEVAL: RETRIEVAL-CHUNK0 [TWO]
+RETRIEVAL-CHUNK0
+   NUMBER TWO
+   NEXT THREE
+</code></pre>
+</div>
+<h3 id="buffer-chunk-copying">1.6.10 Buffer Chunk Copying</h3>
+<p>Notice that the name of the chunk in the <strong>retrieval</strong>
+buffer is not <strong>two</strong>, but
+<strong>retrieval-chunk0</strong>. When an existing chunk is placed into
+a buffer the buffer always makes its own copy of that chunk. The name of
+the chunk that was copied is shown in the buffer inspection window in
+square brackets after the name of the chunk actually in the buffer. The
+reason for copying the chunk is to prevent the model from being able to
+alter the original chunk – it cannot directly manipulate the information
+that it has learned previously, but it may use the contents of that
+knowledge to create new chunks.</p>
+<p>You should now continue to step through the model performing the
+conflict resolution, production instantiation, and declarative memory
+matching exercises until the model finishes the task.</p>
+<h2 id="the-semantic-model">1.7 The Semantic Model</h2>
+<p>The next example model for this unit is the <strong>semantic
+</strong>model, found in the “semantic.lisp” file of tutorial unit 1.
+You should load that model file now. When you do so, you may notice that
+there is some text displayed in the window that indicates it loaded
+successfully and that text is also displayed in the ACT-R window. For
+now, you can ignore that output and just press “Ok” as you did for the
+previous model. We will come back to that after describing the operation
+of the model.</p>
+<p>This model contains chunks which encode the following network of
+categories and properties. </p>
+<p><img src="media/unit1/Pictures/100031920000314D000014E19B4922B0.png"
+style="width:5.7882in;height:2.4484in" /></p>
+<p>The productions it has are capable of searching this network to make
+decisions about whether one category is a member of another category,
+for example, is a canary an animal or is a shark a bird.</p>
+
+<h3 id="encoding-of-the-semantic-network">1.7.1 Encoding of the Semantic
+Network</h3>
+<p>All of the links in this network are encoded by chunks with the slots
+<strong>object</strong>, <strong>attribute</strong>, and
+<strong>value</strong>. For instance, the following three chunks encode
+the links involving shark:</p>
+<div>
+<pre><code> (p1 ISA property object shark attribute dangerous value true)
+ (p2 ISA property object shark attribute locomotion value swimming)
+ (p3 ISA property object shark attribute category value fish)</code></pre>
+</div>
+<p><strong>p1</strong> encodes that a shark is
+<strong>dangerous</strong> (set in the attribute slot) by setting the
+value slot to <strong>true</strong>. <strong>p2 </strong>encodes that a
+shark can swim by setting the value slot to <strong>swimming</strong>
+with the attribute slot set as <strong>locomotion</strong>. <strong>p3
+</strong>encodes that a shark is a fish by setting <strong>fish</strong>
+as the value and the attribute as <strong>category</strong>. </p>
+<p>There are of course many other ways one could encode this
+information, for example instead of using slots named attribute and
+value it seems like one could just use the slot as the attribute and the
+value as its value for example:</p>
+<p>(p1 object shark dangerous true)</p>
+<p>(p2 object shark locomotion swimming)</p>
+<p>(p3 object shark category fish)</p>
+<p>or perhaps even collapsing all of that information into a single
+chunk describing a shark:</p>
+<p>(shark dangerous true locomotion swimming category fish)</p>
+<p>How one chooses to organize the knowledge in a model can have an
+effect on the results, and that can be a very important aspect of the
+modeling task. For example, choosing to encode the properties in
+separate chunks vs a single chunk will affect how that information is
+reinforced (all the items together vs each individually) as well as how
+it may be affected by the spreading of activation for related
+information (both topics which will be discussed in later units).
+Typically, there is no one “right way” to write a model and one should
+make the choices necessary based on the objectives of the modeling
+effort and any related research which provides guidance. </p>
+<p>For this model we have chosen the representation for practical
+reasons – it provides a useful example. It might seem that the second
+representation would still be better for that, and such a representation
+could have been used for the category searching model described below
+since we are only searching for the category attribute which could have
+been encoded directly into the productions. However, with what has been
+discussed so far in the tutorial, it would be difficult to use that
+representation to perform a more general search for information in the
+network. When we get to unit 8 of the tutorial we will see some
+additional aspects of the pattern matching in productions which could be
+used with such a representation to make the searching more general.</p>
+<h3 id="testing-for-category-membership">1.7.2 Testing for Category
+Membership</h3>
+<p>This model performs a test for category membership when a chunk in
+the <strong>goal</strong> buffer has object and category slot values and
+no slot named judgment. The provided starting goal is created like
+this:</p>
+<div>
+<pre><code>(goal-focus (ISA is-member object canary category bird))</code></pre>
+</div>
+<p>which represents a test to determine if a canary is a bird. That
+chunk does not have a judgment slot, and the model will add that slot to
+indicate a result of yes or no. If you run the model you will see the
+following trace:</p>
+<div>
+<pre><code>     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY BIRD) NIL
+     0.000  PROCEDURAL            CONFLICT-RESOLUTION
+     0.050  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.050  DECLARATIVE           start-retrieval
+     0.050  PROCEDURAL            CONFLICT-RESOLUTION
+     0.100  DECLARATIVE           RETRIEVED-CHUNK P14
+     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
+     0.100  PROCEDURAL            CONFLICT-RESOLUTION
+     0.150  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
+     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.150  PROCEDURAL            CONFLICT-RESOLUTION
+     0.150  ------                Stopped because no events left to process</code></pre>
+</div>
+<p>If you inspect the goal chunk after the model stops it will look like
+this:</p>
+<div>
+<pre><code>GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   OBJECT CANARY
+   CATEGORY BIRD
+   JUDGMENT YES
+</code></pre>
+</div>
+<p>This is among the simplest cases possible for this network of facts
+and only requires the retrieval of this property to determine the
+answer:</p>
+<div>
+<pre><code> (p14 ISA property object canary attribute category value bird)</code></pre>
+</div>
+<p>There are two productions involved. The first,
+<strong>initial-retrieve</strong>, requests the retrieval of categorical
+information and the second, <strong>direct-verify,</strong> uses that
+information and sets the <strong>judgment</strong> slot to
+<strong>yes</strong>:</p>
+<div>
+<pre><code>(p initial-retrieve
+   =goal&gt;
+      ISA        is-member
+      object     =obj
+      category   =cat
+      judgment   nil
+==&gt;
+   =goal&gt;
+      judgment   pending
+   +retrieval&gt; 
+      ISA        property
+      object     =obj
+      attribute  category
+)</code></pre>
+</div>
+<p><strong>Initial-retrieve </strong>tests that there are object and
+category slots in the <strong>goal</strong> buffer’s chunk and that it
+does not have a judgment slot. Its action is to modify the chunk in the
+<strong>goal </strong>buffer by adding a judgment slot with the value
+pending and to request the retrieval of a chunk from declarative memory
+which indicates a category for the current object.</p>
+<p>After that production fires and the chunk named p14 is retrieved the
+<strong>direct-verify </strong>production matches and fires:</p>
+<div>
+<pre><code>(P direct-verify
+   =goal&gt;
+      ISA        is-member
+      object     =obj
+      category   =cat
+      judgment   pending
+   =retrieval&gt;
+      ISA        property
+      object     =obj
+      attribute  category
+      value      =cat
+==&gt;
+   =goal&gt;
+      judgment   yes
+)</code></pre>
+</div>
+<p>That production tests that the chunk in the <strong>goal
+</strong>buffer has values in the object and category slots and a
+judgment slot with the value pending, and that the chunk in the
+<strong>retrieval</strong> buffer has an object slot with the same value
+as the object slot of the chunk in the <strong>goal </strong>buffer, an
+attribute slot with the value category, and a value slot with the same
+value as the category slot of the chunk in the <strong>goal</strong>
+buffer. Its action is to modify the chunk in the <strong>goal
+</strong>buffer by setting the judgment slot to the value yes.</p>
+<p>Something to notice about this production is that after it fires we
+see this event in the trace from the procedural module:</p>
+<p> 0.150 PROCEDURAL CLEAR-BUFFER RETRIEVAL </p>
+<p>This is another instance of implicit buffer clearing. If a production
+matches the chunk from a buffer on the LHS and does not modify it on the
+RHS, then for most buffers<a href="#fn7" class="footnote-ref"
+id="fnref7" role="doc-noteref"><sup>7</sup></a> that chunk will be
+automatically cleared from the buffer.</p>
+<p>Some terminology which is often used when discussing productions
+which use a chunk that is in a buffer and then clear that chunk from the
+buffer is to say that it “harvests” the chunk – the
+<strong>direct-verify</strong> production harvests the chunk from the
+<strong>retrieval</strong> buffer. We would not say that it harvests the
+<strong>goal</strong> buffer’s chunk because it is modified and remains
+in the buffer. The implicit clearing of a chunk which is matched and not
+modified is referred to as “strict harvesting” and it is there as a
+convenience so that one does not need to add lots of explicit buffer
+clearing actions to the productions they write.</p>
+<p>If you would like some more experience with how the ACT-R modules
+work, you can reset the model, open the Stepper, enable tutor mode, and
+run it like you did with the count model.</p>
+<h3 id="chaining-through-category-links">1.7.3 Chaining Through Category
+Links</h3>
+<p>A slightly more complex case occurs when the category is not an
+immediate super ordinate of the indicated object and it is necessary to
+chain through an intermediate category. An example where this is
+necessary is in the verification of whether a canary is an animal, and
+there is an example of that the model file which you can use to replace
+the original goal-focus:</p>
+<div>
+<pre><code>; (goal-focus (ISA is-member object canary category animal))</code></pre>
+</div>
+<p>If you edit the file, make that change, and save the file you must
+load the model again. That can be done using the “Reload” button on the
+Control Panel which will load the last model file that was loaded, or
+you can use the “Load ACT-R code” button to select the file and load
+it.<a href="#fn8" class="footnote-ref" id="fnref8"
+role="doc-noteref"><sup>8</sup></a> </p>
+<p>Running the model with that goal will result in the following
+trace:</p>
+<div>
+<pre><code>     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY ANIMAL) NIL
+     0.000  PROCEDURAL            CONFLICT-RESOLUTION
+     0.050  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.050  DECLARATIVE           start-retrieval
+     0.050  PROCEDURAL            CONFLICT-RESOLUTION
+     0.100  DECLARATIVE           RETRIEVED-CHUNK P14
+     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
+     0.100  PROCEDURAL            CONFLICT-RESOLUTION
+     0.150  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
+     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.150  DECLARATIVE           start-retrieval
+     0.150  PROCEDURAL            CONFLICT-RESOLUTION
+     0.200  DECLARATIVE           RETRIEVED-CHUNK P20
+     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P20
+     0.200  PROCEDURAL            CONFLICT-RESOLUTION
+     0.250  PROCEDURAL            PRODUCTION-FIRED DIRECT-VERIFY
+     0.250  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.250  PROCEDURAL            CONFLICT-RESOLUTION
+     0.250  ------                Stopped because no events left to process</code></pre>
+</div>
+<p>This trace is similar to the previous one except that it involves an
+extra production, <strong>chain-category</strong>, which will attempt to
+retrieve the next category in the case that an attribute has been
+retrieved which does not immediately allow a decision to be made.</p>
+<div>
+<pre><code>(P chain-category
+   =goal&gt;
+      ISA        is-member
+      object     =obj1
+      category   =cat
+      judgment   pending
+   =retrieval&gt;
+      ISA        property
+      object     =obj1
+      attribute  category
+      value      =obj2
+    - value      =cat
+==&gt;
+   =goal&gt;
+      object     =obj2
+   +retrieval&gt; 
+      ISA        property
+      object     =obj2
+      attribute  category
+)</code></pre>
+</div>
+<p>This production tests that the chunk in the <strong>goal
+</strong>buffer has values in the object and category slots and a
+judgment slot with the value of pending, and that the chunk in the
+<strong>retrieval </strong>buffer has an object slot with the same value
+as the object slot of the chunk in the <strong>goal</strong> buffer, an
+attribute slot with the value category, a value in the value slot, and
+that the value in the value slot is not the same as the value of the
+category slot of the chunk in the <strong>goal</strong> buffer. Its
+action is to modify the chunk in the <strong>goal </strong>buffer by
+setting the object slot to the value from the value slot of the chunk in
+the <strong>retrieval</strong> buffer and to request the retrieval of a
+chunk from declarative memory which has that same value in its object
+slot and the value category in its attribute slot.</p>
+<p>Again, for more experience, you can reset this model and step through
+it in tutor model.</p>
+<h3 id="the-failure-case">1.7.4 The Failure Case</h3>
+<p>Now you should change the initial goal to the other example provided
+in the model file.</p>
+<div>
+<pre><code>; (goal-focus (ISA is-member object canary category fish))</code></pre>
+</div>
+<p>When you run the model with this goal, you will see what happens when
+the chain reaches a dead end:</p>
+<div>
+<pre><code>     0.000  GOAL                  SET-BUFFER-CHUNK GOAL (ISA IS-MEMBER OBJECT CANARY CATEGORY FISH) NIL
+     0.000  PROCEDURAL            CONFLICT-RESOLUTION
+     0.050  PROCEDURAL            PRODUCTION-FIRED INITIAL-RETRIEVE
+     0.050  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.050  DECLARATIVE           start-retrieval
+     0.050  PROCEDURAL            CONFLICT-RESOLUTION
+     0.100  DECLARATIVE           RETRIEVED-CHUNK P14
+     0.100  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P14
+     0.100  PROCEDURAL            CONFLICT-RESOLUTION
+     0.150  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
+     0.150  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.150  DECLARATIVE           start-retrieval
+     0.150  PROCEDURAL            CONFLICT-RESOLUTION
+     0.200  DECLARATIVE           RETRIEVED-CHUNK P20
+     0.200  DECLARATIVE           SET-BUFFER-CHUNK RETRIEVAL P20
+     0.200  PROCEDURAL            CONFLICT-RESOLUTION
+     0.250  PROCEDURAL            PRODUCTION-FIRED CHAIN-CATEGORY
+     0.250  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.250  DECLARATIVE           start-retrieval
+     0.250  PROCEDURAL            CONFLICT-RESOLUTION
+     0.300  DECLARATIVE           RETRIEVAL-FAILURE
+     0.300  PROCEDURAL            CONFLICT-RESOLUTION
+     0.350  PROCEDURAL            PRODUCTION-FIRED FAIL
+     0.350  PROCEDURAL            CLEAR-BUFFER RETRIEVAL
+     0.350  PROCEDURAL            CONFLICT-RESOLUTION
+     0.350  ------                Stopped because no events left to process</code></pre>
+</div>
+<p>There we see the declarative memory module reporting that a
+retrieval-failure occurred at time 0.3 which is then followed by the
+production <strong>fail </strong>firing. The <strong>fail</strong>
+production uses a test on the LHS that we have not yet seen.</p>
+<h3 id="a-query-in-the-condition">1.7.5 A Query in the Condition</h3>
+<p>In addition to testing the chunks in the buffers as has been done in
+all of the productions we have seen to this point, it is also possible
+to query the status of the buffer itself and the module which controls
+it. This is done using a “<strong>?</strong>” instead of an
+“<strong>=</strong>” before the name of the buffer. There is a fixed set
+of queries which can be made of the buffer itself. The buffer’s module
+must respond to some specific queries, but may have any number of
+additional queries for its specific operations to which it will respond.
+The result of a query will be either true or false. If any query tested
+in a production has a result which is false, then the production does
+not match. </p>
+<h4 id="querying-the-buffer-itself">1.7.5.1 Querying the buffer
+itself</h4>
+<p>When querying the buffer itself, it can be in one of three mutually
+exclusive situations: there can be a chunk in the buffer, a failure can
+be indicated, or the buffer can be empty with no failure noted. If there
+is a chunk in the buffer or a failure has been indicated, then it is
+also possible to test whether that was the result of a requested action
+or not. Here are examples of the possible queries which can be made to
+test the status of a buffer, using the <strong>retrieval</strong> buffer
+for the examples.</p>
+<p>This query will be true if there is a chunk in the <strong>retrieval
+</strong>buffer and false if there is not: </p>
+<p> ?retrieval&gt;</p>
+<p> buffer full</p>
+<p>This query will be true if a failure has been noted for the
+<strong>retrieval </strong>buffer and false if not: </p>
+<p> ?retrieval&gt;</p>
+<p> buffer failure</p>
+<p>This query will be true if there is not a chunk in the
+<strong>retrieval </strong>buffer and there is not a failure indicated
+and false if there is either a chunk in the buffer or a failure has been
+indicated:</p>
+<p> ?retrieval&gt;</p>
+<p> buffer empty</p>
+<p>This query will be true if there is either a chunk in the
+<strong>retrieval</strong> buffer or the failure condition has occurred
+for the <strong>retrieval</strong> buffer, and that chunk or failure was
+the result of a request made to the buffer’s module. Otherwise, it will
+be false:</p>
+<p> ?retrieval&gt;</p>
+<p> buffer requested</p>
+<p>This query will be true if there is either a chunk in the
+<strong>retrieval</strong> buffer or the failure condition has occurred
+for the <strong>retrieval</strong> buffer, and that chunk or failure
+happened without a request being made to the buffer’s module, as was the
+case for the chunk placed into the <strong>goal</strong> buffer as a
+result of the goal-focus command in the model<a href="#fn9"
+class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a>.
+Otherwise, it will be false:</p>
+<p> ?retrieval&gt;</p>
+<p> buffer unrequested</p>
+<h4 id="querying-a-buffers-module">1.7.5.2 Querying a buffer’s
+module</h4>
+<p>Every module must respond to a query for its state which can be
+tested for being either free or busy. Most modules will respond to other
+queries that are specific to their operation, and those will be
+described in future units when needed. Below are some examples of
+querying the state using the <strong>retrieval </strong>buffer.</p>
+<p>This query will be true if the <strong>retrieval </strong>buffer’s
+module (the declarative module) is not currently performing an action
+and will be false if it is currently performing an action:</p>
+<p> ?retrieval&gt;</p>
+<p> state free</p>
+<p>This query will be true if the <strong>retrieval </strong>buffer’s
+module is currently performing an action and will be false if it is not
+currently performing an action:</p>
+<p> ?retrieval&gt;</p>
+<p> state busy</p>
+<h4 id="using-queries-in-productions">1.7.5.3 Using queries in
+productions</h4>
+<p>When specifying queries in a production multiple queries can be made
+of a single buffer. This query checks if the <strong>retrieval</strong>
+buffer is currently empty and that the declarative module is not
+currently handling a request:</p>
+<p> ?retrieval&gt;</p>
+<p> buffer empty</p>
+<p> state free</p>
+<p>One can also use the optional negation modifier “-” before a query to
+test that such a condition is not true. Thus, either of these tests
+would be true if the declarative module was not currently handling a
+request:</p>
+<p> ?retrieval&gt;</p>
+<p> state free</p>
+<p>or</p>
+<p> ?retrieval&gt;</p>
+<p> - state busy</p>
+
+<h3 id="the-fail-production">1.7.6 The fail production </h3>
+<p>Here is the production that fires in response to a category request
+not being found.</p>
+<div>
+<pre><code>(P fail
+   =goal&gt;
+      ISA        is-member
+      object     =obj1
+      category   =cat 
+      judgment   pending
+    
+   ?retrieval&gt;
+      buffer     failure
+==&gt;
+   =goal&gt;
+      judgment   no
+)</code></pre>
+</div>
+<p>Note the query for a <strong>retrieval</strong> buffer failure in the
+condition of this production. When a retrieval request does not succeed,
+in this case because there is no chunk in declarative memory which
+matches the specification requested, the buffer will indicate that as a
+failure. In this model, this will happen when one gets to the top of a
+category hierarchy and there are no super ordinate categories.</p>
+<p>Again, you can reset the model and work through its execution with
+the tutor mode of the Stepper tool. This time, you will also need to
+check the status of the <strong>retrieval</strong> buffer to determine
+when the fail production matches.</p>
+<h3 id="model-warnings">1.7.7 Model Warnings</h3>
+<p>Now that you have worked through the examples we will examine another
+detail which you might have noticed while working on this model. When
+you load or reload the <strong>semantic </strong>model there are the
+following warnings displayed in the Successful load window and the ACT-R
+window:</p>
+<div>
+<pre><code>#|Warning: Creating chunk CATEGORY with no slots |#
+#|Warning: Creating chunk PENDING with no slots |#
+#|Warning: Creating chunk YES with no slots |#
+#|Warning: Creating chunk NO with no slots |#</code></pre>
+</div>
+<p>Output that begins with “#|Warning:” is a warning from ACT-R, and
+indicates that there is something in the model that may need to be
+addressed. This differs from warnings or errors which may be reported by
+the Lisp which implements the ACT-R system that can occur because of
+problems in the syntax or structure of the code in the model file. If
+you see ACT-R warnings when loading a model you should always read
+through them to make sure that there is not a serious problem in the
+model. </p>
+<p>In this case, the warnings are telling you that the model uses chunks
+named <strong>category, pending, yes, </strong>and <strong>no,</strong>
+but does not explicitly define them and thus they are being created
+automatically. That is fine in this case. Those chunks are being used as
+explicit markers in the productions and there are no problems caused by
+allowing the system to create them automatically because they are
+arbitrary names that were used when writing the productions. </p>
+<p>If there had been a typo in one of the productions however, for
+instance misspelling pending in one of them as “pneding”, the warnings
+may have shown something like this:</p>
+<pre><code>#|Warning: Creating chunk PNEDING with no slots |#</code></pre>
+<p>That would provide you with an opportunity to notice the discrepancy
+and fix the problem before running the model and then trying to
+determine why it did not perform as expected.</p>
+<p>There are many other ACT-R warnings that may be displayed and you
+should always read the warnings which occur when loading a model to make
+sure that there are no serious problems before you start running the
+model. Most warnings which are not a serious problem can be eliminated
+with some additional declarations or changes to the model. For example,
+if we wanted to eliminate these warnings we could explicitly create
+those chunks in the model. With what we have seen so far that would be
+done by adding them to declarative memory with the other chunks that are
+created, but later in the tutorial we will show a better approach that
+does not require adding them to the model’s memory.</p>
+<h2 id="the-addition-model">1.8 The Addition Model</h2>
+<p>There is another example model included with the unit materials which
+is similar to the count model which uses a larger set of counting facts
+to do a somewhat more complicated task. It will perform addition by
+counting up. Thus, given the goal to add 2 to 5 it will count 5, 6, 7,
+and report the answer 7. We will not cover that model in detail here. If
+you would like to examine and run that model, it is found in the
+“addition.lisp” file of unit 1, and you would use it the same way you
+loaded and ran the other models.</p>
+<h2 id="building-a-model">1.9 Building a Model</h2>
+<p>We would like you to now construct the pieces of an ACT-R model on
+your own. The “tutor-model.lisp” file included with unit 1 contains the
+basic code necessary for a model, but does not have any of the
+declarative or procedural elements defined. The instructions that follow
+will guide you through the creation of those components. You will be
+constructing a model that can perform the addition of two two-digit
+numbers using this process to add the numbers (which is of course not
+the only way one could implement the addition process):</p>
+<blockquote>
+<p>To add two two-digit numbers start by adding the ones digits of the
+two numbers. After adding the ones digits of the numbers determine if
+there is a carry by checking if that result is equal to 10 plus some
+number. If it is, then that number is the answer for the ones column and
+there is a carry of 1 for the tens column. If it is not, then that
+result is the answer for the ones column and there is no carry. Then add
+the digits in the tens column. If there is no carry from the ones column
+then that sum is the answer for the tens column and the task is done. If
+there is a carry from the ones column then add the carry to that sum and
+make that the answer for the tens column to finish the task.</p>
+</blockquote>
+<p>Once all of the pieces have been created as described below to
+implement that process, you should be able to load and run the model to
+produce a trace that looks like this:</p>
+<div>
+<pre><code>     0.000  GOAL       SET-BUFFER-CHUNK GOAL (ISA ADD-PAIR TEN1 3 ONE1 6 TEN2 4 ONE2 7) NIL
+     0.000  PROCEDURAL CONFLICT-RESOLUTION
+     0.050  PROCEDURAL PRODUCTION-FIRED START-PAIR
+     0.050  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.050  DECLARATIVE start-retrieval
+     0.050  PROCEDURAL CONFLICT-RESOLUTION
+     0.100  DECLARATIVE RETRIEVED-CHUNK FACT67
+     0.100  DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL FACT67
+     0.100  PROCEDURAL CONFLICT-RESOLUTION
+     0.150  PROCEDURAL PRODUCTION-FIRED ADD-ONES
+     0.150  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.150  DECLARATIVE start-retrieval
+     0.150  PROCEDURAL CONFLICT-RESOLUTION
+     0.200  DECLARATIVE RETRIEVED-CHUNK FACT103
+     0.200  DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL FACT103
+     0.200  PROCEDURAL CONFLICT-RESOLUTION
+     0.250  PROCEDURAL PRODUCTION-FIRED PROCESS-CARRY
+     0.250  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.250  DECLARATIVE start-retrieval
+     0.250  PROCEDURAL CONFLICT-RESOLUTION
+     0.300  DECLARATIVE RETRIEVED-CHUNK FACT34
+     0.300  DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL FACT34
+     0.300  PROCEDURAL CONFLICT-RESOLUTION
+     0.350  PROCEDURAL PRODUCTION-FIRED ADD-TENS-CARRY
+     0.350  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.350  DECLARATIVE start-retrieval
+     0.350  PROCEDURAL CONFLICT-RESOLUTION
+     0.400  DECLARATIVE RETRIEVED-CHUNK FACT17
+     0.400  DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL FACT17
+     0.400  PROCEDURAL CONFLICT-RESOLUTION
+     0.450  PROCEDURAL PRODUCTION-FIRED ADD-TENS-DONE
+     0.450  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.450  PROCEDURAL CONFLICT-RESOLUTION
+     0.450  ------     Stopped because no events left to process</code></pre>
+</div>
+<p>There is a working solution model included with the unit 1 files, and
+it is also described in the code description text for this unit. Thus,
+if you have problems you can consult that for help, but you should try
+to complete these tasks without looking first. </p>
+<p>You should now open the tutor-model.lisp file in a text editor if you
+have not already. The following sections will describe the components
+that you should add to the file in the places indicated by comments in
+the model (the lines that begin with the semicolons) to construct a
+model for performing this task. There are of course many ways one could
+represent the addition facts and process them using productions to
+perform the addition, but the description below corresponds to the
+solution model which is provided for reference and thus should be
+followed explicitly if you want to be able to compare to that as you go
+along. </p>
+<h3 id="chunk-types-1">1.9.1 Chunk-types</h3>
+<p>The first thing we should do is define the chunk-types that we will
+use in writing the model. There are two chunk-types which we will define
+for doing this task. One to represent addition facts and one to
+represent the goal chunk which will hold the initial components of the
+task and and the correct answer when it is done. These chunk types will
+be created with the <strong>chunk-type</strong> command as described in
+<a href="#_1.4.2_Chunk-Types"><em>section 1.4.2</em></a>.</p>
+<h4 id="addition-facts">1.9.1.1 Addition Facts</h4>
+<p>The first chunk-type you should create is one to represent the
+addition facts. It should be named <strong>addition-fact </strong>and
+have slots named <strong>addend1</strong>, <strong>addend2, </strong>and
+<strong>sum</strong>. Chunks with these slots will represent the basic
+addition facts for addends from 0-10.</p>
+<h4 id="the-goal-chunk-type">1.9.1.2 The Goal Chunk Type</h4>
+<p>The other chunk type you should create is one to represent the goal
+of adding two two-digit numbers. It should be named
+<strong>add-pair.</strong> It will have slots to encode all of the
+necessary components of the task. It should have two slots to represent
+the ones digit and the tens digit of the first number called
+<strong>one1 </strong>and <strong>ten1 </strong>respectively. It will
+have two more slots to hold the ones digit and the tens digit of the
+second number called <strong>one2</strong> and <strong>ten2,
+</strong>and two slots to hold the answer, called <strong>one-ans
+</strong>and <strong>ten-ans</strong>. It will also need a slot to hold
+any information necessary to process a carry from the addition in the
+ones column to the tens column which should be called
+<strong>carry</strong>.</p>
+
+<h3 id="chunks">1.9.2 Chunks</h3>
+<p>We are now going to define the chunks that will allow the model to
+solve the problem 36 + 47 and place them into the model’s declarative
+memory. This is done using the <strong>add-dm</strong> command which was
+described in <a href="#_1.4.2_Creating_Chunks"><em>section
+1.4.3</em></a>.</p>
+<h4 id="the-addition-facts">1.9.2.1 The Addition Facts</h4>
+<p>You need to create addition facts which encode the following math
+facts in the model’s declarative memory to be able to solve this problem
+using the process described above and implemented with the productions
+which will be described later:</p>
+<p>3+4=7</p>
+<p>6+7=13</p>
+<p>10+3=13</p>
+<p>1+7=8</p>
+<p>They will use the slots of the type addition-fact and should be named
+based on their addends. For example, the fact that 3+4=7 should be named
+<strong>fact34</strong>. The addends and sums for these facts will be
+the corresponding numbers. Thus, <strong>fact34 </strong>will have slots
+with the values 3, 4, and 7. Note that for simplicity we are just using
+the actual numbers as the values of the slots instead of creating
+separate number chunks like the other models in this unit.</p>
+<h4 id="the-initial-goal">1.9.2.2 The Initial Goal</h4>
+<p>The <strong>goal</strong> chunk which encodes that the goal is to add
+36+47 will use slots from the add-pair chunk-type, and is already set in
+the starting model.</p>
+<h4 id="checking-the-results-so-far">1.9.2.3 Checking the results so
+far</h4>
+<p>Once you have completed adding the chunk-types and chunks to the
+model you should be able to save the file and then load it to inspect
+the components you have created. To see the chunks you have created you
+can press the “Declarative”<strong> </strong>button on the Control
+Panel. That will open a declarative memory viewer which allows you to
+see all of the chunks in the model’s declarative memory (every time you
+press that button a new declarative viewer window will be opened so that
+you can view different chunks at the same time when needed). To view a
+particular chunk with that tool select it in the list of chunks on the
+left of the window. The window on the right will then show the
+declarative parameters for that chunk (which will be described in later
+units) along with the slots and values for that chunk.</p>
+<p>Once you are satisfied with the chunks that you have created you can
+move on to creating the productions which will use those chunks.</p>
+<h3 id="productions">1.9.3 Productions</h3>
+<p>So far, we have been looking mainly at the individual productions in
+the models. However, a model really only functions because of the
+interaction of the productions it contains. Essentially, the action of
+one production will set the state so that the condition for another
+production can match, which has an action that sets the state to allow
+another to match, and so on. It is that sequence of productions firing,
+each of which performs some small step, which leads to performing the
+entire task, and one of the challenges of cognitive modeling is
+determining how to perform those small steps in a way that is both
+capable of performing the task and consistent with human performance on
+that task – just “doing the task” is not usually the objective for
+creating a model with a cognitive architecture like ACT-R. </p>
+<p>Your task now is to write the ACT-R productions which perform the
+steps described in English above to do multi-column addition. To do that
+you will need to use the ACT-R <strong>p</strong> command to specify the
+productions as described in <a
+href="#_1.4.3_Creating_Productions"><em>section 1.4.4</em></a>, and to
+help with that we will further detail the six productions which will
+implement that process using the chunk-types and chunks created
+previously. </p>
+<h3 id="start-pair">START-PAIR</h3>
+<p>If the goal buffer contains slots holding the ones digits of two
+numbers and does not have a slot for holding the ones digit of the
+answer then modify the goal to add the slot one-ans and set it to the
+value <strong>busy</strong><a href="#fn10" class="footnote-ref"
+id="fnref10" role="doc-noteref"><sup>10</sup></a> and make a retrieval
+request for the chunk indicating the sum of those ones digits. </p>
+<h3 id="add-ones">ADD-ONES</h3>
+<p>If the chunk in the goal buffer has the one-ans slot with a value of
+<strong>busy</strong> and a chunk has been retrieved containing the sum
+of the ones digits then modify the goal chunk to set the one-ans slot to
+that sum and add a slot named carry<strong> </strong>with a value
+<strong>busy</strong>, and make a retrieval request for an addition fact
+to determine if that sum is equal to 10 plus some number.</p>
+<h3 id="process-carry">PROCESS-CARRY</h3>
+<p>If the chunk in the goal buffer has the carry slot with the value
+<strong>busy</strong>, a chunk has been retrieved which indicates that
+10 plus a number equals the value in the one-ans slot, and the digits
+for the tens column of the two numbers are available in the goal chunk
+then set the carry slot of the goal to 1, set the one-ans slot of the
+goal to the other addend from the chunk in the retrieval buffer, set the
+ten-ans slot to the value <strong>busy</strong>, and make a retrieval
+request for an addition fact of the sum of the tens column digits.</p>
+<h3 id="no-carry">NO-CARRY</h3>
+<p>If the chunk in the goal buffer has the carry slot with the value
+<strong>busy</strong>, a failure to retrieve a chunk has occurred, and
+the digits for the tens column of the two numbers are available in the
+goal chunk then remove the carry slot from the goal by setting it to
+<strong>nil</strong>, set the ten-ans slot to the value
+<strong>busy</strong>, and make a retrieval request for an addition fact
+of the sum of the tens column digits.</p>
+<h3 id="add-tens-done">ADD-TENS-DONE</h3>
+<p>If the chunk in the goal buffer has the ten-ans slot with the value
+<strong>busy</strong>, there is no carry slot in the goal chunk, and
+there is a chunk in the retrieval buffer with a value in the sum slot
+then set the ten-ans slot of the chunk in the goal buffer to that
+sum.</p>
+<h3 id="add-tens-carry">ADD-TENS-CARRY</h3>
+<p>If the chunk in the goal buffer has the ten-ans slot with the value
+<strong>busy,</strong> the carry slot of the goal chunk has the value 1,
+and there is a chunk in the retrieval buffer with a value in the sum
+slot then remove the carry slot from the chunk in the goal buffer, and
+make a retrieval request for the addition of 1 plus the current sum from
+the retrieval buffer.</p>
+<h3 id="running-the-model">1.9.4 Running the model</h3>
+<p>When you are finished entering the productions, save your model,
+reload it, and then run it. </p>
+<p>If your model is correct, then it should produce a trace that looks
+like the one shown above, and the correct answer should be encoded in
+the <strong>ten-ans</strong> and <strong>one-ans</strong> slots of the
+chunk in the <strong>goal </strong>buffer:</p>
+<div>
+<pre><code>GOAL: GOAL-CHUNK0 
+GOAL-CHUNK0
+   ONE1 6
+   TEN1 3
+   ONE2 7
+   TEN2 4
+   TEN-ANS 8
+   ONE-ANS 3
+</code></pre>
+</div>
+<h3 id="incremental-creation-of-productions">1.9.5 Incremental Creation
+of Productions</h3>
+<p>It is also possible to write just one or two productions and test
+them out first before you go on to try to write the rest – to make sure
+that you are on the right track. For instance, this is the trace you
+would get after successfully writing the first two productions and then
+running the model:</p>
+<div>
+<pre><code>     0.000  GOAL       SET-BUFFER-CHUNK GOAL (ISA ADD-PAIR TEN1 3 ONE1 6 TEN2 4 ONE2 7) NIL
+     0.000  PROCEDURAL CONFLICT-RESOLUTION
+     0.050  PROCEDURAL PRODUCTION-FIRED START-PAIR
+     0.050  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.050  DECLARATIVE start-retrieval
+     0.050  PROCEDURAL CONFLICT-RESOLUTION
+     0.100  DECLARATIVE RETRIEVED-CHUNK FACT67
+     0.100  DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL FACT67
+     0.100  PROCEDURAL CONFLICT-RESOLUTION
+     0.150  PROCEDURAL PRODUCTION-FIRED ADD-ONES
+     0.150  PROCEDURAL CLEAR-BUFFER RETRIEVAL
+     0.150  DECLARATIVE start-retrieval
+     0.150  PROCEDURAL CONFLICT-RESOLUTION
+     0.200  DECLARATIVE RETRIEVED-CHUNK FACT103
+     0.200  DECLARATIVE SET-BUFFER-CHUNK RETRIEVAL FACT103
+     0.200  PROCEDURAL CONFLICT-RESOLUTION
+     0.200  ------     Stopped because no events left to process</code></pre>
+</div>
+<p>The first production, <strong>start-pair</strong>, has fired and
+successfully requested the retrieval of the addition fact
+<strong>fact67</strong>. The next production, <strong>add-ones</strong>,
+then fires and makes a retrieval request to determine if there is a
+carry. That chunk is retrieved and then because there are no productions
+which match the current state of the system and no actions remaining to
+perform it stops. You may find it helpful to try out the productions
+occasionally as you write them to make sure that the model is working as
+you progress instead of writing all the productions and then trying to
+debug them all at once.</p>
+<h3 id="debugging-the-productions">1.9.6 Debugging the Productions</h3>
+<p>In the event that your model does not run correctly you will need to
+determine why that is so you can fix it. One tool that can help with
+that is the “Why not?” button in the Procedural viewer. To use that,
+first press the “Procedural” button on the Control Panel to open a
+viewer for the productions in the model. That tool is very similar to
+the Declarative viewer described previously – there is a list of
+productions on the left and selecting one will show the parameters and
+text of the production on the right. Pressing the “Why not?” button at
+the top of the Procedural viewer window when there is a production
+selected in the list will open another window. If the chosen production
+matches the current state of the buffers then the new window will
+indicate that it matches and display the instantiation of that
+production. If the chosen production does not match the current state
+then the text of the production will be printed and an indication of the
+first mismatching item from the LHS of the production will be indicated,
+for example, when the start-pair production described above does not
+match it might say “The chunk in the GOAL buffer has the slot ONE-ANS”
+since that production specifies that the <strong>goal</strong> buffer
+should not have a slot named one-ans.</p>
+<p>The Stepper is also an important tool for use when debugging a model
+because while the model is stopped you can inspect everything in the
+model using all of the other tools. For more information on writing and
+debugging ACT-R models you should also read the “Modeling” text which
+accompanies this unit. That file is the “unit1_modeling” document, and
+each of the odd numbered units in the tutorial will include a modeling
+text with details on potential issues one may encounter and ways to
+detect and fix those issues. Each unit also has a document called
+“productions-summary” which is a reference guide for production syntax
+and module actions which is updated as new mechanisms are
+introduced.</p>
+<h2 id="references">References</h2>
+<p>Anderson, J. R., Bothell, D., Byrne, M. D., Douglass, S., Lebiere,
+C., &amp; Qin, Y . (2004). <a
+href="http://act-r.psy.cmu.edu/?post_type=publications&amp;p=13623"><em>An
+integrated theory of the mind.</em></a> <em>Psychological Review
+111,</em> (4). 1036-1060.</p>
+<p>Anderson, J. R. (2007). <a
+href="http://act-r.psy.cmu.edu/?post_type=publications&amp;p=14305"><em><em>How
+Can the Human Mind Occur in the Physical Universe?</em></em></a> New
+York: Oxford University Press.</p>
+<section id="footnotes" class="footnotes footnotes-end-of-document"
+role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Technically, there is a buffer associated with the
+module in the software which is useful for tracking the activities of
+the module, but that is only there as a convenience for the user and not
+a component of the ACT-R architecture itself.<a href="#fnref1"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p> The Python module included with the tutorial is
+sufficient for running the tasks included with the tutorial. It does not
+contain functions for accessing all of the commands available through
+the ACT-R remote interface, and it has some assumptions about how it
+will be used based on the needs of the tutorial. For more complex tasks
+or where performance is of primary importance, one might be better
+served by creating a custom interface instead of using the one that was
+built for the tutorial.<a href="#fnref2" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>The ACT-R Environment is written in the Tcl/Tk language
+and connects through the same remote interface as the Python module.<a
+href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p> How to change the amount of detail shown in the trace
+is described in the unit 1 code description document (the “unit1_code”
+text).<a href="#fnref4" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p> There are many ways which one could represent that
+information using either a single chunk or spread across multiple
+chunks. We have chosen a single chunk representation of numbers for the
+tutorial to keep things simple, and we will use that same representation
+throughout the tutorial (except for the final model used in this unit
+which does not represent numbers as chunks and instead just uses
+digits), extending it when necessary to include more information. <a
+href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p> At least for the models used through most of the
+tutorial, but in unit 8 we will see situations where that may not always
+be true.<a href="#fnref6" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>Of the buffers used in the tutorial models, only the
+goal buffer is not subject to that automatic clearing mechanism.<a
+href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>It is also possible to update the <strong>goal</strong>
+buffer chunk without editing the model file and loading it again, and
+the unit1_code text shows how that could be done.<a href="#fnref8"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p> Later units will describe modules which can perform
+operations without being requested to do so that are not just the result
+of commands specified by the modeler.<a href="#fnref9"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn10"><p>There is nothing special about the value busy in this
+model. It is simply being used to mark which step the model is currently
+performing. Any other symbol could be used in its place in these
+productions and the model would continue to work.<a href="#fnref10"
+class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+</main>
+</body>
+</html>

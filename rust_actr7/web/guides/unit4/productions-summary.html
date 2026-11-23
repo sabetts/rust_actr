@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit 4 · Productions summary · ACT-R 7 Tutorials</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem("actr-web-theme");
+    if (stored !== "light" && stored !== "dark") {
+      stored = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.dataset.theme = stored;
+  } catch (error) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+</script>
+<link rel="icon" type="image/png" href="../../assets/actr-head.png">
+<link rel="stylesheet" href="../../css/guide.css">
+</head>
+<body>
+<header class="guide-bar">
+  <a class="guide-back" href="../../">← <span>ACT-R 7 Tutorials</span></a>
+  <span class="guide-unit">Unit 4 · Productions summary</span>
+</header>
+<main class="guide-body">
+<p>This document, and the updated versions with future units, will
+provide a summary of the production mechanisms described in the tutorial
+up to that point. The updates with each unit will be highlighted in that
+unit’s file.</p>
+<h1 id="productions">Productions</h1>
+<p>Productions are the representation of procedural knowledge in ACT-R,
+and are an if-then rule consisting of a condition and an action. If the
+condition is true then it will perform the action. The condition is a
+set of patterns to compare to the model’s buffers, and the actions are
+changes that are made to the buffers. The basic cycle of a model’s
+operation is to find a production with a true condition, perform its
+action, and repeat that process until there is nothing else it can do.
+</p>
+<h2 id="syntax-and-notation-details">Syntax and notation details</h2>
+<p>General details and definitions:</p>
+<ul>
+<li>Any white space characters (spaces, tabs, returns, and newlines) can
+be used to separate items in a production. The amount and type doesn’t
+matter.</li>
+<li>A <em>name</em> is a continuous sequence of characters which are not
+all numbers and does not include any of these characters: , ( ) ` ' " #
+:</li>
+<li>A name is not case sensitive. Goal, goal, and GOAL are all the same
+name in a production.</li>
+<li>A <em>string</em> is any sequence of characters between a pair of
+double quotes: " … "</li>
+<li>Names and strings are not the same in a production. The name a is
+not the same as the string "a".</li>
+</ul>
+<p>When describing the syntax of items the following conventions will be
+used:</p>
+<ul>
+<li><strong>bold </strong>items must be specified exactly as
+indicated</li>
+<li><em>italic</em> items are optional</li>
+<li>Angle brackets &lt; &gt; around items forms a group of items that
+occur together</li>
+<li>Curly brackets {} indicate a set of possible values</li>
+<li>Anything followed by a * means that there may be any number of those
+items (including zero)</li>
+<li>Anything followed by a + means that there must be at least one of
+those items, but can be more</li>
+</ul>
+
+<h2 id="syntax">Syntax</h2>
+<p>production<strong> → (p</strong> pname <em>documentation</em>
+condition<em> </em><strong>==&gt; </strong>action <strong>)</strong></p>
+<p>pname<strong> → </strong>a name which must be unique for each
+production</p>
+<p>documentation<strong> → </strong>a string</p>
+<p>condition → pattern*</p>
+<p>pattern → <strong>=</strong>buffer<strong>&gt;</strong><em><strong>
+</strong>&lt;<strong>isa </strong>type&gt; </em>&lt;<em>modifier</em>
+slot-name value&gt;*</p>
+<p>pattern → <strong>?</strong>buffer<strong>&gt;</strong><em><strong>
+</strong></em>&lt;<em>modifier</em> query-test query-value&gt;+</p>
+<p>action → {change , user-tool }*</p>
+<p>change → <strong>=</strong>buffer<strong>&gt;</strong>
+<em>&lt;<strong>isa </strong>type&gt; </em>&lt;slot-name value&gt;*</p>
+<p>change → <strong>+</strong>buffer<strong>&gt;</strong><em><strong>
+</strong>&lt;<strong>isa </strong>type&gt; &lt;param value&gt;*
+</em>&lt;<em>modifier</em> slot-name value&gt;*</p>
+<p>change → <strong>-</strong>buffer<strong>&gt;</strong></p>
+<p>user-tool → <strong>!output! ( </strong>value*<strong> )</strong></p>
+<p>buffer → { <strong>goal</strong>,<strong> retrieval, imaginal,
+manual, visual-location, visual,</strong></p>
+<p><strong> aural, aural-location, vocal</strong> }</p>
+<p>type → a name of a defined chunk-type</p>
+<p>modifier → { <strong>-</strong>, <strong>&lt;</strong>,
+<strong>&gt;</strong>, <strong>&lt;=</strong>, <strong>&gt;=</strong> }
+</p>
+<p>slot-name → a name</p>
+<p>value → { variable, name, string, number,<strong> nil </strong>}</p>
+<p>variable → <strong>=</strong>name</p>
+<p>param → <strong>:</strong>name</p>
+<p>query-test → {<strong>buffer, state</strong>}</p>
+<p>query-test → {<strong>buffer, state, preparation</strong>} if buffer
+is <strong>manual</strong> or <strong>vocal</strong></p>
+<p>query-value → {<strong>full</strong>,
+<strong>failure</strong>,<strong> empty</strong>} if query-test is
+<strong>buffer</strong></p>
+<p>query-value → {<strong>free</strong>, <strong>busy</strong>} if
+query-test is <strong>state </strong>or<strong> preparation</strong></p>
+<p><strong></strong></p>
+
+<h2 id="patterns">Patterns</h2>
+<h2 id="buffer">=buffer&gt;</h2>
+<p>A pattern that starts with the = character is a test that there is a
+chunk in a buffer with a specific set of slots and values. It is true if
+there is a chunk in the named buffer and all of the slots and values
+provided in the pattern match those in that chunk. Variables can be used
+to test that multiple slots have the same value. The value <strong>nil
+</strong>can be used to test that a chunk does not have the indicated
+slot. The<strong> - </strong>modifier can be used to test that a slot
+does not have the value indicated. If the pattern matches then the
+=buffer variable will be set to the name of the chunk in the buffer.</p>
+<h3 id="examples">Examples:</h3>
+<p><strong>=</strong>goal<strong>&gt;</strong> <strong>isa</strong>
+type1 slot1 a - slot2 b</p>
+<p>This is a test of the chunk in the goal buffer. It indicates that the
+slots being used are from a chunk-type named type1. Slot1 of the chunk
+must have the value a, slot2 of the chunk must not have the value b
+because of the <strong>-</strong> modifier. </p>
+<p><strong>=</strong>retrieval<strong>&gt;</strong> slot3 nil slot4 =x
+slot5 =x </p>
+<p>This is a test of the chunk in the retrieval buffer. It does not
+specify a chunk-type for the slots. There must not be a value in the
+slot named slot3 of the chunk because the value tested is
+<strong>nil</strong>, and the slot4 and slot5 slots must have the same
+value because they are tested with the same variable.</p>
+<p><strong>=</strong>visual-location<strong>&gt;</strong>
+<strong>&gt;</strong> screen-x 100 <strong>&lt;=</strong> screen-x
+200</p>
+<p>This is a test of the chunk in the visual-location buffer. It does
+not specify a chunk-type for the slots. There must be a number in the
+slot named screen-x of the chunk which has a value greater than 100 and
+also less-than or equal to 200.</p>
+<h2 id="buffer-1">?buffer&gt;</h2>
+<p>A pattern that starts with the <strong>?</strong> character is a test
+of the status of the buffer itself and/or the buffer’s module, which is
+called a query. The - modifier can be used to test that indicated status
+is not true.</p>
+<h3 id="examples-1">Examples:</h3>
+<p><strong>?</strong>retrieval<strong>&gt;</strong> state free buffer
+full</p>
+<p><strong>?</strong>goal<strong>&gt;</strong> - buffer empty</p>
+<p>The first is a query of the retrieval buffer and its module (the
+declarative memory module). It is true if the declarative module
+indicates that its state is free (it is not performing an action) and
+the retrieval buffer currently contains a chunk. The second is a query
+of the goal buffer and is true if the buffer is not empty because of the
+<strong>-</strong> modifier.</p>
+<h2 id="variables">Variables</h2>
+<p>All variable matched in the condition will have that same value in
+the production’s action.</p>
+<h2 id="changes">Changes</h2>
+<h2 id="buffer-2">=buffer&gt;</h2>
+<p>A change that starts with the <strong>=</strong> character is a
+modification of the chunk in the buffer. The specified slots will be set
+to the values provided, except if the value is <strong>nil</strong>. The
+value <strong>nil </strong>will remove the slot from the chunk.</p>
+<h3 id="example">Example:</h3>
+<p><strong>=</strong>goal<strong>&gt;</strong> <strong>isa</strong>
+type1 slot1 c slot2 =x slot4 nil</p>
+<p>The slots being modified are declared to be in the chunk-type named
+type1. It will change the value of the slot1 slot of the chunk in the
+goal buffer to c, the slot2 slot will have the value of the =x variable,
+and the slot4 slot will be removed from the chunk.</p>
+
+<h2 id="buffer-3">-buffer&gt;</h2>
+<p>A change that starts with the <strong>- </strong>character will
+remove the chunk from the buffer, and it will then be stored in the
+model’s declarative memory.</p>
+<h3 id="example-1">Example:</h3>
+<p><strong>-</strong>goal<strong>&gt;</strong></p>
+<p>This will remove the chunk from the goal buffer and it will be stored
+in declarative memory.</p>
+
+<h2 id="buffer-4">+buffer&gt;</h2>
+<p>A change that starts with the + character is a request that the
+buffer’s module perform some action. This will also clear the buffer if
+it currently has a chunk in it. Each module handles requests differently
+and can have different requirements for how the request is
+specified.</p>
+<p><em><em>All <strong>goal</strong> buffer requests will create a new
+chunk with the slots and values specified (the modifier is not allowed
+for any slots in the request) and it will place that chunk into the goal
+buffer.</em></em></p>
+<p><em><em>All <strong>retrieval</strong> buffer requests will search
+the model’s declarative memory to find a chunk which matches the pattern
+specified (the same way a buffer test in the production’s condition
+matches chunks). The request parameter
+<strong>:recently-retrieved</strong> can be specified with the value
+<strong>nil </strong>indicating that only items not marked as having
+been retrieved recently will be considered, or <strong>t
+</strong>indicating only the items marked as having been retrieved
+recently are considered. If more than one chunk matches the pattern then
+the chunk with the highest activation value is selected. If a chunk is
+selected which has an activation value at or above the retrieval
+threshold parameter value then it will be put into the retrieval buffer
+after a time determined by the activation. If no matching chunk is found
+or the matching chunk has an activation value below the threshold then
+the retrieval buffer will be marked with a failure after a time that
+depends on the value of the retrieval threshold.</em></em></p>
+<p><em><em>All <strong>imaginal</strong> buffer requests will create a
+new chunk with the slots and values specified like the goal buffer.
+However, there is a 0.2 second cost to the imaginal module’s action (by
+default) during which time the imaginal buffer’s state busy query will
+be true and it will not be able to accept another request.</em></em></p>
+<p><em><em>All <strong>visual-location</strong> buffer requests cause
+the vision module to search the visicon to find a feature that matches
+the description specified in the slots and values provided. If the
+<strong>:attended </strong>request-parameter is specified that will
+restrict which items are searched based on the attended status
+indicated. If the <strong>:</strong><strong>nearest</strong><strong>
+</strong>request-parameter is specified with a value that represents a
+visual location or the value <strong>current </strong>which means the
+location currently being attended, then if multiple items are found in
+the search the item nearest to that specified location will be put in
+the buffer. If a feature matching the request is found then a chunk is
+created to represent that feature and placed into the visual-location
+buffer. If no matching feature is found then the buffer will be marked
+with a failure.</em></em></p>
+<p><em><em>Requests to the <strong>visual</strong> buffer require
+specifying a slot named <strong>cmd </strong>whose value will indicate
+the action for the vision module to perform. The value
+<strong>move-attention</strong> will cause the vision module to shift
+its attention to the location specified in the
+<strong>screen-pos</strong> slot of the request (which is typically the
+value <strong>=visual-location </strong>from matching the pattern in the
+visual-location buffer in the condition). If there is a visual object at
+the location attention is shifted to then a chunk representing that
+object is placed in the visual buffer. If no visual object is found then
+the visual buffer will be marked with a failure. That attention shift
+takes 0.085 seconds (by default) during which time the visual buffer’s
+state busy query will be true and it will not be able to accept another
+request. A<strong> cmd</strong> slot value of <strong>clear
+</strong>will make the vision module stop attending to an item which it
+is currently attending and will make the visual buffer’s state busy
+query true for 0.05 seconds.</em></em></p>
+<p><em><em>Requests to the <strong>man</strong><strong>ual</strong>
+buffer require specifying a slot named <strong>cmd </strong>whose value
+will indicate the action for the motor module to perform. The value
+<strong>press-key</strong> will cause the motor module to press the key
+specified in the <strong>key</strong> slot of the request on the
+keyboard device (if it is installed). That action will take time (which
+depends on which key and the prior motor action) during which the
+buffer’s state busy query will be true and it may not be able to accept
+another request. If the manual buffer’s preparation free query is true
+then it will be able to accept a new request even if the state busy
+query is also true.</em></em></p>
+<p><em><em>All
+<strong>a</strong><strong>u</strong><strong>r</strong><strong>al-location</strong>
+buffer requests cause the audio module to search the audicon to find a
+sound event that matches the description specified in the slots and
+values provided. If the <strong>:attended </strong>request-parameter is
+specified that will restrict which items are searched based on the
+attended status indicated. If an event matching the request is found
+then a chunk is created to represent that event and placed into the
+aural-location buffer. If no matching feature is found then the buffer
+will be marked with a failure.</em></em></p>
+<p><em><em>Requests to the<strong>
+</strong><strong>a</strong><strong>u</strong><strong>r</strong><strong>al</strong>
+buffer specifying a slot named <strong>event </strong>with a value that
+is a sound event will cause the audio module to shift its attention to
+that event. If there is still a sound available for that event then the
+model’s aural attention is shifted to that sound and a chunk
+representing it is placed in the aural buffer. If no corresponding sound
+is found then the aural buffer will be marked with a failure. That
+attention shift takes time (which varies depending on the type of sound)
+during which the aural buffer’s state busy query will be true and it
+will not be able to accept another request.</em></em></p>
+<p><em><em>Requests to the <strong>voc</strong><strong>al</strong>
+buffer require specifying a slot named <strong>cmd </strong>whose value
+will indicate the action for the speech module to perform. The value
+<strong>speak</strong> will cause the speech module to speak the string
+specified in the <strong>string</strong> slot of the request which will
+be detected by the microphone device (if it is installed). That action
+will take time (depending on the content of the string provided and the
+prior speech action) during which the buffer’s state busy query will be
+true and it may not be able to accept another request. A
+<strong>cmd</strong> slot value of <strong>subvocalize</strong> will
+cause the speech module to subvocalize the string specified in the
+<strong>string</strong> slot of the request. A subvocalize action is not
+detectable by the microphone device and will take time (which depends on
+the content of the string provided and the prior speech action) during
+which the buffer’s state busy query will be true and it may not be able
+to accept another request. If the vocal buffer’s preparation free query
+is true then it will be able to accept a new request even if the state
+busy query is also true.</em></em></p>
+<h3 id="examples-2">Examples:</h3>
+<h3
+id="goal-isa-type2-slot1-blue-slot2-z"><strong>+</strong>goal<strong>&gt;
+isa</strong> type2 slot1 blue slot2 =z </h3>
+<p>This request will clear the chunk from the goal buffer if there is
+one. Then the goal module will create a chunk with two slots, slot1
+having the value blue and slot2 having the value that the =z variable
+was matched to in the production’s condition. That chunk will then be
+placed into the goal buffer.</p>
+<p><strong>+</strong>retrieval<strong>&gt;</strong> slot1 green slot3 =x
+– slot4 3</p>
+<p>This request will clear the chunk from the retrieval buffer if there
+is one. Then the declarative module will search the chunks it has stored
+to find one which has a slot named slot1 with the value green, a slot
+named slot3 having the value that the =x variable was matched to in the
+production’s condition, and a slot4 value that is not the number 3. That
+chunk will then be placed into the retrieval buffer. If no chunk is
+found matching that pattern then the retrieval buffer will indicate a
+failure.</p>
+<p><strong>+</strong>visual-location<strong>&gt;</strong> :attended nil
+color blue</p>
+<p>This request will clear the chunk from the visual-location buffer if
+there is one. Then the vision module will search for a feature in the
+visicon which the model has not yet attended (because of the :attended
+request parameter specified as <strong>nil</strong>) which is the color
+blue. If there is such a feature the vision module will create a chunk
+to represent it and place it into the visual-location buffer. If no
+feature was found the visual-location buffer will indicate a
+failure.</p>
+<p><strong>+</strong>vocal<strong>&gt;</strong> cmd speak string
+"word"</p>
+<p>This request will clear the chunk from the vocal buffer if there is
+one. Then the speech module will speak the indicated string "word".</p>
+<h2 id="user-tools">User-tools</h2>
+<p>There are special operations that can be used in the condition and
+action of a production which are not part of the ACT-R theory, but are
+software tools that can be helpful when creating models.</p>
+<h2 id="output">!output!</h2>
+<p>The <strong>!output!</strong> operation can be used in the action of
+a production to display information in the model trace. When that
+production is selected and performs its action those items will be
+displayed on a line of the trace.</p>
+<h3 id="example-2">Example:</h3>
+<p><strong></strong></p>
+<p><strong>!output! (</strong>the variable has the value
+=x<strong>)</strong></p>
+<p>If the =x variable matched to the value 3 in the condition of the
+production then the trace will show this when the production performs
+its action:</p>
+<p>the variable has the value 3</p>
+</main>
+</body>
+</html>

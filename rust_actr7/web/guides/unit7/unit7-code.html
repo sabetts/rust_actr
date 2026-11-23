@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit 7 · Code walkthrough · ACT-R 7 Tutorials</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem("actr-web-theme");
+    if (stored !== "light" && stored !== "dark") {
+      stored = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.dataset.theme = stored;
+  } catch (error) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+</script>
+<link rel="icon" type="image/png" href="../../assets/actr-head.png">
+<link rel="stylesheet" href="../../css/guide.css">
+</head>
+<body>
+<header class="guide-bar">
+  <a class="guide-back" href="../../">← <span>ACT-R 7 Tutorials</span></a>
+  <span class="guide-unit">Unit 7 · Code walkthrough</span>
+</header>
+<main class="guide-body">
+<h1 id="unit-7-code-description">Unit 7 Code Description</h1>
+<p>The paired associate model for this unit uses the same experiment
+code as the paired associate model from unit 4. The past-tense task is
+another example of a task and model that do not use the perceptual and
+motor components of ACT-R. It is not that different from previous
+instances of such tasks, and other than some new ACT-R commands to
+describe there is not much to discuss with this unit's code.</p>
+<h2 id="reinforcing-declarative-knowledge">Reinforcing Declarative
+Knowledge</h2>
+<p>One thing the code for the past-tense task does is provide the model
+with examples for declarative memory. To do so, it performs the same
+operations that would happen if the model were doing it through
+productions. It places a chunk into the <strong>imaginal</strong> buffer
+with the information in its slots, and then it clears the buffer so that
+it can be merged into declarative memory. That is not the only way that
+process can be handled without running the model, but it is an easy
+approach if the model is not currently using the buffer involved.
+Alternatively, one could adjust the base-level parameters to update the
+activations or use one of the commands for merging that are provided by
+the declarative memory module (see the reference manual for more
+information).</p>
+<h2 id="new-commands">New Commands</h2>
+<p><strong>set-buffer-chunk </strong>and
+<strong>set_buffer_chunk</strong> can be used to set the contents of a
+buffer. It takes two parameters. The first must be the name of a buffer.
+The second must be a list which would be sufficient for creating a chunk
+(as would be provided to goal-focus) or the name of a chunk. If a chunk
+description is provided it copies that information into a chunk which is
+placed into the buffer, as we have seen with goal-focus for the goal
+buffer. If a chunk name is provided, it copies that chunk into the
+specified buffer. We have not seen this mechanism used before, but we
+will describe it in more detail in the next unit. In either case, it
+clears any chunk which is currently in the buffer first. It returns the
+name of the chunk which is now in the buffer. </p>
+<p>This acts very much like the goal-focus command, except that it works
+for any buffer. An important difference however is that the goal-focus
+command actually schedules an event which uses set-buffer-chunk to put
+the chunk in the <strong>goal</strong> buffer. That is important because
+scheduled events display in the model trace and are changes to which the
+model can react. There is another command which works more like
+goal-focus that is often more appropriate called
+schedule-set-buffer-chunk. That was not necessary for this task, but
+schedule-set-buffer-chunk will be used in the next unit.</p>
+<p><strong></strong></p>
+<p><strong>clear-buffer </strong>and<strong> clear_buffer </strong>can
+be used to clear a chunk from a buffer the same way a
+–<em>buffer</em>&gt; action in a production will. It takes one parameter
+which should be the name of a buffer and that buffer is emptied and the
+chunk is merged into declarative memory. It returns the name of the
+chunk that was cleared. Like set-buffer-chunk, the clear-buffer command
+does not create an event to which the model can respond, but there is a
+corresponding schedule-clear-buffer command which could be used to do
+that.</p>
+<p><strong></strong></p>
+<p><strong>chunk-slot-value </strong>and<strong> chunk_slot_value
+</strong>can be used to get the current value of a slot in a chunk. It
+takes two parameters which are the name of a chunk and the name of a
+slot and it returns the current value of that slot. It is very similar
+to buffer-slot-value which was used in a previous unit when working with
+chunks in the buffers.</p>
+<p><strong>chunk-p </strong>and<strong> chunk_p </strong>can be used to
+determine if the provided name is actually the name of a chunk in the
+current model. It returns a true result if it is (t/True) and a false
+value if not (nil/None).</p>
+<p><strong>push-last </strong>is a macro for Lisp which adds an item to
+the end of a list. It takes two parameters, any item and a list. It
+destructively adds the item to the end of the list. This is often more
+convenient than the standard Lisp function push which adds to the
+beginning of a list.</p>
+<p><strong>trigger-reward </strong>and <strong>trigger_reward
+</strong>were not actually used in the code, but it was monitored to
+determine if the model received a reward. It was mentioned in the last
+unit, and it is the command which provides the rewards to a model for
+utility learning. It is available for a modeler to use to provide a
+reward value to the model at any time. It requires one parameter, and it
+schedules an event to provide that value as a reward at the current
+time. If that reward value is numeric then it is used to update the
+utilities of those productions which have been selected since the last
+reward. If it is not a numeric value then it only serves to mark the
+last reward time for preventing further propagation of the next reward
+signal. </p>
+</main>
+</body>
+</html>

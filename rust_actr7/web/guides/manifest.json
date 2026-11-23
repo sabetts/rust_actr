@@ -1,0 +1,186 @@
+{
+  "unit1": [
+    {
+      "id": "unit1-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit1/unit1.html"
+    },
+    {
+      "id": "unit1-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit1/unit1-code.html"
+    },
+    {
+      "id": "unit1-modeling",
+      "label": "Modeling notes",
+      "kind": "modeling",
+      "path": "guides/unit1/unit1-modeling.html"
+    },
+    {
+      "id": "unit1-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit1/productions-summary.html"
+    }
+  ],
+  "unit2": [
+    {
+      "id": "unit2-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit2/unit2.html"
+    },
+    {
+      "id": "unit2-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit2/unit2-code.html"
+    },
+    {
+      "id": "unit2-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit2/productions-summary.html"
+    }
+  ],
+  "unit3": [
+    {
+      "id": "unit3-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit3/unit3.html"
+    },
+    {
+      "id": "unit3-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit3/unit3-code.html"
+    },
+    {
+      "id": "unit3-modeling",
+      "label": "Modeling notes",
+      "kind": "modeling",
+      "path": "guides/unit3/unit3-modeling.html"
+    },
+    {
+      "id": "unit3-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit3/productions-summary.html"
+    }
+  ],
+  "unit4": [
+    {
+      "id": "unit4-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit4/unit4.html"
+    },
+    {
+      "id": "unit4-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit4/unit4-code.html"
+    },
+    {
+      "id": "unit4-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit4/productions-summary.html"
+    }
+  ],
+  "unit5": [
+    {
+      "id": "unit5-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit5/unit5.html"
+    },
+    {
+      "id": "unit5-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit5/unit5-code.html"
+    },
+    {
+      "id": "unit5-modeling",
+      "label": "Modeling notes",
+      "kind": "modeling",
+      "path": "guides/unit5/unit5-modeling.html"
+    },
+    {
+      "id": "unit5-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit5/productions-summary.html"
+    }
+  ],
+  "unit6": [
+    {
+      "id": "unit6-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit6/unit6.html"
+    },
+    {
+      "id": "unit6-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit6/unit6-code.html"
+    },
+    {
+      "id": "unit6-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit6/productions-summary.html"
+    }
+  ],
+  "unit7": [
+    {
+      "id": "unit7-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit7/unit7.html"
+    },
+    {
+      "id": "unit7-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit7/unit7-code.html"
+    },
+    {
+      "id": "unit7-modeling",
+      "label": "Modeling notes",
+      "kind": "modeling",
+      "path": "guides/unit7/unit7-modeling.html"
+    },
+    {
+      "id": "unit7-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit7/productions-summary.html"
+    }
+  ],
+  "unit8": [
+    {
+      "id": "unit8-guide",
+      "label": "Unit guide",
+      "kind": "guide",
+      "path": "guides/unit8/unit8.html"
+    },
+    {
+      "id": "unit8-code",
+      "label": "Code walkthrough",
+      "kind": "code",
+      "path": "guides/unit8/unit8-code.html"
+    },
+    {
+      "id": "unit8-productions",
+      "label": "Productions summary",
+      "kind": "productions",
+      "path": "guides/unit8/productions-summary.html"
+    }
+  ]
+}

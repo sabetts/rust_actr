@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit 8 · Code walkthrough · ACT-R 7 Tutorials</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem("actr-web-theme");
+    if (stored !== "light" && stored !== "dark") {
+      stored = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.dataset.theme = stored;
+  } catch (error) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+</script>
+<link rel="icon" type="image/png" href="../../assets/actr-head.png">
+<link rel="stylesheet" href="../../css/guide.css">
+</head>
+<body>
+<header class="guide-bar">
+  <a class="guide-back" href="../../">← <span>ACT-R 7 Tutorials</span></a>
+  <span class="guide-unit">Unit 8 · Code walkthrough</span>
+</header>
+<main class="guide-body">
+<h1 id="unit-8-code-description">Unit 8 Code Description</h1>
+<p>The example models for this unit either have no experiment code or
+are driven mostly by code that has been described in a previous unit,
+and the assignment task is similar to code from other unit tasks. Thus
+there isn't really much to discuss about those. There are a few new
+commands used which will be described, and there is a new mechanism used
+in this unit's Building Sticks model which allows it avoids using a
+!bind! to do a calculation which will be described.</p>
+<h2 id="extending-chunks-from-code">Extending chunks from code</h2>
+<p>One of the new commands used in the assignment task code is
+<strong>extend-possible-slots</strong>, and is found in the
+create-example-memories function in Lisp and create_example_memories
+function in Python. Those functions are responsible for adding the
+chunks which represent the studied items to the model’s declarative
+memory using slot names for the features from a globally defined list of
+slots. Since those slot names can be specified arbitrarily by the
+modeler, the code needs to make sure that the model will accept them as
+valid slot names before creating the chunks since they may not have been
+specified in any of the model’s chunk-types. That is what the
+extend-possible-slots and extend_possible_slots functions do. They have
+one required parameter and one optional parameter. The required
+parameter is the name of a slot to add to those which can be used in any
+chunk without having to create a new chunk-type to provide the slot. The
+optional parameter indicates whether or not to print a warning if the
+slot which is provided has already been used to name a slot. If the
+optional parameter is specified as non-true (nil for Lisp or False/None
+for Python) then no warning is provided when a previously named slot is
+specified, otherwise it will print such warnings.</p>
+<h2 id="calling-commands-from-the-model-definition">Calling commands
+from the model definition</h2>
+<p>You may also notice looking at the code for the assignment that the
+create-example-memories and create_example_memories functions are added
+as ACT-R commands. That is done so that they can be called in the
+model’s definition to generate those initial chunks for the model every
+time that it is reset.</p>
+<p>In the starting model file for the assignment you will find this
+line:</p>
+<div>
+<pre><code>  (call-act-r-command &quot;create-example-memories&quot;)</code></pre>
+</div>
+<p>The call-act-r-command command can be used in a model definition to
+call any command which has been added to ACT-R. It requires one
+parameter which is the string that names the command and any number of
+additional parameters can be provided which will be passed to that
+command when it is called. In this case the command requires no
+parameters and thus none are given.</p>
+<p>Instead of using call-act-r-command, it is also possible when
+initially adding a command to specify a name which can be used directly
+in the model definition like the built-in ACT-R commands, but there are
+some additional complications with doing that and how to do so will not
+be described in the tutorial.</p>
+<h2 id="the-imaginal-action-buffer">The Imaginal-action buffer</h2>
+<p>The imaginal module has a second buffer called
+<strong>imaginal-action </strong>which can be used by the modeler to
+make requests that perform custom actions. Those actions are typically
+used to modify the chunk in the <strong>imaginal</strong> buffer,
+replace the chunk in the <strong>imaginal</strong> buffer with a new
+one, or clear the <strong>imaginal </strong>buffer and report an error,
+but may perform any other arbitrary calculation desired. Those requests
+can also take time during which the imaginal module will be marked as
+busy. Note however, the <strong>imaginal-action</strong> buffer is not
+intended to be used for holding a chunk. The <strong>imaginal
+</strong>buffer is the cognitive interface for the imaginal module and
+the <strong>imaginal-action</strong> buffer exists for the purpose of
+allowing modelers to create new operations which can manipulate the
+<strong>imaginal</strong> buffer.</p>
+<p>There are two types of requests which can be made to the
+<strong>imaginal-action</strong> buffer which are referred to as a
+generic action and a simple action. The model for the Building Sticks
+task in this unit uses a simple action with no extra information to
+create a new chunk for the<strong> imaginal</strong> buffer. The generic
+action is more powerful in terms of what it can do and for either the
+generic or simple action it is possible to provide additional details in
+the request. Those capabilities however require more care and
+programming from the modeler in handling the action and are beyond the
+scope of the tutorial. Users interested in using those capabilities
+should consult the reference manual for details.</p>
+<p>Here is the production from the model which uses a simple action
+request to the <strong>imaginal-action</strong> buffer:</p>
+<div>
+<pre><code>(p encode-line-current
+    =goal&gt;
+      isa     try-strategy
+      state   attending
+    =imaginal&gt;
+      isa     encoding
+      goal-loc =goal-loc
+    =visual&gt;
+      isa     line
+      width   =current-len
+    ?visual&gt;
+      state   free
+    ?imaginal-action&gt; 
+      state   free  
+  ==&gt;
+    =imaginal&gt;
+      length    =current-len
+    +imaginal-action&gt;
+      action    &quot;bst-compute-difference&quot;
+      simple    t
+    =goal&gt;
+      state     consider-next
+    +visual&gt;
+      cmd       move-attention
+      screen-pos =goal-loc)</code></pre>
+</div>
+<p>For this task, the “bst-compute-difference” command in the code is
+creating a chunk which is a copy of the chunk currently in the
+<strong>imaginal</strong> buffer (which is done using the new command
+copy-chunk described below) and then modifying that new chunk to have a
+slot named difference which holds the length difference between the
+current line and the goal line using the command mod-chunk.</p>
+<p>A simple action request to the <strong>imaginal-action</strong>
+buffer requires specifying a slot named action which must contain a
+string that names a valid command or a symbol naming a Lisp function,
+and a slot named simple with any value (note that <strong>nil</strong>
+is not a value since it indicates the absence of a value). When a simple
+action request is made to the <strong>imaginal-action</strong> buffer
+the imaginal module performs the following sequence of actions: </p>
+<ul>
+<li>the imaginal module is marked as busy</li>
+<li>if the imaginal module is currently signaling an error that error is
+cleared</li>
+<li>the named command is called with no parameters</li>
+<li>the <strong>imaginal</strong> buffer is cleared</li>
+</ul>
+<p>Then after the current imaginal action time has passed (default of
+200ms and set with the :imaginal-delay parameter) the following actions
+will happen:</p>
+<ul>
+<li>the imaginal module will be marked as free </li>
+<li>if the call to the action command returned the name of a chunk then
+that chunk will be copied into the <strong>imaginal</strong> buffer</li>
+<li>If the call to the action command returned any other value the
+<strong>imaginal </strong>buffer will remain empty, the imaginal
+module’s error state will become true, and the <strong>imaginal</strong>
+buffer’s failure query will be true.</li>
+</ul>
+<p>Here is the segment from a trace showing the actions related to the
+simple-action request when the encode-line-current production fires:</p>
+<div>
+<pre><code>     2.148  PROCEDURAL            PRODUCTION-FIRED ENCODE-LINE-CURRENT
+...
+     2.148  PROCEDURAL            MODULE-REQUEST IMAGINAL-ACTION
+...
+     2.148  PROCEDURAL            CLEAR-BUFFER IMAGINAL-ACTION
+...
+     2.148  IMAGINAL              CLEAR-BUFFER IMAGINAL
+...
+     2.348  IMAGINAL              SET-BUFFER-CHUNK IMAGINAL IMAGINAL-CHUNK0-0</code></pre>
+</div>
+<p>Except for the additional clearing of the
+<strong>imaginal-action</strong> buffer, which should not hold a chunk
+anyway, it performs the same actions as an <strong>imaginal</strong>
+buffer request to create a new chunk would.</p>
+<p>In the conditions of the encode-line-current production a query is
+made to test that the <strong>imaginal-action</strong> buffer has state
+free. That query will return the same state as the
+<strong>imaginal</strong> buffer does. Both buffers pass their requests
+to the same module which can only perform one action at a time
+regardless of which of its buffers was used to make the request. Thus it
+does not matter which buffer is used to test the state for the
+performance of the model, but to avoid a style warning testing the
+buffer for which a request is being made is preferable.</p>
+<p>One important thing to note about a simple action request is that it
+will always clear the <strong>imaginal</strong> buffer. That means that
+the chunk currently in the buffer will become an element of the model’s
+declarative memory at that time. In this model that does not matter
+because it is not retrieving those chunks later. However, in models
+where later retrieval is important, having intermediate chunks added to
+memory like that could cause problems. In those cases, one would
+probably want to use the generic action request to extend the imaginal
+capabilities because it does not clear the buffer automatically and can
+be used to modify the chunk it contains.</p>
+<h2 id="new-commands">New commands</h2>
+<p><strong>copy-chunk</strong> – The copy-chunk command takes one
+parameter which is the name of a chunk. It creates a new chunk which has
+all of the same slots and values as the chunk provided, and returns the
+name of that new chunk. This command is not often needed because buffers
+will automatically copy chunks and as we’ve seen in most units buffers
+can be set without creating a chunk in advance. In this case, because
+the model is using a simple imaginal-action request, the command called
+to handle that action needs to create a new chunk to return and since
+that chunk needs all of the same information as the chunk that is in the
+<strong>imaginal</strong> buffer it uses copy-chunk to do so.</p>
+<p><strong>mod-chunk – </strong>This command is used to modify a chunk.
+The Lisp macro version and the Python function
+(<strong>mod_chunk</strong>) require a chunk name and then an even
+number of additional parameters which indicate slots and values whereas
+the Lisp function (<strong>mod-chunk-fct</strong>) requires a chunk name
+and then a list of slots and values. Each of the slots specified for the
+chunk is given the corresponding value. It returns the name of the chunk
+which was modified. One important thing to note is that once a chunk
+enters declarative memory it cannot be modified.</p>
+<p><strong></strong></p>
+</main>
+</body>
+</html>
