@@ -934,6 +934,70 @@ select.input {
   content: "";
 }
 
+.unit-guides {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.unit-guides-label {
+  padding: 3px 9px 1px;
+  color: var(--faint);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.unit-guide {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--speed), border-color var(--speed), color var(--speed);
+}
+
+.unit-guide:hover {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.unit-guide:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.unit-guide svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+
+.unit-guide-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-guide-open {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 11px;
+}
+
 .model-empty {
   padding: var(--space-4);
   color: var(--faint);

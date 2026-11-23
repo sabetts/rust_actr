@@ -201,6 +201,72 @@ async function main() {
       throw new Error("header ACT-R head logo did not load");
     }
 
+    const unit1Guides = page.locator('.unit[data-unit="unit1"] .unit-guide');
+    if ((await unit1Guides.count()) !== 4) {
+      throw new Error(`unexpected Unit 1 guide count: ${await unit1Guides.count()}`);
+    }
+    const firstGuideHref = await unit1Guides.first().getAttribute("href");
+    if (firstGuideHref !== "./guides/unit1/unit1.html") {
+      throw new Error(`unexpected first guide href: ${firstGuideHref}`);
+    }
+    const guideCheck = await page.evaluate(async () => {
+      const manifest = await (
+        await fetch("./guides/manifest.json", { cache: "no-store" })
+      ).json();
+      const paths = Object.values(manifest)
+        .flat()
+        .map((guide) => guide.path);
+      const results = await Promise.all(
+        paths.map(async (path) => {
+          const response = await fetch(`./${path}`, { cache: "no-store" });
+          return response.ok;
+        })
+      );
+      return { count: paths.length, allOk: results.every(Boolean) };
+    });
+    if (guideCheck.count !== 28 || !guideCheck.allOk) {
+      throw new Error(`guide manifest check failed: ${JSON.stringify(guideCheck)}`);
+    }
+
+    const guideErrors = [];
+    const [guidePage] = await Promise.all([
+      page.waitForEvent("popup"),
+      unit1Guides.first().click(),
+    ]);
+    guidePage.on("pageerror", (error) => guideErrors.push(String(error)));
+    guidePage.on("console", (message) => {
+      if (message.type() === "error") guideErrors.push(message.text());
+    });
+    await guidePage.waitForSelector("main h1", { timeout: 10000 });
+    const guideTitle = await guidePage.title();
+    if (!guideTitle.includes("Unit 1") || !guideTitle.includes("ACT-R 7 Tutorials")) {
+      throw new Error(`unexpected guide title: ${guideTitle}`);
+    }
+    const guideHeading = (await guidePage.locator("main h1").first().textContent()) || "";
+    if (!guideHeading.includes("Introduction to ACT-R")) {
+      throw new Error(`unexpected guide heading: ${guideHeading}`);
+    }
+    if ((await guidePage.locator(".guide-back").getAttribute("href")) !== "../../") {
+      throw new Error("guide back link is wrong");
+    }
+    await guidePage.waitForFunction(
+      () => {
+        const image = document.querySelector("main img");
+        return Boolean(image && image.complete);
+      },
+      null,
+      { timeout: 10000 }
+    );
+    const guideImageWidth = await guidePage
+      .locator("main img")
+      .first()
+      .evaluate((image) => image.naturalWidth);
+    if (!guideImageWidth) throw new Error("guide image did not load");
+    await guidePage.close();
+    if (guideErrors.length) {
+      throw new Error(`guide page errors:\n${guideErrors.join("\n")}`);
+    }
+
     const defaultTitle = (await page.locator("#model-info h2").textContent()) || "";
     if (!defaultTitle.includes("Count")) {
       throw new Error(`default model info looks wrong: ${defaultTitle}`);

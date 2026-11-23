@@ -63,14 +63,31 @@ npm run test:e2e
 
 The `.github/workflows/web.yml` workflow builds the wasm, runs the Node and
 browser smoke tests on pull requests, and deploys the page to GitHub Pages from
-`main`. The Pages staging step copies `index.html`, `assets/`, `css/`, `js/`,
-`models/`, and `actr_engine.wasm`, so keep new static assets in one of those
-directories and add them to the workflow if you introduce another top-level
-folder. Enable
+`main`. The Pages staging step copies `index.html`, `assets/`, `css/`,
+`guides/`, `js/`, `models/`, and `actr_engine.wasm`, so keep new static assets
+in one of those directories and add them to the workflow if you introduce
+another top-level folder. Enable
 Pages once under Settings -> Pages -> Build and deployment -> Source: GitHub
 Actions. The deployed site is the project's Pages URL (for example
 `https://<owner>.github.io/<repo>/`); all fetches are relative, so it works
 under that subpath.
+
+## Unit guides
+
+The unit list links to HTML conversions of the tutorial ODTs under
+`actr7.x/tutorial/unitN/`: the main unit guide, code walkthrough, modeling notes
+where present, and the productions summary. The converted pages, media, and
+`guides/manifest.json` are committed under `web/guides/`.
+
+Regenerate them with:
+
+```sh
+python rust_actr7/web/convert_guides.py
+```
+
+This needs `pandoc` and ImageMagick (`magick`) on `PATH`. ImageMagick converts
+the WMF diagrams in Units 1 and 6 to PNG. The guide pages use `web/css/guide.css`
+and respect the theme stored by the main page.
 
 ## Page UI
 
@@ -81,6 +98,9 @@ runner:
   blurbs, per-model descriptions, and `Starter`, `Solution`, `Broken`, and
   `Demo` badges. A hidden native `<select id="model-preset">` stays populated
   for compatibility and test selectors.
+- **Unit guides**: each expanded unit ends with links to its converted HTML
+  guide, code walkthrough, modeling notes, and productions summary. Guides open
+  in a new tab and link back to the tutorial.
 - **Run bar**: sticky across the top of the page, with run time, seed pair
   under "Seed & advanced", live status pill, Run, and Cancel.
 - **Workspace tabs**: `Task` (task models only), `Model source`, and `Trace`.

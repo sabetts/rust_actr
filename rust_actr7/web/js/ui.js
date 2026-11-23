@@ -52,6 +52,15 @@ const OUTLINE_LABELS = {
   sgp: "params",
 };
 
+const GUIDE_ICONS = {
+  guide:
+    '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 0 4 23z"/><path d="M4 5.5A2.5 2.5 0 0 0 6.5 8H20"/>',
+  code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
+  modeling: '<path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/>',
+  productions:
+    '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+};
+
 function readStorage(key) {
   try {
     return window.localStorage.getItem(key);
@@ -235,7 +244,7 @@ export function setupTabs() {
   return { activate, current, setTaskEnabled };
 }
 
-export function createModelBrowser({ groups }) {
+export function createModelBrowser({ groups, guides = {} }) {
   const list = $("model-list");
   const search = $("model-search");
   const select = $("model-preset");
@@ -264,6 +273,42 @@ export function createModelBrowser({ groups }) {
     return node;
   };
 
+  const guideIcon = (kind) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.8");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = GUIDE_ICONS[kind] || GUIDE_ICONS.guide;
+    return svg;
+  };
+
+  const renderGuides = (group, info) => {
+    const unitGuides = Array.isArray(guides[group.id]) ? guides[group.id] : [];
+    if (!unitGuides.length) return null;
+    const block = element("div", "unit-guides");
+    block.append(element("div", "unit-guides-label", "Guides"));
+    for (const guide of unitGuides) {
+      if (!guide || !guide.path || !guide.label) continue;
+      const link = document.createElement("a");
+      link.className = "unit-guide";
+      link.href = `./${guide.path}`;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.title = `${info.title} · ${guide.label}`;
+      link.append(guideIcon(guide.kind));
+      link.append(element("span", "unit-guide-label", guide.label));
+      const open = element("span", "unit-guide-open", "↗");
+      open.setAttribute("aria-hidden", "true");
+      link.append(open);
+      block.append(link);
+    }
+    return block.children.length > 1 ? block : null;
+  };
+
   const renderRows = (group, models, activeId) => {
     const body = element("div", "unit-body");
     body.id = `unit-body-${group.id}`;
@@ -286,6 +331,8 @@ export function createModelBrowser({ groups }) {
       row.addEventListener("click", () => choose(model.id));
       body.append(row);
     }
+    const guideBlock = renderGuides(group, unitInfo(group.id, group.label));
+    if (guideBlock) body.append(guideBlock);
     return body;
   };
 

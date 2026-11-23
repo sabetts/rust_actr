@@ -470,13 +470,24 @@ async function loadSelectedModel() {
 
 async function loadModels() {
   const select = $("model-preset");
-  const res = await fetch("./models/manifest.json", { cache: "no-store" });
+  const [res, guideRes] = await Promise.all([
+    fetch("./models/manifest.json", { cache: "no-store" }),
+    fetch("./guides/manifest.json", { cache: "no-store" }).catch(() => null),
+  ]);
   if (!res.ok) {
     throw new Error(`fetch models/manifest.json: ${res.status} ${res.statusText}`);
   }
   const manifest = await res.json();
   const groups = Array.isArray(manifest.groups) ? manifest.groups : [];
   if (!groups.length) throw new Error("model manifest has no groups");
+  let guides = {};
+  if (guideRes?.ok) {
+    try {
+      guides = await guideRes.json();
+    } catch {
+      guides = {};
+    }
+  }
 
   select.replaceChildren();
   models = new Map();
@@ -504,7 +515,7 @@ async function loadModels() {
     select.selectedIndex = 0;
   }
 
-  browser = createModelBrowser({ groups });
+  browser = createModelBrowser({ groups, guides });
   await loadSelectedModel();
   browser.markSelected(selectedModel?.id || select.value);
 }
