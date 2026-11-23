@@ -11,9 +11,9 @@ async function ulIssues(actr, ctx) {
   const presentChoose = () => {
     actr.goalFocus(["isa", "choose"]);
     let answer = null;
-    if (Number(actr.random(1.0)) < 0.6) {
+    if (Number(actr.randomFloat(1.0)) < 0.6) {
       answer = "a";
-    } else if (Number(actr.random(1.0)) > 0.5) {
+    } else if (Number(actr.randomFloat(1.0)) > 0.5) {
       answer = "b";
     }
     if (answer === "a") choices.a += 1;

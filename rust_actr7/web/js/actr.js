@@ -116,6 +116,11 @@ function first(values) {
   return Array.isArray(values) && values.length ? values[0] : null;
 }
 
+function jsonFloat(value) {
+  const text = String(Number(value));
+  return /[.eE]/.test(text) ? text : `${text}.0`;
+}
+
 function optionPairs(options) {
   if (Array.isArray(options)) return options;
   return Object.entries(options || {});
@@ -283,8 +288,12 @@ class WasmSession {
   }
 
   eval(name, args) {
+    return this.evalRaw(name, JSON.stringify(args));
+  }
+
+  evalRaw(name, argsJson) {
     const nameBytes = encoder.encode(name);
-    const argBytes = encoder.encode(JSON.stringify(args));
+    const argBytes = encoder.encode(argsJson);
     const namePtr = this.wasm.alloc(nameBytes.length);
     const argPtr = this.wasm.alloc(argBytes.length);
     let status;
@@ -356,6 +365,12 @@ export class Actr {
 
   eval(name, ...args) {
     const result = this.session.eval(name, args);
+    this.drain();
+    return result;
+  }
+
+  evalRaw(name, argsJson) {
+    const result = this.session.evalRaw(name, argsJson);
     this.drain();
     return result;
   }
@@ -642,6 +657,10 @@ export class Actr {
 
   random(limit) {
     return first(this.eval("act-r-random", limit));
+  }
+
+  randomFloat(limit) {
+    return first(this.evalRaw("act-r-random", `[${jsonFloat(limit)}]`));
   }
 
   getTime(modelTime = true) {

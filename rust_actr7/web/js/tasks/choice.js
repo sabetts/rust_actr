@@ -159,7 +159,7 @@ async function modelPass(actr, ctx, visible, response) {
     blocks[Math.floor(trial / BLOCK)].push(key === "h");
 
     actr.clearExpWindow(window);
-    const answer = Number(actr.random(1.0)) < 0.9 ? "heads" : "tails";
+    const answer = Number(actr.randomFloat(1.0)) < 0.9 ? "heads" : "tails";
     addFeedback(actr, window, answer);
     if (visible) await ctx.paint();
     await actr.run(1, { paint: visible, signal: ctx.signal });
@@ -193,7 +193,7 @@ async function humanPass(actr, ctx) {
 
       actr.clearExpWindow(window);
       controls?.setDisabled(true);
-      const answer = Number(actr.random(1.0)) < 0.9 ? "heads" : "tails";
+      const answer = Number(actr.randomFloat(1.0)) < 0.9 ? "heads" : "tails";
       addFeedback(actr, window, answer);
       await ctx.paint();
       await waitReal(1000, ctx.signal);
