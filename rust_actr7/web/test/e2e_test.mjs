@@ -255,6 +255,12 @@ async function main() {
     if (traceMeta === "No run yet") {
       throw new Error("trace metadata did not update");
     }
+    if ((await page.locator("#trace-count").getAttribute("data-state")) === "error") {
+      throw new Error("successful trace is marked as an error");
+    }
+    if ((await page.locator("#trace-meta").getAttribute("data-state")) === "error") {
+      throw new Error("successful trace metadata is marked as an error");
+    }
 
     await selectModel("unit8-semantic-dynamic", "define-model semantic");
     if (!(await page.locator("#task-panel").isVisible())) {
@@ -401,6 +407,12 @@ async function main() {
     const rawOutput = await page.inputValue("#output");
     if (!rawOutput.includes("parse error at line 5")) {
       throw new Error(`raw trace is missing the parse error:\n${rawOutput}`);
+    }
+    if ((await page.locator("#trace-count").getAttribute("data-state")) !== "error") {
+      throw new Error("error trace count is not marked as an error");
+    }
+    if ((await page.locator("#trace-meta").getAttribute("data-state")) !== "error") {
+      throw new Error("error trace metadata is not marked as an error");
     }
 
     await selectModel("unit8-categorize", "define-model categorize");

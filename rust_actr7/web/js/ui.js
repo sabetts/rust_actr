@@ -479,8 +479,22 @@ export function setupTraceView({ onCountChange } = {}) {
   let wrap = true;
   let follow = true;
   let followPaused = false;
+  let hasError = false;
 
   const matches = (line) => !filter || line.toLowerCase().includes(filter);
+
+  const applyState = () => {
+    for (const node of [count, meta]) {
+      if (!node) continue;
+      if (hasError) {
+        node.dataset.state = "error";
+        node.title = "Trace contains an error";
+      } else {
+        delete node.dataset.state;
+        node.title = "";
+      }
+    }
+  };
 
   const lineClass = (line) => {
     const lower = line.toLowerCase();
@@ -560,6 +574,7 @@ export function setupTraceView({ onCountChange } = {}) {
       count.textContent = String(lines.length);
       count.hidden = !lines.length;
     }
+    applyState();
     onCountChange?.(lines.length);
 
     if (follow && !followPaused) {
@@ -591,14 +606,16 @@ export function setupTraceView({ onCountChange } = {}) {
 
   const set = (text, { error = false } = {}) => {
     raw = text || "";
+    hasError = Boolean(error);
     output.value = raw;
-    output.classList.toggle("err", Boolean(error));
+    output.classList.toggle("err", hasError);
     followPaused = false;
     render();
   };
 
   const clear = () => {
     raw = "";
+    hasError = false;
     output.value = "";
     output.classList.remove("err");
     render();

@@ -1318,6 +1318,12 @@ select.input {
   font-variant-numeric: tabular-nums;
 }
 
+.tab-count[data-state="error"] {
+  background: var(--red-soft);
+  color: var(--red);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 35%, transparent);
+}
+
 .tab-panel {
   animation: panel-in 180ms ease both;
 }
@@ -1372,6 +1378,11 @@ select.input {
   color: var(--faint);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+
+.card-meta[data-state="error"] {
+  color: var(--red);
+  font-weight: 650;
 }
 
 .source-status {
