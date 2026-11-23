@@ -273,7 +273,6 @@ async function playHand(actr, goal, monitor, ctx, human, seconds, more) {
       hideModel: false,
       hideHuman: false,
       result: `You: ${htot} (${hres})   Model: ${mtot} (${mres})`,
-      hint: more ? "Next hand..." : "Game over",
       actions: more ? [["next", "Next hand"]] : [],
     });
     const next = more ? waitForNext(ctx, 3000) : null;
