@@ -86,8 +86,8 @@ runner:
   switch to the trace when run.
 - **Model source**: line-number gutter, lightweight Lisp syntax highlighting,
   and a production/chunk outline that jumps to a form. Unmatched parens are
-  marked red and listed in the toolbar; placing the caret next to a paren
-  highlights its match. Parse errors highlight the source line and show a
+  marked red and listed in the toolbar; placing the caret just after a paren
+  highlights it and its match. Parse errors highlight the source line and show a
   clickable line chip, with task-prelude offsets mapped back to the editor.
   `Reset` restores the loaded source and `Copy` copies it.
 - **Trace**: colorized timestamps, modules, events, output, warnings, and

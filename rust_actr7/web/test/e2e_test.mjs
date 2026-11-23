@@ -353,6 +353,36 @@ async function main() {
     );
     await page.evaluate(() => {
       const textarea = document.getElementById("model");
+      const text = textarea.value;
+      let close = text.lastIndexOf(")");
+      while (close > 0 && (text[close - 1] === "(" || text[close - 1] === ")")) {
+        close = text.lastIndexOf(")", close - 1);
+      }
+      textarea.setSelectionRange(close, close);
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    await page.waitForFunction(
+      () => document.querySelectorAll(".tok-paren-match").length === 0,
+      null,
+      { timeout: 3000 }
+    );
+    await page.evaluate(() => {
+      const textarea = document.getElementById("model");
+      const text = textarea.value;
+      let close = text.lastIndexOf(")");
+      while (close > 0 && (text[close - 1] === "(" || text[close - 1] === ")")) {
+        close = text.lastIndexOf(")", close - 1);
+      }
+      textarea.setSelectionRange(close + 1, close + 1);
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    await page.waitForFunction(
+      () => document.querySelectorAll(".tok-paren-match").length === 2,
+      null,
+      { timeout: 3000 }
+    );
+    await page.evaluate(() => {
+      const textarea = document.getElementById("model");
       textarea.setSelectionRange(0, 2);
       document.dispatchEvent(new Event("selectionchange"));
     });

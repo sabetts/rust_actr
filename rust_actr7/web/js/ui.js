@@ -986,18 +986,11 @@ export function createEditor({ onChange } = {}) {
     ) {
       const text = textarea.value;
       const cursor = textarea.selectionStart;
-      const candidates = [];
-      if (text[cursor] === "(" || text[cursor] === ")") candidates.push(cursor);
-      if (text[cursor - 1] === "(" || text[cursor - 1] === ")") {
-        candidates.push(cursor - 1);
-      }
-      for (const index of candidates) {
-        if (problemIndices.has(index)) continue;
+      const index = cursor - 1;
+      const char = text[index];
+      if ((char === "(" || char === ")") && !problemIndices.has(index)) {
         const match = structure.pairs.get(index);
-        if (match != null) {
-          next = new Set([index, match]);
-          break;
-        }
+        if (match != null) next = new Set([index, match]);
       }
     }
     const same =
