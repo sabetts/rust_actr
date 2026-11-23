@@ -33,46 +33,78 @@ function waitReal(ms, signal) {
   });
 }
 
-function createHumanGuide(ctx) {
-  const stage = ctx.stage;
-  if (!stage) return null;
-  stage.hidden = false;
-  stage.classList.add("paired-stage");
-  stage.replaceChildren();
-
-  const box = document.createElement("div");
-  box.className = "paired-guide";
-  const heading = document.createElement("div");
-  heading.className = "paired-guide-heading";
-  heading.textContent = "Paired Associate — Human";
-
-  const instructions = document.createElement("div");
-  instructions.className = "paired-guide-instructions";
-  const recallInstruction = document.createElement("div");
-  recallInstruction.textContent = "When you see a word, type the digit associated with it.";
-  const studyInstruction = document.createElement("div");
-  studyInstruction.textContent = "When you see a number, it is paired with the previous word. Remember it.";
-  instructions.append(recallInstruction, studyInstruction);
-
+function createHumanGuide(ctx, keypad) {
   const progress = document.createElement("div");
-  progress.className = "paired-guide-progress";
-  box.append(heading, instructions, progress);
-  stage.append(box);
-  return { progress };
+  progress.className = "paired-keypad-status";
+  if (keypad?.pad?.parentElement) {
+    keypad.pad.after(progress);
+  } else if (ctx.stage) {
+    ctx.stage.hidden = false;
+    ctx.stage.classList.add("paired-stage");
+    ctx.stage.replaceChildren(progress);
+  }
+  return { progress, element: progress };
 }
 
 function updateHumanGuide(guide, progress) {
   if (guide) guide.progress.textContent = progress;
 }
 
-function waitForHumanResponse(ctx, ms) {
+function createKeypad(actr) {
+  const root = actr?.window?.root;
+  if (!root?.parentElement) return null;
+  root.parentElement.querySelectorAll(".paired-keypad").forEach((node) => node.remove());
+  const pad = document.createElement("div");
+  pad.className = "paired-keypad";
+  pad.setAttribute("role", "group");
+  pad.setAttribute("aria-label", "Choose the associate digit");
+  pad.hidden = false;
+  const buttons = new Map();
+  for (let digit = 0; digit <= 9; digit += 1) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.digit = String(digit);
+    button.textContent = String(digit);
+    button.setAttribute("aria-pressed", "false");
+    pad.append(button);
+    buttons.set(String(digit), button);
+  }
+  const select = (digit) => {
+    const key = digit == null ? "" : String(digit);
+    for (const [value, button] of buttons) {
+      button.setAttribute("aria-pressed", value === key ? "true" : "false");
+    }
+  };
+  root.after(pad);
+  return {
+    pad,
+    select,
+    clear: () => select(null),
+    setDisabled: (disabled) => {
+      pad.classList.toggle("is-disabled", disabled);
+      for (const button of buttons.values()) button.disabled = disabled;
+    },
+    remove: () => pad.remove(),
+  };
+}
+
+function waitForHumanResponse(ctx, ms, keypad) {
   return new Promise((resolve, reject) => {
     let done = false;
     let response = null;
     let responseTime = null;
+    const pad = keypad?.pad || null;
+    const onSelect = (digit) => {
+      const key = String(digit ?? "");
+      if (!/^[0-9]$/.test(key)) return;
+      response = key;
+      responseTime = performance.now();
+      keypad?.select(key);
+    };
     const cleanup = () => {
       clearTimeout(timer);
       document.removeEventListener("keydown", onKey, true);
+      pad?.removeEventListener("click", onClick);
       ctx.signal?.removeEventListener("abort", abort);
     };
     const finish = () => {
@@ -91,13 +123,17 @@ function waitForHumanResponse(ctx, ms) {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
-      if (!/^[0-9]$/.test(event.key) || response != null) return;
+      if (!/^[0-9]$/.test(event.key)) return;
       event.preventDefault();
-      response = event.key;
-      responseTime = performance.now();
+      onSelect(event.key);
+    };
+    const onClick = (event) => {
+      const button = event.target instanceof Element ? event.target.closest("button") : null;
+      if (button?.dataset.digit != null) onSelect(button.dataset.digit);
     };
     const timer = setTimeout(finish, ms);
     document.addEventListener("keydown", onKey, true);
+    pad?.addEventListener("click", onClick);
     ctx.signal?.addEventListener("abort", abort, { once: true });
     if (ctx.signal?.aborted) abort();
   });
@@ -195,40 +231,49 @@ async function humanPass(actr, ctx, size, blocks) {
     width: 300,
     height: 300,
   });
-  const guide = createHumanGuide(ctx);
+  const keypad = createKeypad(actr);
+  const guide = createHumanGuide(ctx, keypad);
   const total = size * blocks;
   let pairIndex = 0;
   const rows = [];
-  for (let block = 0; block < blocks; block += 1) {
-    let score = 0;
-    let time = 0;
-    for (const [prompt, associate] of actr.permuteList(PAIRS.slice(PAIRS.length - size))) {
-      const progress = `Block ${block + 1}/${blocks} · Pair ${pairIndex + 1}/${total}`;
-      actr.clearExpWindow(window);
-      addText(actr, prompt);
-      updateHumanGuide(guide, progress);
-      await ctx.paint();
-      const start = performance.now();
-      const answer = await waitForHumanResponse(ctx, 5000);
-      if (sameKey(answer.response, associate)) {
-        score += 1;
-        time += answer.responseTime - start;
-      }
+  try {
+    for (let block = 0; block < blocks; block += 1) {
+      let score = 0;
+      let time = 0;
+      for (const [prompt, associate] of actr.permuteList(PAIRS.slice(PAIRS.length - size))) {
+        const progress = `Block ${block + 1}/${blocks} · Pair ${pairIndex + 1}/${total}`;
+        actr.clearExpWindow(window);
+        addText(actr, prompt);
+        updateHumanGuide(guide, progress);
+        keypad?.clear();
+        keypad?.setDisabled(false);
+        await ctx.paint();
+        const start = performance.now();
+        const answer = await waitForHumanResponse(ctx, 5000, keypad);
+        if (sameKey(answer.response, associate)) {
+          score += 1;
+          time += answer.responseTime - start;
+        }
 
-      actr.clearExpWindow(window);
-      addText(actr, associate);
-      await ctx.paint();
-      await waitReal(5000, ctx.signal);
-      pairIndex += 1;
+        actr.clearExpWindow(window);
+        keypad?.setDisabled(true);
+        addText(actr, associate);
+        await ctx.paint();
+        await waitReal(5000, ctx.signal);
+        pairIndex += 1;
+      }
+      rows.push({
+        accuracy: score / size,
+        latency: score > 0 ? time / score / 1000 : 0,
+      });
+      ctx.progress?.(`running... block ${block + 1}/${blocks}`);
     }
-    rows.push({
-      accuracy: score / size,
-      latency: score > 0 ? time / score / 1000 : 0,
-    });
-    ctx.progress?.(`running... block ${block + 1}/${blocks}`);
+    updateHumanGuide(guide, `All ${total} trials complete`);
+  } finally {
+    keypad?.remove();
+    guide?.element?.remove();
+    actr.closeExpWindow(window);
   }
-  updateHumanGuide(guide, `All ${total} trials complete`);
-  actr.closeExpWindow(window);
   return rows;
 }
 

@@ -2198,31 +2198,52 @@ select.input {
   color: var(--ink);
 }
 
-.paired-guide {
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow-xs);
-}
-
-.paired-guide-heading {
-  font-size: 14px;
-  font-weight: 750;
-}
-
-.paired-guide-instructions {
-  margin-top: 6px;
-  color: var(--ink-soft);
-  font-size: 12.5px;
-}
-
-.paired-guide-progress {
+.paired-keypad-status {
   min-height: 1.2em;
-  margin-top: 9px;
   color: var(--faint);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
+}
+
+.paired-keypad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  width: min(300px, 100%);
+  transition: opacity var(--speed);
+}
+
+.paired-keypad.is-disabled {
+  opacity: 0.4;
+}
+
+.paired-keypad button {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--speed), border-color var(--speed), color var(--speed), box-shadow var(--speed);
+}
+
+.paired-keypad button:hover {
+  background: var(--surface-3);
+}
+
+.paired-keypad button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--ring);
+}
+
+.paired-keypad button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .past-tense-stage {
