@@ -16,8 +16,9 @@ python -m http.server 8000
 # open http://localhost:8000/
 ```
 
-`build.py` stages the model files and manifest under `web/models/`, builds the
-wasm, and copies it next to `index.html`:
+`build.py` stages the model files and manifest under `web/models/`, stages the
+ACT-R head icon under `web/assets/`, builds the wasm, and copies it next to
+`index.html`:
 
 ```text
 cargo build --manifest-path rust_actr7/Cargo.toml --release --target wasm32-unknown-unknown
@@ -29,15 +30,15 @@ It needs a Rust toolchain with the `wasm32-unknown-unknown` target:
 rustup target add wasm32-unknown-unknown
 ```
 
-No `wasm-pack` is needed. To stage only the model menu:
+No `wasm-pack` is needed. To stage only the model menu and static assets:
 
 ```sh
 python rust_actr7/web/build.py --models-only
 ```
 
-The page loads `./actr_engine.wasm` and the generated `./models/` files, so
-serve the `web/` folder over HTTP. Opening `index.html` as `file://` fails on
-the fetches.
+The page loads `./actr_engine.wasm`, the generated `./models/` files, and the
+staged `./assets/actr-head.png` icon, so serve the `web/` folder over HTTP.
+Opening `index.html` as `file://` fails on the fetches.
 
 Optional bridge smoke tests (Node 18+, after `build.py`):
 
@@ -62,9 +63,10 @@ npm run test:e2e
 
 The `.github/workflows/web.yml` workflow builds the wasm, runs the Node and
 browser smoke tests on pull requests, and deploys the page to GitHub Pages from
-`main`. The Pages staging step copies `index.html`, `css/`, `js/`, `models/`,
-and `actr_engine.wasm`, so keep new static assets in one of those directories
-and add them to the workflow if you introduce another top-level folder. Enable
+`main`. The Pages staging step copies `index.html`, `assets/`, `css/`, `js/`,
+`models/`, and `actr_engine.wasm`, so keep new static assets in one of those
+directories and add them to the workflow if you introduce another top-level
+folder. Enable
 Pages once under Settings -> Pages -> Build and deployment -> Source: GitHub
 Actions. The deployed site is the project's Pages URL (for example
 `https://<owner>.github.io/<repo>/`); all fetches are relative, so it works
@@ -101,6 +103,9 @@ runner:
 - **Theme and accessibility**: light/dark theme persisted in `localStorage`,
   keyboard tabs, visible focus rings, reduced-motion support, and a sticky run
   bar that keeps the primary action reachable on mobile.
+- **Header and favicon**: the ACT-R head image is staged from
+  `src/data/actr-head.png` into `assets/` and used for both the browser tab
+  icon and the header brand mark.
 
 Keyboard shortcuts: `Ctrl`/`Cmd` + `Enter` runs the model, `Ctrl`/`Cmd` + `K`
 focuses the model search, and `Ctrl`/`Cmd` + `F` filters the trace when the

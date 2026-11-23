@@ -186,6 +186,21 @@ async function main() {
     );
     await page.click("#theme-toggle");
 
+    const iconHref = await page.evaluate(
+      () => document.querySelector('link[rel="icon"]')?.getAttribute("href") || ""
+    );
+    if (iconHref !== "./assets/actr-head.png") {
+      throw new Error(`unexpected favicon href: ${iconHref}`);
+    }
+    const logo = await page.locator(".brand-logo").evaluate((img) => ({
+      complete: img.complete,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+    }));
+    if (!logo.complete || logo.width === 0 || logo.height === 0) {
+      throw new Error("header ACT-R head logo did not load");
+    }
+
     const defaultTitle = (await page.locator("#model-info h2").textContent()) || "";
     if (!defaultTitle.includes("Count")) {
       throw new Error(`default model info looks wrong: ${defaultTitle}`);

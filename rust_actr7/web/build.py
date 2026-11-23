@@ -13,6 +13,9 @@ WASM_TARGET = "wasm32-unknown-unknown"
 WASM_BUILD = CRATE_DIR / "target" / WASM_TARGET / "release" / "actr_engine.wasm"
 WASM_STAGED = WEB_DIR / "actr_engine.wasm"
 MODELS_DIR = WEB_DIR / "models"
+ASSETS_DIR = WEB_DIR / "assets"
+HEAD_ICON = CRATE_DIR / "src" / "data" / "actr-head.png"
+HEAD_ICON_STAGED = ASSETS_DIR / "actr-head.png"
 
 MODEL_GROUPS = (
     {
@@ -155,6 +158,14 @@ MODEL_GROUPS = (
 )
 
 
+def stage_assets() -> None:
+    if not HEAD_ICON.is_file():
+        raise SystemExit(f"missing icon source: {HEAD_ICON}")
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(HEAD_ICON, HEAD_ICON_STAGED)
+    print(f"staged {HEAD_ICON_STAGED}")
+
+
 def stage_models() -> None:
     for group in MODEL_GROUPS:
         for _, _, filename, _ in group["models"]:
@@ -239,6 +250,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    stage_assets()
     stage_models()
     if not args.models_only:
         status = build_wasm()
