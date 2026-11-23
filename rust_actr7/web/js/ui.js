@@ -4,6 +4,7 @@ import {
   modelInfo,
   unitInfo,
 } from "./catalog.js";
+import { scanParens } from "./lisp-scan.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -645,13 +646,36 @@ export function createEditor({ onChange } = {}) {
   const outline = $("model-outline");
   const meta = $("source-meta");
   const toggle = $("toggle-outline");
+  const marker = $("editor-line-marker");
+  const parenStatus = $("paren-status");
+  const errorStatus = $("error-status");
   if (!textarea || !highlight) {
-    return { setSource() {}, getSource: () => "", focus() {} };
+    return {
+      setSource() {},
+      getSource: () => "",
+      getOriginal: () => "",
+      refresh() {},
+      focus() {},
+      setErrorLine() {},
+      clearErrorLine() {},
+      revealLine() {},
+    };
   }
 
   let source = "";
   let pending = 0;
   let outlineOpen = true;
+  let lines = [""];
+  let offsets = [0];
+  let structure = { pairs: new Map(), problems: [] };
+  let problemIndices = new Set();
+  let matchParens = new Set();
+  let cursorFrame = 0;
+  let errorLine = null;
+  let errorMessage = "";
+  let errorLabel = "Error";
+  let lineHeight = 20;
+  let paddingTop = 16;
 
   const escape = (value) =>
     value
@@ -668,7 +692,7 @@ export function createEditor({ onChange } = {}) {
     return "";
   };
 
-  const tokenize = (text) => {
+  const tokenize = (text, matched = new Set(), problems = new Set()) => {
     let out = "";
     let index = 0;
     const length = text.length;
@@ -694,8 +718,37 @@ export function createEditor({ onChange } = {}) {
         index = end;
         continue;
       }
+      if (char === "#" && text[index + 1] === "|") {
+        let end = index + 2;
+        let depth = 1;
+        while (end < length && depth > 0) {
+          if (text[end] === "#" && text[end + 1] === "|") {
+            depth += 1;
+            end += 2;
+          } else if (text[end] === "|" && text[end + 1] === "#") {
+            depth -= 1;
+            end += 2;
+          } else {
+            end += 1;
+          }
+        }
+        out += `<span class="tok-comment">${escape(text.slice(index, end))}</span>`;
+        index = end;
+        continue;
+      }
+      if (char === "|") {
+        let end = index + 1;
+        while (end < length && text[end] !== "|") end += 1;
+        if (end < length) end += 1;
+        out += `<span class="tok-string">${escape(text.slice(index, end))}</span>`;
+        index = end;
+        continue;
+      }
       if (char === "(" || char === ")") {
-        out += `<span class="tok-paren">${char}</span>`;
+        const classes = ["tok-paren"];
+        if (matched.has(index)) classes.push("tok-paren-match");
+        if (problems.has(index)) classes.push("tok-paren-bad");
+        out += `<span class="${classes.join(" ")}">${char}</span>`;
         index += 1;
         continue;
       }
@@ -705,7 +758,7 @@ export function createEditor({ onChange } = {}) {
         continue;
       }
       let end = index;
-      while (end < length && !/[\s();"]/.test(text[end])) end += 1;
+      while (end < length && !/[\s();"#|]/.test(text[end])) end += 1;
       const word = text.slice(index, end);
       const kind = classifyWord(word);
       out += kind ? `<span class="${kind}">${escape(word)}</span>` : escape(word);
@@ -714,22 +767,98 @@ export function createEditor({ onChange } = {}) {
     return out;
   };
 
-  const lineOffsets = (lines) => {
-    const offsets = [];
+  const lineOffsets = (lineList) => {
+    const result = [];
     let offset = 0;
-    for (const line of lines) {
-      offsets.push(offset);
+    for (const line of lineList) {
+      result.push(offset);
       offset += line.length + 1;
     }
-    return offsets;
+    return result;
   };
 
-  const renderOutline = (lines, offsets) => {
+  const measure = () => {
+    const style = getComputedStyle(textarea);
+    lineHeight = parseFloat(style.lineHeight) || 20;
+    paddingTop = parseFloat(style.paddingTop) || 0;
+  };
+
+  const lineStart = (line) => {
+    const index = Math.max(0, Math.min(line - 1, offsets.length - 1));
+    return offsets[index] ?? 0;
+  };
+
+  const positionMarker = () => {
+    if (!marker) return;
+    if (errorLine == null) {
+      marker.hidden = true;
+      return;
+    }
+    marker.hidden = false;
+    marker.style.height = `${lineHeight}px`;
+    marker.style.top = `${paddingTop + (errorLine - 1) * lineHeight - textarea.scrollTop}px`;
+  };
+
+  const syncScroll = () => {
+    if (gutter) {
+      gutter.style.transform = `translateY(${-textarea.scrollTop}px)`;
+    }
+    highlightCode.style.transform = `translate(${-textarea.scrollLeft}px, ${-textarea.scrollTop}px)`;
+    positionMarker();
+  };
+
+  const renderHighlight = () => {
+    highlight.innerHTML = textarea.value.length
+      ? tokenize(textarea.value, matchParens, problemIndices)
+      : "";
+  };
+
+  const renderGutter = () => {
+    if (!gutter) return;
+    const fragment = document.createDocumentFragment();
+    for (let i = 1; i <= lines.length; i += 1) {
+      const row = element("div", "editor-gutter-line", String(i));
+      if (errorLine === i) row.classList.add("is-error");
+      fragment.append(row);
+    }
+    gutter.replaceChildren(fragment);
+  };
+
+  const renderDiagnostics = () => {
+    const problems = structure.problems;
+    if (parenStatus) {
+      parenStatus.hidden = problems.length === 0;
+      if (problems.length) {
+        const first = problems[0];
+        parenStatus.textContent =
+          problems.length === 1
+            ? `Unmatched ${first.char} · line ${first.line}`
+            : `${problems.length} unmatched parens · line ${first.line}`;
+        parenStatus.title = problems
+          .map((problem) => `line ${problem.line}: unmatched ${problem.char}`)
+          .join("\n");
+      }
+    }
+    if (errorStatus) {
+      errorStatus.hidden = errorLine == null;
+      if (errorLine != null) {
+        errorStatus.textContent = `${errorLabel} · line ${errorLine}`;
+        errorStatus.title = errorMessage;
+      }
+    }
+    if (problems.length || errorLine != null) {
+      textarea.setAttribute("aria-invalid", "true");
+    } else {
+      textarea.removeAttribute("aria-invalid");
+    }
+  };
+
+  const renderOutline = (lineList, lineOffsetsList) => {
     if (!outline) return;
     outline.replaceChildren();
 
     const groups = new Map();
-    lines.forEach((line, index) => {
+    lineList.forEach((line, index) => {
       const match = line.match(
         /^\s*\(\s*(define-model|chunk-type|add-dm|goal-focus|p|sgp)\b(.*)$/i
       );
@@ -755,7 +884,9 @@ export function createEditor({ onChange } = {}) {
                   ? "Productions"
                   : "Parameters";
       if (!groups.has(label)) groups.set(label, []);
-      groups.get(label).push({ name, line: index + 1, offset: offsets[index] ?? 0, kind });
+      groups
+        .get(label)
+        .push({ name, line: index + 1, offset: lineOffsetsList[index] ?? 0, kind });
     });
 
     if (!groups.size) {
@@ -773,12 +904,7 @@ export function createEditor({ onChange } = {}) {
         button.append(element("span", "outline-item-name", item.name));
         button.append(element("span", "outline-line", String(item.line)));
         button.addEventListener("click", () => {
-          textarea.focus();
-          textarea.setSelectionRange(item.offset, item.offset);
-          const lineHeight = parseFloat(
-            getComputedStyle(textarea).getPropertyValue("line-height")
-          ) || 20;
-          textarea.scrollTop = Math.max(0, lineHeight * (item.line - 1) - 40);
+          revealLine(item.line);
         });
         group.append(button);
       }
@@ -787,22 +913,113 @@ export function createEditor({ onChange } = {}) {
     outline.hidden = !outlineOpen;
   };
 
+  const revealLine = (line) => {
+    const target = Math.max(1, Math.min(Math.round(line), Math.max(1, lines.length)));
+    const top = (target - 1) * lineHeight;
+    const view = textarea.clientHeight || 0;
+    if (top < textarea.scrollTop + paddingTop || top + lineHeight > textarea.scrollTop + view - paddingTop) {
+      textarea.scrollTop = Math.max(0, top - view / 2 + lineHeight / 2);
+    }
+    textarea.focus();
+    const offset = lineStart(target);
+    textarea.setSelectionRange(offset, offset);
+    syncScroll();
+    updateCursorMatch();
+  };
+
+  const clearErrorLine = () => {
+    if (errorLine == null) return;
+    errorLine = null;
+    errorMessage = "";
+    errorLabel = "Error";
+    if (marker) marker.hidden = true;
+    renderGutter();
+    renderDiagnostics();
+  };
+
+  const setErrorLine = (line, message = "", label = "Error") => {
+    if (!Number.isFinite(line) || line < 1) {
+      clearErrorLine();
+      return;
+    }
+    const total = Math.max(1, lines.length);
+    let target = Math.max(1, Math.min(Math.round(line), total));
+    errorMessage = String(message || "");
+    errorLabel = label;
+    const lower = errorMessage.toLowerCase();
+    if (lower.includes("unterminated list") || lower.includes("unexpected end of input")) {
+      const opens = structure.problems.filter((problem) => problem.char === "(");
+      if (opens.length) target = opens[opens.length - 1].line;
+    } else if (errorMessage.includes("unexpected `)`")) {
+      const close = structure.problems.find((problem) => problem.char === ")");
+      if (close) target = close.line;
+    }
+    errorLine = Math.max(1, Math.min(target, total));
+    renderGutter();
+    renderDiagnostics();
+    positionMarker();
+    revealLine(errorLine);
+  };
+
+  const updateCursorMatch = () => {
+    let next = new Set();
+    if (
+      document.activeElement === textarea &&
+      textarea.selectionStart === textarea.selectionEnd
+    ) {
+      const text = textarea.value;
+      const cursor = textarea.selectionStart;
+      const candidates = [];
+      if (text[cursor] === "(" || text[cursor] === ")") candidates.push(cursor);
+      if (text[cursor - 1] === "(" || text[cursor - 1] === ")") {
+        candidates.push(cursor - 1);
+      }
+      for (const index of candidates) {
+        if (problemIndices.has(index)) continue;
+        const match = structure.pairs.get(index);
+        if (match != null) {
+          next = new Set([index, match]);
+          break;
+        }
+      }
+    }
+    const same =
+      next.size === matchParens.size &&
+      [...next].every((index) => matchParens.has(index));
+    if (!same) {
+      matchParens = next;
+      renderHighlight();
+    }
+  };
+
+  const scheduleCursorMatch = () => {
+    if (cursorFrame) return;
+    cursorFrame = window.requestAnimationFrame(() => {
+      cursorFrame = 0;
+      updateCursorMatch();
+    });
+  };
+
   const refresh = () => {
     pending = 0;
     const text = textarea.value;
-    const lines = text.split("\n");
-    if (gutter) {
-      const fragment = document.createDocumentFragment();
-      for (let i = 1; i <= lines.length; i += 1) {
-        fragment.append(element("div", "editor-gutter-line", String(i)));
-      }
-      gutter.replaceChildren(fragment);
+    lines = text.split("\n");
+    offsets = lineOffsets(lines);
+    measure();
+    structure = scanParens(text);
+    problemIndices = new Set(structure.problems.map((problem) => problem.index));
+    if (errorLine != null) {
+      errorLine = Math.max(1, Math.min(errorLine, lines.length));
     }
-    highlight.innerHTML = text.length > 0 ? tokenize(text) : "";
+    renderGutter();
+    renderHighlight();
     if (meta) {
       meta.textContent = `${lines.length} lines · ${text.length.toLocaleString()} chars`;
     }
-    renderOutline(lines, lineOffsets(lines));
+    renderOutline(lines, offsets);
+    renderDiagnostics();
+    positionMarker();
+    updateCursorMatch();
   };
 
   const scheduleRefresh = () => {
@@ -810,18 +1027,32 @@ export function createEditor({ onChange } = {}) {
     pending = window.requestAnimationFrame(refresh);
   };
 
-  const syncScroll = () => {
-    if (gutter) {
-      gutter.style.transform = `translateY(${-textarea.scrollTop}px)`;
-    }
-    highlightCode.style.transform = `translate(${-textarea.scrollLeft}px, ${-textarea.scrollTop}px)`;
-  };
-
   textarea.addEventListener("input", () => {
+    clearErrorLine();
     scheduleRefresh();
     onChange?.(textarea.value);
   });
   textarea.addEventListener("scroll", syncScroll, { passive: true });
+  textarea.addEventListener("keyup", scheduleCursorMatch);
+  textarea.addEventListener("click", scheduleCursorMatch);
+  textarea.addEventListener("select", scheduleCursorMatch);
+  textarea.addEventListener("focus", scheduleCursorMatch);
+  textarea.addEventListener("blur", () => {
+    if (!matchParens.size) return;
+    matchParens = new Set();
+    renderHighlight();
+  });
+  document.addEventListener("selectionchange", () => {
+    if (document.activeElement === textarea) scheduleCursorMatch();
+  });
+
+  parenStatus?.addEventListener("click", () => {
+    const first = structure.problems[0];
+    if (first) revealLine(first.line);
+  });
+  errorStatus?.addEventListener("click", () => {
+    if (errorLine != null) revealLine(errorLine);
+  });
 
   if (toggle) {
     toggle.setAttribute("aria-pressed", "true");
@@ -837,6 +1068,11 @@ export function createEditor({ onChange } = {}) {
     textarea.value = source;
     textarea.scrollTop = 0;
     textarea.scrollLeft = 0;
+    errorLine = null;
+    errorMessage = "";
+    errorLabel = "Error";
+    matchParens = new Set();
+    if (marker) marker.hidden = true;
     refresh();
     syncScroll();
   };
@@ -851,6 +1087,9 @@ export function createEditor({ onChange } = {}) {
     getOriginal: () => source,
     refresh,
     focus: () => textarea.focus(),
+    setErrorLine,
+    clearErrorLine,
+    revealLine,
   };
 }
 

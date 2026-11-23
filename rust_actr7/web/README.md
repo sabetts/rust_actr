@@ -42,9 +42,14 @@ the fetches.
 Optional bridge smoke tests (Node 18+, after `build.py`):
 
 ```sh
+node test/lisp_scan_test.mjs
 node test/bridge_test.mjs
 node test/unit8_test.mjs
 ```
+
+`lisp_scan_test.mjs` covers the source scanner used for paren matching,
+mismatch diagnostics, and best-effort error anchors. It does not need the wasm
+build.
 
 Browser smoke test (Node 20+ and Playwright Chromium, after `build.py`):
 
@@ -80,8 +85,11 @@ runner:
   Task models open on the Task tab; trace-only models open on the source and
   switch to the trace when run.
 - **Model source**: line-number gutter, lightweight Lisp syntax highlighting,
-  and a production/chunk outline that jumps to a form. `Reset` restores the
-  loaded source and `Copy` copies it.
+  and a production/chunk outline that jumps to a form. Unmatched parens are
+  marked red and listed in the toolbar; placing the caret next to a paren
+  highlights its match. Parse errors highlight the source line and show a
+  clickable line chip, with task-prelude offsets mapped back to the editor.
+  `Reset` restores the loaded source and `Copy` copies it.
 - **Trace**: colorized timestamps, modules, events, output, warnings, and
   errors; filter, wrap/follow toggles, copy, and save. Traces up to 12,000
   lines are colorized; larger runs use a plain, line-numbered fallback. The raw

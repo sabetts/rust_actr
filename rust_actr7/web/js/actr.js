@@ -269,7 +269,17 @@ class WasmSession {
     const status = this.callWithText(source, (ptr, len) =>
       this.wasm.session_load_source(ptr, len)
     );
-    if (status !== 0) throw new Error(this.resultText());
+    if (status !== 0) {
+      const text = this.resultText();
+      let message = text;
+      try {
+        const payload = JSON.parse(text);
+        if (payload?.error) message = payload.error;
+      } catch {
+        message = text;
+      }
+      throw new Error(message);
+    }
   }
 
   eval(name, args) {

@@ -2,6 +2,7 @@ import { Actr, RunCancelled, loadWasm, nextPaint } from "./actr.js";
 import { AgiWindow } from "./agi-window.js";
 import { TASKS } from "./tasks/index.js";
 import { RECOMMENDED_START } from "./catalog.js";
+import { locateErrorAnchor } from "./lisp-scan.js";
 import {
   createEditor,
   createModelBrowser,
@@ -37,6 +38,13 @@ const trace = setupTraceView();
 
 function taskDescriptor(model) {
   return model?.task ? TASKS[model.task] || null : null;
+}
+
+function parseErrorLine(error) {
+  const message =
+    typeof error === "string" ? error : error?.message || String(error || "");
+  const match = message.match(/parse error at line (\d+):/i);
+  return match ? Number(match[1]) : null;
 }
 
 function runTimeModeFor(model) {
@@ -281,9 +289,23 @@ async function runTask(model, descriptor, source, seed0, seed1, secs, signal) {
     typeof descriptor.prelude === "function"
       ? descriptor.prelude(controls)
       : descriptor.prelude;
+  const preludeLineCount = prelude ? prelude.split("\n").length : 0;
   const taskSource = prelude ? `${prelude}\n${source}` : source;
   try {
-    actr.loadSource(taskSource);
+    try {
+      actr.loadSource(taskSource);
+    } catch (loadError) {
+      const parsed = parseErrorLine(loadError);
+      if (parsed != null) {
+        loadError.engineLine = parsed;
+        if (parsed > preludeLineCount) {
+          loadError.sourceLine = parsed - preludeLineCount;
+        } else {
+          loadError.setupError = true;
+        }
+      }
+      throw loadError;
+    }
     const result = await descriptor.run(actr, {
       secs,
       runSeconds: secs,
@@ -306,7 +328,13 @@ async function runTask(model, descriptor, source, seed0, seed1, secs, signal) {
 async function runGenericModel(source, seed0, seed1, secs, signal) {
   const actr = new Actr(wasm, seed0, seed1, null);
   try {
-    actr.loadSource(source);
+    try {
+      actr.loadSource(source);
+    } catch (loadError) {
+      const parsed = parseErrorLine(loadError);
+      if (parsed != null) loadError.sourceLine = parsed;
+      throw loadError;
+    }
     await actr.run(secs, { signal, paint: false });
     return { ok: true, out: actr.trace.join("\n") };
   } catch (e) {
@@ -335,6 +363,7 @@ async function run() {
   setControlsDisabled(true);
   setRunState(true);
   setStatus("running...", "running");
+  editor.clearErrorLine();
   if (!descriptor && tabs.current() === "source") tabs.activate("trace");
   const t0 = performance.now();
   try {
@@ -342,6 +371,7 @@ async function run() {
       ? await runTask(model, descriptor, source, seed0, seed1, secs, controller.signal)
       : await runGenericModel(source, seed0, seed1, secs, controller.signal);
     trace.set(result.out, { error: !result.ok && !result.cancelled });
+    if (!result.cancelled) editor.clearErrorLine();
     const ms = Math.round(performance.now() - t0);
     const lines = result.out ? result.out.split("\n").length : 0;
     if (result.cancelled) {
@@ -350,8 +380,36 @@ async function run() {
       setStatus(`${result.ok ? "ok" : "error"} - ${ms} ms - ${lines} lines`, result.ok ? "ok" : "error");
     }
   } catch (e) {
-    trace.set("error: " + e, { error: true });
+    const message = e?.message || String(e);
+    trace.set("error: " + message, { error: true });
     setStatus("error", "error");
+    let line = Number.isFinite(e?.sourceLine)
+      ? e.sourceLine
+      : e?.setupError
+        ? null
+        : parseErrorLine(message);
+    let label = "Parse error";
+    if (!line && !e?.setupError) {
+      const anchor = locateErrorAnchor(message, $("model").value);
+      if (anchor) {
+        line = anchor.line;
+        label = "Related line";
+      }
+    }
+    if (line) {
+      tabs.activate("source");
+      editor.setErrorLine(line, message, label);
+      showToast(
+        label === "Parse error"
+          ? `Parse error on line ${line}`
+          : `Error near line ${line}`
+      );
+    } else if (e?.setupError) {
+      editor.clearErrorLine();
+      showToast("Error in the task setup; see the trace");
+    } else {
+      editor.clearErrorLine();
+    }
   } finally {
     activeRun = null;
     $("cancel").hidden = true;

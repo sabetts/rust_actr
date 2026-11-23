@@ -36,7 +36,7 @@
       </svg>
     </div>
     <div class="brand-text">
-      <div class="brand-title">ACT-R 7 <span>· Rust</span></div>
+      <div class="brand-title">ACT-R 7 <span>Tutorials</span></div>
       <div class="brand-tagline">Interactive tutorial models, running in your browser</div>
     </div>
   </div>
@@ -221,6 +221,8 @@
             Model source
           </div>
           <span class="card-meta" id="source-meta">0 lines</span>
+          <button class="source-status source-status-warn" id="paren-status" type="button" hidden aria-live="polite"></button>
+          <button class="source-status source-status-error" id="error-status" type="button" hidden aria-live="polite"></button>
           <div class="toolbar-spacer"></div>
           <div class="toolbar-group">
             <button class="tool-button" id="toggle-outline" type="button" aria-pressed="true" title="Toggle model outline">
@@ -249,9 +251,10 @@
             <div class="editor-gutter-lines" id="editor-gutter-lines"></div>
           </div>
           <div class="editor-main">
+            <div class="editor-line-marker" id="editor-line-marker" hidden aria-hidden="true"></div>
             <pre class="editor-highlight" aria-hidden="true"><code id="editor-highlight"></code></pre>
             <label class="sr-only" for="model">Model source</label>
-            <textarea id="model" spellcheck="false" placeholder="Loading model..." autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+            <textarea id="model" spellcheck="false" placeholder="Loading model..." autocomplete="off" autocapitalize="off" autocorrect="off" aria-describedby="paren-status error-status"></textarea>
           </div>
         </div>
         <div class="outline" id="model-outline" hidden></div>

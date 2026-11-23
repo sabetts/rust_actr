@@ -62,6 +62,7 @@ jobs:
 
       - name: node bridge smoke tests
         run: |
+          node rust_actr7/web/test/lisp_scan_test.mjs
           node rust_actr7/web/test/bridge_test.mjs
           node rust_actr7/web/test/unit8_test.mjs
 

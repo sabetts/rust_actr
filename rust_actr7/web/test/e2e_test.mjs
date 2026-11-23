@@ -140,6 +140,27 @@ async function main() {
     }
   };
 
+  const runModelExpectingError = async () => {
+    await page.click("#run");
+    await page.waitForFunction(
+      () => {
+        const status = document.getElementById("status");
+        const text = status ? status.textContent : "";
+        return (
+          text.startsWith("ok") ||
+          text.startsWith("error") ||
+          text.startsWith("cancelled")
+        );
+      },
+      null,
+      { timeout: 60000 }
+    );
+    const status = (await page.locator("#status").textContent()) || "";
+    if (!status.startsWith("error")) {
+      throw new Error(`run did not fail: ${status}`);
+    }
+  };
+
   try {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(
@@ -309,6 +330,110 @@ async function main() {
     if (outputLines > pairedCount * 0.25) {
       throw new Error(
         `too many lines misclassified as output: ${outputLines}/${pairedCount}`
+      );
+    }
+
+    await selectModel("unit8-simple-ppm", "define-model test-ppm");
+    await page.evaluate(() => {
+      const textarea = document.getElementById("model");
+      textarea.focus();
+      textarea.setSelectionRange(1, 1);
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    await page.waitForFunction(
+      () => document.querySelectorAll(".tok-paren-match").length === 2,
+      null,
+      { timeout: 3000 }
+    );
+    await page.evaluate(() => {
+      const textarea = document.getElementById("model");
+      textarea.setSelectionRange(0, 2);
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    await page.waitForFunction(
+      () => document.querySelectorAll(".tok-paren-match").length === 0,
+      null,
+      { timeout: 3000 }
+    );
+
+    const brokenSource =
+      "(clear-all)\n(define-model broken\n  (sgp :v t)\n)\n)\n";
+    await page.fill("#model", brokenSource);
+    await page.waitForFunction(
+      () => {
+        const chip = document.getElementById("paren-status");
+        return chip && !chip.hidden;
+      },
+      null,
+      { timeout: 3000 }
+    );
+    const parenText = (await page.locator("#paren-status").textContent()) || "";
+    if (!parenText.includes("Unmatched")) {
+      throw new Error(`paren chip is wrong: ${parenText}`);
+    }
+    if ((await page.locator(".tok-paren-bad").count()) < 1) {
+      throw new Error("unmatched paren was not highlighted");
+    }
+
+    await runModelExpectingError();
+    if (!(await page.locator("#panel-source").isVisible())) {
+      throw new Error("parse error did not switch to the Model source tab");
+    }
+    if (!(await page.locator("#editor-line-marker").isVisible())) {
+      throw new Error("parse error line marker is not visible");
+    }
+    const errorText = (await page.locator("#error-status").textContent()) || "";
+    if (!errorText.includes("line 5")) {
+      throw new Error(`error chip is wrong: ${errorText}`);
+    }
+    const gutterError =
+      (await page.locator(".editor-gutter-line.is-error").textContent()) || "";
+    if (gutterError !== "5") {
+      throw new Error(`error gutter line is wrong: ${gutterError}`);
+    }
+    const parseTrace = (await page.locator("#trace-view").textContent()) || "";
+    if (!parseTrace.includes("parse error at line 5")) {
+      throw new Error(`trace is missing the parse error:\n${parseTrace}`);
+    }
+    if (parseTrace.includes('{"ok":false')) {
+      throw new Error("trace still contains the raw wasm JSON error");
+    }
+    const rawOutput = await page.inputValue("#output");
+    if (!rawOutput.includes("parse error at line 5")) {
+      throw new Error(`raw trace is missing the parse error:\n${rawOutput}`);
+    }
+
+    await selectModel("unit8-categorize", "define-model categorize");
+    await page.click("#tab-source");
+    const taskBrokenSource =
+      "(clear-all)\n(define-model categorize\n  (sgp :v t)\n)\n)\n;; trailing one\n;; trailing two\n";
+    await page.fill("#model", taskBrokenSource);
+    await page.waitForFunction(
+      () => {
+        const chip = document.getElementById("paren-status");
+        return chip && !chip.hidden;
+      },
+      null,
+      { timeout: 3000 }
+    );
+    await runModelExpectingError();
+    const taskErrorText = (await page.locator("#error-status").textContent()) || "";
+    if (!taskErrorText.includes("line 5")) {
+      throw new Error(`task error chip is wrong: ${taskErrorText}`);
+    }
+    const taskGutter =
+      (await page.locator(".editor-gutter-line.is-error").textContent()) || "";
+    if (taskGutter !== "5") {
+      throw new Error(`task error gutter line is wrong: ${taskGutter}`);
+    }
+    const taskTrace = (await page.locator("#trace-view").textContent()) || "";
+    const engineLine = taskTrace.match(/parse error at line (\d+):/i);
+    if (!engineLine) {
+      throw new Error(`task trace is missing the parse error:\n${taskTrace}`);
+    }
+    if (Number(engineLine[1]) <= 5) {
+      throw new Error(
+        `task prelude offset was not applied: engine line ${engineLine[1]}`
       );
     }
 
