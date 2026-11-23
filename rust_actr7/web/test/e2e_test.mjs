@@ -340,6 +340,32 @@ async function main() {
     }
 
     await selectModel("unit8-simple-ppm", "define-model test-ppm");
+    const outlineItem = page.locator(".outline-item").nth(1);
+    const outlineLine = Number(
+      (await outlineItem.locator(".outline-line").textContent()) || "1"
+    );
+    await outlineItem.click();
+    await page.waitForFunction(
+      (line) => {
+        const textarea = document.getElementById("model");
+        if (document.activeElement !== textarea) return false;
+        const lines = textarea.value.split("\n");
+        let offset = 0;
+        for (let i = 0; i < line - 1; i += 1) offset += lines[i].length + 1;
+        return textarea.selectionStart === offset;
+      },
+      outlineLine,
+      { timeout: 3000 }
+    );
+    const outlineGap = await page.evaluate(() => {
+      const textarea = document.getElementById("model").getBoundingClientRect();
+      const outline = document.getElementById("model-outline").getBoundingClientRect();
+      return Math.round(outline.top - textarea.bottom);
+    });
+    if (Math.abs(outlineGap) > 2) {
+      throw new Error(`outline has a ${outlineGap}px gap below the editor`);
+    }
+
     await page.evaluate(() => {
       const textarea = document.getElementById("model");
       textarea.focus();

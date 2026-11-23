@@ -921,7 +921,7 @@ export function createEditor({ onChange } = {}) {
         button.append(element("span", "outline-item-name", item.name));
         button.append(element("span", "outline-line", String(item.line)));
         button.addEventListener("click", () => {
-          revealLine(item.line);
+          revealLine(item.line, { scrollPage: true });
         });
         group.append(button);
       }
@@ -930,16 +930,26 @@ export function createEditor({ onChange } = {}) {
     outline.hidden = !outlineOpen;
   };
 
-  const revealLine = (line) => {
+  const revealLine = (line, { scrollPage = false } = {}) => {
     const target = Math.max(1, Math.min(Math.round(line), Math.max(1, lines.length)));
     const top = (target - 1) * lineHeight;
     const view = textarea.clientHeight || 0;
-    if (top < textarea.scrollTop + paddingTop || top + lineHeight > textarea.scrollTop + view - paddingTop) {
-      textarea.scrollTop = Math.max(0, top - view / 2 + lineHeight / 2);
-    }
-    textarea.focus();
+    textarea.focus({ preventScroll: !scrollPage });
     const offset = lineStart(target);
     textarea.setSelectionRange(offset, offset);
+    if (top < textarea.scrollTop || top + lineHeight > textarea.scrollTop + view) {
+      textarea.scrollTop = Math.max(0, top - view / 2 + lineHeight / 2);
+    }
+    if (scrollPage) {
+      const header = document.querySelector(".app-header");
+      const bar = document.querySelector(".run-bar");
+      const margin = (header?.offsetHeight || 0) + (bar?.offsetHeight || 0) + 16;
+      const rect = textarea.getBoundingClientRect();
+      const lineY = rect.top + paddingTop + (target - 1) * lineHeight - textarea.scrollTop;
+      if (lineY < margin + lineHeight || lineY > window.innerHeight - 24) {
+        window.scrollBy({ top: lineY - margin - 24, behavior: "auto" });
+      }
+    }
     syncScroll();
     updateCursorMatch();
   };
@@ -975,7 +985,7 @@ export function createEditor({ onChange } = {}) {
     renderGutter();
     renderDiagnostics();
     positionMarker();
-    revealLine(errorLine);
+    revealLine(errorLine, { scrollPage: true });
   };
 
   const updateCursorMatch = () => {
@@ -1058,10 +1068,10 @@ export function createEditor({ onChange } = {}) {
 
   parenStatus?.addEventListener("click", () => {
     const first = structure.problems[0];
-    if (first) revealLine(first.line);
+    if (first) revealLine(first.line, { scrollPage: true });
   });
   errorStatus?.addEventListener("click", () => {
-    if (errorLine != null) revealLine(errorLine);
+    if (errorLine != null) revealLine(errorLine, { scrollPage: true });
   });
 
   if (toggle) {
