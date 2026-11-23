@@ -283,6 +283,25 @@ async function main() {
       throw new Error(`Categorize report missing custom slots:\n${categorizeReport}`);
     }
 
+    await selectModel("unit4-paired", "define-model paired");
+    await page.check("#task-control-paired-trace");
+    await runModel();
+    const pairedCount = Number((await page.locator("#trace-count").textContent()) || "0");
+    if (pairedCount <= 4000) {
+      throw new Error(`Paired trace did not grow past the highlight cap: ${pairedCount}`);
+    }
+    await page.click("#tab-trace");
+    const renderedTrace = await page.locator("#trace-view").textContent();
+    if (!renderedTrace.includes("PRODUCTION-FIRED")) {
+      throw new Error("long trace rendered without its production lines");
+    }
+    const filledLines = await page
+      .locator("#trace-view .trace-text")
+      .evaluateAll((nodes) => nodes.filter((node) => node.textContent.trim()).length);
+    if (filledLines < 1000) {
+      throw new Error(`long trace rendered only ${filledLines} filled lines`);
+    }
+
     if (errors.length) {
       throw new Error(`browser errors:\n${errors.join("\n")}`);
     }

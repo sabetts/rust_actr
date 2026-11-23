@@ -481,8 +481,10 @@ export function setupTraceView({ onCountChange } = {}) {
 
   const lineClass = (line) => {
     const lower = line.toLowerCase();
-    if (/\bwarn(ing)?\b/.test(lower)) return "trace-warn";
-    if (/\b(error|failed|cannot|can't|invalid)\b/.test(lower)) return "trace-error";
+    if (/(^|\s)warn(ing)?(\s|:|$)/.test(lower)) return "trace-warn";
+    if (/(^|\s)(error|failed|cannot|can't|invalid)(\s|:|$)/.test(lower)) {
+      return "trace-error";
+    }
     if (/^stopped because/.test(lower) || /^summary/.test(lower) || /^==/.test(lower)) {
       return "trace-heading";
     }
@@ -527,7 +529,7 @@ export function setupTraceView({ onCountChange } = {}) {
         if (tone) row.classList.add(tone);
         row.append(element("span", "trace-num", String(lineNumber)));
         const text = element("span", "trace-text");
-        if (highlight && !appendTimestampLine(line, text)) {
+        if (!highlight || !appendTimestampLine(line, text)) {
           text.textContent = line;
           if (!line.trim()) row.classList.add("trace-blank");
           else if (/^[A-Z0-9 _().<>-]+$/.test(line.trim())) row.classList.add("trace-output");
