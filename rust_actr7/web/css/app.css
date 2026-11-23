@@ -515,20 +515,12 @@ button:disabled {
   font-weight: 650;
   line-height: 1;
   white-space: nowrap;
-  transition: background var(--speed), border-color var(--speed), color var(--speed), box-shadow var(--speed), transform var(--speed);
+  transition: background var(--speed), border-color var(--speed), color var(--speed), box-shadow var(--speed);
 }
 
 .btn svg {
   width: 16px;
   height: 16px;
-}
-
-.btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.btn:active:not(:disabled) {
-  transform: translateY(0);
 }
 
 .btn:disabled {
