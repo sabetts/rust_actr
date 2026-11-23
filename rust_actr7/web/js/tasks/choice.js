@@ -21,19 +21,69 @@ function addFeedback(actr, window, answer) {
   actr.addTextToExpWindow(window, answer, { x: point.x, y: point.y });
 }
 
-function waitForKey(ctx, timeoutMs = 5000) {
+function createChoiceControls(actr) {
+  const root = actr?.window?.root;
+  if (!root?.parentElement) return null;
+  root.parentElement
+    .querySelectorAll(".choice-actions, .choice-status")
+    .forEach((node) => node.remove());
+  const actions = document.createElement("div");
+  actions.className = "choice-actions";
+  actions.setAttribute("role", "group");
+  actions.setAttribute("aria-label", "Choose heads or tails");
+  const buttons = new Map();
+  for (const [key, label] of [["h", "Heads"], ["t", "Tails"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.key = key;
+    button.textContent = label;
+    button.setAttribute("aria-pressed", "false");
+    actions.append(button);
+    buttons.set(key, button);
+  }
+  const status = document.createElement("div");
+  status.className = "choice-status";
+  root.after(actions);
+  actions.after(status);
+  const select = (key) => {
+    const value = key == null ? "" : String(key);
+    for (const [name, button] of buttons) {
+      button.setAttribute("aria-pressed", name === value ? "true" : "false");
+    }
+  };
+  return {
+    actions,
+    status,
+    select,
+    clear: () => select(null),
+    setDisabled: (disabled) => {
+      actions.classList.toggle("is-disabled", disabled);
+      for (const button of buttons.values()) button.disabled = disabled;
+    },
+    setProgress: (text) => {
+      status.textContent = text;
+    },
+    remove: () => {
+      actions.remove();
+      status.remove();
+    },
+  };
+}
+
+function waitForKey(ctx, controls) {
   return new Promise((resolve, reject) => {
     let done = false;
-    let timer = null;
+    const actions = controls?.actions || null;
     const cleanup = () => {
-      if (timer) clearTimeout(timer);
       document.removeEventListener("keydown", onKey, true);
+      actions?.removeEventListener("click", onClick);
       ctx.signal?.removeEventListener("abort", abort);
     };
     const finish = (key) => {
       if (done) return;
       done = true;
       cleanup();
+      controls?.select(key);
       resolve(key);
     };
     const abort = () => {
@@ -52,10 +102,15 @@ function waitForKey(ctx, timeoutMs = 5000) {
         finish(key);
       }
     };
+    const onClick = (event) => {
+      const button = event.target instanceof Element ? event.target.closest("button") : null;
+      const key = button?.dataset.key;
+      if (key === "h" || key === "t") finish(key);
+    };
     document.addEventListener("keydown", onKey, true);
+    actions?.addEventListener("click", onClick);
     ctx.signal?.addEventListener("abort", abort, { once: true });
     if (ctx.signal?.aborted) abort();
-    timer = setTimeout(() => finish(""), timeoutMs);
   });
 }
 
@@ -120,21 +175,31 @@ async function humanPass(actr, ctx) {
     height: 300,
   });
   actr.installDevice(window);
+  const controls = createChoiceControls(actr);
   const blocks = Array.from({ length: 4 }, () => []);
 
-  for (let trial = 0; trial < TRIALS; trial += 1) {
-    if (ctx.signal?.aborted) throw new RunCancelled();
-    actr.clearExpWindow(window);
-    addChoose(actr, window);
-    await ctx.paint();
-    const key = await waitForKey(ctx, 5000);
-    blocks[Math.floor(trial / BLOCK)].push(key === "h");
+  try {
+    for (let trial = 0; trial < TRIALS; trial += 1) {
+      if (ctx.signal?.aborted) throw new RunCancelled();
+      const block = Math.floor(trial / BLOCK) + 1;
+      actr.clearExpWindow(window);
+      addChoose(actr, window);
+      controls?.clear();
+      controls?.setDisabled(false);
+      controls?.setProgress(`Block ${block}/4 · Trial ${trial + 1}/${TRIALS}`);
+      await ctx.paint();
+      const key = await waitForKey(ctx, controls);
+      blocks[Math.floor(trial / BLOCK)].push(key === "h");
 
-    actr.clearExpWindow(window);
-    const answer = Number(actr.random(1.0)) < 0.9 ? "heads" : "tails";
-    addFeedback(actr, window, answer);
-    await ctx.paint();
-    await waitReal(1000, ctx.signal);
+      actr.clearExpWindow(window);
+      controls?.setDisabled(true);
+      const answer = Number(actr.random(1.0)) < 0.9 ? "heads" : "tails";
+      addFeedback(actr, window, answer);
+      await ctx.paint();
+      await waitReal(1000, ctx.signal);
+    }
+  } finally {
+    controls?.remove();
   }
   return blocks;
 }
@@ -168,9 +233,9 @@ async function choice(actr, ctx) {
   const mode = String(ctx.controls.mode || "model");
   const runs = Math.max(1, Number(ctx.controls.runs) || 1);
   const visible = Boolean(ctx.controls.visible);
-  if (actr.window) actr.window.headless = !visible || runs > 1;
 
   if (mode === "human") {
+    if (actr.window) actr.window.headless = false;
     const blocks = await humanPass(actr, ctx);
     const summary = summarize(blocks);
     return {
@@ -187,6 +252,8 @@ async function choice(actr, ctx) {
       ].join("\n"),
     };
   }
+
+  if (actr.window) actr.window.headless = !visible || runs > 1;
 
   const response = { value: "" };
   actr.addCommand("choice-response", (_model, key) => {

@@ -2198,7 +2198,8 @@ select.input {
   color: var(--ink);
 }
 
-.paired-keypad-status {
+.paired-keypad-status,
+.choice-status {
   min-height: 1.2em;
   color: var(--faint);
   font-size: 11.5px;
@@ -2213,11 +2214,21 @@ select.input {
   transition: opacity var(--speed);
 }
 
-.paired-keypad.is-disabled {
+.choice-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: min(500px, 100%);
+  transition: opacity var(--speed);
+}
+
+.paired-keypad.is-disabled,
+.choice-actions.is-disabled {
   opacity: 0.4;
 }
 
-.paired-keypad button {
+.paired-keypad button,
+.choice-actions button {
   min-height: 38px;
   padding: 0 10px;
   border: 1px solid var(--border-strong);
@@ -2230,18 +2241,21 @@ select.input {
   transition: background var(--speed), border-color var(--speed), color var(--speed), box-shadow var(--speed);
 }
 
-.paired-keypad button:hover {
+.paired-keypad button:hover,
+.choice-actions button:hover {
   background: var(--surface-3);
 }
 
-.paired-keypad button[aria-pressed="true"] {
+.paired-keypad button[aria-pressed="true"],
+.choice-actions button[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: var(--ring);
 }
 
-.paired-keypad button:focus-visible {
+.paired-keypad button:focus-visible,
+.choice-actions button:focus-visible {
   outline: none;
   box-shadow: var(--ring);
 }
