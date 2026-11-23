@@ -498,14 +498,33 @@ async function main() {
       outlineLine,
       { timeout: 3000 }
     );
-    const outlineGap = await page.evaluate(() => {
+    const outlineLayout = await page.evaluate(() => {
+      const textarea = document.getElementById("model").getBoundingClientRect();
+      const outline = document.getElementById("model-outline").getBoundingClientRect();
+      return {
+        beside: Math.round(outline.left - textarea.right),
+        top: Math.round(outline.top - textarea.top),
+      };
+    });
+    if (outlineLayout.beside < -2 || Math.abs(outlineLayout.top) > 2) {
+      throw new Error(
+        `outline is not beside the editor on wide screens: ${JSON.stringify(outlineLayout)}`
+      );
+    }
+
+    await page.setViewportSize({ width: 1000, height: 720 });
+    await page.waitForTimeout(100);
+    const stackedGap = await page.evaluate(() => {
       const textarea = document.getElementById("model").getBoundingClientRect();
       const outline = document.getElementById("model-outline").getBoundingClientRect();
       return Math.round(outline.top - textarea.bottom);
     });
-    if (Math.abs(outlineGap) > 2) {
-      throw new Error(`outline has a ${outlineGap}px gap below the editor`);
+    if (Math.abs(stackedGap) > 2) {
+      throw new Error(
+        `outline is not stacked below the editor on narrow screens: ${stackedGap}px`
+      );
     }
+    await page.setViewportSize({ width: 1280, height: 720 });
 
     await page.evaluate(() => {
       const textarea = document.getElementById("model");
