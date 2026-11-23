@@ -473,6 +473,24 @@ export function createGuideViewer({ tabs }) {
   if (!frame || !tabs) return { open() {}, close() {} };
 
   let previousTab = "source";
+  let frameObserver = null;
+
+  const fitFrame = () => {
+    let doc = null;
+    try {
+      doc = frame.contentDocument;
+    } catch {
+      return;
+    }
+    const body = doc?.querySelector(".guide-body") || doc?.body;
+    if (!body) return;
+    const height = Math.ceil(body.getBoundingClientRect().height);
+    if (height > 0) {
+      const cap = Math.round(window.innerHeight * 0.85);
+      frame.style.height = `${Math.min(height, cap)}px`;
+      frame.style.maxHeight = "none";
+    }
+  };
 
   const syncFrame = () => {
     let doc = null;
@@ -489,9 +507,20 @@ export function createGuideViewer({ tabs }) {
       link.setAttribute("target", "_blank");
       link.setAttribute("rel", "noopener noreferrer");
     }
+    fitFrame();
+    if (typeof ResizeObserver === "function") {
+      frameObserver?.disconnect();
+      frameObserver = null;
+      const body = doc.querySelector(".guide-body") || doc.body;
+      if (body) {
+        frameObserver = new ResizeObserver(() => fitFrame());
+        frameObserver.observe(body);
+      }
+    }
   };
 
   frame.addEventListener("load", syncFrame);
+  window.addEventListener("resize", () => fitFrame());
 
   const themeObserver = new MutationObserver(() => {
     let doc = null;
@@ -522,6 +551,8 @@ export function createGuideViewer({ tabs }) {
       );
     }
     if (tabLabel) tabLabel.textContent = guide.label;
+    frame.style.height = "";
+    frame.style.maxHeight = "";
     frame.title = `${info?.title || group?.label || "Unit"} · ${guide.label}`;
     frame.src = `./${guide.path}?v=${GUIDE_VERSION}`;
     tabs.setGuideEnabled(true);
@@ -534,6 +565,10 @@ export function createGuideViewer({ tabs }) {
     tabs.activate(fallback && !fallback.hidden ? previousTab : "source", {
       focus: true,
     });
+    frameObserver?.disconnect();
+    frameObserver = null;
+    frame.style.height = "";
+    frame.style.maxHeight = "";
     frame.src = "about:blank";
     frame.title = "Unit guide";
     if (title) title.textContent = "Guide";
