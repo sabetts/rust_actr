@@ -53,8 +53,8 @@ first-block behavior.
 - Human-mode runs use wall-clock timing and do not run the model.
 - Human stimulus randomization is local to the page, so model-body fixed seeds
   do not make every human trial identical.
-- Sperling human mode plays a WebAudio tone and also shows a top/middle/bottom
-  row cue.
+- Sperling human mode plays a WebAudio tone to cue the row; no text hint
+  reveals which row to report.
 - Building Sticks human mode offers the two demo problems plus a full
   15-problem experiment.
 - Grouped Recall human mode presents `123 / 456 / 789` for five seconds, clears,

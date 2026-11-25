@@ -844,6 +844,9 @@ async function main() {
         null,
         { timeout: 5000 }
       );
+      if (await page.locator(".human-hint").count()) {
+        throw new Error("Sperling human mode should not reveal the cued row");
+      }
       await page.waitForFunction(
         () => document.querySelectorAll("#agi-window .agi-text").length === 0,
         null,

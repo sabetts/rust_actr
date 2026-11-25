@@ -324,8 +324,8 @@ input is disabled and a help tooltip explains why.
   shortcuts.
 - Sperling runs one block of four tone-onset trials by default. In model mode,
   tones are delivered to the ACT-R audio module but are not played through
-  browser audio. Human mode plays the tone through WebAudio and also shows a
-  top/middle/bottom row cue as a fallback.
+  browser audio. Human mode plays the tone through WebAudio; no text hint
+  reveals the cued row.
 - The Unit 2 Assignment, Subitize, and 1-Hit Blackjack models are intentionally
   incomplete starters, so their results are not tutorial solutions.
 - Paired Associate runs the Unit 4 experiment task against the Unit 4, Unit 7,

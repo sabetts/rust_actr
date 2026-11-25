@@ -1,11 +1,9 @@
 import {
-  clearHint,
   humanRandomInt,
   humanShuffle,
   isHuman,
   modeControl,
   playTone,
-  showHint,
   waitReal,
 } from "./human.js";
 import { createTextPrompt } from "./human-controls.js";
@@ -16,7 +14,6 @@ const LETTERS = [
 ];
 const ONSETS = [0.0, 0.15, 0.3, 1.0];
 const EXP_DATA = [3.03, 2.4, 2.03, 1.5];
-const ROW_NAMES = ["top", "middle", "bottom"];
 
 function score(answers, responses) {
   const wanted = new Set(answers.map((a) => a.toLowerCase()));
@@ -88,45 +85,31 @@ async function humanTrial(actr, ctx, onset) {
   }
 
   const freq = row === 0 ? 2000 : row === 1 ? 1000 : 500;
-  const rowName = ROW_NAMES[row];
-  let cueTimer = null;
+  await ctx.paint();
+
+  playTone(freq, 500, onset * 1000);
+
+  await waitReal(900 + humanRandomInt(200), ctx.signal);
+  actr.clearExpWindow(window);
+  await ctx.paint();
+
+  const prompt = createTextPrompt(actr, ctx, {
+    prompt: "Type the letters from the cued row, then press Space or Submit.",
+    placeholder: "letters",
+    maxLength: 12,
+    submitKeys: ["space", "enter"],
+    allowEmpty: true,
+    timeoutMs: 30000,
+    sanitize: (value) => value.replace(/[^a-z]/gi, "").slice(0, 12),
+  });
+  let answer;
   try {
-    showHint(
-      actr,
-      `Remember the letters. Listen for the ${rowName} row tone, then type its letters and press Space.`
-    );
-    await ctx.paint();
-
-    playTone(freq, 500, onset * 1000);
-    cueTimer = setTimeout(() => {
-      showHint(actr, `Report the ${rowName} row. Type its letters, then press Space.`);
-    }, onset * 1000);
-
-    await waitReal(900 + humanRandomInt(200), ctx.signal);
-    actr.clearExpWindow(window);
-    await ctx.paint();
-
-    const prompt = createTextPrompt(actr, ctx, {
-      prompt: "Type the letters from the cued row, then press Space or Submit.",
-      placeholder: "letters",
-      maxLength: 12,
-      submitKeys: ["space", "enter"],
-      allowEmpty: true,
-      timeoutMs: 30000,
-      sanitize: (value) => value.replace(/[^a-z]/gi, "").slice(0, 12),
-    });
-    let answer;
-    try {
-      answer = await prompt.wait();
-    } finally {
-      prompt.remove();
-    }
-    const responses = answer ? [...answer.text.toLowerCase()] : [];
-    return { onset, answers, responses, score: score(answers, responses) };
+    answer = await prompt.wait();
   } finally {
-    if (cueTimer) clearTimeout(cueTimer);
-    clearHint(actr);
+    prompt.remove();
   }
+  const responses = answer ? [...answer.text.toLowerCase()] : [];
+  return { onset, answers, responses, score: score(answers, responses) };
 }
 
 async function sperling(actr, ctx) {
