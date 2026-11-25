@@ -178,6 +178,7 @@ export const MODEL_META = {
     highlights: [
       "Reports a response matrix and correlation",
       "Digit sounds go to the audio module",
+      "Human mode hears digits and answers with buttons",
     ],
   },
   "unit5-onehit": {
@@ -229,6 +230,7 @@ export const MODEL_META = {
     highlights: [
       "The block table and chart diagnose the starter",
       "Add the learning rules to improve it",
+      "Human mode types and scores past tenses",
     ],
   },
   "unit7-utility-learning-issues": {
@@ -297,6 +299,7 @@ export const MODEL_META = {
     highlights: [
       "Adjust the offset and feature slots",
       "Try model mode for a full run",
+      "Human mode studies examples then classifies test items",
     ],
   },
 };

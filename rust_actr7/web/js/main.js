@@ -103,7 +103,9 @@ function summaryText(result) {
     }
     return `Grouped Recall: ${result.responses.length} response(s)`;
   }
-  if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
+  if (result.kind === "siegler") {
+    return `Siegler${result.mode === "human" ? " (human)" : ""}: correlation ${Number(result.correlation).toFixed(3)}`;
+  }
   if (result.kind === "bst") {
     return `${result.label || "Building Sticks"}: ${result.mode === "human" ? "human" : "experiment"} complete`;
   }
@@ -120,7 +122,11 @@ function summaryText(result) {
     if (result.mode === "block") return `Alpha-Arithmetic: ${who}block complete`;
     return `Alpha-Arithmetic: ${who}experiment complete`;
   }
-  if (result.kind === "past-tense") return "Past Tense: block report complete";
+  if (result.kind === "past-tense") {
+    return result.mode === "human"
+      ? `Past Tense (human): ${result.correct}/${result.total} correct`
+      : "Past Tense: block report complete";
+  }
   if (result.kind === "ul-issues") {
     return result.mode === "human"
       ? `Utility Learning: human run complete (${result.trials} trials)`
@@ -132,7 +138,7 @@ function summaryText(result) {
       : "Production Compilation: games complete";
   }
   if (result.kind === "categorize") {
-    return `Categorize: ${result.answered}/${result.total} responded`;
+    return `Categorize${result.mode === "human" ? " (human)" : ""}: ${result.answered}/${result.total} responded`;
   }
   if (result.kind === "semantic-dynamic") {
     return result.mode === "human"

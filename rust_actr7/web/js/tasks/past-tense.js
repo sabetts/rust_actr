@@ -1,3 +1,6 @@
+import { humanShuffle, isHuman, modeControl } from "./human.js";
+import { createTextPrompt } from "./human-controls.js";
+
 const VERBS = [
   ["have", "i", 12458, "had"],
   ["do", "i", 4367, "did"],
@@ -22,6 +25,21 @@ const VERBS = [
   ["start", "r", 386, "start"],
   ["lose", "i", 274, "lost"],
 ];
+
+function isIrregular(entry) {
+  return String(entry[1]).toLowerCase() === "i";
+}
+
+function regularPast(verb) {
+  const value = String(verb).toLowerCase();
+  if (value.endsWith("e")) return `${value}d`;
+  if (/[^aeiou]y$/.test(value)) return `${value.slice(0, -1)}ied`;
+  return `${value}ed`;
+}
+
+function expectedPast(entry) {
+  return isIrregular(entry) ? String(entry[3]).toLowerCase() : regularPast(entry[0]);
+}
 
 function makeWordFreqList() {
   let count = 0;
@@ -185,7 +203,93 @@ function renderChart(stage, rows, blockSize) {
   stage.append(svg);
 }
 
+async function humanPastTense(actr, ctx) {
+  const limit = Math.max(
+    1,
+    Math.min(VERBS.length, Number(ctx.controls.humanTrials) || VERBS.length)
+  );
+  const selected = humanShuffle(VERBS).slice(0, limit);
+  actr.reset();
+  const window = actr.openExpWindow("Past Tense", {
+    visible: true,
+    width: 400,
+    height: 300,
+  });
+  const records = [];
+
+  try {
+    for (const entry of selected) {
+      const verb = String(entry[0]).toLowerCase();
+      actr.clearExpWindow(window);
+      actr.addTextToExpWindow(window, `Verb: ${verb}`, { x: 140, y: 145 });
+      await ctx.paint();
+
+      const prompt = createTextPrompt(actr, ctx, {
+        prompt: `Type the past tense of "${verb}".`,
+        placeholder: "past tense",
+        maxLength: 30,
+        timeoutMs: 30000,
+        sanitize: (value) => value.replace(/[^a-z'-]/gi, "").slice(0, 30),
+      });
+      let answer;
+      try {
+        answer = await prompt.wait();
+      } finally {
+        prompt.remove();
+      }
+      if (answer == null) break;
+
+      const response = answer.text.toLowerCase();
+      const expected = expectedPast(entry);
+      records.push({
+        verb,
+        response,
+        expected,
+        correct: response === expected,
+        irregular: isIrregular(entry),
+      });
+      ctx.progress?.(`running... ${records.length}/${limit}`);
+    }
+  } finally {
+    actr.closeExpWindow(window);
+  }
+
+  const total = records.length;
+  const correct = records.filter((record) => record.correct).length;
+  const regular = records.filter((record) => !record.irregular);
+  const irregular = records.filter((record) => record.irregular);
+  const regularCorrect = regular.filter((record) => record.correct).length;
+  const irregularCorrect = irregular.filter((record) => record.correct).length;
+  const errors = records.filter((record) => !record.correct);
+  const lines = [
+    "Mode: human",
+    `Verbs: ${total}`,
+    `CORRECT: ${correct}/${total}`,
+    `Regular: ${regularCorrect}/${regular.length}`,
+    `Irregular: ${irregularCorrect}/${irregular.length}`,
+  ];
+  if (errors.length) {
+    lines.push("", "Errors:");
+    for (const record of errors.slice(0, 10)) {
+      lines.push(
+        `  ${record.verb} -> ${record.response || "none"} (expected ${record.expected})`
+      );
+    }
+    if (errors.length > 10) lines.push(`  ... ${errors.length - 10} more`);
+  }
+
+  return {
+    kind: "past-tense",
+    mode: "human",
+    correct,
+    total,
+    report: lines.join("\n"),
+  };
+}
+
 async function pastTense(actr, ctx) {
+  if (isHuman(ctx.controls)) return humanPastTense(actr, ctx);
+
   const trials = Math.max(1, Math.min(10000, Number(ctx.controls.trials) || 2000));
   const blockSize = Math.max(1, Math.min(trials, Number(ctx.controls.blockSize) || 1000));
   const wordList = makeWordFreqList();
@@ -274,12 +378,13 @@ async function pastTense(actr, ctx) {
     if (warnings.length > 5) lines.push(`... ${warnings.length - 5} more`);
   }
 
-  return { kind: "past-tense", report: lines.join("\n") };
+  return { kind: "past-tense", mode: "model", report: lines.join("\n") };
 }
 
 export const pastTenseTask = {
   run: pastTense,
   controls: [
+    modeControl("model"),
     {
       id: "trials",
       label: "Trials",
@@ -288,6 +393,7 @@ export const pastTenseTask = {
       max: 10000,
       step: 100,
       default: 2000,
+      showWhen: (values) => !isHuman(values),
     },
     {
       id: "blockSize",
@@ -297,6 +403,17 @@ export const pastTenseTask = {
       max: 2000,
       step: 100,
       default: 1000,
+      showWhen: (values) => !isHuman(values),
+    },
+    {
+      id: "humanTrials",
+      label: "Human verbs",
+      type: "number",
+      min: 1,
+      max: VERBS.length,
+      step: 1,
+      default: VERBS.length,
+      showWhen: (values) => isHuman(values),
     },
   ],
   runSeconds: 200,

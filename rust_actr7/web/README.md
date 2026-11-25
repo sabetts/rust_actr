@@ -63,8 +63,8 @@ npm run test:e2e
 
 The `.github/workflows/web.yml` workflow builds the wasm, runs the Node and
 browser smoke tests on pull requests, and deploys the page to GitHub Pages from
-`main`. The Pages staging step copies `index.html`, `assets/`, `css/`,
-`guides/`, `js/`, `models/`, and `actr_engine.wasm`, so keep new static assets
+`main`. The Pages staging step copies `index.html`, `assets/`, `audio/`,
+`css/`, `guides/`, `js/`, `models/`, and `actr_engine.wasm`, so keep new static assets
 in one of those directories and add them to the workflow if you introduce
 another top-level folder. Enable
 Pages once under Settings -> Pages -> Build and deployment -> Source: GitHub
@@ -227,6 +227,7 @@ in `rust_actr7/python`:
   input, wall-clock waits, hints, and tone playback.
 - `web/js/tasks/human-controls.js` - shared button, choice, and text prompts for
   touch-friendly human input.
+- `web/js/tasks/audio.js` - cached digit-audio playback for human tasks.
 - `web/js/tasks/index.js` - task registry with controls and default run times.
 - `web/js/main.js` - model menu, editor, task controls, reports, and run wiring.
 
@@ -286,16 +287,16 @@ are:
 - PM Issues: model or human mode, and random, next, or previous prompt
 - Fan / Fan no PM: model or human mode; the retrieval term applies to model runs only
 - Grouped Recall: model or human mode
-- Siegler: number of sets (10 by default)
+- Siegler: model or human mode; model sets (10 by default) or human sets (2 by default)
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
 - Building Sticks / Building Sticks (PPM): report, visible demo, or human mode; report runs, demo problem, and the human problem or full 15-problem experiment
 - Choice: model or human mode, model runs, and visible-window toggle
 - Paired Associate: model or human mode, pairs, blocks, runs, and model trace
 - Alpha-Arithmetic: model or human runner; model trial scope and runs; human trial scope; and single-problem fields
-- Past Tense: trial count and block size
+- Past Tense: model or human mode; model trial count and block size, or human verb count
 - Utility Learning Issues: model or human mode; model runs use the global run-time field and human runs use a fixed trial count
 - Production Compilation Issues: model or human mode, games, and compilation toggle (games and compilation apply to model runs)
-- Categorize: experiment runs, offset, and four feature slot names
+- Categorize: model or human mode; model runs, offset, and four feature slot names, or human study time
 - Semantic Network: model or human mode, and question (`g1`, `g2`, `g3`, or all)
 
 Controls initialize to task defaults and are disabled while a task runs.
@@ -335,7 +336,9 @@ input is disabled and a help tooltip explains why.
   are also available.
 - Past Tense is the Unit 7 assignment starter, so it produces no inflections,
   no rewards, and no U-shaped learning. The block table and chart diagnose that
-  state rather than presenting a solution.
+  state rather than presenting a solution. Human mode presents all 22 verbs in
+  random order, accepts typed past-tense forms, and scores regular and
+  irregular accuracy.
 - Utility Learning Issues uses its own fixed seed and begins from a
   model-scheduled event, so it is not reset with the page seed. Human mode
   presents A/B choices, gives feedback for two seconds, and uses a fixed trial
@@ -352,7 +355,9 @@ input is disabled and a help tooltip explains why.
   mode shows `123 / 456 / 789` for five seconds, then scores free recall
   against the correct `1-9` sequence.
 - Siegler presents digit sounds to the engine and reports a response matrix
-  against the child data. Tones are not played through browser audio.
+  against the child data. Model-mode tones are not played through browser
+  audio. Human mode plays bundled royalty-free digit MP3s, offers a Replay
+  sounds button, and falls back to showing the digits if audio is unavailable.
 - 1-Hit Blackjack can run automated learning blocks or a human-vs-model game.
   The play mode supports Hit/Stay buttons and the `h`/`s` keys, with a Stay
   fallback on timeout. The default deck and opponent are the tutorial defaults.
@@ -381,7 +386,9 @@ input is disabled and a help tooltip explains why.
   explains that no category responses are expected. It accepts the tutorial's
   offset and alternate feature slot names; invalid or duplicate slots fall
   back to `eh`, `es`, `nl`, `mh` with a report warning, and the example
-  memories are regenerated for the chosen slots.
+  memories are regenerated for the chosen slots. Human mode shows the 10
+  training examples, converts the 14 test stimuli to size words, and asks
+  Category 1/2 for each item.
 - The engine is deterministic given the seed, so equal inputs give equal traces.
 
 ## Limits
@@ -391,11 +398,10 @@ input is disabled and a help tooltip explains why.
   JS commands; a model-body `call-act-r-command` still needs a Lisp `defun`
   prelude. The generic host-command bridge is a known follow-up; it would also
   need a reset-cleared runtime DM add.
-- Human interaction is implemented for Unit 2 Demo2 and Assignment, Sperling,
-  PM Issues, Subitize, Fan and Fan no PM, Grouped Recall, Alpha-Arithmetic,
-  Building Sticks (including the PPM variant), Choice, Paired Associate,
-  Utility Learning, Production Compilation, Semantic Network, and 1-Hit
-  Blackjack. Siegler, Past Tense, and Categorize remain model-only.
+- Human interaction is implemented for every model with a task panel. The
+  trace-only models (Unit 1, Declarative Issues, Simple PPM, and Simple
+  Dynamic) have no task panel. Categorize human mode uses size words as an
+  approximation of the numeric tutorial stimuli.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
 - Runs happen on the browser main thread. The runner yields for progress and

@@ -1,3 +1,6 @@
+import { isHuman, modeControl, waitReal } from "./human.js";
+import { createChoicePrompt } from "./human-controls.js";
+
 const CAT1 = [
   ["small", "large", "medium", "small"],
   ["medium", "small", "large", "medium"],
@@ -65,6 +68,118 @@ function normalizeOffset(controls) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function sizeWord(value) {
+  if (value <= -0.45) return "small";
+  if (value >= 0.45) return "large";
+  return "medium";
+}
+
+function featureText(words, slots) {
+  return words
+    .map((word, index) => `${String(slots[index] ?? `slot${index + 1}`).toUpperCase()} ${word}`)
+    .join("   ");
+}
+
+async function humanCategorize(actr, ctx) {
+  const studySeconds = Math.max(
+    1,
+    Math.min(30, Number(ctx.controls.studySeconds) || 10)
+  );
+  const { slots } = normalizeSlots(ctx.controls);
+  actr.reset();
+  const window = actr.openExpWindow("Categorize", {
+    visible: true,
+    width: 680,
+    height: 420,
+  });
+
+  const results = [];
+  try {
+    actr.addTextToExpWindow(window, "Category 1", { x: 40, y: 24 });
+    actr.addTextToExpWindow(window, "Category 2", { x: 350, y: 24 });
+    CAT1.forEach((example, index) => {
+      actr.addTextToExpWindow(window, example.join(" "), {
+        x: 40,
+        y: 60 + index * 32,
+      });
+      actr.addTextToExpWindow(window, CAT2[index].join(" "), {
+        x: 350,
+        y: 60 + index * 32,
+      });
+    });
+    actr.addTextToExpWindow(window, "Study the examples. Test begins shortly.", {
+      x: 160,
+      y: 260,
+    });
+    await ctx.paint();
+    await waitReal(studySeconds * 1000, ctx.signal);
+
+    for (let index = 0; index < STIMS.length; index += 1) {
+      const words = STIMS[index].map(sizeWord);
+      actr.clearExpWindow(window);
+      actr.addTextToExpWindow(window, featureText(words, slots), {
+        x: 70,
+        y: 130,
+      });
+      await ctx.paint();
+
+      const prompt = createChoicePrompt(actr, ctx, {
+        prompt: `Test item ${index + 1}/${STIMS.length}: which category?`,
+        choices: [
+          { value: 1, label: "Category 1", key: "1" },
+          { value: 2, label: "Category 2", key: "2" },
+        ],
+      });
+      let answer;
+      try {
+        answer = await prompt.wait();
+      } finally {
+        prompt.remove();
+      }
+      if (answer == null) break;
+      results.push(Number(answer.value));
+      ctx.progress?.(`running... ${index + 1}/${STIMS.length}`);
+    }
+  } finally {
+    actr.closeExpWindow(window);
+  }
+
+  const answered = results.length;
+  const total = STIMS.length;
+  const proportions = results.map((category) => (category === 1 ? 1 : 0));
+  const lines = [
+    "Mode: human",
+    `Test items: ${total}`,
+    `Category 1 choices: ${proportions.filter(Boolean).length}/${answered}`,
+  ];
+  if (answered < total) lines.push(`Answered: ${answered}/${total}`);
+  if (answered > 0) {
+    const hasVariation = new Set(proportions).size > 1;
+    if (hasVariation) {
+      lines.push(
+        `CORRELATION: ${Number(actr.correlation(proportions, CAT_DATA.slice(0, answered), false)).toFixed(3)}`,
+        `MEAN DEVIATION: ${Number(actr.meanDeviation(proportions, CAT_DATA.slice(0, answered), false)).toFixed(3)}`
+      );
+    } else {
+      lines.push("CORRELATION: n/a", "MEAN DEVIATION: n/a");
+    }
+  }
+  lines.push(
+    "",
+    "P(C=1)",
+    "data  " + CAT_DATA.map((value) => value.toFixed(3).padStart(7)).join(""),
+    "human " + proportions.map((value) => value.toFixed(3).padStart(7)).join("")
+  );
+
+  return {
+    kind: "categorize",
+    mode: "human",
+    answered,
+    total,
+    report: lines.join("\n"),
+  };
+}
+
 function exampleForm(name, category, values, slots) {
   return (
     `      (list '${name} 'isa 'example 'category ${category}` +
@@ -121,6 +236,8 @@ async function trial(actr, ctx, features, slots, offset) {
 }
 
 async function categorize(actr, ctx) {
+  if (isHuman(ctx.controls)) return humanCategorize(actr, ctx);
+
   const runs = Math.max(1, Number(ctx.controls.runs) || 5);
   const { slots, warning } = normalizeSlots(ctx.controls);
   const offset = normalizeOffset(ctx.controls);
@@ -175,6 +292,7 @@ async function categorize(actr, ctx) {
     );
     return {
       kind: "categorize",
+      mode: "model",
       answered,
       total,
       report: report.join("\n"),
@@ -188,6 +306,7 @@ export const categorizeTask = {
   run: categorize,
   prelude: (controls) => buildPrelude(normalizeSlots(controls).slots),
   controls: [
+    modeControl("model"),
     {
       id: "runs",
       label: "Runs",
@@ -196,6 +315,7 @@ export const categorizeTask = {
       max: 20,
       step: 1,
       default: 5,
+      showWhen: (values) => !isHuman(values),
     },
     {
       id: "offset",
@@ -205,11 +325,22 @@ export const categorizeTask = {
       max: 2,
       step: 0.1,
       default: 0,
+      showWhen: (values) => !isHuman(values),
     },
-    { id: "slot1", label: "Slot 1", type: "text", default: "eh" },
-    { id: "slot2", label: "Slot 2", type: "text", default: "es" },
-    { id: "slot3", label: "Slot 3", type: "text", default: "nl" },
-    { id: "slot4", label: "Slot 4", type: "text", default: "mh" },
+    { id: "slot1", label: "Slot 1", type: "text", default: "eh", showWhen: (values) => !isHuman(values) },
+    { id: "slot2", label: "Slot 2", type: "text", default: "es", showWhen: (values) => !isHuman(values) },
+    { id: "slot3", label: "Slot 3", type: "text", default: "nl", showWhen: (values) => !isHuman(values) },
+    { id: "slot4", label: "Slot 4", type: "text", default: "mh", showWhen: (values) => !isHuman(values) },
+    {
+      id: "studySeconds",
+      label: "Study time (s)",
+      type: "number",
+      min: 1,
+      max: 30,
+      step: 1,
+      default: 10,
+      showWhen: (values) => isHuman(values),
+    },
   ],
   runSeconds: 20,
   runTimeMode: "unused",

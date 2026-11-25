@@ -975,6 +975,101 @@ async function main() {
       throw new Error(`Semantic human report missing model comparison:\n${semanticHumanReport}`);
     }
 
+    const audioOk = await page.evaluate(async () => {
+      const response = await fetch(
+        "./audio/floraphonic-casual-voice-man-says-1-186552.mp3",
+        { cache: "no-store" }
+      );
+      return response.ok && (await response.arrayBuffer()).byteLength > 0;
+    });
+    if (!audioOk) {
+      throw new Error("digit audio asset did not load");
+    }
+
+    await selectModel("unit5-siegler", "define-model siegler");
+    await page.selectOption("#task-control-siegler-mode", "human");
+    await page.fill("#task-control-siegler-humanSets", "1");
+    await page.click("#run");
+    await waitForHumanWindow();
+    for (let trial = 0; trial < 6; trial += 1) {
+      await page.waitForSelector(".human-choice-bar", { timeout: 15000 });
+      if (trial === 0) {
+        const replay = page.locator(".human-choice-bar button.secondary");
+        if (await replay.count()) await replay.first().click();
+      }
+      await page
+        .locator(".human-choice-bar button")
+        .filter({ hasText: /^0$/ })
+        .click();
+      if (trial < 5) {
+        await page.waitForFunction(
+          () => !document.querySelector(".human-choice-bar"),
+          null,
+          { timeout: 3000 }
+        );
+      }
+    }
+    await waitForRunStatus("ok");
+    const sieglerReport = (await page.locator("#task-report").textContent()) || "";
+    if (!sieglerReport.includes("Mode: human")) {
+      throw new Error(`Siegler human report missing mode:\n${sieglerReport}`);
+    }
+
+    await selectModel("unit7-past-tense", "define-model past-tense");
+    await page.selectOption("#task-control-past-tense-mode", "human");
+    await page.fill("#task-control-past-tense-humanTrials", "2");
+    await page.click("#run");
+    await waitForHumanWindow();
+    for (let trial = 0; trial < 2; trial += 1) {
+      await page.waitForSelector(".human-text-row input", { timeout: 5000 });
+      await page.fill(".human-text-row input", "tested");
+      await page.locator(".human-text-row button").click();
+      if (trial === 0) {
+        await page.waitForFunction(
+          () => !document.querySelector(".human-text-row"),
+          null,
+          { timeout: 3000 }
+        );
+      }
+    }
+    await waitForRunStatus("ok");
+    const pastTenseReport = (await page.locator("#task-report").textContent()) || "";
+    if (!pastTenseReport.includes("Mode: human")) {
+      throw new Error(`Past Tense human report missing mode:\n${pastTenseReport}`);
+    }
+    if (!pastTenseReport.includes("Verbs: 2")) {
+      throw new Error(`Past Tense human trial count missing:\n${pastTenseReport}`);
+    }
+
+    await selectModel("unit8-categorize", "define-model categorize");
+    await page.selectOption("#task-control-categorize-mode", "human");
+    await page.fill("#task-control-categorize-studySeconds", "1");
+    await page.click("#run");
+    await waitForHumanWindow();
+    for (let item = 0; item < 14; item += 1) {
+      await page.waitForSelector(".human-choice-bar", { timeout: 5000 });
+      await page
+        .locator(".human-choice-bar button")
+        .filter({ hasText: /^Category 1$/ })
+        .click();
+      if (item < 13) {
+        await page.waitForFunction(
+          () => !document.querySelector(".human-choice-bar"),
+          null,
+          { timeout: 3000 }
+        );
+      }
+    }
+    await waitForRunStatus("ok");
+    const categorizeHumanReport =
+      (await page.locator("#task-report").textContent()) || "";
+    if (!categorizeHumanReport.includes("Mode: human")) {
+      throw new Error(`Categorize human report missing mode:\n${categorizeHumanReport}`);
+    }
+    if (!categorizeHumanReport.includes("Category 1 choices: 14/14")) {
+      throw new Error(`Categorize human answers were not recorded:\n${categorizeHumanReport}`);
+    }
+
     if (errors.length) {
       throw new Error(`browser errors:\n${errors.join("\n")}`);
     }
