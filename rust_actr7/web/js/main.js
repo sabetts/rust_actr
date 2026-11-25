@@ -495,7 +495,7 @@ async function loadSelectedModel() {
     modelReady = true;
     showTaskPanel(model);
     browser?.markSelected(model.id);
-    renderModelInfo({ model, unitId: model.unitId, descriptor: taskDescriptor(model) });
+    renderModelInfo({ model, unitId: model.unitId });
     welcome?.hide();
     setStatus("", "idle");
   } catch (e) {

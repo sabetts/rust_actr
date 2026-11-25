@@ -557,7 +557,7 @@ export function createGuideViewer({ tabs }) {
   return { open, close };
 }
 
-export function renderModelInfo({ model, unitId, descriptor }) {
+export function renderModelInfo({ model, unitId }) {
   const host = $("model-info");
   if (!host) return;
   host.replaceChildren();
@@ -582,10 +582,9 @@ export function renderModelInfo({ model, unitId, descriptor }) {
   const tags = element("div", "model-tags");
 
   if (meta.badge) tags.append(element("span", `badge badge-${meta.badge}`, BADGE_LABELS[meta.badge]));
-  if (descriptor) tags.append(element("span", "tag tag-accent", "Interactive task"));
-  else tags.append(element("span", "tag", "Trace only"));
 
-  host.append(kicker, title, description, tags);
+  host.append(kicker, title, description);
+  if (tags.children.length) host.append(tags);
 
   if (meta.highlights.length) {
     const list = element("ul", "model-highlights");
