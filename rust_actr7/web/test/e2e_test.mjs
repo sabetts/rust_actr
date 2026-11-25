@@ -734,6 +734,24 @@ async function main() {
     }
 
     await selectModel("unit2-demo2", "define-model demo2");
+    const demoControlWidths = await page.evaluate(() => {
+      const controls = document.getElementById("task-controls");
+      const input = document.getElementById("task-control-unit2-demo2-mode");
+      return {
+        controls: controls?.getBoundingClientRect().width || 0,
+        input: input?.getBoundingClientRect().width || 0,
+      };
+    });
+    if (demoControlWidths.input > 260) {
+      throw new Error(
+        `task control is too wide on a wide window: ${demoControlWidths.input}px`
+      );
+    }
+    if (demoControlWidths.controls > 320) {
+      throw new Error(
+        `task control card should hug its controls: ${demoControlWidths.controls}px`
+      );
+    }
     await page.selectOption("#task-control-unit2-demo2-mode", "human");
     await page.click("#run");
     await waitForHumanWindow();

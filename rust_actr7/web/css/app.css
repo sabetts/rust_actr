@@ -1967,8 +1967,11 @@ select.input {
 }
 
 .task-controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 11rem));
+  justify-content: start;
+  width: fit-content;
+  max-width: 100%;
   gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--border);
@@ -1980,8 +1983,7 @@ select.input {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 7.5rem;
-  flex: 1 1 7.5rem;
+  min-width: 0;
 }
 
 .task-control label {
