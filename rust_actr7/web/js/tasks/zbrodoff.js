@@ -1,9 +1,5 @@
-import {
-  MODEL_HUMAN_OPTIONS,
-  clearHint,
-  showHint,
-  waitForKey,
-} from "./human.js";
+import { MODEL_HUMAN_OPTIONS } from "./human.js";
+import { createChoicePrompt } from "./human-controls.js";
 
 const CONTROL_DATA = [1.84, 2.46, 2.82, 1.21, 1.45, 1.42, 1.14, 1.21, 1.17];
 
@@ -176,20 +172,31 @@ async function collectHumanResponses(actr, ctx, trials) {
     width: 400,
     height: 300,
   });
-  showHint(actr, "Press K if the problem is correct, or D if it is not.");
   const results = [];
   try {
     for (const trial of trials) {
       presentTrial(actr, window, trial, true);
       await ctx.paint();
-      const answer = await waitForKey(ctx, { keys: ["k", "d"], timeoutMs: 30000 });
+      const prompt = createChoicePrompt(actr, ctx, {
+        prompt: "Is the problem correct?",
+        choices: [
+          { value: "k", label: "Correct (K)", key: "k" },
+          { value: "d", label: "Incorrect (D)", key: "d" },
+        ],
+        timeoutMs: 30000,
+      });
+      let answer;
+      try {
+        answer = await prompt.wait();
+      } finally {
+        prompt.remove();
+      }
       if (answer == null) break;
       trial.time = (answer.at - trial.start) / 1000;
-      trial.correct = answer.key === trial.answer;
+      trial.correct = answer.value === trial.answer;
       results.push(trial);
     }
   } finally {
-    clearHint(actr);
     actr.closeExpWindow(window);
   }
   return results;

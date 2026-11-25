@@ -1,10 +1,5 @@
-import {
-  clearHint,
-  isHuman,
-  modeControl,
-  showHint,
-  waitForKey,
-} from "./human.js";
+import { isHuman, modeControl } from "./human.js";
+import { createChoicePrompt } from "./human-controls.js";
 
 const PERSON_LOCATION_DATA = [
   1.11, 1.17, 1.22,
@@ -117,14 +112,26 @@ async function humanSentence(actr, ctx, window, person, location, target) {
   actr.clearExpWindow(window);
   actr.addTextToExpWindow(window, person, { x: 50, y: 150, width: 75 });
   actr.addTextToExpWindow(window, location, { x: 250, y: 150, width: 75 });
-  showHint(actr, "Press K if the pair was studied, or D if it was not.");
   const start = performance.now();
   await ctx.paint();
-  const answer = await waitForKey(ctx, { keys: ["k", "d"], timeoutMs: 30000 });
+  const prompt = createChoicePrompt(actr, ctx, {
+    prompt: "Was this pair studied?",
+    choices: [
+      { value: "k", label: "Studied (K)", key: "k" },
+      { value: "d", label: "Not studied (D)", key: "d" },
+    ],
+    timeoutMs: 30000,
+  });
+  let answer;
+  try {
+    answer = await prompt.wait();
+  } finally {
+    prompt.remove();
+  }
   if (answer == null) return { rt: 30, correct: false };
   return {
     rt: (answer.at - start) / 1000,
-    correct: isCorrect(answer.key, target),
+    correct: isCorrect(answer.value, target),
   };
 }
 
@@ -142,7 +149,6 @@ async function humanCollect(actr, ctx) {
     }
     return results;
   } finally {
-    clearHint(actr);
     actr.closeExpWindow(window);
   }
 }

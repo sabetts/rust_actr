@@ -5,9 +5,9 @@ import {
   isHuman,
   modeControl,
   showHint,
-  waitForKeys,
   waitReal,
 } from "./human.js";
+import { createTextPrompt } from "./human-controls.js";
 
 const ALPHABET = [
   "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
@@ -52,12 +52,20 @@ async function humanTrial(actr, ctx) {
     actr.addTextToExpWindow(window, prompt, { x: 125, y: 150 });
     await ctx.paint();
 
-    const collected = await waitForKeys(ctx, {
-      accept: (key) => /^[a-z]$/.test(key),
-      maxKeys: 2,
+    const inputPrompt = createTextPrompt(actr, ctx, {
+      prompt: "Type the letter you saw, then its neighbor.",
+      maxLength: 2,
+      autoSubmitLength: 2,
       timeoutMs: 10000,
+      sanitize: (value) => value.replace(/[^a-z]/gi, "").slice(0, 2),
     });
-    const response = collected.events.map((event) => event.key.toUpperCase());
+    let answer;
+    try {
+      answer = await inputPrompt.wait();
+    } finally {
+      inputPrompt.remove();
+    }
+    const response = answer ? [...answer.text.toUpperCase()] : [];
     const keys = response.map((key) => key.toLowerCase());
     const shown = String(letter).toLowerCase();
     const correct = scoreResponse(prompt, shown, keys);

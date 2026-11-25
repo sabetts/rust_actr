@@ -3,8 +3,8 @@ import {
   humanShuffle,
   isHuman,
   modeControl,
-  waitForKey,
 } from "./human.js";
+import { createTextPrompt } from "./human-controls.js";
 
 const LETTERS = [
   "B", "C", "D", "F", "G", "H", "J", "K", "L",
@@ -28,8 +28,21 @@ async function demo2(actr, ctx) {
 
   if (human) {
     await ctx.paint();
-    const answer = await waitForKey(ctx, { timeoutMs: 30000 });
-    response = answer?.key ?? null;
+    const prompt = createTextPrompt(actr, ctx, {
+      prompt: "Press the letter you see.",
+      maxLength: 1,
+      submitLabel: "Submit",
+      timeoutMs: 30000,
+      autoSubmitLength: 1,
+      sanitize: (value) => value.replace(/[^a-z]/gi, "").slice(0, 1),
+    });
+    let answer;
+    try {
+      answer = await prompt.wait();
+    } finally {
+      prompt.remove();
+    }
+    response = answer ? answer.text.toLowerCase() : null;
     if (response != null) actr.clearExpWindow();
     await ctx.paint();
   } else {
@@ -77,8 +90,21 @@ async function assignment(actr, ctx) {
 
   if (human) {
     await ctx.paint();
-    const answer = await waitForKey(ctx, { timeoutMs: 30000 });
-    response = answer?.key ?? null;
+    const prompt = createTextPrompt(actr, ctx, {
+      prompt: "Press the letter that appears once.",
+      maxLength: 1,
+      submitLabel: "Submit",
+      timeoutMs: 30000,
+      autoSubmitLength: 1,
+      sanitize: (value) => value.replace(/[^a-z]/gi, "").slice(0, 1),
+    });
+    let answer;
+    try {
+      answer = await prompt.wait();
+    } finally {
+      prompt.remove();
+    }
+    response = answer ? answer.text.toLowerCase() : null;
   } else {
     actr.addCommand("unit2-key-press", (model, key) => {
       response = key;

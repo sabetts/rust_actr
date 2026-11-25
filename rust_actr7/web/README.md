@@ -314,7 +314,10 @@ input is disabled and a help tooltip explains why.
 - Human-mode runs use wall-clock timing and do not run the model. Keyboard
   input is captured from the page; click the task window or page before typing
   if a form control has focus. Human stimulus randomization is local, so
-  model-body fixed seeds do not make every human trial identical.
+  model-body fixed seeds do not make every human trial identical. Human tasks
+  use the shared button, choice, and text prompts in
+  `web/js/tasks/human-controls.js` for touch input while keeping keyboard
+  shortcuts.
 - Sperling runs one block of four tone-onset trials by default. In model mode,
   tones are delivered to the ACT-R audio module but are not played through
   browser audio. Human mode plays the tone through WebAudio and also shows a

@@ -6,9 +6,9 @@ import {
   modeControl,
   playTone,
   showHint,
-  waitForKeys,
   waitReal,
 } from "./human.js";
+import { createTextPrompt } from "./human-controls.js";
 
 const LETTERS = [
   "B", "C", "D", "F", "G", "H", "J", "K", "L", "M", "N",
@@ -106,12 +106,22 @@ async function humanTrial(actr, ctx, onset) {
     actr.clearExpWindow(window);
     await ctx.paint();
 
-    const collected = await waitForKeys(ctx, {
-      accept: (key) => /^[a-z]$/.test(key),
-      terminator: "space",
+    const prompt = createTextPrompt(actr, ctx, {
+      prompt: "Type the letters from the cued row, then press Space or Submit.",
+      placeholder: "letters",
+      maxLength: 12,
+      submitKeys: ["space", "enter"],
+      allowEmpty: true,
       timeoutMs: 30000,
+      sanitize: (value) => value.replace(/[^a-z]/gi, "").slice(0, 12),
     });
-    const responses = collected.events.map((event) => event.key);
+    let answer;
+    try {
+      answer = await prompt.wait();
+    } finally {
+      prompt.remove();
+    }
+    const responses = answer ? [...answer.text.toLowerCase()] : [];
     return { onset, answers, responses, score: score(answers, responses) };
   } finally {
     if (cueTimer) clearTimeout(cueTimer);

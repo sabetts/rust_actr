@@ -1,10 +1,5 @@
-import {
-  clearHint,
-  isHuman,
-  modeControl,
-  showHint,
-  waitForKey,
-} from "./human.js";
+import { isHuman, modeControl } from "./human.js";
+import { createChoicePrompt } from "./human-controls.js";
 
 const EXP_DATA = [0.6, 0.65, 0.7, 0.86, 1.12, 1.5, 1.79, 2.13, 2.15, 2.58];
 const WORDS = [
@@ -66,20 +61,28 @@ async function humanTrial(actr, ctx, n) {
   for (const point of points) {
     actr.addTextToExpWindow(window, "x", { x: point[0], y: point[1] });
   }
-  showHint(actr, "Press the number of Xs shown (0 represents 10).");
-
+  await ctx.paint();
+  const prompt = createChoicePrompt(actr, ctx, {
+    prompt: "How many Xs were shown? (0 represents 10)",
+    choices: DIGITS.map((digit) => ({
+      value: digit,
+      label: digit,
+      key: digit,
+    })),
+    timeoutMs: 30000,
+  });
+  let answer;
   try {
-    await ctx.paint();
-    const answer = await waitForKey(ctx, { keys: DIGITS, timeoutMs: 30000 });
-    if (answer == null) return [30, false];
-    const wanted = n === 10 ? "0" : String(n);
-    if (answer.key === wanted) {
-      return [(answer.at - start) / 1000.0, true];
-    }
-    return [30, false];
+    answer = await prompt.wait();
   } finally {
-    clearHint(actr);
+    prompt.remove();
   }
+  if (answer == null) return [30, false];
+  const wanted = n === 10 ? "0" : String(n);
+  if (answer.value === wanted) {
+    return [(answer.at - start) / 1000.0, true];
+  }
+  return [30, false];
 }
 
 async function subitize(actr, ctx) {

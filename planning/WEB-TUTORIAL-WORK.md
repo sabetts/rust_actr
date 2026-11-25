@@ -45,9 +45,10 @@ Human mode remains to be added for:
 - Past Tense
 - Categorize
 
-Shared touch-friendly prompts are in place for the new Grouped Recall, Utility
-Learning, and Semantic Network human modes. Retrofit into the older
-keyboard-only human tasks is still pending.
+Shared touch-friendly prompts are in place for all human tasks: the new
+Grouped Recall, Utility Learning, and Semantic Network modes, plus the older
+keyboard-only Unit 2, Sperling, PM Issues, Subitize, Fan, Alpha-Arithmetic, and
+Production Compilation tasks. Keyboard shortcuts remain available.
 
 Paired Associate human mode intentionally keeps the canonical fixed-seed
 first-block behavior.
@@ -90,9 +91,8 @@ first-block behavior.
 
 ## 5. Next checkpoints
 
-1. Retrofit shared controls into keyboard-only human tasks.
-2. Remaining human modes: Siegler, Past Tense, Categorize.
-3. Longer-term engine follow-ups:
+1. Remaining human modes: Siegler, Past Tense, Categorize.
+2. Longer-term engine follow-ups:
    - Generic model-body `call-act-r-command` bridge to JS
    - Reset-cleared runtime DM adds
    - External task/setup files
@@ -125,3 +125,5 @@ Latest verified result before the next checkpoints: all four test commands pass.
 - 2026-11-25: Added Grouped Recall, Utility Learning, and Semantic Network
   human modes, plus shared `human-controls.js` prompts. Browser tests cover the
   new flows. Committed as `2f0ddf0`.
+- 2026-11-25: Retrofitted shared choice/text prompts into the remaining
+  keyboard-only human tasks. Keyboard shortcuts remain available.

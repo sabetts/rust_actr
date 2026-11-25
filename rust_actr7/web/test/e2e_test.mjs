@@ -741,7 +741,11 @@ async function main() {
     await page.selectOption("#task-control-subitize-items", "1");
     await page.click("#run");
     await waitForHumanWindow();
-    await page.keyboard.press("1");
+    await page.waitForSelector(".human-choice-bar", { timeout: 5000 });
+    await page
+      .locator(".human-choice-bar button")
+      .filter({ hasText: /^1$/ })
+      .click();
     await waitForRunStatus("ok");
     const subitizeReport = (await page.locator("#task-report").textContent()) || "";
     if (!subitizeReport.includes("Mode: human")) {

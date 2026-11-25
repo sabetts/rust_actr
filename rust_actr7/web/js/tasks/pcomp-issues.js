@@ -1,9 +1,5 @@
-import {
-  clearHint,
-  modeControl,
-  showHint,
-  waitForKey,
-} from "./human.js";
+import { modeControl } from "./human.js";
+import { createChoicePrompt } from "./human-controls.js";
 
 const TRIALS = 150;
 const BLOCKS = 15;
@@ -127,26 +123,50 @@ async function runHumanGame(actr, ctx) {
     finished: false,
   };
 
-  showHint(actr, "Press S, D, or F for your choice, then Space to continue.");
   try {
     for (let trial = 0; trial < TRIALS; trial += 1) {
       presentTrial(actr, window, state, true);
       await ctx.paint();
-      const answer = await waitForKey(ctx, { keys: ["s", "d", "f"], timeoutMs: 30000 });
+      const choice = createChoicePrompt(actr, ctx, {
+        prompt: "Choose a response.",
+        choices: [
+          { value: "s", label: "S", key: "s" },
+          { value: "d", label: "D", key: "d" },
+          { value: "f", label: "F", key: "f" },
+        ],
+        timeoutMs: 30000,
+      });
+      let answer;
+      try {
+        answer = await choice.wait();
+      } finally {
+        choice.remove();
+      }
       if (answer == null) break;
-      const result = RESULTS[state.val1][state.val2][responseIndex(answer.key)];
+      const result = RESULTS[state.val1][state.val2][responseIndex(answer.value)];
       state.responses.push(result);
       state.times.push(answer.at - state.start);
       state.taskState = "feedback";
       presentFeedback(actr, window, result);
       await ctx.paint();
-      const next = await waitForKey(ctx, { keys: ["space"], timeoutMs: 30000 });
-      if (next == null) break;
+      const next = createChoicePrompt(actr, ctx, {
+        prompt: "Press Space or Continue for the next trial.",
+        choices: [
+          { value: "space", label: "Continue", key: "space" },
+        ],
+        timeoutMs: 30000,
+      });
+      let advance;
+      try {
+        advance = await next.wait();
+      } finally {
+        next.remove();
+      }
+      if (advance == null) break;
       ctx.progress?.(`running... ${trial + 1}/${TRIALS}`);
     }
     state.finished = state.responses.length >= TRIALS;
   } finally {
-    clearHint(actr);
     actr.closeExpWindow(window);
   }
   return state;

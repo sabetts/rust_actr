@@ -131,7 +131,11 @@ export function createTextPrompt(actr, ctx, options = {}) {
     submitLabel = "Submit",
     timeoutMs = 30000,
     sanitize = null,
+    autoSubmitLength = 0,
+    submitKeys = ["enter"],
+    allowEmpty = false,
   } = options;
+  const submitKeySet = new Set(submitKeys.map(normalizeKey));
   const host = createHost(actr);
   makePrompt(host, prompt);
   const row = document.createElement("div");
@@ -163,6 +167,7 @@ export function createTextPrompt(actr, ctx, options = {}) {
     if (timer) clearTimeout(timer);
     input.removeEventListener("keydown", onKeyDown);
     input.removeEventListener("input", onInput);
+    document.removeEventListener("keydown", onDocumentKey, true);
     button.removeEventListener("click", submit);
     ctx?.signal?.removeEventListener("abort", abort);
     removeHost(host);
@@ -192,21 +197,45 @@ export function createTextPrompt(actr, ctx, options = {}) {
   };
   const submit = () => {
     const text = read();
-    if (!text) return;
+    if (!text && !allowEmpty) return;
     finish(text);
   };
   const onInput = () => {
-    read();
+    const text = read();
+    if (autoSubmitLength > 0 && text.length >= autoSubmitLength) {
+      finish(text);
+    }
   };
   const onKeyDown = (event) => {
-    if (event.key === "Enter") {
+    if (submitKeySet.has(normalizeKey(event.key))) {
       event.preventDefault();
       submit();
     }
   };
+  const onDocumentKey = (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target === input || isEditable(event.target)) return;
+    const key = normalizeKey(event.key);
+    if (submitKeySet.has(key)) {
+      event.preventDefault();
+      submit();
+      return;
+    }
+    if (event.key === "Backspace") {
+      event.preventDefault();
+      input.value = input.value.slice(0, -1);
+      onInput();
+      return;
+    }
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    input.value += event.key;
+    onInput();
+  };
 
   input.addEventListener("input", onInput);
   input.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keydown", onDocumentKey, true);
   button.addEventListener("click", submit);
   ctx?.signal?.addEventListener("abort", abort, { once: true });
   if (ctx?.signal?.aborted) {
