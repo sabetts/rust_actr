@@ -1,8 +1,17 @@
+import {
+  clearHint,
+  isHuman,
+  modeControl,
+  showHint,
+  waitForKey,
+} from "./human.js";
+
 const EXP_DATA = [0.6, 0.65, 0.7, 0.86, 1.12, 1.5, 1.79, 2.13, 2.15, 2.58];
 const WORDS = [
   "", "one", "two", "three", "four", "five",
   "six", "seven", "eight", "nine", "ten",
 ];
+const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 function tooClose(x, y, point) {
   return Math.abs(x - point[0]) < 40 && Math.abs(y - point[1]) < 40;
@@ -49,6 +58,30 @@ async function trial(actr, ctx, n) {
   return [30, false];
 }
 
+async function humanTrial(actr, ctx, n) {
+  actr.reset();
+  const points = generatePoints(actr, n);
+  const window = actr.openExpWindow("Subitizing Experiment");
+  const start = performance.now();
+  for (const point of points) {
+    actr.addTextToExpWindow(window, "x", { x: point[0], y: point[1] });
+  }
+  showHint(actr, "Press the number of Xs shown (0 represents 10).");
+
+  try {
+    await ctx.paint();
+    const answer = await waitForKey(ctx, { keys: DIGITS, timeoutMs: 30000 });
+    if (answer == null) return [30, false];
+    const wanted = n === 10 ? "0" : String(n);
+    if (answer.key === wanted) {
+      return [(answer.at - start) / 1000.0, true];
+    }
+    return [30, false];
+  } finally {
+    clearHint(actr);
+  }
+}
+
 async function subitize(actr, ctx) {
   const selected = ctx.controls.items ?? "all";
   let items;
@@ -58,9 +91,15 @@ async function subitize(actr, ctx) {
     items = [Number(selected)];
   }
 
+  const human = isHuman(ctx.controls);
   const results = [];
   for (const n of items) {
-    results.push([Number(n), await trial(actr, ctx, Number(n))]);
+    results.push([
+      Number(n),
+      await (human
+        ? humanTrial(actr, ctx, Number(n))
+        : trial(actr, ctx, Number(n))),
+    ]);
   }
   results.sort((a, b) => a[0] - b[0]);
 
@@ -89,16 +128,22 @@ async function subitize(actr, ctx) {
 
   return {
     kind: "subitize",
+    mode: human ? "human" : "model",
     results,
     correlation,
     meanDeviation,
-    report: report.join("\n"),
+    report: (human ? ["Mode: human", "", ...report] : report).join("\n"),
   };
+}
+
+function runTimeMode(values) {
+  return isHuman(values) ? "unused" : "per-trial";
 }
 
 export const subitizeTask = {
   run: subitize,
   controls: [
+    modeControl("model"),
     {
       id: "items",
       label: "Items",
@@ -112,5 +157,5 @@ export const subitizeTask = {
     },
   ],
   runSeconds: 30,
-  runTimeMode: "per-trial",
+  runTimeMode,
 };

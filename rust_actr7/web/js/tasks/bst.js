@@ -1,4 +1,5 @@
 import { RunCancelled } from "../actr.js";
+import { clearHint, showHint, waitReal } from "./human.js";
 
 const EXP_DATA = [20, 67, 20, 47, 87, 20, 80, 93, 83, 13, 29, 27, 80, 73, 53];
 
@@ -181,9 +182,15 @@ function makeBstTask(config) {
     const display = buildDisplay(actr, true, stims);
     state.window = display.window;
     currentState = state;
-    await ctx.paint();
-    await done;
-    return state;
+    showHint(actr, "Use the A, B, and C buttons to build the green target. Use Reset to start over.");
+    try {
+      await ctx.paint();
+      await done;
+      await waitReal(1000, ctx.signal);
+      return state;
+    } finally {
+      clearHint(actr);
+    }
   }
 
   async function bst(actr, ctx) {
@@ -197,11 +204,44 @@ function makeBstTask(config) {
     installCommands(actr, () => currentState);
     try {
       if (mode === "human") {
-        const stims = problemStims(ctx.controls.problem);
+        const choice = String(ctx.controls.humanProblem || "experiment");
+        if (choice === "experiment") {
+          const choices = [];
+          let solved = 0;
+          for (const stims of EXP_STIMS) {
+            const state = await humanTrial(actr, ctx, stims);
+            choices.push(state.choice ?? "none");
+            if (state.done) solved += 1;
+            ctx.progress?.(`running... ${choices.length}/${EXP_STIMS.length}`);
+          }
+          const percentages = choices.map((value) => (value === "over" ? 100 : 0));
+          const correlation = actr.correlation(percentages, EXP_DATA, false);
+          const meanDeviation = actr.meanDeviation(percentages, EXP_DATA, false);
+          return {
+            kind: "bst",
+            label,
+            mode: "human",
+            report: [
+              "Mode: human",
+              `Problems: ${EXP_STIMS.length}`,
+              "",
+              "Trial " + Array.from({ length: EXP_STIMS.length }, (_, i) => String(i + 1).padEnd(8)).join(""),
+              "  " + percentages.map((value) => value.toFixed(2).padStart(8)).join(""),
+              "",
+              `Solved: ${solved} / ${EXP_STIMS.length}`,
+              `CORRELATION: ${Number(correlation).toFixed(3)}`,
+              `MEAN DEVIATION: ${Number(meanDeviation).toFixed(3)}`,
+            ].join("\n"),
+          };
+        }
+
+        const stemIndex = choice === "demo2" ? 2 : 1;
+        const stims = problemStims(stemIndex);
         const state = await humanTrial(actr, ctx, stims);
         return {
           kind: "bst",
           label,
+          mode: "human",
           report: [
             "Mode: human",
             `Sticks: ${stims.join(" / ")}`,
@@ -288,10 +328,22 @@ function makeBstTask(config) {
         options: [
           ["1", "Demo 1"],
           ["2", "Demo 2"],
-          ["3", "Experiment 1"],
+          ["3", "Experiment problem 1"],
         ],
         default: "1",
-        showWhen: (values) => values.mode === "demo" || values.mode === "human",
+        showWhen: (values) => values.mode === "demo",
+      },
+      {
+        id: "humanProblem",
+        label: "Human problem",
+        type: "select",
+        options: [
+          ["demo1", "Demo 1"],
+          ["demo2", "Demo 2"],
+          ["experiment", "Full experiment (15 problems)"],
+        ],
+        default: "experiment",
+        showWhen: (values) => values.mode === "human",
       },
       {
         id: "runs",

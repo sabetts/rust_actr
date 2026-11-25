@@ -1,3 +1,10 @@
+import {
+  MODEL_HUMAN_OPTIONS,
+  clearHint,
+  showHint,
+  waitForKey,
+} from "./human.js";
+
 const CONTROL_DATA = [1.84, 2.46, 2.82, 1.21, 1.45, 1.42, 1.14, 1.21, 1.17];
 
 const DATA_SET = [
@@ -33,10 +40,10 @@ function createSet(actr, block, visible) {
   );
 }
 
-function presentTrial(actr, window, trial) {
+function presentTrial(actr, window, trial, human = false) {
   actr.clearExpWindow(window);
   actr.addTextToExpWindow(window, trial.text, { x: 100, y: 150 });
-  trial.start = Number(actr.getTime(true));
+  trial.start = human ? performance.now() : Number(actr.getTime(true));
 }
 
 function analyze(results) {
@@ -135,7 +142,60 @@ async function collectResponses(actr, ctx, trials, visible) {
   return results;
 }
 
-function reportFor(actr, mode, totals, games) {
+function buildHumanTrials(actr, ctx, scope) {
+  const trials = [];
+  if (scope === "problem") {
+    const arg1 = String(ctx.controls.arg1 || "a").toLowerCase();
+    const arg2 = String(ctx.controls.arg2 || "2");
+    const sum = String(ctx.controls.sum || "c").toLowerCase();
+    const answer = String(ctx.controls.answer || "k").toLowerCase();
+    trials.push(makeTrial(1, arg1, arg2, sum, answer, true));
+    return trials;
+  }
+  if (scope === "experiment") {
+    for (let block = 1; block <= 3; block += 1) {
+      for (let set = 0; set < 8; set += 1) {
+        trials.push(...createSet(actr, block, true));
+      }
+    }
+    return trials;
+  }
+  if (scope === "block") {
+    for (let set = 0; set < 8; set += 1) {
+      trials.push(...createSet(actr, 1, true));
+    }
+    return trials;
+  }
+  trials.push(...createSet(actr, 1, true));
+  return trials;
+}
+
+async function collectHumanResponses(actr, ctx, trials) {
+  const window = actr.openExpWindow("Alpha-arithmetic Experiment", {
+    visible: true,
+    width: 400,
+    height: 300,
+  });
+  showHint(actr, "Press K if the problem is correct, or D if it is not.");
+  const results = [];
+  try {
+    for (const trial of trials) {
+      presentTrial(actr, window, trial, true);
+      await ctx.paint();
+      const answer = await waitForKey(ctx, { keys: ["k", "d"], timeoutMs: 30000 });
+      if (answer == null) break;
+      trial.time = (answer.at - trial.start) / 1000;
+      trial.correct = answer.key === trial.answer;
+      results.push(trial);
+    }
+  } finally {
+    clearHint(actr);
+    actr.closeExpWindow(window);
+  }
+  return results;
+}
+
+function reportFor(actr, mode, totals, games, human = false) {
   const data = totals;
   const lines = [];
   if (mode === "experiment" || mode === "compare") {
@@ -154,7 +214,9 @@ function reportFor(actr, mode, totals, games) {
     counts: data.counts.map((value) => value / games),
     totals: averageTotals,
   }));
-  if (mode === "problem") {
+  if (human) {
+    lines.push("", `Mode: human (${mode})`);
+  } else if (mode === "problem") {
     lines.push("", "Mode: single problem", "Starter model: counting strategy only.");
   } else {
     lines.push(
@@ -167,6 +229,20 @@ function reportFor(actr, mode, totals, games) {
 }
 
 async function zbrodoff(actr, ctx) {
+  const human = String(ctx.controls.runner || "model") === "human";
+  if (human) {
+    const scope = String(ctx.controls.humanScope || "problem");
+    actr.reset();
+    const trials = buildHumanTrials(actr, ctx, scope);
+    const results = await collectHumanResponses(actr, ctx, trials);
+    return {
+      kind: "zbrodoff",
+      mode: scope,
+      human: true,
+      report: reportFor(actr, scope, analyze(results), 1, true),
+    };
+  }
+
   const mode = String(ctx.controls.mode || "experiment");
   const runs = mode === "experiment"
     ? Math.max(1, Number(ctx.controls.runs) || 1)
@@ -237,8 +313,15 @@ export const zbrodoffTask = {
   run: zbrodoff,
   controls: [
     {
+      id: "runner",
+      label: "Run by",
+      type: "select",
+      options: MODEL_HUMAN_OPTIONS,
+      default: "model",
+    },
+    {
       id: "mode",
-      label: "Mode",
+      label: "Model trials",
       type: "select",
       options: [
         ["experiment", "Experiment"],
@@ -247,6 +330,20 @@ export const zbrodoffTask = {
         ["problem", "Single problem"],
       ],
       default: "experiment",
+      showWhen: (values) => values.runner !== "human",
+    },
+    {
+      id: "humanScope",
+      label: "Human trials",
+      type: "select",
+      options: [
+        ["problem", "Single problem"],
+        ["set", "Set (24 trials)"],
+        ["block", "Block (192 trials)"],
+        ["experiment", "Experiment (576 trials)"],
+      ],
+      default: "problem",
+      showWhen: (values) => values.runner === "human",
     },
     {
       id: "runs",
@@ -256,7 +353,7 @@ export const zbrodoffTask = {
       max: 10,
       step: 1,
       default: 1,
-      showWhen: (values) => values.mode === "experiment",
+      showWhen: (values) => values.runner !== "human" && values.mode === "experiment",
     },
     {
       id: "arg1",
@@ -264,7 +361,9 @@ export const zbrodoffTask = {
       type: "select",
       options: ["a", "b", "c", "d", "e", "f"].map((value) => [value, value.toUpperCase()]),
       default: "a",
-      showWhen: (values) => values.mode === "problem",
+      showWhen: (values) =>
+        (values.runner !== "human" && values.mode === "problem") ||
+        (values.runner === "human" && values.humanScope === "problem"),
     },
     {
       id: "arg2",
@@ -272,7 +371,9 @@ export const zbrodoffTask = {
       type: "select",
       options: [["2", "2"], ["3", "3"], ["4", "4"]],
       default: "2",
-      showWhen: (values) => values.mode === "problem",
+      showWhen: (values) =>
+        (values.runner !== "human" && values.mode === "problem") ||
+        (values.runner === "human" && values.humanScope === "problem"),
     },
     {
       id: "sum",
@@ -282,7 +383,9 @@ export const zbrodoffTask = {
         (value) => [value, value.toUpperCase()]
       ),
       default: "c",
-      showWhen: (values) => values.mode === "problem",
+      showWhen: (values) =>
+        (values.runner !== "human" && values.mode === "problem") ||
+        (values.runner === "human" && values.humanScope === "problem"),
     },
     {
       id: "answer",
@@ -290,14 +393,16 @@ export const zbrodoffTask = {
       type: "select",
       options: [["k", "K (true)"], ["d", "D (false)"]],
       default: "k",
-      showWhen: (values) => values.mode === "problem",
+      showWhen: (values) =>
+        (values.runner !== "human" && values.mode === "problem") ||
+        (values.runner === "human" && values.humanScope === "problem"),
     },
     {
       id: "visible",
       label: "Visible window",
       type: "checkbox",
       default: true,
-      showWhen: (values) => values.mode === "problem",
+      showWhen: (values) => values.runner !== "human" && values.mode === "problem",
     },
   ],
   runSeconds: 10,

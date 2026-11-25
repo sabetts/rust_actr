@@ -1,3 +1,11 @@
+import {
+  clearHint,
+  isHuman,
+  modeControl,
+  showHint,
+  waitForKey,
+} from "./human.js";
+
 const PERSON_LOCATION_DATA = [
   1.11, 1.17, 1.22,
   1.17, 1.20, 1.22,
@@ -105,6 +113,40 @@ async function collect(actr, ctx, term, noPm) {
   return results;
 }
 
+async function humanSentence(actr, ctx, window, person, location, target) {
+  actr.clearExpWindow(window);
+  actr.addTextToExpWindow(window, person, { x: 50, y: 150, width: 75 });
+  actr.addTextToExpWindow(window, location, { x: 250, y: 150, width: 75 });
+  showHint(actr, "Press K if the pair was studied, or D if it was not.");
+  const start = performance.now();
+  await ctx.paint();
+  const answer = await waitForKey(ctx, { keys: ["k", "d"], timeoutMs: 30000 });
+  if (answer == null) return { rt: 30, correct: false };
+  return {
+    rt: (answer.at - start) / 1000,
+    correct: isCorrect(answer.key, target),
+  };
+}
+
+async function humanCollect(actr, ctx) {
+  actr.reset();
+  const window = actr.openExpWindow("Sentence Experiment", {
+    visible: true,
+    width: 600,
+    height: 300,
+  });
+  try {
+    const results = [];
+    for (const [person, location, target] of PROBES) {
+      results.push(await humanSentence(actr, ctx, window, person, location, target));
+    }
+    return results;
+  } finally {
+    clearHint(actr);
+    actr.closeExpWindow(window);
+  }
+}
+
 function average(a, b) {
   return a.map((item, i) => ({
     rt: (item.rt + b[i].rt) / 2,
@@ -135,9 +177,12 @@ function formatTable(data) {
 }
 
 async function fan(actr, ctx, noPm) {
+  const human = isHuman(ctx.controls);
   const term = String(ctx.controls.term || "both");
   let data;
-  if (term === "both") {
+  if (human) {
+    data = await humanCollect(actr, ctx);
+  } else if (term === "both") {
     const person = await collect(actr, ctx, "person", noPm);
     const location = await collect(actr, ctx, "location", noPm);
     data = average(person, location);
@@ -149,6 +194,7 @@ async function fan(actr, ctx, noPm) {
   const correlation = actr.correlation(rts, PERSON_LOCATION_DATA, false);
   const meanDeviation = actr.meanDeviation(rts, PERSON_LOCATION_DATA, false);
   const report = [
+    ...(human ? ["Mode: human", ""] : []),
     ...formatTable(data),
     "",
     `CORRELATION: ${Number(correlation).toFixed(3)}`,
@@ -157,6 +203,7 @@ async function fan(actr, ctx, noPm) {
 
   return {
     kind: noPm ? "fan-no-pm" : "fan",
+    mode: human ? "human" : "model",
     data,
     correlation,
     meanDeviation,
@@ -165,6 +212,7 @@ async function fan(actr, ctx, noPm) {
 }
 
 const controls = [
+  modeControl("model"),
   {
     id: "term",
     label: "Retrieval term",
@@ -175,19 +223,24 @@ const controls = [
       ["location", "Location"],
     ],
     default: "both",
+    showWhen: (values) => !isHuman(values),
   },
 ];
+
+function runTimeMode(values) {
+  return isHuman(values) ? "unused" : "per-trial";
+}
 
 export const fanTask = {
   run: (actr, ctx) => fan(actr, ctx, false),
   controls,
   runSeconds: 30,
-  runTimeMode: "per-trial",
+  runTimeMode,
 };
 
 export const fanNoPmTask = {
   run: (actr, ctx) => fan(actr, ctx, true),
   controls,
   runSeconds: 30,
-  runTimeMode: "per-trial",
+  runTimeMode,
 };

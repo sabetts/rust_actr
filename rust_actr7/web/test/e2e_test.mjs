@@ -161,6 +161,42 @@ async function main() {
     }
   };
 
+  const waitForRunStatus = async (expected = "ok") => {
+    await page.waitForFunction(
+      () => {
+        const status = document.getElementById("status");
+        const text = status ? status.textContent : "";
+        return (
+          text.startsWith("ok") ||
+          text.startsWith("error") ||
+          text.startsWith("cancelled")
+        );
+      },
+      null,
+      { timeout: 60000 }
+    );
+    const status = (await page.locator("#status").textContent()) || "";
+    if (!status.startsWith(expected)) {
+      throw new Error(`run status was ${status}, expected ${expected}`);
+    }
+  };
+
+  const waitForHumanWindow = async () => {
+    await page.waitForFunction(
+      () => {
+        const root = document.getElementById("agi-window");
+        return Boolean(
+          root &&
+            !root.hidden &&
+            root.querySelector(".agi-text, .agi-button")
+        );
+      },
+      null,
+      { timeout: 10000 }
+    );
+    await page.locator("#agi-window .agi-title").click();
+  };
+
   try {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(
@@ -664,6 +700,206 @@ async function main() {
         `task prelude offset was not applied: engine line ${engineLine[1]}`
       );
     }
+
+    await selectModel("unit2-demo2", "define-model demo2");
+    await page.selectOption("#task-control-unit2-demo2-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    const demoTarget = (
+      (await page.locator("#agi-window .agi-text").first().textContent()) || ""
+    ).trim();
+    await page.keyboard.press(demoTarget.toLowerCase());
+    await waitForRunStatus("ok");
+    const demoResult = (await page.locator("#task-result").textContent()) || "";
+    if (!demoResult.includes(`response: ${demoTarget.toLowerCase()}`)) {
+      throw new Error(`Demo2 human response missing: ${demoResult}`);
+    }
+
+    await selectModel("unit2-unit2-assignment", "define-model unit2");
+    await page.selectOption("#task-control-unit2-assignment-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    const assignmentTexts = await page
+      .locator("#agi-window .agi-text")
+      .allTextContents();
+    const letters = assignmentTexts.map((text) => text.trim().toUpperCase());
+    const targetLetter = [...new Set(letters)].find(
+      (letter) => letters.filter((value) => value === letter).length === 1
+    );
+    if (!targetLetter) {
+      throw new Error(`Unit 2 Assignment human display has no target: ${letters}`);
+    }
+    await page.keyboard.press(targetLetter.toLowerCase());
+    await waitForRunStatus("ok");
+    const assignmentResult = (await page.locator("#task-result").textContent()) || "";
+    if (!assignmentResult.includes(`response: ${targetLetter.toLowerCase()}`)) {
+      throw new Error(`Unit 2 Assignment human response missing: ${assignmentResult}`);
+    }
+
+    await selectModel("unit3-subitize", "define-model subitize");
+    await page.selectOption("#task-control-subitize-mode", "human");
+    await page.selectOption("#task-control-subitize-items", "1");
+    await page.click("#run");
+    await waitForHumanWindow();
+    await page.keyboard.press("1");
+    await waitForRunStatus("ok");
+    const subitizeReport = (await page.locator("#task-report").textContent()) || "";
+    if (!subitizeReport.includes("Mode: human")) {
+      throw new Error(`Subitize human report missing mode:\n${subitizeReport}`);
+    }
+
+    await selectModel("unit4-zbrodoff", "define-model zbrodoff");
+    await page.selectOption("#task-control-zbrodoff-runner", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    await page.keyboard.press("k");
+    await waitForRunStatus("ok");
+    const zbrodoffReport = (await page.locator("#task-report").textContent()) || "";
+    if (!zbrodoffReport.includes("Mode: human (problem)")) {
+      throw new Error(`Alpha-Arithmetic human report missing mode:\n${zbrodoffReport}`);
+    }
+    if (zbrodoffReport.includes("Starter model")) {
+      throw new Error(`Alpha-Arithmetic human report shows starter text:\n${zbrodoffReport}`);
+    }
+
+    await selectModel("unit3-sperling", "define-model sperling");
+    await page.selectOption("#task-control-sperling-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    for (let trial = 0; trial < 4; trial += 1) {
+      await page.waitForFunction(
+        () => document.querySelectorAll("#agi-window .agi-text").length > 0,
+        null,
+        { timeout: 5000 }
+      );
+      await page.waitForFunction(
+        () => document.querySelectorAll("#agi-window .agi-text").length === 0,
+        null,
+        { timeout: 5000 }
+      );
+      await page.waitForTimeout(100);
+      await page.keyboard.press("Space");
+    }
+    await waitForRunStatus("ok");
+    const sperlingReport = (await page.locator("#task-report").textContent()) || "";
+    if (!sperlingReport.includes("Mode: human")) {
+      throw new Error(`Sperling human report missing mode:\n${sperlingReport}`);
+    }
+
+    await selectModel(
+      "unit3-perceptual-motor-issues",
+      "define-model perceptual-motor-issues"
+    );
+    await page.selectOption("#task-control-pm-issues-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    const shownLetter = (
+      (await page.locator("#agi-window .agi-text").first().textContent()) || ""
+    )
+      .trim()
+      .toLowerCase();
+    await page.waitForFunction(
+      () => {
+        const text =
+          document.querySelector("#agi-window .agi-text")?.textContent || "";
+        return text === "next" || text === "previous";
+      },
+      null,
+      { timeout: 5000 }
+    );
+    const promptWord = (
+      (await page.locator("#agi-window .agi-text").first().textContent()) || ""
+    )
+      .trim()
+      .toLowerCase();
+    const indexed = "zabcdefghijklmnopqrstuvwxyz";
+    const shownIndex = indexed.indexOf(shownLetter);
+    const secondIndex = promptWord === "next" ? shownIndex + 1 : shownIndex - 1;
+    const secondLetter =
+      secondIndex >= 0 && secondIndex < indexed.length
+        ? indexed[secondIndex]
+        : shownLetter;
+    await page.keyboard.press(shownLetter);
+    await page.keyboard.press(secondLetter);
+    await waitForRunStatus("ok");
+    const pmReport = (await page.locator("#task-report").textContent()) || "";
+    if (!pmReport.includes("Mode: human")) {
+      throw new Error(`PM Issues human report missing mode:\n${pmReport}`);
+    }
+
+    await selectModel("unit5-fan", "define-model fan");
+    await page.selectOption("#task-control-fan-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    let fanText =
+      (await page.locator("#agi-window .agi-text").first().textContent()) || "";
+    await page.waitForTimeout(150);
+    for (let probe = 0; probe < 18; probe += 1) {
+      await page.keyboard.press(probe < 9 ? "k" : "d");
+      if (probe < 17) {
+        await page.waitForTimeout(100);
+        await page.waitForFunction(
+          (previous) =>
+            (document.querySelector("#agi-window .agi-text")?.textContent || "") !==
+            previous,
+          fanText,
+          { timeout: 5000 }
+        );
+        fanText =
+          (await page.locator("#agi-window .agi-text").first().textContent()) || "";
+      }
+    }
+    await waitForRunStatus("ok");
+    const fanReport = (await page.locator("#task-report").textContent()) || "";
+    if (!fanReport.includes("Mode: human")) {
+      throw new Error(`Fan human report missing mode:\n${fanReport}`);
+    }
+
+    await selectModel(
+      "unit7-production-compilation-issues",
+      "define-model compilation-test"
+    );
+    await page.selectOption("#task-control-pcomp-issues-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    await page.keyboard.press("s");
+    await page.waitForFunction(
+      () => {
+        const text =
+          document.querySelector("#agi-window .agi-text")?.textContent || "";
+        return text === "win" || text === "lose" || text === "draw";
+      },
+      null,
+      { timeout: 3000 }
+    );
+    await page.waitForTimeout(150);
+    await page.keyboard.press("Space");
+    await page.waitForFunction(
+      () => document.querySelectorAll("#agi-window .agi-text").length === 2,
+      null,
+      { timeout: 3000 }
+    );
+    await page.click("#cancel");
+    await waitForRunStatus("cancelled");
+
+    await selectModel("unit6-bst", "define-model bst");
+    await page.selectOption("#task-control-bst-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    for (const label of ["B", "C", "C", "A"]) {
+      await page
+        .locator("#agi-window .agi-button")
+        .filter({ hasText: new RegExp(`^${label}$`) })
+        .click();
+    }
+    await page.waitForFunction(
+      () =>
+        ((document.getElementById("status") || {}).textContent || "").includes("1/15"),
+      null,
+      { timeout: 10000 }
+    );
+    await page.click("#cancel");
+    await waitForRunStatus("cancelled");
 
     if (errors.length) {
       throw new Error(`browser errors:\n${errors.join("\n")}`);

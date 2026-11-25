@@ -1,3 +1,5 @@
+import { isHuman, modeControl, waitForKey } from "./human.js";
+
 const LETTERS = [
   "B", "C", "D", "F", "G", "H", "J", "K", "L",
   "M", "N", "P", "Q", "R", "S", "T", "V", "W",
@@ -16,21 +18,31 @@ async function demo2(actr, ctx) {
   actr.addTextToExpWindow(window, text1, { x: 125, y: 150 });
 
   let response = null;
-  actr.addCommand("demo2-key-press", (model, key) => {
-    response = key;
-    actr.clearExpWindow();
-  });
-  actr.monitorCommand("output-key", "demo2-key-press");
-  actr.installDevice(window);
 
-  await ctx.paint();
-  await actr.run(ctx.secs, { signal: ctx.signal });
+  if (isHuman(ctx.controls)) {
+    await ctx.paint();
+    const answer = await waitForKey(ctx, { timeoutMs: 30000 });
+    response = answer?.key ?? null;
+    if (response != null) actr.clearExpWindow();
+    await ctx.paint();
+  } else {
+    actr.addCommand("demo2-key-press", (model, key) => {
+      response = key;
+      actr.clearExpWindow();
+    });
+    actr.monitorCommand("output-key", "demo2-key-press");
+    actr.installDevice(window);
 
-  actr.removeCommandMonitor("output-key", "demo2-key-press");
-  actr.removeCommand("demo2-key-press");
+    await ctx.paint();
+    await actr.run(ctx.secs, { signal: ctx.signal });
+
+    actr.removeCommandMonitor("output-key", "demo2-key-press");
+    actr.removeCommand("demo2-key-press");
+  }
 
   return {
     kind: "demo2",
+    mode: isHuman(ctx.controls) ? "human" : "model",
     window: "Letter recognition",
     stimuli: [text1],
     response,
@@ -54,20 +66,28 @@ async function assignment(actr, ctx) {
   actr.addTextToExpWindow(window, texts[2], { x: 175, y: 175 });
 
   let response = null;
-  actr.addCommand("unit2-key-press", (model, key) => {
-    response = key;
-  });
-  actr.monitorCommand("output-key", "unit2-key-press");
-  actr.installDevice(window);
 
-  await ctx.paint();
-  await actr.run(ctx.secs, { signal: ctx.signal });
+  if (isHuman(ctx.controls)) {
+    await ctx.paint();
+    const answer = await waitForKey(ctx, { timeoutMs: 30000 });
+    response = answer?.key ?? null;
+  } else {
+    actr.addCommand("unit2-key-press", (model, key) => {
+      response = key;
+    });
+    actr.monitorCommand("output-key", "unit2-key-press");
+    actr.installDevice(window);
 
-  actr.removeCommandMonitor("output-key", "unit2-key-press");
-  actr.removeCommand("unit2-key-press");
+    await ctx.paint();
+    await actr.run(ctx.secs, { signal: ctx.signal });
+
+    actr.removeCommandMonitor("output-key", "unit2-key-press");
+    actr.removeCommand("unit2-key-press");
+  }
 
   return {
     kind: "assignment",
+    mode: isHuman(ctx.controls) ? "human" : "model",
     window: "Letter difference",
     stimuli: texts,
     target,
@@ -76,7 +96,13 @@ async function assignment(actr, ctx) {
   };
 }
 
+const controls = [modeControl("model")];
+
+function runTimeMode(values) {
+  return isHuman(values) ? "unused" : "per-trial";
+}
+
 export const unit2Tasks = {
-  "unit2-demo2": { run: demo2, controls: [], runSeconds: 10, runTimeMode: "per-trial" },
-  "unit2-assignment": { run: assignment, controls: [], runSeconds: 10, runTimeMode: "per-trial" },
+  "unit2-demo2": { run: demo2, controls, runSeconds: 10, runTimeMode },
+  "unit2-assignment": { run: assignment, controls, runSeconds: 10, runTimeMode },
 };

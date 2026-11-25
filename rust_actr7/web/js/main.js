@@ -80,21 +80,27 @@ function summaryText(result) {
     return `Target: ${result.target} - response: ${result.response} - ${result.correct ? "correct" : "incorrect"}`;
   }
   if (result.kind === "assignment") {
-    if (result.response == null) return `Target: ${result.target} - no response (starter model)`;
+    if (result.response == null) {
+      return `Target: ${result.target} - no response${result.mode === "human" ? "" : " (starter model)"}`;
+    }
     return `Target: ${result.target} - response: ${result.response} - ${result.correct ? "true" : "false"}`;
   }
   if (result.kind === "pm-issues") {
-    return `Prompt: ${result.prompt} - letter: ${result.letter} - response: ${result.response.join(" ") || "none"} - ${result.correct ? "correct" : "incorrect"}`;
+    return `${result.mode === "human" ? "Human - " : ""}Prompt: ${result.prompt} - letter: ${result.letter} - response: ${result.response.join(" ") || "none"} - ${result.correct ? "correct" : "incorrect"}`;
   }
-  if (result.kind === "sperling") return `Sperling: ${result.data.length} onset conditions`;
-  if (result.kind === "subitize") return `Subitize: ${result.results.length} trial(s)`;
+  if (result.kind === "sperling") {
+    return `Sperling${result.mode === "human" ? " (human)" : ""}: ${result.data.length} onset conditions`;
+  }
+  if (result.kind === "subitize") {
+    return `Subitize${result.mode === "human" ? " (human)" : ""}: ${result.results.length} trial(s)`;
+  }
   if (result.kind === "fan" || result.kind === "fan-no-pm") {
-    return `Fan: correlation ${Number(result.correlation).toFixed(3)} - mean deviation ${Number(result.meanDeviation).toFixed(3)}`;
+    return `Fan${result.mode === "human" ? " (human)" : ""}: correlation ${Number(result.correlation).toFixed(3)} - mean deviation ${Number(result.meanDeviation).toFixed(3)}`;
   }
   if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
   if (result.kind === "bst") {
-    return `${result.label || "Building Sticks"}: experiment complete`;
+    return `${result.label || "Building Sticks"}: ${result.mode === "human" ? "human" : "experiment"} complete`;
   }
   if (result.kind === "choice") return "Choice: experiment complete";
   if (result.kind === "paired") {
@@ -103,14 +109,19 @@ function summaryText(result) {
       : "Paired Associate: model run complete";
   }
   if (result.kind === "zbrodoff") {
-    if (result.mode === "problem") return "Alpha-Arithmetic: single problem complete";
-    if (result.mode === "set") return "Alpha-Arithmetic: set complete";
-    if (result.mode === "block") return "Alpha-Arithmetic: block complete";
-    return "Alpha-Arithmetic: experiment complete";
+    const who = result.human ? "human " : "";
+    if (result.mode === "problem") return `Alpha-Arithmetic: ${who}single problem complete`;
+    if (result.mode === "set") return `Alpha-Arithmetic: ${who}set complete`;
+    if (result.mode === "block") return `Alpha-Arithmetic: ${who}block complete`;
+    return `Alpha-Arithmetic: ${who}experiment complete`;
   }
   if (result.kind === "past-tense") return "Past Tense: block report complete";
   if (result.kind === "ul-issues") return "Utility Learning: run complete";
-  if (result.kind === "pcomp-issues") return "Production Compilation: games complete";
+  if (result.kind === "pcomp-issues") {
+    return result.mode === "human"
+      ? "Production Compilation: human game complete"
+      : "Production Compilation: games complete";
+  }
   if (result.kind === "categorize") {
     return `Categorize: ${result.answered}/${result.total} responded`;
   }

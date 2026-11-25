@@ -223,6 +223,8 @@ in `rust_actr7/python`:
   `pcomp-issues.js`, `categorize.js`, `semantic-dynamic.js` - JS ports of the
   tutorial experiment code. `bst.js` exports both the Unit 6 task and the
   Unit 8 PPM variant.
+- `web/js/tasks/human.js` - shared human-mode helpers for mode controls, keyboard
+  input, wall-clock waits, hints, and tone playback.
 - `web/js/tasks/index.js` - task registry with controls and default run times.
 - `web/js/main.js` - model menu, editor, task controls, reports, and run wiring.
 
@@ -276,19 +278,20 @@ for cancellation.
 Task descriptors can expose controls in the task panel. The current controls
 are:
 
-- Sperling: number of blocks
-- Subitize: all 1-10 items, or a single item count
-- PM Issues: random, next, or previous prompt
-- Fan / Fan no PM: both retrieval terms, person only, or location only
+- Unit 2 Demo2 / Unit 2 Assignment: model or human mode
+- Sperling: model or human mode and number of blocks
+- Subitize: model or human mode, and all 1-10 items or a single item count
+- PM Issues: model or human mode, and random, next, or previous prompt
+- Fan / Fan no PM: model or human mode; the retrieval term applies to model runs only
 - Siegler: number of sets (10 by default)
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
-- Building Sticks / Building Sticks (PPM): report, visible demo, or human mode; report runs and demo problem
+- Building Sticks / Building Sticks (PPM): report, visible demo, or human mode; report runs, demo problem, and the human problem or full 15-problem experiment
 - Choice: model or human mode, model runs, and visible-window toggle
 - Paired Associate: model or human mode, pairs, blocks, runs, and model trace
-- Alpha-Arithmetic: experiment, block, set, or single-problem mode; experiment runs and problem fields
+- Alpha-Arithmetic: model or human runner; model trial scope and runs; human trial scope; and single-problem fields
 - Past Tense: trial count and block size
 - Utility Learning Issues: uses the global run-time field
-- Production Compilation Issues: games and compilation toggle
+- Production Compilation Issues: model or human mode, games, and compilation toggle (games and compilation apply to model runs)
 - Categorize: experiment runs, offset, and four feature slot names
 - Semantic Network: question (`g1`, `g2`, `g3`, or all)
 
@@ -305,8 +308,13 @@ input is disabled and a help tooltip explains why.
 ## Notes
 
 - Demo2 displays the canonical `V` because its model fixes the seed.
-- Sperling runs one block of four tone-onset trials by default. Tones are
-  delivered to the ACT-R audio module but are not played through browser audio.
+- Human-mode runs use wall-clock timing and do not run the model. Keyboard
+  input is captured from the page; click the task window or page before typing
+  if a form control has focus.
+- Sperling runs one block of four tone-onset trials by default. In model mode,
+  tones are delivered to the ACT-R audio module but are not played through
+  browser audio. Human mode plays the tone through WebAudio and also shows a
+  top/middle/bottom row cue as a fallback.
 - The Unit 2 Assignment, Subitize, and 1-Hit Blackjack models are intentionally
   incomplete starters, so their results are not tutorial solutions.
 - Paired Associate runs the Unit 4 experiment task against the Unit 4, Unit 7,
@@ -316,6 +324,8 @@ input is disabled and a help tooltip explains why.
   labels the recall and study phases.
 - Alpha-Arithmetic is the Unit 4 assignment starter: it counts through the
   alphabet and does not retrieve learned additions. Its poor fit is expected.
+  Human runs default to a single problem; set, block, and full experiment scopes
+  are also available.
 - Past Tense is the Unit 7 assignment starter, so it produces no inflections,
   no rewards, and no U-shaped learning. The block table and chart diagnose that
   state rather than presenting a solution.
@@ -323,10 +333,11 @@ input is disabled and a help tooltip explains why.
   model-scheduled event, so it is not reset with the page seed.
 - Production Compilation Issues runs the canonical starter. The compilation
   toggle applies `:epl`; the tutorial's later utility and reward edits are not
-  baked into the model.
+  baked into the model. Human mode runs one 150-trial game.
 - The Perceptual-Motor Issues task is presented as in the tutorial.
 - Fan reports response times and correctness for the target and foil probes,
-  with correlation and mean deviation against the tutorial data.
+  with correlation and mean deviation against the tutorial data. Human mode,
+  including Fan no PM, presents one 18-probe pass in a visible sentence window.
 - Grouped Recall uses the model's fixed seed, so it reports the expected
   `1 2 3 4 6 5 7 8` sequence with the commission and omission errors.
 - Siegler presents digit sounds to the engine and reports a response matrix
@@ -336,12 +347,15 @@ input is disabled and a help tooltip explains why.
   fallback on timeout. The default deck and opponent are the tutorial defaults.
 - Building Sticks runs its model experiment in JS so the browser does not
   depend on the engine's test-only native BST driver. Report mode uses 100 runs
-  by default; demo and human modes use the tutorial demo problems.
+  by default. Human mode offers the two tutorial demo problems or a full
+  15-problem experiment; the full run reports each problem's first choice and
+  the over/under percentages against the tutorial data.
 - Choice is a starter harness: the empty model produces no responses until
   productions are added. Human mode accepts `h`/`t` keys.
 - Building Sticks (PPM) uses the JS `:sim-hook` and imaginal-action callbacks to
   supply `bst-number-sims` and `bst-compute-difference`. Its report defaults to
-  10 runs; demo and human modes use the tutorial demo problems.
+  10 runs; demo mode uses the tutorial demo problems and human mode offers the
+  demo problems or the full 15-problem experiment.
 - Simple PPM and Simple Dynamic have no task panel; running them shows the
   tutorial trace.
 - Semantic Network runs the tutorial `g1` -> `g2` -> `g2` -> `g3` sequence and
@@ -364,9 +378,11 @@ input is disabled and a help tooltip explains why.
   JS commands; a model-body `call-act-r-command` still needs a Lisp `defun`
   prelude. The generic host-command bridge is a known follow-up; it would also
   need a reset-cleared runtime DM add.
-- Human interaction is implemented for 1-Hit Blackjack, Building Sticks
-  (including the PPM variant), Choice, and the shared paired-associate task;
-  other tasks run models only.
+- Human interaction is implemented for Unit 2 Demo2 and Assignment, Sperling,
+  PM Issues, Subitize, Fan and Fan no PM, Alpha-Arithmetic, Building Sticks
+  (including the PPM variant), Choice, Paired Associate, Production
+  Compilation, and 1-Hit Blackjack. Grouped Recall, Siegler, Past Tense,
+  Utility Learning, Categorize, and Semantic Network remain model-only.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
 - Runs happen on the browser main thread. The runner yields for progress and
