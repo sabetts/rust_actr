@@ -147,3 +147,8 @@ Tense, Categorize, audio, and touch-control work.
 - 2026-11-25: Added bundled digit audio and human modes for Siegler, Past Tense,
   and Categorize. Browser tests cover all three flows. Committed as `4970d60`
   and `d74ed83`.
+- 2026-11-25: Reworked the sidebar for a cleaner first load. The page now starts
+  with no model selected and every unit collapsed; the selected-model info card
+  replaces the welcome card at the top of the sidebar; the model search, its
+  heading, the welcome card's Explore button, and the footer seed note are
+  removed. Browser coverage updated for the empty state and card placement.
