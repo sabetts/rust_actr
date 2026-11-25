@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `11baf17`
+Latest relevant commit: `3fa7b66`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -123,7 +123,8 @@ The browser tests require a built wasm/model tree:
 python rust_actr7/web/build.py
 ```
 
-Latest verified result before the next checkpoints: all four test commands pass.
+Latest verified result: all four test commands pass after the Grouped Recall,
+Utility Learning, Semantic Network, and touch-control work.
 
 ## 7. Progress log
 
