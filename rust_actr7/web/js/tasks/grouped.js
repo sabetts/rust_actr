@@ -11,8 +11,9 @@ import { createTextPrompt } from "./human-controls.js";
 const EXPECTED = ["1", "2", "3", "4", "6", "5", "7", "8"];
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const STUDY_MS = 5000;
+const DEFAULT_TRIALS = 6;
 
-async function humanRecall(actr, ctx) {
+async function humanTrial(actr, ctx, trial, trialCount) {
   actr.reset();
   const studied = humanShuffle(DIGITS);
   const window = actr.openExpWindow("Grouped Recall", {
@@ -26,7 +27,7 @@ async function humanRecall(actr, ctx) {
       y: 90 + (i / 3) * 50,
     });
   }
-  showHint(actr, "Study the grouped list.");
+  showHint(actr, `Trial ${trial} of ${trialCount}. Study the grouped list.`);
 
   let prompt = null;
   try {
@@ -34,7 +35,7 @@ async function humanRecall(actr, ctx) {
     await waitReal(STUDY_MS, ctx.signal);
 
     actr.clearExpWindow(window);
-    showHint(actr, "Type the digits in recall order.");
+    showHint(actr, `Trial ${trial} of ${trialCount}.`);
     await ctx.paint();
 
     prompt = createTextPrompt(actr, ctx, {
@@ -50,25 +51,50 @@ async function humanRecall(actr, ctx) {
     const correct = responses.filter((item, index) => item === studied[index]).length;
     const matches = responses.length === studied.length
       && responses.every((item, index) => item === studied[index]);
-    return {
-      kind: "grouped",
-      mode: "human",
-      responses,
-      correct,
-      total: studied.length,
-      report: [
-        "Mode: human",
-        `STUDIED: ${studied.join(" ")}`,
-        `RECALLED: ${responses.join(" ") || "none"}`,
-        `CORRECT: ${correct}/${studied.length}`,
-        `MATCH: ${matches ? "yes" : "no"}`,
-      ].join("\n"),
-    };
+    return { studied, responses, correct, matches };
   } finally {
     prompt?.remove();
     clearHint(actr);
     actr.closeExpWindow(window);
   }
+}
+
+async function humanRecall(actr, ctx) {
+  const trials = Math.max(
+    1,
+    Math.min(20, Number(ctx.controls.humanTrials) || DEFAULT_TRIALS)
+  );
+  const results = [];
+  for (let trial = 1; trial <= trials; trial += 1) {
+    results.push(await humanTrial(actr, ctx, trial, trials));
+    if (trial < trials) await waitReal(750, ctx.signal);
+  }
+
+  const correct = results.reduce((sum, result) => sum + result.correct, 0);
+  const total = trials * DIGITS.length;
+  const matches = results.filter((result) => result.matches).length;
+  const rows = results.map((result, index) =>
+    `${String(index + 1).padStart(2)}. ${result.studied.join(" ")} | ${result.responses.join(" ") || "none"} | ${result.correct}/9${result.matches ? " | exact" : ""}`
+  );
+
+  return {
+    kind: "grouped",
+    mode: "human",
+    trials,
+    results,
+    correct,
+    total,
+    matches,
+    report: [
+      "Mode: human",
+      `Trials: ${trials}`,
+      "",
+      ...rows,
+      "",
+      `Mean correct: ${(correct / trials).toFixed(2)}/9`,
+      `Exact matches: ${matches}/${trials}`,
+    ].join("\n"),
+  };
 }
 
 async function grouped(actr, ctx) {
@@ -106,7 +132,19 @@ function runTimeMode(values) {
 
 export const groupedTask = {
   run: grouped,
-  controls: [modeControl("model")],
+  controls: [
+    modeControl("model"),
+    {
+      id: "humanTrials",
+      label: "Human trials",
+      type: "number",
+      min: 1,
+      max: 20,
+      step: 1,
+      default: DEFAULT_TRIALS,
+      showWhen: (values) => values.mode === "human",
+    },
+  ],
   runSeconds: 20,
   runTimeMode,
 };

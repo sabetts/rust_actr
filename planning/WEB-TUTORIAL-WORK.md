@@ -58,8 +58,9 @@ first-block behavior.
 - Building Sticks human mode offers the two demo problems plus a full
   15-problem experiment.
 - Grouped Recall human mode shuffles the digits `1-9` into three groups of
-  three, presents them for five seconds, clears, and scores free recall against
-  the studied sequence.
+  three per trial, presents them for five seconds, clears, and scores free
+  recall against the studied sequence. It repeats a configurable number of
+  trials (6 by default) and reports per-trial plus aggregate recall.
 - Utility Learning human mode uses fixed trials, A/B buttons, and two seconds of
   feedback.
 - Semantic Network human mode compares human answers with the canonical model

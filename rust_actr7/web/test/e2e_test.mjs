@@ -984,30 +984,46 @@ async function main() {
 
     await selectModel("unit5-grouped", "define-model grouped");
     await page.selectOption("#task-control-grouped-mode", "human");
+    await page.fill("#task-control-grouped-humanTrials", "2");
     await page.click("#run");
     await waitForHumanWindow();
-    await page.waitForFunction(
-      () => document.querySelectorAll("#agi-window .agi-text").length === 3,
-      null,
-      { timeout: 5000 }
-    );
-    const groupedLines = await page
-      .locator("#agi-window .agi-text")
-      .allTextContents();
-    const groupedStudy = groupedLines.join("").replace(/\s+/g, "");
-    if (!/^[1-9]{9}$/.test(groupedStudy)) {
-      throw new Error(`Grouped study list looks wrong: ${groupedLines.join(" | ")}`);
+    for (let trial = 0; trial < 2; trial += 1) {
+      await page.waitForFunction(
+        () => document.querySelectorAll("#agi-window .agi-text").length === 3,
+        null,
+        { timeout: 10000 }
+      );
+      const groupedLines = await page
+        .locator("#agi-window .agi-text")
+        .allTextContents();
+      const groupedStudy = groupedLines.join("").replace(/\s+/g, "");
+      if (!/^[1-9]{9}$/.test(groupedStudy)) {
+        throw new Error(`Grouped study list looks wrong: ${groupedLines.join(" | ")}`);
+      }
+      await page.waitForSelector(".human-text-row input", { timeout: 10000 });
+      await page.fill(".human-text-row input", groupedStudy);
+      await page.locator(".human-text-row button").click();
+      if (trial === 0) {
+        await page.waitForFunction(
+          () => !document.querySelector(".human-text-row"),
+          null,
+          { timeout: 3000 }
+        );
+      }
     }
-    await page.waitForSelector(".human-text-row input", { timeout: 10000 });
-    await page.fill(".human-text-row input", groupedStudy);
-    await page.locator(".human-text-row button").click();
     await waitForRunStatus("ok");
     const groupedReport = (await page.locator("#task-report").textContent()) || "";
     if (!groupedReport.includes("Mode: human")) {
       throw new Error(`Grouped human report missing mode:\n${groupedReport}`);
     }
-    if (!groupedReport.includes("CORRECT: 9/9")) {
+    if (!groupedReport.includes("Trials: 2")) {
+      throw new Error(`Grouped human report missing trial count:\n${groupedReport}`);
+    }
+    if (!groupedReport.includes("Mean correct: 9.00/9")) {
       throw new Error(`Grouped human recall was not scored correctly:\n${groupedReport}`);
+    }
+    if (!groupedReport.includes("Exact matches: 2/2")) {
+      throw new Error(`Grouped human exact matches were not recorded:\n${groupedReport}`);
     }
 
     await selectModel(
