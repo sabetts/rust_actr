@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `69e01bf`
+Latest relevant commit: `2f0ddf0`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -81,7 +81,7 @@ first-block behavior.
 - `69e01bf web: randomize human stimuli independently of model seed`
   - Local human randomization helpers
   - Sperling, Demo2, and PM Issues decoupled from model fixed seeds
-- Grouped Recall, Utility Learning, and Semantic Network human modes
+- `2f0ddf0 web: add grouped, utility, and semantic human modes`
   - Shared `web/js/tasks/human-controls.js` choice and text prompts
   - Grouped study/free-recall flow
   - Utility fixed-trial A/B flow with two-second feedback
@@ -124,4 +124,4 @@ Latest verified result before the next checkpoints: all four test commands pass.
 - 2026-11-25: Created this tracker.
 - 2026-11-25: Added Grouped Recall, Utility Learning, and Semantic Network
   human modes, plus shared `human-controls.js` prompts. Browser tests cover the
-  new flows.
+  new flows. Committed as `2f0ddf0`.
