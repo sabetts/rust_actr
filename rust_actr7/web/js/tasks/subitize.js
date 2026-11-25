@@ -6,7 +6,7 @@ const WORDS = [
   "", "one", "two", "three", "four", "five",
   "six", "seven", "eight", "nine", "ten",
 ];
-const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
 function tooClose(x, y, point) {
   return Math.abs(x - point[0]) < 40 && Math.abs(y - point[1]) < 40;

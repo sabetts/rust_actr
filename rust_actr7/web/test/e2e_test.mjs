@@ -810,6 +810,12 @@ async function main() {
     await page.click("#run");
     await waitForHumanWindow();
     await page.waitForSelector(".human-choice-bar", { timeout: 5000 });
+    const subitizeChoices = await page
+      .locator(".human-choice-bar button")
+      .allTextContents();
+    if (subitizeChoices.at(-1) !== "0") {
+      throw new Error(`Subitize zero should come after nine: ${subitizeChoices.join(",")}`);
+    }
     await page
       .locator(".human-choice-bar button")
       .filter({ hasText: /^1$/ })
