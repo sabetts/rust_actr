@@ -1,5 +1,7 @@
 import {
   clearHint,
+  humanRandomInt,
+  humanShuffle,
   isHuman,
   modeControl,
   showHint,
@@ -26,14 +28,14 @@ function scoreResponse(prompt, shown, keys) {
 
 async function humanTrial(actr, ctx) {
   actr.reset();
-  const letter = actr.permuteList(ALPHABET)[0];
+  const letter = humanShuffle(ALPHABET)[0];
   const requested = ctx.controls.prompt ?? "random";
   const prompt = requested === "next" || requested === "previous"
     ? requested
-    : Number(actr.random(2)) === 0
+    : humanRandomInt(2) === 0
       ? "next"
       : "previous";
-  const time = 1500 + Number(actr.random(1000));
+  const time = 1500 + humanRandomInt(1000);
   const window = actr.openExpWindow("Simple task");
 
   actr.addTextToExpWindow(window, letter, { x: 130, y: 150 });

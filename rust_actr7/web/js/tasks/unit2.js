@@ -1,4 +1,10 @@
-import { isHuman, modeControl, waitForKey } from "./human.js";
+import {
+  humanRandomInt,
+  humanShuffle,
+  isHuman,
+  modeControl,
+  waitForKey,
+} from "./human.js";
 
 const LETTERS = [
   "B", "C", "D", "F", "G", "H", "J", "K", "L",
@@ -11,15 +17,16 @@ function sameKey(response, target) {
 }
 
 async function demo2(actr, ctx) {
+  const human = isHuman(ctx.controls);
   actr.reset();
-  const items = actr.permuteList(LETTERS);
+  const items = human ? humanShuffle(LETTERS) : actr.permuteList(LETTERS);
   const text1 = items[0];
   const window = actr.openExpWindow("Letter recognition");
   actr.addTextToExpWindow(window, text1, { x: 125, y: 150 });
 
   let response = null;
 
-  if (isHuman(ctx.controls)) {
+  if (human) {
     await ctx.paint();
     const answer = await waitForKey(ctx, { timeoutMs: 30000 });
     response = answer?.key ?? null;
@@ -42,7 +49,7 @@ async function demo2(actr, ctx) {
 
   return {
     kind: "demo2",
-    mode: isHuman(ctx.controls) ? "human" : "model",
+    mode: human ? "human" : "model",
     window: "Letter recognition",
     stimuli: [text1],
     response,
@@ -52,11 +59,12 @@ async function demo2(actr, ctx) {
 }
 
 async function assignment(actr, ctx) {
+  const human = isHuman(ctx.controls);
   actr.reset();
-  const items = actr.permuteList(LETTERS);
+  const items = human ? humanShuffle(LETTERS) : actr.permuteList(LETTERS);
   const target = items[0];
   const foil = items[1];
-  const index = Number(actr.random(3));
+  const index = human ? humanRandomInt(3) : Number(actr.random(3));
   const texts = [foil, foil, foil];
   texts[index] = target;
 
@@ -67,7 +75,7 @@ async function assignment(actr, ctx) {
 
   let response = null;
 
-  if (isHuman(ctx.controls)) {
+  if (human) {
     await ctx.paint();
     const answer = await waitForKey(ctx, { timeoutMs: 30000 });
     response = answer?.key ?? null;
@@ -87,7 +95,7 @@ async function assignment(actr, ctx) {
 
   return {
     kind: "assignment",
-    mode: isHuman(ctx.controls) ? "human" : "model",
+    mode: human ? "human" : "model",
     window: "Letter difference",
     stimuli: texts,
     target,

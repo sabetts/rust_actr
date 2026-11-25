@@ -310,7 +310,8 @@ input is disabled and a help tooltip explains why.
 - Demo2 displays the canonical `V` because its model fixes the seed.
 - Human-mode runs use wall-clock timing and do not run the model. Keyboard
   input is captured from the page; click the task window or page before typing
-  if a form control has focus.
+  if a form control has focus. Human stimulus randomization is local, so
+  model-body fixed seeds do not make every human trial identical.
 - Sperling runs one block of four tone-onset trials by default. In model mode,
   tones are delivered to the ACT-R audio module but are not played through
   browser audio. Human mode plays the tone through WebAudio and also shows a

@@ -24,6 +24,21 @@ export function normalizeKey(key) {
   return String(key ?? "").toLowerCase();
 }
 
+export function humanRandomInt(limit) {
+  const size = Math.trunc(Number(limit));
+  if (!Number.isFinite(size) || size <= 0) return 0;
+  return Math.floor(Math.random() * size);
+}
+
+export function humanShuffle(items) {
+  const values = Array.from(items || []);
+  for (let i = values.length - 1; i > 0; i -= 1) {
+    const j = humanRandomInt(i + 1);
+    [values[i], values[j]] = [values[j], values[i]];
+  }
+  return values;
+}
+
 function isEditable(target) {
   if (!(target instanceof Element)) return false;
   if (target.isContentEditable) return true;

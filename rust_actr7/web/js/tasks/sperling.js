@@ -1,5 +1,7 @@
 import {
   clearHint,
+  humanRandomInt,
+  humanShuffle,
   isHuman,
   modeControl,
   playTone,
@@ -69,9 +71,9 @@ async function trial(actr, ctx, onset) {
 
 async function humanTrial(actr, ctx, onset) {
   actr.reset();
-  const letters = actr.permuteList(LETTERS);
+  const letters = humanShuffle(LETTERS);
   const answers = [];
-  const row = Number(actr.random(3));
+  const row = humanRandomInt(3);
   const window = actr.openExpWindow("Sperling Experiment", { visible: true });
 
   for (let i = 0; i < 3; i += 1) {
@@ -100,7 +102,7 @@ async function humanTrial(actr, ctx, onset) {
       showHint(actr, `Report the ${rowName} row. Type its letters, then press Space.`);
     }, onset * 1000);
 
-    await waitReal(900 + Number(actr.random(200)), ctx.signal);
+    await waitReal(900 + humanRandomInt(200), ctx.signal);
     actr.clearExpWindow(window);
     await ctx.paint();
 
@@ -122,7 +124,7 @@ async function sperling(actr, ctx) {
   const blocks = Math.max(1, Number(ctx.controls.blocks) || 1);
   const totals = [0, 0, 0, 0];
   for (let i = 0; i < blocks; i += 1) {
-    const onsets = actr.permuteList(ONSETS);
+    const onsets = human ? humanShuffle(ONSETS) : actr.permuteList(ONSETS);
     const trials = [];
     for (const onset of onsets) {
       trials.push(
