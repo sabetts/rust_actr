@@ -97,10 +97,12 @@ and respect the theme stored by the main page.
 The page is a no-build, dependency-free app shell over the same wasm model
 runner:
 
-- **Model browser** (`web/js/catalog.js`): searchable Units 1-8 with unit
-  blurbs, per-model descriptions, and `Starter`, `Solution`, `Broken`, and
-  `Demo` badges. A hidden native `<select id="model-preset">` stays populated
-  for compatibility and test selectors.
+- **Model browser** (`web/js/catalog.js`): Units 1-8 with unit blurbs,
+  per-model descriptions, and `Starter`, `Solution`, `Broken`, and `Demo`
+  badges. Units start collapsed and no model is selected on first load; the
+  selected-model card replaces the welcome card at the top of the sidebar. A
+  hidden native `<select id="model-preset">` stays populated for compatibility
+  and test selectors.
 - **Unit guides**: each expanded unit ends with links to its converted HTML
   guide, code walkthrough, modeling notes, and productions summary. A guide row
   opens in the workspace Guide tab (with a Close button), while its arrow opens
@@ -122,9 +124,10 @@ runner:
   metadata turn red when the trace contains an error. Traces up to 12,000 lines
   are colorized; larger runs use a plain, line-numbered fallback. The raw trace
   stays in the hidden `#output` textarea for tooling and tests.
-- **First-run guidance**: a dismissible welcome card, an "What is ACT-R?"
-  dialog with a short workflow and glossary, and inline help for seeds and
-  fixed-timing tasks.
+- **First-run guidance**: a dismissible welcome card in the sidebar's top slot,
+  which the selected model's info card replaces after a model is chosen; a
+  "What is ACT-R?" dialog with a short workflow and glossary; and inline help
+  for seeds and fixed-timing tasks.
 - **Theme and accessibility**: light/dark theme persisted in `localStorage`,
   keyboard tabs, visible focus rings, reduced-motion support, and a sticky run
   bar that keeps the primary action reachable on mobile.
@@ -132,9 +135,8 @@ runner:
   `src/data/actr-head.png` into `assets/` and used for both the browser tab
   icon and the header brand mark.
 
-Keyboard shortcuts: `Ctrl`/`Cmd` + `Enter` runs the model, `Ctrl`/`Cmd` + `K`
-focuses the model search, and `Ctrl`/`Cmd` + `F` filters the trace when the
-trace tab is open. `Esc` closes dialogs.
+Keyboard shortcuts: `Ctrl`/`Cmd` + `Enter` runs the model and `Ctrl`/`Cmd` + `F`
+filters the trace when the trace tab is open. `Esc` closes dialogs.
 
 ## Models
 

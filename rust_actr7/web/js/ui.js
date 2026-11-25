@@ -163,7 +163,7 @@ export function renderAboutContent() {
   }
 }
 
-export function setupWelcome({ onStart, onExplore } = {}) {
+export function setupWelcome({ onStart } = {}) {
   const card = $("welcome-card");
   if (!card) return { show() {}, hide() {} };
 
@@ -171,19 +171,22 @@ export function setupWelcome({ onStart, onExplore } = {}) {
     card.hidden = true;
     if (persist) writeStorage(WELCOME_KEY, "1");
   };
+  const isDismissed = () => readStorage(WELCOME_KEY) === "1";
 
-  if (readStorage(WELCOME_KEY) === "1") hide(false);
+  if (isDismissed()) hide(false);
 
   $("welcome-start")?.addEventListener("click", () => {
     hide();
     onStart?.();
   });
-  $("welcome-explore")?.addEventListener("click", () => {
-    onExplore?.();
-  });
   $("welcome-dismiss")?.addEventListener("click", () => hide());
 
-  return { show: () => { card.hidden = false; }, hide: () => hide(false) };
+  return {
+    show: () => {
+      if (!isDismissed()) card.hidden = false;
+    },
+    hide: () => hide(false),
+  };
 }
 
 export function setupTabs() {
@@ -259,12 +262,10 @@ export function setupTabs() {
 
 export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
   const list = $("model-list");
-  const search = $("model-search");
   const select = $("model-preset");
-  if (!list || !select) return { markSelected() {}, focusSearch() {} };
+  if (!list || !select) return { markSelected() {} };
 
   const openState = new Map();
-  let query = "";
 
   const findEntry = (id) => {
     for (const group of groups) {
@@ -374,24 +375,15 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
   const render = () => {
     list.replaceChildren();
     const activeId = select.value;
-    const needle = query.trim().toLowerCase();
-    let visibleCount = 0;
 
     for (const group of groups) {
       const info = unitInfo(group.id, group.label);
-      const matches = group.models.filter((model) => {
-        if (!needle) return true;
-        const meta = modelInfo(model, group.id);
-        return `${model.label} ${meta.description} ${info.title} ${info.blurb}`
-          .toLowerCase()
-          .includes(needle);
-      });
-      if (!matches.length) continue;
-      visibleCount += matches.length;
+      const models = group.models;
+      if (!models.length) continue;
 
       const unit = element("section", "unit");
       unit.dataset.unit = group.id;
-      unit.dataset.open = needle || openState.get(group.id) ? "true" : "false";
+      unit.dataset.open = openState.get(group.id) ? "true" : "false";
 
       const head = element("button", "unit-head");
       head.type = "button";
@@ -409,7 +401,7 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
       headText.append(element("span", "unit-title", info.title));
       headText.append(element("span", "unit-blurb", info.blurb));
       head.append(headText);
-      head.append(element("span", "unit-count", String(matches.length)));
+      head.append(element("span", "unit-count", String(models.length)));
       head.append(element("span", "unit-caret", "▾"));
 
       head.addEventListener("click", () => {
@@ -419,12 +411,8 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
         openState.set(group.id, !open);
       });
 
-      unit.append(head, renderRows(group, matches, activeId));
+      unit.append(head, renderRows(group, models, activeId));
       list.append(unit);
-    }
-
-    if (!visibleCount) {
-      list.append(element("div", "model-empty", "No models match that search."));
     }
   };
 
@@ -443,24 +431,12 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
     }
   };
 
-  search?.addEventListener("input", () => {
-    query = search.value;
-    render();
-  });
-
-  for (const group of groups) {
-    if (group.id === "unit1") openState.set(group.id, true);
-  }
   render();
 
   return {
     choose,
     markSelected,
     render,
-    focusSearch() {
-      search?.focus();
-      search?.select();
-    },
   };
 }
 
@@ -587,11 +563,11 @@ export function renderModelInfo({ model, unitId, descriptor }) {
   host.replaceChildren();
 
   if (!model) {
-    host.append(element("div", "model-info-kicker", "No model selected"));
-    host.append(element("h2", null, "Choose a model"));
-    host.append(element("p", null, "Pick a tutorial model from the list to get started."));
+    host.hidden = true;
     return;
   }
+
+  host.hidden = false;
 
   const unit = unitInfo(unitId, unitId);
   const meta = modelInfo(model, unitId);
@@ -1233,7 +1209,9 @@ export function createEditor({ onChange } = {}) {
     renderGutter();
     renderHighlight();
     if (meta) {
-      meta.textContent = `${lines.length} lines · ${text.length.toLocaleString()} chars`;
+      meta.textContent = text
+        ? `${lines.length} lines · ${text.length.toLocaleString()} chars`
+        : "No model loaded";
     }
     renderOutline(lines, offsets);
     renderDiagnostics();
@@ -1409,10 +1387,6 @@ export function setupGlobalShortcuts({ run, trace }) {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
       event.preventDefault();
       run?.();
-    }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-      event.preventDefault();
-      document.getElementById("model-search")?.focus();
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
       if (document.activeElement?.id === "model") return;

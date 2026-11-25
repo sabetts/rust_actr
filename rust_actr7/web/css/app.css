@@ -363,6 +363,13 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+.sidebar-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
 .workspace {
   display: flex;
   flex-direction: column;
@@ -375,31 +382,6 @@ button:disabled {
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
-}
-
-.panel-head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) 0;
-}
-
-.panel-head h2,
-.panel-head h3 {
-  font-size: 13px;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.panel-head .panel-sub {
-  margin-top: 2px;
-  color: var(--faint);
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 .panel-body {
@@ -702,32 +684,8 @@ select.input {
 .unit-head-text,
 .unit-guides,
 .unit-guide-row,
-.model-row,
-.model-search input {
+.model-row {
   min-width: 0;
-}
-
-.model-search {
-  position: relative;
-}
-
-.model-search svg {
-  position: absolute;
-  top: 50%;
-  left: 11px;
-  width: 15px;
-  height: 15px;
-  color: var(--faint);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.model-search input {
-  padding-left: 34px;
-}
-
-.model-search input::-webkit-search-cancel-button {
-  cursor: pointer;
 }
 
 .model-list {
@@ -1035,13 +993,6 @@ select.input {
 .unit-guide-open:focus-visible {
   outline: none;
   box-shadow: var(--ring);
-}
-
-.model-empty {
-  padding: var(--space-4);
-  color: var(--faint);
-  font-size: 12px;
-  text-align: center;
 }
 
 .model-info {
@@ -2733,7 +2684,8 @@ kbd {
     overflow: visible;
   }
 
-  .welcome-card {
+  .sidebar-intro,
+  .model-browser-panel {
     grid-column: 1 / -1;
   }
 

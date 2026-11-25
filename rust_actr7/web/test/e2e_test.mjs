@@ -211,6 +211,31 @@ async function main() {
     if (await page.locator("#welcome-card").isHidden()) {
       throw new Error("first-run welcome card should be visible");
     }
+    if (!(await page.locator("#model-info").isHidden())) {
+      throw new Error("model info should be hidden before a model is selected");
+    }
+    if (await page.locator("#model-search").count()) {
+      throw new Error("model search should not be present");
+    }
+    if (await page.inputValue("#model")) {
+      throw new Error("editor should start empty");
+    }
+    if (!(await page.locator("#run").isDisabled())) {
+      throw new Error("Run should be disabled until a model is selected");
+    }
+    if ((await page.locator('#model-list [aria-current="true"]').count()) !== 0) {
+      throw new Error("no model should be selected on first load");
+    }
+    const openUnits = await page.locator('.unit[data-open="true"]').count();
+    if (openUnits !== 0) {
+      throw new Error(`all units should start collapsed, found ${openUnits} open`);
+    }
+    if (!(await page.locator("footer").textContent()).includes("Runs entirely in your browser")) {
+      throw new Error("footer is missing its runtime note");
+    }
+    if ((await page.locator("footer").textContent()).includes("Deterministic for a given seed")) {
+      throw new Error("footer still contains the deterministic note");
+    }
     const initialTheme = await page.evaluate(
       () => document.documentElement.dataset.theme
     );
@@ -237,6 +262,10 @@ async function main() {
       throw new Error("header ACT-R head logo did not load");
     }
 
+    await page.locator('.unit[data-unit="unit1"] .unit-head').click();
+    if ((await page.locator('.unit[data-unit="unit1"]').getAttribute("data-open")) !== "true") {
+      throw new Error("Unit 1 did not expand");
+    }
     const unit1Guides = page.locator('.unit[data-unit="unit1"] .unit-guide');
     if ((await unit1Guides.count()) !== 4) {
       throw new Error(`unexpected Unit 1 guide count: ${await unit1Guides.count()}`);
@@ -363,18 +392,6 @@ async function main() {
     }
     await guidePage.close();
 
-    const defaultTitle = (await page.locator("#model-info h2").textContent()) || "";
-    if (!defaultTitle.includes("Count")) {
-      throw new Error(`default model info looks wrong: ${defaultTitle}`);
-    }
-    const highlighted = (await page.locator("#editor-highlight").textContent()) || "";
-    if (!highlighted.includes("define-model")) {
-      throw new Error("syntax-highlighted source is missing define-model");
-    }
-    if (await page.locator("#model-outline").isHidden()) {
-      throw new Error("model outline should be visible");
-    }
-
     await page.click("#tab-trace");
     if (!(await page.locator("#panel-trace").isVisible())) {
       throw new Error("Trace tab did not open");
@@ -397,22 +414,37 @@ async function main() {
       throw new Error("ACT-R help dialog did not close");
     }
 
-    await page.fill("#model-search", "categorize");
-    await page.waitForFunction(() => {
-      const visible = [...document.querySelectorAll("[data-model-id]")].filter((row) => {
-        const rect = row.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      });
-      return visible.length === 1 && visible[0].dataset.modelId === "unit8-categorize";
-    });
-    await page.fill("#model-search", "");
-
     await page.click("#welcome-dismiss");
     if (!(await page.locator("#welcome-card").isHidden())) {
       throw new Error("welcome card did not dismiss");
     }
 
     await selectModel("unit8-simple-ppm", "define-model test-ppm");
+    if (await page.locator("#model-info").isHidden()) {
+      throw new Error("model info should be visible after selecting a model");
+    }
+    if (!(await page.locator("#welcome-card").isHidden())) {
+      throw new Error("welcome card should hide after selecting a model");
+    }
+    const infoBeforeBrowser = await page.evaluate(() => {
+      const info = document.getElementById("model-info");
+      const browser = document.querySelector(".model-browser-panel");
+      return Boolean(
+        info &&
+          browser &&
+          info.compareDocumentPosition(browser) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
+    if (!infoBeforeBrowser) {
+      throw new Error("model info should sit above the model list");
+    }
+    const highlighted = (await page.locator("#editor-highlight").textContent()) || "";
+    if (!highlighted.includes("define-model")) {
+      throw new Error("syntax-highlighted source is missing define-model");
+    }
+    if (await page.locator("#model-outline").isHidden()) {
+      throw new Error("model outline should be visible");
+    }
     if (!(await page.locator("#task-panel").isHidden())) {
       throw new Error("Simple PPM should not show a task panel");
     }

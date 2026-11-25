@@ -194,7 +194,7 @@ def stage_models() -> None:
             models.append(entry)
         groups.append({"id": group["id"], "label": group["label"], "models": models})
 
-    manifest = {"default": groups[0]["models"][0]["id"], "groups": groups}
+    manifest = {"groups": groups}
     manifest_path = MODELS_DIR / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",

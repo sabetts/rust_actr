@@ -106,49 +106,33 @@
   </section>
 
   <aside class="sidebar" aria-label="Model chooser and run controls">
-    <section class="welcome-card" id="welcome-card" aria-labelledby="welcome-title">
-      <span class="welcome-eyebrow">New to ACT-R?</span>
-      <h2 id="welcome-title">Watch a mind think, one production at a time.</h2>
-      <p>ACT-R is a cognitive architecture. These models are small programs that see, remember, decide, and act. Run one to follow its event trace.</p>
-      <ol class="welcome-steps">
-        <li>Choose a tutorial model.</li>
-        <li>Press Run and watch the result.</li>
-        <li>Read the trace or experiment window.</li>
-      </ol>
-      <div class="welcome-actions">
-        <button id="welcome-start" class="btn btn-primary btn-sm" type="button">Start with Count</button>
-        <button id="welcome-explore" class="btn btn-secondary btn-sm" type="button">Explore models</button>
-      </div>
-      <button class="welcome-dismiss" id="welcome-dismiss" type="button" aria-label="Dismiss welcome message" title="Dismiss">×</button>
-    </section>
+    <div class="sidebar-intro">
+      <section class="welcome-card" id="welcome-card" aria-labelledby="welcome-title">
+        <span class="welcome-eyebrow">New to ACT-R?</span>
+        <h2 id="welcome-title">Watch a mind think, one production at a time.</h2>
+        <p>ACT-R is a cognitive architecture. These models are small programs that see, remember, decide, and act. Run one to follow its event trace.</p>
+        <ol class="welcome-steps">
+          <li>Choose a tutorial model.</li>
+          <li>Press Run and watch the result.</li>
+          <li>Read the trace or experiment window.</li>
+        </ol>
+        <div class="welcome-actions">
+          <button id="welcome-start" class="btn btn-primary btn-sm" type="button">Start with Count</button>
+        </div>
+        <button class="welcome-dismiss" id="welcome-dismiss" type="button" aria-label="Dismiss welcome message" title="Dismiss">×</button>
+      </section>
 
-    <section class="surface model-browser-panel" aria-labelledby="models-heading">
-      <div class="panel-head">
-        <div>
-          <h2 id="models-heading">Models</h2>
-          <div class="panel-sub">Units 1–8 of the canonical ACT-R tutorial</div>
-        </div>
-      </div>
+      <section class="surface model-info" id="model-info" aria-live="polite" hidden></section>
+    </div>
+
+    <section class="surface model-browser-panel" aria-label="Tutorial models">
       <div class="panel-body model-browser">
-        <div class="model-search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <circle cx="11" cy="11" r="7"></circle>
-            <path d="m16.5 16.5 4 4" stroke-linecap="round"></path>
-          </svg>
-          <input id="model-search" type="search" placeholder="Search models or units" aria-label="Search models" autocomplete="off">
-        </div>
         <label class="sr-only" for="model-preset">Model</label>
         <select id="model-preset" class="sr-only" disabled tabindex="-1" aria-hidden="true">
           <option>Loading models...</option>
         </select>
         <div id="model-list" class="model-list" aria-live="polite"></div>
       </div>
-    </section>
-
-    <section class="surface model-info" id="model-info" aria-live="polite">
-      <div class="model-info-kicker">Loading models</div>
-      <h2>Getting ready</h2>
-      <p>The tutorial catalog is loading.</p>
     </section>
   </aside>
 
@@ -257,7 +241,7 @@
             <div class="editor-line-marker" id="editor-line-marker" hidden aria-hidden="true"></div>
             <pre class="editor-highlight" aria-hidden="true"><code id="editor-highlight"></code></pre>
             <label class="sr-only" for="model">Model source</label>
-            <textarea id="model" spellcheck="false" placeholder="Loading model..." autocomplete="off" autocapitalize="off" autocorrect="off" aria-describedby="paren-status error-status"></textarea>
+            <textarea id="model" spellcheck="false" placeholder="Choose a model to load its source." autocomplete="off" autocapitalize="off" autocorrect="off" aria-describedby="paren-status error-status"></textarea>
           </div>
         </div>
         <div class="outline" id="model-outline" hidden></div>
@@ -356,8 +340,6 @@
   <span>Runs entirely in your browser via WebAssembly.</span>
   <span class="footer-dot" aria-hidden="true"></span>
   <span>No model data leaves your machine.</span>
-  <span class="footer-spacer"></span>
-  <span>Deterministic for a given seed.</span>
 </footer>
 
 <dialog id="about-dialog" class="help-dialog" aria-labelledby="about-title">

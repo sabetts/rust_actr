@@ -34,6 +34,7 @@ let activeRun = null;
 let browser = null;
 let tabs = null;
 let guideViewer = null;
+let welcome = null;
 
 const editor = createEditor();
 const trace = setupTraceView();
@@ -458,8 +459,21 @@ async function loadSelectedModel() {
     return;
   }
   const option = select.selectedOptions[0];
-  const model = option ? models.get(option.value) : null;
-  if (!model) return;
+  const model = option?.value ? models.get(option.value) : null;
+  if (!model) {
+    modelRequest += 1;
+    selectedModel = null;
+    modelReady = false;
+    editor.setSource("");
+    $("reset-source").disabled = true;
+    showTaskPanel(null);
+    browser?.markSelected("");
+    renderModelInfo({ model: null });
+    welcome?.show();
+    setStatus("", "idle");
+    updateRunButton();
+    return;
+  }
 
   const request = ++modelRequest;
   modelReady = false;
@@ -482,6 +496,7 @@ async function loadSelectedModel() {
     showTaskPanel(model);
     browser?.markSelected(model.id);
     renderModelInfo({ model, unitId: model.unitId, descriptor: taskDescriptor(model) });
+    welcome?.hide();
     setStatus("", "idle");
   } catch (e) {
     if (request !== modelRequest) return;
@@ -493,6 +508,7 @@ async function loadSelectedModel() {
     $("task-panel").hidden = true;
     browser?.markSelected("");
     renderModelInfo({ model: null });
+    welcome?.show();
     setStatus("model failed to load", "error");
     trace.set(String(e) + "\n\nDid you run web/build.py --models-only?", { error: true });
   } finally {
@@ -522,6 +538,10 @@ async function loadModels() {
   }
 
   select.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choose a model";
+  select.append(placeholder);
   models = new Map();
   for (const group of groups) {
     const optgroup = document.createElement("optgroup");
@@ -537,15 +557,10 @@ async function loadModels() {
     }
     if (optgroup.children.length) select.append(optgroup);
   }
-  if (!select.options.length) throw new Error("model manifest has no models");
+  if (!models.size) throw new Error("model manifest has no models");
 
   select.disabled = false;
-  const defaultId = String(manifest.default || "");
-  if ([...select.options].some((option) => option.value === defaultId)) {
-    select.value = defaultId;
-  } else {
-    select.selectedIndex = 0;
-  }
+  select.value = "";
 
   browser = createModelBrowser({
     groups,
@@ -553,7 +568,6 @@ async function loadModels() {
     onOpenGuide: (payload) => guideViewer?.open(payload),
   });
   await loadSelectedModel();
-  browser.markSelected(selectedModel?.id || select.value);
 }
 
 (async function main() {
@@ -565,9 +579,8 @@ async function loadModels() {
   setupToolbar({ editor, trace, getModelId: () => selectedModel?.id });
   setupGlobalShortcuts({ run: () => void run(), trace });
 
-  setupWelcome({
+  welcome = setupWelcome({
     onStart: () => browser?.choose(RECOMMENDED_START),
-    onExplore: () => browser?.focusSearch(),
   });
 
   $("model-preset").addEventListener("change", () => {
@@ -604,7 +617,7 @@ async function loadModels() {
     return;
   }
 
-  setStatus(modelReady ? "" : "model failed to load", modelReady ? "idle" : "error");
+  setStatus("", "idle");
   updateRunButton();
   $("run").addEventListener("click", () => {
     void run();
