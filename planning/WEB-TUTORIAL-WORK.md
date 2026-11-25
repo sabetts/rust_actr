@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `3fa7b66`
+Latest relevant commit: `d74ed83`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -30,25 +30,20 @@ Human mode is implemented for:
 - Subitize
 - Fan and Fan no PM
 - Grouped Recall
+- Siegler
 - Alpha-Arithmetic
 - Building Sticks and Building Sticks (PPM)
 - Choice
 - Paired Associate
+- Past Tense
 - Utility Learning
 - Production Compilation
+- Categorize
 - Semantic Network
 - 1-Hit Blackjack
 
-Human mode remains to be added for:
-
-- Siegler
-- Past Tense
-- Categorize
-
-Shared touch-friendly prompts are in place for all human tasks: the new
-Grouped Recall, Utility Learning, and Semantic Network modes, plus the older
-keyboard-only Unit 2, Sperling, PM Issues, Subitize, Fan, Alpha-Arithmetic, and
-Production Compilation tasks. Keyboard shortcuts remain available.
+Shared touch-friendly prompts are in place for all human tasks. Keyboard
+shortcuts remain available.
 
 Paired Associate human mode intentionally keeps the canonical fixed-seed
 first-block behavior.
@@ -68,9 +63,14 @@ first-block behavior.
   feedback.
 - Semantic Network human mode compares human answers with the canonical model
   answers.
-- Existing touch controls in Choice, Paired Associate, 1-Hit Blackjack, and
-  Building Sticks remain task-specific; new shared controls are being added for
-  the remaining keyboard-only human tasks.
+- Siegler human mode plays bundled royalty-free digit MP3s, offers a Replay
+  sounds button, and falls back to visible digits. The audio files are kept
+  under `web/audio/` with their original Pixabay filenames; no zero file is
+  needed because Siegler only presents 1, 2, and 3.
+- Past Tense human mode presents all 22 verbs by default, accepts typed forms,
+  and scores regular/irregular accuracy with English spelling rules.
+- Categorize human mode shows the 10 training examples, converts test stimuli
+  to size words, and compares Category 1 choices with the tutorial data.
 
 ## 4. Completed checkpoints
 
@@ -94,16 +94,25 @@ first-block behavior.
   - Browser coverage for button and text-input human flows
   - Catalog highlights advertise the new Grouped, Utility, and Semantic human
     modes
+- `4970d60 web: add digit audio assets and playback helper`
+  - Royalty-free digit MP3s under `web/audio/`
+  - Cached WebAudio playback with replay support and visible fallback
+- `d74ed83 web: add siegler, past tense, and categorize human modes`
+  - Siegler spoken-digit trials with Replay sounds
+  - Past Tense typed inflections with regular/irregular scoring
+  - Categorize study and 14-item test flow
+  - Browser coverage for all three flows
 
 ## 5. Next checkpoints
 
-1. Remaining human modes: Siegler, Past Tense, Categorize.
-2. Longer-term engine follow-ups:
-   - Generic model-body `call-act-r-command` bridge to JS
-   - Reset-cleared runtime DM adds
-   - External task/setup files
-   - 1-Hit Blackjack alternate decks and `game1`
-   - Optional Web Worker execution for long runs
+All tutorial task models now have human mode. Remaining work is longer-term
+engine and platform follow-up:
+
+- Generic model-body `call-act-r-command` bridge to JS
+- Reset-cleared runtime DM adds
+- External task/setup files
+- 1-Hit Blackjack alternate decks and `game1`
+- Optional Web Worker execution for long runs
 
 ## 6. Verification
 
@@ -123,8 +132,8 @@ The browser tests require a built wasm/model tree:
 python rust_actr7/web/build.py
 ```
 
-Latest verified result: all four test commands pass after the Grouped Recall,
-Utility Learning, Semantic Network, and touch-control work.
+Latest verified result: all four test commands pass after the Siegler, Past
+Tense, Categorize, audio, and touch-control work.
 
 ## 7. Progress log
 
@@ -135,3 +144,6 @@ Utility Learning, Semantic Network, and touch-control work.
 - 2026-11-25: Retrofitted shared choice/text prompts into the remaining
   keyboard-only human tasks. Keyboard shortcuts remain available. Committed as
   `11baf17`.
+- 2026-11-25: Added bundled digit audio and human modes for Siegler, Past Tense,
+  and Categorize. Browser tests cover all three flows. Committed as `4970d60`
+  and `d74ed83`.
