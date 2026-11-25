@@ -98,8 +98,9 @@ The page is a no-build, dependency-free app shell over the same wasm model
 runner:
 
 - **Model browser** (`web/js/catalog.js`): Units 1-8 with unit blurbs,
-  per-model descriptions, and `Starter`, `Solution`, `Broken`, and `Demo`
-  badges. Units start collapsed and no model is selected on first load; the
+  per-model descriptions, `Task` tags for models with interactive human modes,
+  and `Starter`, `Solution`, `Broken`, and `Demo` badges. Units start collapsed
+  and no model is selected on first load; the
   selected-model card replaces the welcome card at the top of the sidebar. A
   hidden native `<select id="model-preset">` stays populated for compatibility
   and test selectors.

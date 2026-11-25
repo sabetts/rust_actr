@@ -287,6 +287,8 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
     return node;
   };
 
+  const taskTag = () => element("span", "task-tag", "Task");
+
   const guideIcon = (kind) => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -362,6 +364,7 @@ export function createModelBrowser({ groups, guides = {}, onOpenGuide }) {
       if (meta.isRecommended) text.append(element("span", "start-here", "Start here"));
 
       row.append(text);
+      if (model.task) row.append(taskTag());
       const tag = badge(meta.badge);
       if (tag) row.append(tag);
       row.addEventListener("click", () => choose(model.id));
@@ -581,6 +584,7 @@ export function renderModelInfo({ model, unitId }) {
   const description = element("p", null, meta.description);
   const tags = element("div", "model-tags");
 
+  if (model.task) tags.append(element("span", "task-tag", "Task"));
   if (meta.badge) tags.append(element("span", `badge badge-${meta.badge}`, BADGE_LABELS[meta.badge]));
 
   host.append(kicker, title, description);

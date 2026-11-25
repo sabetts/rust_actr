@@ -420,6 +420,12 @@ async function main() {
     }
 
     await selectModel("unit8-simple-ppm", "define-model test-ppm");
+    if ((await page.locator('[data-model-id="unit8-simple-ppm"] .task-tag').count()) !== 0) {
+      throw new Error("trace-only model row should not have a Task tag");
+    }
+    if ((await page.locator("#model-info .task-tag").count()) !== 0) {
+      throw new Error("trace-only model info should not have a Task tag");
+    }
     if (await page.locator("#model-info").isHidden()) {
       throw new Error("model info should be visible after selecting a model");
     }
@@ -734,6 +740,18 @@ async function main() {
     }
 
     await selectModel("unit2-demo2", "define-model demo2");
+    const demoRowTaskTag = (
+      (await page.locator('[data-model-id="unit2-demo2"] .task-tag').textContent()) || ""
+    ).trim();
+    if (demoRowTaskTag !== "Task") {
+      throw new Error(`task model row is missing its Task tag: ${demoRowTaskTag}`);
+    }
+    const demoInfoTaskTag = (
+      (await page.locator("#model-info .task-tag").textContent()) || ""
+    ).trim();
+    if (demoInfoTaskTag !== "Task") {
+      throw new Error(`task model info is missing its Task tag: ${demoInfoTaskTag}`);
+    }
     const demoControlWidths = await page.evaluate(() => {
       const controls = document.getElementById("task-controls");
       const input = document.getElementById("task-control-unit2-demo2-mode");
