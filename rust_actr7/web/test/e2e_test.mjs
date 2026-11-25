@@ -1141,6 +1141,34 @@ async function main() {
       throw new Error(`Categorize human answers were not recorded:\n${categorizeHumanReport}`);
     }
 
+    await selectModel("unit4-paired", "define-model paired");
+    await page.locator('.unit[data-unit="unit4"] .unit-guide').first().click();
+    await page.waitForFunction(
+      () => {
+        const tab = document.getElementById("tab-guide");
+        return (
+          tab &&
+          !tab.hidden &&
+          tab.getAttribute("aria-selected") === "true"
+        );
+      },
+      null,
+      { timeout: 5000 }
+    );
+
+    await selectModel("unit4-zbrodoff", "define-model zbrodoff");
+    if (await page.locator("#tab-guide").isHidden()) {
+      throw new Error("same-unit model selection should keep the guide open");
+    }
+
+    await selectModel("unit5-fan", "define-model fan");
+    if (!(await page.locator("#tab-guide").isHidden())) {
+      throw new Error("switching units should close the guide tab");
+    }
+    if (!(await page.locator("#panel-guide").isHidden())) {
+      throw new Error("switching units should close the guide panel");
+    }
+
     if (errors.length) {
       throw new Error(`browser errors:\n${errors.join("\n")}`);
     }

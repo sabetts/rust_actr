@@ -449,10 +449,11 @@ export function createGuideViewer({ tabs }) {
   const meta = $("guide-meta");
   const tabLabel = $("tab-guide-label");
   const closeButton = $("guide-close");
-  if (!frame || !tabs) return { open() {}, close() {} };
+  if (!frame || !tabs) return { open() {}, close() {}, closeForUnit() {} };
 
   let previousTab = "source";
   let frameObserver = null;
+  let guideUnitId = null;
 
   const fitFrame = () => {
     let doc = null;
@@ -522,6 +523,7 @@ export function createGuideViewer({ tabs }) {
     if (!guide?.path) return;
     const current = tabs.current();
     if (current && current !== "guide") previousTab = current;
+    guideUnitId = group?.id ?? null;
     if (title) title.textContent = guide.label;
     if (meta) {
       meta.textContent = `${group?.label || group?.id || "Unit"} · ${info?.title || ""}`.replace(
@@ -538,12 +540,14 @@ export function createGuideViewer({ tabs }) {
     tabs.activate("guide", { focus: true });
   };
 
-  const close = () => {
+  const close = ({ activate = true } = {}) => {
     tabs.setGuideEnabled(false);
-    const fallback = document.getElementById(`tab-${previousTab}`);
-    tabs.activate(fallback && !fallback.hidden ? previousTab : "source", {
-      focus: true,
-    });
+    if (activate) {
+      const fallback = document.getElementById(`tab-${previousTab}`);
+      tabs.activate(fallback && !fallback.hidden ? previousTab : "source", {
+        focus: true,
+      });
+    }
     frameObserver?.disconnect();
     frameObserver = null;
     frame.style.height = "";
@@ -553,11 +557,17 @@ export function createGuideViewer({ tabs }) {
     if (title) title.textContent = "Guide";
     if (meta) meta.textContent = "";
     if (tabLabel) tabLabel.textContent = "Guide";
+    guideUnitId = null;
+  };
+
+  const closeForUnit = (unitId) => {
+    if (!guideUnitId || guideUnitId === unitId) return;
+    close({ activate: tabs.current() === "guide" });
   };
 
   closeButton?.addEventListener("click", close);
 
-  return { open, close };
+  return { open, close, closeForUnit };
 }
 
 export function renderModelInfo({ model, unitId }) {

@@ -495,6 +495,7 @@ async function loadSelectedModel() {
     modelReady = true;
     showTaskPanel(model);
     browser?.markSelected(model.id);
+    guideViewer?.closeForUnit(model.unitId);
     renderModelInfo({ model, unitId: model.unitId });
     welcome?.hide();
     setStatus("", "idle");
