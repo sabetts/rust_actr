@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `2f0ddf0`
+Latest relevant commit: `11baf17`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -88,6 +88,10 @@ first-block behavior.
   - Utility fixed-trial A/B flow with two-second feedback
   - Semantic Yes/No/Don't Know flow with canonical model-answer comparison
   - Browser coverage for all three flows
+- `11baf17 web: add touch-friendly human task controls`
+  - Shared choice/text prompts in the remaining keyboard-only human tasks
+  - Auto-submit text prompts and page-level keyboard fallback
+  - Browser coverage for button and text-input human flows
 
 ## 5. Next checkpoints
 
@@ -126,4 +130,5 @@ Latest verified result before the next checkpoints: all four test commands pass.
   human modes, plus shared `human-controls.js` prompts. Browser tests cover the
   new flows. Committed as `2f0ddf0`.
 - 2026-11-25: Retrofitted shared choice/text prompts into the remaining
-  keyboard-only human tasks. Keyboard shortcuts remain available.
+  keyboard-only human tasks. Keyboard shortcuts remain available. Committed as
+  `11baf17`.
