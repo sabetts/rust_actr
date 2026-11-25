@@ -41,6 +41,7 @@ export function createChoicePrompt(actr, ctx, options = {}) {
   const {
     prompt = "",
     choices = [],
+    secondaryActions = [],
     timeoutMs = 0,
   } = options;
   const host = createHost(actr);
@@ -52,6 +53,7 @@ export function createChoicePrompt(actr, ctx, options = {}) {
   host?.append(bar);
 
   const keyMap = new Map();
+  const secondaryMap = new Map();
   let done = false;
   let timer = null;
   let resolvePromise = null;
@@ -84,9 +86,15 @@ export function createChoicePrompt(actr, ctx, options = {}) {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (isEditable(event.target)) return;
     const key = normalizeKey(event.key);
-    if (!keyMap.has(key)) return;
-    event.preventDefault();
-    finish(keyMap.get(key));
+    if (keyMap.has(key)) {
+      event.preventDefault();
+      finish(keyMap.get(key));
+      return;
+    }
+    if (secondaryMap.has(key)) {
+      event.preventDefault();
+      secondaryMap.get(key)();
+    }
   };
 
   for (const choice of choices) {
@@ -98,6 +106,23 @@ export function createChoicePrompt(actr, ctx, options = {}) {
     button.addEventListener("click", () => finish(choice.value));
     bar.append(button);
     keyMap.set(normalizeKey(choice.key ?? choice.value), choice.value);
+  }
+
+  for (const action of secondaryActions) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "human-choice secondary";
+    button.dataset.action = String(action.label ?? "");
+    button.textContent = String(action.label ?? "");
+    const run = () => {
+      if (done) return;
+      action.onClick?.();
+    };
+    button.addEventListener("click", run);
+    bar.append(button);
+    if (action.key) {
+      secondaryMap.set(normalizeKey(action.key), run);
+    }
   }
 
   document.addEventListener("keydown", onKey, true);

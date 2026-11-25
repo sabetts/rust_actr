@@ -2242,6 +2242,12 @@ select.input {
   gap: 6px;
 }
 
+.human-choice.secondary {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .human-text-row {
   display: flex;
   gap: 6px;
