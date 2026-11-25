@@ -1,5 +1,6 @@
 import {
   clearHint,
+  humanShuffle,
   isHuman,
   modeControl,
   showHint,
@@ -8,19 +9,23 @@ import {
 import { createTextPrompt } from "./human-controls.js";
 
 const EXPECTED = ["1", "2", "3", "4", "6", "5", "7", "8"];
-const STUDIED = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const STUDY_MS = 5000;
 
 async function humanRecall(actr, ctx) {
   actr.reset();
+  const studied = humanShuffle(DIGITS);
   const window = actr.openExpWindow("Grouped Recall", {
     visible: true,
     width: 400,
     height: 300,
   });
-  ["1 2 3", "4 5 6", "7 8 9"].forEach((line, index) => {
-    actr.addTextToExpWindow(window, line, { x: 80, y: 90 + index * 50 });
-  });
+  for (let i = 0; i < studied.length; i += 3) {
+    actr.addTextToExpWindow(window, studied.slice(i, i + 3).join(" "), {
+      x: 80,
+      y: 90 + (i / 3) * 50,
+    });
+  }
   showHint(actr, "Study the grouped list.");
 
   let prompt = null;
@@ -42,20 +47,20 @@ async function humanRecall(actr, ctx) {
     });
     const answer = await prompt.wait();
     const responses = answer ? [...answer.text] : [];
-    const correct = responses.filter((item, index) => item === STUDIED[index]).length;
-    const matches = responses.length === STUDIED.length
-      && responses.every((item, index) => item === STUDIED[index]);
+    const correct = responses.filter((item, index) => item === studied[index]).length;
+    const matches = responses.length === studied.length
+      && responses.every((item, index) => item === studied[index]);
     return {
       kind: "grouped",
       mode: "human",
       responses,
       correct,
-      total: STUDIED.length,
+      total: studied.length,
       report: [
         "Mode: human",
-        `STUDIED: ${STUDIED.join(" ")}`,
+        `STUDIED: ${studied.join(" ")}`,
         `RECALLED: ${responses.join(" ") || "none"}`,
-        `CORRECT: ${correct}/${STUDIED.length}`,
+        `CORRECT: ${correct}/${studied.length}`,
         `MATCH: ${matches ? "yes" : "no"}`,
       ].join("\n"),
     };

@@ -986,8 +986,20 @@ async function main() {
     await page.selectOption("#task-control-grouped-mode", "human");
     await page.click("#run");
     await waitForHumanWindow();
+    await page.waitForFunction(
+      () => document.querySelectorAll("#agi-window .agi-text").length === 3,
+      null,
+      { timeout: 5000 }
+    );
+    const groupedLines = await page
+      .locator("#agi-window .agi-text")
+      .allTextContents();
+    const groupedStudy = groupedLines.join("").replace(/\s+/g, "");
+    if (!/^[1-9]{9}$/.test(groupedStudy)) {
+      throw new Error(`Grouped study list looks wrong: ${groupedLines.join(" | ")}`);
+    }
     await page.waitForSelector(".human-text-row input", { timeout: 10000 });
-    await page.fill(".human-text-row input", "123456789");
+    await page.fill(".human-text-row input", groupedStudy);
     await page.locator(".human-text-row button").click();
     await waitForRunStatus("ok");
     const groupedReport = (await page.locator("#task-report").textContent()) || "";

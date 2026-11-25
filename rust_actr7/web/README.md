@@ -355,8 +355,8 @@ input is disabled and a help tooltip explains why.
   including Fan no PM, presents one 18-probe pass in a visible sentence window.
 - Grouped Recall uses the model's fixed seed, so it reports the expected
   `1 2 3 4 6 5 7 8` sequence with the commission and omission errors. Human
-  mode shows `123 / 456 / 789` for five seconds, then scores free recall
-  against the correct `1-9` sequence.
+  mode shuffles `1-9` into three groups of three, shows them for five seconds,
+  then scores free recall against the studied sequence.
 - Siegler presents digit sounds to the engine and reports a response matrix
   against the child data. Model-mode tones are not played through browser
   audio. Human mode plays bundled royalty-free digit MP3s, offers a Replay

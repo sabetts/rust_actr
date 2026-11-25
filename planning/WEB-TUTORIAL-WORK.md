@@ -57,8 +57,9 @@ first-block behavior.
   reveals which row to report.
 - Building Sticks human mode offers the two demo problems plus a full
   15-problem experiment.
-- Grouped Recall human mode presents `123 / 456 / 789` for five seconds, clears,
-  and scores free recall against the correct `1-9` sequence.
+- Grouped Recall human mode shuffles the digits `1-9` into three groups of
+  three, presents them for five seconds, clears, and scores free recall against
+  the studied sequence.
 - Utility Learning human mode uses fixed trials, A/B buttons, and two seconds of
   feedback.
 - Semantic Network human mode compares human answers with the canonical model
