@@ -92,6 +92,8 @@ first-block behavior.
   - Shared choice/text prompts in the remaining keyboard-only human tasks
   - Auto-submit text prompts and page-level keyboard fallback
   - Browser coverage for button and text-input human flows
+  - Catalog highlights advertise the new Grouped, Utility, and Semantic human
+    modes
 
 ## 5. Next checkpoints
 

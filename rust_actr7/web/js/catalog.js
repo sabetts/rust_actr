@@ -169,6 +169,7 @@ export const MODEL_META = {
     highlights: [
       "Fixed seed gives the tutorial sequence",
       "Commission and omission errors appear",
+      "Human mode studies and scores free recall",
     ],
   },
   "unit5-siegler": {
@@ -236,6 +237,7 @@ export const MODEL_META = {
     highlights: [
       "Uses its own fixed seed",
       "Watch utility values evolve",
+      "Human mode chooses A or B with feedback",
     ],
   },
   "unit7-production-compilation-issues": {
@@ -277,6 +279,7 @@ export const MODEL_META = {
     highlights: [
       "Choose g1, g2, g3, or all",
       "Each answer appears in the report",
+      "Human mode compares answers with the model",
     ],
   },
   "unit8-paired-dynamic": {
