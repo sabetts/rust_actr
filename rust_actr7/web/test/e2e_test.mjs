@@ -901,6 +901,76 @@ async function main() {
     await page.click("#cancel");
     await waitForRunStatus("cancelled");
 
+    await selectModel("unit5-grouped", "define-model grouped");
+    await page.selectOption("#task-control-grouped-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    await page.waitForSelector(".human-text-row input", { timeout: 10000 });
+    await page.fill(".human-text-row input", "123456789");
+    await page.locator(".human-text-row button").click();
+    await waitForRunStatus("ok");
+    const groupedReport = (await page.locator("#task-report").textContent()) || "";
+    if (!groupedReport.includes("Mode: human")) {
+      throw new Error(`Grouped human report missing mode:\n${groupedReport}`);
+    }
+    if (!groupedReport.includes("CORRECT: 9/9")) {
+      throw new Error(`Grouped human recall was not scored correctly:\n${groupedReport}`);
+    }
+
+    await selectModel(
+      "unit7-utility-learning-issues",
+      "define-model utility-learning-test"
+    );
+    await page.selectOption("#task-control-ul-issues-mode", "human");
+    await page.fill("#task-control-ul-issues-humanTrials", "2");
+    await page.click("#run");
+    await waitForHumanWindow();
+    await page
+      .locator(".human-choice-bar button")
+      .filter({ hasText: /^A$/ })
+      .click();
+    await page.waitForSelector(".human-choice-bar", { timeout: 10000 });
+    await page
+      .locator(".human-choice-bar button")
+      .filter({ hasText: /^B$/ })
+      .click();
+    await waitForRunStatus("ok");
+    const utilityReport = (await page.locator("#task-report").textContent()) || "";
+    if (!utilityReport.includes("Mode: human")) {
+      throw new Error(`Utility Learning human report missing mode:\n${utilityReport}`);
+    }
+    if (!utilityReport.includes("Choices: A 1, B 1")) {
+      throw new Error(`Utility Learning human choices were not recorded:\n${utilityReport}`);
+    }
+
+    await selectModel("unit8-semantic-dynamic", "define-model semantic");
+    await page.selectOption("#task-control-semantic-dynamic-mode", "human");
+    await page.click("#run");
+    await waitForHumanWindow();
+    for (const [index, label] of ["Yes", "Yes", "No"].entries()) {
+      await page.waitForSelector(".human-choice-bar", { timeout: 5000 });
+      await page
+        .locator(".human-choice-bar button")
+        .filter({ hasText: new RegExp(`^${label}$`) })
+        .click();
+      if (index < 2) {
+        await page.waitForFunction(
+          () => !document.querySelector(".human-choice-bar"),
+          null,
+          { timeout: 3000 }
+        );
+      }
+    }
+    await waitForRunStatus("ok");
+    const semanticHumanReport =
+      (await page.locator("#task-report").textContent()) || "";
+    if (!semanticHumanReport.includes("Mode: human")) {
+      throw new Error(`Semantic human report missing mode:\n${semanticHumanReport}`);
+    }
+    if (!semanticHumanReport.includes("model: DONT-KNOW")) {
+      throw new Error(`Semantic human report missing model comparison:\n${semanticHumanReport}`);
+    }
+
     if (errors.length) {
       throw new Error(`browser errors:\n${errors.join("\n")}`);
     }

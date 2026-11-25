@@ -2223,13 +2223,56 @@ select.input {
   transition: opacity var(--speed);
 }
 
+.human-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(500px, 100%);
+}
+
+.human-prompt {
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.human-choice-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.human-text-row {
+  display: flex;
+  gap: 6px;
+}
+
+.human-text-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.human-text-row input:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
 .paired-keypad.is-disabled,
 .choice-actions.is-disabled {
   opacity: 0.4;
 }
 
 .paired-keypad button,
-.choice-actions button {
+.choice-actions button,
+.human-choice-bar button,
+.human-text-row button {
   min-height: 38px;
   padding: 0 10px;
   border: 1px solid var(--border-strong);
@@ -2243,7 +2286,9 @@ select.input {
 }
 
 .paired-keypad button:hover,
-.choice-actions button:hover {
+.choice-actions button:hover,
+.human-choice-bar button:hover,
+.human-text-row button:hover {
   background: var(--surface-3);
 }
 
@@ -2256,7 +2301,9 @@ select.input {
 }
 
 .paired-keypad button:focus-visible,
-.choice-actions button:focus-visible {
+.choice-actions button:focus-visible,
+.human-choice-bar button:focus-visible,
+.human-text-row button:focus-visible {
   outline: none;
   box-shadow: var(--ring);
 }

@@ -225,6 +225,8 @@ in `rust_actr7/python`:
   Unit 8 PPM variant.
 - `web/js/tasks/human.js` - shared human-mode helpers for mode controls, keyboard
   input, wall-clock waits, hints, and tone playback.
+- `web/js/tasks/human-controls.js` - shared button, choice, and text prompts for
+  touch-friendly human input.
 - `web/js/tasks/index.js` - task registry with controls and default run times.
 - `web/js/main.js` - model menu, editor, task controls, reports, and run wiring.
 
@@ -283,6 +285,7 @@ are:
 - Subitize: model or human mode, and all 1-10 items or a single item count
 - PM Issues: model or human mode, and random, next, or previous prompt
 - Fan / Fan no PM: model or human mode; the retrieval term applies to model runs only
+- Grouped Recall: model or human mode
 - Siegler: number of sets (10 by default)
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
 - Building Sticks / Building Sticks (PPM): report, visible demo, or human mode; report runs, demo problem, and the human problem or full 15-problem experiment
@@ -290,10 +293,10 @@ are:
 - Paired Associate: model or human mode, pairs, blocks, runs, and model trace
 - Alpha-Arithmetic: model or human runner; model trial scope and runs; human trial scope; and single-problem fields
 - Past Tense: trial count and block size
-- Utility Learning Issues: uses the global run-time field
+- Utility Learning Issues: model or human mode; model runs use the global run-time field and human runs use a fixed trial count
 - Production Compilation Issues: model or human mode, games, and compilation toggle (games and compilation apply to model runs)
 - Categorize: experiment runs, offset, and four feature slot names
-- Semantic Network: question (`g1`, `g2`, `g3`, or all)
+- Semantic Network: model or human mode, and question (`g1`, `g2`, `g3`, or all)
 
 Controls initialize to task defaults and are disabled while a task runs.
 Switching tasks restores the values last used for that task. Controls can be
@@ -331,7 +334,9 @@ input is disabled and a help tooltip explains why.
   no rewards, and no U-shaped learning. The block table and chart diagnose that
   state rather than presenting a solution.
 - Utility Learning Issues uses its own fixed seed and begins from a
-  model-scheduled event, so it is not reset with the page seed.
+  model-scheduled event, so it is not reset with the page seed. Human mode
+  presents A/B choices, gives feedback for two seconds, and uses a fixed trial
+  count instead of the global run time.
 - Production Compilation Issues runs the canonical starter. The compilation
   toggle applies `:epl`; the tutorial's later utility and reward edits are not
   baked into the model. Human mode runs one 150-trial game.
@@ -340,7 +345,9 @@ input is disabled and a help tooltip explains why.
   with correlation and mean deviation against the tutorial data. Human mode,
   including Fan no PM, presents one 18-probe pass in a visible sentence window.
 - Grouped Recall uses the model's fixed seed, so it reports the expected
-  `1 2 3 4 6 5 7 8` sequence with the commission and omission errors.
+  `1 2 3 4 6 5 7 8` sequence with the commission and omission errors. Human
+  mode shows `123 / 456 / 789` for five seconds, then scores free recall
+  against the correct `1-9` sequence.
 - Siegler presents digit sounds to the engine and reports a response matrix
   against the child data. Tones are not played through browser audio.
 - 1-Hit Blackjack can run automated learning blocks or a human-vs-model game.
@@ -360,7 +367,9 @@ input is disabled and a help tooltip explains why.
 - Simple PPM and Simple Dynamic have no task panel; running them shows the
   tutorial trace.
 - Semantic Network runs the tutorial `g1` -> `g2` -> `g2` -> `g3` sequence and
-  reports each answer, or runs a single selected question.
+  reports each answer, or runs a single selected question. Human mode asks the
+  g1/g2/g3 questions with Yes/No/Don't Know buttons and compares the answers
+  with the canonical model answers.
 - Paired Associate (Dynamic) uses the shared paired-associate task and enables
   production compilation in the model.
 - Categorize is the Unit 8 starter: its model has no productions. The task
@@ -380,10 +389,10 @@ input is disabled and a help tooltip explains why.
   prelude. The generic host-command bridge is a known follow-up; it would also
   need a reset-cleared runtime DM add.
 - Human interaction is implemented for Unit 2 Demo2 and Assignment, Sperling,
-  PM Issues, Subitize, Fan and Fan no PM, Alpha-Arithmetic, Building Sticks
-  (including the PPM variant), Choice, Paired Associate, Production
-  Compilation, and 1-Hit Blackjack. Grouped Recall, Siegler, Past Tense,
-  Utility Learning, Categorize, and Semantic Network remain model-only.
+  PM Issues, Subitize, Fan and Fan no PM, Grouped Recall, Alpha-Arithmetic,
+  Building Sticks (including the PPM variant), Choice, Paired Associate,
+  Utility Learning, Production Compilation, Semantic Network, and 1-Hit
+  Blackjack. Siegler, Past Tense, and Categorize remain model-only.
 - The AGI surface covers the item and device features needed by the current
   tutorial units; more behavior can be added as later units need it.
 - Runs happen on the browser main thread. The runner yields for progress and

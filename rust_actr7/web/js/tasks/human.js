@@ -30,6 +30,10 @@ export function humanRandomInt(limit) {
   return Math.floor(Math.random() * size);
 }
 
+export function humanRandomFloat() {
+  return Math.random();
+}
+
 export function humanShuffle(items) {
   const values = Array.from(items || []);
   for (let i = values.length - 1; i > 0; i -= 1) {

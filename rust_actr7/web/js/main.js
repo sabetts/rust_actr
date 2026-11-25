@@ -97,7 +97,12 @@ function summaryText(result) {
   if (result.kind === "fan" || result.kind === "fan-no-pm") {
     return `Fan${result.mode === "human" ? " (human)" : ""}: correlation ${Number(result.correlation).toFixed(3)} - mean deviation ${Number(result.meanDeviation).toFixed(3)}`;
   }
-  if (result.kind === "grouped") return `Grouped Recall: ${result.responses.length} response(s)`;
+  if (result.kind === "grouped") {
+    if (result.mode === "human") {
+      return `Grouped Recall (human): ${result.correct}/${result.total} correct`;
+    }
+    return `Grouped Recall: ${result.responses.length} response(s)`;
+  }
   if (result.kind === "siegler") return `Siegler: correlation ${Number(result.correlation).toFixed(3)}`;
   if (result.kind === "bst") {
     return `${result.label || "Building Sticks"}: ${result.mode === "human" ? "human" : "experiment"} complete`;
@@ -116,7 +121,11 @@ function summaryText(result) {
     return `Alpha-Arithmetic: ${who}experiment complete`;
   }
   if (result.kind === "past-tense") return "Past Tense: block report complete";
-  if (result.kind === "ul-issues") return "Utility Learning: run complete";
+  if (result.kind === "ul-issues") {
+    return result.mode === "human"
+      ? `Utility Learning: human run complete (${result.trials} trials)`
+      : "Utility Learning: run complete";
+  }
   if (result.kind === "pcomp-issues") {
     return result.mode === "human"
       ? "Production Compilation: human game complete"
@@ -125,7 +134,11 @@ function summaryText(result) {
   if (result.kind === "categorize") {
     return `Categorize: ${result.answered}/${result.total} responded`;
   }
-  if (result.kind === "semantic-dynamic") return "Semantic Network: run complete";
+  if (result.kind === "semantic-dynamic") {
+    return result.mode === "human"
+      ? "Semantic Network: human run complete"
+      : "Semantic Network: run complete";
+  }
   if (result.kind === "onehit") {
     return result.mode === "play" ? "1-Hit Blackjack: played against model" : "1-Hit Blackjack: learning run complete";
   }
