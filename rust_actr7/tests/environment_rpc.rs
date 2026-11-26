@@ -326,6 +326,23 @@ fn environment_nil_model_sentinel_runs_against_the_current_model() {
 }
 
 #[test]
+fn no_history_data_is_an_empty_result_for_the_tcl_client() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    // The Tcl Environment's history viewers test `$any == "nil" || $any == ""`;
+    // a JSON `false` would be treated as data and start a fetch.
+    let available = c.eval_ok(
+        "history-data-available",
+        None,
+        vec![Json::Str("trace-history".into())],
+    );
+    assert!(
+        available.is_empty(),
+        "no-data must be an empty result, got {available:?}"
+    );
+}
+
+#[test]
 fn reload_reads_the_file_from_disk_and_loads_another_model() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");

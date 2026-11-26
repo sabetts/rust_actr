@@ -2420,7 +2420,15 @@ impl Session {
                         !filter_history_records(r, args.get(1), args.get(2), detail).is_empty()
                     })
                     .unwrap_or(false);
-                Ok(vec![Json::Bool(any)])
+                // Return *no values* when there is no data, not `[false]`.
+                // The Tcl Environment tests the result with
+                // `if {$any == "nil" || $any == ""}`, so a JSON false looks
+                // like data and sends it into the incremental fetch path.
+                if any {
+                    Ok(vec![Json::Bool(true)])
+                } else {
+                    Ok(Vec::new())
+                }
             }
             // Start an incremental transfer of a history stream: returns an id
             // whose chunks are fetched with `get-incremental-history-data`.
@@ -6738,7 +6746,7 @@ mod tests {
                 &mut r,
             )
             .unwrap();
-        assert_eq!(none[0], Json::Bool(false));
+        assert!(none.is_empty(), "no-data must be an empty result for Tcl");
 
         let some = s
             .evaluate(
@@ -8012,7 +8020,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count_history[0], Json::Bool(true));
-        assert_eq!(addition_history[0], Json::Bool(false));
+        assert!(addition_history.is_empty(), "no-data must be an empty result");
         assert_eq!(
             s.evaluate("current-model", None, &[], &mut r).unwrap(),
             vec![Json::Str("ADDITION".into())]
