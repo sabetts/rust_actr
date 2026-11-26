@@ -289,7 +289,7 @@ are:
 - Subitize: model or human mode, and all 1-10 items or a single item count
 - PM Issues: model or human mode, and random, next, or previous prompt
 - Fan / Fan no PM: model or human mode; the retrieval term applies to model runs only
-- Grouped Recall: model or human mode; human trial count (6 by default)
+- Grouped Recall: model or human mode; human list mode (randomized practice or canonical) and human trial count (3 by default, practice only)
 - Siegler: model or human mode; model sets (10 by default) or human sets (2 by default)
 - 1-Hit Blackjack: learn or play mode, games, hands, and human decision time
 - Building Sticks / Building Sticks (PPM): report, visible demo, or human mode; report runs, demo problem, and the human problem or full 15-problem experiment
@@ -359,10 +359,11 @@ input is disabled and a help tooltip explains why.
   with `Probe X/18` progress; model mode shows probe progress as well.
 - Grouped Recall uses the model's fixed seed, so it reports the expected
   `1 2 3 4 6 5 7 8` sequence with the commission and omission errors. Human
-  mode runs a configurable number of randomized grouped trials (6 by default),
-  showing three groups of three for five seconds and scoring free recall
-  against each studied sequence. The report includes per-trial recall and the
-  aggregate mean and exact-match count.
+  mode offers randomized practice (3 trials by default, configurable) or the
+  canonical one-trial list `123 / 456 / 789`. Both show three groups of three
+  for five seconds and score free recall against the studied sequence. The
+  report includes per-trial recall and the aggregate mean and exact-match
+  count.
 - Siegler presents digit sounds to the engine and reports a response matrix
   against the child data. Model-mode tones are not played through browser
   audio. Human mode plays bundled royalty-free digit MP3s, offers a Replay

@@ -1100,6 +1100,36 @@ async function main() {
       throw new Error(`Grouped human exact matches were not recorded:\n${groupedReport}`);
     }
 
+    await page.selectOption("#task-control-grouped-humanListMode", "canonical");
+    if (!(await page.locator("#task-control-grouped-humanTrials").isHidden())) {
+      throw new Error("Grouped canonical mode should hide the human trial count");
+    }
+    await page.click("#run");
+    await waitForHumanWindow();
+    await page.waitForFunction(
+      () => document.querySelectorAll("#agi-window .agi-text").length === 3,
+      null,
+      { timeout: 10000 }
+    );
+    const canonicalLines = await page
+      .locator("#agi-window .agi-text")
+      .allTextContents();
+    const canonicalStudy = canonicalLines.join("").replace(/\s+/g, "");
+    if (canonicalStudy !== "123456789") {
+      throw new Error(`Grouped canonical list looks wrong: ${canonicalLines.join(" | ")}`);
+    }
+    await page.waitForSelector(".human-text-row input", { timeout: 10000 });
+    await page.fill(".human-text-row input", "123456789");
+    await page.locator(".human-text-row button").click();
+    await waitForRunStatus("ok");
+    const canonicalReport = (await page.locator("#task-report").textContent()) || "";
+    if (!canonicalReport.includes("Lists: canonical (123 / 456 / 789)")) {
+      throw new Error(`Grouped canonical report missing list mode:\n${canonicalReport}`);
+    }
+    if (!canonicalReport.includes("Trials: 1")) {
+      throw new Error(`Grouped canonical run should use one trial:\n${canonicalReport}`);
+    }
+
     await selectModel(
       "unit7-utility-learning-issues",
       "define-model utility-learning-test"

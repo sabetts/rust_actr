@@ -10,12 +10,12 @@ import { createTextPrompt } from "./human-controls.js";
 
 const EXPECTED = ["1", "2", "3", "4", "6", "5", "7", "8"];
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const CANONICAL = DIGITS.slice();
 const STUDY_MS = 5000;
-const DEFAULT_TRIALS = 6;
+const DEFAULT_TRIALS = 3;
 
-async function humanTrial(actr, ctx, window, trial, trialCount) {
+async function humanTrial(actr, ctx, window, studied, trial, trialCount) {
   actr.clearExpWindow(window);
-  const studied = humanShuffle(DIGITS);
   for (let i = 0; i < studied.length; i += 3) {
     actr.addTextToExpWindow(window, studied.slice(i, i + 3).join(" "), {
       x: 80,
@@ -55,10 +55,13 @@ async function humanTrial(actr, ctx, window, trial, trialCount) {
 }
 
 async function humanRecall(actr, ctx) {
-  const trials = Math.max(
-    1,
-    Math.min(20, Number(ctx.controls.humanTrials) || DEFAULT_TRIALS)
-  );
+  const canonical = String(ctx.controls.humanListMode || "practice") === "canonical";
+  const trials = canonical
+    ? 1
+    : Math.max(
+      1,
+      Math.min(20, Number(ctx.controls.humanTrials) || DEFAULT_TRIALS)
+    );
   actr.reset();
   const window = actr.openExpWindow("Grouped Recall", {
     visible: true,
@@ -68,7 +71,8 @@ async function humanRecall(actr, ctx) {
   const results = [];
   try {
     for (let trial = 1; trial <= trials; trial += 1) {
-      results.push(await humanTrial(actr, ctx, window, trial, trials));
+      const studied = canonical ? CANONICAL : humanShuffle(DIGITS);
+      results.push(await humanTrial(actr, ctx, window, studied, trial, trials));
       if (trial < trials) await waitReal(750, ctx.signal);
     }
   } finally {
@@ -93,6 +97,7 @@ async function humanRecall(actr, ctx) {
     matches,
     report: [
       "Mode: human",
+      `Lists: ${canonical ? "canonical (123 / 456 / 789)" : "randomized practice"}`,
       `Trials: ${trials}`,
       "",
       ...rows,
@@ -141,6 +146,17 @@ export const groupedTask = {
   controls: [
     modeControl("model"),
     {
+      id: "humanListMode",
+      label: "Human list",
+      type: "select",
+      options: [
+        ["practice", "Randomized practice"],
+        ["canonical", "Canonical 1-9"],
+      ],
+      default: "practice",
+      showWhen: (values) => values.mode === "human",
+    },
+    {
       id: "humanTrials",
       label: "Human trials",
       type: "number",
@@ -148,7 +164,8 @@ export const groupedTask = {
       max: 20,
       step: 1,
       default: DEFAULT_TRIALS,
-      showWhen: (values) => values.mode === "human",
+      showWhen: (values) =>
+        values.mode === "human" && values.humanListMode !== "canonical",
     },
   ],
   runSeconds: 20,
