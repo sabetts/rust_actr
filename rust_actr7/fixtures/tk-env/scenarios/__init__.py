@@ -2,7 +2,14 @@
 
 
 def all_scenarios():
-    from . import control_panel, dispatcher, histories, trace_history, viewers
+    from . import (
+        control_panel,
+        dispatcher,
+        histories,
+        stepper,
+        trace_history,
+        viewers,
+    )
 
     scenarios = []
     scenarios.extend(trace_history.SCENARIOS)
@@ -10,4 +17,5 @@ def all_scenarios():
     scenarios.extend(viewers.SCENARIOS)
     scenarios.extend(histories.SCENARIOS)
     scenarios.extend(dispatcher.SCENARIOS)
+    scenarios.extend(stepper.SCENARIOS)
     return scenarios

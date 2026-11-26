@@ -287,6 +287,46 @@ class Context:
         self.root.update_idletasks()
         self.root.update()
 
+    def run_async(self, name: str = "run", model: str = "nil", *params) -> None:
+        """Start an RPC call from inside the Tk event loop.
+
+        The call is scheduled with ``after 0`` so the main thread can keep
+        pumping callbacks (stepper pauses, window ops) while the server has the
+        request in flight.
+        """
+        assert self.tcl is not None
+        plist = self.tcl.call("list", *[str(p) for p in params])
+        script = (
+            "set ::async_done 0\n"
+            f"set ::async_result [send_cmd_with_result evaluate "
+            f"[list {name} {model} {plist}]]\n"
+            "set ::async_done 1\n"
+        )
+        self.tcl.call("after", "0", script)
+
+    def wait_async(self, timeout: float = 30.0) -> tuple:
+        assert self.tcl is not None
+        self.wait_until(
+            lambda: self.eval("info exists ::async_done") == "1"
+            and str(self.tcl.call("set", "::async_done")) == "1",
+            timeout,
+        )
+        return self._tuple(self.tcl.call("set", "::async_result"))
+
+    def canvas_items(self, widget: str, tag: str | None = None) -> tuple:
+        assert self.tcl is not None
+        if tag is None:
+            return self._tuple(self.tcl.call(widget, "find", "all"))
+        return self._tuple(self.tcl.call(widget, "find", "withtag", tag))
+
+    def canvas_text(self, widget: str, item: str) -> str:
+        assert self.tcl is not None
+        return str(self.tcl.call(widget, "itemcget", item, "-text"))
+
+    def canvas_tags(self, widget: str, item: str) -> tuple:
+        assert self.tcl is not None
+        return self._tuple(self.tcl.call(widget, "gettags", item))
+
     def wait_until(self, predicate: Callable[[], bool], timeout: float = 10.0) -> None:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:

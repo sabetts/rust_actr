@@ -9,6 +9,9 @@ set list_font "TkFixedFont"
 set button_font "TkDefaultFont"
 set label_font "TkDefaultFont"
 set intro_s_font "TkDefaultFont"
+set checkbox_font "TkDefaultFont"
+set menu_font "TkDefaultFont"
+set graphic_trace_font "TkDefaultFont"
 set global_status ""
 set local_connection 1
 set up_and_running 0
@@ -83,6 +86,16 @@ proc append_data {args} {}
 proc console {args} {}
 proc set_return_result {args} {}
 proc clean_exit {} {}
+proc update_registered_windows {} {}
+
+proc multi_scroll {wins args} {
+  foreach w $wins { $w {*}$args }
+}
+
+proc sync_scroll {wins scrollbar args} {
+  foreach w $wins { $w yview moveto [lindex $args 0] }
+  $scrollbar set {*}$args
+}
 
 proc report_status {s} {
   set ::global_status $s
