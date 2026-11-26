@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `d74ed83`
+Latest relevant commit: `994fa6a`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -104,6 +104,11 @@ first-block behavior.
   - Past Tense typed inflections with regular/irregular scoring
   - Categorize study and 14-item test flow
   - Browser coverage for all three flows
+- `994fa6a web: add trial progress counters across tasks`
+  - Configurable Production Compilation human trial count
+  - Trial/block/problem/probe/item/hand progress displays
+  - Dynamic block reporting for shorter Production Compilation runs
+  - Browser coverage for the new progress displays
 
 ## 5. Next checkpoints
 
@@ -134,8 +139,8 @@ The browser tests require a built wasm/model tree:
 python rust_actr7/web/build.py
 ```
 
-Latest verified result: all four test commands pass after the Siegler, Past
-Tense, Categorize, audio, and touch-control work.
+Latest verified result: all four test commands pass after the progress-counter
+pass and the Siegler, Past Tense, Categorize, audio, and touch-control work.
 
 ## 7. Progress log
 
@@ -154,3 +159,6 @@ Tense, Categorize, audio, and touch-control work.
   replaces the welcome card at the top of the sidebar; the model search, its
   heading, the welcome card's Explore button, and the footer seed note are
   removed. Browser coverage updated for the empty state and card placement.
+- 2026-11-25: Added configurable Production Compilation human trials and
+  trial/block/problem/probe/item/hand progress counters across the remaining
+  tasks. Browser coverage updated. Committed as `994fa6a`.
