@@ -730,6 +730,31 @@ impl Session {
         {
             self.remove_model(&name);
         }
+
+        // Keep only the trace that has not been delivered yet. Rebuilding from
+        // each engine's `out_since(0)` would replay a previous run into a
+        // client's load monitor (the Environment's "SUCCESSFUL Load" popup).
+        let was_multi = self.model_order.len() > 1;
+        let pending_multi = was_multi.then(|| {
+            let pos = self.global_trace_pos.min(self.global_trace.len());
+            (
+                self.global_trace[pos..].to_vec(),
+                self.global_trace_kinds[pos.min(self.global_trace_kinds.len())..].to_vec(),
+                self.global_trace_levels[pos.min(self.global_trace_levels.len())..].to_vec(),
+            )
+        });
+        let pending_single = (!was_multi && self.model_order.len() == 1).then(|| {
+            let old_name = self.current_model.clone().unwrap_or_default();
+            let pos = self.trace_pos;
+            let eng = self.engine.as_ref().expect("model_order has an engine");
+            (
+                old_name,
+                eng.out_since(pos),
+                eng.out_kinds_since(pos),
+                eng.out_levels_since(pos),
+            )
+        });
+
         let mut eng = self.make_engine(&def)?;
         self.install_stepper_hook(&name, &mut eng);
         self.defs.push(def);
@@ -744,10 +769,69 @@ impl Session {
             }
         }
         self.engine = Some(eng);
-        self.current_model = Some(name);
+        self.current_model = Some(name.clone());
         self.sync_multi_model_flags();
-        self.rebuild_global_trace();
+        self.seed_global_trace_after_add(&name, pending_multi, pending_single);
         Ok(())
+    }
+
+    /// Seed the global trace after adding `name`, retaining only lines that
+    /// were not delivered before the add. Older engines' delivered prefixes are
+    /// never re-read; the new engine's output is delivered from index 0.
+    fn seed_global_trace_after_add(
+        &mut self,
+        name: &str,
+        pending_multi: Option<(Vec<String>, Vec<TraceKind>, Vec<Out>)>,
+        pending_single: Option<(String, Vec<String>, Vec<TraceKind>, Vec<Out>)>,
+    ) {
+        if self.model_order.len() <= 1 {
+            self.global_trace.clear();
+            self.global_trace_kinds.clear();
+            self.global_trace_levels.clear();
+            self.global_trace_pos = 0;
+            // The engine is fresh, so none of its output has been delivered.
+            self.trace_pos = 0;
+            return;
+        }
+        let model_width =
+            crate::engine::multi::model_column_width(self.model_order.iter().map(String::len));
+        let mut lines = Vec::new();
+        let mut kinds = Vec::new();
+        let mut levels = Vec::new();
+        if let Some((l, k, v)) = pending_multi {
+            lines.extend(l);
+            kinds.extend(k);
+            levels.extend(v);
+        }
+        if let Some((old_name, l, k, v)) = pending_single {
+            for (i, line) in l.into_iter().enumerate() {
+                lines.push(crate::engine::multi::with_model_column(
+                    &line,
+                    &old_name,
+                    model_width,
+                ));
+                kinds.push(k.get(i).copied().unwrap_or(TraceKind::Model));
+                levels.push(v.get(i).copied().unwrap_or(Out::Low));
+            }
+        }
+        if let Some(eng) = &self.engine {
+            let new_lines = eng.out_since(0);
+            let new_kinds = eng.out_kinds_since(0);
+            let new_levels = eng.out_levels_since(0);
+            for (i, line) in new_lines.into_iter().enumerate() {
+                lines.push(crate::engine::multi::with_model_column(
+                    &line,
+                    name,
+                    model_width,
+                ));
+                kinds.push(new_kinds.get(i).copied().unwrap_or(TraceKind::Model));
+                levels.push(new_levels.get(i).copied().unwrap_or(Out::Low));
+            }
+        }
+        self.global_trace = lines;
+        self.global_trace_kinds = kinds;
+        self.global_trace_levels = levels;
+        self.global_trace_pos = 0;
     }
 
     fn activate_model(&mut self, name: &str) -> Result<(), String> {
@@ -8059,6 +8143,45 @@ mod tests {
             )
             .unwrap();
         assert_eq!(chunk_p[0], Json::Bool(true));
+    }
+
+    #[test]
+    fn loading_a_second_model_without_clear_all_does_not_replay_run_trace() {
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        // `load_source` does not execute a top-level `(clear-all)`, so this is
+        // the plain append path a model-addition takes.
+        s.load_source(
+            r#"
+(define-model first-model
+  (sgp :v t)
+  (chunk-type goal state)
+  (add-dm (start isa goal state 0))
+  (goal-focus start))
+"#,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Int(1)], &mut r).unwrap();
+        let run_trace = s.take_trace();
+        assert!(!run_trace.is_empty(), "run produced no trace");
+
+        s.load_source(
+            r#"
+(define-model second-model
+  (sgp :v t)
+  (chunk-type goal state)
+  (add-dm (start isa goal state 0))
+  (goal-focus start))
+"#,
+        )
+        .unwrap();
+        let load_trace = s.take_trace();
+        assert!(
+            load_trace
+                .iter()
+                .all(|line| !line.contains("Stopped because")),
+            "adding a model replayed the run trace: {load_trace:?}"
+        );
     }
 
     #[test]
