@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use super::builtin_docs::builtin_doc;
 use crate::engine::module::{ModuleFactory, ModuleSet};
 use crate::engine::{
     DeviceSetup, Engine, EngineError, EventHook, EventView, HookValue, PpmHookFn, PreResult,
@@ -47,13 +48,13 @@ pub struct Command {
 }
 
 impl Command {
-    fn builtin() -> Command {
+    fn builtin(doc: &str) -> Command {
         Command {
             owner: Owner::Builtin,
             before: Vec::new(),
             after: Vec::new(),
             simple: Vec::new(),
-            doc: String::new(),
+            doc: doc.to_string(),
             connection: None,
         }
     }
@@ -533,7 +534,8 @@ impl Session {
     pub fn new(seed: (u64, u64)) -> Session {
         let mut commands = BTreeMap::new();
         for name in BUILTINS {
-            commands.insert((*name).to_string(), Command::builtin());
+            let doc = builtin_doc(name).unwrap_or("Built-in ACT-R command.");
+            commands.insert((*name).to_string(), Command::builtin(doc));
         }
         Session {
             model_files: Vec::new(),
