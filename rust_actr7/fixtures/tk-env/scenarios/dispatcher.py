@@ -32,6 +32,20 @@ def dispatcher(ctx: Context) -> None:
     # The address/counter labels should have been filled from list-connections.
     assert ctx.get_global(".dispatcher.li0.value").strip()
 
+    # The internal connection's built-in commands mirror the Lisp server's
+    # add-act-r-command documentation; add-dm must not show a blank pane.
+    internal = [str(n) for n in names].index("internal ACT-R commands")
+    ctx.tcl.call(".dispatcher.list_frame_1.list_box", "selection", "clear", "0", "end")
+    ctx.tcl.call(".dispatcher.list_frame_1.list_box", "selection", "set", str(internal))
+    ctx.eval("select_dispatcher_name")
+    builtins = [str(c) for c in ctx.list_items(".dispatcher.list_frame.list_box")]
+    add_dm = builtins.index("add-dm")
+    ctx.tcl.call(".dispatcher.list_frame.list_box", "selection", "clear", "0", "end")
+    ctx.tcl.call(".dispatcher.list_frame.list_box", "selection", "set", str(add_dm))
+    ctx.eval("select_command_name")
+    doc = str(ctx.get_global(".dispatcher.d2.value"))
+    assert "declarative memory" in doc, doc
+
 
 SCENARIOS = [
     Scenario("dispatcher", dispatcher, tags=("dispatcher", "commands")),

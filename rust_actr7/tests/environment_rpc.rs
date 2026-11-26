@@ -670,6 +670,24 @@ fn multi_model_run_emits_both_model_columns() {
 }
 
 #[test]
+fn builtin_commands_expose_lisp_documentation() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+
+    let checked = c.check("add-dm");
+    assert!(
+        matches!(checked.first(), Some(Json::Bool(true))),
+        "{checked:?}"
+    );
+    let doc = checked.get(2).and_then(|v| v.as_str()).unwrap_or("");
+    assert!(doc.contains("declarative memory"), "add-dm doc: {doc:?}");
+
+    let checked = c.check("goal-focus");
+    let doc = checked.get(2).and_then(|v| v.as_str()).unwrap_or("");
+    assert!(doc.contains("goal buffer"), "goal-focus doc: {doc:?}");
+}
+
+#[test]
 fn viewers_connections_and_history_round_trip() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
