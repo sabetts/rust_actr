@@ -6673,7 +6673,18 @@ mod tests {
             Json::Bool(true)
         );
 
-        let verb = |o: &Vec<Json>| o.first().and_then(|x| x.as_str()).unwrap_or("").to_string();
+        // Window ops are wrapped in one list for the Tcl handler.
+        let flat = |o: &Vec<Json>| match o.first() {
+            Some(Json::Arr(a)) => a.clone(),
+            _ => o.clone(),
+        };
+        let verb = |o: &Vec<Json>| {
+            flat(o)
+                .first()
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .to_string()
+        };
         s.evaluate(
             "open-exp-window",
             None,
@@ -6702,7 +6713,11 @@ mod tests {
             &mut r,
         )
         .unwrap();
-        let text = r.ops.iter().find(|o| verb(o) == "text").expect("text op");
+        let text = r
+            .ops
+            .iter()
+            .find_map(|o| (verb(o) == "text").then(|| flat(o)))
+            .expect("text op");
         assert!(text[2]
             .as_str()
             .map(|s| s.starts_with("TEXT-VDI"))
