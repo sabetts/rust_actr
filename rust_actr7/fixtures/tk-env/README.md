@@ -69,10 +69,18 @@ Add a module under `scenarios/` exporting `SCENARIOS` and register it in
 
 - `trace-history` — Text Trace viewer: empty history, load `addition.lisp`,
   run, low/ALL detail fetch, incremental termination.
+- `control-panel` — Load button, creating-model menu update, Run/Reset/Reload/
+  Stop via the real control-panel procs.
+- `viewers` — Declarative, procedural, buffer, and parameter viewers.
+- `histories` — Retrieval and buffer history viewers, selection/detail panes.
+- `dispatcher` — Connections, per-connection commands, and documentation.
 
-More areas (control panel, viewers, other histories, stepper, windows) are
-added incrementally.  Prefer semantic assertions (non-empty, contains a known
-production/chunk, ordering) over brittle full-window text.
+`--audit` checks Tcl command literals against the live server registry.
+
+More areas (stepper, experiment windows/AGI, production histories/graphs,
+BOLD, perceptual histories) are added incrementally.  Prefer semantic
+assertions (non-empty, contains a known production/chunk, ordering) over brittle
+full-window text.
 
 ## Limitations
 

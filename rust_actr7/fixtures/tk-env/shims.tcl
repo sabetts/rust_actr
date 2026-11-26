@@ -33,6 +33,13 @@ array set options_array {
   edit_warn 0
   update_when_stepped 1
   use_env_window 1
+  sort_lists 0
+}
+
+array set gui_options {
+  p_selected "#44da22"
+  p_matched "#fca31d"
+  p_mismatched "#e1031e"
 }
 
 # The dialogs place their buttons into this frame hierarchy.
