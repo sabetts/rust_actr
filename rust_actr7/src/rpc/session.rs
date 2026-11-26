@@ -509,6 +509,15 @@ struct Stepper {
     last_action: String,
 }
 
+/// The Tcl Environment sends the literal string `"nil"` as its "no model
+/// selected" sentinel (`new-server.tcl:292`, `currently_selected_model`), and
+/// its JSON encoder leaves `"nil"` as a string. Treat it (and an empty name)
+/// like the absent/JSON-null model so a command runs against the current model
+/// instead of trying to activate a model literally named `nil`.
+fn normalize_model_name(model: Option<&str>) -> Option<&str> {
+    model.filter(|m| !m.is_empty() && !m.eq_ignore_ascii_case("nil"))
+}
+
 /// Why one [`Session::run_slice_reason`] call returned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStop {
@@ -1346,6 +1355,7 @@ impl Session {
         args: &[Json],
         remote: &mut dyn Remote,
     ) -> Result<Vec<Json>, String> {
+        let model = normalize_model_name(model);
         let c = self.commands.get(name).cloned().ok_or_else(|| {
             format!("Command {name:?} not found in the table and cannot be executed.")
         })?;
@@ -1615,8 +1625,8 @@ impl Session {
                 .map(Json::Str)
                 .unwrap_or(Json::Null)]),
             "set-current-model" => {
-                let name = args.first().and_then(|a| a.as_str()).map(str::to_string);
-                if let Some(n) = &name {
+                let name = normalize_model_name(args.first().and_then(|a| a.as_str()));
+                if let Some(n) = name {
                     self.activate_model(n)?;
                 } else {
                     self.current_model = None;
@@ -5891,6 +5901,47 @@ mod tests {
         );
         // The trace is drained.
         assert!(s.take_trace().is_empty());
+    }
+
+    #[test]
+    fn environment_nil_model_sentinel_uses_the_current_model() {
+        let root = fixture_root();
+        if !root.is_dir() {
+            return; // vendored fixtures not available
+        }
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        // The Tcl Environment sends the literal string "nil" when no model is
+        // selected (`new-server.tcl`); it must not be treated as a model name.
+        s.evaluate("act-r-version", Some("nil"), &[], &mut remote)
+            .unwrap();
+        s.evaluate(
+            "load-act-r-code",
+            Some("nil"),
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        assert_eq!(s.current_model(), Some("ADDITION"));
+        let models = s
+            .evaluate("mp-models", Some("nil"), &[], &mut remote)
+            .unwrap();
+        match models.first() {
+            Some(Json::Arr(a)) => {
+                let names: Vec<&str> = a.iter().filter_map(|x| x.as_str()).collect();
+                assert_eq!(names, vec!["ADDITION"]);
+            }
+            other => panic!("mp-models returned {other:?}"),
+        }
+        // The sentinel also clears the selection when passed as an argument.
+        s.evaluate(
+            "set-current-model",
+            None,
+            &[Json::Str("nil".into())],
+            &mut remote,
+        )
+        .unwrap();
+        assert_eq!(s.current_model(), None);
     }
 
     #[test]

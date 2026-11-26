@@ -303,6 +303,29 @@ fn control_panel_signals_event_queue_and_clear_all() {
 }
 
 #[test]
+fn environment_nil_model_sentinel_runs_against_the_current_model() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    // The Tcl Environment sends the literal string "nil" whenever no model is
+    // selected (`new-server.tcl`); it is not a model name.
+    let version = c.eval("act-r-version", Some("nil"), Vec::new());
+    assert!(
+        version.is_ok(),
+        "act-r-version with the nil model sentinel failed: {version:?}"
+    );
+    let loaded = c.eval_ok(
+        "load-act-r-code",
+        Some("nil"),
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    assert_eq!(loaded.first(), Some(&Json::Bool(true)));
+    assert_eq!(
+        strings(&c.eval_ok("mp-models", Some("nil"), Vec::new())),
+        vec!["ADDITION".to_string()]
+    );
+}
+
+#[test]
 fn reload_reads_the_file_from_disk_and_loads_another_model() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");
