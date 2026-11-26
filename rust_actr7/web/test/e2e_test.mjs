@@ -806,7 +806,7 @@ async function main() {
 
     await selectModel("unit3-subitize", "define-model subitize");
     await page.selectOption("#task-control-subitize-mode", "human");
-    await page.selectOption("#task-control-subitize-items", "1");
+    await page.selectOption("#task-control-subitize-items", "10");
     await page.click("#run");
     await waitForHumanWindow();
     await page.waitForSelector(".human-choice-bar", { timeout: 5000 });
@@ -814,20 +814,23 @@ async function main() {
     if (!subitizePrompt.includes("Item 1/1")) {
       throw new Error(`Subitize progress count missing: ${subitizePrompt}`);
     }
+    if (!subitizePrompt.includes("press 0 for 10")) {
+      throw new Error(`Subitize ten shortcut missing: ${subitizePrompt}`);
+    }
     const subitizeChoices = await page
       .locator(".human-choice-bar button")
       .allTextContents();
-    if (subitizeChoices.at(-1) !== "0") {
-      throw new Error(`Subitize zero should come after nine: ${subitizeChoices.join(",")}`);
+    if (subitizeChoices.at(-1) !== "10") {
+      throw new Error(`Subitize ten should come after nine: ${subitizeChoices.join(",")}`);
     }
-    await page
-      .locator(".human-choice-bar button")
-      .filter({ hasText: /^1$/ })
-      .click();
+    await page.keyboard.press("0");
     await waitForRunStatus("ok");
     const subitizeReport = (await page.locator("#task-report").textContent()) || "";
     if (!subitizeReport.includes("Mode: human")) {
       throw new Error(`Subitize human report missing mode:\n${subitizeReport}`);
+    }
+    if (!subitizeReport.includes("(true")) {
+      throw new Error(`Subitize ten response was not scored correctly:\n${subitizeReport}`);
     }
 
     await selectModel("unit4-zbrodoff", "define-model zbrodoff");

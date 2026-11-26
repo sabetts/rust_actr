@@ -329,7 +329,8 @@ input is disabled and a help tooltip explains why.
 - The Unit 2 Assignment, Subitize, and 1-Hit Blackjack models are intentionally
   incomplete starters, so their results are not tutorial solutions.
 - Subitize shows `Item X/10` progress for the full item set, or `Item 1/1` for a
-  single selected count.
+  single selected count. The ten-item response is labeled `10`; its keyboard
+  shortcut is `0`.
 - Paired Associate runs the Unit 4 experiment task against the Unit 4, Unit 7,
   or Unit 8 model. The Unit 4 model is traced off by default for full runs;
   enable the task Trace control for short runs. In human mode, type the paired

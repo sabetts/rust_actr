@@ -6,7 +6,7 @@ const WORDS = [
   "", "one", "two", "three", "four", "five",
   "six", "seven", "eight", "nine", "ten",
 ];
-const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
 function tooClose(x, y, point) {
   return Math.abs(x - point[0]) < 40 && Math.abs(y - point[1]) < 40;
@@ -63,11 +63,11 @@ async function humanTrial(actr, ctx, n, progressLabel = "") {
   }
   await ctx.paint();
   const prompt = createChoicePrompt(actr, ctx, {
-    prompt: `${progressLabel ? `${progressLabel}: ` : ""}How many Xs were shown? (0 represents 10)`,
+    prompt: `${progressLabel ? `${progressLabel}: ` : ""}How many Xs were shown? (press 0 for 10)`,
     choices: DIGITS.map((digit) => ({
       value: digit,
       label: digit,
-      key: digit,
+      key: digit === "10" ? "0" : digit,
     })),
     timeoutMs: 30000,
   });
@@ -78,7 +78,7 @@ async function humanTrial(actr, ctx, n, progressLabel = "") {
     prompt.remove();
   }
   if (answer == null) return [30, false];
-  const wanted = n === 10 ? "0" : String(n);
+  const wanted = String(n);
   if (answer.value === wanted) {
     return [(answer.at - start) / 1000.0, true];
   }
