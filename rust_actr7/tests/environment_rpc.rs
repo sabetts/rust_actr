@@ -326,6 +326,32 @@ fn environment_nil_model_sentinel_runs_against_the_current_model() {
 }
 
 #[test]
+fn monitor_callbacks_use_the_client_proc_name() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    // Tcl registers a unique command name but expects the underlying proc.
+    c.add_command("create-monitor-1", "create-current-model");
+    c.monitor("creating-model", "create-monitor-1");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, _, _)| name == "create-current-model"),
+        "callback did not use the client proc name: {:?}",
+        c.callbacks
+    );
+    assert!(
+        !c.callbacks.iter().any(|(name, _, _)| name == "create-monitor-1"),
+        "callback used the registered command name: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
 fn no_history_data_is_an_empty_result_for_the_tcl_client() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");

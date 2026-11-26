@@ -114,8 +114,8 @@ fn rpc_stepper_pauses_updates_and_resumes() {
     });
 
     let mut client = Client::connect(addr).expect("connect test server");
-    client.add_command("next-event", "next-event");
-    client.add_command("update-event", "update-event");
+    client.add_command("next-event", "next-event-proc");
+    client.add_command("update-event", "update-event-proc");
 
     let loaded = client.eval("load-act-r-model", None, vec![Json::Str(stepper_model())]);
     assert_eq!(loaded.first(), Some(&Json::Bool(true)));
@@ -156,7 +156,7 @@ fn rpc_stepper_pauses_updates_and_resumes() {
             };
             let callback = params.first().and_then(|p| p.as_str()).unwrap_or("");
             match callback {
-                "next-event" => {
+                "next-event-proc" => {
                     let desc = params.get(2).and_then(|p| p.as_str()).unwrap_or("");
                     next_events.push(desc.to_string());
                     client.reply_callback(&msg);
@@ -174,7 +174,7 @@ fn rpc_stepper_pauses_updates_and_resumes() {
                         assert_eq!(reply.first(), Some(&Json::Bool(true)), "{reply:?}");
                     }
                 }
-                "update-event" => {
+                "update-event-proc" => {
                     assert_eq!(params.len(), 9, "update callback shape: {params:?}");
                     updates.push(
                         params

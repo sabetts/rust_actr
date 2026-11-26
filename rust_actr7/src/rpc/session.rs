@@ -969,6 +969,21 @@ impl Session {
             .unwrap_or(false)
     }
 
+    /// The client procedure to call for a remote command.  A Tcl client
+    /// registers `load_monitor_3` but wants its callback to execute the
+    /// underlying proc `record_load_traces`; `add` stores that as the
+    /// command's local name.  Direct callback paths (monitors, stepper,
+    /// device actions) must go through this mapping too, not just
+    /// `Session::evaluate`.
+    pub fn remote_local_name<'a>(&'a self, name: &'a str) -> &'a str {
+        match self.commands.get(name).map(|c| &c.owner) {
+            Some(Owner::Remote {
+                local_name: Some(local),
+            }) => local.as_str(),
+            _ => name,
+        }
+    }
+
     /// The simple monitors of a command, each with whether it is
     /// client-owned (`call_remote_reentrant`) or server-side
     /// (`Session::evaluate`). A model-fired command's monitors must run with

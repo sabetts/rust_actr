@@ -527,6 +527,9 @@ impl Actor {
         model: Option<&str>,
         args: Vec<Json>,
     ) -> Result<Vec<Json>, String> {
+        // The wire protocol expects the client's underlying proc name, not the
+        // dispatcher command name the Tcl Environment registered.
+        let call = self.session.remote_local_name(name).to_string();
         let target = self.target_conn(owner, origin)?;
         let callback_id = {
             let conn = self
@@ -535,7 +538,7 @@ impl Actor {
                 .ok_or_else(|| "callback connection is closed".to_string())?;
             let id = conn.next_callback_id;
             conn.next_callback_id += 1;
-            let msg = callback(name, model, args, id);
+            let msg = callback(&call, model, args, id);
             conn.sent += 1;
             write_message(&mut conn.writer, &msg).map_err(|e| e.to_string())?;
             id
