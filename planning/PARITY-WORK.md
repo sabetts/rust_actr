@@ -613,10 +613,14 @@ that time, seeds, and parameters reset. A `run-start` monitor mutates `MP-B`'s
 - `reload` did not execute the model file's top-level `(clear-all)`, so model
   time and state survived. Reload now clears when the source has a top-level
   `(clear-all)`, matching SBCL.
-- A second `load-act-r-model` of a different file intentionally keeps the old
-  Rust "append models" behavior: existing tests rely on it, while the
-  canonical multi-model file contains all models. `reload` handles the
-  clear-all case separately.
+- `load-act-r-model` and `load-act-r-code` now execute a top-level
+  `(clear-all)` too, matching SBCL's `load` semantics: loading a tutorial model
+  file replaces the currently loaded models. Multi-model loading from separate
+  files still works for files without a top-level `(clear-all)`; use the
+  canonical one-file multi-model fixture when every file starts with a clear.
+  Regression: `loading_a_clear_all_file_replaces_models_and_drops_the_run_trace`,
+  `load_appends_a_model_file_without_clear_all`,
+  `clear_all_file_load_replaces_models_and_does_not_replay_trace`.
 
 Regression: `multi_model_honors_per_model_trace_and_parameter_types`,
 `source_clear_all_is_detected_at_top_level_only`; existing multi-model session,
@@ -633,7 +637,10 @@ Mid-run reset is now covered between client `run` calls. The probe records
 time, order, parameters, and seeds before/after `reset`, then runs again. Rust
 `reset` now appends only each engine's newly emitted reset trace instead of
 rebuilding the global trace from `out_since(0)`, which had replayed already
-delivered lines.
+delivered lines. Adding a model no longer rebuilds from `out_since(0)` either:
+`add_model_definition` seeds the global trace from only the undelivered lines,
+so a run's trace cannot leak into the next load. Regression:
+`loading_a_second_model_without_clear_all_does_not_replay_run_trace`.
 
 Exact `run` event-count parity is now covered. The probe prints the full
 `[elapsed, events, break]` tuple for the initial run and the post-reset run.

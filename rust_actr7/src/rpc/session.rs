@@ -4705,6 +4705,17 @@ impl Session {
     /// Load a model or task file from a filesystem path.  ACT-R logical names
     /// (`ACT-R:tutorial;unit1;count.lisp`) are deliberately unsupported.
     fn load(&mut self, path: &str, remote: &mut dyn Remote) -> Result<(), String> {
+        // ACT-R's `load` evaluates top-level forms, so a file that starts with
+        // `(clear-all)` replaces the loaded models.  `load-act-r-model` and
+        // `load-act-r-code` both go through Lisp `load` (`dispatcher.lisp`).
+        let clears_all = filesystem_path(path)
+            .ok()
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .map(|src| model::source_clears_all(&src))
+            .unwrap_or(false);
+        if clears_all {
+            self.evaluate("clear-all", None, &[], remote)?;
+        }
         self.load_file(path, remote, true).map(|_| ())
     }
 
@@ -6015,6 +6026,11 @@ mod tests {
             .into_owned()
     }
 
+    /// The canonical one-file multi-model fixture (COUNT, SEMANTIC, ADDITION).
+    fn multi_model_fixture() -> String {
+        fixture_model("examples;multiple-models;unit-1-together-1-mp.lisp")
+    }
+
     #[test]
     fn logical_model_paths_are_rejected() {
         assert!(filesystem_path("ACT-R:tutorial;unit1;count.lisp").is_err());
@@ -6343,14 +6359,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
-            &mut remote,
-        )
-        .unwrap();
-        s.evaluate(
-            "load-act-r-model",
-            None,
-            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &[Json::Str(multi_model_fixture())],
             &mut remote,
         )
         .unwrap();
@@ -6612,14 +6621,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
-            &mut r,
-        )
-        .unwrap();
-        s.evaluate(
-            "load-act-r-model",
-            None,
-            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &[Json::Str(multi_model_fixture())],
             &mut r,
         )
         .unwrap();
@@ -6627,6 +6629,7 @@ mod tests {
             s.evaluate("mp-models", None, &[], &mut r).unwrap(),
             vec![Json::Arr(vec![
                 Json::Str("COUNT".into()),
+                Json::Str("SEMANTIC".into()),
                 Json::Str("ADDITION".into())
             ])]
         );
@@ -6658,14 +6661,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
-            &mut r,
-        )
-        .unwrap();
-        s.evaluate(
-            "load-act-r-model",
-            None,
-            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &[Json::Str(multi_model_fixture())],
             &mut r,
         )
         .unwrap();
@@ -8103,15 +8099,13 @@ mod tests {
         }
         let mut s = Session::new((100, 0));
         let mut remote = NoRemote;
-        for model in ["tutorial;unit1;count.lisp", "tutorial;unit1;semantic.lisp"] {
-            s.evaluate(
-                "load-act-r-model",
-                None,
-                &[Json::Str(fixture_model(model))],
-                &mut remote,
-            )
-            .unwrap();
-        }
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(multi_model_fixture())],
+            &mut remote,
+        )
+        .unwrap();
         s.evaluate("run", None, &[Json::Int(1)], &mut remote)
             .unwrap();
         let before = s.take_trace();
@@ -8185,6 +8179,45 @@ mod tests {
     }
 
     #[test]
+    fn loading_a_clear_all_file_replaces_models_and_drops_the_run_trace() {
+        if !fixture_root().is_dir() {
+            return;
+        }
+        let mut s = Session::new((100, 0));
+        let mut r = NoRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        let _ = s.take_trace();
+        s.evaluate("run", None, &[Json::Int(1)], &mut r).unwrap();
+        let run_trace = s.take_trace();
+        assert!(!run_trace.is_empty(), "run produced no trace");
+
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut r,
+        )
+        .unwrap();
+        assert_eq!(
+            s.evaluate("mp-models", None, &[], &mut r).unwrap(),
+            vec![Json::Arr(vec![Json::Str("COUNT".into())])]
+        );
+        let load_trace = s.take_trace();
+        assert!(
+            load_trace
+                .iter()
+                .all(|line| !line.contains("Stopped because")),
+            "loading count.lisp replayed the addition run trace: {load_trace:?}"
+        );
+    }
+
+    #[test]
     fn multi_model_run_interleaves_and_switches_viewers() {
         let root = fixture_root();
         if !root.is_dir() {
@@ -8195,14 +8228,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
-            &mut r,
-        )
-        .unwrap();
-        s.evaluate(
-            "load-act-r-model",
-            None,
-            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &[Json::Str(multi_model_fixture())],
             &mut r,
         )
         .unwrap();
@@ -8895,14 +8921,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
-            &mut r,
-        )
-        .unwrap();
-        s.evaluate(
-            "load-act-r-model",
-            None,
-            &[Json::Str(fixture_model("tutorial;unit1;addition.lisp"))],
+            &[Json::Str(multi_model_fixture())],
             &mut r,
         )
         .unwrap();

@@ -325,7 +325,8 @@ The stepper must operate on the model store:
 - Remove the RPC single-model guard and test-only `allow_multi_model` path.
 - Support:
   - one file with several models
-  - several files with one model each
+  - several files with one model each (files without a top-level `(clear-all)`;
+    a clear-all file replaces the loaded models, as in SBCL)
 - Implement order-preserving `mp-models`.
 - Implement `current-model` and `set-current-model`.
 - Implement delete/reload by file group.
@@ -333,7 +334,8 @@ The stepper must operate on the model store:
 
 Exit criteria:
 
-- load two files, list both, switch current, clear-all removes both.
+- load two files without a top-level `(clear-all)`, list both, switch current;
+  a `(clear-all)` file replaces them and `clear-all` removes both.
 
 ### Phase 2 — Global execution
 
@@ -487,7 +489,8 @@ cargo test --test rpc_conformance -- --ignored --nocapture
 
 ## Definition of done
 
-- Two models can be loaded from separate files or one file.
+- Two models can be loaded from separate files without a top-level
+  `(clear-all)`, or from one file.
 - The Tcl model menu lists both and switches the selected model.
 - Global run/reset/clear-all behave like Lisp.
 - Viewers and histories follow the selected model.

@@ -420,20 +420,102 @@ fn reload_reads_the_file_from_disk_and_loads_another_model() {
         None,
         vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
     );
+    // `addition.lisp` has a top-level `(clear-all)`, so it replaces COUNT3.
     assert_eq!(
         strings(&c.eval_ok("mp-models", None, Vec::new())),
-        vec!["COUNT3", "ADDITION"]
+        vec!["ADDITION"]
     );
     assert_eq!(
         c.eval_ok("current-model", None, Vec::new()),
         vec![Json::Str("ADDITION".into())]
     );
-    c.eval_ok("set-current-model", None, vec![Json::Str("COUNT3".into())]);
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn load_appends_a_model_file_without_clear_all() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+
+    let path = std::env::temp_dir().join(format!(
+        "actr-append-{}-{}.lisp",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::write(
+        &path,
+        "(define-model append-test\n  (sgp :v t)\n  (chunk-type goal state)\n  (add-dm (start isa goal state 0))\n  (goal-focus start))\n",
+    )
+    .unwrap();
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(path.to_string_lossy().into_owned())],
+    );
+    assert_eq!(
+        strings(&c.eval_ok("mp-models", None, Vec::new())),
+        vec!["COUNT", "APPEND-TEST"]
+    );
     assert_eq!(
         c.eval_ok("current-model", None, Vec::new()),
-        vec![Json::Str("COUNT3".into())]
+        vec![Json::Str("APPEND-TEST".into())]
     );
     let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn clear_all_file_load_replaces_models_and_does_not_replay_trace() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.add_command("on-trace", "on-trace");
+    c.monitor("model-trace", "on-trace");
+
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+    );
+    c.eval_ok("run", None, vec![Json::Float(2.0)]);
+    assert!(
+        c.callbacks.iter().any(|(name, _, args)| {
+            name == "on-trace"
+                && args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .is_some_and(|line| line.contains("Stopped because"))
+        }),
+        "run did not reach the trace monitor: {:?}",
+        c.callbacks
+    );
+
+    c.callbacks.clear();
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    assert_eq!(
+        strings(&c.eval_ok("mp-models", None, Vec::new())),
+        vec!["COUNT"]
+    );
+    let lines: Vec<&str> = c
+        .callbacks
+        .iter()
+        .filter(|(name, _, _)| name == "on-trace")
+        .filter_map(|(_, _, args)| args.first().and_then(|a| a.as_str()))
+        .collect();
+    assert!(
+        lines.iter().all(|line| !line.contains("Stopped because")),
+        "loading count.lisp replayed the addition run trace: {lines:?}"
+    );
 }
 
 #[test]
@@ -640,12 +722,9 @@ fn multi_model_run_emits_both_model_columns() {
     c.eval_ok(
         "load-act-r-model",
         None,
-        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
-    );
-    c.eval_ok(
-        "load-act-r-model",
-        None,
-        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+        vec![Json::Str(model(
+            "examples/multiple-models/unit-1-together-1-mp.lisp",
+        ))],
     );
     c.eval_ok("run", None, vec![Json::Float(2.0)]);
     let lines: Vec<&str> = c
@@ -793,12 +872,9 @@ fn multi_model_stepper_callbacks_include_the_model() {
     c.eval_ok(
         "load-act-r-model",
         None,
-        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
-    );
-    c.eval_ok(
-        "load-act-r-model",
-        None,
-        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+        vec![Json::Str(model(
+            "examples/multiple-models/unit-1-together-1-mp.lisp",
+        ))],
     );
     let started = c
         .eval(
@@ -869,7 +945,7 @@ fn multi_model_stepper_callbacks_include_the_model() {
         paused_models
             .iter()
             .flatten()
-            .all(|m| m == "COUNT" || m == "ADDITION"),
+            .all(|m| m == "COUNT" || m == "SEMANTIC" || m == "ADDITION"),
         "{paused_models:?}"
     );
     assert!(updates > 0, "no stepper updates");
@@ -947,12 +1023,9 @@ fn multi_model_windows_are_scoped_by_model() {
     c.eval_ok(
         "load-act-r-model",
         None,
-        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
-    );
-    c.eval_ok(
-        "load-act-r-model",
-        None,
-        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+        vec![Json::Str(model(
+            "examples/multiple-models/unit-1-together-1-mp.lisp",
+        ))],
     );
 
     c.eval_ok(
@@ -1036,12 +1109,9 @@ fn close_window_by_title_and_close_all_without_a_model_argument() {
     c.eval_ok(
         "load-act-r-model",
         None,
-        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
-    );
-    c.eval_ok(
-        "load-act-r-model",
-        None,
-        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+        vec![Json::Str(model(
+            "examples/multiple-models/unit-1-together-1-mp.lisp",
+        ))],
     );
     c.eval_ok(
         "open-exp-window",
@@ -1081,12 +1151,9 @@ fn multi_model_clear_all_closes_each_model_window() {
     c.eval_ok(
         "load-act-r-model",
         None,
-        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
-    );
-    c.eval_ok(
-        "load-act-r-model",
-        None,
-        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+        vec![Json::Str(model(
+            "examples/multiple-models/unit-1-together-1-mp.lisp",
+        ))],
     );
     c.eval_ok(
         "open-exp-window",
@@ -1114,12 +1181,9 @@ fn multi_model_window_click_dispatches_the_owning_models_action() {
     c.eval_ok(
         "load-act-r-model",
         None,
-        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
-    );
-    c.eval_ok(
-        "load-act-r-model",
-        None,
-        vec![Json::Str(model("tutorial/unit1/addition.lisp"))],
+        vec![Json::Str(model(
+            "examples/multiple-models/unit-1-together-1-mp.lisp",
+        ))],
     );
     c.eval_ok(
         "open-exp-window",
