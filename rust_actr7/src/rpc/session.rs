@@ -1522,7 +1522,10 @@ impl Session {
         let handlers = self.vwin_handlers.clone();
         let mut display = Vec::new();
         for h in handlers {
-            if let Ok(v) = self.evaluate(&h, None, &[Json::Str("check".into())], remote) {
+            // The Tcl Environment handler is `process_env_window {model cmd}`
+            // and expects the op as one list argument (`PORTING-NOTES` #371).
+            let check = [Json::Arr(vec![Json::Str("check".into())])];
+            if let Ok(v) = self.evaluate(&h, None, &check, remote) {
                 let yes = v
                     .first()
                     .map(|x| !matches!(x, Json::Bool(false) | Json::Null))
@@ -1584,7 +1587,8 @@ impl Session {
             return;
         };
         for h in w.handlers {
-            let _ = self.evaluate(&h, Some(model), op, remote);
+            // Tcl's `process_env_window {model cmd}` takes the op as one list.
+            let _ = self.evaluate(&h, Some(model), &[Json::Arr(op.to_vec())], remote);
         }
     }
 

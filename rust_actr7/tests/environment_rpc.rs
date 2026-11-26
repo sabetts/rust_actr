@@ -871,8 +871,12 @@ fn window_ops(c: &Client, op: &str) -> Vec<(Option<String>, Vec<Json>)> {
         .iter()
         .filter(|(name, _, _)| name == "env-vv")
         .filter_map(|(_, model, args)| {
-            (args.first().and_then(|a| a.as_str()) == Some(op))
-                .then(|| (model.clone(), args.clone()))
+            let flat = match args.first() {
+                Some(Json::Arr(a)) => a.clone(),
+                _ => args.clone(),
+            };
+            (flat.first().and_then(|a| a.as_str()) == Some(op))
+                .then(|| (model.clone(), flat))
         })
         .collect()
 }
@@ -884,6 +888,37 @@ fn add_window_handler(c: &mut Client) {
         None,
         vec![Json::Str("env-vv".into())],
     );
+}
+
+#[test]
+fn window_ops_are_one_list_for_the_tcl_handler() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        None,
+        vec![Json::Str("LIST-WIN".into()), Json::Null],
+    );
+    let open = c
+        .callbacks
+        .iter()
+        .filter(|(name, _, _)| name == "env-vv")
+        .find(|(_, _, args)| {
+            matches!(args.first(), Some(Json::Arr(op))
+                if op.first().and_then(|x| x.as_str()) == Some("open"))
+        })
+        .expect("open window callback");
+    assert_eq!(open.2.len(), 1, "window op must be one argument: {open:?}");
+    let Json::Arr(op) = &open.2[0] else {
+        panic!("window op was not a list: {open:?}");
+    };
+    assert_eq!(op.first().and_then(|x| x.as_str()), Some("open"));
 }
 
 #[test]
