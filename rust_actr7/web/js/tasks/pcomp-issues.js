@@ -2,6 +2,7 @@ import { modeControl } from "./human.js";
 import { createChoicePrompt } from "./human-controls.js";
 
 const TRIALS = 150;
+const TRIALS_PER_BLOCK = 10;
 const BLOCKS = 15;
 const RESULTS = [
   [
@@ -104,7 +105,14 @@ async function runGame(actr, ctx, compile) {
   return state;
 }
 
-async function runHumanGame(actr, ctx) {
+function humanTrialLabel(trial, trials) {
+  const block = Math.floor(trial / TRIALS_PER_BLOCK) + 1;
+  const blocks = Math.ceil(trials / TRIALS_PER_BLOCK);
+  const prefix = `Trial ${trial + 1}/${trials}`;
+  return blocks > 1 ? `${prefix} · Block ${block}/${blocks}` : prefix;
+}
+
+async function runHumanGame(actr, ctx, trials) {
   actr.reset();
   const window = actr.openExpWindow("Compilation task", {
     visible: true,
@@ -124,11 +132,12 @@ async function runHumanGame(actr, ctx) {
   };
 
   try {
-    for (let trial = 0; trial < TRIALS; trial += 1) {
+    for (let trial = 0; trial < trials; trial += 1) {
+      ctx.progress?.(`running... trial ${trial + 1}/${trials}`);
       presentTrial(actr, window, state, true);
       await ctx.paint();
       const choice = createChoicePrompt(actr, ctx, {
-        prompt: "Choose a response.",
+        prompt: `${humanTrialLabel(trial, trials)}: choose a response.`,
         choices: [
           { value: "s", label: "S", key: "s" },
           { value: "d", label: "D", key: "d" },
@@ -149,8 +158,12 @@ async function runHumanGame(actr, ctx) {
       state.taskState = "feedback";
       presentFeedback(actr, window, result);
       await ctx.paint();
+      const nextText =
+        trial + 1 < trials
+          ? "Press Space or Continue for the next trial."
+          : "Press Space or Continue to finish.";
       const next = createChoicePrompt(actr, ctx, {
-        prompt: "Press Space or Continue for the next trial.",
+        prompt: `${humanTrialLabel(trial, trials)} complete. ${nextText}`,
         choices: [
           { value: "space", label: "Continue", key: "space" },
         ],
@@ -163,24 +176,23 @@ async function runHumanGame(actr, ctx) {
         next.remove();
       }
       if (advance == null) break;
-      ctx.progress?.(`running... ${trial + 1}/${TRIALS}`);
     }
-    state.finished = state.responses.length >= TRIALS;
+    state.finished = state.responses.length >= trials;
   } finally {
     actr.closeExpWindow(window);
   }
   return state;
 }
 
-function summarize(games) {
-  const scores = Array(BLOCKS).fill(0);
-  const times = Array(BLOCKS).fill(0);
-  const counts = Array(BLOCKS).fill(0);
+function summarize(games, blockCount = BLOCKS) {
+  const scores = Array(blockCount).fill(0);
+  const times = Array(blockCount).fill(0);
+  const counts = Array(blockCount).fill(0);
 
   for (const state of games) {
     state.responses.forEach((result, index) => {
-      const block = Math.floor(index / 10);
-      if (block >= BLOCKS) return;
+      const block = Math.floor(index / TRIALS_PER_BLOCK);
+      if (block >= blockCount) return;
       if (result === "win") scores[block] += 1;
       if (result === "lose") scores[block] -= 1;
       times[block] += state.times[index] || 0;
@@ -196,6 +208,9 @@ function summarize(games) {
 
 async function pcompIssues(actr, ctx) {
   const human = String(ctx.controls.mode || "model") === "human";
+  const humanTrials = human
+    ? Math.max(1, Math.min(TRIALS, Number(ctx.controls.humanTrials) || TRIALS))
+    : TRIALS;
   const gameCount = human
     ? 1
     : Math.max(1, Math.min(10, Number(ctx.controls.games) || 1));
@@ -203,25 +218,31 @@ async function pcompIssues(actr, ctx) {
   const games = [];
   for (let game = 0; game < gameCount; game += 1) {
     games.push(
-      await (human ? runHumanGame(actr, ctx) : runGame(actr, ctx, compile))
+      await (human
+        ? runHumanGame(actr, ctx, humanTrials)
+        : runGame(actr, ctx, compile))
     );
     ctx.progress?.(`running... ${game + 1}/${gameCount}`);
   }
 
-  const data = summarize(games);
+  const trialCount = human ? humanTrials : TRIALS;
+  const blockCount = human
+    ? Math.max(1, Math.ceil(trialCount / TRIALS_PER_BLOCK))
+    : BLOCKS;
+  const data = summarize(games, blockCount);
   const averages = data.scores.map((value) => value / gameCount);
   const completed = games.map((game) => game.responses.length);
   const lines = [
-    ...(human ? ["Mode: human"] : []),
-    `Average Score of ${gameCount} trial${gameCount === 1 ? "" : "s"}`,
+    ...(human ? ["Mode: human", `Human trials: ${humanTrials}`] : []),
+    `Average score of ${gameCount} game${gameCount === 1 ? "" : "s"}`,
     averages.map((value) => value.toFixed(2).padStart(6)).join(""),
     "Average Response times",
     data.times.map((value) => value.toFixed(2).padStart(6)).join(""),
     "",
-    `Completed trials: ${completed.join(", ")} / ${TRIALS} per game`,
+    `Completed trials: ${completed.join(", ")} / ${trialCount} per game`,
   ];
   if (human) {
-    lines.push("Human mode: one game of 150 trials.");
+    lines.push(`Human mode: one game of ${humanTrials} trials.`);
   } else {
     lines.push(
       `Compilation: ${compile ? "on" : "off"}`,
@@ -239,6 +260,16 @@ export const pcompIssuesTask = {
   run: pcompIssues,
   controls: [
     modeControl("model"),
+    {
+      id: "humanTrials",
+      label: "Human trials",
+      type: "number",
+      min: 1,
+      max: TRIALS,
+      step: 1,
+      default: TRIALS,
+      showWhen: (values) => values.mode === "human",
+    },
     {
       id: "games",
       label: "Games",

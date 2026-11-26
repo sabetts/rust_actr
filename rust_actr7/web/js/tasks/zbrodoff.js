@@ -106,8 +106,13 @@ async function collectResponses(actr, ctx, trials, visible) {
 
   const queue = [...trials];
   const results = [];
+  const reportProgress = () => {
+    const index = Math.min(results.length + 1, trials.length);
+    ctx.progress?.(`running... ${index}/${trials.length}`);
+  };
   let current = queue.shift();
   presentTrial(actr, window, current);
+  reportProgress();
   if (visible) await ctx.paint();
 
   actr.addCommand("zbrodoff-response", (_model, key) => {
@@ -118,6 +123,9 @@ async function collectResponses(actr, ctx, trials, visible) {
     current = queue.shift();
     if (current) {
       presentTrial(actr, window, current);
+      reportProgress();
+    } else {
+      ctx.progress?.(`running... ${trials.length}/${trials.length}`);
     }
   });
   actr.monitorCommand("output-key", "zbrodoff-response");
@@ -174,11 +182,13 @@ async function collectHumanResponses(actr, ctx, trials) {
   });
   const results = [];
   try {
-    for (const trial of trials) {
+    for (let index = 0; index < trials.length; index += 1) {
+      const trial = trials[index];
+      ctx.progress?.(`running... ${index + 1}/${trials.length}`);
       presentTrial(actr, window, trial, true);
       await ctx.paint();
       const prompt = createChoicePrompt(actr, ctx, {
-        prompt: "Is the problem correct?",
+        prompt: `Trial ${index + 1}/${trials.length}: is the problem correct?`,
         choices: [
           { value: "k", label: "Correct (K)", key: "k" },
           { value: "d", label: "Incorrect (D)", key: "d" },

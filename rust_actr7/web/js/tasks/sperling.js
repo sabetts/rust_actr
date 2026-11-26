@@ -66,7 +66,7 @@ async function trial(actr, ctx, onset) {
   return { onset, answers, responses, score: score(answers, responses) };
 }
 
-async function humanTrial(actr, ctx, onset) {
+async function humanTrial(actr, ctx, onset, progressLabel = "") {
   actr.reset();
   const letters = humanShuffle(LETTERS);
   const answers = [];
@@ -94,7 +94,7 @@ async function humanTrial(actr, ctx, onset) {
   await ctx.paint();
 
   const prompt = createTextPrompt(actr, ctx, {
-    prompt: "Type the letters from the cued row, then press Space or Submit.",
+    prompt: `${progressLabel ? `${progressLabel} ` : ""}Type the letters from the cued row, then press Space or Submit.`,
     placeholder: "letters",
     maxLength: 12,
     submitKeys: ["space", "enter"],
@@ -119,11 +119,16 @@ async function sperling(actr, ctx) {
   for (let i = 0; i < blocks; i += 1) {
     const onsets = human ? humanShuffle(ONSETS) : actr.permuteList(ONSETS);
     const trials = [];
-    for (const onset of onsets) {
+    for (let trialIndex = 0; trialIndex < onsets.length; trialIndex += 1) {
+      const onset = Number(onsets[trialIndex]);
+      const label = `Block ${i + 1}/${blocks} · Trial ${trialIndex + 1}/${onsets.length}.`;
+      ctx.progress?.(
+        `running... block ${i + 1}/${blocks} · trial ${trialIndex + 1}/${onsets.length}`
+      );
       trials.push(
         await (human
-          ? humanTrial(actr, ctx, Number(onset))
-          : trial(actr, ctx, Number(onset)))
+          ? humanTrial(actr, ctx, onset, label)
+          : trial(actr, ctx, onset))
       );
     }
     trials.sort((a, b) => a.onset - b.onset);

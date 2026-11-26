@@ -53,7 +53,7 @@ async function trial(actr, ctx, n) {
   return [30, false];
 }
 
-async function humanTrial(actr, ctx, n) {
+async function humanTrial(actr, ctx, n, progressLabel = "") {
   actr.reset();
   const points = generatePoints(actr, n);
   const window = actr.openExpWindow("Subitizing Experiment");
@@ -63,7 +63,7 @@ async function humanTrial(actr, ctx, n) {
   }
   await ctx.paint();
   const prompt = createChoicePrompt(actr, ctx, {
-    prompt: "How many Xs were shown? (0 represents 10)",
+    prompt: `${progressLabel ? `${progressLabel}: ` : ""}How many Xs were shown? (0 represents 10)`,
     choices: DIGITS.map((digit) => ({
       value: digit,
       label: digit,
@@ -96,12 +96,14 @@ async function subitize(actr, ctx) {
 
   const human = isHuman(ctx.controls);
   const results = [];
-  for (const n of items) {
+  for (let index = 0; index < items.length; index += 1) {
+    const n = Number(items[index]);
+    ctx.progress?.(`running... item ${index + 1}/${items.length}`);
     results.push([
-      Number(n),
+      n,
       await (human
-        ? humanTrial(actr, ctx, Number(n))
-        : trial(actr, ctx, Number(n))),
+        ? humanTrial(actr, ctx, n, `Item ${index + 1}/${items.length}`)
+        : trial(actr, ctx, n)),
     ]);
   }
   results.sort((a, b) => a[0] - b[0]);

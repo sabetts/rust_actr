@@ -298,7 +298,7 @@ are:
 - Alpha-Arithmetic: model or human runner; model trial scope and runs; human trial scope; and single-problem fields
 - Past Tense: model or human mode; model trial count and block size, or human verb count
 - Utility Learning Issues: model or human mode; model runs use the global run-time field and human runs use a fixed trial count
-- Production Compilation Issues: model or human mode, games, and compilation toggle (games and compilation apply to model runs)
+- Production Compilation Issues: model or human mode; model games and compilation toggle, or human trial count
 - Categorize: model or human mode; model runs, offset, and four feature slot names, or human study time
 - Semantic Network: model or human mode, and question (`g1`, `g2`, `g3`, or all)
 
@@ -325,9 +325,11 @@ input is disabled and a help tooltip explains why.
 - Sperling runs one block of four tone-onset trials by default. In model mode,
   tones are delivered to the ACT-R audio module but are not played through
   browser audio. Human mode plays the tone through WebAudio; no text hint
-  reveals the cued row.
+  reveals the cued row. Both modes show block/trial progress.
 - The Unit 2 Assignment, Subitize, and 1-Hit Blackjack models are intentionally
   incomplete starters, so their results are not tutorial solutions.
+- Subitize shows `Item X/10` progress for the full item set, or `Item 1/1` for a
+  single selected count.
 - Paired Associate runs the Unit 4 experiment task against the Unit 4, Unit 7,
   or Unit 8 model. The Unit 4 model is traced off by default for full runs;
   enable the task Trace control for short runs. In human mode, type the paired
@@ -336,23 +338,25 @@ input is disabled and a help tooltip explains why.
 - Alpha-Arithmetic is the Unit 4 assignment starter: it counts through the
   alphabet and does not retrieve learned additions. Its poor fit is expected.
   Human runs default to a single problem; set, block, and full experiment scopes
-  are also available.
+  are also available. Human and model runs show trial progress.
 - Past Tense is the Unit 7 assignment starter, so it produces no inflections,
   no rewards, and no U-shaped learning. The block table and chart diagnose that
   state rather than presenting a solution. Human mode presents all 22 verbs in
-  random order, accepts typed past-tense forms, and scores regular and
-  irregular accuracy.
+  random order with a `Verb X/Y` prompt, accepts typed past-tense forms, and
+  scores regular and irregular accuracy.
 - Utility Learning Issues uses its own fixed seed and begins from a
   model-scheduled event, so it is not reset with the page seed. Human mode
   presents A/B choices, gives feedback for two seconds, and uses a fixed trial
   count instead of the global run time.
 - Production Compilation Issues runs the canonical starter. The compilation
   toggle applies `:epl`; the tutorial's later utility and reward edits are not
-  baked into the model. Human mode runs one 150-trial game.
+  baked into the model. Human mode runs one game of 150 trials by default and
+  accepts a shorter trial count; prompts show trial and block progress.
 - The Perceptual-Motor Issues task is presented as in the tutorial.
 - Fan reports response times and correctness for the target and foil probes,
   with correlation and mean deviation against the tutorial data. Human mode,
-  including Fan no PM, presents one 18-probe pass in a visible sentence window.
+  including Fan no PM, presents one 18-probe pass in a visible sentence window
+  with `Probe X/18` progress; model mode shows probe progress as well.
 - Grouped Recall uses the model's fixed seed, so it reports the expected
   `1 2 3 4 6 5 7 8` sequence with the commission and omission errors. Human
   mode runs a configurable number of randomized grouped trials (6 by default),
@@ -362,15 +366,18 @@ input is disabled and a help tooltip explains why.
 - Siegler presents digit sounds to the engine and reports a response matrix
   against the child data. Model-mode tones are not played through browser
   audio. Human mode plays bundled royalty-free digit MP3s, offers a Replay
-  sounds button, and falls back to showing the digits if audio is unavailable.
+  sounds button, falls back to showing the digits if audio is unavailable, and
+  shows set/problem progress.
 - 1-Hit Blackjack can run automated learning blocks or a human-vs-model game.
   The play mode supports Hit/Stay buttons and the `h`/`s` keys, with a Stay
-  fallback on timeout. The default deck and opponent are the tutorial defaults.
+  fallback on timeout and `Hand X/Y` progress. The default deck and opponent are
+  the tutorial defaults.
 - Building Sticks runs its model experiment in JS so the browser does not
   depend on the engine's test-only native BST driver. Report mode uses 100 runs
   by default. Human mode offers the two tutorial demo problems or a full
-  15-problem experiment; the full run reports each problem's first choice and
-  the over/under percentages against the tutorial data.
+  15-problem experiment with `Problem X/15` progress; the full run reports each
+  problem's first choice and the over/under percentages against the tutorial
+  data.
 - Choice is a starter harness: the empty model produces no responses until
   productions are added. Human mode accepts `h`/`t` keys.
 - Building Sticks (PPM) uses the JS `:sim-hook` and imaginal-action callbacks to

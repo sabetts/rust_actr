@@ -810,6 +810,10 @@ async function main() {
     await page.click("#run");
     await waitForHumanWindow();
     await page.waitForSelector(".human-choice-bar", { timeout: 5000 });
+    const subitizePrompt = (await page.locator(".human-prompt").textContent()) || "";
+    if (!subitizePrompt.includes("Item 1/1")) {
+      throw new Error(`Subitize progress count missing: ${subitizePrompt}`);
+    }
     const subitizeChoices = await page
       .locator(".human-choice-bar button")
       .allTextContents();
@@ -830,6 +834,10 @@ async function main() {
     await page.selectOption("#task-control-zbrodoff-runner", "human");
     await page.click("#run");
     await waitForHumanWindow();
+    const zbrodoffPrompt = (await page.locator(".human-prompt").textContent()) || "";
+    if (!zbrodoffPrompt.includes("Trial 1/1")) {
+      throw new Error(`Alpha-Arithmetic progress count missing: ${zbrodoffPrompt}`);
+    }
     await page.keyboard.press("k");
     await waitForRunStatus("ok");
     const zbrodoffReport = (await page.locator("#task-report").textContent()) || "";
@@ -858,6 +866,11 @@ async function main() {
         null,
         { timeout: 5000 }
       );
+      await page.waitForSelector(".human-prompt", { timeout: 5000 });
+      const sperlingPrompt = (await page.locator(".human-prompt").textContent()) || "";
+      if (!sperlingPrompt.includes(`Trial ${trial + 1}/4`)) {
+        throw new Error(`Sperling progress count missing: ${sperlingPrompt}`);
+      }
       await page.waitForTimeout(100);
       await page.keyboard.press("Space");
     }
@@ -912,6 +925,11 @@ async function main() {
     await page.selectOption("#task-control-fan-mode", "human");
     await page.click("#run");
     await waitForHumanWindow();
+    await page.waitForSelector(".human-prompt", { timeout: 5000 });
+    const fanPrompt = (await page.locator(".human-prompt").textContent()) || "";
+    if (!fanPrompt.includes("Probe 1/18")) {
+      throw new Error(`Fan progress count missing: ${fanPrompt}`);
+    }
     let fanText =
       (await page.locator("#agi-window .agi-text").first().textContent()) || "";
     await page.waitForTimeout(150);
@@ -928,6 +946,16 @@ async function main() {
         );
         fanText =
           (await page.locator("#agi-window .agi-text").first().textContent()) || "";
+        if (probe === 0) {
+          await page.waitForFunction(
+            () =>
+              (document.querySelector(".human-prompt")?.textContent || "").includes(
+                "Probe 2/18"
+              ),
+            null,
+            { timeout: 5000 }
+          );
+        }
       }
     }
     await waitForRunStatus("ok");
@@ -941,8 +969,13 @@ async function main() {
       "define-model compilation-test"
     );
     await page.selectOption("#task-control-pcomp-issues-mode", "human");
+    await page.fill("#task-control-pcomp-issues-humanTrials", "2");
     await page.click("#run");
     await waitForHumanWindow();
+    const pcompPrompt = (await page.locator(".human-prompt").textContent()) || "";
+    if (!pcompPrompt.includes("Trial 1/2")) {
+      throw new Error(`Production Compilation progress count missing: ${pcompPrompt}`);
+    }
     await page.keyboard.press("s");
     await page.waitForFunction(
       () => {
@@ -956,17 +989,58 @@ async function main() {
     await page.waitForTimeout(150);
     await page.keyboard.press("Space");
     await page.waitForFunction(
-      () => document.querySelectorAll("#agi-window .agi-text").length === 2,
+      () =>
+        (document.querySelector(".human-prompt")?.textContent || "").includes(
+          "Trial 2/2"
+        ),
+      null,
+      { timeout: 5000 }
+    );
+    await page.keyboard.press("s");
+    await page.waitForFunction(
+      () => {
+        const text =
+          document.querySelector("#agi-window .agi-text")?.textContent || "";
+        return text === "win" || text === "lose" || text === "draw";
+      },
       null,
       { timeout: 3000 }
     );
-    await page.click("#cancel");
-    await waitForRunStatus("cancelled");
+    await page.keyboard.press("Space");
+    await waitForRunStatus("ok");
+    const pcompReport = (await page.locator("#task-report").textContent()) || "";
+    if (!pcompReport.includes("Human trials: 2")) {
+      throw new Error(`Production Compilation human trial count missing:\n${pcompReport}`);
+    }
+    if (!pcompReport.includes("Completed trials: 2 / 2 per game")) {
+      throw new Error(`Production Compilation completed count missing:\n${pcompReport}`);
+    }
+
+    await selectModel("unit5-onehit", "define-model 1-hit-model");
+    await page.selectOption("#task-control-onehit-mode", "play");
+    await page.fill("#task-control-onehit-hands", "1");
+    await page.fill("#task-control-onehit-seconds", "1");
+    await page.click("#run");
+    await page.waitForSelector(".bj-status", { timeout: 10000 });
+    const onehitHint = (await page.locator(".bj-status").textContent()) || "";
+    if (!onehitHint.includes("Hand 1/1")) {
+      throw new Error(`1-Hit Blackjack hand count missing: ${onehitHint}`);
+    }
+    await page.locator('.bj-actions button[data-choice="s"]').click();
+    await waitForRunStatus("ok");
+    const onehitReport = (await page.locator("#task-report").textContent()) || "";
+    if (!onehitReport.includes("Mode: play against model")) {
+      throw new Error(`1-Hit Blackjack play report missing:\n${onehitReport}`);
+    }
 
     await selectModel("unit6-bst", "define-model bst");
     await page.selectOption("#task-control-bst-mode", "human");
     await page.click("#run");
     await waitForHumanWindow();
+    const bstHint = (await page.locator(".human-hint").textContent()) || "";
+    if (!bstHint.includes("Problem 1/15")) {
+      throw new Error(`Building Sticks progress count missing: ${bstHint}`);
+    }
     for (const label of ["B", "C", "C", "A"]) {
       await page
         .locator("#agi-window .agi-button")
@@ -1098,6 +1172,10 @@ async function main() {
     await waitForHumanWindow();
     for (let trial = 0; trial < 6; trial += 1) {
       await page.waitForSelector(".human-choice-bar", { timeout: 15000 });
+      const sieglerPrompt = (await page.locator(".human-prompt").textContent()) || "";
+      if (!sieglerPrompt.includes(`Problem ${trial + 1}/6`)) {
+        throw new Error(`Siegler progress count missing: ${sieglerPrompt}`);
+      }
       if (trial === 0) {
         const replay = page.locator(".human-choice-bar button.secondary");
         if (await replay.count()) await replay.first().click();
@@ -1127,6 +1205,10 @@ async function main() {
     await waitForHumanWindow();
     for (let trial = 0; trial < 2; trial += 1) {
       await page.waitForSelector(".human-text-row input", { timeout: 5000 });
+      const pastTensePrompt = (await page.locator(".human-prompt").textContent()) || "";
+      if (!pastTensePrompt.includes(`Verb ${trial + 1}/2`)) {
+        throw new Error(`Past Tense progress count missing: ${pastTensePrompt}`);
+      }
       await page.fill(".human-text-row input", "tested");
       await page.locator(".human-text-row button").click();
       if (trial === 0) {

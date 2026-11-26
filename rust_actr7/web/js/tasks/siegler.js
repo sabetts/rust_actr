@@ -119,9 +119,12 @@ async function humanSiegler(actr, ctx) {
         if (!played) {
           actr.addTextToExpWindow(window, `${arg1} and ${arg2}`, { x: 155, y: 185 });
         }
+        ctx.progress?.(
+          `running... set ${setIndex + 1}/${sets} · problem ${set.length + 1}/${PROBLEMS.length}`
+        );
 
         const prompt = createChoicePrompt(actr, ctx, {
-          prompt: `Set ${setIndex + 1}/${sets}: what is the sum?`,
+          prompt: `Set ${setIndex + 1}/${sets} · Problem ${set.length + 1}/${PROBLEMS.length}: what is the sum?`,
           choices: DIGITS.map((digit) => ({
             value: digit,
             label: digit,
@@ -140,7 +143,6 @@ async function humanSiegler(actr, ctx) {
         }
         if (answer == null) break;
         set.push(answer.value);
-        ctx.progress?.(`running... set ${setIndex + 1}/${sets}`);
       }
       if (set.length !== PROBLEMS.length) break;
       responses.push(set);

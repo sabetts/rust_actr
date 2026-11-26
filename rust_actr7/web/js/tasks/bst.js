@@ -152,7 +152,7 @@ function makeBstTask(config) {
     return state;
   }
 
-  async function humanTrial(actr, ctx, stims) {
+  async function humanTrial(actr, ctx, stims, progressLabel = "") {
     const state = newState(stims);
     const done = new Promise((resolve, reject) => {
       const abort = () => reject(new RunCancelled());
@@ -182,7 +182,10 @@ function makeBstTask(config) {
     const display = buildDisplay(actr, true, stims);
     state.window = display.window;
     currentState = state;
-    showHint(actr, "Use the A, B, and C buttons to build the green target. Use Reset to start over.");
+    showHint(
+      actr,
+      `${progressLabel ? `${progressLabel} ` : ""}Use the A, B, and C buttons to build the green target. Use Reset to start over.`
+    );
     try {
       await ctx.paint();
       await done;
@@ -208,11 +211,17 @@ function makeBstTask(config) {
         if (choice === "experiment") {
           const choices = [];
           let solved = 0;
-          for (const stims of EXP_STIMS) {
-            const state = await humanTrial(actr, ctx, stims);
+          for (let index = 0; index < EXP_STIMS.length; index += 1) {
+            const stims = EXP_STIMS[index];
+            ctx.progress?.(`running... ${index + 1}/${EXP_STIMS.length}`);
+            const state = await humanTrial(
+              actr,
+              ctx,
+              stims,
+              `Problem ${index + 1}/${EXP_STIMS.length}.`
+            );
             choices.push(state.choice ?? "none");
             if (state.done) solved += 1;
-            ctx.progress?.(`running... ${choices.length}/${EXP_STIMS.length}`);
           }
           const percentages = choices.map((value) => (value === "over" ? 100 : 0));
           const correlation = actr.correlation(percentages, EXP_DATA, false);

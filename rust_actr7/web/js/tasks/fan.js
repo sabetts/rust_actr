@@ -98,7 +98,9 @@ async function goalSentence(actr, ctx, person, location, target, term) {
 
 async function collect(actr, ctx, term, noPm) {
   const results = [];
-  for (const [person, location, target] of PROBES) {
+  for (let index = 0; index < PROBES.length; index += 1) {
+    const [person, location, target] = PROBES[index];
+    ctx.progress?.(`running... probe ${index + 1}/${PROBES.length}`);
     results.push(
       noPm
         ? await goalSentence(actr, ctx, person, location, target, term)
@@ -108,14 +110,22 @@ async function collect(actr, ctx, term, noPm) {
   return results;
 }
 
-async function humanSentence(actr, ctx, window, person, location, target) {
+async function humanSentence(
+  actr,
+  ctx,
+  window,
+  person,
+  location,
+  target,
+  promptText = "Was this pair studied?"
+) {
   actr.clearExpWindow(window);
   actr.addTextToExpWindow(window, person, { x: 50, y: 150, width: 75 });
   actr.addTextToExpWindow(window, location, { x: 250, y: 150, width: 75 });
   const start = performance.now();
   await ctx.paint();
   const prompt = createChoicePrompt(actr, ctx, {
-    prompt: "Was this pair studied?",
+    prompt: promptText,
     choices: [
       { value: "k", label: "Studied (K)", key: "k" },
       { value: "d", label: "Not studied (D)", key: "d" },
@@ -144,8 +154,20 @@ async function humanCollect(actr, ctx) {
   });
   try {
     const results = [];
-    for (const [person, location, target] of PROBES) {
-      results.push(await humanSentence(actr, ctx, window, person, location, target));
+    for (let index = 0; index < PROBES.length; index += 1) {
+      const [person, location, target] = PROBES[index];
+      ctx.progress?.(`running... probe ${index + 1}/${PROBES.length}`);
+      results.push(
+        await humanSentence(
+          actr,
+          ctx,
+          window,
+          person,
+          location,
+          target,
+          `Probe ${index + 1}/${PROBES.length}: was this pair studied?`
+        )
+      );
     }
     return results;
   } finally {

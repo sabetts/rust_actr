@@ -218,14 +218,16 @@ async function humanPastTense(actr, ctx) {
   const records = [];
 
   try {
-    for (const entry of selected) {
+    for (let index = 0; index < selected.length; index += 1) {
+      const entry = selected[index];
       const verb = String(entry[0]).toLowerCase();
+      ctx.progress?.(`running... ${index + 1}/${limit}`);
       actr.clearExpWindow(window);
       actr.addTextToExpWindow(window, `Verb: ${verb}`, { x: 140, y: 145 });
       await ctx.paint();
 
       const prompt = createTextPrompt(actr, ctx, {
-        prompt: `Type the past tense of "${verb}".`,
+        prompt: `Verb ${index + 1}/${limit}: type the past tense of "${verb}".`,
         placeholder: "past tense",
         maxLength: 30,
         timeoutMs: 30000,

@@ -225,7 +225,16 @@ function newScores() {
   return [0, 0, 0, 0];
 }
 
-async function playHand(actr, goal, monitor, ctx, human, seconds, more) {
+async function playHand(
+  actr,
+  goal,
+  monitor,
+  ctx,
+  human,
+  seconds,
+  more,
+  handLabel = ""
+) {
   const mcards = deal(actr);
   const ocards = deal(actr);
   showModelCards(actr, goal, mcards, ocards[0]);
@@ -240,7 +249,7 @@ async function playHand(actr, goal, monitor, ctx, human, seconds, more) {
       modelCards: mcards.slice(0, 2),
       hideModel: true,
       hideHuman: false,
-      hint: `Hit or stay? (${seconds}s)`,
+      hint: `${handLabel ? `${handLabel} · ` : ""}Hit or stay? (${seconds}s)`,
       actions: [["h", "Hit"], ["s", "Stay"]],
     });
     const choice = waitForChoice(ctx, seconds);
@@ -352,9 +361,19 @@ async function play(actr, ctx) {
   let scores = newScores();
   try {
     for (let hand = 0; hand < hands; hand += 1) {
+      ctx.progress?.(`running... hand ${hand + 1}/${hands}`);
       scores = addScores(
         scores,
-        await playHand(actr, goal, monitor, ctx, true, seconds, hand + 1 < hands)
+        await playHand(
+          actr,
+          goal,
+          monitor,
+          ctx,
+          true,
+          seconds,
+          hand + 1 < hands,
+          `Hand ${hand + 1}/${hands}`
+        )
       );
     }
   } finally {
