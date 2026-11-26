@@ -13,14 +13,9 @@ const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const STUDY_MS = 5000;
 const DEFAULT_TRIALS = 6;
 
-async function humanTrial(actr, ctx, trial, trialCount) {
-  actr.reset();
+async function humanTrial(actr, ctx, window, trial, trialCount) {
+  actr.clearExpWindow(window);
   const studied = humanShuffle(DIGITS);
-  const window = actr.openExpWindow("Grouped Recall", {
-    visible: true,
-    width: 400,
-    height: 300,
-  });
   for (let i = 0; i < studied.length; i += 3) {
     actr.addTextToExpWindow(window, studied.slice(i, i + 3).join(" "), {
       x: 80,
@@ -55,7 +50,7 @@ async function humanTrial(actr, ctx, trial, trialCount) {
   } finally {
     prompt?.remove();
     clearHint(actr);
-    actr.closeExpWindow(window);
+    actr.clearExpWindow(window);
   }
 }
 
@@ -64,10 +59,21 @@ async function humanRecall(actr, ctx) {
     1,
     Math.min(20, Number(ctx.controls.humanTrials) || DEFAULT_TRIALS)
   );
+  actr.reset();
+  const window = actr.openExpWindow("Grouped Recall", {
+    visible: true,
+    width: 400,
+    height: 300,
+  });
   const results = [];
-  for (let trial = 1; trial <= trials; trial += 1) {
-    results.push(await humanTrial(actr, ctx, trial, trials));
-    if (trial < trials) await waitReal(750, ctx.signal);
+  try {
+    for (let trial = 1; trial <= trials; trial += 1) {
+      results.push(await humanTrial(actr, ctx, window, trial, trials));
+      if (trial < trials) await waitReal(750, ctx.signal);
+    }
+  } finally {
+    clearHint(actr);
+    actr.closeExpWindow(window);
   }
 
   const correct = results.reduce((sum, result) => sum + result.correct, 0);
