@@ -27,6 +27,7 @@ fixtures/
   extract-specs.lisp  spec extractor for the regression corpus
   rpc-conformance.{sh,py}, rpc-enabled.txt
   command-inventory.{py,txt}
+  tk-env/          local Tk Environment compatibility suite (run.py)
 ```
 
 The refs themselves live beside their tests: `tests/cases/<name>.ref`, one
@@ -99,6 +100,24 @@ refs. Regenerate with `surrogates/regen-surrogates.sh`.
 `units/tables/*.sexp` are module-level latency / base-level tables checked
 row-by-row by `src/engine/tests.rs`. `regen-units.sh` + `run-units.lisp`
 regenerate them.
+
+### tk-env/
+
+Local-only harness that drives the real Tk Environment Tcl client against a
+private Rust server. It copies `actr7.x/environment/gui` into `.tmp`, starts a
+server with `--no-port-file`, and sources `new-server.tcl` plus selected dialog
+files. It is exploratory: when a scenario finds a bug, add a Rust regression
+test under `tests/` or `src/rpc/session.rs`.
+
+```sh
+python fixtures/tk-env/run.py --list
+python fixtures/tk-env/run.py
+python fixtures/tk-env/run.py --scenario trace-history
+python fixtures/tk-env/run.py --audit
+```
+
+Requires Python 3 + `tkinter` and an `actr7.x` checkout. See
+`tk-env/README.md`. It is not part of default `cargo test`.
 
 ## Regenerate
 
