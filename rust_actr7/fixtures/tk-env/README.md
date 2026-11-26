@@ -74,18 +74,24 @@ Add a module under `scenarios/` exporting `SCENARIOS` and register it in
 - `viewers` — Declarative, procedural, buffer, and parameter viewers.
 - `histories` — Retrieval and buffer history viewers, selection/detail panes.
 - `dispatcher` — Connections, per-connection commands, and documentation.
+- `stepper` — Real stepper UI, auto-stepping, Stop, and Event Queue.
+- `experiment-windows` — Visible-virtual open/text/line/close, key forwarding.
+- `production-history` — Production grid and graph canvas items/modes.
+- `perceptual` — Audicon history plus live visicon/audicon viewers.
+- `bold-smoke` — BOLD graph fetch/plot smoke test.
+- `graphic-traces` — Horizontal and vertical buffer graphic traces.
 
 `--audit` checks Tcl command literals against the live server registry.
 
-More areas (stepper, experiment windows/AGI, production histories/graphs,
-BOLD, perceptual histories) are added incrementally.  Prefer semantic
-assertions (non-empty, contains a known production/chunk, ordering) over brittle
-full-window text.
+Prefer semantic assertions (non-empty, contains a known production/chunk,
+ordering) over brittle full-window text.
 
 ## Limitations
 
 - No pixel-level rendering checks.
 - Only selected dialog procs are sourced; full `server.tcl`/settings init is
   not exercised.
-- BOLD and graphical views are shape/smoke candidates only.
+- BOLD and graphical views are shape/smoke checks, not visual verification.
+- Visicon history needs a scripted visual device that the RPC layer does not
+  expose; audicon history and live visicon printing are covered instead.
 - Tk needs a display; this suite is intended for local runs.

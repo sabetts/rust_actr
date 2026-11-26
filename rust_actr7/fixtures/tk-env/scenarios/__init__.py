@@ -3,9 +3,12 @@
 
 def all_scenarios():
     from . import (
+        bold,
         control_panel,
         dispatcher,
+        graphic_traces,
         histories,
+        perceptual,
         production,
         stepper,
         trace_history,
@@ -22,4 +25,7 @@ def all_scenarios():
     scenarios.extend(stepper.SCENARIOS)
     scenarios.extend(windows.SCENARIOS)
     scenarios.extend(production.SCENARIOS)
+    scenarios.extend(perceptual.SCENARIOS)
+    scenarios.extend(bold.SCENARIOS)
+    scenarios.extend(graphic_traces.SCENARIOS)
     return scenarios
