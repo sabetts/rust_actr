@@ -5606,23 +5606,65 @@ fn production_grid_records(e: &crate::engine::Engine) -> Vec<String> {
 /// Lisp Environment emits the same records from its own history processors.
 fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Vec<String> {
     let graph = e.production_graph_data(mode);
-    let mut out =
-        vec![Json::Arr(vec![Json::Str("size".into()), Json::Int(1), Json::Int(1)]).write()];
+    // The Tcl Production Graph draws directly from these records, so unlike
+    // the native Environment (which has its own layout pass) it needs real
+    // node coordinates and link point lists.  Lay nodes out on a deterministic
+    // grid; every page uses the same node positions.
+    let cell_w = 190i64;
+    let cell_h = 110i64;
+    let margin = 80i64;
+    let count = graph.nodes.len();
+    let cols = if count == 0 {
+        1
+    } else {
+        (count as f64).sqrt().ceil() as i64
+    }
+    .max(1);
+    let rows = if count == 0 {
+        1
+    } else {
+        ((count as i64) + cols - 1) / cols
+    };
+    let width = margin * 2 + cols * cell_w;
+    let height = margin * 2 + rows * cell_h;
+    let mut pos = std::collections::HashMap::new();
+    for (i, node) in graph.nodes.iter().enumerate() {
+        let col = i as i64 % cols;
+        let row = i as i64 / cols;
+        let cx = margin + col * cell_w + cell_w / 2;
+        let cy = margin + row * cell_h + cell_h / 2;
+        pos.insert(node.name.as_str(), (cx, cy));
+    }
+
+    let mut out = vec![
+        Json::Arr(vec![
+            Json::Str("size".into()),
+            Json::Int(width),
+            Json::Int(height),
+        ])
+        .write(),
+    ];
 
     for (page, info) in graph.pages.iter().enumerate() {
         let page_num = page as u32;
         let mut items = Vec::new();
         for node in &graph.nodes {
             let color = if node.used { "black" } else { "gray" };
+            let (cx, cy) = pos
+                .get(node.name.as_str())
+                .copied()
+                .unwrap_or((width / 2, height / 2));
+            let (x1, y1) = (cx - cell_w / 2 + 20, cy - 20);
+            let (x2, y2) = (cx + cell_w / 2 - 20, cy + 20);
             items.push(Json::Arr(vec![
                 Json::Str("label".into()),
                 Json::Str(node.name.clone()),
-                Json::Int(0),
-                Json::Int(0),
-                Json::Int(0),
-                Json::Int(0),
-                Json::Int(0),
-                Json::Int(0),
+                Json::Int(cx),
+                Json::Int(cy),
+                Json::Int(x1),
+                Json::Int(y1),
+                Json::Int(x2),
+                Json::Int(y2),
                 Json::Str(color.into()),
                 Json::Str(node.text.clone()),
             ]));
@@ -5630,10 +5672,10 @@ fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Ve
                 items.push(Json::Arr(vec![
                     Json::Str("box".into()),
                     Json::Str(node.name.clone()),
-                    Json::Int(0),
-                    Json::Int(0),
-                    Json::Int(0),
-                    Json::Int(0),
+                    Json::Int(x1),
+                    Json::Int(y1),
+                    Json::Int(x2),
+                    Json::Int(y2),
                     Json::Str("green".into()),
                     Json::Int(1),
                 ]));
@@ -5642,10 +5684,10 @@ fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Ve
                 items.push(Json::Arr(vec![
                     Json::Str("box".into()),
                     Json::Str(node.name.clone()),
-                    Json::Int(0),
-                    Json::Int(0),
-                    Json::Int(0),
-                    Json::Int(0),
+                    Json::Int(x1),
+                    Json::Int(y1),
+                    Json::Int(x2),
+                    Json::Int(y2),
                     Json::Str("red".into()),
                     Json::Int(1),
                 ]));
@@ -5659,6 +5701,17 @@ fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Ve
             }
         }
         for edge in graph.edges.iter().filter(|edge| edge.page == page_num) {
+            let from = pos.get(edge.from.as_str()).copied();
+            let to = pos.get(edge.to.as_str()).copied();
+            let points: Vec<Json> = match (from, to) {
+                (Some((x1, y1)), Some((x2, y2))) => vec![
+                    Json::Int(x1),
+                    Json::Int(y1),
+                    Json::Int(x2),
+                    Json::Int(y2),
+                ],
+                _ => Vec::new(),
+            };
             items.push(Json::Arr(vec![
                 Json::Str("link".into()),
                 Json::Str(edge.from.clone()),
@@ -5666,6 +5719,7 @@ fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Ve
                 Json::Str(if edge.dashed { "gray" } else { "black" }.into()),
                 Json::Int(edge.count as i64),
                 Json::Int(1),
+                Json::Arr(points),
             ]));
         }
         if let Some(start) = info.start_ms {
@@ -7778,6 +7832,41 @@ mod tests {
             assert!(has_kind("label"), "{command}: no label records");
             assert!(has_kind("link"), "{command}: no link records");
             assert!(has_kind("size"), "{command}: no size record");
+            let mut labels_have_coords = false;
+            let mut links_have_points = false;
+            let mut rows = Vec::new();
+            for record in &records {
+                let Json::Arr(fields) = record else { continue };
+                if matches!(fields.first(), Some(Json::Arr(_))) {
+                    rows.extend(fields.iter());
+                } else {
+                    rows.push(record);
+                }
+            }
+            for record in rows {
+                let Json::Arr(fields) = record else { continue };
+                match fields.first().and_then(Json::as_str) {
+                    Some("label") => {
+                        if fields.get(6).and_then(Json::as_f64).unwrap_or(0.0) > 0.0 {
+                            labels_have_coords = true;
+                        }
+                    }
+                    Some("link") => {
+                        if matches!(fields.get(6), Some(Json::Arr(points)) if !points.is_empty()) {
+                            links_have_points = true;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            assert!(
+                labels_have_coords,
+                "{command}: label records have no coordinates"
+            );
+            assert!(
+                links_have_points,
+                "{command}: link records have no point list"
+            );
         }
     }
 
