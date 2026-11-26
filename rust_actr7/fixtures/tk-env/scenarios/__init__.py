@@ -6,6 +6,7 @@ def all_scenarios():
         control_panel,
         dispatcher,
         histories,
+        production,
         stepper,
         trace_history,
         viewers,
@@ -20,4 +21,5 @@ def all_scenarios():
     scenarios.extend(dispatcher.SCENARIOS)
     scenarios.extend(stepper.SCENARIOS)
     scenarios.extend(windows.SCENARIOS)
+    scenarios.extend(production.SCENARIOS)
     return scenarios
