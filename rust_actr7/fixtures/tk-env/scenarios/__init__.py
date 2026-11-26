@@ -9,6 +9,7 @@ def all_scenarios():
         stepper,
         trace_history,
         viewers,
+        windows,
     )
 
     scenarios = []
@@ -18,4 +19,5 @@ def all_scenarios():
     scenarios.extend(histories.SCENARIOS)
     scenarios.extend(dispatcher.SCENARIOS)
     scenarios.extend(stepper.SCENARIOS)
+    scenarios.extend(windows.SCENARIOS)
     return scenarios
