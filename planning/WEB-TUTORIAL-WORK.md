@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `994fa6a`
+Latest relevant commit: `40c7358`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -57,10 +57,11 @@ first-block behavior.
   reveals which row to report.
 - Building Sticks human mode offers the two demo problems plus a full
   15-problem experiment.
-- Grouped Recall human mode shuffles the digits `1-9` into three groups of
-  three per trial, presents them for five seconds, clears, and scores free
-  recall against the studied sequence. It repeats a configurable number of
-  trials (6 by default) and reports per-trial plus aggregate recall.
+- Grouped Recall human mode offers randomized practice (3 trials by default,
+  configurable) or the canonical one-trial list `123 / 456 / 789`. It reuses
+  one window, presents three groups of three for five seconds, clears, and
+  scores free recall against the studied sequence. The report includes
+  per-trial plus aggregate recall and the selected list mode.
 - Utility Learning human mode uses fixed trials, A/B buttons, and two seconds of
   feedback.
 - Semantic Network human mode compares human answers with the canonical model
@@ -139,8 +140,9 @@ The browser tests require a built wasm/model tree:
 python rust_actr7/web/build.py
 ```
 
-Latest verified result: all four test commands pass after the progress-counter
-pass and the Siegler, Past Tense, Categorize, audio, and touch-control work.
+Latest verified result: all four test commands pass after the Grouped Recall
+canonical/practice work, the progress-counter pass, and the Siegler, Past Tense,
+Categorize, audio, and touch-control work.
 
 ## 7. Progress log
 
@@ -162,3 +164,6 @@ pass and the Siegler, Past Tense, Categorize, audio, and touch-control work.
 - 2026-11-25: Added configurable Production Compilation human trials and
   trial/block/problem/probe/item/hand progress counters across the remaining
   tasks. Browser coverage updated. Committed as `994fa6a`.
+- 2026-11-25: Added canonical/practice list selection to Grouped Recall. The
+  canonical mode runs one fixed `123 / 456 / 789` trial; practice mode defaults
+  to three randomized trials. Browser coverage updated. Committed as `40c7358`.
