@@ -2498,7 +2498,12 @@ impl Session {
                     }
                     self.hist_jobs.remove(&id);
                 }
-                Ok(vec![Json::Str(String::new())])
+                // End of an incremental transfer.  Return *no values*, which
+                // serializes as `"result": []`.  The Tcl Environment's
+                // `get_incremental_history` loops on `while {$start != ""}`;
+                // a `[""]` result would arrive there as `{}` and never end,
+                // leaving the Text Trace window stuck on "Collecting Data".
+                Ok(Vec::new())
             }
             // Write a history stream to a file.
             "save-history-data" => {
@@ -6676,13 +6681,21 @@ mod tests {
             let got = s
                 .evaluate("get-incremental-history-data", None, &[id.clone()], &mut r)
                 .unwrap();
-            match got.first().and_then(|x| x.as_str()) {
-                Some("") | None => break,
-                Some(c) => {
-                    assert!(c.starts_with('['), "chunk not JSON array: {c}");
-                    chunks += 1;
-                }
+            if got.is_empty() {
+                // The Tcl Environment's fetch loop ends on an empty result;
+                // `[""]` would arrive there as `{}` and loop forever.
+                break;
             }
+            let c = got
+                .first()
+                .and_then(|x| x.as_str())
+                .unwrap_or_else(|| panic!("unexpected incremental result: {got:?}"));
+            assert!(
+                !c.is_empty(),
+                "end-of-stream must be an empty result, not [\"\"]"
+            );
+            assert!(c.starts_with('['), "chunk not JSON array: {c}");
+            chunks += 1;
             assert!(chunks < 1000, "incremental stream did not terminate");
         }
         assert!(chunks >= 1, "expected at least one chunk");

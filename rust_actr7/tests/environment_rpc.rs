@@ -710,9 +710,15 @@ fn viewers_connections_and_history_round_trip() {
     let mut chunks = Vec::new();
     loop {
         let got = c.eval_ok("get-incremental-history-data", None, id.clone());
+        if got.is_empty() {
+            // The Tcl Environment's `while {$start != ""}` loop relies on an
+            // empty result list; a `[""]` result arrives there as `{}`.
+            break;
+        }
         match got.first().and_then(|x| x.as_str()) {
-            Some("") | None => break,
+            Some("") => panic!("end-of-stream must be an empty result, not [\"\"]"),
             Some(s) => chunks.push(s.to_string()),
+            None => panic!("unexpected incremental chunk: {got:?}"),
         }
     }
     assert!(!chunks.is_empty(), "trace-history produced no chunks");
