@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-25
 Branch: `main`
-Latest relevant commit: `40c7358`
+Latest relevant commit: `c681222`
 
 This document tracks the browser tutorial under `rust_actr7/web`: what is
 implemented, what remains, how it is verified, and the decisions made while
@@ -140,9 +140,9 @@ The browser tests require a built wasm/model tree:
 python rust_actr7/web/build.py
 ```
 
-Latest verified result: all four test commands pass after the Grouped Recall
-canonical/practice work, the progress-counter pass, and the Siegler, Past Tense,
-Categorize, audio, and touch-control work.
+Latest verified result: all four test commands pass after the Subitize response
+label, Grouped Recall canonical/practice, progress-counter, and earlier human
+mode work.
 
 ## 7. Progress log
 
@@ -167,3 +167,6 @@ Categorize, audio, and touch-control work.
 - 2026-11-25: Added canonical/practice list selection to Grouped Recall. The
   canonical mode runs one fixed `123 / 456 / 789` trial; practice mode defaults
   to three randomized trials. Browser coverage updated. Committed as `40c7358`.
+- 2026-11-25: Labeled the Subitize ten response as `10` while keeping `0` as
+  the keyboard shortcut, and updated the instructions and browser coverage.
+  Committed as `c681222`.
