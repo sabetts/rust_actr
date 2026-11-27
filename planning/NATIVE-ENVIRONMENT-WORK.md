@@ -27,10 +27,12 @@ now owns the native GUI program.
     Environment; `--connect HOST:PORT` overrides discovery. All server
     connections share one `Session`, matching the Lisp dispatcher, so the GUI
     sees models loaded by Python or other clients.
-  - **in-process** (`--in-process`): the GUI owns `Session`.
+  - **in-process** (`EnvTarget::InProcess`): the GUI owns `Session`; for
+    programmatic/backend/test use, not selected by `actr env`.
 - `actr server --env [MODEL]` starts the shared server and opens the native
   Environment as another client of it. Closing the GUI exits the process.
-- Auto-connect failures are fatal; use `--in-process` for the local engine.
+- Auto-connect failures are fatal; start `actr server` first, or run
+  `actr server --env` for a local GUI.
 
 ## Program status
 
@@ -465,8 +467,8 @@ Manual smoke (desktop session required):
 cargo run --features env -- env
 cargo run --features env -- env --connect 127.0.0.1:2650
 
-# Local engine, for a machine with no dispatcher.
-cargo run --features env -- env --in-process
+# Local server plus GUI, for a machine with no dispatcher.
+cargo run --features env -- server --env
 ```
 
 ## Definition of done

@@ -33,7 +33,7 @@ cargo run -- run <model.lisp>
 cargo run -- server              # RPC dispatcher, one shared model session
 cargo run --features env -- server --env  # dispatcher + attached native GUI
 cargo run --features env -- env  # native GUI, auto-connects via ~/act-r-*.txt
-cargo run --features env -- env --in-process  # native GUI with a local engine
+cargo run --features env -- env --connect 127.0.0.1:2650  # explicit address
 ```
 
 ## Python interface

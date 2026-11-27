@@ -5,8 +5,9 @@
 //!   speaking the same `\x04`-framed JSON protocol as `actr.py` and the Tcl
 //!   environment. It reads `~/act-r-address.txt` and `~/act-r-port-num.txt`
 //!   like the Tcl Environment unless `--connect HOST:PORT` overrides them.
-//! - **in-process** (`--in-process`) â€” the GUI owns the
-//!   [`crate::rpc::session::Session`].
+//! - **in-process** (`EnvTarget::InProcess`) â€” the GUI owns the
+//!   [`crate::rpc::session::Session`]. This is the programmatic/backend form
+//!   used by tests and embedders; the `actr env` CLI only connects to a server.
 //!
 //! Compiled only with the `env` feature so the core engine, the trace test
 //! suites, and the wasm cdylib stay dependency-free.
@@ -75,7 +76,10 @@ pub fn run(args: EnvArgs) -> ExitCode {
                         address_file.display(),
                         port_file.display()
                     );
-                    eprintln!("         pass --in-process to run the engine locally.");
+                    eprintln!(
+                        "         start an ACT-R server first (`actr server`), or run \
+                         `actr server --env` for a local GUI."
+                    );
                     return ExitCode::FAILURE;
                 }
             }
@@ -84,7 +88,10 @@ pub fn run(args: EnvArgs) -> ExitCode {
             Ok(c) => Box::new(c),
             Err(e) => {
                 eprintln!("actr env: could not connect to {host}:{port}: {e}");
-                eprintln!("         pass --in-process to run the engine locally.");
+                eprintln!(
+                    "         start an ACT-R server first (`actr server`), or run \
+                     `actr server --env` for a local GUI."
+                );
                 return ExitCode::FAILURE;
             }
         },
