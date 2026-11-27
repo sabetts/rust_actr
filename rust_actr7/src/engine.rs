@@ -2923,6 +2923,9 @@ pub struct Engine {
     copy_source: HashMap<String, String>,
     /// `!stop!` was executed: end the run with a BREAK-EVENT.
     stopped: bool,
+    /// Skip the tertiary module reset so the session can dispatch model-body
+    /// load actions between the secondary and tertiary reset phases.
+    defer_tertiary_reset: bool,
     /// The last `step_once` hit an event-hook `Break` (the event is requeued).
     hook_break_hit: bool,
     /// Recently-retrieved chunk finsts: `(name, time_ms)`, newest last.
@@ -3256,12 +3259,35 @@ impl Engine {
     /// Build an engine from already-created module instances. The session uses
     /// this to give each model its own instances from its factory list.
     pub fn with_module_instances(
+        model: Model,
+        seed: (u64, u64),
+        run_secs: f64,
+        device: DeviceSetup,
+        module_width: usize,
+        modules: Vec<Box<dyn module::Module>>,
+    ) -> Result<Engine, EngineError> {
+        Self::with_module_instances_deferred_tertiary(
+            model,
+            seed,
+            run_secs,
+            device,
+            module_width,
+            modules,
+            false,
+        )
+    }
+
+    /// Like [`Engine::with_module_instances`], optionally deferring the
+    /// tertiary module reset so the session can dispatch model-body load
+    /// actions before it.
+    pub(crate) fn with_module_instances_deferred_tertiary(
         mut model: Model,
         seed: (u64, u64),
         run_secs: f64,
         device: DeviceSetup,
         module_width: usize,
         modules: Vec<Box<dyn module::Module>>,
+        defer_tertiary_reset: bool,
     ) -> Result<Engine, EngineError> {
         let module_descriptors: Vec<module::ModuleDescriptor> = modules
             .iter()
@@ -3550,6 +3576,7 @@ impl Engine {
             chunk_alias: HashMap::new(),
             copy_source: HashMap::new(),
             stopped: false,
+            defer_tertiary_reset: false,
             hook_break_hit: false,
             finsts: Vec::new(),
             goal_set: Vec::new(),
@@ -3693,8 +3720,10 @@ impl Engine {
         // `+buffer> isa TYPE` carries the chunk-type's default slots (e.g.
         // `cmd move-attention`), which the rendering and composition see.
         eng.expand_request_defaults();
+        eng.defer_tertiary_reset = defer_tertiary_reset;
         eng.init_custom_modules()?;
         eng.reset_impl()?;
+        eng.defer_tertiary_reset = false;
         eng.cfg.module_width = module_width;
         // The construction reset is not part of the recorded trace: ACT-R
         // installs its monitors after the model is loaded, so any warnings it
@@ -3786,6 +3815,18 @@ impl Engine {
         self.reset()?;
         *self.rng.borrow_mut() = saved;
         Ok(())
+    }
+
+    /// Defer the tertiary reset so the session can dispatch model-body load
+    /// actions between the secondary and tertiary phases.
+    pub(crate) fn set_defer_tertiary_reset(&mut self, defer: bool) {
+        self.defer_tertiary_reset = defer;
+    }
+
+    /// Run the tertiary reset deferred by [`set_defer_tertiary_reset`].
+    pub(crate) fn run_deferred_tertiary_reset(&mut self) -> Result<(), EngineError> {
+        self.module_reset(module::ResetPhase::Tertiary)
+            .map_err(EngineError::from)
     }
 
     /// `(reset)` with the reset segment removed from the trace and `:v` left
@@ -4501,10 +4542,13 @@ impl Engine {
             );
         }
         // Lisp's `reset-module` / `secondary-reset-module` /
-        // `tertiary-reset-module` callbacks.
+        // `tertiary-reset-module` callbacks. The session may defer the
+        // tertiary phase so it can dispatch model-body load actions first.
         self.module_reset(module::ResetPhase::Primary)?;
         self.module_reset(module::ResetPhase::Secondary)?;
-        self.module_reset(module::ResetPhase::Tertiary)?;
+        if !self.defer_tertiary_reset {
+            self.module_reset(module::ResetPhase::Tertiary)?;
+        }
         // ACT-R re-evaluates the model body (and its `sgp` forms) on reset.
         self.apply_model_module_params()?;
         Ok(())

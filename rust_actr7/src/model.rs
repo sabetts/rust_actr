@@ -359,6 +359,15 @@ pub struct Chunk {
     pub slots: Vec<(String, Pattern)>,
 }
 
+/// A model-body form that may be dispatched through the command/module layer
+/// during load or reset. Static parsing still populates the corresponding
+/// `Model` fields for the fast path.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModelLoadAction {
+    pub command: String,
+    pub args: Vec<Sexp>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
     pub name: String,
@@ -395,6 +404,10 @@ pub struct Model {
     pub goal_focuses: Vec<ChunkDesc>,
     /// Warnings for goal-focus specs naming an unknown chunk type.
     pub goal_warnings: Vec<String>,
+    /// Ordered model-body forms that can be dispatched to an overriding
+    /// command or module during load/reset. The static fields above remain the
+    /// fast path when no override is active.
+    pub load_actions: Vec<ModelLoadAction>,
     pub productions: Vec<Production>,
     /// Model-body `(schedule-event <secs> "command" :params (...) ...)`:
     /// scheduled relative to model time 0 on each reset.
@@ -2814,6 +2827,7 @@ fn parse_model(
         reset_warnings: Vec::new(),
         model_warnings: Vec::new(),
         goal_warnings: Vec::new(),
+        load_actions: Vec::new(),
     };
     // `(spp <production> :key value ...)` calls, applied after the body so
     // they may appear before their production.
@@ -2903,6 +2917,10 @@ fn parse_model(
                         return structural(format!("bad add-dm entry: {e:?}"));
                     }
                 }
+                model.load_actions.push(ModelLoadAction {
+                    command: "ADD-DM".to_string(),
+                    args: items[1..].to_vec(),
+                });
             }
             "DEFINE-CHUNKS" => {
                 // Named chunks that live in the model's chunk table but not
@@ -2933,6 +2951,10 @@ fn parse_model(
                         }
                     }
                 }
+                model.load_actions.push(ModelLoadAction {
+                    command: "DEFINE-CHUNKS".to_string(),
+                    args: items[1..].to_vec(),
+                });
             }
             "MERGE-CHUNKS" | "MERGE-CHUNKS-FCT" => {
                 let a = match items.get(1).and_then(Sexp::as_sym) {
@@ -2944,6 +2966,10 @@ fn parse_model(
                     None => return structural("merge-chunks needs two chunk names"),
                 };
                 model.merge_chunks.push((a, b));
+                model.load_actions.push(ModelLoadAction {
+                    command: "MERGE-CHUNKS".to_string(),
+                    args: items[1..].to_vec(),
+                });
             }
             "GOAL-FOCUS" | "GOAL-FOCUS-FCT" => {
                 if items.len() != 2 {
@@ -2967,6 +2993,10 @@ fn parse_model(
                     model.initial_goal = Some(desc.clone());
                     model.goal_focuses.push(desc);
                 }
+                model.load_actions.push(ModelLoadAction {
+                    command: "GOAL-FOCUS".to_string(),
+                    args: vec![items[1].clone()],
+                });
             }
             // `(set-similarities (a b v) ...)`: explicit Sji between named
             // chunks (`commands/dm-commands.lisp:513`). Values are stored
