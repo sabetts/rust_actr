@@ -202,9 +202,6 @@ button:disabled {
 }
 
 .app-header {
-  position: sticky;
-  top: 0;
-  z-index: 60;
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -1072,7 +1069,7 @@ select.input {
 
 .run-bar {
   position: sticky;
-  top: calc(var(--header-h) + var(--space-2));
+  top: var(--space-2);
   z-index: 40;
   grid-column: 1 / -1;
   display: flex;
@@ -2774,7 +2771,7 @@ kbd {
   }
 
   .run-bar {
-    top: calc(var(--header-h) + 4px);
+    top: 4px;
     gap: 9px;
   }
 

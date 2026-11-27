@@ -1129,9 +1129,8 @@ export function createEditor({ onChange } = {}) {
       textarea.scrollTop = Math.max(0, top - view / 2 + lineHeight / 2);
     }
     if (scrollPage) {
-      const header = document.querySelector(".app-header");
       const bar = document.querySelector(".run-bar");
-      const margin = (header?.offsetHeight || 0) + (bar?.offsetHeight || 0) + 16;
+      const margin = (bar?.offsetHeight || 0) + 16;
       const rect = textarea.getBoundingClientRect();
       const lineY = rect.top + paddingTop + (target - 1) * lineHeight - textarea.scrollTop;
       if (lineY < margin + lineHeight || lineY > window.innerHeight - 24) {
