@@ -14,7 +14,7 @@ use std::rc::Rc;
 
 use crate::engine::module::{
     BufferSpec, Module, ModuleCtx, ModuleDescriptor, ModuleError, ModuleFactory, MultiBufferMode,
-    ParamSpec,
+    ParamSpec, ResetPhase,
 };
 use crate::engine::Value;
 use crate::json::Json;
@@ -131,6 +131,7 @@ impl ModuleFactory for RemoteModuleFactory {
             descriptor: self.descriptor.clone(),
             callbacks: self.callbacks.clone(),
             host: self.host.clone(),
+            connection: self.connection.clone(),
             model: RefCell::new(String::new()),
         })
     }
@@ -140,6 +141,7 @@ struct RemoteModule {
     descriptor: ModuleDescriptor,
     callbacks: RemoteCallbacks,
     host: Rc<dyn ModuleHost>,
+    connection: Option<String>,
     /// Model instance name, captured by `create`. `query` is `&self` and has
     /// no `ModuleCtx`, so it needs the name saved here.
     model: RefCell<String>,
@@ -164,6 +166,12 @@ impl RemoteModule {
 
     fn first(&self, values: Vec<Json>) -> Option<Json> {
         values.into_iter().next()
+    }
+
+    fn enqueue(&self, ctx: &mut ModuleCtx<'_>, command: Option<&str>, args: Vec<Value>) {
+        if let Some(command) = command {
+            ctx.enqueue_callback(self.connection.clone(), command, args);
+        }
     }
 }
 
@@ -242,6 +250,48 @@ impl Module for RemoteModule {
             Some(value) => json_to_value(&value),
             None => Value::Nil,
         }
+    }
+
+    fn reset(&mut self, ctx: &mut ModuleCtx<'_>, phase: ResetPhase) -> Result<(), ModuleError> {
+        let index = match phase {
+            ResetPhase::Primary => 0,
+            ResetPhase::Secondary => 1,
+            ResetPhase::Tertiary => 2,
+        };
+        self.enqueue(ctx, self.callbacks.reset[index].as_deref(), Vec::new());
+        Ok(())
+    }
+
+    fn notify_on_clear(&mut self, ctx: &mut ModuleCtx<'_>, buffer: &str, chunk: Option<&str>) {
+        let chunk = chunk
+            .map(|chunk| Value::Sym(chunk.to_uppercase()))
+            .unwrap_or(Value::Nil);
+        self.enqueue(
+            ctx,
+            self.callbacks.notify_on_clear.as_deref(),
+            vec![Value::Sym(buffer.to_uppercase()), chunk],
+        );
+    }
+
+    fn update(&mut self, ctx: &mut ModuleCtx<'_>, old_ms: i64, new_ms: i64) {
+        self.enqueue(
+            ctx,
+            self.callbacks.update.as_deref(),
+            vec![Value::Int(old_ms), Value::Int(new_ms)],
+        );
+    }
+
+    fn delete(&mut self, ctx: &mut ModuleCtx<'_>) -> Result<(), ModuleError> {
+        self.enqueue(ctx, self.callbacks.delete.as_deref(), Vec::new());
+        Ok(())
+    }
+
+    fn run_start(&mut self, ctx: &mut ModuleCtx<'_>) {
+        self.enqueue(ctx, self.callbacks.run_start.as_deref(), Vec::new());
+    }
+
+    fn run_end(&mut self, ctx: &mut ModuleCtx<'_>) {
+        self.enqueue(ctx, self.callbacks.run_end.as_deref(), Vec::new());
     }
 
     fn search(&mut self, ctx: &mut ModuleCtx<'_>, buffer: &str) -> Option<Vec<String>> {
