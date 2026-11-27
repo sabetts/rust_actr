@@ -18,6 +18,8 @@ pub const BUILTIN_DOCS: &[(&str, &str)] = &[
     ("load-act-r-code", "Loads the Lisp code file indicated. Params: pathname {compile}."),
     ("add-act-r-command", "Register a command with the ACT-R dispatcher. Params: name underlying-function {documentation} {single-instance} {local-name} {encoded}."),
     ("remove-act-r-command", "Remove a command from the ACT-R dispatcher. Params: name."),
+    ("define-module", "Create a new module. Params: name (buffer-spec*) (param-spec*) {< version, documentation, creation , reset, query, request, buffer-mod, params, delete, notify-on-clear, update, warning, search, offset, run-start, run-end, required, requires >}"),
+    ("undefine-module", "Remove the named module from the system.  Params: module-name."),
     ("start-pipe-connection", "Attempt to switch a connection to using pipes returns true if pipe connection available. Params: id."),
     ("goal-focus", "Schedule a chunk to enter the goal buffer at the current time or print the current goal buffer chunk. Params: {chunk-name}."),
     ("mod-focus", "Modify the chunk in the goal buffer using the slots and values provided. Params: '{<slot-name> <new-slot-value>}'*"),

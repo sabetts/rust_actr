@@ -8,11 +8,12 @@
 //! server invokes by sending an `evaluate` callback back over the wire.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use super::builtin_docs::builtin_doc;
+use super::remote_module::{self, ModuleHost};
 use crate::engine::module::{ModuleFactory, ModuleSet};
 use crate::engine::{
     DeviceSetup, Engine, EngineError, EventHook, EventView, HookValue, PpmHookFn, PreResult,
@@ -76,6 +77,8 @@ pub const BUILTINS: &[&str] = &[
     "load-act-r-code",
     "add-act-r-command",
     "remove-act-r-command",
+    "define-module",
+    "undefine-module",
     "start-pipe-connection",
     "goal-focus",
     "mod-focus",
@@ -298,6 +301,19 @@ pub trait Remote {
     ) -> Result<Vec<Json>, String> {
         self.call(name, model, args)
     }
+
+    /// A synchronous host for remote module data callbacks.
+    ///
+    /// Only RPC connections provide one; in-process loaders and test remotes
+    /// leave it `None`.
+    fn module_host(&self) -> Option<Rc<dyn ModuleHost>> {
+        None
+    }
+
+    /// The stable connection key that owns remote module factories.
+    fn connection_key(&self) -> Option<String> {
+        None
+    }
 }
 
 /// A remote target used by loaders without an RPC client (in-memory or
@@ -402,6 +418,9 @@ pub struct Session {
     device: DeviceSetup,
     /// Custom module factories; every model engine gets fresh instances.
     module_factories: Vec<Box<dyn ModuleFactory>>,
+    /// Connections that owned module factories when they disconnected while a
+    /// model was loaded. Their factories are pruned after the last model goes.
+    stale_module_connections: BTreeSet<String>,
     /// Models that installed a speech/microphone device. A runtime engine
     /// rebuild must restore this flag, as `define-chunks` does not uninstall
     /// the device in ACT-R.
@@ -625,6 +644,7 @@ impl Session {
             stepper: None,
             device: DeviceSetup::default(),
             module_factories: Vec::new(),
+            stale_module_connections: BTreeSet::new(),
             speech_models: Default::default(),
             vwin_handlers: Vec::new(),
             windows: HashMap::new(),
@@ -636,15 +656,59 @@ impl Session {
     }
 
     /// Register a module factory. Mirrors `define-module`'s restriction: it may
-    /// only be called while no model is defined.
+    /// only be called while no model is defined, and names are unique.
     pub fn add_module_factory(&mut self, factory: Box<dyn ModuleFactory>) -> Result<(), String> {
-        if !self.defs.is_empty() || self.engine.is_some() {
+        if self.models_loaded() {
             return Err(
                 "cannot define a module when a model is loaded; call clear-all first".into(),
             );
         }
+        self.prune_stale_module_factories();
+        let name = factory.name();
+        if self
+            .module_factories
+            .iter()
+            .any(|existing| existing.name().eq_ignore_ascii_case(&name))
+        {
+            return Err(format!(
+                "Module {} already exists and cannot be redefined; delete it with undefine-module first.",
+                name.to_uppercase()
+            ));
+        }
         self.module_factories.push(factory);
         Ok(())
+    }
+
+    /// Remove a registered module factory. Built-in modules are not factories
+    /// yet, so `goal`/`declarative` return the Lisp warning shape until M6.
+    pub fn remove_module_factory(&mut self, name: &str) -> Result<(), String> {
+        if self.models_loaded() {
+            return Err("Cannot delete a module when there are models defined.".into());
+        }
+        let Some(index) = self
+            .module_factories
+            .iter()
+            .position(|factory| factory.name().eq_ignore_ascii_case(name))
+        else {
+            return Err(format!(
+                "{name} is not the name of a currently defined module."
+            ));
+        };
+        self.module_factories.remove(index);
+        Ok(())
+    }
+
+    fn prune_stale_module_factories(&mut self) {
+        if self.models_loaded() || self.stale_module_connections.is_empty() {
+            return;
+        }
+        let stale = std::mem::take(&mut self.stale_module_connections);
+        self.module_factories.retain(|factory| {
+            factory
+                .connection()
+                .map(|connection| !stale.contains(&connection))
+                .unwrap_or(true)
+        });
     }
 
     pub fn module_set(&self) -> ModuleSet {
@@ -1098,6 +1162,9 @@ impl Session {
         self.windows
             .retain(|window_model, _| !window_model.eq_ignore_ascii_case(name));
         self.sync_multi_model_flags();
+        if self.model_order.is_empty() {
+            self.prune_stale_module_factories();
+        }
     }
 
     /// The command registry (for `check`/`list-commands`/`add`/`remove`).
@@ -1259,9 +1326,6 @@ impl Session {
             .filter(|(_, c)| c.connection.as_deref() == Some(connection))
             .map(|(name, _)| name.clone())
             .collect();
-        if owned.is_empty() {
-            return;
-        }
         for name in &owned {
             self.commands.remove(name);
         }
@@ -1270,6 +1334,18 @@ impl Session {
         }
         for name in &owned {
             self.restore_builtin(name);
+        }
+        if self.models_loaded() {
+            if self
+                .module_factories
+                .iter()
+                .any(|factory| factory.connection().as_deref() == Some(connection))
+            {
+                self.stale_module_connections.insert(connection.to_string());
+            }
+        } else {
+            self.module_factories
+                .retain(|factory| factory.connection().as_deref() != Some(connection));
         }
     }
 
@@ -2062,6 +2138,37 @@ impl Session {
                 }
                 Ok(vec![Json::Bool(true)])
             }
+            "define-module" => {
+                let module_name = args
+                    .first()
+                    .and_then(|arg| arg.as_str())
+                    .ok_or("define-module requires a module name")?;
+                let buffers = args.get(1).cloned().unwrap_or(Json::Null);
+                let params = args.get(2).cloned().unwrap_or(Json::Null);
+                let interface = args.get(3).cloned().unwrap_or(Json::Null);
+                let host = remote
+                    .module_host()
+                    .ok_or("define-module requires an RPC client connection")?;
+                let factory = remote_module::define_module(
+                    module_name,
+                    &buffers,
+                    &params,
+                    &interface,
+                    host,
+                    remote.connection_key(),
+                )?;
+                self.add_module_factory(Box::new(factory))?;
+                Ok(vec![Json::Str(module_name.to_string())])
+            }
+            "undefine-module" => {
+                let module_name = args
+                    .first()
+                    .and_then(|arg| arg.as_str())
+                    .ok_or("undefine-module requires a module name")?;
+                Ok(vec![Json::Bool(
+                    self.remove_module_factory(module_name).is_ok(),
+                )])
+            }
             "reset" => {
                 self.queue_signal("reset-start", Vec::new());
                 let load_dispatch = self.load_dispatch_policy();
@@ -2230,6 +2337,7 @@ impl Session {
                 self.global_time_ms = 0;
                 self.global_run_events = 0;
                 self.trace_pos = 0;
+                self.prune_stale_module_factories();
                 Ok(vec![Json::Bool(true)])
             }
             "reload" => {
@@ -9084,6 +9192,209 @@ mod tests {
         s.remove_checked("task-command").unwrap();
 
         assert!(!s.has_command("task-command"));
+    }
+
+    type HostCalls = Rc<RefCell<Vec<(String, String, Vec<Json>)>>>;
+
+    struct TestHost {
+        calls: HostCalls,
+    }
+
+    impl crate::rpc::remote_module::ModuleHost for TestHost {
+        fn invoke(&self, command: &str, model: &str, args: Vec<Json>) -> Result<Vec<Json>, String> {
+            self.calls
+                .borrow_mut()
+                .push((command.to_string(), model.to_string(), args));
+            Ok(match command {
+                "query-probe" => vec![Json::Bool(true)],
+                "params-probe" => vec![Json::Int(2)],
+                _ => vec![Json::Null],
+            })
+        }
+    }
+
+    struct TestRemote {
+        host: Rc<TestHost>,
+        connection: Option<String>,
+    }
+
+    impl TestRemote {
+        fn new() -> (TestRemote, HostCalls) {
+            let calls: HostCalls = Rc::new(RefCell::new(Vec::new()));
+            (
+                TestRemote {
+                    host: Rc::new(TestHost {
+                        calls: calls.clone(),
+                    }),
+                    connection: Some("connection-1".into()),
+                },
+                calls,
+            )
+        }
+    }
+
+    impl Remote for TestRemote {
+        fn call(
+            &mut self,
+            _name: &str,
+            _model: Option<&str>,
+            _args: Vec<Json>,
+        ) -> Result<Vec<Json>, String> {
+            Err("test remote has no commands".into())
+        }
+
+        fn module_host(&self) -> Option<Rc<dyn crate::rpc::remote_module::ModuleHost>> {
+            Some(self.host.clone())
+        }
+
+        fn connection_key(&self) -> Option<String> {
+            self.connection.clone()
+        }
+    }
+
+    fn define_probe_module(s: &mut Session, remote: &mut TestRemote) -> Result<Vec<Json>, String> {
+        s.evaluate(
+            "define-module",
+            None,
+            &[
+                Json::Str("probe".into()),
+                crate::json::parse(r#"[["probe"]]"#).unwrap(),
+                crate::json::parse(r#"[[":p",[["default-value",2]]]]"#).unwrap(),
+                crate::json::parse(
+                    r#"[["creation","create-probe"],["query","query-probe"],["params","params-probe"]]"#,
+                )
+                .unwrap(),
+            ],
+            remote,
+        )
+    }
+
+    #[test]
+    fn define_module_registers_and_undefines_a_remote_module() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+
+        let result = define_probe_module(&mut s, &mut remote).unwrap();
+        assert_eq!(result, vec![Json::Str("probe".into())]);
+        let descriptors = s.module_set();
+        assert_eq!(descriptors.descriptors().len(), 1);
+        assert_eq!(descriptors.descriptors()[0].name, "PROBE");
+        assert_eq!(descriptors.descriptors()[0].buffers[0].name, "PROBE");
+
+        let result = s
+            .evaluate(
+                "undefine-module",
+                None,
+                &[Json::Str("probe".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(result, vec![Json::Bool(true)]);
+        assert!(s.module_set().is_empty());
+    }
+
+    #[test]
+    fn duplicate_module_definitions_are_rejected() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+        define_probe_module(&mut s, &mut remote).unwrap();
+
+        let error = define_probe_module(&mut s, &mut remote).unwrap_err();
+        assert!(error.contains("already exists"), "{error}");
+    }
+
+    #[test]
+    fn module_definition_and_removal_are_blocked_while_a_model_is_loaded() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+        define_probe_module(&mut s, &mut remote).unwrap();
+        loaded_guard_model(&mut s);
+
+        let error = define_probe_module(&mut s, &mut remote).unwrap_err();
+        assert!(error.contains("model is loaded"), "{error}");
+        assert!(s.remove_module_factory("probe").is_err());
+        let result = s
+            .evaluate(
+                "undefine-module",
+                None,
+                &[Json::Str("probe".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(result, vec![Json::Bool(false)]);
+        assert_eq!(s.module_set().descriptors().len(), 1);
+    }
+
+    #[test]
+    fn disconnecting_prunes_an_unused_remote_module() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+        define_probe_module(&mut s, &mut remote).unwrap();
+
+        s.remove_connection("connection-1");
+
+        assert!(s.module_set().is_empty());
+    }
+
+    #[test]
+    fn disconnecting_defers_remote_module_cleanup_until_clear_all() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+        define_probe_module(&mut s, &mut remote).unwrap();
+        loaded_guard_model(&mut s);
+
+        s.remove_connection("connection-1");
+        assert_eq!(s.module_set().descriptors().len(), 1);
+
+        s.evaluate("clear-all", None, &[], &mut remote).unwrap();
+        assert!(s.module_set().is_empty());
+    }
+
+    #[test]
+    fn remote_module_create_params_and_query_reach_the_host() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, calls) = TestRemote::new();
+        define_probe_module(&mut s, &mut remote).unwrap();
+
+        s.load_source(
+            r#"
+(define-model probe-run
+  (p probe
+    ?probe> state free
+    ==>
+    !output! (probe-fired)))
+"#,
+        )
+        .unwrap();
+        s.evaluate("run-n-events", None, &[Json::Int(5)], &mut NoRemote)
+            .unwrap();
+
+        let calls = calls.borrow();
+        assert!(
+            calls
+                .iter()
+                .any(|(command, model, _)| command == "create-probe"
+                    && model.eq_ignore_ascii_case("PROBE-RUN")),
+            "{calls:?}"
+        );
+        assert!(
+            calls
+                .iter()
+                .any(|(command, _, _)| command == "params-probe"),
+            "{calls:?}"
+        );
+        let query = calls
+            .iter()
+            .find(|(command, _, _)| command == "query-probe")
+            .unwrap_or_else(|| panic!("no query callback: {calls:?}"));
+        assert_eq!(
+            query.2,
+            vec![
+                Json::Str("PROBE".into()),
+                Json::Str("STATE".into()),
+                Json::Str("FREE".into())
+            ]
+        );
     }
 
     #[test]
