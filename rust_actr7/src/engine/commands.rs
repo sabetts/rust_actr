@@ -161,6 +161,12 @@ impl Engine {
             self.clear_window();
             return Ok(());
         }
+        if key == "RELEASE-CHUNK-SPEC-ID" {
+            if let Some(Value::Int(id)) = params.first() {
+                self.chunk_specs.borrow_mut().remove(*id);
+            }
+            return Ok(());
+        }
         // A command registered by the embedder (`add-act-r-command`): record
         // it for the Python side to dispatch after this event instead of
         // trying to run it as a Lisp task defun.

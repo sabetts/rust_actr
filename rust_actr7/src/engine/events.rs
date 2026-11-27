@@ -8,7 +8,10 @@ impl Engine {
         let key = name.to_uppercase();
         matches!(
             key.as_str(),
-            "SET-IMAGINAL-FREE" | "SET-IMAGINAL-ERROR" | "CLEAR-EXP-WINDOW"
+            "SET-IMAGINAL-FREE"
+                | "SET-IMAGINAL-ERROR"
+                | "CLEAR-EXP-WINDOW"
+                | "RELEASE-CHUNK-SPEC-ID"
         ) || self.task_commands.contains(&key)
             || self.user_fns.contains_key(&key)
     }
