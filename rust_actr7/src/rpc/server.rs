@@ -357,21 +357,31 @@ impl Actor {
                     .get(&conn_id)
                     .map(|conn| conn.key.clone())
                     .unwrap_or_default();
-                self.session.add_remote(name, local, Some(key));
-                if let Some(doc) = params.get(2).and_then(|p| p.as_str()) {
-                    self.session.set_command_doc(name, doc);
+                match self.session.add_remote_checked(name, local, Some(key)) {
+                    Ok(()) => {
+                        if let Some(doc) = params.get(2).and_then(|p| p.as_str()) {
+                            self.session.set_command_doc(name, doc);
+                        }
+                        // `add-command` returns the command name (`actr.py:118`
+                        // reads `result[1]`).
+                        reply_ok(
+                            id,
+                            Json::Arr(vec![Json::Bool(true), Json::Str(name.to_string())]),
+                        )
+                    }
+                    Err(error) => {
+                        reply_ok(id, Json::Arr(vec![Json::Bool(false), Json::Str(error)]))
+                    }
                 }
-                // `add-command` returns the command name (`actr.py:118` reads
-                // `result[1]`).
-                reply_ok(
-                    id,
-                    Json::Arr(vec![Json::Bool(true), Json::Str(name.to_string())]),
-                )
             }
             Method::Remove => {
                 let name = params.first().and_then(|p| p.as_str()).unwrap_or("");
-                let ok = self.session.remove(name);
-                reply_ok(id, Json::Arr(vec![Json::Bool(ok)]))
+                match self.session.remove_checked(name) {
+                    Ok(()) => reply_ok(id, Json::Arr(vec![Json::Bool(true)])),
+                    Err(error) => {
+                        reply_ok(id, Json::Arr(vec![Json::Bool(false), Json::Str(error)]))
+                    }
+                }
             }
             Method::Monitor => {
                 let target = params.first().and_then(|p| p.as_str()).unwrap_or("");

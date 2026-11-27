@@ -145,6 +145,30 @@ fn add_count_overrides(session: &mut Session) {
     session.add_remote("goal-focus", None, Some("connection-1".to_string()));
 }
 
+fn replace_count_builtins(session: &mut Session) {
+    for name in ["add-dm", "goal-focus"] {
+        session.remove_checked(name).unwrap();
+        session
+            .add_remote_checked(name, None, Some("connection-1".to_string()))
+            .unwrap();
+    }
+}
+
+#[test]
+fn checked_remove_then_add_dispatches_overrides() {
+    let mut session = Session::new((100, 0));
+    replace_count_builtins(&mut session);
+    let mut remote = RecordingRemote::default();
+
+    load(&mut session, &mut remote, &count_model()).unwrap();
+
+    let names: Vec<&str> = remote.calls.iter().map(|call| call.name.as_str()).collect();
+    assert_eq!(names, vec!["add-dm", "goal-focus"]);
+    assert!(dm_chunks(&mut session, &mut remote).is_empty());
+    assert!(session.command_is_remote("add-dm"));
+    assert!(session.command_is_remote("goal-focus"));
+}
+
 #[test]
 fn load_dispatches_overridden_add_dm_and_goal_focus() {
     let mut session = Session::new((100, 0));

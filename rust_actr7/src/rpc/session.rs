@@ -268,6 +268,14 @@ pub const BUILTINS: &[&str] = &[
     "general-trace",
 ];
 
+/// Built-in model-body commands a remote client may replace (`RPC-MODULES-WORK.md`
+/// §5.5). Everything else in [`BUILTINS`] stays internal.
+pub const OVERRIDABLE_BUILTINS: &[&str] = &["add-dm", "dm", "sdp", "goal-focus", "mod-focus"];
+
+fn is_overridable_builtin(name: &str) -> bool {
+    OVERRIDABLE_BUILTINS.contains(&name)
+}
+
 /// A remote (client-owned) command the server can invoke by name.
 pub trait Remote {
     fn call(
@@ -351,6 +359,9 @@ pub struct Session {
     user_fns: std::collections::HashMap<String, UserDefun>,
     user_vars: std::collections::HashMap<String, Sexp>,
     commands: BTreeMap<String, Command>,
+    /// Allowlisted built-ins removed by a client, kept so removing a remote
+    /// replacement can restore the original handler.
+    removed_builtins: BTreeMap<String, Command>,
     /// The selected model's live engine.
     engine: Option<Engine>,
     /// All non-selected model engines, in load order.
@@ -590,6 +601,7 @@ impl Session {
             user_fns: Default::default(),
             user_vars: Default::default(),
             commands,
+            removed_builtins: BTreeMap::new(),
             engine: None,
             inactive: Vec::new(),
             sim_hook: None,
@@ -1094,6 +1106,10 @@ impl Session {
     }
 
     /// Register a client-owned command.
+    ///
+    /// This is the low-level registration used by the loader and tests. The RPC
+    /// policy (built-in replacement, model-state checks) lives in
+    /// [`Session::add_remote_checked`].
     pub fn add_remote(
         &mut self,
         name: &str,
@@ -1111,6 +1127,66 @@ impl Session {
         self.commands.insert(name.to_string(), c);
     }
 
+    /// Whether any model is currently loaded.
+    fn models_loaded(&self) -> bool {
+        !self.defs.is_empty() || self.engine.is_some() || !self.model_order.is_empty()
+    }
+
+    /// Detach `name` from every command's before/after/simple monitor lists.
+    fn detach_monitor(&mut self, name: &str) {
+        for command in self.commands.values_mut() {
+            for list in [&mut command.before, &mut command.after, &mut command.simple] {
+                list.retain(|monitor| monitor != name);
+            }
+        }
+    }
+
+    /// Put a stashed built-in back once its remote replacement is gone.
+    fn restore_builtin(&mut self, name: &str) {
+        if self.commands.contains_key(name) {
+            return;
+        }
+        if let Some(command) = self.removed_builtins.remove(name) {
+            self.commands.insert(name.to_string(), command);
+        }
+    }
+
+    /// Register a client-owned command under the dispatcher's add rules.
+    ///
+    /// A built-in can only be replaced after it has been removed, and only while
+    /// no model is loaded (`RPC-MODULES-WORK.md` §5.5).
+    pub fn add_remote_checked(
+        &mut self,
+        name: &str,
+        local_name: Option<String>,
+        connection: Option<String>,
+    ) -> Result<(), String> {
+        if is_overridable_builtin(name) && self.models_loaded() {
+            return Err(format!(
+                "Cannot replace built-in command {name:?} when a model is loaded; call clear-all first."
+            ));
+        }
+        if let Some(owner) = self.commands.get(name).map(|c| c.owner.clone()) {
+            if owner == Owner::Builtin {
+                if !is_overridable_builtin(name) {
+                    return Err(format!(
+                        "Command {name:?} is a built-in and cannot be replaced."
+                    ));
+                }
+                if self.models_loaded() {
+                    return Err(format!(
+                        "Cannot replace built-in command {name:?} when a model is loaded; call clear-all first."
+                    ));
+                }
+                return Err(format!(
+                    "Command {name:?} is a built-in; remove it before adding a replacement."
+                ));
+            }
+        }
+        self.add_remote(name, local_name, connection);
+        Ok(())
+    }
+
     pub fn set_command_doc(&mut self, name: &str, doc: &str) {
         if let Some(c) = self.commands.get_mut(name) {
             c.doc = doc.to_string();
@@ -1122,21 +1198,60 @@ impl Session {
         self.commands.get(name).map(|c| c.doc.clone())
     }
 
-    /// Remove a command (only client-added ones may be removed).
-    pub fn remove(&mut self, name: &str) -> bool {
-        match self.commands.get(name) {
-            Some(c) if c.owner != Owner::Builtin => {
-                self.commands.remove(name);
-                true
+    /// Remove a command and restore the built-in it replaced.
+    ///
+    /// Allowlisted built-ins may only be removed while no model is loaded; the
+    /// same restriction applies to the remote command that replaced one.
+    pub fn remove_checked(&mut self, name: &str) -> Result<(), String> {
+        let Some(is_builtin) = self.commands.get(name).map(|c| c.owner == Owner::Builtin) else {
+            return Err(format!(
+                "Command {name:?} not in the table and cannot be removed."
+            ));
+        };
+        if is_builtin {
+            if !is_overridable_builtin(name) {
+                return Err(format!(
+                    "Built-in command {name:?} cannot be removed or replaced."
+                ));
             }
-            _ => false,
+            if self.models_loaded() {
+                return Err(format!(
+                    "Cannot remove built-in command {name:?} when a model is loaded; call clear-all first."
+                ));
+            }
+            let mut command = self.commands.remove(name).expect("checked command exists");
+            command.before.clear();
+            command.after.clear();
+            command.simple.clear();
+            self.detach_monitor(name);
+            self.removed_builtins.insert(name.to_string(), command);
+        } else {
+            let shadows_builtin = self.removed_builtins.contains_key(name);
+            if shadows_builtin && self.models_loaded() {
+                return Err(format!(
+                    "Cannot remove replacement for built-in command {name:?} when a model is loaded; call clear-all first."
+                ));
+            }
+            self.commands.remove(name);
+            self.detach_monitor(name);
+            if shadows_builtin {
+                self.restore_builtin(name);
+            }
         }
+        Ok(())
+    }
+
+    /// Remove a command. Returns `false` for missing or protected commands; use
+    /// [`Session::remove_checked`] for the reason.
+    pub fn remove(&mut self, name: &str) -> bool {
+        self.remove_checked(name).is_ok()
     }
 
     /// Remove every command and monitor registration owned by a connection.
     ///
     /// The dispatcher does this when an external client disconnects
-    /// (`framework/dispatcher.lisp:1500`).
+    /// (`framework/dispatcher.lisp:1500`). A command that shadowed an
+    /// allowlisted built-in restores it.
     pub fn remove_connection(&mut self, connection: &str) {
         let owned: Vec<String> = self
             .commands
@@ -1144,16 +1259,17 @@ impl Session {
             .filter(|(_, c)| c.connection.as_deref() == Some(connection))
             .map(|(name, _)| name.clone())
             .collect();
-        for name in &owned {
-            self.commands.remove(name);
-        }
         if owned.is_empty() {
             return;
         }
-        for command in self.commands.values_mut() {
-            for list in [&mut command.before, &mut command.after, &mut command.simple] {
-                list.retain(|monitor| !owned.contains(monitor));
-            }
+        for name in &owned {
+            self.commands.remove(name);
+        }
+        for name in &owned {
+            self.detach_monitor(name);
+        }
+        for name in &owned {
+            self.restore_builtin(name);
         }
     }
 
@@ -8847,6 +8963,127 @@ mod tests {
         s.remove_connection("connection-1");
         assert!(!s.has_command("sink"));
         assert!(s.simple_monitors("model-trace").is_empty());
+    }
+
+    fn loaded_guard_model(s: &mut Session) {
+        s.load_source("(define-model guard-model)").unwrap();
+    }
+
+    fn builtin_owner(s: &Session, name: &str) -> bool {
+        matches!(
+            s.commands().get(name).map(|c| &c.owner),
+            Some(Owner::Builtin)
+        )
+    }
+
+    #[test]
+    fn removing_an_overridable_builtin_hides_it_until_restored() {
+        let mut s = Session::new((100, 0));
+        let doc = s.command_doc("add-dm").unwrap();
+        assert!(builtin_owner(&s, "add-dm"));
+
+        s.remove_checked("add-dm").unwrap();
+
+        assert!(!s.has_command("add-dm"));
+        assert!(s.command_doc("add-dm").is_none());
+        assert!(matches!(
+            s.removed_builtins.get("add-dm").map(|c| &c.owner),
+            Some(Owner::Builtin)
+        ));
+        assert_eq!(s.removed_builtins["add-dm"].doc, doc);
+    }
+
+    #[test]
+    fn removing_a_non_overridable_builtin_is_rejected() {
+        let mut s = Session::new((100, 0));
+        let error = s.remove_checked("run").unwrap_err();
+        assert!(error.contains("cannot be removed or replaced"), "{error}");
+        assert!(builtin_owner(&s, "run"));
+    }
+
+    #[test]
+    fn removing_an_overridable_builtin_with_a_model_loaded_is_rejected() {
+        let mut s = Session::new((100, 0));
+        loaded_guard_model(&mut s);
+        let error = s.remove_checked("goal-focus").unwrap_err();
+        assert!(error.contains("model is loaded"), "{error}");
+        assert!(builtin_owner(&s, "goal-focus"));
+    }
+
+    #[test]
+    fn adding_over_a_builtin_requires_removal_first() {
+        let mut s = Session::new((100, 0));
+        let error = s
+            .add_remote_checked("goal-focus", None, Some("connection-1".into()))
+            .unwrap_err();
+        assert!(error.contains("remove it before"), "{error}");
+        assert!(builtin_owner(&s, "goal-focus"));
+    }
+
+    #[test]
+    fn adding_an_overridable_builtin_with_a_model_loaded_is_rejected() {
+        let mut s = Session::new((100, 0));
+        s.remove_checked("add-dm").unwrap();
+        loaded_guard_model(&mut s);
+        let error = s
+            .add_remote_checked("add-dm", None, Some("connection-1".into()))
+            .unwrap_err();
+        assert!(error.contains("model is loaded"), "{error}");
+    }
+
+    #[test]
+    fn removing_a_remote_override_restores_the_builtin() {
+        let mut s = Session::new((100, 0));
+        let doc = s.command_doc("add-dm").unwrap();
+        s.remove_checked("add-dm").unwrap();
+        s.add_remote_checked("add-dm", Some("add-dm".into()), Some("connection-1".into()))
+            .unwrap();
+        s.set_command_doc("add-dm", "remote add-dm");
+        assert!(s.command_is_remote("add-dm"));
+
+        s.remove_checked("add-dm").unwrap();
+
+        assert!(builtin_owner(&s, "add-dm"));
+        assert!(!s.command_is_remote("add-dm"));
+        assert_eq!(s.command_doc("add-dm").as_deref(), Some(doc.as_str()));
+    }
+
+    #[test]
+    fn removing_a_remote_override_with_a_model_loaded_is_rejected() {
+        let mut s = Session::new((100, 0));
+        s.remove_checked("add-dm").unwrap();
+        s.add_remote_checked("add-dm", None, Some("connection-1".into()))
+            .unwrap();
+        loaded_guard_model(&mut s);
+
+        let error = s.remove_checked("add-dm").unwrap_err();
+        assert!(error.contains("model is loaded"), "{error}");
+        assert!(s.command_is_remote("add-dm"));
+    }
+
+    #[test]
+    fn disconnecting_restores_a_shadowed_builtin() {
+        let mut s = Session::new((100, 0));
+        s.remove_checked("add-dm").unwrap();
+        s.add_remote_checked("add-dm", None, Some("connection-1".into()))
+            .unwrap();
+
+        s.remove_connection("connection-1");
+
+        assert!(builtin_owner(&s, "add-dm"));
+        assert!(!s.command_is_remote("add-dm"));
+    }
+
+    #[test]
+    fn ordinary_commands_remain_mutable_while_a_model_is_loaded() {
+        let mut s = Session::new((100, 0));
+        s.add_remote_checked("task-command", None, Some("connection-1".into()))
+            .unwrap();
+        loaded_guard_model(&mut s);
+
+        s.remove_checked("task-command").unwrap();
+
+        assert!(!s.has_command("task-command"));
     }
 
     #[test]

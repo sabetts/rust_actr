@@ -135,6 +135,11 @@ impl Client {
         self.wait(id).expect("check")
     }
 
+    fn remove(&mut self, name: &str) -> Vec<Json> {
+        let id = self.send(Method::Remove, vec![Json::Str(name.into())]);
+        self.wait(id).expect("remove")
+    }
+
     fn monitor(&mut self, target: &str, monitor: &str) {
         let id = self.send(
             Method::Monitor,
@@ -766,6 +771,75 @@ fn builtin_commands_expose_lisp_documentation() {
     let checked = c.check("goal-focus");
     let doc = checked.get(2).and_then(|v| v.as_str()).unwrap_or("");
     assert!(doc.contains("goal buffer"), "goal-focus doc: {doc:?}");
+}
+
+#[test]
+fn overridable_builtin_remove_add_and_restore_round_trip() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+
+    assert_eq!(c.check("add-dm").first(), Some(&Json::Bool(true)));
+    assert_eq!(c.remove("add-dm").first(), Some(&Json::Bool(true)));
+    assert_eq!(c.check("add-dm").first(), Some(&Json::Null));
+
+    c.add_command_doc("add-dm", "add-dm", "remote add-dm");
+    let owned = c.check("add-dm");
+    assert_eq!(owned.first(), Some(&Json::Bool(true)));
+    assert_eq!(owned.get(1), Some(&Json::Bool(true)));
+    assert_eq!(owned.get(2).and_then(|v| v.as_str()), Some("remote add-dm"));
+
+    assert_eq!(c.remove("add-dm").first(), Some(&Json::Bool(true)));
+    let restored = c.check("add-dm");
+    assert_eq!(restored.first(), Some(&Json::Bool(true)));
+    assert_eq!(restored.get(1), Some(&Json::Bool(false)));
+    assert!(
+        restored
+            .get(2)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .contains("declarative memory"),
+        "restored doc: {restored:?}"
+    );
+}
+
+#[test]
+fn non_overridable_builtin_removal_is_rejected_with_a_message() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+
+    let result = c.remove("run");
+    assert_eq!(result.first(), Some(&Json::Bool(false)));
+    assert!(
+        result
+            .get(1)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .contains("cannot be removed"),
+        "{result:?}"
+    );
+    assert_eq!(c.check("run").first(), Some(&Json::Bool(true)));
+}
+
+#[test]
+fn overridden_builtin_dispatch_reaches_the_client() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+
+    assert_eq!(c.remove("add-dm").first(), Some(&Json::Bool(true)));
+    c.add_command("add-dm", "add-dm");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    assert!(
+        c.callbacks.iter().any(|(name, _, _)| name == "add-dm"),
+        "callbacks: {:?}",
+        c.callbacks
+    );
+
+    c.eval_ok("clear-all", None, Vec::new());
+    assert_eq!(c.remove("add-dm").first(), Some(&Json::Bool(true)));
 }
 
 #[test]
