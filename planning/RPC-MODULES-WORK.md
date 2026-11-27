@@ -3,8 +3,8 @@
 Last updated: 2026-11-27
 Branch: `main`
 Starting commit: `d00fb51`
-Latest relevant code commit: `af4bb7c`
-Status: Milestones 1-4 complete; Milestone 5 next
+Latest relevant code commit: `dbc0427`
+Status: Milestones 1-5 complete; Milestone 6 next
 
 This document tracks support for RPC-defined custom modules in the Rust
 `actr-engine`. It records the design, the ordered milestones, the current
@@ -86,12 +86,19 @@ What exists:
   `delete` callbacks are queued by the engine and drained with the session
   borrow released. `run`/`run-full-time`/`run-until-time` yield between events
   so a callback can issue nested commands before the next event.
+- Session-scoped chunk-spec IDs and `define-chunk-spec`,
+  `chunk-spec-to-chunk-def`, `release-chunk-spec-id`.
+- Remote `request`/`buffer-mod` callbacks receive spec IDs and run through the
+  deferred bridge.
+- `schedule-set-buffer-chunk`, spec-aware `schedule-mod-buffer-chunk`,
+  `set-buffer-failure`, `schedule-event-after-module`, `delete-event`, and
+  external event IDs.
+- Scheduled client commands are drained to their owning connection.
 
 What is missing:
 
-- `request`/`buffer-mod` deferred-callback wiring, which needs chunk-spec IDs.
-- A chunk-spec ID registry and the scheduling commands used by the examples.
-- Declarative compatibility commands used by `simple_declarative.py`.
+- Declarative compatibility commands (`find-matching-chunks`, `merge-chunks`,
+  chunk metadata helpers) used by `simple_declarative.py`.
 - Suppression of the built-in goal/declarative modules and focus command
   replacement.
 
@@ -325,21 +332,35 @@ Implementation notes:
 
 ### Milestone 5 — Chunk specs and scheduling
 
-- [ ] Add a session-scoped chunk-spec ID registry.
-- [ ] Implement `define-chunk-spec`, `chunk-spec-to-chunk-def`, and a real
+- [x] Add a session-scoped chunk-spec ID registry.
+- [x] Implement `define-chunk-spec`, `chunk-spec-to-chunk-def`, and a real
   `release-chunk-spec-id`.
-- [ ] Assign spec IDs to module `request`, `buffer-mod`, and `warning` callback
-  arguments.
-- [ ] Wire `RemoteModule::request` and `buffer_mod` to enqueue the deferred
+- [x] Assign spec IDs to module `request` and `buffer-mod` callback arguments.
+  `warning` still has no engine call site.
+- [x] Wire `RemoteModule::request` and `buffer_mod` to enqueue the deferred
   callbacks once spec IDs exist.
-- [ ] Implement `schedule-set-buffer-chunk`.
-- [ ] Implement `schedule-event-after-module`.
-- [ ] Implement `set-buffer-failure` and `delete-event`.
-- [ ] Extend `schedule-mod-buffer-chunk` to accept spec IDs.
-- [ ] Clear or invalidate spec IDs at the correct model lifecycle boundaries.
+- [x] Implement `schedule-set-buffer-chunk`.
+- [x] Implement `schedule-event-after-module`.
+- [x] Implement `set-buffer-failure` and `delete-event`.
+- [x] Extend `schedule-mod-buffer-chunk` to accept spec IDs.
+- [x] Clear or invalidate spec IDs at the correct model lifecycle boundaries.
 
 Acceptance: the goal-style remote module can receive a request spec and schedule
 the resulting buffer change through the normal event queue.
+
+Implementation notes:
+
+- `ChunkSpecTable` is session-scoped and shared with every engine. Request and
+  buffer-mod specs get IDs only for external modules.
+- Scheduled events carry external `rpc_id`s; `delete-event` removes queued and
+  waiting events.
+- `schedule-event-after-module` releases its event when the matching module’s
+  next event executes. `dynamic`/`precondition` are accepted but ignored and
+  `include-maintenance` is best-effort.
+- Client commands scheduled through the engine are registered as task commands
+  and drained to their owning connection.
+- `chunk-spec-to-chunk-def` rejects negated/relative spec slots for now; full
+  matching semantics remain Milestone 7.
 
 ### Milestone 6 — Goal replacement parity
 
@@ -396,19 +417,24 @@ models still run with expected results.
 - **Built-in replacement scope.** Hardcoded goal/declarative behavior remains.
   `undefine-module('goal'/'declarative')` is currently a no-op returning false;
   built-in suppression and focus-command replacement are Milestone 6.
-- **Deferred callback coverage.** `request`/`buffer-mod` stay un-wired until
-  chunk-spec IDs exist. `warning` and `delete` have no engine call site yet.
+- **Deferred callback coverage.** `request`/`buffer-mod` are wired. `warning`
+  and `delete` have no engine call site yet.
 - **`run-n-events` ordering.** It drains module callbacks after the command
   completes rather than yielding between events. Use `run`/`run-full-time`/
   `run-until-time` when callback ordering matters.
+- **After-module scheduling.** `dynamic` and `precondition` are accepted but
+  ignored; `include-maintenance` is best-effort. The goal-style after-module
+  path is covered.
 - **Multi-model lifecycle.** Remote module instances are per model; callback
   ownership, factory cleanup, and reset ordering need more coverage. The multi
-  runner does not yet invoke module `run-start`/`run-end` callbacks.
+  runner does not yet invoke module `run-start`/`run-end` callbacks, and fired
+  task commands use the current model.
 - **Disconnect cleanup.** Owned remote factories are removed immediately when no
   model is loaded, or pruned after the last model is cleared when a model was
   loaded at disconnect time.
-- **Chunk-spec lifetime.** Spec IDs must remain valid until the callback
-  releases them and must not leak across reset/clear-all.
+- **Chunk-spec lifetime.** The table clears on reset, model load, and clear-all.
+  `chunk-spec-to-chunk-def` rejects negated/relative slots; full chunk-spec
+  matching/variables remain Milestone 7.
 - **Trace parity.** Rust trace ordering may differ from Lisp even when model
   results match.
 
@@ -436,6 +462,8 @@ Tests:
 - `rust_actr7/tests/rpc_conformance.rs` — gated Python/ACT-R conformance
 - `rust_actr7/fixtures/models/rpc-modules/probe.lisp` — custom-buffer query
   fixture for the synchronous bridge test
+- `rust_actr7/fixtures/models/rpc-modules/request-probe.lisp` — request/spec
+  buffer scheduling fixture
 
 Examples and oracle:
 
@@ -506,26 +534,30 @@ Add one entry per milestone or meaningful checkpoint, with the commit range.
   reentrant path (`af4bb7c`). `cargo test` passed the 560-case corpus, 156 lib
   tests, 32 `environment_rpc` tests, 10 `rpc_modules` tests, and 2 `stepper_rpc`
   tests; `cargo fmt --check` clean.
+- 2026-11-27: Milestone 5 complete. Added the shared chunk-spec table and spec
+  IDs (`aa839fb`), external event IDs, waiting after-module events, buffer
+  scheduling/failure, spec-aware mod requests, and server command draining
+  (`dbc0427`). `cargo test` passed the 560-case corpus, 160 lib tests, 34
+  `environment_rpc` tests, 10 `rpc_modules` tests, and 2 `stepper_rpc` tests;
+  `cargo fmt --check` clean.
 
 ## 11. Handoff notes
 
-Next action: start Milestone 5 with the session-scoped chunk-spec ID registry,
-then wire `request`/`buffer-mod` through the deferred bridge.
+Next action: start Milestone 6, goal replacement parity. Run `goal.py` against
+the unit 1 models once built-in goal-module suppression and `goal-focus`/
+`mod-focus` replacement are wired.
 
 Before editing:
 
-- Read `rust_actr7/src/rpc/session.rs` around `schedule_event_cmd`,
-  `schedule-mod-buffer-chunk`, chunk helpers, and the command registry.
-- Read `rust_actr7/src/engine/module.rs` around `Request`, `ModifyRequest`, and
-  `PendingModuleCallback` for the args the module callbacks receive.
-- Read `rust_actr7/src/rpc/remote_module.rs` for the deferred enqueue path.
+- Read `rust_actr7/src/rpc/session.rs` around `remove_module_factory`,
+  `define-module`, `goal-focus`, `mod-focus`, and the loader dispatch policy.
+- Read `rust_actr7/src/engine/events.rs` around GOAL request/clear handling and
+  `rust_actr7/src/engine/module.rs` for module buffer precedence.
+- Read `rust_actr7/src/rpc/remote_module.rs` for the deferred request path.
 - Read `rust_actr7/src/rpc/server.rs` around `drain_module_callbacks` and
-  `call_remote`.
-- Read `actr7.x/framework/chunk-spec.lisp` and
-  `actr7.x/framework/buffers.lisp` for spec IDs, `chunk-spec-to-chunk-def`, and
-  scheduling argument shapes.
-- Read `actr7.x/examples/creating-modules/external/goal.py` and
-  `simple_declarative.py` for the request/buffer-mod callback behavior.
+  `drain_task_commands`.
+- Read `actr7.x/examples/creating-modules/external/goal.py`.
+- Read `actr7.x/framework/model.lisp:384-577` for the load/reset phases.
 
 When finishing a milestone:
 
