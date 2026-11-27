@@ -13,7 +13,7 @@ use crate::json::Json;
 use crate::rpc::session::{Remote, Session};
 
 use super::backend::{BackendEvent, ConnectionInfo, EnvBackend, TraceStream};
-use super::client::window_op;
+use crate::rpc::session::window_op;
 
 /// An in-progress interactive run.
 struct RunState {

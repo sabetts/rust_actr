@@ -2654,6 +2654,20 @@ impl PartialEq<Vec<String>> for OutLines {
     }
 }
 
+/// One `create-image-for-exp-window` item. The definition survives removal and
+/// `clear-exp-window` so `add-items-to-exp-window` can re-add it; opening a new
+/// window starts a fresh table.
+#[derive(Clone)]
+pub(crate) struct WindowImageDef {
+    pub(crate) text: String,
+    pub(crate) file: String,
+    pub(crate) x: i64,
+    pub(crate) y: i64,
+    pub(crate) width: i64,
+    pub(crate) height: i64,
+    pub(crate) action: Option<(String, Vec<Json>)>,
+}
+
 pub struct Engine {
     model: Model,
     /// Custom modules, one instance per engine. `None` while a callback is
@@ -2869,6 +2883,8 @@ pub struct Engine {
     /// (`bst-button-pressed`). Only the RPC path populates this — the
     /// scripted timeline replays the task's resulting window ops directly.
     window_actions: HashMap<String, (String, Vec<Json>)>,
+    /// Created image items, including those not currently displayed.
+    window_image_defs: HashMap<String, WindowImageDef>,
     /// Device actions queued by a click, in order. The run loop yields while
     /// this is non-empty so the server can call the client back and apply the
     /// window commands the action issues (`bst`'s `button-pressed`).
@@ -3517,6 +3533,7 @@ impl Engine {
             defer_display_at: None,
             window_items: Vec::new(),
             window_actions: HashMap::new(),
+            window_image_defs: HashMap::new(),
             pending_device_actions: Vec::new(),
             scripted_click_actions: false,
             pending_scripted_click: None,

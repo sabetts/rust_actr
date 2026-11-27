@@ -237,6 +237,9 @@ pub const BUILTINS: &[&str] = &[
     "add-text-to-exp-window",
     "add-line-to-exp-window",
     "add-button-to-exp-window",
+    "add-image-to-exp-window",
+    "create-image-for-exp-window",
+    "add-items-to-exp-window",
     "remove-items-from-exp-window",
     "modify-text-for-exp-window",
     "modify-line-for-exp-window",
@@ -1676,6 +1679,39 @@ impl Session {
             // Tcl's `process_env_window {model cmd}` takes the op as one list.
             let _ = self.evaluate(&h, Some(model), &[Json::Arr(op.to_vec())], remote);
         }
+    }
+
+    /// Add one created image item to the current window and emit its display op
+    /// (`add-items-to-exp-window`). Returns false when the key is unknown or
+    /// already displayed.
+    fn add_window_image_item(&mut self, key: &str, remote: &mut dyn Remote) -> bool {
+        let Some(def) = self
+            .engine
+            .as_mut()
+            .and_then(|e| e.add_created_window_image(key))
+        else {
+            return false;
+        };
+        let model = self.current_model.clone().unwrap_or_default();
+        let title = self.vwin_title();
+        if let Some(win) = self.current_window_mut() {
+            win.items.push(key.to_string());
+        }
+        self.vwin_send_to(
+            &model,
+            &[
+                Json::Str("image".into()),
+                Json::Str(title),
+                Json::Str(key.to_string()),
+                Json::Int(def.x),
+                Json::Int(def.y),
+                Json::Str(def.file),
+                Json::Int(def.width),
+                Json::Int(def.height),
+            ],
+            remote,
+        );
+        true
     }
 
     /// The selected model's visible window title (or empty).
@@ -3651,6 +3687,40 @@ impl Session {
                 }
                 Ok(vec![Json::Str(key)])
             }
+            "create-image-for-exp-window" | "add-image-to-exp-window" => {
+                let text = args.get(1).and_then(|a| a.as_str()).unwrap_or("");
+                let file = args.get(2).and_then(|a| a.as_str()).unwrap_or("");
+                let opts = args.get(3);
+                let (x, y) = (opt_i(opts, "x", 0), opt_i(opts, "y", 0));
+                let (w, h) = (opt_i(opts, "width", 50), opt_i(opts, "height", 50));
+                let clickable = opt_bool(opts, "clickable", true);
+                let action = if clickable {
+                    parse_action(option(opts, "action"))
+                        .or(Some(("IMAGE-WARNING".to_string(), Vec::new())))
+                } else {
+                    None
+                };
+                let key = self
+                    .engine
+                    .as_mut()
+                    .map(|e| e.create_window_image(text, file, x, y, w, h, action))
+                    .unwrap_or_default();
+                if name == "add-image-to-exp-window" && !key.is_empty() {
+                    self.add_window_image_item(&key, remote);
+                }
+                Ok(vec![Json::Str(key)])
+            }
+            "add-items-to-exp-window" => {
+                let keys: Vec<String> =
+                    args[1.min(args.len())..].iter().map(json_to_text).collect();
+                let mut added = false;
+                for key in &keys {
+                    if self.add_window_image_item(key, remote) {
+                        added = true;
+                    }
+                }
+                Ok(vec![Json::Bool(added)])
+            }
             "remove-items-from-exp-window" => {
                 let keys: Vec<String> =
                     args[1.min(args.len())..].iter().map(json_to_text).collect();
@@ -5243,6 +5313,16 @@ fn pair(j: Option<&Json>) -> (i64, i64) {
 }
 
 /// JSON â†’ display text (for `model-output`/`print-warning`).
+/// The Lisp dispatcher passes a command's argument list as one nested list:
+/// `params: ["handler", model, ["open", title, ...]]`. The Rust dispatcher
+/// sends the same op flat, so accept both shapes.
+pub(crate) fn window_op(args: &[Json]) -> Vec<Json> {
+    match args {
+        [Json::Arr(op)] => op.clone(),
+        _ => args.to_vec(),
+    }
+}
+
 pub fn json_to_text(j: &Json) -> String {
     match j {
         Json::Null => String::new(),

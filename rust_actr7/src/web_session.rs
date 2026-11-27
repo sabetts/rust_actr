@@ -2,7 +2,7 @@
 
 use crate::engine::{HookValue, PpmHookFn, TraceKind};
 use crate::json::Json;
-use crate::rpc::session::{Remote, Session};
+use crate::rpc::session::{window_op, Remote, Session};
 
 const WINDOW_HANDLER: &str = "web-vv";
 
@@ -24,7 +24,8 @@ impl Remote for WebRemote {
         model: Option<&str>,
         args: Vec<Json>,
     ) -> Result<Vec<Json>, String> {
-        if matches!(args.first(), Some(Json::Str(op)) if op == "check") {
+        let op = window_op(&args);
+        if matches!(op.first(), Some(Json::Str(op)) if op == "check") {
             return Ok(vec![Json::Bool(true)]);
         }
         self.events.push(Json::Obj(vec![
@@ -33,7 +34,7 @@ impl Remote for WebRemote {
                 "model".into(),
                 model.map(|m| Json::Str(m.into())).unwrap_or(Json::Null),
             ),
-            ("args".into(), Json::Arr(args)),
+            ("args".into(), Json::Arr(op)),
         ]));
         Ok(vec![Json::Bool(true)])
     }
@@ -205,13 +206,85 @@ mod tests {
             )
             .unwrap();
         let events = session.take_events();
-        assert!(events.iter().any(|event| {
-            matches!(
-                event,
+        let window = events
+            .iter()
+            .find_map(|event| match event {
                 Json::Obj(items)
-                    if items.iter().any(|(k, v)| k == "type" && v == &Json::Str("window".into()))
+                    if items
+                        .iter()
+                        .any(|(k, v)| k == "type" && v == &Json::Str("window".into())) =>
+                {
+                    items.iter().find_map(|(k, v)| (k == "args").then_some(v))
+                }
+                _ => None,
+            })
+            .expect("window event");
+        let Json::Arr(args) = window else {
+            panic!("window args were not an array: {window:?}");
+        };
+        assert_eq!(args.first().and_then(|a| a.as_str()), Some("open"));
+        assert!(
+            !events.iter().any(|event| matches!(
+                event,
+                Json::Obj(items) if items.iter().any(|(k, v)| {
+                    k == "args"
+                        && matches!(v, Json::Arr(args)
+                            if args.first().and_then(|a| a.as_str()) == Some("check"))
+                })
+            )),
+            "check leaked as a window event: {events:?}"
+        );
+    }
+
+    #[test]
+    fn image_window_ops_are_flat() {
+        let mut session = session();
+        session
+            .eval("open-exp-window", &[Json::Str("Test".into())])
+            .unwrap();
+        session.take_events();
+        let key = session
+            .eval(
+                "add-image-to-exp-window",
+                &[
+                    Json::Str("Test".into()),
+                    Json::Str("logo".into()),
+                    Json::Str("smalllogo.gif".into()),
+                    Json::Obj(vec![
+                        ("x".into(), Json::Int(10)),
+                        ("y".into(), Json::Int(20)),
+                        ("width".into(), Json::Int(288)),
+                        ("height".into(), Json::Int(142)),
+                    ]),
+                ],
             )
-        }));
+            .unwrap()
+            .first()
+            .and_then(|j| j.as_str())
+            .expect("image key")
+            .to_string();
+        let image = session
+            .take_events()
+            .into_iter()
+            .find_map(|event| match event {
+                Json::Obj(items) => items.into_iter().find_map(|(k, v)| {
+                    if k != "args" {
+                        return None;
+                    }
+                    match v {
+                        Json::Arr(args)
+                            if args.first().and_then(|a| a.as_str()) == Some("image") =>
+                        {
+                            Some(args)
+                        }
+                        _ => None,
+                    }
+                }),
+                _ => None,
+            })
+            .expect("image event");
+        assert_eq!(image.get(2).and_then(|a| a.as_str()), Some(key.as_str()));
+        assert_eq!(image.get(5).and_then(|a| a.as_str()), Some("smalllogo.gif"));
     }
 
     #[test]

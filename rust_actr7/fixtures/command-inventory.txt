@@ -3,15 +3,12 @@
 # already implements.  Regenerate with fixtures/command-inventory.py.
 # format: name<TAB>family<TAB>needed-by
 act-r-running-p	misc	actr.py
-add-image-to-exp-window	misc	actr.py
-add-items-to-exp-window	misc	actr.py,refs
 add-post-event-hook	misc	refs
 add-pre-event-hook	misc	refs
 chunk-spec-to-chunk-def	chunk-dm	actr.py
 connect-pipe-from-actr	misc	actr.py
 connect-pipe-to-actr	misc	actr.py
 create-button-for-exp-window	misc	refs
-create-image-for-exp-window	misc	actr.py
 create-line-for-exp-window	misc	refs
 create-text-for-exp-window	misc	refs
 define-module	modules	actr.py
@@ -24,19 +21,12 @@ evt-params	events	refs
 evt-time	events	refs
 finish-pipe-connection	misc	actr.py
 format-event	events	refs
-get-articulation-time	misc	refs
 get-history-data	misc	actr.py,refs
 get-module	modules	refs
 modify-button-for-exp-window	misc	refs
-mp-models	production	actr.py
-mp-queue-text	production	refs
 overwrite-buffer-chunk	events	refs
 process-history-data	misc	actr.py
-register-articulation-time	misc	refs
 run-until-condition	production	actr.py
-saved-activation-history	misc	actr.py
-schedule-break	events	refs
-schedule-break-relative	events	actr.py
 schedule-simple-mod-buffer-chunk	events	actr.py
 schedule-simple-set-buffer-chunk	events	actr.py
 undefine-module	modules	actr.py,refs

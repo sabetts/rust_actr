@@ -1017,6 +1017,171 @@ fn window_ops_are_one_list_for_the_tcl_handler() {
 }
 
 #[test]
+fn agi_image_commands_create_add_remove_and_readd() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        None,
+        vec![Json::Str("IMAGE-WIN".into()), Json::Null],
+    );
+
+    let key = c
+        .eval_ok(
+            "create-image-for-exp-window",
+            None,
+            vec![
+                Json::Str("IMAGE-WIN".into()),
+                Json::Str("logo".into()),
+                Json::Str("smalllogo.gif".into()),
+                options(vec![
+                    ("x", Json::Int(10)),
+                    ("y", Json::Int(20)),
+                    ("width", Json::Int(288)),
+                    ("height", Json::Int(142)),
+                ]),
+            ],
+        )
+        .first()
+        .and_then(|j| j.as_str())
+        .expect("image key")
+        .to_string();
+    assert!(key.starts_with("IMAGE-VDI-"), "{key}");
+    assert!(
+        window_ops(&c, "image").is_empty(),
+        "create must not display: {:?}",
+        c.callbacks
+    );
+    let visicon = c
+        .eval_ok("printed-visicon", None, Vec::new())
+        .first()
+        .and_then(|j| j.as_str())
+        .unwrap_or("")
+        .to_string();
+    assert!(!visicon.contains("logo"), "{visicon}");
+
+    let added = c.eval_ok(
+        "add-items-to-exp-window",
+        None,
+        vec![Json::Str("IMAGE-WIN".into()), Json::Str(key.clone())],
+    );
+    assert_eq!(added, vec![Json::Bool(true)]);
+    let images = window_ops(&c, "image");
+    let (display_model, op) = images.last().expect("image display op");
+    assert_eq!(display_model.as_deref(), Some("COUNT"));
+    assert_eq!(op.get(1).and_then(|x| x.as_str()), Some("IMAGE-WIN"));
+    assert_eq!(op.get(2).and_then(|x| x.as_str()), Some(key.as_str()));
+    assert_eq!(op.get(3).and_then(|x| x.as_f64()), Some(10.0));
+    assert_eq!(op.get(4).and_then(|x| x.as_f64()), Some(20.0));
+    assert_eq!(op.get(5).and_then(|x| x.as_str()), Some("smalllogo.gif"));
+    assert_eq!(op.get(6).and_then(|x| x.as_f64()), Some(288.0));
+    assert_eq!(op.get(7).and_then(|x| x.as_f64()), Some(142.0));
+
+    let visicon = c
+        .eval_ok("printed-visicon", None, Vec::new())
+        .first()
+        .and_then(|j| j.as_str())
+        .unwrap_or("")
+        .to_string();
+    assert!(visicon.contains("IMAGE"), "{visicon}");
+    assert!(visicon.contains("logo"), "{visicon}");
+
+    c.eval_ok(
+        "remove-items-from-exp-window",
+        None,
+        vec![Json::Str("IMAGE-WIN".into()), Json::Str(key.clone())],
+    );
+    assert!(window_ops(&c, "remove")
+        .iter()
+        .any(|(_, op)| op.get(2).and_then(|x| x.as_str()) == Some(key.as_str())));
+    let visicon = c
+        .eval_ok("printed-visicon", None, Vec::new())
+        .first()
+        .and_then(|j| j.as_str())
+        .unwrap_or("")
+        .to_string();
+    assert!(!visicon.contains("logo"), "{visicon}");
+
+    let readded = c.eval_ok(
+        "add-items-to-exp-window",
+        None,
+        vec![Json::Str("IMAGE-WIN".into()), Json::Str(key.clone())],
+    );
+    assert_eq!(readded, vec![Json::Bool(true)]);
+    assert_eq!(
+        window_ops(&c, "image")
+            .iter()
+            .filter(|(_, op)| op.get(2).and_then(|x| x.as_str()) == Some(key.as_str()))
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn add_image_to_exp_window_dispatches_the_click_action() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    add_window_handler(&mut c);
+    c.add_command("clicked", "clicked");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.eval_ok(
+        "open-exp-window",
+        None,
+        vec![Json::Str("IMAGE-WIN".into()), Json::Null],
+    );
+
+    let key = c
+        .eval_ok(
+            "add-image-to-exp-window",
+            None,
+            vec![
+                Json::Str("IMAGE-WIN".into()),
+                Json::Str("brain".into()),
+                Json::Str("ref-brain.gif".into()),
+                options(vec![
+                    ("x", Json::Int(10)),
+                    ("y", Json::Int(160)),
+                    ("width", Json::Int(128)),
+                    ("height", Json::Int(128)),
+                    ("action", Json::Str("clicked".into())),
+                ]),
+            ],
+        )
+        .first()
+        .and_then(|j| j.as_str())
+        .expect("image key")
+        .to_string();
+    assert!(window_ops(&c, "image")
+        .iter()
+        .any(|(_, op)| op.get(2).and_then(|x| x.as_str()) == Some(key.as_str())));
+
+    // Image centre in window coordinates: (10 + 128/2, 160 + 128/2).
+    c.eval_ok(
+        "visible-virtual-window-mouse-click",
+        None,
+        vec![Json::Str("IMAGE-WIN".into()), Json::Int(74), Json::Int(224)],
+    );
+    c.eval_ok("run", None, vec![Json::Float(1.0)]);
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, model, _)| name == "clicked" && model.as_deref() == Some("COUNT")),
+        "image click action did not fire: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
 fn multi_model_windows_are_scoped_by_model() {
     let addr = server();
     let mut c = Client::connect(addr).expect("connect");

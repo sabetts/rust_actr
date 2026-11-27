@@ -15,6 +15,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::json::Json;
+use crate::rpc::session::window_op;
 use crate::rpc::{
     parse_reply, parse_request, read_message, reply_err, reply_ok, write_message, Method,
 };
@@ -39,16 +40,6 @@ const RUN_STOP: &str = "env-run-stop";
 /// Stepper callback handlers.
 const STEP_NEXT: &str = "env-next-event";
 const STEP_UPDATE: &str = "env-update-event";
-
-/// The Lisp dispatcher passes a command's argument list as one nested list:
-/// `params: ["handler", model, ["open", title, ...]]`. The Rust dispatcher
-/// sends the same op flat, so accept both shapes.
-pub(super) fn window_op(args: &[Json]) -> Vec<Json> {
-    match args {
-        [Json::Arr(op)] => op.clone(),
-        _ => args.to_vec(),
-    }
-}
 
 type Pending = Arc<Mutex<HashMap<i64, Sender<Result<Vec<Json>, String>>>>>;
 

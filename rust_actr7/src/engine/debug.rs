@@ -3584,6 +3584,7 @@ impl Engine {
     pub fn open_window(&mut self, x: i64, y: i64) {
         self.window_origin = (x, y);
         self.clear_window();
+        self.window_image_defs.clear();
     }
 
     /// Drop the armed scripted device timeline. The BST learning driver
@@ -3935,6 +3936,18 @@ impl Engine {
         });
         if let Some((key, feat)) = hit {
             if let Some((cmd, args)) = self.window_actions.get(&key).cloned() {
+                if !self.scripted_click_actions && cmd == "IMAGE-WARNING" && feat.kind == "IMAGE" {
+                    let x = mx - (feat.x - feat.width / 2);
+                    let y = my - (feat.y - feat.height / 2);
+                    self.emit_warning(&format!(
+                        "Image {:?} with no valid action clicked at position {},{} at time {}.",
+                        feat.value,
+                        x,
+                        y,
+                        lisp_s_f32(self.time_ms as f32 / 1000.0)
+                    ));
+                    return;
+                }
                 let action = if self.scripted_click_actions && feat.kind == "IMAGE" {
                     let x = mx - (feat.x - feat.width / 2);
                     let y = my - (feat.y - feat.height / 2);
@@ -3969,8 +3982,84 @@ impl Engine {
         }
     }
 
-    /// `add-image-to-exp-window` (the AGI image extension): an image feature
-    /// with `value` = the image name.
+    /// `create-image-for-exp-window`: allocate and remember an image item
+    /// without displaying it. `file` is needed by the visible-window op; the
+    /// engine itself only builds the visicon feature on add.
+    pub fn create_window_image(
+        &mut self,
+        text: &str,
+        file: &str,
+        x: i64,
+        y: i64,
+        width: i64,
+        height: i64,
+        action: Option<(String, Vec<Json>)>,
+    ) -> String {
+        let key = format!("IMAGE-VDI-{}", self.window_item_seq);
+        self.window_item_seq += 1;
+        self.window_image_defs.insert(
+            key.clone(),
+            WindowImageDef {
+                text: text.to_string(),
+                file: file.to_string(),
+                x,
+                y,
+                width,
+                height,
+                action,
+            },
+        );
+        key
+    }
+
+    /// `add-items-to-exp-window` for an image key: create the `IMAGE` visicon
+    /// feature, remember its click action, and queue the display wave.
+    pub(crate) fn add_created_window_image(&mut self, key: &str) -> Option<WindowImageDef> {
+        let def = self.window_image_defs.get(key)?.clone();
+        if self.window_items.iter().any(|(k, _)| k == key) {
+            return None;
+        }
+        let (ox, oy) = self.window_origin;
+        let name = format!("VISUAL-LOCATION{}", self.feat_seq);
+        self.feat_seq += 1;
+        let sx = ox + def.x + round_half_even_f(def.width as f64 / 2.0) as i64;
+        let sy = oy + def.y + round_half_even_f(def.height as f64 / 2.0) as i64;
+        // `image-vdi`'s `build-vis-locs-for` (`tools/image-feature.lisp:292`).
+        // The printed-table order is the reverse of the construction order.
+        let spec = vec![
+            ("VALUE".to_string(), Value::Str(def.text.clone())),
+            ("WIDTH".to_string(), Value::Int(def.width)),
+            ("HEIGHT".to_string(), Value::Int(def.height)),
+            ("KIND".to_string(), Value::Sym("IMAGE".to_string())),
+            ("IMAGE".to_string(), Value::Sym("T".to_string())),
+            ("SCREEN-X".to_string(), Value::Int(sx)),
+            ("SCREEN-Y".to_string(), Value::Int(sy)),
+        ];
+        self.features.push(Feature {
+            name: name.clone(),
+            kind: "IMAGE".to_string(),
+            value: def.text.clone(),
+            x: sx,
+            y: sy,
+            width: def.width,
+            height: def.height,
+            extra: Vec::new(),
+            spec,
+            spec_pre: Vec::new(),
+            tstamp_ms: self.time_ms,
+            new_p: true,
+            finst_ms: None,
+        });
+        self.window_items.push((key.to_string(), vec![name]));
+        if let Some(action) = def.action.clone() {
+            self.window_actions.insert(key.to_string(), action);
+        }
+        self.now_display();
+        Some(def)
+    }
+
+    /// `add-image-to-exp-window` (the AGI image extension): create and display
+    /// an image feature with `value` = the image name.
     pub fn add_window_image(
         &mut self,
         text: &str,
@@ -3980,44 +4069,8 @@ impl Engine {
         height: i64,
         action: Option<(String, Vec<Json>)>,
     ) -> String {
-        let key = format!("IMAGE-VDI-{}", self.window_item_seq);
-        self.window_item_seq += 1;
-        let (ox, oy) = self.window_origin;
-        let name = format!("VISUAL-LOCATION{}", self.feat_seq);
-        self.feat_seq += 1;
-        let sx = ox + x + round_half_even_f(width as f64 / 2.0) as i64;
-        let sy = oy + y + round_half_even_f(height as f64 / 2.0) as i64;
-        // `image-vdi`'s `build-vis-locs-for` (`tools/image-feature.lisp:292`).
-        // The printed-table order is the reverse of the construction order.
-        let spec = vec![
-            ("VALUE".to_string(), Value::Str(text.to_string())),
-            ("WIDTH".to_string(), Value::Int(width)),
-            ("HEIGHT".to_string(), Value::Int(height)),
-            ("KIND".to_string(), Value::Sym("IMAGE".to_string())),
-            ("IMAGE".to_string(), Value::Sym("T".to_string())),
-            ("SCREEN-X".to_string(), Value::Int(sx)),
-            ("SCREEN-Y".to_string(), Value::Int(sy)),
-        ];
-        self.features.push(Feature {
-            name: name.clone(),
-            kind: "IMAGE".to_string(),
-            value: text.to_string(),
-            x: sx,
-            y: sy,
-            width,
-            height,
-            extra: Vec::new(),
-            spec,
-            spec_pre: Vec::new(),
-            tstamp_ms: self.time_ms,
-            new_p: true,
-            finst_ms: None,
-        });
-        self.window_items.push((key.clone(), vec![name]));
-        if let Some(action) = action {
-            self.window_actions.insert(key.clone(), action);
-        }
-        self.now_display();
+        let key = self.create_window_image(text, "", x, y, width, height, action);
+        let _ = self.add_created_window_image(&key);
         key
     }
 
