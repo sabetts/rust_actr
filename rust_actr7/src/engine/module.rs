@@ -280,6 +280,17 @@ pub trait ModuleFactory: 'static {
         ModuleDescriptor::from_module(&*module)
     }
 
+    /// The module's registered name, for duplicate checks and removal.
+    fn name(&self) -> String {
+        self.describe().name
+    }
+
+    /// The owning RPC connection, for remote factories. Rust embedders and
+    /// in-process modules leave this as `None`.
+    fn connection(&self) -> Option<String> {
+        None
+    }
+
     fn create(&self) -> Box<dyn Module>;
 }
 
@@ -453,6 +464,11 @@ impl<'a> ModuleCtx<'a> {
 
     pub fn module_name(&self) -> &str {
         &self.name
+    }
+
+    /// The model this module instance belongs to (for remote callbacks).
+    pub fn model_name(&self) -> &str {
+        &self.engine.model.name
     }
 
     pub fn time_ms(&self) -> i64 {
