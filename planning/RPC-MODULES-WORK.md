@@ -3,8 +3,8 @@
 Last updated: 2026-11-27
 Branch: `main`
 Starting commit: `d00fb51`
-Latest relevant code commit: `b5a8aab`
-Status: Milestone 1 complete; Milestone 2 next
+Latest relevant code commit: `d73f2d0`
+Status: Milestones 1-2 complete; Milestone 3 next
 
 This document tracks support for RPC-defined custom modules in the Rust
 `actr-engine`. It records the design, the ordered milestones, the current
@@ -74,13 +74,15 @@ What exists:
   (`src/engine/events.rs`).
 - The RPC server supports owner-aware client callbacks and a reentrant callback
   path for a few sites (`src/rpc/server.rs`).
+- Allowlisted module commands (`add-dm`, `dm`, `sdp`, `goal-focus`,
+  `mod-focus`) can be removed and replaced while no model is loaded, with
+  built-in restoration on override removal/disconnect.
 
 What is missing:
 
 - RPC `define-module` and `undefine-module` commands.
-- A remote `Module` proxy and callback bridge.
-- Replacement/removal of module-related built-in commands.
-- A dispatch-aware model loader.
+- A remote `Module` proxy and callback bridge, including the scoped synchronous
+  data-callback path.
 - A chunk-spec ID registry and the scheduling commands used by the examples.
 - Declarative compatibility commands used by `simple_declarative.py`.
 
@@ -177,6 +179,10 @@ Allow remote replacement/removal of module-related built-in commands only:
 Do this only when no model is loaded. Do not open all built-ins to replacement
 without a separate decision.
 
+Removed built-ins are stashed. Removing the remote replacement, or disconnecting
+its owner, restores the original handler. A bare removal with no replacement
+stays removed until the command is re-added.
+
 ## 6. Milestones
 
 Status markers: `[ ]` not started, `[~]` in progress, `[x]` complete.
@@ -217,16 +223,37 @@ Implementation notes:
 
 ### Milestone 2 — Built-in command override foundation
 
-- [ ] Allow removal/replacement of the allowlisted module commands when no
+- [x] Allow removal/replacement of the allowlisted module commands when no
   model is loaded.
-- [ ] Preserve normal built-in behavior when no override exists.
-- [ ] Add tests for `check`, `remove`, `add`, and restore behavior.
+- [x] Preserve normal built-in behavior when no override exists.
+- [x] Add tests for `check`, `remove`, `add`, and restore behavior.
 
 Acceptance: a remote client can remove `add-dm`/`goal-focus`, register its own
 version, and have dispatch use it.
 
+Implementation notes:
+
+- `OVERRIDABLE_BUILTINS` is the §5.5 allowlist; other built-ins remain
+  protected.
+- `Session::remove_checked` and `Session::add_remote_checked` enforce the
+  no-model-loaded rule. A built-in must be removed before a replacement can be
+  added.
+- Removed built-ins live in `Session::removed_builtins`. Removing the remote
+  replacement or disconnecting its owner restores the original handler.
+- RPC `add`/`remove` return `[false, message]` when the dispatcher rejects the
+  request.
+
 ### Milestone 3 — `define-module` registration and remote proxy
 
+- [ ] Add a scoped synchronous data-callback bridge for module `create`,
+  `query`, `params` get, `search`, and `offset`. The bridge returns a value
+  while the session is borrowed and must not allow nested ACT-R commands.
+- [ ] Wire the bridge into `RemoteModule` so model construction/reset can call
+  `create` and params-get and production matching can call `query`.
+- [ ] Detect and reject nested commands from synchronous callbacks with a clear
+  error.
+- [ ] Add tests for returning `create`/`query`/`params` callbacks and for
+  nested-call rejection.
 - [ ] Add `define-module` and `undefine-module` to the RPC command registry in
   `rust_actr7/src/rpc/session.rs`.
 - [ ] Parse buffer definitions, remote parameter specs, callback names, and
@@ -249,8 +276,6 @@ parameters are visible to a loaded model.
 - [ ] Drain callbacks in `rust_actr7/src/rpc/server.rs` with the session borrow
   released.
 - [ ] Route deferred callbacks through the owner-aware reentrant callback path.
-- [ ] Add a scoped synchronous callback path for data callbacks.
-- [ ] Detect and reject nested commands from synchronous callbacks.
 - [ ] Test a request callback that issues a nested scheduling command.
 
 Acceptance: a remote module callback can issue ACT-R commands that take effect
@@ -401,10 +426,17 @@ Add one entry per milestone or meaningful checkpoint, with the commit range.
   the code work. After the final `load_source` gating change, `cargo test --lib`
   and `cargo test --test rpc_modules` (9 tests) were rerun and passed;
   `cargo fmt --check` clean.
+- 2026-11-27: Milestone 2 complete; the scoped synchronous data bridge moved to
+  the start of Milestone 3 (`d73f2d0`). Added the overridable-builtin allowlist,
+  checked add/remove with model-state guards, built-in stash/restore, disconnect
+  restoration, and RPC error replies. `cargo test` passed the 560-case corpus,
+  145 lib tests, 10 `rpc_modules` tests, and 28 `environment_rpc` tests;
+  `cargo fmt --check` clean.
 
 ## 11. Handoff notes
 
-Next action: start Milestone 2.
+Next action: start Milestone 3 with the scoped synchronous data bridge, then
+`define-module` registration.
 
 Before editing:
 
