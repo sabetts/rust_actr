@@ -1079,7 +1079,7 @@ select.input {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-3);
-  padding: 11px 13px;
+  padding: 8px 12px;
   border-color: color-mix(in srgb, var(--border) 76%, transparent);
   background: var(--surface-glass);
   box-shadow: var(--shadow-md);
@@ -1117,6 +1117,24 @@ select.input {
 
 .run-time-field .field-label {
   white-space: nowrap;
+}
+
+@media (min-width: 761px) {
+  .run-time-field {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    width: auto;
+  }
+
+  .run-time-field .field-label {
+    flex: 0 0 auto;
+  }
+
+  .run-time-field input {
+    flex: 0 0 5.25rem;
+    width: 5.25rem;
+  }
 }
 
 .run-bar .run-settings {
@@ -2700,6 +2718,10 @@ kbd {
   .task-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .run-bar-title {
+    display: none;
+  }
 }
 
 @media (min-width: 1200px) {
@@ -2795,10 +2817,14 @@ kbd {
   .run-bar-actions {
     width: 100%;
     margin-left: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: var(--space-2);
   }
 
   .run-bar-actions .btn {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    min-width: 96px;
   }
 
   .run-bar .status-pill {
