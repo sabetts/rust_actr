@@ -1095,21 +1095,6 @@ select.input {
   min-width: 0;
 }
 
-.run-bar-title {
-  display: flex;
-  align-items: center;
-  min-height: 38px;
-  padding-right: 2px;
-}
-
-.run-bar-title h2 {
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .run-time-field {
   flex: 0 0 auto;
   width: 132px;
@@ -2718,10 +2703,6 @@ kbd {
   .task-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .run-bar-title {
-    display: none;
-  }
 }
 
 @media (min-width: 1200px) {
@@ -2797,10 +2778,6 @@ kbd {
     gap: 9px;
   }
 
-  .run-bar-title {
-    display: none;
-  }
-
   .run-bar-main {
     flex: 1 1 100%;
   }
@@ -2825,10 +2802,6 @@ kbd {
   .run-bar-actions .btn {
     flex: 0 0 auto;
     min-width: 96px;
-  }
-
-  .run-bar .status-pill {
-    margin-right: auto;
   }
 
   .run-fields,
