@@ -140,6 +140,52 @@ impl Client {
         self.wait(id).expect("remove")
     }
 
+    /// Wait for `id`, but before answering the first callback issue a nested
+    /// `evaluate`. Returns the outer reply and the nested request's error.
+    fn wait_with_nested_evaluate(&mut self, id: i64) -> Result<(Vec<Json>, String), String> {
+        let mut nested_error = String::new();
+        loop {
+            let msg = self.read();
+            if msg.get("method").and_then(|m| m.as_str()) == Some("evaluate") {
+                let params = match msg.get("params") {
+                    Some(Json::Arr(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
+                let name = params
+                    .first()
+                    .and_then(|p| p.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let model = params.get(1).and_then(|p| p.as_str()).map(str::to_string);
+                self.callbacks
+                    .push((name, model, params.get(2..).unwrap_or(&[]).to_vec()));
+                let nested_id = self.send(
+                    Method::Evaluate,
+                    vec![Json::Str("mp-time".into()), Json::Null],
+                );
+                loop {
+                    let nested = self.read();
+                    if reply_id(&nested) == Some(nested_id) {
+                        nested_error = match parse_reply(&nested) {
+                            Ok(_) => "nested command unexpectedly succeeded".into(),
+                            Err(error) => error,
+                        };
+                        break;
+                    }
+                }
+                let callback_id = msg.get("id").cloned().unwrap_or(Json::Null);
+                let reply = reply_ok(Some(&callback_id), Json::Arr(vec![Json::Bool(true)]));
+                write_message(&mut self.stream, &reply).expect("send callback reply");
+                continue;
+            }
+            match reply_id(&msg) {
+                Some(got) if got == id => return Ok((parse_reply(&msg)?, nested_error)),
+                Some(_) => self.pending.push(msg),
+                None => {}
+            }
+        }
+    }
+
     fn monitor(&mut self, target: &str, monitor: &str) {
         let id = self.send(
             Method::Monitor,
@@ -206,6 +252,10 @@ fn model(name: &str) -> String {
         .join(name)
         .to_string_lossy()
         .into_owned()
+}
+
+fn json(source: &str) -> Json {
+    actr_engine::json::parse(source).unwrap()
 }
 
 fn server() -> std::net::SocketAddr {
@@ -818,6 +868,125 @@ fn non_overridable_builtin_removal_is_rejected_with_a_message() {
         "{result:?}"
     );
     assert_eq!(c.check("run").first(), Some(&Json::Bool(true)));
+}
+
+#[test]
+fn remote_module_definition_round_trips_over_rpc() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    let define = |name: &str| {
+        vec![
+            Json::Str(name.into()),
+            Json::Null,
+            Json::Null,
+            json(r#"[["creation","create-round-trip"]]"#),
+        ]
+    };
+
+    let builtin = c.eval_ok("undefine-module", None, vec![Json::Str("goal".into())]);
+    assert_eq!(builtin.first(), Some(&Json::Bool(false)));
+
+    let result = c.eval_ok("define-module", None, define("round-trip"));
+    assert_eq!(result.first().and_then(|v| v.as_str()), Some("round-trip"));
+    let error = c
+        .eval("define-module", None, define("round-trip"))
+        .unwrap_err();
+    assert!(error.contains("already exists"), "{error}");
+
+    let result = c.eval_ok(
+        "undefine-module",
+        None,
+        vec![Json::Str("round-trip".into())],
+    );
+    assert_eq!(result.first(), Some(&Json::Bool(true)));
+    let result = c.eval_ok("define-module", None, define("round-trip"));
+    assert_eq!(result.first().and_then(|v| v.as_str()), Some("round-trip"));
+}
+
+#[test]
+fn remote_module_sync_callbacks_reach_the_client() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+
+    let defined = c.eval_ok(
+        "define-module",
+        None,
+        vec![
+            Json::Str("probe".into()),
+            json(r#"[["probe"]]"#),
+            Json::Null,
+            json(r#"[["creation","create-probe"],["query","query-probe"]]"#),
+        ],
+    );
+    assert_eq!(defined.first().and_then(|v| v.as_str()), Some("probe"));
+
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("rpc-modules/probe.lisp"))],
+    );
+    c.eval_ok("run-n-events", None, vec![Json::Int(5)]);
+
+    let created = c
+        .callbacks
+        .iter()
+        .find(|(name, _, _)| name == "create-probe")
+        .unwrap_or_else(|| panic!("no create callback: {:?}", c.callbacks));
+    assert_eq!(created.1.as_deref(), Some("PROBE-MODEL"));
+    assert_eq!(created.2, vec![Json::Str("PROBE-MODEL".into())]);
+
+    let query = c
+        .callbacks
+        .iter()
+        .find(|(name, _, _)| name == "query-probe")
+        .unwrap_or_else(|| panic!("no query callback: {:?}", c.callbacks));
+    assert_eq!(
+        query.2,
+        vec![
+            Json::Str("PROBE-MODEL".into()),
+            Json::Str("PROBE".into()),
+            Json::Str("STATE".into()),
+            Json::Str("FREE".into())
+        ]
+    );
+}
+
+#[test]
+fn synchronous_module_callbacks_reject_nested_commands() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+
+    c.eval_ok(
+        "define-module",
+        None,
+        vec![
+            Json::Str("nested-probe".into()),
+            Json::Null,
+            Json::Null,
+            json(r#"[["creation","create-nested"]]"#),
+        ],
+    );
+    let id = c.send(
+        Method::Evaluate,
+        vec![
+            Json::Str("load-act-r-model".into()),
+            Json::Null,
+            Json::Str(model("tutorial/unit1/count.lisp")),
+        ],
+    );
+    let (reply, nested_error) = c.wait_with_nested_evaluate(id).expect("load");
+    assert_eq!(reply.first(), Some(&Json::Bool(true)), "{reply:?}");
+    assert!(
+        nested_error.contains("Nested ACT-R commands are not allowed"),
+        "nested error: {nested_error:?}"
+    );
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, _, _)| name == "create-nested"),
+        "callbacks: {:?}",
+        c.callbacks
+    );
 }
 
 #[test]

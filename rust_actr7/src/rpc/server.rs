@@ -12,13 +12,17 @@
 //! servicing nested requests from the callback, mirroring the Lisp
 //! dispatcher's `send-remote-command` (`framework/dispatcher.lisp:2074`).
 
+use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, VecDeque};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::PathBuf;
-use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::rc::Rc;
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, TryRecvError};
+use std::time::Duration;
 
 use crate::json::Json;
+use crate::rpc::remote_module::ModuleHost;
 use crate::rpc::session::{MonitorWhen, Owner, Remote, RunStop, Session};
 use crate::rpc::{
     callback, parse_reply, parse_request, reply_err, reply_ok, write_message, Method,
@@ -184,15 +188,51 @@ fn take_buffered(buf: &mut Vec<u8>) -> std::io::Result<Option<Json>> {
 }
 
 /// One live connection as seen by the actor.
+/// The transport handles a connection callback needs. Cloned into synchronous
+/// module hosts, which run while the actor/session is borrowed.
+#[derive(Clone)]
+struct ConnIo {
+    writer: Rc<RefCell<TcpStream>>,
+    next_callback_id: Rc<Cell<i64>>,
+    sent: Rc<Cell<u64>>,
+}
+
+impl ConnIo {
+    fn new(writer: TcpStream) -> ConnIo {
+        ConnIo {
+            writer: Rc::new(RefCell::new(writer)),
+            next_callback_id: Rc::new(Cell::new(1)),
+            sent: Rc::new(Cell::new(0)),
+        }
+    }
+
+    fn next_callback_id(&self) -> i64 {
+        let id = self.next_callback_id.get();
+        self.next_callback_id.set(id + 1);
+        id
+    }
+
+    fn send(&self, message: &Json) -> Result<(), String> {
+        write_message(&mut *self.writer.borrow_mut(), message).map_err(|e| e.to_string())?;
+        self.sent.set(self.sent.get() + 1);
+        Ok(())
+    }
+}
+
+/// Shared event plumbing for the actor and synchronous module hosts.
+#[derive(Clone)]
+struct CallbackShared {
+    rx: Rc<RefCell<Receiver<Event>>>,
+    deferred: Rc<RefCell<VecDeque<Event>>>,
+}
+
 struct ConnState {
     /// Stable owner key. Display names can change with `set-name`; commands
     /// and monitors stay attached to this key.
     key: String,
     name: Option<String>,
     peer: String,
-    writer: TcpStream,
-    next_callback_id: i64,
-    sent: u64,
+    io: ConnIo,
     received: u64,
 }
 
@@ -205,11 +245,11 @@ impl ConnState {
 /// The single-threaded owner of the shared [`Session`].
 struct Actor {
     session: Session,
-    rx: Receiver<Event>,
+    rx: Rc<RefCell<Receiver<Event>>>,
     conns: BTreeMap<u64, ConnState>,
     /// Events seen while a remote callback was waiting.  They are handled
     /// after the callback returns instead of being lost.
-    deferred: VecDeque<Event>,
+    deferred: Rc<RefCell<VecDeque<Event>>>,
     address: String,
 }
 
@@ -217,15 +257,19 @@ impl Actor {
     fn new(session: Session, rx: Receiver<Event>, address: String) -> Actor {
         Actor {
             session,
-            rx,
+            rx: Rc::new(RefCell::new(rx)),
             conns: BTreeMap::new(),
-            deferred: VecDeque::new(),
+            deferred: Rc::new(RefCell::new(VecDeque::new())),
             address,
         }
     }
 
     fn run(mut self) {
-        while let Ok(event) = self.rx.recv() {
+        loop {
+            let next = self.rx.borrow_mut().recv();
+            let Ok(event) = next else {
+                break;
+            };
             self.handle_event(event);
             self.process_deferred();
         }
@@ -240,9 +284,7 @@ impl Actor {
                         key: format!("connection-{id}"),
                         name: None,
                         peer,
-                        writer,
-                        next_callback_id: 1,
-                        sent: 0,
+                        io: ConnIo::new(writer),
                         received: 0,
                     },
                 );
@@ -265,7 +307,11 @@ impl Actor {
     }
 
     fn process_deferred(&mut self) {
-        while let Some(event) = self.deferred.pop_front() {
+        loop {
+            let event = self.deferred.borrow_mut().pop_front();
+            let Some(event) = event else {
+                break;
+            };
             self.handle_event(event);
         }
     }
@@ -436,7 +482,7 @@ impl Actor {
                         Json::Str(conn.display_name()),
                         Json::Str(conn.peer.clone()),
                         Json::Int(conn.received as i64),
-                        Json::Int(conn.sent as i64),
+                        Json::Int(conn.io.sent.get() as i64),
                         Json::Arr(commands),
                     ]));
                 }
@@ -519,8 +565,10 @@ impl Actor {
         } = self;
         let mut remote = ActorRemote {
             conns,
-            rx,
-            deferred,
+            shared: CallbackShared {
+                rx: rx.clone(),
+                deferred: deferred.clone(),
+            },
             origin,
         };
         f(session, &mut remote)
@@ -546,11 +594,9 @@ impl Actor {
                 .conns
                 .get_mut(&target)
                 .ok_or_else(|| "callback connection is closed".to_string())?;
-            let id = conn.next_callback_id;
-            conn.next_callback_id += 1;
+            let id = conn.io.next_callback_id();
             let msg = callback(&call, model, args, id);
-            conn.sent += 1;
-            write_message(&mut conn.writer, &msg).map_err(|e| e.to_string())?;
+            conn.io.send(&msg)?;
             id
         };
         loop {
@@ -558,7 +604,8 @@ impl Actor {
             if !self.conns.contains_key(&target) {
                 return Err("connection closed waiting for a command reply".into());
             }
-            match self.rx.recv() {
+            let next = self.rx.borrow_mut().recv();
+            match next {
                 Ok(Event::Reply { id, message })
                     if id == target && message_id(&message) == Some(callback_id) =>
                 {
@@ -688,7 +735,8 @@ impl Actor {
     fn pump_requests(&mut self, origin: u64) -> Result<(), String> {
         self.process_deferred();
         loop {
-            match self.rx.try_recv() {
+            let next = self.rx.borrow_mut().try_recv();
+            match next {
                 Ok(Event::Request {
                     id,
                     method,
@@ -723,7 +771,8 @@ impl Actor {
             if !self.conns.contains_key(&origin) {
                 return Err("connection closed while the stepper was paused".into());
             }
-            match self.rx.recv() {
+            let next = self.rx.borrow_mut().recv();
+            match next {
                 Ok(event) => self.handle_event(event),
                 Err(_) => return Err("server dispatcher stopped".into()),
             }
@@ -839,12 +888,11 @@ impl Actor {
     }
 
     fn write_reply(&mut self, conn_id: u64, reply: Json) {
-        let failed = if let Some(conn) = self.conns.get_mut(&conn_id) {
-            conn.sent += 1;
-            write_message(&mut conn.writer, &reply).is_err()
-        } else {
-            false
-        };
+        let failed = self
+            .conns
+            .get(&conn_id)
+            .map(|conn| conn.io.send(&reply).is_err())
+            .unwrap_or(false);
         if failed {
             self.disconnect(conn_id);
         }
@@ -853,7 +901,7 @@ impl Actor {
     fn disconnect(&mut self, conn_id: u64) {
         if let Some(conn) = self.conns.remove(&conn_id) {
             self.session.remove_connection(&conn.key);
-            let _ = conn.writer.shutdown(Shutdown::Both);
+            let _ = conn.io.writer.borrow().shutdown(Shutdown::Both);
         }
     }
 }
@@ -897,8 +945,7 @@ impl Remote for TraceRemote {
 /// client-owned command to the connection that registered it.
 struct ActorRemote<'a> {
     conns: &'a mut BTreeMap<u64, ConnState>,
-    rx: &'a Receiver<Event>,
-    deferred: &'a mut VecDeque<Event>,
+    shared: CallbackShared,
     origin: u64,
 }
 
@@ -935,26 +982,100 @@ impl Remote for ActorRemote<'_> {
                 .conns
                 .get_mut(&target)
                 .ok_or_else(|| "callback connection is closed".to_string())?;
-            let id = conn.next_callback_id;
-            conn.next_callback_id += 1;
+            let id = conn.io.next_callback_id();
             let msg = callback(name, model, args, id);
-            conn.sent += 1;
-            write_message(&mut conn.writer, &msg).map_err(|e| e.to_string())?;
+            conn.io.send(&msg)?;
             id
         };
         loop {
-            match self.rx.recv() {
+            let next = self.shared.rx.borrow_mut().recv();
+            match next {
                 Ok(Event::Reply { id, message })
                     if id == target && message_id(&message) == Some(callback_id) =>
                 {
                     return parse_reply(&message);
                 }
                 Ok(Event::Disconnected { id }) if id == target => {
-                    self.deferred.push_back(Event::Disconnected { id });
+                    self.shared
+                        .deferred
+                        .borrow_mut()
+                        .push_back(Event::Disconnected { id });
                     return Err("connection closed waiting for a command reply".into());
                 }
-                Ok(event) => self.deferred.push_back(event),
+                Ok(event) => self.shared.deferred.borrow_mut().push_back(event),
                 Err(_) => return Err("server dispatcher stopped".into()),
+            }
+        }
+    }
+
+    fn module_host(&self) -> Option<Rc<dyn ModuleHost>> {
+        let conn = self.conns.get(&self.origin)?;
+        Some(Rc::new(RpcModuleHost {
+            conn_id: self.origin,
+            io: conn.io.clone(),
+            shared: self.shared.clone(),
+        }))
+    }
+
+    fn connection_key(&self) -> Option<String> {
+        self.conns.get(&self.origin).map(|conn| conn.key.clone())
+    }
+}
+
+const MODULE_CALLBACK_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// The synchronous host used by remote module data callbacks.
+///
+/// It runs while `&mut Session` is borrowed, so it talks to the connection
+/// directly instead of going through [`Actor::call_remote`]. Nested ACT-R
+/// commands are rejected: there is no safe re-entrant session borrow here.
+struct RpcModuleHost {
+    conn_id: u64,
+    io: ConnIo,
+    shared: CallbackShared,
+}
+
+impl ModuleHost for RpcModuleHost {
+    fn invoke(&self, command: &str, model: &str, args: Vec<Json>) -> Result<Vec<Json>, String> {
+        let callback_id = self.io.next_callback_id();
+        let mut params = vec![Json::Str(model.to_string())];
+        params.extend(args);
+        self.io
+            .send(&callback(command, Some(model), params, callback_id))?;
+        loop {
+            let next = self
+                .shared
+                .rx
+                .borrow()
+                .recv_timeout(MODULE_CALLBACK_TIMEOUT);
+            match next {
+                Ok(Event::Reply { id, message })
+                    if id == self.conn_id && message_id(&message) == Some(callback_id) =>
+                {
+                    return parse_reply(&message);
+                }
+                Ok(Event::Request { id, request_id, .. }) if id == self.conn_id => {
+                    let _ = self.io.send(&reply_err(
+                        request_id.as_ref(),
+                        "Nested ACT-R commands are not allowed from synchronous module callbacks.",
+                    ));
+                }
+                Ok(Event::Disconnected { id }) if id == self.conn_id => {
+                    self.shared
+                        .deferred
+                        .borrow_mut()
+                        .push_back(Event::Disconnected { id });
+                    return Err("connection closed during a module callback".into());
+                }
+                Ok(event) => self.shared.deferred.borrow_mut().push_back(event),
+                Err(RecvTimeoutError::Timeout) => {
+                    return Err(format!(
+                        "Timed out waiting for module callback {command:?}."
+                    ))
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    return Err("server dispatcher stopped".into())
+                }
             }
         }
     }

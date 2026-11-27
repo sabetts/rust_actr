@@ -202,12 +202,9 @@ impl Module for RemoteModule {
 
     fn create(&mut self, ctx: &mut ModuleCtx<'_>) -> Result<(), ModuleError> {
         *self.model.borrow_mut() = ctx.model_name().to_string();
-        self.call(
-            self.callbacks.creation.as_deref(),
-            ctx.model_name(),
-            "creation",
-            Vec::new(),
-        )?;
+        if let Some(creation) = self.callbacks.creation.as_deref() {
+            self.call(Some(creation), ctx.model_name(), "creation", Vec::new())?;
+        }
         Ok(())
     }
 
@@ -233,16 +230,14 @@ impl Module for RemoteModule {
     }
 
     fn params(&mut self, ctx: &mut ModuleCtx<'_>, name: &str, value: Option<&Value>) -> Value {
+        let Some(callback) = self.callbacks.params.as_deref() else {
+            return value.cloned().unwrap_or(Value::Nil);
+        };
         let param = match value {
             Some(value) => Json::Arr(vec![Json::Str(name.to_uppercase()), value_to_json(value)]),
             None => Json::Arr(vec![Json::Str(name.to_uppercase())]),
         };
-        let values = self.call(
-            self.callbacks.params.as_deref(),
-            ctx.model_name(),
-            "params",
-            vec![param],
-        );
+        let values = self.call(Some(callback), ctx.model_name(), "params", vec![param]);
         match values.ok().and_then(|values| self.first(values)) {
             Some(value) => json_to_value(&value),
             None => Value::Nil,
