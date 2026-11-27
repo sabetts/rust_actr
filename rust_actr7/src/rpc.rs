@@ -15,6 +15,7 @@ use std::io::{BufRead, Read, Write};
 use crate::json::Json;
 
 pub mod builtin_docs;
+pub mod remote_module;
 pub mod server;
 pub mod session;
 
