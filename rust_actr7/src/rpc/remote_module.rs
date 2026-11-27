@@ -208,6 +208,10 @@ impl Module for RemoteModule {
         &self.descriptor.requires
     }
 
+    fn external(&self) -> bool {
+        true
+    }
+
     fn create(&mut self, ctx: &mut ModuleCtx<'_>) -> Result<(), ModuleError> {
         *self.model.borrow_mut() = ctx.model_name().to_string();
         if let Some(creation) = self.callbacks.creation.as_deref() {
@@ -250,6 +254,42 @@ impl Module for RemoteModule {
             Some(value) => json_to_value(&value),
             None => Value::Nil,
         }
+    }
+
+    fn request(
+        &mut self,
+        ctx: &mut ModuleCtx<'_>,
+        request: crate::engine::module::Request<'_>,
+    ) -> Result<(), ModuleError> {
+        if let Some(spec_id) = request.spec_id {
+            self.enqueue(
+                ctx,
+                self.callbacks.request.as_deref(),
+                vec![
+                    Value::Sym(request.buffer.to_uppercase()),
+                    Value::Int(spec_id),
+                ],
+            );
+        }
+        Ok(())
+    }
+
+    fn buffer_mod(
+        &mut self,
+        ctx: &mut ModuleCtx<'_>,
+        request: crate::engine::module::ModifyRequest<'_>,
+    ) -> Result<(), ModuleError> {
+        if let Some(spec_id) = request.spec_id {
+            self.enqueue(
+                ctx,
+                self.callbacks.buffer_mod.as_deref(),
+                vec![
+                    Value::Sym(request.buffer.to_uppercase()),
+                    Value::Int(spec_id),
+                ],
+            );
+        }
+        Ok(())
     }
 
     fn reset(&mut self, ctx: &mut ModuleCtx<'_>, phase: ResetPhase) -> Result<(), ModuleError> {

@@ -355,6 +355,7 @@ impl Actor {
                 let _ = self.call_remote(owner.as_deref(), conn_id, &name, None, Vec::new());
             }
             self.drain_module_callbacks(conn_id);
+            self.drain_task_commands(conn_id);
             self.write_reply(conn_id, reply);
         }
     }
@@ -639,10 +640,7 @@ impl Actor {
     }
 
     fn owner_key_for(&self, command: &str) -> Option<String> {
-        self.session
-            .commands()
-            .get(command)
-            .and_then(|c| c.connection.clone())
+        self.session.command_connection(command)
     }
 
     /// Run deferred module side-effect callbacks with the session borrow
@@ -671,6 +669,28 @@ impl Actor {
             }
         }
         self.module_callback_depth -= 1;
+    }
+
+    /// Dispatch task commands the engine fired during a run or command
+    /// (`!eval!`, scheduled client commands). Their effects must run before
+    /// the next event/command result is observed.
+    fn drain_task_commands(&mut self, origin: u64) {
+        for _ in 0..32 {
+            let commands = self.session.take_fired_task_commands();
+            if commands.is_empty() {
+                break;
+            }
+            let model = self.session.current_model().map(str::to_string);
+            for (command, args) in commands {
+                let args = args.into_iter().map(Json::Str).collect();
+                let owner = self.owner_key_for(&command);
+                if let Err(error) =
+                    self.call_remote(owner.as_deref(), origin, &command, model.as_deref(), args)
+                {
+                    eprintln!("rpc: scheduled command {command} failed: {error}");
+                }
+            }
+        }
     }
 
     fn drain(&mut self, origin: u64) {
@@ -851,6 +871,7 @@ impl Actor {
             };
             self.drain(origin);
             self.drain_module_callbacks(origin);
+            self.drain_task_commands(origin);
             if let Err(e) = self.drain_stepper_updates(origin) {
                 return reply_err(id, &e);
             }
@@ -902,6 +923,7 @@ impl Actor {
             break;
         }
         self.drain_module_callbacks(origin);
+        self.drain_task_commands(origin);
         if let Err(e) = self.fire_signal(
             origin,
             "run-stop",

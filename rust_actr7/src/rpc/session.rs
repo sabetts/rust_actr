@@ -14,10 +14,10 @@ use std::rc::Rc;
 
 use super::builtin_docs::builtin_doc;
 use super::remote_module::{self, ModuleHost};
-use crate::engine::module::{ModuleFactory, ModuleSet};
+use crate::engine::module::{ChunkSpecTable, ModuleFactory, ModuleSet};
 use crate::engine::{
-    DeviceSetup, Engine, EngineError, EventHook, EventView, HookValue, PpmHookFn, PreResult,
-    ProductionGraphMode, StepperSnapshot, TraceKind,
+    DeviceSetup, Engine, EngineError, EventHook, EventView, HookValue, NewChunk, PpmHookFn,
+    PreResult, Prio, ProductionGraphMode, StepperSnapshot, TraceKind,
 };
 use crate::json::Json;
 use crate::model::{self, ChunkDesc, Model, UserDefun};
@@ -115,6 +115,7 @@ pub const BUILTINS: &[&str] = &[
     "buffer-read",
     "buffer-slot-value",
     "clear-buffer",
+    "set-buffer-failure",
     "set-buffer-chunk",
     "mod-chunk",
     "mod-buffer-chunk",
@@ -127,11 +128,13 @@ pub const BUILTINS: &[&str] = &[
     "schedule-set-buffer-chunk",
     "schedule-mod-buffer-chunk",
     "schedule-event-after-module",
+    "delete-event",
     "add-dm",
     "add-dm-fct",
     "define-chunks",
     "define-chunks-fct",
     "define-chunk-spec",
+    "chunk-spec-to-chunk-def",
     "chunk-type",
     "dm",
     "sdm",
@@ -421,6 +424,10 @@ pub struct Session {
     /// Connections that owned module factories when they disconnected while a
     /// model was loaded. Their factories are pruned after the last model goes.
     stale_module_connections: BTreeSet<String>,
+    /// Session-scoped chunk-spec IDs shared with every engine.
+    chunk_specs: Rc<RefCell<ChunkSpecTable>>,
+    /// External id assigned to each RPC-scheduled event.
+    next_event_id: i64,
     /// Models that installed a speech/microphone device. A runtime engine
     /// rebuild must restore this flag, as `define-chunks` does not uninstall
     /// the device in ACT-R.
@@ -647,6 +654,8 @@ impl Session {
             device: DeviceSetup::default(),
             module_factories: Vec::new(),
             stale_module_connections: BTreeSet::new(),
+            chunk_specs: Rc::new(RefCell::new(ChunkSpecTable::default())),
+            next_event_id: 0,
             speech_models: Default::default(),
             vwin_handlers: Vec::new(),
             windows: HashMap::new(),
@@ -821,6 +830,7 @@ impl Session {
                 model: def.name.clone(),
             })));
         }
+        eng.set_chunk_spec_table(self.chunk_specs.clone());
         Ok(eng)
     }
 
@@ -919,6 +929,7 @@ impl Session {
         allow_load_dispatch: bool,
     ) -> Result<(), String> {
         let name = def.name.clone();
+        self.chunk_specs.borrow_mut().clear();
         if self
             .model_order
             .iter()
@@ -1379,13 +1390,28 @@ impl Session {
         self.commands.contains_key(name)
     }
 
+    fn command_entry(&self, name: &str) -> Option<&Command> {
+        self.commands.get(name).or_else(|| {
+            self.commands
+                .iter()
+                .find(|(command, _)| command.eq_ignore_ascii_case(name))
+                .map(|(_, command)| command)
+        })
+    }
+
     /// Whether `name` is owned by a remote client. Used to dispatch a queued
     /// window action as a callback instead of invoking it server-side.
     pub fn command_is_remote(&self, name: &str) -> bool {
-        self.commands
-            .get(name)
+        self.command_entry(name)
             .map(|c| matches!(c.owner, Owner::Remote { .. }))
             .unwrap_or(false)
+    }
+
+    /// The registered spelling of a command, for case-insensitive dispatches
+    /// such as engine-fired task commands.
+    pub fn command_connection(&self, name: &str) -> Option<String> {
+        self.command_entry(name)
+            .and_then(|command| command.connection.clone())
     }
 
     /// The client procedure to call for a remote command.  A Tcl client
@@ -1395,7 +1421,7 @@ impl Session {
     /// device actions) must go through this mapping too, not just
     /// `Session::evaluate`.
     pub fn remote_local_name<'a>(&'a self, name: &'a str) -> &'a str {
-        match self.commands.get(name).map(|c| &c.owner) {
+        match self.command_entry(name).map(|c| &c.owner) {
             Some(Owner::Remote {
                 local_name: Some(local),
             }) => local.as_str(),
@@ -2173,6 +2199,7 @@ impl Session {
             }
             "reset" => {
                 self.queue_signal("reset-start", Vec::new());
+                self.chunk_specs.borrow_mut().clear();
                 let load_dispatch = self.load_dispatch_policy();
                 let defer_tertiary = load_dispatch.any();
                 let multi_marks: Vec<(String, usize)> = if self.is_multi() {
@@ -2339,6 +2366,7 @@ impl Session {
                 self.global_time_ms = 0;
                 self.global_run_events = 0;
                 self.trace_pos = 0;
+                self.chunk_specs.borrow_mut().clear();
                 self.prune_stale_module_factories();
                 Ok(vec![Json::Bool(true)])
             }
@@ -2679,6 +2707,23 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "set-buffer-failure" => {
+                let buffer = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("set-buffer-failure needs a buffer")?;
+                let ignore_if_full = option(args.get(1), "ignore-if-full")
+                    .is_some_and(|value| matches!(value, Json::Bool(true)));
+                let requested = option(args.get(1), "requested")
+                    .map(|value| !matches!(value, Json::Bool(false) | Json::Null))
+                    .unwrap_or(true);
+                let ok = self
+                    .engine
+                    .as_mut()
+                    .map(|eng| eng.set_buffer_failure_rpc(buffer, ignore_if_full, requested))
+                    .unwrap_or(false);
+                Ok(vec![Json::Bool(ok)])
+            }
             "set-buffer-chunk" => {
                 // `(set-buffer-chunk buffer chunk {requested})`: a named chunk
                 // (string) or a spec list.
@@ -2770,52 +2815,122 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "schedule-set-buffer-chunk" => {
+                let buffer = args
+                    .first()
+                    .and_then(|a| a.as_str())
+                    .ok_or("schedule-set-buffer-chunk needs a buffer")?;
+                let chunk = match args.get(1) {
+                    Some(Json::Str(name)) => NewChunk::Named(name.to_uppercase()),
+                    Some(Json::Int(_)) | Some(Json::Float(_)) => {
+                        let id = args[1].as_f64().unwrap_or(0.0) as i64;
+                        let spec = self
+                            .chunk_specs
+                            .borrow()
+                            .get(id)
+                            .ok_or("schedule-set-buffer-chunk needs a valid chunk-spec id")?;
+                        spec_new_chunk(spec)
+                    }
+                    Some(Json::Arr(items)) => {
+                        let forms: Vec<Sexp> = items.iter().map(json_to_sexp).collect();
+                        let desc = model::parse_chunk_desc(&forms).map_err(|e| e.to_string())?;
+                        let record = self
+                            .engine
+                            .as_ref()
+                            .ok_or("schedule-set-buffer-chunk called with no current model")?
+                            .chunk_spec_record_from_desc(&desc)?;
+                        spec_new_chunk(record)
+                    }
+                    _ => return Err("schedule-set-buffer-chunk needs a chunk or spec".into()),
+                };
+                let delay = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let time_in_ms = option(args.get(3), "time-in-ms")
+                    .is_some_and(|value| !matches!(value, Json::Bool(false) | Json::Null));
+                let delay_ms = if time_in_ms {
+                    delay as i64
+                } else {
+                    (delay * 1000.0).round() as i64
+                };
+                let priority = priority_from_json(option(args.get(3), "priority"));
+                let requested = option(args.get(3), "requested")
+                    .map(|value| !matches!(value, Json::Bool(false) | Json::Null))
+                    .unwrap_or(true);
+                let id = self.next_event_id();
+                if let Some(eng) = &mut self.engine {
+                    eng.schedule_set_buffer_chunk_rpc(
+                        buffer,
+                        chunk,
+                        delay_ms,
+                        priority,
+                        requested,
+                        Some(id),
+                    );
+                    Ok(vec![Json::Int(id)])
+                } else {
+                    Ok(vec![Json::Null])
+                }
+            }
             "schedule-mod-buffer-chunk" => {
                 let buffer = args
                     .first()
                     .and_then(|a| a.as_str())
                     .ok_or("schedule-mod-buffer-chunk needs a buffer")?;
-                let items: Vec<Json> = match args.get(1) {
-                    Some(Json::Arr(a)) => a.clone(),
-                    Some(_) => args[1..].to_vec(),
-                    None => Vec::new(),
-                };
-                let mut mods = Vec::new();
-                for pair in items.chunks(2) {
-                    let name = pair.first().map(json_to_text).unwrap_or_default();
-                    let value = pair
-                        .get(1)
-                        .map(json_to_sexp)
-                        .unwrap_or(Sexp::Sym("NIL".into()));
-                    mods.push((name.to_uppercase(), value));
-                }
-                let delay = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
-                let mut delay_ms = (delay * 1000.0).round() as i64;
-                let mut priority = 0i64;
-                let mut module = "NONE".to_string();
-                let mut i = 3;
-                while i + 1 < args.len() {
-                    let key = args[i].as_str().unwrap_or("").to_uppercase();
-                    match key.as_str() {
-                        ":PRIORITY" => {
-                            priority = args[i + 1].as_f64().unwrap_or(0.0) as i64;
-                        }
-                        ":MODULE" => {
-                            module = json_to_text(&args[i + 1]).to_uppercase();
-                        }
-                        ":TIME-IN-MS" => {
-                            if !matches!(args[i + 1], Json::Bool(false) | Json::Null) {
-                                delay_ms = delay as i64;
-                            }
-                        }
-                        _ => {}
+                let mods: Vec<(String, crate::engine::Value)> = if let Some(id) =
+                    args.get(1).and_then(|a| a.as_f64())
+                {
+                    let spec = self
+                        .chunk_specs
+                        .borrow()
+                        .get(id as i64)
+                        .ok_or("schedule-mod-buffer-chunk needs a valid chunk-spec id")?;
+                    if !spec.negated.is_empty() || !spec.relative.is_empty() {
+                        return Err("schedule-mod-buffer-chunk requires a plain chunk-spec".into());
                     }
-                    i += 2;
-                }
+                    spec.slots
+                } else {
+                    let items: Vec<Json> = match args.get(1) {
+                        Some(Json::Arr(a)) => a.clone(),
+                        Some(_) => args[1..].to_vec(),
+                        None => Vec::new(),
+                    };
+                    let mut mods = Vec::new();
+                    for pair in items.chunks(2) {
+                        let name = pair.first().map(json_to_text).unwrap_or_default();
+                        let value = pair
+                            .get(1)
+                            .map(remote_module::json_to_value)
+                            .unwrap_or(crate::engine::Value::Nil);
+                        mods.push((name.to_uppercase(), value));
+                    }
+                    mods
+                };
+                let delay = args.get(2).and_then(|a| a.as_f64()).unwrap_or(0.0);
+                let time_in_ms = option(args.get(3), "time-in-ms")
+                    .is_some_and(|value| !matches!(value, Json::Bool(false) | Json::Null));
+                let delay_ms = if time_in_ms {
+                    delay as i64
+                } else {
+                    (delay * 1000.0).round() as i64
+                };
+                let priority = priority_from_json(option(args.get(3), "priority"));
+                let module = option(args.get(3), "module")
+                    .map(json_to_text)
+                    .unwrap_or_else(|| "NONE".into())
+                    .to_uppercase();
+                let id = self.next_event_id();
                 if let Some(eng) = &mut self.engine {
-                    eng.schedule_mod_buffer_chunk_rpc(buffer, &mods, delay_ms, &module, priority);
+                    eng.schedule_mod_buffer_chunk_rpc(
+                        buffer,
+                        &mods,
+                        delay_ms,
+                        &module,
+                        priority,
+                        Some(id),
+                    );
+                    Ok(vec![Json::Int(id)])
+                } else {
+                    Ok(vec![Json::Null])
                 }
-                Ok(vec![Json::Null])
             }
             "extend-possible-slots" => {
                 for arg in args {
@@ -2882,14 +2997,118 @@ impl Session {
                 Ok(vec![Json::Arr(out)])
             }
             "schedule-event-relative" | "schedule-event-now" | "schedule-event" => {
-                self.schedule_event_cmd(name, args);
-                Ok(vec![Json::Null])
+                let id = self.schedule_event_cmd(name, args);
+                Ok(vec![id.map(Json::Int).unwrap_or(Json::Null)])
+            }
+            "schedule-event-after-module" => {
+                let after_module = args
+                    .first()
+                    .and_then(|arg| arg.as_str())
+                    .ok_or("schedule-event-after-module needs a module")?;
+                let action = args
+                    .get(1)
+                    .and_then(|arg| arg.as_str())
+                    .ok_or("schedule-event-after-module needs an action")?;
+                let options = args.get(2);
+                let params: Vec<Sexp> = match option(options, "params") {
+                    Some(Json::Arr(items)) => items.iter().map(json_to_sexp).collect(),
+                    _ => Vec::new(),
+                };
+                let maintenance = option(options, "maintenance")
+                    .is_some_and(|value| matches!(value, Json::Bool(true)));
+                let include_maintenance = option(options, "include-maintenance")
+                    .is_some_and(|value| matches!(value, Json::Bool(true)));
+                let delay = option(options, "delay")
+                    .map(|value| !matches!(value, Json::Bool(false) | Json::Null))
+                    .unwrap_or(true);
+                let id = self.next_event_id();
+                let remote_action = self.command_is_remote(action);
+                if let Some(eng) = &mut self.engine {
+                    if remote_action {
+                        eng.register_task_command(action);
+                    }
+                    eng.schedule_after_module_rpc(
+                        after_module,
+                        action,
+                        &params,
+                        maintenance,
+                        include_maintenance,
+                        delay,
+                        id,
+                    );
+                    Ok(vec![Json::Int(id)])
+                } else {
+                    Ok(vec![Json::Null])
+                }
             }
             "schedule-break" | "schedule-break-relative" => {
                 self.schedule_break_cmd(name == "schedule-break-relative", args);
                 Ok(vec![Json::Null])
             }
-            "release-chunk-spec-id" => Ok(vec![Json::Null]),
+            "delete-event" => {
+                let id = args
+                    .first()
+                    .and_then(|arg| arg.as_f64())
+                    .map(|value| value as i64);
+                let mut removed = false;
+                if let Some(id) = id {
+                    if let Some(engine) = &mut self.engine {
+                        removed |= engine.delete_event(id);
+                    }
+                    for model in &mut self.inactive {
+                        removed |= model.engine.delete_event(id);
+                    }
+                }
+                Ok(vec![Json::Bool(removed)])
+            }
+            "define-chunk-spec" => {
+                let forms: Vec<Sexp> = args.iter().map(json_to_sexp).collect();
+                let desc = model::parse_chunk_desc(&forms).map_err(|e| e.to_string())?;
+                let record = self
+                    .engine
+                    .as_ref()
+                    .ok_or("define-chunk-spec called with no current model")?
+                    .chunk_spec_record_from_desc(&desc)?;
+                let id = self.chunk_specs.borrow_mut().insert(record);
+                Ok(vec![Json::Int(id)])
+            }
+            "chunk-spec-to-chunk-def" => {
+                let id = args
+                    .first()
+                    .and_then(|arg| arg.as_f64())
+                    .map(|value| value as i64);
+                let def = id
+                    .and_then(|id| self.chunk_specs.borrow().get(id))
+                    .and_then(|spec| {
+                        if !spec.negated.is_empty() || !spec.relative.is_empty() {
+                            return None;
+                        }
+                        let mut items = Vec::new();
+                        if !spec.ctype.is_empty() {
+                            items.push(Json::Str("ISA".into()));
+                            items.push(Json::Str(spec.ctype));
+                        }
+                        for (slot, value) in &spec.slots {
+                            items.push(Json::Str(slot.clone()));
+                            items.push(remote_module::value_to_json(value));
+                        }
+                        if items.is_empty() {
+                            items.push(Json::Str("ISA".into()));
+                            items.push(Json::Str("CHUNK".into()));
+                        }
+                        Some(Json::Arr(items))
+                    })
+                    .unwrap_or(Json::Null);
+                Ok(vec![def])
+            }
+            "release-chunk-spec-id" => {
+                let removed = args
+                    .first()
+                    .and_then(|arg| arg.as_f64())
+                    .map(|value| self.chunk_specs.borrow_mut().remove(value as i64))
+                    .unwrap_or(false);
+                Ok(vec![Json::Bool(removed)])
+            }
             "record-history" => {
                 let names: Vec<String> = args
                     .iter()
@@ -5471,7 +5690,12 @@ impl Session {
     /// `schedule-event[-relative|-now]`: `(time, action, options)` (or
     /// `(action, options)` for `-now`). The `:params` option becomes the
     /// command's arguments.
-    fn schedule_event_cmd(&mut self, kind: &str, args: &[Json]) {
+    fn next_event_id(&mut self) -> i64 {
+        self.next_event_id += 1;
+        self.next_event_id
+    }
+
+    fn schedule_event_cmd(&mut self, kind: &str, args: &[Json]) -> Option<i64> {
         let now = self.engine.as_ref().map(|e| e.time_ms()).unwrap_or(0);
         let (at_ms, action, options) = match kind {
             "schedule-event-now" => (now, args.first(), args.get(1)),
@@ -5487,7 +5711,7 @@ impl Session {
             }
         };
         let Some(action) = action.and_then(|a| a.as_str()) else {
-            return;
+            return None;
         };
         let sexps: Vec<Sexp> = match options {
             // The test-step command form has no JSON object type, so a flat
@@ -5499,8 +5723,16 @@ impl Session {
             },
             _ => Vec::new(),
         };
+        let id = self.next_event_id();
+        let remote_action = self.command_is_remote(action);
         if let Some(eng) = &mut self.engine {
-            eng.schedule_command_rpc(at_ms, action, &sexps);
+            if remote_action {
+                eng.register_task_command(action);
+            }
+            eng.schedule_command_rpc(at_ms, action, &sexps, Some(id));
+            Some(id)
+        } else {
+            None
         }
     }
 
@@ -9503,6 +9735,212 @@ mod tests {
     }
 
     #[test]
+    fn chunk_specs_define_convert_and_release() {
+        let mut s = Session::new((100, 0));
+        loaded_guard_model(&mut s);
+        let mut remote = NoRemote;
+        let id = s
+            .evaluate(
+                "define-chunk-spec",
+                None,
+                &[
+                    Json::Str("isa".into()),
+                    Json::Str("goal".into()),
+                    Json::Str("state".into()),
+                    Json::Str("free".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap()
+            .first()
+            .and_then(|value| value.as_f64())
+            .expect("chunk-spec id") as i64;
+        let def = s
+            .evaluate(
+                "chunk-spec-to-chunk-def",
+                None,
+                &[Json::Int(id)],
+                &mut remote,
+            )
+            .unwrap();
+        let Some(Json::Arr(items)) = def.first() else {
+            panic!("no chunk definition: {def:?}");
+        };
+        assert_eq!(items[0], Json::Str("ISA".into()));
+        assert_eq!(items[1], Json::Str("GOAL".into()));
+        assert!(items.contains(&Json::Str("STATE".into())));
+        assert!(items.contains(&Json::Str("FREE".into())));
+
+        let released = s
+            .evaluate("release-chunk-spec-id", None, &[Json::Int(id)], &mut remote)
+            .unwrap();
+        assert_eq!(released, vec![Json::Bool(true)]);
+        let missing = s
+            .evaluate(
+                "chunk-spec-to-chunk-def",
+                None,
+                &[Json::Int(id)],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(missing, vec![Json::Null]);
+    }
+
+    #[test]
+    fn scheduled_event_ids_can_be_deleted() {
+        let mut s = Session::new((100, 0));
+        loaded_guard_model(&mut s);
+        let mut remote = NoRemote;
+        let id = s
+            .evaluate(
+                "schedule-event-relative",
+                None,
+                &[
+                    Json::Float(1.0),
+                    Json::Str("mp-time".into()),
+                    Json::Arr(Vec::new()),
+                ],
+                &mut remote,
+            )
+            .unwrap()
+            .first()
+            .and_then(|value| value.as_f64())
+            .expect("event id") as i64;
+        let removed = s
+            .evaluate("delete-event", None, &[Json::Int(id)], &mut remote)
+            .unwrap();
+        assert_eq!(removed, vec![Json::Bool(true)]);
+        let removed = s
+            .evaluate("delete-event", None, &[Json::Int(id)], &mut remote)
+            .unwrap();
+        assert_eq!(removed, vec![Json::Bool(false)]);
+    }
+
+    #[test]
+    fn spec_ids_schedule_set_and_mod_buffer_chunks() {
+        let mut s = Session::new((100, 0));
+        loaded_guard_model(&mut s);
+        let mut remote = NoRemote;
+        let set_spec = s
+            .evaluate(
+                "define-chunk-spec",
+                None,
+                &[
+                    Json::Str("isa".into()),
+                    Json::Str("goal".into()),
+                    Json::Str("state".into()),
+                    Json::Str("free".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap()[0]
+            .as_f64()
+            .unwrap() as i64;
+        let options = Json::Arr(vec![
+            Json::Arr(vec![Json::Str("module".into()), Json::Str("goal".into())]),
+            Json::Arr(vec![Json::Str("priority".into()), Json::Str(":max".into())]),
+        ]);
+        s.evaluate(
+            "schedule-set-buffer-chunk",
+            None,
+            &[
+                Json::Str("goal".into()),
+                Json::Int(set_spec),
+                Json::Float(0.0),
+                options,
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Float(0.1)], &mut remote)
+            .unwrap();
+        let chunk = s
+            .evaluate(
+                "buffer-read",
+                None,
+                &[Json::Str("goal".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert!(chunk.first().and_then(|value| value.as_str()).is_some());
+
+        let mod_spec = s
+            .evaluate(
+                "define-chunk-spec",
+                None,
+                &[
+                    Json::Str("isa".into()),
+                    Json::Str("goal".into()),
+                    Json::Str("state".into()),
+                    Json::Str("busy".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap()[0]
+            .as_f64()
+            .unwrap() as i64;
+        s.evaluate(
+            "schedule-mod-buffer-chunk",
+            None,
+            &[
+                Json::Str("goal".into()),
+                Json::Int(mod_spec),
+                Json::Float(0.0),
+                Json::Arr(vec![
+                    Json::Arr(vec![Json::Str("module".into()), Json::Str("goal".into())]),
+                    Json::Arr(vec![Json::Str("priority".into()), Json::Int(20)]),
+                ]),
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Float(0.1)], &mut remote)
+            .unwrap();
+        let value = s
+            .evaluate(
+                "buffer-slot-value",
+                None,
+                &[Json::Str("goal".into()), Json::Str("state".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(
+            value
+                .first()
+                .and_then(|value| value.as_str())
+                .map(str::to_ascii_lowercase)
+                .as_deref(),
+            Some("busy"),
+            "{value:?}"
+        );
+    }
+
+    #[test]
+    fn set_buffer_failure_targets_an_empty_buffer() {
+        let mut s = Session::new((100, 0));
+        loaded_guard_model(&mut s);
+        let mut remote = NoRemote;
+        let result = s
+            .evaluate(
+                "set-buffer-failure",
+                None,
+                &[Json::Str("goal".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(result, vec![Json::Bool(true)]);
+        let result = s
+            .evaluate(
+                "set-buffer-failure",
+                None,
+                &[Json::Str("missing-buffer".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(result, vec![Json::Bool(false)]);
+    }
+
+    #[test]
     fn remote_module_create_params_and_query_reach_the_host() {
         let mut s = Session::new((100, 0));
         let (mut remote, calls) = TestRemote::new();
@@ -9921,6 +10359,31 @@ fn mod_focus_slots(args: &[Json]) -> Result<Vec<(String, Sexp)>, String> {
         i += 2;
     }
     Ok(slots)
+}
+
+fn priority_from_json(value: Option<&Json>) -> Prio {
+    match value {
+        Some(Json::Str(value)) if value.eq_ignore_ascii_case(":max") => Prio::Max,
+        Some(Json::Str(value)) if value.eq_ignore_ascii_case(":min") => Prio::Min,
+        Some(Json::Str(_)) => Prio::Num(0),
+        Some(value) => Prio::Num(value.as_f64().unwrap_or(0.0) as i64),
+        None => Prio::Num(0),
+    }
+}
+
+fn spec_new_chunk(spec: crate::engine::module::ChunkSpecRecord) -> NewChunk {
+    if spec.ctype.is_empty() && spec.slots.is_empty() {
+        if let Some(name) = spec.name {
+            return NewChunk::Named(name);
+        }
+    }
+    NewChunk::Spec {
+        ctype: spec.ctype,
+        slots: spec.slots,
+        neg: spec.negated,
+        rels: spec.relative,
+        bare: spec.bare,
+    }
 }
 
 fn goal_desc(args: &[Json]) -> Result<ChunkDesc, String> {

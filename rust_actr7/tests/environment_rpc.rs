@@ -19,6 +19,8 @@ struct Client {
     /// than one request outstanding (`run` plus Stop), and the server answers
     /// them in request order, so an earlier reply can arrive first.
     pending: Vec<Json>,
+    /// Test-only counter for the remote `probe` module's query callback.
+    probe_queries: usize,
 }
 
 impl Client {
@@ -30,6 +32,7 @@ impl Client {
             next_id: 1,
             callbacks: Vec::new(),
             pending: Vec::new(),
+            probe_queries: 0,
         })
     }
 
@@ -188,6 +191,90 @@ impl Client {
             }
             match reply_id(&msg) {
                 Some(got) if got == id => return Ok((parse_reply(&msg)?, nested_result)),
+                Some(_) => self.pending.push(msg),
+                None => {}
+            }
+        }
+    }
+
+    fn reply_with_result(&mut self, msg: &Json, result: Json) {
+        let id = msg.get("id").cloned().unwrap_or(Json::Null);
+        let reply = reply_ok(Some(&id), result);
+        write_message(&mut self.stream, &reply).expect("send callback reply");
+    }
+
+    fn nested_eval(&mut self, name: &str, args: Vec<Json>) -> Result<Vec<Json>, String> {
+        let mut params = vec![Json::Str(name.into()), Json::Null];
+        params.extend(args);
+        let id = self.send(Method::Evaluate, params);
+        loop {
+            let msg = self.read();
+            if reply_id(&msg) == Some(id) {
+                return parse_reply(&msg);
+            }
+            if msg.get("method").and_then(|m| m.as_str()) == Some("evaluate") {
+                self.reply_callback(&msg);
+            } else {
+                self.pending.push(msg);
+            }
+        }
+    }
+
+    /// Drive the remote `probe` module: the first query answers free, requests
+    /// are answered by scheduling the spec into the buffer and releasing it,
+    /// and later queries answer busy.
+    fn wait_with_probe_callbacks(&mut self, id: i64) -> Result<Vec<Json>, String> {
+        loop {
+            let msg = self.read();
+            if msg.get("method").and_then(|m| m.as_str()) == Some("evaluate") {
+                let params = match msg.get("params") {
+                    Some(Json::Arr(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
+                let name = params
+                    .first()
+                    .and_then(|p| p.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let model = params.get(1).and_then(|p| p.as_str()).map(str::to_string);
+                let args = params.get(2..).unwrap_or(&[]).to_vec();
+                self.callbacks.push((name.clone(), model, args.clone()));
+                match name.as_str() {
+                    "query-probe" => {
+                        self.probe_queries += 1;
+                        let free = self.probe_queries == 1;
+                        self.reply_with_result(&msg, Json::Arr(vec![Json::Bool(free)]));
+                    }
+                    "request-probe" => {
+                        let buffer = args
+                            .get(1)
+                            .cloned()
+                            .unwrap_or_else(|| Json::Str("PROBE".into()));
+                        let spec = args.get(2).cloned().unwrap_or(Json::Null);
+                        let def =
+                            self.nested_eval("chunk-spec-to-chunk-def", vec![spec.clone()])?;
+                        assert!(
+                            matches!(def.first(), Some(Json::Arr(_))),
+                            "request spec has no definition: {def:?}"
+                        );
+                        let options = Json::Arr(vec![
+                            Json::Arr(vec![Json::Str("module".into()), Json::Str("probe".into())]),
+                            Json::Arr(vec![Json::Str("priority".into()), Json::Int(-1000)]),
+                            Json::Arr(vec![Json::Str("requested".into()), Json::Bool(true)]),
+                        ]);
+                        self.nested_eval(
+                            "schedule-set-buffer-chunk",
+                            vec![buffer, spec.clone(), Json::Float(0.0), options],
+                        )?;
+                        self.nested_eval("release-chunk-spec-id", vec![spec])?;
+                        self.reply_with_result(&msg, Json::Arr(vec![Json::Bool(true)]));
+                    }
+                    _ => self.reply_callback(&msg),
+                }
+                continue;
+            }
+            match reply_id(&msg) {
+                Some(got) if got == id => return parse_reply(&msg),
                 Some(_) => self.pending.push(msg),
                 None => {}
             }
@@ -1039,6 +1126,120 @@ fn synchronous_module_callbacks_reject_nested_commands() {
             .iter()
             .any(|(name, _, _)| name == "create-nested"),
         "callbacks: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
+fn remote_module_request_spec_schedules_a_buffer_chunk() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.eval_ok(
+        "define-module",
+        None,
+        vec![
+            Json::Str("probe".into()),
+            json(r#"[["probe"]]"#),
+            Json::Null,
+            json(r#"[["query","query-probe"],["request","request-probe"]]"#),
+        ],
+    );
+
+    let id = c.send(
+        Method::Evaluate,
+        vec![
+            Json::Str("load-act-r-model".into()),
+            Json::Null,
+            Json::Str(model("rpc-modules/request-probe.lisp")),
+        ],
+    );
+    let reply = c.wait_with_probe_callbacks(id).expect("load");
+    assert_eq!(reply.first(), Some(&Json::Bool(true)), "{reply:?}");
+
+    let id = c.send(
+        Method::Evaluate,
+        vec![Json::Str("run".into()), Json::Null, Json::Float(0.1)],
+    );
+    let reply = c.wait_with_probe_callbacks(id).expect("run");
+    assert!(reply.first().is_some(), "{reply:?}");
+
+    let chunk = c.eval_ok("buffer-read", None, vec![Json::Str("probe".into())]);
+    assert!(
+        chunk.first().and_then(|value| value.as_str()).is_some(),
+        "buffer not set: {chunk:?}"
+    );
+    let value = c.eval_ok(
+        "buffer-slot-value",
+        None,
+        vec![Json::Str("probe".into()), Json::Str("state".into())],
+    );
+    assert_eq!(
+        value
+            .first()
+            .and_then(|value| value.as_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
+        Some("ready"),
+        "{value:?}"
+    );
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, _, _)| name == "request-probe"),
+        "callbacks: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
+fn schedule_after_module_dispatches_a_client_command() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.add_command("after-marker", "after-marker");
+    c.eval_ok(
+        "schedule-event-after-module",
+        None,
+        vec![
+            Json::Str("goal".into()),
+            Json::Str("after-marker".into()),
+            json(r#"[["params",[]]]"#),
+        ],
+    );
+    let spec = c.eval_ok(
+        "define-chunk-spec",
+        None,
+        vec![
+            Json::Str("isa".into()),
+            Json::Str("goal".into()),
+            Json::Str("state".into()),
+            Json::Str("free".into()),
+        ],
+    );
+    let spec = spec
+        .first()
+        .and_then(|value| value.as_f64())
+        .expect("spec id");
+    c.eval_ok(
+        "schedule-set-buffer-chunk",
+        None,
+        vec![
+            Json::Str("goal".into()),
+            Json::Int(spec as i64),
+            Json::Float(0.0),
+            json(r#"[["priority",":max"]]"#),
+        ],
+    );
+    c.eval_ok("run", None, vec![Json::Float(0.1)]);
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, _, _)| name == "after-marker"),
+        "after-module command missing: {:?}",
         c.callbacks
     );
 }
