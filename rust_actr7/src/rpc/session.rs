@@ -292,6 +292,48 @@ pub trait Remote {
     }
 }
 
+/// A remote target used by loaders without an RPC client (in-memory or
+/// filesystem loads that have no overriding command).
+struct NullRemote;
+
+impl Remote for NullRemote {
+    fn call(
+        &mut self,
+        _name: &str,
+        _model: Option<&str>,
+        _args: Vec<Json>,
+    ) -> Result<Vec<Json>, String> {
+        Ok(vec![Json::Null])
+    }
+}
+
+/// Which model-body commands have been overridden by a remote client. Only
+/// these actions are dispatched through the command registry; everything else
+/// stays on the static model-load fast path.
+#[derive(Debug, Clone, Copy, Default)]
+struct LoadDispatchPolicy {
+    add_dm: bool,
+    define_chunks: bool,
+    merge_chunks: bool,
+    goal_focus: bool,
+}
+
+impl LoadDispatchPolicy {
+    fn any(&self) -> bool {
+        self.add_dm || self.define_chunks || self.merge_chunks || self.goal_focus
+    }
+
+    fn enabled(&self, command: &str) -> bool {
+        match command.to_ascii_uppercase().as_str() {
+            "ADD-DM" => self.add_dm,
+            "DEFINE-CHUNKS" => self.define_chunks,
+            "MERGE-CHUNKS" => self.merge_chunks,
+            "GOAL-FOCUS" => self.goal_focus,
+            _ => false,
+        }
+    }
+}
+
 /// An inactive model engine owned by the session.
 struct NamedEngine {
     name: String,
@@ -652,19 +694,20 @@ impl Session {
             .find(|d| d.name.eq_ignore_ascii_case(&name))
     }
 
-    fn make_engine(&self, def: &Model) -> Result<Engine, String> {
+    fn make_engine(&self, def: &Model, defer_tertiary: bool) -> Result<Engine, String> {
         let modules: Vec<Box<dyn crate::engine::module::Module>> = self
             .module_factories
             .iter()
             .map(|factory| factory.create())
             .collect();
-        let mut eng = Engine::with_module_instances(
+        let mut eng = Engine::with_module_instances_deferred_tertiary(
             def.clone(),
             self.seed,
             0.0,
             self.device.clone(),
             crate::trace::MODULE_WIDTH,
             modules,
+            defer_tertiary,
         )
         .map_err(|e| e.to_string())?;
         let multi_model = self.model_order.len() > 1
@@ -722,9 +765,81 @@ impl Session {
         }
     }
 
+    /// Overridden model-body commands.
+    fn load_dispatch_policy(&self) -> LoadDispatchPolicy {
+        LoadDispatchPolicy {
+            add_dm: self.command_is_remote("add-dm"),
+            define_chunks: self.command_is_remote("define-chunks"),
+            merge_chunks: self.command_is_remote("merge-chunks"),
+            goal_focus: self.command_is_remote("goal-focus"),
+        }
+    }
+
+    /// Remove the static state for model-body forms that the remote command
+    /// will own, so the built-in path does not apply them a second time.
+    fn apply_load_dispatch_clearing(&self, def: &mut Model) {
+        let policy = self.load_dispatch_policy();
+        if policy.add_dm {
+            def.chunks.clear();
+        }
+        if policy.define_chunks {
+            def.defined_chunks.clear();
+        }
+        if policy.merge_chunks {
+            def.merge_chunks.clear();
+        }
+        if policy.goal_focus {
+            def.initial_goal = None;
+            def.goal_focuses.clear();
+        }
+    }
+
+    /// Dispatch the model's load actions that are owned by a remote command.
+    fn dispatch_load_actions(
+        &mut self,
+        model: &str,
+        remote: &mut dyn Remote,
+    ) -> Result<(), String> {
+        let actions = self
+            .defs
+            .iter()
+            .find(|def| def.name.eq_ignore_ascii_case(model))
+            .map(|def| def.load_actions.clone())
+            .unwrap_or_default();
+        let policy = self.load_dispatch_policy();
+        for action in actions {
+            if !policy.enabled(&action.command) {
+                continue;
+            }
+            let args: Vec<Json> = action.args.iter().map(sexp_to_json).collect();
+            self.evaluate(
+                &action.command.to_ascii_lowercase(),
+                Some(model),
+                &args,
+                remote,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn finish_deferred_tertiary(&mut self, model: &str) -> Result<(), String> {
+        if let Some(eng) = self.engine_mut_for(model) {
+            eng.run_deferred_tertiary_reset()
+                .map_err(|e| e.to_string())?;
+            eng.set_defer_tertiary_reset(false);
+        }
+        Ok(())
+    }
+
     /// Add one model definition and make it the current model. Existing models
     /// are retained, which is the multi-model load behavior.
-    fn add_model_definition(&mut self, def: Model, source: Option<String>) -> Result<(), String> {
+    fn add_model_definition(
+        &mut self,
+        mut def: Model,
+        source: Option<String>,
+        remote: &mut dyn Remote,
+        allow_load_dispatch: bool,
+    ) -> Result<(), String> {
         let name = def.name.clone();
         if self
             .model_order
@@ -758,7 +873,16 @@ impl Session {
             )
         });
 
-        let mut eng = self.make_engine(&def)?;
+        let previous_current = self.current_model.clone();
+        let policy = if allow_load_dispatch {
+            self.load_dispatch_policy()
+        } else {
+            def.load_actions.clear();
+            LoadDispatchPolicy::default()
+        };
+        let defer_tertiary = policy.any();
+        self.apply_load_dispatch_clearing(&mut def);
+        let mut eng = self.make_engine(&def, defer_tertiary)?;
         self.install_stepper_hook(&name, &mut eng);
         self.defs.push(def);
         self.def_sources.push(source);
@@ -774,6 +898,18 @@ impl Session {
         self.engine = Some(eng);
         self.current_model = Some(name.clone());
         self.sync_multi_model_flags();
+        if defer_tertiary {
+            let dispatched = self
+                .dispatch_load_actions(&name, remote)
+                .and_then(|()| self.finish_deferred_tertiary(&name));
+            if let Err(error) = dispatched {
+                self.remove_model(&name);
+                if let Some(previous) = previous_current {
+                    let _ = self.activate_model(&previous);
+                }
+                return Err(error);
+            }
+        }
         self.seed_global_trace_after_add(&name, pending_multi, pending_single);
         Ok(())
     }
@@ -1812,6 +1948,8 @@ impl Session {
             }
             "reset" => {
                 self.queue_signal("reset-start", Vec::new());
+                let load_dispatch = self.load_dispatch_policy();
+                let defer_tertiary = load_dispatch.any();
                 let multi_marks: Vec<(String, usize)> = if self.is_multi() {
                     self.model_order
                         .iter()
@@ -1836,7 +1974,19 @@ impl Session {
                     // FIFO sequence for the resulting 0.000 events.
                     for name in self.model_order.clone() {
                         if let Some(eng) = self.engine_mut_for(&name) {
+                            eng.set_defer_tertiary_reset(defer_tertiary);
                             eng.reset().map_err(|e| e.to_string())?;
+                        }
+                        if defer_tertiary {
+                            let dispatched = self
+                                .dispatch_load_actions(&name, remote)
+                                .and_then(|()| self.finish_deferred_tertiary(&name));
+                            if let Err(error) = dispatched {
+                                if let Some(eng) = self.engine_mut_for(&name) {
+                                    eng.set_defer_tertiary_reset(false);
+                                }
+                                return Err(error);
+                            }
                         }
                     }
                 }
@@ -4765,8 +4915,9 @@ impl Session {
         let loaded = crate::model::load_models_from_str_with_modules(source, &modules)
             .map_err(|e| e.to_string())?;
         self.prepare_model_load();
+        let mut remote = NullRemote;
         for def in loaded {
-            self.add_model_definition(def, None)?;
+            self.add_model_definition(def, None, &mut remote, false)?;
         }
         self.model_files.push("<source>".to_string());
         Ok(())
@@ -4837,7 +4988,12 @@ impl Session {
                 let name = def.name.clone();
                 self.close_model_window(&name, remote);
                 created.push(name);
-                self.add_model_definition(def, Some(path.to_string_lossy().into_owned()))?;
+                self.add_model_definition(
+                    def,
+                    Some(path.to_string_lossy().into_owned()),
+                    remote,
+                    true,
+                )?;
             }
             self.last_model_file = Some(path.to_string_lossy().into_owned());
         }
@@ -5140,7 +5296,7 @@ impl Session {
             return Ok(());
         };
         self.current_model = Some(def.name.clone());
-        let eng = self.make_engine(&def)?;
+        let eng = self.make_engine(&def, false)?;
         self.engine = Some(eng);
         self.rebuild_global_trace();
         self.trace_pos = 0;
