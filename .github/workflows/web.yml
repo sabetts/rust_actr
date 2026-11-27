@@ -79,6 +79,7 @@ jobs:
           mkdir -p _site
           cp rust_actr7/web/index.html _site/
           cp -r rust_actr7/web/assets _site/
+          cp -r rust_actr7/web/AGI-images _site/
           cp -r rust_actr7/web/audio _site/
           cp -r rust_actr7/web/css _site/
           cp -r rust_actr7/web/guides _site/
