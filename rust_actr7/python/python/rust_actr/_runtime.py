@@ -440,6 +440,69 @@ class RuntimeMixin:
             "add-button-to-exp-window", window or self._current_window, options
         )
 
+    def add_image_to_exp_window(
+        self,
+        window: Optional[str],
+        text: str,
+        file: str,
+        x: int = 0,
+        y: int = 0,
+        height: int = 50,
+        width: int = 50,
+        action: Any = None,
+        clickable: bool = True,
+    ) -> Any:
+        options = _pairs(
+            x=x,
+            y=y,
+            height=height,
+            width=width,
+            clickable=clickable,
+        )
+        if action is not None:
+            options.append(["action", action])
+        return self._single(
+            "add-image-to-exp-window",
+            window or self._current_window,
+            text,
+            file,
+            options,
+        )
+
+    def create_image_for_exp_window(
+        self,
+        window: Optional[str],
+        text: str,
+        file: str,
+        x: int = 0,
+        y: int = 0,
+        height: int = 50,
+        width: int = 50,
+        action: Any = None,
+        clickable: bool = True,
+    ) -> Any:
+        options = _pairs(
+            x=x,
+            y=y,
+            height=height,
+            width=width,
+            clickable=clickable,
+        )
+        if action is not None:
+            options.append(["action", action])
+        return self._single(
+            "create-image-for-exp-window",
+            window or self._current_window,
+            text,
+            file,
+            options,
+        )
+
+    def add_items_to_exp_window(self, window: Optional[str], *items: Any) -> Any:
+        return self._single(
+            "add-items-to-exp-window", window or self._current_window, *items
+        )
+
     def remove_items_from_exp_window(self, window: Optional[str], *items: Any) -> Any:
         return self._single(
             "remove-items-from-exp-window", window or self._current_window, *items

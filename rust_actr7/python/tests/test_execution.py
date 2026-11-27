@@ -81,6 +81,21 @@ class ExecutionTests(unittest.TestCase):
         self.assertLess(seen[0][1], 2000)
         self.assertEqual(model.get_time(), 2000)
 
+    def test_agi_image_window_commands(self):
+        model = device_model("images")
+        window = model.open_exp_window("test")
+        key = model.create_image_for_exp_window(
+            window, "logo", "smalllogo.gif", x=10, y=20, width=288, height=142
+        )
+        self.assertIsInstance(key, str)
+        self.assertTrue(key)
+        self.assertTrue(model.add_items_to_exp_window(window, key))
+        added = model.add_image_to_exp_window(
+            window, "brain", "ref-brain.gif", x=10, y=160, width=128, height=128
+        )
+        self.assertIsInstance(added, str)
+        self.assertTrue(added)
+
     def test_python_similarity_hook_selects_chunk(self):
         calls = []
 
