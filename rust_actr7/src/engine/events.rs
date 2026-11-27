@@ -14,6 +14,7 @@ impl Engine {
     }
 
     pub(super) fn exec(&mut self, event: Event, show: bool) -> Result<(), EngineError> {
+        self.release_waiting_for_event(&event);
         match event {
             Event::ModuleCallback {
                 module,

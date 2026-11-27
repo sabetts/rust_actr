@@ -2239,7 +2239,13 @@ impl Engine {
     /// `schedule-event-relative`/`schedule-event-now`/`schedule-event`: queue a
     /// task command at an absolute model time (`scheduling.lisp`). `params`
     /// are the command's arguments as AT-R values.
-    pub fn schedule_command_rpc(&mut self, at_ms: i64, name: &str, params: &[crate::sexpr::Sexp]) {
+    pub fn schedule_command_rpc(
+        &mut self,
+        at_ms: i64,
+        name: &str,
+        params: &[crate::sexpr::Sexp],
+        rpc_id: Option<i64>,
+    ) {
         use crate::sexpr::Sexp;
         fn value(s: &Sexp) -> Value {
             match s {
@@ -2255,24 +2261,75 @@ impl Engine {
         // defun it has no `NONE` command trace line.
         if name.eq_ignore_ascii_case("end-ongoing-sound") {
             if let Some(Value::Int(id)) = params.first() {
-                self.push(
+                self.push_scheduled(
                     at_ms,
                     Prio::Num(0),
                     Out::Medium,
+                    false,
                     Event::EndOngoingSound { id: *id as u64 },
+                    rpc_id,
                 );
             }
             return;
         }
-        self.push(
+        self.push_scheduled(
             at_ms,
             Prio::Num(0),
             Out::Medium,
+            false,
             Event::Command {
                 name: name.to_string(),
                 params,
             },
+            rpc_id,
         );
+    }
+
+    /// `schedule-event-after-module` (`scheduling.lisp:1343`): hold a command
+    /// until the next event for `after_module` (or schedule it now when
+    /// `delay` is false).
+    pub(crate) fn schedule_after_module_rpc(
+        &mut self,
+        after_module: &str,
+        action: &str,
+        params: &[crate::sexpr::Sexp],
+        maintenance: bool,
+        include_maintenance: bool,
+        delay: bool,
+        rpc_id: i64,
+    ) {
+        use crate::sexpr::Sexp;
+        fn value(s: &Sexp) -> Value {
+            match s {
+                Sexp::Sym(x) => Value::Sym(x.clone()),
+                Sexp::Int(i) => Value::Int(*i),
+                Sexp::Float(x) => Value::Num(*x),
+                Sexp::Str(x) => Value::Str(x.clone()),
+                Sexp::List(items) => Value::List(items.iter().map(value).collect()),
+            }
+        }
+        let event = Event::Command {
+            name: action.to_string(),
+            params: params.iter().map(value).collect(),
+        };
+        if delay {
+            self.waiting_module_events.push(WaitingModuleEvent {
+                after_module: after_module.to_uppercase(),
+                maintenance,
+                include_maintenance,
+                rpc_id,
+                event,
+            });
+        } else {
+            self.push_scheduled(
+                self.time_ms,
+                Prio::Max,
+                Out::Medium,
+                maintenance,
+                event,
+                Some(rpc_id),
+            );
+        }
     }
 
     /// A scheduled command's task `defun` names (for name resolution).
@@ -2321,34 +2378,82 @@ impl Engine {
     /// buffer modification. Unlike a module's `*buffer>` request, the default
     /// module is `:none`, so the trace column is `NONE` and the imaginal
     /// module's busy state is untouched.
-    pub fn schedule_mod_buffer_chunk_rpc(
+    pub(crate) fn schedule_mod_buffer_chunk_rpc(
         &mut self,
         buffer: &str,
-        mods: &[(String, Sexp)],
+        mods: &[(String, Value)],
         delay_ms: i64,
         module: &str,
-        priority: i64,
+        priority: Prio,
+        rpc_id: Option<i64>,
     ) {
         let bname = buffer.to_uppercase();
         let slots = mods
             .iter()
-            .map(|(name, value)| {
-                (
-                    name.to_uppercase(),
-                    Value::from_sexp(value).unwrap_or(Value::Nil),
-                )
-            })
+            .map(|(name, value)| (name.to_uppercase(), value.clone()))
             .collect();
-        self.push(
+        self.push_scheduled(
             self.time_ms + delay_ms,
-            Prio::Num(priority),
+            priority,
             Out::Low,
+            false,
             Event::ModBuffer {
                 buffer: bname,
                 slots,
                 module: module.to_uppercase(),
             },
+            rpc_id,
         );
+    }
+
+    /// `schedule-set-buffer-chunk` (`buffers.lisp:1403`): queue a buffer set.
+    pub(crate) fn schedule_set_buffer_chunk_rpc(
+        &mut self,
+        buffer: &str,
+        chunk: NewChunk,
+        delay_ms: i64,
+        priority: Prio,
+        requested: bool,
+        rpc_id: Option<i64>,
+    ) {
+        self.push_scheduled(
+            self.time_ms + delay_ms,
+            priority,
+            Out::Low,
+            false,
+            Event::SetBuffer {
+                buffer: buffer.to_uppercase(),
+                chunk,
+                requested,
+                shown: None,
+            },
+            rpc_id,
+        );
+    }
+
+    /// `set-buffer-failure` (`buffers.lisp:1300`): set the failure flag when
+    /// the buffer is empty (unless `:ignore-if-full`).
+    pub fn set_buffer_failure_rpc(
+        &mut self,
+        buffer: &str,
+        ignore_if_full: bool,
+        requested: bool,
+    ) -> bool {
+        let bname = buffer.to_uppercase();
+        let Some(buffer) = self.buffers.get_mut(&bname) else {
+            return false;
+        };
+        if buffer.chunk.is_some() {
+            if ignore_if_full {
+                return false;
+            }
+            return false;
+        }
+        buffer.failed = true;
+        buffer.busy = false;
+        buffer.requested = requested;
+        self.changed();
+        true
     }
 
     /// `trigger-reward` (`modules/utility-and-reward-1.lisp`): propagate a

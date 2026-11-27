@@ -1950,7 +1950,7 @@ struct Sound {
 // ---------------------------------------------------------------- events
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Prio {
+pub(crate) enum Prio {
     Min,
     Num(i64),
     Max,
@@ -2464,6 +2464,16 @@ struct Queued {
     /// Maintenance-class events never wake armed conflict-resolution
     /// (`conditions-met` requires non-maintenance).
     maintenance: bool,
+    /// External RPC event id, when scheduled by a client.
+    rpc_id: Option<i64>,
+    event: Event,
+}
+
+struct WaitingModuleEvent {
+    after_module: String,
+    maintenance: bool,
+    include_maintenance: bool,
+    rpc_id: i64,
     event: Event,
 }
 
@@ -2895,6 +2905,10 @@ pub struct Engine {
     pending_module_callbacks: Vec<module::PendingModuleCallback>,
     /// Set when [`Engine::run_to_limit`] stopped early for a module callback.
     module_callback_yield: bool,
+    /// Session-shared chunk-spec IDs for external module callbacks.
+    chunk_specs: Rc<RefCell<module::ChunkSpecTable>>,
+    /// Client events waiting for the next event of a named module.
+    waiting_module_events: Vec<WaitingModuleEvent>,
     /// Scripted task-window clicks (AGI/image drivers): the action is held
     /// until the motor click's release event, matching the GUI callback time.
     scripted_click_actions: bool,
@@ -3569,6 +3583,8 @@ impl Engine {
             pending_device_actions: Vec::new(),
             pending_module_callbacks: Vec::new(),
             module_callback_yield: false,
+            chunk_specs: Rc::new(RefCell::new(module::ChunkSpecTable::default())),
+            waiting_module_events: Vec::new(),
             scripted_click_actions: false,
             pending_scripted_click: None,
             device_action_yield: false,
@@ -4743,6 +4759,18 @@ impl Engine {
     }
 
     fn push_m(&mut self, time_ms: i64, prio: Prio, out: Out, maintenance: bool, event: Event) {
+        self.push_scheduled(time_ms, prio, out, maintenance, event, None);
+    }
+
+    fn push_scheduled(
+        &mut self,
+        time_ms: i64,
+        prio: Prio,
+        out: Out,
+        maintenance: bool,
+        event: Event,
+        rpc_id: Option<i64>,
+    ) {
         let seq = match &self.shared_seq {
             Some(shared) => {
                 let seq = shared.get();
@@ -4761,6 +4789,7 @@ impl Engine {
             seq,
             out,
             maintenance,
+            rpc_id,
             event,
         });
     }
@@ -5601,6 +5630,49 @@ impl Engine {
     /// Whether the last run slice yielded for a pending module callback.
     pub fn module_callback_yield(&self) -> bool {
         self.module_callback_yield
+    }
+
+    /// Remove a queued client event by its external id.
+    pub fn delete_event(&mut self, id: i64) -> bool {
+        let mut queued: Vec<Queued> = self.queue.drain().collect();
+        let before = queued.len();
+        queued.retain(|event| event.rpc_id != Some(id));
+        let mut removed = queued.len() != before;
+        self.queue.extend(queued);
+        let before = self.waiting_module_events.len();
+        self.waiting_module_events
+            .retain(|event| event.rpc_id != id);
+        removed |= self.waiting_module_events.len() != before;
+        removed
+    }
+
+    fn release_waiting_for_event(&mut self, event: &Event) {
+        let module = self.queue_event(event).0;
+        let waiting = std::mem::take(&mut self.waiting_module_events);
+        let mut keep = Vec::new();
+        for waiting_event in waiting {
+            // Maintenance filtering is approximate until the triggering
+            // event's class is threaded through; keep the parsed option.
+            let _include_maintenance = waiting_event.include_maintenance;
+            if waiting_event.after_module.eq_ignore_ascii_case(&module) {
+                self.push_scheduled(
+                    self.time_ms,
+                    Prio::Min,
+                    Out::Medium,
+                    waiting_event.maintenance,
+                    waiting_event.event,
+                    Some(waiting_event.rpc_id),
+                );
+            } else {
+                keep.push(waiting_event);
+            }
+        }
+        self.waiting_module_events = keep;
+    }
+
+    /// Share the session's chunk-spec ID table with this engine.
+    pub fn set_chunk_spec_table(&mut self, table: Rc<RefCell<module::ChunkSpecTable>>) {
+        self.chunk_specs = table;
     }
 
     /// Events evaluated in the current `run` (`run-sched-queue`'s

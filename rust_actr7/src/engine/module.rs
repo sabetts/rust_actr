@@ -5,12 +5,12 @@
 //! queries and parameter access to it. Modules are registered through a
 //! [`ModuleFactory`] so every model/engine gets its own instance.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use super::{bad, Event, Out, Prio};
 
 pub use super::Value;
-use crate::model::{ChunkDesc, ChunkType, Pattern};
+use crate::model::{ChunkDesc, ChunkType, Pattern, SlotOp};
 
 /// The reset hook being invoked (`:reset`'s primary/secondary/tertiary
 /// callbacks).
@@ -338,6 +338,12 @@ pub trait Module: 'static {
         &[]
     }
 
+    /// Whether callbacks live in a remote client. External modules receive
+    /// chunk-spec IDs for request/buffer-mod callbacks.
+    fn external(&self) -> bool {
+        false
+    }
+
     fn create(&mut self, _ctx: &mut ModuleCtx<'_>) -> Result<(), ModuleError> {
         Ok(())
     }
@@ -426,6 +432,8 @@ pub struct Request<'a> {
     pub slots: &'a [(String, Value)],
     pub chunk: Option<&'a str>,
     pub var_slots: &'a [String],
+    /// Registered chunk-spec ID for external modules.
+    pub spec_id: Option<i64>,
 }
 
 /// A `*buffer>` modification request delivered to [`Module::buffer_mod`].
@@ -433,6 +441,8 @@ pub struct Request<'a> {
 pub struct ModifyRequest<'a> {
     pub buffer: &'a str,
     pub slots: &'a [(String, Value)],
+    /// Registered chunk-spec ID for external modules.
+    pub spec_id: Option<i64>,
 }
 
 /// A named module event (`ctx.schedule_named`).
@@ -440,6 +450,46 @@ pub struct ModifyRequest<'a> {
 pub struct ModuleEvent {
     pub name: String,
     pub payload: Vec<Value>,
+}
+
+/// A chunk spec registered with an external module callback.
+#[derive(Debug, Clone)]
+pub struct ChunkSpecRecord {
+    pub name: Option<String>,
+    pub ctype: String,
+    pub slots: Vec<(String, Value)>,
+    pub negated: Vec<(String, Value)>,
+    pub relative: Vec<(String, Value, SlotOp)>,
+    /// Request-built specs print slots-only (`chunk-spec-to-chunk-def`).
+    pub bare: bool,
+}
+
+/// Session-scoped chunk-spec IDs, mirroring Lisp's `:chunk-spec` component.
+#[derive(Debug, Default)]
+pub struct ChunkSpecTable {
+    next: i64,
+    specs: BTreeMap<i64, ChunkSpecRecord>,
+}
+
+impl ChunkSpecTable {
+    pub fn insert(&mut self, spec: ChunkSpecRecord) -> i64 {
+        self.next += 1;
+        let id = self.next;
+        self.specs.insert(id, spec);
+        id
+    }
+
+    pub fn get(&self, id: i64) -> Option<ChunkSpecRecord> {
+        self.specs.get(&id).cloned()
+    }
+
+    pub fn remove(&mut self, id: i64) -> bool {
+        self.specs.remove(&id).is_some()
+    }
+
+    pub fn clear(&mut self) {
+        self.specs.clear();
+    }
 }
 
 /// A side-effect module callback awaiting a borrow-released server drain.
@@ -725,6 +775,15 @@ impl super::Engine {
         spec: &super::NewChunk,
         var_slots: &[String],
     ) -> Result<(), ModuleError> {
+        let external = self
+            .modules
+            .get(idx)
+            .and_then(|module| module.as_ref())
+            .is_some_and(|module| module.external());
+        let spec_id = external.then(|| {
+            let record = self.request_spec_record(spec);
+            self.chunk_specs.borrow_mut().insert(record)
+        });
         let (slots, chunk) = match spec {
             super::NewChunk::Named(name) => (Vec::new(), Some(name.clone())),
             super::NewChunk::Spec { slots, .. } => (slots.clone(), None),
@@ -735,6 +794,7 @@ impl super::Engine {
             slots: &slots,
             chunk: chunk.as_deref(),
             var_slots,
+            spec_id,
         };
         if let Some(result) =
             self.with_module_mut(idx, move |module, ctx| module.request(ctx, request))
@@ -750,13 +810,131 @@ impl super::Engine {
         buffer: &str,
         slots: &[(String, Value)],
     ) -> Result<(), ModuleError> {
-        let request = ModifyRequest { buffer, slots };
+        let external = self
+            .modules
+            .get(idx)
+            .and_then(|module| module.as_ref())
+            .is_some_and(|module| module.external());
+        let spec_id = external.then(|| {
+            let record = ChunkSpecRecord {
+                name: None,
+                ctype: String::new(),
+                slots: slots.to_vec(),
+                negated: Vec::new(),
+                relative: Vec::new(),
+                bare: true,
+            };
+            self.chunk_specs.borrow_mut().insert(record)
+        });
+        let request = ModifyRequest {
+            buffer,
+            slots,
+            spec_id,
+        };
         if let Some(result) =
             self.with_module_mut(idx, move |module, ctx| module.buffer_mod(ctx, request))
         {
             result?;
         }
         Ok(())
+    }
+
+    fn request_spec_record(&self, spec: &super::NewChunk) -> ChunkSpecRecord {
+        match spec {
+            super::NewChunk::Named(name) => {
+                self.chunk_spec_record_from_name(name)
+                    .unwrap_or_else(|| ChunkSpecRecord {
+                        name: Some(name.to_uppercase()),
+                        ctype: String::new(),
+                        slots: Vec::new(),
+                        negated: Vec::new(),
+                        relative: Vec::new(),
+                        bare: true,
+                    })
+            }
+            super::NewChunk::Spec {
+                ctype,
+                slots,
+                neg,
+                rels,
+                bare,
+            } => ChunkSpecRecord {
+                name: None,
+                ctype: ctype.clone(),
+                slots: slots.clone(),
+                negated: neg.clone(),
+                relative: rels.clone(),
+                bare: *bare,
+            },
+            super::NewChunk::Instance(inst) => ChunkSpecRecord {
+                name: inst.name.clone(),
+                ctype: inst.ctype.clone(),
+                slots: inst.slots.clone(),
+                negated: Vec::new(),
+                relative: Vec::new(),
+                bare: inst.bare,
+            },
+        }
+    }
+
+    pub(crate) fn chunk_spec_record_from_name(&self, name: &str) -> Option<ChunkSpecRecord> {
+        let name = name.to_uppercase();
+        let chunk = self
+            .dm
+            .iter()
+            .find(|chunk| chunk.name.as_deref() == Some(name.as_str()))
+            .or_else(|| self.named.get(&name))?;
+        Some(ChunkSpecRecord {
+            name: Some(name),
+            ctype: chunk.ctype.clone(),
+            slots: chunk.slots.clone(),
+            negated: Vec::new(),
+            relative: Vec::new(),
+            bare: chunk.bare,
+        })
+    }
+
+    /// Build a registered chunk-spec record from a parsed description.
+    pub(crate) fn chunk_spec_record_from_desc(
+        &self,
+        desc: &ChunkDesc,
+    ) -> Result<ChunkSpecRecord, String> {
+        let values = |items: &[(String, Pattern)]| -> Result<Vec<(String, Value)>, String> {
+            items
+                .iter()
+                .map(|(slot, pattern)| {
+                    Value::from_pattern(pattern)
+                        .map(|value| (slot.to_uppercase(), value))
+                        .map_err(|error| error.to_string())
+                })
+                .collect()
+        };
+        match desc {
+            ChunkDesc::Named(name) => self
+                .chunk_spec_record_from_name(name)
+                .ok_or_else(|| format!("{name} does not name a chunk")),
+            ChunkDesc::Spec {
+                ctype,
+                slots,
+                neg,
+                rels,
+                ..
+            } => Ok(ChunkSpecRecord {
+                name: None,
+                ctype: ctype.to_uppercase(),
+                slots: values(slots)?,
+                negated: values(neg)?,
+                relative: rels
+                    .iter()
+                    .map(|(slot, pattern, op)| {
+                        Value::from_pattern(pattern)
+                            .map(|value| (slot.to_uppercase(), value, *op))
+                            .map_err(|error| error.to_string())
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+                bare: false,
+            }),
+        }
     }
 
     pub(crate) fn module_notify_clear(&mut self, buffer: &str, chunk: Option<&str>) {
