@@ -237,6 +237,10 @@ mod tests {
             .iter()
             .filter_map(|o| o.first().and_then(|x| x.as_str()))
             .collect();
+        assert!(
+            !verbs.contains(&"check"),
+            "check leaked as a display op: {verbs:?}"
+        );
         assert!(verbs.contains(&"open"), "ops: {verbs:?}");
         assert!(verbs.contains(&"text"), "ops: {verbs:?}");
     }

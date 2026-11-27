@@ -43,7 +43,7 @@ const STEP_UPDATE: &str = "env-update-event";
 /// The Lisp dispatcher passes a command's argument list as one nested list:
 /// `params: ["handler", model, ["open", title, ...]]`. The Rust dispatcher
 /// sends the same op flat, so accept both shapes.
-fn window_op(args: &[Json]) -> Vec<Json> {
+pub(super) fn window_op(args: &[Json]) -> Vec<Json> {
     match args {
         [Json::Arr(op)] => op.clone(),
         _ => args.to_vec(),

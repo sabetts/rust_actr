@@ -13,6 +13,7 @@ use crate::json::Json;
 use crate::rpc::session::{Remote, Session};
 
 use super::backend::{BackendEvent, ConnectionInfo, EnvBackend, TraceStream};
+use super::client::window_op;
 
 /// An in-progress interactive run.
 struct RunState {
@@ -44,13 +45,16 @@ impl Remote for GuiRemote {
         if name != self.handler {
             return Err(format!("no in-process handler for client command {name:?}"));
         }
-        let check = args
+        // The RPC server wraps the op as one list argument for the Tcl
+        // handler; the GUI's `apply_window_op` wants it flat.
+        let op = window_op(&args);
+        let check = op
             .first()
             .and_then(|a| a.as_str())
             .map(|s| s == "check")
             .unwrap_or(false);
         if !check {
-            self.ops.lock().unwrap().push(args);
+            self.ops.lock().unwrap().push(op);
         }
         Ok(vec![Json::Bool(true)])
     }
