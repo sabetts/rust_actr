@@ -140,6 +140,60 @@ impl Client {
         self.wait(id).expect("remove")
     }
 
+    /// Wait for `id`, answer the first callback only after issuing a nested
+    /// `evaluate`, and return the outer reply plus the nested reply.
+    fn wait_with_nested_command(
+        &mut self,
+        id: i64,
+        command: &str,
+        args: Vec<Json>,
+    ) -> Result<(Vec<Json>, Vec<Json>), String> {
+        let mut nested_result = Vec::new();
+        loop {
+            let msg = self.read();
+            if msg.get("method").and_then(|m| m.as_str()) == Some("evaluate") {
+                let params = match msg.get("params") {
+                    Some(Json::Arr(a)) => a.clone(),
+                    _ => Vec::new(),
+                };
+                let name = params
+                    .first()
+                    .and_then(|p| p.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let model = params.get(1).and_then(|p| p.as_str()).map(str::to_string);
+                self.callbacks
+                    .push((name, model, params.get(2..).unwrap_or(&[]).to_vec()));
+
+                let mut nested_params = vec![Json::Str(command.into()), Json::Null];
+                nested_params.extend(args.clone());
+                let nested_id = self.send(Method::Evaluate, nested_params);
+                loop {
+                    let nested = self.read();
+                    if reply_id(&nested) == Some(nested_id) {
+                        nested_result = parse_reply(&nested)?;
+                        break;
+                    }
+                    if nested.get("method").and_then(|m| m.as_str()) == Some("evaluate") {
+                        self.reply_callback(&nested);
+                    } else {
+                        self.pending.push(nested);
+                    }
+                }
+
+                let callback_id = msg.get("id").cloned().unwrap_or(Json::Null);
+                let reply = reply_ok(Some(&callback_id), Json::Arr(vec![Json::Bool(true)]));
+                write_message(&mut self.stream, &reply).expect("send callback reply");
+                continue;
+            }
+            match reply_id(&msg) {
+                Some(got) if got == id => return Ok((parse_reply(&msg)?, nested_result)),
+                Some(_) => self.pending.push(msg),
+                None => {}
+            }
+        }
+    }
+
     /// Wait for `id`, but before answering the first callback issue a nested
     /// `evaluate`. Returns the outer reply and the nested request's error.
     fn wait_with_nested_evaluate(&mut self, id: i64) -> Result<(Vec<Json>, String), String> {
@@ -985,6 +1039,55 @@ fn synchronous_module_callbacks_reject_nested_commands() {
             .iter()
             .any(|(name, _, _)| name == "create-nested"),
         "callbacks: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
+fn deferred_module_callback_can_issue_nested_commands() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    c.add_command("deferred-marker", "deferred-marker");
+    c.eval_ok(
+        "define-module",
+        None,
+        vec![
+            Json::Str("deferred".into()),
+            Json::Null,
+            Json::Null,
+            json(r#"[["reset","reset-deferred"]]"#),
+        ],
+    );
+
+    let id = c.send(
+        Method::Evaluate,
+        vec![
+            Json::Str("load-act-r-model".into()),
+            Json::Null,
+            Json::Str(model("tutorial/unit1/count.lisp")),
+        ],
+    );
+    let (reply, nested) = c
+        .wait_with_nested_command(
+            id,
+            "set-parameter-value",
+            vec![Json::Str(":rt".into()), Json::Float(0.25)],
+        )
+        .expect("load");
+    assert_eq!(reply.first(), Some(&Json::Bool(true)), "{reply:?}");
+    assert_eq!(nested, vec![Json::Bool(true)], "nested parameter reply");
+
+    let value = c.eval_ok("get-parameter-value", None, vec![Json::Str(":rt".into())]);
+    assert_eq!(
+        value.first().and_then(|value| value.as_str()),
+        Some("0.25"),
+        "{value:?}"
+    );
+    assert!(
+        c.callbacks
+            .iter()
+            .any(|(name, _, _)| name == "reset-deferred"),
+        "reset callback missing: {:?}",
         c.callbacks
     );
 }

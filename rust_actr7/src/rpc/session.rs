@@ -601,6 +601,8 @@ pub enum RunStop {
     /// The slice hit its event budget; the run is still in progress.
     Continue,
     DeviceAction,
+    /// A deferred remote-module callback must be drained before the next event.
+    ModuleCallback,
     StepperPause,
     StepperUpdate,
 }
@@ -4783,6 +4785,9 @@ impl Session {
         if self.is_multi() {
             return self.run_multi_slice(limit_ms, None);
         }
+        if self.has_pending_module_callbacks() {
+            return Ok(RunStop::ModuleCallback);
+        }
         if self
             .engine
             .as_ref()
@@ -4796,6 +4801,13 @@ impl Session {
             .ok_or_else(|| "no model loaded".to_string())?
             .run_slice(limit_ms, full)
             .map_err(|e| e.to_string())?;
+        if self
+            .engine
+            .as_ref()
+            .is_some_and(Engine::module_callback_yield)
+        {
+            return Ok(RunStop::ModuleCallback);
+        }
         if device {
             return Ok(RunStop::DeviceAction);
         }
@@ -4826,6 +4838,9 @@ impl Session {
         if self.is_multi() {
             return self.run_multi_slice(limit_ms, Some(1));
         }
+        if self.has_pending_module_callbacks() {
+            return Ok(RunStop::ModuleCallback);
+        }
         if self
             .engine
             .as_ref()
@@ -4839,6 +4854,13 @@ impl Session {
             .ok_or_else(|| "no model loaded".to_string())?
             .run_chunk(limit_ms, full, Some(max_events), None)
             .map_err(|e| e.to_string())?;
+        if self
+            .engine
+            .as_ref()
+            .is_some_and(Engine::module_callback_yield)
+        {
+            return Ok(RunStop::ModuleCallback);
+        }
         if self
             .engine
             .as_ref()
@@ -4878,6 +4900,9 @@ impl Session {
             crate::engine::multi::model_column_width(self.model_order.iter().map(String::len));
         let mut processed = 0u64;
         loop {
+            if self.has_pending_module_callbacks() {
+                return Ok(RunStop::ModuleCallback);
+            }
             let pending_action = self
                 .engine
                 .as_ref()
@@ -5004,6 +5029,18 @@ impl Session {
             }
             self.global_time_ms = self.global_time_ms.max(time);
             self.global_run_events += 1;
+            let module_pending = if idx == 0 {
+                self.engine
+                    .as_ref()
+                    .is_some_and(Engine::has_pending_module_callbacks)
+            } else {
+                self.inactive
+                    .get(idx - 1)
+                    .is_some_and(|model| model.engine.has_pending_module_callbacks())
+            };
+            if module_pending {
+                return Ok(RunStop::ModuleCallback);
+            }
             if stopped {
                 // A break event is global to the meta-process: stop every
                 // model and emit the `run` terminator once.
@@ -5096,6 +5133,46 @@ impl Session {
             }
         }
         actions
+    }
+
+    /// Whether any model queued a deferred module callback.
+    pub fn has_pending_module_callbacks(&self) -> bool {
+        self.engine
+            .as_ref()
+            .is_some_and(Engine::has_pending_module_callbacks)
+            || self
+                .inactive
+                .iter()
+                .any(|model| model.engine.has_pending_module_callbacks())
+    }
+
+    /// Drain deferred module callbacks from every model, with the owning
+    /// connection, model name, callback command, and JSON arguments.
+    pub fn take_pending_module_callbacks_with_models(
+        &mut self,
+    ) -> Vec<(Option<String>, String, String, Vec<Json>)> {
+        let mut callbacks = Vec::new();
+        if let Some(engine) = &mut self.engine {
+            for callback in engine.take_pending_module_callbacks() {
+                let args = callback
+                    .args
+                    .iter()
+                    .map(remote_module::value_to_json)
+                    .collect();
+                callbacks.push((callback.connection, callback.model, callback.command, args));
+            }
+        }
+        for model in &mut self.inactive {
+            for callback in model.engine.take_pending_module_callbacks() {
+                let args = callback
+                    .args
+                    .iter()
+                    .map(remote_module::value_to_json)
+                    .collect();
+                callbacks.push((callback.connection, callback.model, callback.command, args));
+            }
+        }
+        callbacks
     }
 
     /// The model time in seconds, for `run`'s first return value.
@@ -6904,7 +6981,7 @@ mod tests {
                         break;
                     }
                 }
-                RunStop::DeviceAction | RunStop::Continue => continue,
+                RunStop::DeviceAction | RunStop::ModuleCallback | RunStop::Continue => continue,
                 RunStop::Finished => break,
             }
         }
@@ -9348,6 +9425,81 @@ mod tests {
 
         s.evaluate("clear-all", None, &[], &mut remote).unwrap();
         assert!(s.module_set().is_empty());
+    }
+
+    #[test]
+    fn deferred_reset_callbacks_are_queued_during_model_load() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+        s.evaluate(
+            "define-module",
+            None,
+            &[
+                Json::Str("deferred".into()),
+                Json::Null,
+                Json::Null,
+                crate::json::parse(r#"[["reset","reset-deferred"]]"#).unwrap(),
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.load_source("(define-model guard-model)").unwrap();
+
+        let callbacks = s.take_pending_module_callbacks_with_models();
+        let callback = callbacks
+            .iter()
+            .find(|(_, _, command, _)| command == "reset-deferred")
+            .unwrap_or_else(|| panic!("no reset callback: {callbacks:?}"));
+        assert!(callback.0.is_some());
+        assert!(callback.1.eq_ignore_ascii_case("GUARD-MODEL"));
+        assert!(callback.3.is_empty());
+        assert!(!s.has_pending_module_callbacks());
+    }
+
+    #[test]
+    fn update_callback_yields_before_the_next_event() {
+        let mut s = Session::new((100, 0));
+        let (mut remote, _calls) = TestRemote::new();
+        s.evaluate(
+            "define-module",
+            None,
+            &[
+                Json::Str("probe".into()),
+                crate::json::parse(r#"[["probe"]]"#).unwrap(),
+                Json::Null,
+                crate::json::parse(r#"[["query","query-probe"],["update","update-probe"]]"#)
+                    .unwrap(),
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.load_source(
+            r#"
+(define-model probe-run
+  (p probe
+    ?probe> state free
+    ==>
+    !output! (probe-fired)))
+"#,
+        )
+        .unwrap();
+        assert!(!s.has_pending_module_callbacks());
+
+        let mut stop = RunStop::Continue;
+        for _ in 0..10 {
+            stop = s.run_slice_reason_capped(1000, false, 1).unwrap();
+            if stop == RunStop::ModuleCallback {
+                break;
+            }
+        }
+        assert_eq!(stop, RunStop::ModuleCallback);
+        let callbacks = s.take_pending_module_callbacks_with_models();
+        let update = callbacks
+            .iter()
+            .find(|(_, _, command, _)| command == "update-probe")
+            .unwrap_or_else(|| panic!("no update callback: {callbacks:?}"));
+        assert_eq!(update.3.len(), 2);
+        assert!(!s.has_pending_module_callbacks());
     }
 
     #[test]

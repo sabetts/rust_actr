@@ -250,6 +250,8 @@ struct Actor {
     /// Events seen while a remote callback was waiting.  They are handled
     /// after the callback returns instead of being lost.
     deferred: Rc<RefCell<VecDeque<Event>>>,
+    /// Prevent nested commands from recursively draining module callbacks.
+    module_callback_depth: usize,
     address: String,
 }
 
@@ -260,6 +262,7 @@ impl Actor {
             rx: Rc::new(RefCell::new(rx)),
             conns: BTreeMap::new(),
             deferred: Rc::new(RefCell::new(VecDeque::new())),
+            module_callback_depth: 0,
             address,
         }
     }
@@ -351,6 +354,7 @@ impl Actor {
                 let owner = self.owner_key_for(&name);
                 let _ = self.call_remote(owner.as_deref(), conn_id, &name, None, Vec::new());
             }
+            self.drain_module_callbacks(conn_id);
             self.write_reply(conn_id, reply);
         }
     }
@@ -641,6 +645,34 @@ impl Actor {
             .and_then(|c| c.connection.clone())
     }
 
+    /// Run deferred module side-effect callbacks with the session borrow
+    /// released. Nested commands issued by a callback are serviced by
+    /// `call_remote`; callbacks they queue are picked up by this loop rather
+    /// than recursively draining.
+    fn drain_module_callbacks(&mut self, origin: u64) {
+        if self.module_callback_depth > 0 {
+            return;
+        }
+        self.module_callback_depth += 1;
+        for _ in 0..32 {
+            let callbacks = self.session.take_pending_module_callbacks_with_models();
+            if callbacks.is_empty() {
+                break;
+            }
+            for (owner, model, command, args) in callbacks {
+                let mut params = vec![Json::Str(model.clone())];
+                params.extend(args);
+                let owner = owner.or_else(|| self.owner_key_for(&command));
+                if let Err(error) =
+                    self.call_remote(owner.as_deref(), origin, &command, Some(&model), params)
+                {
+                    eprintln!("rpc: module callback {command} for {model} failed: {error}");
+                }
+            }
+        }
+        self.module_callback_depth -= 1;
+    }
+
     fn drain(&mut self, origin: u64) {
         for _ in 0..32 {
             let lines = self.session.take_trace_events();
@@ -796,6 +828,7 @@ impl Actor {
         let secs = args.first().and_then(|a| a.as_f64()).unwrap_or(0.0);
         let start_ms = (self.session.time_secs() * 1000.0).round() as i64;
         let (limit, full, should_run) = self.session.run_begin(name, secs);
+        self.drain_module_callbacks(origin);
         if !should_run {
             return reply_ok(
                 id,
@@ -817,6 +850,7 @@ impl Actor {
                 Err(e) => return reply_err(id, &e),
             };
             self.drain(origin);
+            self.drain_module_callbacks(origin);
             if let Err(e) = self.drain_stepper_updates(origin) {
                 return reply_err(id, &e);
             }
@@ -845,7 +879,10 @@ impl Actor {
                 continue;
             }
 
-            if stop == RunStop::StepperUpdate || stop == RunStop::Continue {
+            if stop == RunStop::ModuleCallback
+                || stop == RunStop::StepperUpdate
+                || stop == RunStop::Continue
+            {
                 continue;
             }
 
@@ -864,6 +901,7 @@ impl Actor {
 
             break;
         }
+        self.drain_module_callbacks(origin);
         if let Err(e) = self.fire_signal(
             origin,
             "run-stop",
