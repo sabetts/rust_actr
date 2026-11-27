@@ -317,6 +317,12 @@ pub trait Remote {
     fn connection_key(&self) -> Option<String> {
         None
     }
+
+    /// Whether load-time callbacks must be dispatched by the server after the
+    /// engine is built (they may issue nested ACT-R commands).
+    fn defer_load_dispatch(&self) -> bool {
+        false
+    }
 }
 
 /// A remote target used by loaders without an RPC client (in-memory or
@@ -359,6 +365,15 @@ impl LoadDispatchPolicy {
             _ => false,
         }
     }
+}
+
+/// Load actions that must be dispatched from the server after the model's
+/// engine is built, so remote callbacks can issue nested commands.
+#[derive(Debug, Clone)]
+pub struct PendingLoadDispatch {
+    pub model: String,
+    pub actions: Vec<(String, Vec<Json>)>,
+    pub previous_current: Option<String>,
 }
 
 /// An inactive model engine owned by the session.
@@ -428,6 +443,11 @@ pub struct Session {
     chunk_specs: Rc<RefCell<ChunkSpecTable>>,
     /// External id assigned to each RPC-scheduled event.
     next_event_id: i64,
+    /// Model-body load actions waiting for the server to dispatch them with
+    /// the session borrow released.
+    pending_load_dispatches: Vec<PendingLoadDispatch>,
+    /// Built-in modules removed by `undefine-module` (`goal`, `declarative`).
+    suppressed_builtin_modules: BTreeSet<String>,
     /// Models that installed a speech/microphone device. A runtime engine
     /// rebuild must restore this flag, as `define-chunks` does not uninstall
     /// the device in ACT-R.
@@ -656,6 +676,8 @@ impl Session {
             stale_module_connections: BTreeSet::new(),
             chunk_specs: Rc::new(RefCell::new(ChunkSpecTable::default())),
             next_event_id: 0,
+            pending_load_dispatches: Vec::new(),
+            suppressed_builtin_modules: BTreeSet::new(),
             speech_models: Default::default(),
             vwin_handlers: Vec::new(),
             windows: HashMap::new(),
@@ -701,12 +723,22 @@ impl Session {
             .iter()
             .position(|factory| factory.name().eq_ignore_ascii_case(name))
         else {
+            if name.eq_ignore_ascii_case("goal") || name.eq_ignore_ascii_case("declarative") {
+                self.suppressed_builtin_modules
+                    .insert(name.to_ascii_lowercase());
+                return Ok(());
+            }
             return Err(format!(
                 "{name} is not the name of a currently defined module."
             ));
         };
         self.module_factories.remove(index);
         Ok(())
+    }
+
+    /// Built-in modules currently replaced/removed by `undefine-module`.
+    pub fn suppressed_builtin_modules(&self) -> &BTreeSet<String> {
+        &self.suppressed_builtin_modules
     }
 
     fn prune_stale_module_factories(&mut self) {
@@ -853,13 +885,22 @@ impl Session {
         }
     }
 
+    fn goal_buffer_owned(&self) -> bool {
+        self.module_set().descriptors().iter().any(|descriptor| {
+            descriptor
+                .buffers
+                .iter()
+                .any(|buffer| buffer.name.eq_ignore_ascii_case("GOAL"))
+        })
+    }
+
     /// Overridden model-body commands.
     fn load_dispatch_policy(&self) -> LoadDispatchPolicy {
         LoadDispatchPolicy {
             add_dm: self.command_is_remote("add-dm"),
             define_chunks: self.command_is_remote("define-chunks"),
             merge_chunks: self.command_is_remote("merge-chunks"),
-            goal_focus: self.command_is_remote("goal-focus"),
+            goal_focus: self.command_is_remote("goal-focus") || self.goal_buffer_owned(),
         }
     }
 
@@ -882,12 +923,7 @@ impl Session {
         }
     }
 
-    /// Dispatch the model's load actions that are owned by a remote command.
-    fn dispatch_load_actions(
-        &mut self,
-        model: &str,
-        remote: &mut dyn Remote,
-    ) -> Result<(), String> {
+    fn load_actions_for(&self, model: &str) -> Vec<(String, Vec<Json>)> {
         let actions = self
             .defs
             .iter()
@@ -895,17 +931,78 @@ impl Session {
             .map(|def| def.load_actions.clone())
             .unwrap_or_default();
         let policy = self.load_dispatch_policy();
-        for action in actions {
-            if !policy.enabled(&action.command) {
+        actions
+            .into_iter()
+            .filter(|action| policy.enabled(&action.command))
+            .map(|action| {
+                (
+                    action.command.to_ascii_lowercase(),
+                    action.args.iter().map(sexp_to_json).collect(),
+                )
+            })
+            .collect()
+    }
+
+    /// The Python replacement goal module's `goal-focus` only accepts a chunk
+    /// name. Define a chunk for a spec-list argument and return its name.
+    pub fn normalize_goal_focus_args(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        if !matches!(args.first(), Some(Json::Arr(_))) {
+            return Ok(args.to_vec());
+        }
+        let before = self
+            .current_def_mut()
+            .map(|def| def.defined_chunks.len())
+            .unwrap_or(0);
+        let mut null = NullRemote;
+        self.invoke("define-chunks", &args[..1], &mut null)?;
+        if let Some(chunk) = self
+            .current_def_mut()
+            .and_then(|def| def.defined_chunks.get(before))
+        {
+            Ok(vec![Json::Str(chunk.name.clone())])
+        } else {
+            Ok(args.to_vec())
+        }
+    }
+
+    /// The Python replacement goal module's `goal-focus` only accepts a chunk
+    /// name. Define chunks for model-body spec lists and forward their names.
+    fn normalize_goal_focus_actions(
+        &mut self,
+        _model: &str,
+        mut actions: Vec<(String, Vec<Json>)>,
+    ) -> Result<Vec<(String, Vec<Json>)>, String> {
+        if !self.command_is_remote("goal-focus") {
+            return Ok(actions);
+        }
+        for (command, args) in &mut actions {
+            if command != "goal-focus" || !matches!(args.first(), Some(Json::Arr(_))) {
                 continue;
             }
-            let args: Vec<Json> = action.args.iter().map(sexp_to_json).collect();
-            self.evaluate(
-                &action.command.to_ascii_lowercase(),
-                Some(model),
-                &args,
-                remote,
-            )?;
+            let before = self
+                .current_def_mut()
+                .map(|def| def.defined_chunks.len())
+                .unwrap_or(0);
+            let mut null = NullRemote;
+            self.invoke("define-chunks", &args[..1], &mut null)?;
+            if let Some(chunk) = self
+                .current_def_mut()
+                .and_then(|def| def.defined_chunks.get(before))
+            {
+                *args = vec![Json::Str(chunk.name.clone())];
+            }
+        }
+        Ok(actions)
+    }
+
+    /// Dispatch the model's load actions that are owned by a remote command.
+    fn dispatch_load_actions(
+        &mut self,
+        model: &str,
+        remote: &mut dyn Remote,
+    ) -> Result<(), String> {
+        for (command, args) in self.load_actions_for(model) {
+            self.evaluate(&command, Some(model), &args, remote)?;
         }
         Ok(())
     }
@@ -917,6 +1014,24 @@ impl Session {
             eng.set_defer_tertiary_reset(false);
         }
         Ok(())
+    }
+
+    /// Actions queued for the server to dispatch after the load call returns.
+    pub fn take_pending_load_dispatches(&mut self) -> Vec<PendingLoadDispatch> {
+        std::mem::take(&mut self.pending_load_dispatches)
+    }
+
+    /// Finish the tertiary reset after a deferred load action completes.
+    pub fn finish_pending_load(&mut self, model: &str) -> Result<(), String> {
+        self.finish_deferred_tertiary(model)
+    }
+
+    /// Drop a model whose deferred load action failed.
+    pub fn abort_pending_load(&mut self, model: &str, previous: Option<&str>) {
+        self.remove_model(model);
+        if let Some(previous) = previous {
+            let _ = self.activate_model(previous);
+        }
     }
 
     /// Add one model definition and make it the current model. Existing models
@@ -987,7 +1102,19 @@ impl Session {
         self.engine = Some(eng);
         self.current_model = Some(name.clone());
         self.sync_multi_model_flags();
-        if defer_tertiary {
+        if defer_tertiary && remote.defer_load_dispatch() {
+            let actions = self.load_actions_for(&name);
+            let actions = self.normalize_goal_focus_actions(&name, actions)?;
+            if actions.is_empty() {
+                self.finish_deferred_tertiary(&name)?;
+            } else {
+                self.pending_load_dispatches.push(PendingLoadDispatch {
+                    model: name.clone(),
+                    actions,
+                    previous_current: previous_current.clone(),
+                });
+            }
+        } else if defer_tertiary {
             let dispatched = self
                 .dispatch_load_actions(&name, remote)
                 .and_then(|()| self.finish_deferred_tertiary(&name));
@@ -1905,7 +2032,14 @@ impl Session {
             Owner::None => Ok(vec![Json::Bool(true)]),
             Owner::Remote { local_name } => {
                 let call = local_name.clone().unwrap_or_else(|| name.to_string());
-                remote.call_from(c.connection.as_deref(), &call, model, args.to_vec())
+                let mut call_args = args.to_vec();
+                // The Python goal module's `goal-focus` only accepts a chunk
+                // name, while ACT-R model bodies commonly pass a chunk-spec
+                // list. Define the chunk first and forward its generated name.
+                if name.eq_ignore_ascii_case("goal-focus") && remote.defer_load_dispatch() {
+                    call_args = self.normalize_goal_focus_args(&call_args)?;
+                }
+                remote.call_from(c.connection.as_deref(), &call, model, call_args)
             }
         }
     }
@@ -5714,6 +5848,17 @@ impl Session {
             return None;
         };
         let sexps: Vec<Sexp> = match options {
+            // The Python client sends `[[key, value], ...]`; select `:params`.
+            Some(Json::Arr(a))
+                if a.iter().any(|option| {
+                    matches!(option, Json::Arr(pair) if pair.first().is_some_and(|key| key.as_str().is_some()))
+                }) =>
+            {
+                match option(options, "params") {
+                    Some(Json::Arr(params)) => params.iter().map(json_to_sexp).collect(),
+                    _ => Vec::new(),
+                }
+            }
             // The test-step command form has no JSON object type, so a flat
             // third argument is its parameter list.
             Some(Json::Arr(a)) => a.iter().map(json_to_sexp).collect(),
@@ -9913,6 +10058,68 @@ mod tests {
             Some("busy"),
             "{value:?}"
         );
+    }
+
+    #[test]
+    fn undefine_goal_is_allowed_without_a_model() {
+        let mut s = Session::new((100, 0));
+        let mut remote = NoRemote;
+        let result = s
+            .evaluate(
+                "undefine-module",
+                None,
+                &[Json::Str("goal".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(result, vec![Json::Bool(true)]);
+        assert!(s.suppressed_builtin_modules().contains("goal"));
+    }
+
+    #[test]
+    fn scheduled_release_chunk_spec_removes_the_id() {
+        let mut s = Session::new((100, 0));
+        loaded_guard_model(&mut s);
+        let mut remote = NoRemote;
+        let id = s
+            .evaluate(
+                "define-chunk-spec",
+                None,
+                &[
+                    Json::Str("isa".into()),
+                    Json::Str("goal".into()),
+                    Json::Str("state".into()),
+                    Json::Str("free".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap()[0]
+            .as_f64()
+            .unwrap() as i64;
+        s.evaluate(
+            "schedule-event-now",
+            None,
+            &[
+                Json::Str("release-chunk-spec-id".into()),
+                Json::Arr(vec![Json::Arr(vec![
+                    Json::Str("params".into()),
+                    Json::Arr(vec![Json::Int(id)]),
+                ])]),
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Float(0.1)], &mut remote)
+            .unwrap();
+        let def = s
+            .evaluate(
+                "chunk-spec-to-chunk-def",
+                None,
+                &[Json::Int(id)],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(def, vec![Json::Null]);
     }
 
     #[test]

@@ -345,6 +345,10 @@ impl Actor {
 
         let reply = self.dispatch(conn_id, method, &params, request_id.as_ref());
         if self.conns.contains_key(&conn_id) {
+            if let Err(error) = self.drain_load_dispatches(conn_id) {
+                self.write_reply(conn_id, reply_err(request_id.as_ref(), &error));
+                return;
+            }
             if let Err(e) = self.drain_pending_signals(conn_id) {
                 eprintln!("rpc: pending signals for connection {conn_id}: {e}");
             }
@@ -527,6 +531,27 @@ impl Actor {
                 if matches!(name.as_str(), "run" | "run-full-time" | "run-until-time") {
                     return self.run_interleaved(conn_id, &name, &args, id);
                 }
+                if self.session.command_is_remote(&name) {
+                    let owner = self.owner_key_for(&name);
+                    let model = model
+                        .map(str::to_string)
+                        .or_else(|| self.session.current_model().map(str::to_string));
+                    let args = if name.eq_ignore_ascii_case("goal-focus") {
+                        match self.session.normalize_goal_focus_args(&args) {
+                            Ok(args) => args,
+                            Err(e) => return reply_err(id, &e),
+                        }
+                    } else {
+                        args
+                    };
+                    let result =
+                        self.call_remote(owner.as_deref(), conn_id, &name, model.as_deref(), args);
+                    self.drain(conn_id);
+                    return match result {
+                        Ok(values) => reply_ok(id, Json::Arr(values)),
+                        Err(e) => reply_err(id, &e),
+                    };
+                }
                 let result = self.evaluate(conn_id, &name, model, &args);
                 // Stream any trace the command produced to the trace monitors,
                 // and dispatch the commands the model itself fired
@@ -641,6 +666,44 @@ impl Actor {
 
     fn owner_key_for(&self, command: &str) -> Option<String> {
         self.session.command_connection(command)
+    }
+
+    /// Dispatch model-body load actions for RPC loads. These run after the
+    /// engine is built so remote callbacks can issue nested commands with the
+    /// session borrow released; the tertiary reset runs afterward.
+    fn drain_load_dispatches(&mut self, origin: u64) -> Result<(), String> {
+        for dispatch in self.session.take_pending_load_dispatches() {
+            for (command, args) in &dispatch.actions {
+                if self.session.command_is_remote(command) {
+                    let owner = self.owner_key_for(command);
+                    if let Err(error) = self.call_remote(
+                        owner.as_deref(),
+                        origin,
+                        command,
+                        Some(&dispatch.model),
+                        args.clone(),
+                    ) {
+                        self.session.abort_pending_load(
+                            &dispatch.model,
+                            dispatch.previous_current.as_deref(),
+                        );
+                        return Err(error);
+                    }
+                } else if let Err(error) =
+                    self.evaluate(origin, command, Some(&dispatch.model), args)
+                {
+                    self.session
+                        .abort_pending_load(&dispatch.model, dispatch.previous_current.as_deref());
+                    return Err(error);
+                }
+            }
+            if let Err(error) = self.session.finish_pending_load(&dispatch.model) {
+                self.session
+                    .abort_pending_load(&dispatch.model, dispatch.previous_current.as_deref());
+                return Err(error);
+            }
+        }
+        Ok(())
     }
 
     /// Run deferred module side-effect callbacks with the session borrow
@@ -1079,6 +1142,10 @@ impl Remote for ActorRemote<'_> {
 
     fn connection_key(&self) -> Option<String> {
         self.conns.get(&self.origin).map(|conn| conn.key.clone())
+    }
+
+    fn defer_load_dispatch(&self) -> bool {
+        true
     }
 }
 
