@@ -3,8 +3,8 @@
 Last updated: 2026-11-27
 Branch: `main`
 Starting commit: `d00fb51`
-Latest relevant code commit: `dbc0427`
-Status: Milestones 1-5 complete; Milestone 6 next
+Latest relevant code commit: `b94bdd2`
+Status: Milestones 1-6 complete; Milestone 7 next
 
 This document tracks support for RPC-defined custom modules in the Rust
 `actr-engine`. It records the design, the ordered milestones, the current
@@ -94,13 +94,17 @@ What exists:
   `set-buffer-failure`, `schedule-event-after-module`, `delete-event`, and
   external event IDs.
 - Scheduled client commands are drained to their owning connection.
+- RPC model loads defer remote load actions to the server so goal-focus and
+  other nested callbacks run with the session borrow released.
+- The vendored Python `goal.py` replacement runs count, addition, and semantic
+  with matching model outcomes.
 
 What is missing:
 
 - Declarative compatibility commands (`find-matching-chunks`, `merge-chunks`,
   chunk metadata helpers) used by `simple_declarative.py`.
-- Suppression of the built-in goal/declarative modules and focus command
-  replacement.
+- Full suppression of the hardcoded declarative module behavior; goal
+  replacement works through module-buffer ownership precedence.
 
 Relevant missing RPC commands:
 
@@ -147,6 +151,11 @@ The dispatch path must match the Lisp `define-model-fct` phases:
 6. tertiary module reset
 
 Reference: `actr7.x/framework/model.lisp:384-577`.
+
+For RPC loads, phase 5 is paused after the engine is built: the session queues
+`PendingLoadDispatch`, the server invokes the actions with the session borrow
+released, then the session runs phase 6. In-process/test remotes that do not need
+nested callbacks keep the synchronous path.
 
 ### 5.3 No replay shim
 
@@ -364,16 +373,38 @@ Implementation notes:
 
 ### Milestone 6 — Goal replacement parity
 
-- [ ] Enable replacement of `goal-focus`/`mod-focus` and the `GOAL` buffer via
+- [x] Enable replacement of `goal-focus`/`mod-focus` and the `GOAL` buffer via
   the loader dispatch path.
-- [ ] Ensure model-body goal focus uses the custom module when `GOAL` is owned
+- [x] Ensure model-body goal focus uses the custom module when `GOAL` is owned
   by a remote module.
-- [ ] Run `goal.py` against unit 1 tutorial models.
-- [ ] Compare model outcomes and fix lifecycle/timing mismatches.
-- [ ] Add a regression test or scripted smoke test.
+- [x] Run `goal.py` against unit 1 tutorial models.
+- [x] Compare model outcomes and fix lifecycle/timing mismatches.
+- [x] Add a regression test or scripted smoke test.
 
 Acceptance: `goal.py` replaces the goal module and the unit 1 tutorial models
 still run with expected results.
+
+Implementation notes:
+
+- RPC model loads now build the engine, defer model-body load actions to the
+  server, dispatch remote actions with the session borrow released, then run the
+  tertiary reset. This fixes the deadlock where goal-focus issued nested
+  commands during load.
+- Client-invoked remote commands now route through `call_remote`, so runtime
+  `goal-focus`/`mod-focus` callbacks can also issue nested commands.
+- The Python replacement `goal-focus` only accepts chunk names; spec-list args
+  are converted to a generated chunk name before the remote callback.
+- Scheduled `release-chunk-spec-id` now executes in the engine against the
+  shared spec table.
+- `undefine-module('goal')` records the built-in suppression and returns true.
+  The hardcoded GOAL buffer still exists, but module-buffer ownership routes
+  requests/queries to the replacement.
+- `fixtures/rpc-goal-smoke.py` runs the real vendored `goal.py` against count,
+  addition, and semantic.
+
+Trace differences from the built-in goal module remain (for example the
+`clear-delayed-goal` NONE line and `SET-BUFFER-CHUNK … NIL`), but the model
+outcomes and outputs match.
 
 ### Milestone 7 — Declarative replacement parity
 
@@ -414,9 +445,16 @@ models still run with expected results.
 - **Loader regression surface.** The loader refactor touches model parsing,
   engine construction, reset ordering, and trace output. Keep the static fast
   path for non-override models and run the full corpus after each change.
-- **Built-in replacement scope.** Hardcoded goal/declarative behavior remains.
-  `undefine-module('goal'/'declarative')` is currently a no-op returning false;
-  built-in suppression and focus-command replacement are Milestone 6.
+- **Built-in replacement scope.** `undefine-module('goal'/'declarative')` records
+  a suppression and returns true, but the hardcoded GOAL buffer/initial-goal
+  paths remain. Module-buffer ownership routes requests/queries correctly; the
+  Python goal replacement is covered, declarative replacement is Milestone 7.
+- **Top-level remote command monitors.** Client commands invoked directly via
+  `evaluate` now route through `call_remote` so they can nest; their dispatcher
+  before/after/simple monitors are not run on that path.
+- **Goal replacement traces.** The Python goal module adds
+  `clear-delayed-goal`/`… NIL` trace differences even though model outcomes
+  match.
 - **Deferred callback coverage.** `request`/`buffer-mod` are wired. `warning`
   and `delete` have no engine call site yet.
 - **`run-n-events` ordering.** It drains module callbacks after the command
@@ -464,6 +502,8 @@ Tests:
   fixture for the synchronous bridge test
 - `rust_actr7/fixtures/models/rpc-modules/request-probe.lisp` — request/spec
   buffer scheduling fixture
+- `rust_actr7/fixtures/rpc-goal-smoke.py` — real `goal.py` smoke driver for
+  count, addition, and semantic
 
 Examples and oracle:
 
@@ -540,24 +580,32 @@ Add one entry per milestone or meaningful checkpoint, with the commit range.
   (`dbc0427`). `cargo test` passed the 560-case corpus, 160 lib tests, 34
   `environment_rpc` tests, 10 `rpc_modules` tests, and 2 `stepper_rpc` tests;
   `cargo fmt --check` clean.
+- 2026-11-27: Milestone 6 complete. Added deferred RPC load dispatch and
+  reentrant top-level remote commands (`23ebfa0`), scheduled chunk-spec release
+  (`4ad8515`), and goal replacement tests plus the gated Python goal smoke
+  driver (`b94bdd2`). `cargo test` passed the 560-case corpus, 162 lib tests, 36
+  `environment_rpc` tests, and 10 `rpc_modules` tests. The ignored
+  `rpc_goal_conformance` test ran the real `goal.py` against count, addition,
+  and semantic successfully.
 
 ## 11. Handoff notes
 
-Next action: start Milestone 6, goal replacement parity. Run `goal.py` against
-the unit 1 models once built-in goal-module suppression and `goal-focus`/
-`mod-focus` replacement are wired.
+Next action: start Milestone 7, declarative replacement parity. Wire
+`add-dm`/`dm`/`sdp` through the dispatch path, implement the missing DM utility
+commands, and run the real `simple_declarative.py` against count, addition, and
+semantic.
 
 Before editing:
 
-- Read `rust_actr7/src/rpc/session.rs` around `remove_module_factory`,
-  `define-module`, `goal-focus`, `mod-focus`, and the loader dispatch policy.
-- Read `rust_actr7/src/engine/events.rs` around GOAL request/clear handling and
-  `rust_actr7/src/engine/module.rs` for module buffer precedence.
-- Read `rust_actr7/src/rpc/remote_module.rs` for the deferred request path.
-- Read `rust_actr7/src/rpc/server.rs` around `drain_module_callbacks` and
-  `drain_task_commands`.
-- Read `actr7.x/examples/creating-modules/external/goal.py`.
-- Read `actr7.x/framework/model.lisp:384-577` for the load/reset phases.
+- Read `planning/RPC-MODULES-WORK.md` section 4 command list and Milestone 7.
+- Read `rust_actr7/src/rpc/session.rs` around `add-dm`, `dm`, `sdp`,
+  `load_dispatch_policy`, and chunk helpers.
+- Read `rust_actr7/src/engine/dm.rs` for matching/merging helpers.
+- Read `rust_actr7/src/rpc/remote_module.rs` and `drain_load_dispatches` in
+  `rust_actr7/src/rpc/server.rs` for deferred load actions.
+- Read `actr7.x/examples/creating-modules/external/simple_declarative.py`.
+- Read `actr7.x/framework/chunk-spec.lisp` and `chunks.lisp` for the DM utility
+  commands.
 
 When finishing a milestone:
 
