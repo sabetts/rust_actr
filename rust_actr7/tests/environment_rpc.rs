@@ -345,7 +345,9 @@ fn monitor_callbacks_use_the_client_proc_name() {
         c.callbacks
     );
     assert!(
-        !c.callbacks.iter().any(|(name, _, _)| name == "create-monitor-1"),
+        !c.callbacks
+            .iter()
+            .any(|(name, _, _)| name == "create-monitor-1"),
         "callback used the registered command name: {:?}",
         c.callbacks
     );
@@ -969,8 +971,7 @@ fn window_ops(c: &Client, op: &str) -> Vec<(Option<String>, Vec<Json>)> {
                 Some(Json::Arr(a)) => a.clone(),
                 _ => args.clone(),
             };
-            (flat.first().and_then(|a| a.as_str()) == Some(op))
-                .then(|| (model.clone(), flat))
+            (flat.first().and_then(|a| a.as_str()) == Some(op)).then(|| (model.clone(), flat))
         })
         .collect()
 }

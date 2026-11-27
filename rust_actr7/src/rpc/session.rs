@@ -5733,14 +5733,12 @@ fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Ve
         pos.insert(node.name.as_str(), (cx, cy));
     }
 
-    let mut out = vec![
-        Json::Arr(vec![
-            Json::Str("size".into()),
-            Json::Int(width),
-            Json::Int(height),
-        ])
-        .write(),
-    ];
+    let mut out = vec![Json::Arr(vec![
+        Json::Str("size".into()),
+        Json::Int(width),
+        Json::Int(height),
+    ])
+    .write()];
 
     for (page, info) in graph.pages.iter().enumerate() {
         let page_num = page as u32;
@@ -5801,12 +5799,9 @@ fn production_graph_history_records(e: &Engine, mode: ProductionGraphMode) -> Ve
             let from = pos.get(edge.from.as_str()).copied();
             let to = pos.get(edge.to.as_str()).copied();
             let points: Vec<Json> = match (from, to) {
-                (Some((x1, y1)), Some((x2, y2))) => vec![
-                    Json::Int(x1),
-                    Json::Int(y1),
-                    Json::Int(x2),
-                    Json::Int(y2),
-                ],
+                (Some((x1, y1)), Some((x2, y2))) => {
+                    vec![Json::Int(x1), Json::Int(y1), Json::Int(x2), Json::Int(y2)]
+                }
                 _ => Vec::new(),
             };
             items.push(Json::Arr(vec![
@@ -8294,7 +8289,10 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count_history[0], Json::Bool(true));
-        assert!(addition_history.is_empty(), "no-data must be an empty result");
+        assert!(
+            addition_history.is_empty(),
+            "no-data must be an empty result"
+        );
         assert_eq!(
             s.evaluate("current-model", None, &[], &mut r).unwrap(),
             vec![Json::Str("ADDITION".into())]
@@ -8381,9 +8379,7 @@ mod tests {
         s.evaluate(
             "load-act-r-model",
             None,
-            &[Json::Str(fixture_model(
-                "test-models;models;test-ppm.lisp",
-            ))],
+            &[Json::Str(fixture_model("test-models;models;test-ppm.lisp"))],
             &mut remote,
         )
         .unwrap();
@@ -8398,7 +8394,10 @@ mod tests {
         s.evaluate(
             "sgp",
             None,
-            &[Json::Str(":PPM-HOOK".into()), Json::Str("SHOW-PPM-VALUES".into())],
+            &[
+                Json::Str(":PPM-HOOK".into()),
+                Json::Str("SHOW-PPM-VALUES".into()),
+            ],
             &mut remote,
         )
         .unwrap();

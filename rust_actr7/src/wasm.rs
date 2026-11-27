@@ -71,10 +71,7 @@ const HOOK_NUM: u32 = 3;
 const HOOK_STR: u32 = 4;
 
 /// Encode one value for the sim-hook ABI.  Returns `(kind, num, ptr, len)`.
-fn encode_hook_value(
-    value: &HookValue,
-    buf: &RefCell<Vec<u8>>,
-) -> (u32, f64, *const u8, usize) {
+fn encode_hook_value(value: &HookValue, buf: &RefCell<Vec<u8>>) -> (u32, f64, *const u8, usize) {
     let mut out = buf.borrow_mut();
     out.clear();
     match value {
