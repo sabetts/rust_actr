@@ -17,8 +17,8 @@ python -m http.server 8000
 ```
 
 `build.py` stages the model files and manifest under `web/models/`, stages the
-ACT-R head icon under `web/assets/`, stages the AGI GIFs under `web/AGI-images/`,
-builds the wasm, and copies it next to `index.html`:
+ACT-R head icon under `web/assets/`, builds the wasm, and copies it next to
+`index.html`:
 
 ```text
 cargo build --manifest-path rust_actr7/Cargo.toml --release --target wasm32-unknown-unknown
@@ -63,10 +63,10 @@ npm run test:e2e
 
 The `.github/workflows/web.yml` workflow builds the wasm, runs the Node and
 browser smoke tests on pull requests, and deploys the page to GitHub Pages from
-`main`. The Pages staging step copies `index.html`, `assets/`, `AGI-images/`,
-`audio/`, `css/`, `guides/`, `js/`, `models/`, and `actr_engine.wasm`, so keep new
-static assets in one of those directories and add them to the workflow if you
-introduce another top-level folder. Enable
+`main`. The Pages staging step copies `index.html`, `assets/`, `audio/`,
+`css/`, `guides/`, `js/`, `models/`, and `actr_engine.wasm`, so keep new static assets
+in one of those directories and add them to the workflow if you introduce
+another top-level folder. Enable
 Pages once under Settings -> Pages -> Build and deployment -> Source: GitHub
 Actions. The deployed site is the project's Pages URL (for example
 `https://<owner>.github.io/<repo>/`); all fetches are relative, so it works

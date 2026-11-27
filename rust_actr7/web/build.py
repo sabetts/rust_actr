@@ -16,8 +16,6 @@ MODELS_DIR = WEB_DIR / "models"
 ASSETS_DIR = WEB_DIR / "assets"
 HEAD_ICON = CRATE_DIR / "src" / "data" / "actr-head.png"
 HEAD_ICON_STAGED = ASSETS_DIR / "actr-head.png"
-AGI_IMAGES_SRC = REPO_ROOT / "actr7.x" / "environment" / "gui" / "AGI-images"
-AGI_IMAGES_DIR = WEB_DIR / "AGI-images"
 
 MODEL_GROUPS = (
     {
@@ -166,13 +164,6 @@ def stage_assets() -> None:
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(HEAD_ICON, HEAD_ICON_STAGED)
     print(f"staged {HEAD_ICON_STAGED}")
-
-    if not AGI_IMAGES_SRC.is_dir():
-        raise SystemExit(f"missing AGI image source: {AGI_IMAGES_SRC}")
-    if AGI_IMAGES_DIR.exists():
-        shutil.rmtree(AGI_IMAGES_DIR)
-    shutil.copytree(AGI_IMAGES_SRC, AGI_IMAGES_DIR)
-    print(f"staged {AGI_IMAGES_DIR}")
 
 
 def stage_models() -> None:
