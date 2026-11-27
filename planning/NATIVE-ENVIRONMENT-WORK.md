@@ -95,8 +95,8 @@ Remaining:
    scaling/clamping.
 2. Full stepper tutor interaction windows: production binding answers,
    conflict-resolution checklist, and start-retrieval chunk checklist.
-3. Engine/session emission of image/eyeloc/finger display ops; real image
-   loading and click hit-testing.
+3. Engine/session emission of eyeloc/finger display ops; AGI image ops now come
+   from the RPC commands.
 4. Multiple experiment windows per model.
 5. Chunk-tree filled-slot filtering and the full recursive canvas tree.
 6. Option wiring: `use_env_window`, `use_localhost`, client-mode real-time,
@@ -136,7 +136,7 @@ Known gaps versus the Tcl Environment:
 | Histories | trace (detail/time), retrieval, blending, buffer, visicon, audicon, production | multi-pane histories and production grid/graphs |
 | Graphs/BOLD | production grid + 7 graph processors, 2 graphic traces, BOLD graph/2D/3D | grid, 7 graph processors, 2 graphic traces, BOLD graph/2D and approximate 3D |
 | Stepper | full stepper + tutoring | controls and callbacks; tutor interaction depth remains |
-| Experiment windows | text/button/line/image, attention/cursor/eye/finger, keys+clicks, multiple titles | text/button/line/attention/cursor, clicks; image/eye/finger pending |
+| Experiment windows | text/button/line/image, attention/cursor/eye/finger, keys+clicks, multiple titles | text/button/line/image, attention/cursor, clicks; eye/finger pending |
 | Options/tools | 10 options, geometry/colors, event queue, connections, editor, about | all 10 options, tool geometry/colors, event queue, connections, editor, about |
 | Multi-model UI | client-side model menu | client-side model menu |
 
@@ -343,7 +343,11 @@ Completed:
 - Native window ops now cover text, button, line, image, remove, attention,
   cursor, EMMA eye spot (`eyeloc`/`cleareyeloc`), and touch finger markers
   (`showfinger`/`removefinger`).
-- Image items render as a labelled placeholder until an image loader is added.
+- AGI image commands (`add-image-to-exp-window`,
+  `create-image-for-exp-window`, `add-items-to-exp-window`) produce real image
+  items. The native GUI loads GIFs from `ACTR_AGI_IMAGES`, the source tree, or
+  the embedded `smalllogo.gif`/`ref-brain.gif`; a filename placeholder remains
+  only when a file cannot be read.
 - Experiment windows have a close affordance that sends
   `close-exp-window <title>`; **Miscellaneous > Close Exp Windows** sends
   `close-all-exp-windows` and clears stale windows after a task disconnects.
@@ -357,13 +361,13 @@ clean.
 
 Follow-ups (M6 polish):
 
-- Engine/session do not yet emit image/eyeloc/finger display ops from device
-  state; the native renderer is ready but needs the producer side.
+- Engine/session still do not emit eyeloc/finger display ops from device state;
+  image ops now come from the AGI commands.
 - Multiple experiment windows per model are still not supported; the engine
   keeps one window record per model.
 - Window titles remain global keys, matching the Tcl limitation.
-- The image item is a placeholder; real image loading and click hit-testing are
-  not wired.
+- Custom AGI images that are neither in the source tree nor embedded fall back
+  to the filename placeholder; set `ACTR_AGI_IMAGES` to point at a directory.
 
 ### M7 — Editor and remaining utilities (initial)
 
@@ -384,8 +388,8 @@ Follow-ups:
 - Parenthesis matching/highlighting from the Tcl editor is not implemented.
 - Python module import remains out of scope.
 - Multi-pane history layouts, layered production-graph processors, full tutor
-  UIs, engine-emitted image/eye/finger ops, and multiple experiment windows
-  per model remain tracked in their milestone follow-ups.
+  UIs, eye/finger display ops, and multiple experiment windows per model remain
+  tracked in their milestone follow-ups.
 
 ## Architecture notes
 

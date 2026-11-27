@@ -52,7 +52,8 @@ Only the pre-existing untracked
   GUI has its own program in `NATIVE-ENVIRONMENT-WORK.md`.
 - Multi-model is the Milestone 3 feature.
 - `999-*` AGI overlays are deferred for the Tcl Environment; the native GUI
-  tracks them in M6 of `NATIVE-ENVIRONMENT-WORK.md`.
+  tracks them in M6 of `NATIVE-ENVIRONMENT-WORK.md` (image overlays now cover
+  the three AGI image commands; eye/finger producers remain).
 - Python remains single-model; no multi-model Python API work.
 - The stepper is included in Milestone 3.
 - No `with-model-eval`-style host callbacks.
