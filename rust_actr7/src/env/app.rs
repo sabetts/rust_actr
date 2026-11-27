@@ -574,6 +574,62 @@ fn color(name: &str) -> egui::Color32 {
     }
 }
 
+/// The two GIFs shipped with `actr7.x/environment/gui/AGI-images`, embedded so
+/// the `creating-an-image` example still renders when the repo tree is absent.
+const AGI_SMALL_LOGO: &[u8] = include_bytes!("../data/smalllogo.gif");
+const AGI_REF_BRAIN: &[u8] = include_bytes!("../data/ref-brain.gif");
+
+/// Resolve an AGI image file. `ACTR_AGI_IMAGES` wins, then the source tree
+/// relative to the cwd/executable, then the embedded examples.
+fn agi_image_bytes(file: &str) -> Option<Vec<u8>> {
+    let direct = PathBuf::from(file);
+    if direct.is_file() {
+        if let Ok(bytes) = std::fs::read(&direct) {
+            return Some(bytes);
+        }
+    }
+    if let Some(dir) = std::env::var_os("ACTR_AGI_IMAGES") {
+        if let Ok(bytes) = std::fs::read(PathBuf::from(dir).join(file)) {
+            return Some(bytes);
+        }
+    }
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    if let Ok(cwd) = std::env::current_dir() {
+        dirs.extend(
+            cwd.ancestors()
+                .map(|p| p.join("actr7.x/environment/gui/AGI-images")),
+        );
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            dirs.extend(
+                parent
+                    .ancestors()
+                    .map(|p| p.join("actr7.x/environment/gui/AGI-images")),
+            );
+        }
+    }
+    for dir in dirs {
+        if let Ok(bytes) = std::fs::read(dir.join(file)) {
+            return Some(bytes);
+        }
+    }
+    match file.to_ascii_lowercase().as_str() {
+        "smalllogo.gif" => Some(AGI_SMALL_LOGO.to_vec()),
+        "ref-brain.gif" => Some(AGI_REF_BRAIN.to_vec()),
+        _ => None,
+    }
+}
+
+fn decode_agi_image(bytes: &[u8]) -> Result<egui::ColorImage, String> {
+    let image = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
+    let rgba = image.to_rgba8();
+    Ok(egui::ColorImage::from_rgba_unmultiplied(
+        [rgba.width() as usize, rgba.height() as usize],
+        rgba.as_raw(),
+    ))
+}
+
 pub struct App {
     backend: Box<dyn EnvBackend>,
     /// Where the file dialog opens (the current directory; `None` in client
@@ -607,6 +663,9 @@ pub struct App {
     /// Decoded 2D BOLD brain image, loaded on first use.
     bold_texture: Option<egui::TextureHandle>,
     bold_texture_error: Option<String>,
+    /// Decoded AGI experiment-window images, keyed by file name. `None`
+    /// records a load failure so the filename placeholder is drawn.
+    window_image_textures: HashMap<String, Option<egui::TextureHandle>>,
     /// The visible experiment windows the engine is displaying.
     windows: Vec<VisWin>,
     /// Floating tool windows (viewers, Event Queue, Connections, About, …).
@@ -662,6 +721,7 @@ impl App {
             recorded_history: HashMap::new(),
             bold_texture: None,
             bold_texture_error: None,
+            window_image_textures: HashMap::new(),
             windows: Vec::new(),
             tools: Vec::new(),
             next_tool_id: 1,
@@ -2231,6 +2291,14 @@ impl App {
     /// Draw each visible window and forward clicks back to the engine.
     fn render_windows(&mut self, ctx: &egui::Context) {
         let wins = self.windows.clone();
+        for w in &wins {
+            for it in &w.items {
+                if let WinItem::Image { file, .. } = it {
+                    self.ensure_window_image_texture(ctx, file);
+                }
+            }
+        }
+        let textures = &self.window_image_textures;
         let mut click: Option<(String, f64, f64)> = None;
         let mut close: Option<String> = None;
         let mut keys: Vec<String> = Vec::new();
@@ -2331,13 +2399,32 @@ impl App {
                                     egui::Stroke::new(1.0, egui::Color32::GRAY),
                                     egui::StrokeKind::Inside,
                                 );
-                                p.text(
-                                    r.center(),
-                                    egui::Align2::CENTER_CENTER,
-                                    file,
-                                    egui::FontId::proportional(11.0),
-                                    egui::Color32::BLACK,
-                                );
+                                if let Some(texture) =
+                                    textures.get(file).and_then(|texture| texture.as_ref())
+                                {
+                                    let natural = texture.size_vec2();
+                                    let draw = egui::Rect::from_min_size(
+                                        r.min,
+                                        egui::vec2(natural.x.min(*iw), natural.y.min(*ih)),
+                                    );
+                                    ui.painter_at(r).image(
+                                        texture.id(),
+                                        draw,
+                                        egui::Rect::from_min_max(
+                                            egui::pos2(0.0, 0.0),
+                                            egui::pos2(1.0, 1.0),
+                                        ),
+                                        egui::Color32::WHITE,
+                                    );
+                                } else {
+                                    p.text(
+                                        r.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        file,
+                                        egui::FontId::proportional(11.0),
+                                        egui::Color32::BLACK,
+                                    );
+                                }
                             }
                         }
                     }
@@ -4226,6 +4313,26 @@ impl App {
         }
     }
 
+    /// Load one AGI window image once; `None` means it will keep the filename
+    /// placeholder.
+    fn ensure_window_image_texture(&mut self, ctx: &egui::Context, file: &str) {
+        if self.window_image_textures.contains_key(file) {
+            return;
+        }
+        let texture = agi_image_bytes(file)
+            .ok_or_else(|| format!("could not find AGI image {file:?}"))
+            .and_then(|bytes| decode_agi_image(&bytes))
+            .ok()
+            .map(|image| {
+                ctx.load_texture(
+                    format!("agi-image:{file}"),
+                    image,
+                    egui::TextureOptions::LINEAR,
+                )
+            });
+        self.window_image_textures.insert(file.to_string(), texture);
+    }
+
     fn draw_bold_graph(&self, ui: &mut egui::Ui, tool: &ToolWindow, data: &BoldData) {
         let global_max = data
             .rows
@@ -5077,5 +5184,25 @@ mod tests {
         assert_eq!(history_detail_arg("low"), "low");
         assert_eq!(history_detail_arg("medium"), "medium");
         assert_eq!(history_detail_arg("high"), "high");
+    }
+
+    #[test]
+    fn embedded_agi_images_decode() {
+        for file in ["smalllogo.gif", "ref-brain.gif"] {
+            let bytes = agi_image_bytes(file).unwrap_or_else(|| panic!("missing {file}"));
+            let image = decode_agi_image(&bytes).unwrap_or_else(|e| panic!("{file}: {e}"));
+            assert!(image.size[0] > 0 && image.size[1] > 0, "{file}");
+        }
+    }
+
+    #[test]
+    fn agi_image_texture_loads() {
+        let ctx = egui::Context::default();
+        let mut app = test_app();
+        app.ensure_window_image_texture(&ctx, "smalllogo.gif");
+        assert!(app
+            .window_image_textures
+            .get("smalllogo.gif")
+            .is_some_and(|texture| texture.is_some()));
     }
 }
