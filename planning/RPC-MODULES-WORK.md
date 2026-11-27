@@ -3,8 +3,8 @@
 Last updated: 2026-11-27
 Branch: `main`
 Starting commit: `d00fb51`
-Latest relevant code commit: `f3e0a8e`
-Status: Milestones 1-3 complete; Milestone 4 next
+Latest relevant code commit: `af4bb7c`
+Status: Milestones 1-4 complete; Milestone 5 next
 
 This document tracks support for RPC-defined custom modules in the Rust
 `actr-engine`. It records the design, the ordered milestones, the current
@@ -82,11 +82,14 @@ What exists:
 - Remote module `create`, `query`, `params`, `search`, and `offset` callbacks
   run synchronously through `RpcModuleHost`; nested ACT-R commands from them
   are rejected with a clear error.
+- Deferred `reset`, `notify-on-clear`, `update`, `run-start`, `run-end`, and
+  `delete` callbacks are queued by the engine and drained with the session
+  borrow released. `run`/`run-full-time`/`run-until-time` yield between events
+  so a callback can issue nested commands before the next event.
 
 What is missing:
 
-- The deferred side-effect callback bridge (`request`, `buffer-mod`, `reset`,
-  `delete`, `notify-on-clear`, `warning`, `update`, `run-start`, `run-end`).
+- `request`/`buffer-mod` deferred-callback wiring, which needs chunk-spec IDs.
 - A chunk-spec ID registry and the scheduling commands used by the examples.
 - Declarative compatibility commands used by `simple_declarative.py`.
 - Suppression of the built-in goal/declarative modules and focus command
@@ -169,9 +172,9 @@ Synchronous callbacks must not re-enter ACT-R. Detect nested attempts and
 return a clear error instead of deadlocking. The vendored examples satisfy this
 constraint because their synchronous callbacks only read remote state.
 
-Milestone 3 implements this split via `RpcModuleHost`: synchronous callbacks
-wait on the shared connection receiver and reject nested requests; Milestone 4
-adds the deferred side-effect queue.
+Milestone 3 implements the synchronous half via `RpcModuleHost`; Milestone 4
+adds the deferred side-effect queue and runs those callbacks through
+`call_remote` with the session borrow released.
 
 A general reentrant synchronous-callback design remains a full-parity
 follow-up.
@@ -285,24 +288,40 @@ Implementation notes:
 - `RpcModuleHost` shares the actor's event receiver and deferred queue so it can
   wait for a callback reply while `&mut Session` is borrowed. It times out after
   30 seconds and answers nested requests with a clear error.
-- M3 wires only the synchronous callbacks. `reset`, `request`, `buffer-mod`,
-  `delete`, `notify-on-clear`, `warning`, `update`, `run-start`, and `run-end`
-  are parsed and stored but remain no-ops until Milestone 4.
+- M3 wires only the synchronous callbacks. Milestone 4 adds the deferred
+  `reset`, `notify-on-clear`, `update`, `run-start`, `run-end`, and `delete`
+  paths; `request`/`buffer-mod` wait for Milestone 5.
 - Built-in `undefine-module('goal'/'declarative')` still returns `false`; full
   built-in module suppression and focus-command replacement remain Milestone 6.
 
 ### Milestone 4 — Deferred callback bridge
 
-- [ ] Add an engine-level pending remote-callback queue and a
+- [x] Add an engine-level pending remote-callback queue and a
   `ModuleCtx` method to enqueue side-effect callbacks.
-- [ ] Make the run loop yield before the next event when callbacks are pending.
-- [ ] Drain callbacks in `rust_actr7/src/rpc/server.rs` with the session borrow
+- [x] Make the run loop yield before the next event when callbacks are pending.
+- [x] Drain callbacks in `rust_actr7/src/rpc/server.rs` with the session borrow
   released.
-- [ ] Route deferred callbacks through the owner-aware reentrant callback path.
-- [ ] Test a request callback that issues a nested scheduling command.
+- [x] Route deferred callbacks through the owner-aware reentrant callback path.
+- [x] Test a deferred reset callback that issues a nested ACT-R command.
 
 Acceptance: a remote module callback can issue ACT-R commands that take effect
 before the next event.
+
+Implementation notes:
+
+- `ModuleCtx::enqueue_callback` records the owner connection, callback command,
+  model, and args. `Engine::run_to_limit` yields before the next event while
+  the queue is non-empty.
+- `RemoteModule` now queues `reset`, `notify-on-clear`, `update`, `run-start`,
+  `run-end`, and `delete`. `delete` has no engine call site yet.
+- The server drains with `call_remote`, so nested commands are serviced with the
+  session borrow released; a depth guard prevents recursive draining.
+- `request`/`buffer-mod` remain Milestone 5 because their callback args are
+  chunk-spec IDs.
+- `run-n-events` still drains callbacks only after the command; the
+  run/run-full-time/run-until-time paths yield between events.
+- Multi-model run-start/run-end callbacks are not invoked by the multi runner
+  yet.
 
 ### Milestone 5 — Chunk specs and scheduling
 
@@ -311,6 +330,8 @@ before the next event.
   `release-chunk-spec-id`.
 - [ ] Assign spec IDs to module `request`, `buffer-mod`, and `warning` callback
   arguments.
+- [ ] Wire `RemoteModule::request` and `buffer_mod` to enqueue the deferred
+  callbacks once spec IDs exist.
 - [ ] Implement `schedule-set-buffer-chunk`.
 - [ ] Implement `schedule-event-after-module`.
 - [ ] Implement `set-buffer-failure` and `delete-event`.
@@ -375,8 +396,14 @@ models still run with expected results.
 - **Built-in replacement scope.** Hardcoded goal/declarative behavior remains.
   `undefine-module('goal'/'declarative')` is currently a no-op returning false;
   built-in suppression and focus-command replacement are Milestone 6.
+- **Deferred callback coverage.** `request`/`buffer-mod` stay un-wired until
+  chunk-spec IDs exist. `warning` and `delete` have no engine call site yet.
+- **`run-n-events` ordering.** It drains module callbacks after the command
+  completes rather than yielding between events. Use `run`/`run-full-time`/
+  `run-until-time` when callback ordering matters.
 - **Multi-model lifecycle.** Remote module instances are per model; callback
-  ownership, factory cleanup, and reset ordering need more coverage.
+  ownership, factory cleanup, and reset ordering need more coverage. The multi
+  runner does not yet invoke module `run-start`/`run-end` callbacks.
 - **Disconnect cleanup.** Owned remote factories are removed immediately when no
   model is loaded, or pruned after the last model is cleared when a model was
   loaded at disconnect time.
@@ -473,27 +500,32 @@ Add one entry per milestone or meaningful checkpoint, with the commit range.
   bridge with nested-command rejection (`f3e0a8e`). `cargo test` passed the
   560-case corpus, 154 lib tests, 31 `environment_rpc` tests, 10 `rpc_modules`
   tests, and 2 `stepper_rpc` tests; `cargo fmt --check` clean.
+- 2026-11-27: Milestone 4 complete. Added the engine pending-callback queue and
+  run-loop yield (`0352417`), wired deferred `reset`/notify/update/run-start/
+  run-end callbacks (`83fa3f7`), and drained them through the owner-aware
+  reentrant path (`af4bb7c`). `cargo test` passed the 560-case corpus, 156 lib
+  tests, 32 `environment_rpc` tests, 10 `rpc_modules` tests, and 2 `stepper_rpc`
+  tests; `cargo fmt --check` clean.
 
 ## 11. Handoff notes
 
-Next action: start Milestone 4, the deferred side-effect callback bridge.
-Reuse the `ConnIo`/`CallbackShared` plumbing added for `RpcModuleHost`, but run
-deferred callbacks with the session borrow released so they can issue nested
-ACT-R commands.
+Next action: start Milestone 5 with the session-scoped chunk-spec ID registry,
+then wire `request`/`buffer-mod` through the deferred bridge.
 
 Before editing:
 
-- Read `rust_actr7/src/rpc/remote_module.rs` for the stored callback names and
-  the current synchronous-only `RemoteModule`.
-- Read `rust_actr7/src/rpc/server.rs` around `ConnIo`, `CallbackShared`,
-  `RpcModuleHost`, and `call_remote`.
-- Read `rust_actr7/src/engine/module.rs` around `ModuleCtx`/`Module` for the
-  pending-callback queue and run-loop yield point.
-- Read `rust_actr7/src/rpc/session.rs` around `add_remote`, `remove`, `add`,
-  `Owner`, and the command registry tests.
-- Read `rust_actr7/tests/rpc_modules.rs` and `tests/environment_rpc.rs` for the
-  loader and callback test patterns.
-- Read `actr7.x/framework/model.lisp:384-577` for the load phase ordering.
+- Read `rust_actr7/src/rpc/session.rs` around `schedule_event_cmd`,
+  `schedule-mod-buffer-chunk`, chunk helpers, and the command registry.
+- Read `rust_actr7/src/engine/module.rs` around `Request`, `ModifyRequest`, and
+  `PendingModuleCallback` for the args the module callbacks receive.
+- Read `rust_actr7/src/rpc/remote_module.rs` for the deferred enqueue path.
+- Read `rust_actr7/src/rpc/server.rs` around `drain_module_callbacks` and
+  `call_remote`.
+- Read `actr7.x/framework/chunk-spec.lisp` and
+  `actr7.x/framework/buffers.lisp` for spec IDs, `chunk-spec-to-chunk-def`, and
+  scheduling argument shapes.
+- Read `actr7.x/examples/creating-modules/external/goal.py` and
+  `simple_declarative.py` for the request/buffer-mod callback behavior.
 
 When finishing a milestone:
 
