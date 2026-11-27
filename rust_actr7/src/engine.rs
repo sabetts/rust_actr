@@ -2889,6 +2889,12 @@ pub struct Engine {
     /// this is non-empty so the server can call the client back and apply the
     /// window commands the action issues (`bst`'s `button-pressed`).
     pending_device_actions: Vec<(String, Vec<Json>)>,
+    /// Deferred remote-module side-effect callbacks. The run loop yields before
+    /// the next event while this is non-empty so the server can drain it with
+    /// the session borrow released.
+    pending_module_callbacks: Vec<module::PendingModuleCallback>,
+    /// Set when [`Engine::run_to_limit`] stopped early for a module callback.
+    module_callback_yield: bool,
     /// Scripted task-window clicks (AGI/image drivers): the action is held
     /// until the motor click's release event, matching the GUI callback time.
     scripted_click_actions: bool,
@@ -3561,6 +3567,8 @@ impl Engine {
             window_actions: HashMap::new(),
             window_image_defs: HashMap::new(),
             pending_device_actions: Vec::new(),
+            pending_module_callbacks: Vec::new(),
+            module_callback_yield: false,
             scripted_click_actions: false,
             pending_scripted_click: None,
             device_action_yield: false,
@@ -5579,6 +5587,22 @@ impl Engine {
         std::mem::take(&mut self.pending_device_actions)
     }
 
+    /// Whether a module queued a deferred side-effect callback.
+    pub fn has_pending_module_callbacks(&self) -> bool {
+        !self.pending_module_callbacks.is_empty()
+    }
+
+    /// Drain queued module callbacks for the server to invoke with the session
+    /// borrow released.
+    pub fn take_pending_module_callbacks(&mut self) -> Vec<module::PendingModuleCallback> {
+        std::mem::take(&mut self.pending_module_callbacks)
+    }
+
+    /// Whether the last run slice yielded for a pending module callback.
+    pub fn module_callback_yield(&self) -> bool {
+        self.module_callback_yield
+    }
+
     /// Events evaluated in the current `run` (`run-sched-queue`'s
     /// `event-count`).
     pub fn run_events(&self) -> u64 {
@@ -5915,11 +5939,19 @@ impl Engine {
     ) -> Result<bool, EngineError> {
         self.schedule_display();
         self.device_action_yield = false;
+        self.module_callback_yield = false;
         self.run_capped = false;
         self.stopped = false;
         let mut processed = false;
         let mut chunk_events = 0u64;
         loop {
+            // A deferred module callback must run before the next event. Stop
+            // without a terminator and let the server drain it.
+            if !self.pending_module_callbacks.is_empty() {
+                self.module_callback_yield = true;
+                self.run_capped = true;
+                break;
+            }
             // A chunked run stops on its event budget or wall budget *before*
             // the stop check, without emitting the terminator, so a long run
             // can be resumed next frame (the Environment's interactive loop).

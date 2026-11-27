@@ -442,6 +442,19 @@ pub struct ModuleEvent {
     pub payload: Vec<Value>,
 }
 
+/// A side-effect module callback awaiting a borrow-released server drain.
+#[derive(Debug, Clone)]
+pub struct PendingModuleCallback {
+    /// Owning RPC connection, if the module was defined by a client.
+    pub connection: Option<String>,
+    /// Client command implementing the callback.
+    pub command: String,
+    /// Model instance the callback belongs to.
+    pub model: String,
+    /// Callback arguments, excluding the model name (the server prepends it).
+    pub args: Vec<Value>,
+}
+
 /// The engine operations available to a module callback.
 pub struct ModuleCtx<'a> {
     engine: &'a mut super::Engine,
@@ -549,6 +562,24 @@ impl<'a> ModuleCtx<'a> {
         b.modified = true;
         self.engine.changed();
         Ok(())
+    }
+
+    /// Queue a remote side-effect callback for the server to run after the
+    /// session borrow is released.
+    pub fn enqueue_callback(
+        &mut self,
+        connection: Option<String>,
+        command: impl Into<String>,
+        args: Vec<Value>,
+    ) {
+        self.engine
+            .pending_module_callbacks
+            .push(PendingModuleCallback {
+                connection,
+                command: command.into(),
+                model: self.engine.model.name.clone(),
+                args,
+            });
     }
 
     /// Schedule a named callback into this module (`Module::on_event`).
