@@ -3,8 +3,8 @@
 Last updated: 2026-11-27
 Branch: `main`
 Starting commit: `d00fb51`
-Latest relevant code commit: `d73f2d0`
-Status: Milestones 1-2 complete; Milestone 3 next
+Latest relevant code commit: `f3e0a8e`
+Status: Milestones 1-3 complete; Milestone 4 next
 
 This document tracks support for RPC-defined custom modules in the Rust
 `actr-engine`. It records the design, the ordered milestones, the current
@@ -77,14 +77,20 @@ What exists:
 - Allowlisted module commands (`add-dm`, `dm`, `sdp`, `goal-focus`,
   `mod-focus`) can be removed and replaced while no model is loaded, with
   built-in restoration on override removal/disconnect.
+- RPC `define-module`/`undefine-module` register per-connection remote module
+  factories with parsed buffers, parameters, metadata, and callback names.
+- Remote module `create`, `query`, `params`, `search`, and `offset` callbacks
+  run synchronously through `RpcModuleHost`; nested ACT-R commands from them
+  are rejected with a clear error.
 
 What is missing:
 
-- RPC `define-module` and `undefine-module` commands.
-- A remote `Module` proxy and callback bridge, including the scoped synchronous
-  data-callback path.
+- The deferred side-effect callback bridge (`request`, `buffer-mod`, `reset`,
+  `delete`, `notify-on-clear`, `warning`, `update`, `run-start`, `run-end`).
 - A chunk-spec ID registry and the scheduling commands used by the examples.
 - Declarative compatibility commands used by `simple_declarative.py`.
+- Suppression of the built-in goal/declarative modules and focus command
+  replacement.
 
 Relevant missing RPC commands:
 
@@ -162,6 +168,10 @@ Synchronous data callbacks, run while the engine is borrowed:
 Synchronous callbacks must not re-enter ACT-R. Detect nested attempts and
 return a clear error instead of deadlocking. The vendored examples satisfy this
 constraint because their synchronous callbacks only read remote state.
+
+Milestone 3 implements this split via `RpcModuleHost`: synchronous callbacks
+wait on the shared connection receiver and reject nested requests; Milestone 4
+adds the deferred side-effect queue.
 
 A general reentrant synchronous-callback design remains a full-parity
 follow-up.
@@ -245,30 +255,43 @@ Implementation notes:
 
 ### Milestone 3 — `define-module` registration and remote proxy
 
-- [ ] Add a scoped synchronous data-callback bridge for module `create`,
+- [x] Add a scoped synchronous data-callback bridge for module `create`,
   `query`, `params` get, `search`, and `offset`. The bridge returns a value
   while the session is borrowed and must not allow nested ACT-R commands.
-- [ ] Wire the bridge into `RemoteModule` so model construction/reset can call
+- [x] Wire the bridge into `RemoteModule` so model construction can call
   `create` and params-get and production matching can call `query`.
-- [ ] Detect and reject nested commands from synchronous callbacks with a clear
+- [x] Detect and reject nested commands from synchronous callbacks with a clear
   error.
-- [ ] Add tests for returning `create`/`query`/`params` callbacks and for
+- [x] Add tests for returning `create`/`query`/`params` callbacks and for
   nested-call rejection.
-- [ ] Add `define-module` and `undefine-module` to the RPC command registry in
+- [x] Add `define-module` and `undefine-module` to the RPC command registry in
   `rust_actr7/src/rpc/session.rs`.
-- [ ] Parse buffer definitions, remote parameter specs, callback names, and
+- [x] Parse buffer definitions, remote parameter specs, callback names, and
   metadata from the Python client shape.
-- [ ] Track the owning connection for later callbacks.
-- [ ] Add `rust_actr7/src/rpc/remote_module.rs` with a `RemoteModuleFactory` and
+- [x] Track the owning connection for later callbacks.
+- [x] Add `rust_actr7/src/rpc/remote_module.rs` with a `RemoteModuleFactory` and
   `RemoteModule`.
-- [ ] Implement descriptor generation without remote side effects.
-- [ ] Remove remote factories owned by a disconnected client when allowed.
-- [ ] Add tests for define, undefine, metadata, ownership, and duplicate names.
+- [x] Implement descriptor generation without remote side effects.
+- [x] Remove remote factories owned by a disconnected client when allowed.
+- [x] Add tests for define, undefine, metadata, ownership, and duplicate names.
 
 Acceptance: `define-module` registers a module whose buffers, queries, and
 parameters are visible to a loaded model.
 
-### Milestone 4 — Callback bridge
+Implementation notes:
+
+- `RemoteModuleFactory` stores the parsed descriptor, callback names, owner
+  connection, and an `Rc<dyn ModuleHost>`.
+- `RpcModuleHost` shares the actor's event receiver and deferred queue so it can
+  wait for a callback reply while `&mut Session` is borrowed. It times out after
+  30 seconds and answers nested requests with a clear error.
+- M3 wires only the synchronous callbacks. `reset`, `request`, `buffer-mod`,
+  `delete`, `notify-on-clear`, `warning`, `update`, `run-start`, and `run-end`
+  are parsed and stored but remain no-ops until Milestone 4.
+- Built-in `undefine-module('goal'/'declarative')` still returns `false`; full
+  built-in module suppression and focus-command replacement remain Milestone 6.
+
+### Milestone 4 — Deferred callback bridge
 
 - [ ] Add an engine-level pending remote-callback queue and a
   `ModuleCtx` method to enqueue side-effect callbacks.
@@ -335,18 +358,28 @@ models still run with expected results.
 ## 7. Known limitations and risks
 
 - **Synchronous callback reentrancy.** `query`, `params` get, `create`,
-  `search`, and `offset` need immediate return values. They cannot safely issue
-  nested ACT-R commands while the engine is borrowed. The examples do not
-  require that, but full Lisp parity does. Track this as a follow-up.
+  `search`, and `offset` need immediate return values. The M3 bridge returns
+  them while the engine is borrowed and rejects nested ACT-R commands. Full
+  reentrant synchronous callbacks remain a follow-up. The vendored examples do
+  not require nesting from these callbacks.
+- **Synchronous callback cost.** Every remote `query`/`params` call is one RPC
+  round-trip. `query` can be hot during production matching, though only for
+  models whose buffer is owned by a remote module. Consider mirroring or
+  caching state if a real workload makes it visible.
+- **Blocking module callbacks.** A synchronous callback blocks the shared actor
+  until the client replies or the 30 s timeout fires. A hung client therefore
+  stalls all models.
 - **Loader regression surface.** The loader refactor touches model parsing,
   engine construction, reset ordering, and trace output. Keep the static fast
   path for non-override models and run the full corpus after each change.
 - **Built-in replacement scope.** Hardcoded goal/declarative behavior remains.
-  The override path depends on buffer ownership and command replacement.
+  `undefine-module('goal'/'declarative')` is currently a no-op returning false;
+  built-in suppression and focus-command replacement are Milestone 6.
 - **Multi-model lifecycle.** Remote module instances are per model; callback
-  ownership, factory cleanup, and reset ordering need tests.
-- **Disconnect cleanup.** Decide whether a disconnected owner removes its
-  remote factories or leaves them with callbacks that fail gracefully.
+  ownership, factory cleanup, and reset ordering need more coverage.
+- **Disconnect cleanup.** Owned remote factories are removed immediately when no
+  model is loaded, or pruned after the last model is cleared when a model was
+  loaded at disconnect time.
 - **Chunk-spec lifetime.** Spec IDs must remain valid until the callback
   releases them and must not leak across reset/clear-all.
 - **Trace parity.** Rust trace ordering may differ from Lisp even when model
@@ -374,6 +407,8 @@ Tests:
 - `rust_actr7/tests/environment_rpc.rs` — TCP client/test pattern
 - `rust_actr7/tests/stepper_rpc.rs` — callback test pattern
 - `rust_actr7/tests/rpc_conformance.rs` — gated Python/ACT-R conformance
+- `rust_actr7/fixtures/models/rpc-modules/probe.lisp` — custom-buffer query
+  fixture for the synchronous bridge test
 
 Examples and oracle:
 
@@ -432,21 +467,33 @@ Add one entry per milestone or meaningful checkpoint, with the commit range.
   restoration, and RPC error replies. `cargo test` passed the 560-case corpus,
   145 lib tests, 10 `rpc_modules` tests, and 28 `environment_rpc` tests;
   `cargo fmt --check` clean.
+- 2026-11-27: Milestone 3 complete. Added `ModuleCtx::model_name` (`792bbac`),
+  remote module parsing/proxy (`65288a3`), `define-module`/`undefine-module`
+  registration and ownership cleanup (`a959b03`), and the scoped synchronous
+  bridge with nested-command rejection (`f3e0a8e`). `cargo test` passed the
+  560-case corpus, 154 lib tests, 31 `environment_rpc` tests, 10 `rpc_modules`
+  tests, and 2 `stepper_rpc` tests; `cargo fmt --check` clean.
 
 ## 11. Handoff notes
 
-Next action: start Milestone 3 with the scoped synchronous data bridge, then
-`define-module` registration.
+Next action: start Milestone 4, the deferred side-effect callback bridge.
+Reuse the `ConnIo`/`CallbackShared` plumbing added for `RpcModuleHost`, but run
+deferred callbacks with the session borrow released so they can issue nested
+ACT-R commands.
 
 Before editing:
 
+- Read `rust_actr7/src/rpc/remote_module.rs` for the stored callback names and
+  the current synchronous-only `RemoteModule`.
+- Read `rust_actr7/src/rpc/server.rs` around `ConnIo`, `CallbackShared`,
+  `RpcModuleHost`, and `call_remote`.
+- Read `rust_actr7/src/engine/module.rs` around `ModuleCtx`/`Module` for the
+  pending-callback queue and run-loop yield point.
 - Read `rust_actr7/src/rpc/session.rs` around `add_remote`, `remove`, `add`,
   `Owner`, and the command registry tests.
-- Read `rust_actr7/src/rpc/server.rs` around the `add`/`remove` dispatch arms.
-- Read `rust_actr7/tests/rpc_modules.rs` for the Milestone 1 test pattern.
+- Read `rust_actr7/tests/rpc_modules.rs` and `tests/environment_rpc.rs` for the
+  loader and callback test patterns.
 - Read `actr7.x/framework/model.lisp:384-577` for the load phase ordering.
-- Read the RPC callback paths in `rust_actr7/src/rpc/server.rs` and the
-  `Remote` trait in `rust_actr7/src/rpc/session.rs`.
 
 When finishing a milestone:
 
