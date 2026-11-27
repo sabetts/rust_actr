@@ -1025,7 +1025,7 @@ fn remote_module_definition_round_trips_over_rpc() {
     };
 
     let builtin = c.eval_ok("undefine-module", None, vec![Json::Str("goal".into())]);
-    assert_eq!(builtin.first(), Some(&Json::Bool(false)));
+    assert_eq!(builtin.first(), Some(&Json::Bool(true)));
 
     let result = c.eval_ok("define-module", None, define("round-trip"));
     assert_eq!(result.first().and_then(|v| v.as_str()), Some("round-trip"));
@@ -1188,6 +1188,63 @@ fn remote_module_request_spec_schedules_a_buffer_chunk() {
             .any(|(name, _, _)| name == "request-probe"),
         "callbacks: {:?}",
         c.callbacks
+    );
+}
+
+#[test]
+fn load_dispatch_remote_goal_focus_can_issue_nested_commands() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    assert_eq!(c.remove("goal-focus").first(), Some(&Json::Bool(true)));
+    c.add_command("goal-focus", "goal-focus");
+
+    let id = c.send(
+        Method::Evaluate,
+        vec![
+            Json::Str("load-act-r-model".into()),
+            Json::Null,
+            Json::Str(model("tutorial/unit1/count.lisp")),
+        ],
+    );
+    let (reply, nested) = c
+        .wait_with_nested_command(id, "mp-time", Vec::new())
+        .expect("load");
+    assert_eq!(reply.first(), Some(&Json::Bool(true)), "{reply:?}");
+    assert!(nested.first().is_some(), "nested reply: {nested:?}");
+    assert!(
+        c.callbacks.iter().any(|(name, _, _)| name == "goal-focus"),
+        "goal-focus callback missing: {:?}",
+        c.callbacks
+    );
+}
+
+#[test]
+fn runtime_goal_focus_spec_list_reaches_the_client_as_a_chunk_name() {
+    let addr = server();
+    let mut c = Client::connect(addr).expect("connect");
+    assert_eq!(c.remove("goal-focus").first(), Some(&Json::Bool(true)));
+    c.add_command("goal-focus", "goal-focus");
+    c.eval_ok(
+        "load-act-r-model",
+        None,
+        vec![Json::Str(model("tutorial/unit1/count.lisp"))],
+    );
+    c.callbacks.clear();
+
+    c.eval_ok(
+        "goal-focus",
+        None,
+        vec![json(r#"["ISA","count-from","start","one","end","three"]"#)],
+    );
+    let callback = c
+        .callbacks
+        .iter()
+        .find(|(name, _, _)| name == "goal-focus")
+        .unwrap_or_else(|| panic!("no goal-focus callback: {:?}", c.callbacks));
+    let arg = callback.2.last().cloned().unwrap_or(Json::Null);
+    assert!(
+        arg.as_str().is_some(),
+        "goal-focus arg was not a chunk name: {arg:?}"
     );
 }
 
