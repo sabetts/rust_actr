@@ -75,6 +75,11 @@ python benchmarking/parity.py                    # verify synthetic traces match
 python benchmarking/verify_scenarios.py          # verify real-model work matches
 ```
 
+On Windows, `cargo build --release` writes
+`rust_actr7\target\release\actr.exe`; the harness resolves it automatically, so
+`python benchmarking\run.py --engine all` works from PowerShell. `sbcl` must be
+on `PATH`, and `--pin-cpu` is Linux-only.
+
 See `benchmarking/README.md` for workloads, methodology, and the baseline
 results.
 

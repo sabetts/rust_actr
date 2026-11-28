@@ -26,9 +26,14 @@ sys.path.insert(0, str(HERE))
 
 import harness  # noqa: E402
 ACTR = ROOT / "actr7.x"
-RUST = ROOT / "rust_actr7" / "target" / "release" / "actr"
+RUST = harness.RUST
 CLEAR = HERE / "models" / "generated" / "clear-user-models.lisp"
 TRACE_LINE = re.compile(r"^\s*\d+\.\d+\s+\S")
+
+
+def _lisp_path(path: Path) -> str:
+    """Render *path* for a double-quoted Lisp string."""
+    return str(path.resolve()).replace("\\", "\\\\").replace('"', '\\"')
 
 
 def trace_lines(text: str) -> list[str]:
@@ -69,9 +74,9 @@ def run_lisp(model: Path, seconds: float, timeout: float) -> list[str]:
         script.write_text(
             "\n".join(
                 [
-                    f'(load "{ACTR / "load-act-r.lisp"}")',
-                    f'(load "{CLEAR}")',
-                    f'(load "{model}")',
+                    f'(load "{_lisp_path(ACTR / "load-act-r.lisp")}")',
+                    f'(load "{_lisp_path(CLEAR)}")',
+                    f'(load "{_lisp_path(model)}")',
                     f"(run {seconds})",
                 ]
             ),

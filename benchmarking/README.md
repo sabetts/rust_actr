@@ -33,6 +33,25 @@ sbcl --version
 The first Lisp run may compile ACT-R's `.fasl` files and takes longer; later
 server startups are about a second.
 
+### Windows
+
+The native Windows build uses the same commands:
+
+```powershell
+cargo build --release --manifest-path rust_actr7\Cargo.toml
+python benchmarking\run.py --engine all
+```
+
+- `cargo` writes `rust_actr7\target\release\actr.exe`; `harness.rust_binary()`
+  resolves the `.exe` automatically.
+- `sbcl` must be on `PATH` (for example
+  `C:\ProgramData\chocolatey\bin\sbcl.exe`).
+- `--pin-cpu` is Linux-only and is ignored on other platforms.
+- `parity.py` escapes native paths before writing them into the temporary Lisp
+  script, so SBCL handles drive-letter paths.
+- Stop any ACT-R server already listening on port 2650 before starting a run;
+  the harness reports an occupied port as an error.
+
 ## Quick start
 
 ```sh

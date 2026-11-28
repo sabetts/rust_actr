@@ -24,13 +24,21 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 ACTR = ROOT / "actr7.x"
 CRATE = ROOT / "rust_actr7"
-RUST = CRATE / "target" / "release" / "actr"
 CURRENT_NET = ACTR / "environment" / "gui" / "init" / "05-current-net.tcl"
 # ACT-R rewrites these two mode files every time it loads.
 LOAD_MODE = ACTR / "support" / "load-mode.lisp"
 REQUIRE_MODE = ACTR / "support" / "require-mode.lisp"
 DEFAULT_PORT = 2650
 CLIENT = HERE / "client.py"
+
+
+def rust_binary() -> Path:
+    """Path to the release ``actr`` binary for the current platform."""
+    name = "actr.exe" if sys.platform.startswith("win") else "actr"
+    return CRATE / "target" / "release" / name
+
+
+RUST = rust_binary()
 
 
 def home_file(name: str) -> Path:
