@@ -704,30 +704,39 @@ impl Engine {
                 // merges into DM, gaining a reference
                 // (`merge-chunk-into-dm`). Empty clears merge nothing.
                 if let Some(chunk) = cleared {
-                    // `al-check-cleared-chunks` (`associative-learning.lisp:562`):
-                    // a source buffer's clear schedules the parameter update at
-                    // priority 5 (after the merge, before a retrieval's -2000).
-                    let al = if self.cfg.al_eal.is_some() && self.al_is_source_buffer(&buffer) {
-                        Some(chunk.name.clone())
-                    } else {
-                        None
-                    };
-                    self.merge_into_dm(chunk, &buffer);
-                    if let Some(name) = al {
-                        let true_name = name
-                            .as_ref()
-                            .and_then(|n| self.chunk_alias.get(n).cloned())
-                            .or(name);
-                        if let Some(true_name) = true_name {
-                            self.now(
-                                Prio::Num(5),
-                                Out::Never,
-                                Event::AlBufferCleared { chunk: true_name },
-                            );
+                    // The external module owns RETRIEVAL when it has replaced
+                    // the declarative module: its notify-on-clear callback
+                    // harvests the chunk instead, so the built-in DM must not
+                    // also merge it.
+                    if self.module_index_for_buffer("RETRIEVAL").is_none() {
+                        // `al-check-cleared-chunks`
+                        // (`associative-learning.lisp:562`): a source buffer's
+                        // clear schedules the parameter update at priority 5
+                        // (after the merge, before a retrieval's -2000).
+                        let al = if self.cfg.al_eal.is_some() && self.al_is_source_buffer(&buffer) {
+                            Some(chunk.name.clone())
+                        } else {
+                            None
+                        };
+                        self.merge_into_dm(chunk, &buffer);
+                        if let Some(name) = al {
+                            let true_name = name
+                                .as_ref()
+                                .and_then(|n| self.chunk_alias.get(n).cloned())
+                                .or(name);
+                            if let Some(true_name) = true_name {
+                                self.now(
+                                    Prio::Num(5),
+                                    Out::Never,
+                                    Event::AlBufferCleared { chunk: true_name },
+                                );
+                            }
                         }
                     }
+                    // `clear-buffer-process` only notifies modules when a
+                    // chunk was actually removed (`buffers.lisp:1243`).
+                    self.module_notify_clear(&buffer, cleared_name.as_deref());
                 }
-                self.module_notify_clear(&buffer, cleared_name.as_deref());
                 self.changed();
             }
             Event::UnstuffAural { copy } => {

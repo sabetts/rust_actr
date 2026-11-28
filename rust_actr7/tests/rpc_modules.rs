@@ -255,6 +255,75 @@ fn in_process_module_without_override_does_not_dispatch() {
 }
 
 #[test]
+fn external_retrieval_module_suppresses_the_builtin_dm_merge() {
+    let mut session = Session::new((100, 0));
+    let log = Rc::new(RefCell::new(Vec::new()));
+    let module_log = log.clone();
+    session
+        .add_module_factory(Box::new(move || {
+            Box::new(PhaseProbe {
+                log: module_log.clone(),
+            }) as Box<dyn Module>
+        }))
+        .unwrap();
+    session
+        .load_source(
+            r#"
+(clear-all)
+(define-model clear-probe
+  (chunk-type goal state)
+  (chunk-type probe value)
+  (add-dm (g1 ISA goal state go) (p1 ISA probe value x))
+  (goal-focus g1)
+  (p clear-retrieval
+    =goal>
+      ISA goal
+      state go
+    ==>
+    =goal>
+      state done
+    -retrieval>))
+"#,
+        )
+        .unwrap();
+    let mut remote = RecordingRemote::default();
+
+    session
+        .evaluate(
+            "define-chunks",
+            None,
+            &[Json::Arr(vec![
+                Json::Str("extra".into()),
+                Json::Str("ISA".into()),
+                Json::Str("probe".into()),
+                Json::Str("value".into()),
+                Json::Str("y".into()),
+            ])],
+            &mut remote,
+        )
+        .unwrap();
+    session
+        .evaluate(
+            "set-buffer-chunk",
+            None,
+            &[Json::Str("retrieval".into()), Json::Str("EXTRA".into())],
+            &mut remote,
+        )
+        .unwrap();
+    session
+        .evaluate("run", None, &[Json::Float(0.2)], &mut remote)
+        .unwrap();
+
+    let chunks = dm_chunks(&mut session, &mut remote);
+    assert_eq!(chunks.len(), 2, "unexpected DM chunks: {chunks:?}");
+    assert!(!chunks.iter().any(|name| name == "EXTRA"), "{chunks:?}");
+    assert!(
+        chunks.iter().any(|name| name == "P1"),
+        "the original DM chunk disappeared: {chunks:?}"
+    );
+}
+
+#[test]
 fn load_actions_run_between_secondary_and_tertiary_reset() {
     let mut session = Session::new((100, 0));
     let log = Rc::new(RefCell::new(Vec::new()));

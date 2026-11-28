@@ -945,6 +945,16 @@ impl Actor {
                 return reply_err(id, &e);
             }
 
+            // A deferred client callback can schedule a new event after the
+            // engine reported that its queue was empty. Resume instead of
+            // treating that slice as the end of the run.
+            if stop == RunStop::Finished
+                && !self.session.is_stopped()
+                && self.session.has_queued_events_before(limit)
+            {
+                continue;
+            }
+
             if stop == RunStop::StepperPause || self.session.stepper_paused() {
                 if let Some((cmd, model, a)) = self.session.take_stepper_pause() {
                     let owner = self.owner_key_for(&cmd);

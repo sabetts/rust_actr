@@ -1308,3 +1308,111 @@ impl Engine {
         Ok(if negated { !ok } else { ok })
     }
 }
+
+impl Engine {
+    /// Resolve a chunk name through copy/merge aliases to the live name.
+    pub fn canonical_chunk_name_rpc(&self, name: &str) -> Option<String> {
+        let upper = name.to_uppercase();
+        let canonical = self.resolve_alias(&upper);
+        self.find_chunk(&canonical)
+            .or_else(|| self.find_chunk(&upper))
+            .map(|chunk| chunk.name.clone().unwrap_or(canonical))
+    }
+
+    /// `find-matching-chunks`: test the registered spec against the named
+    /// chunks (or all model chunks when `chunks` is `None`). Results are in
+    /// the Lisp push-then-return order (the reverse of the input order).
+    pub fn find_matching_chunks_rpc(
+        &self,
+        spec: &super::module::ChunkSpecRecord,
+        chunks: Option<&[String]>,
+    ) -> Vec<String> {
+        let matches = |name: &str| {
+            let Some(canonical) = self.canonical_chunk_name_rpc(name) else {
+                return false;
+            };
+            let Some(chunk) = self.find_chunk(&canonical) else {
+                return false;
+            };
+            if !spec.ctype.is_empty() && !chunk.ctype.eq_ignore_ascii_case(&spec.ctype) {
+                return false;
+            }
+            self.chunk_matches_req(chunk, &spec.slots, &spec.negated, &spec.relative)
+        };
+        let mut found = Vec::new();
+        match chunks {
+            Some(names) => {
+                for name in names {
+                    if matches(name) {
+                        found.push(name.to_uppercase());
+                    }
+                }
+            }
+            None => {
+                for chunk in &self.dm {
+                    if let Some(name) = chunk.name.as_deref() {
+                        if matches(name) {
+                            found.push(name.to_uppercase());
+                        }
+                    }
+                }
+                for name in self.named.keys() {
+                    if matches(name) {
+                        found.push(name.to_uppercase());
+                    }
+                }
+            }
+        }
+        found.reverse();
+        found
+    }
+
+    /// `chunk-equal-test` for two named chunks (type plus filled slots).
+    pub fn chunks_equal_rpc(&self, a: &str, b: &str) -> Option<bool> {
+        let a = self.canonical_chunk_name_rpc(a)?;
+        let b = self.canonical_chunk_name_rpc(b)?;
+        if a == b {
+            return Some(true);
+        }
+        let ca = self.find_chunk(&a)?;
+        let cb = self.find_chunk(&b)?;
+        if !ca.ctype.eq_ignore_ascii_case(&cb.ctype) {
+            return Some(false);
+        }
+        let sa = self.filled_slots(ca);
+        let sb = self.filled_slots(cb);
+        if sa.len() != sb.len() {
+            return Some(false);
+        }
+        Some(
+            sa.iter()
+                .all(|slot| self.value_eq(&ca.get(slot), &cb.get(slot))),
+        )
+    }
+
+    /// `merge-chunks-fct` for named/model chunks. Parameter values are merged
+    /// by the caller because they may require a client callback.
+    pub fn merge_chunks_rpc(&mut self, a: &str, b: &str) -> bool {
+        let Some(a) = self.canonical_chunk_name_rpc(a) else {
+            return false;
+        };
+        let Some(b) = self.canonical_chunk_name_rpc(b) else {
+            return false;
+        };
+        if a == b {
+            return true;
+        }
+        if !self.chunks_equal_rpc(&a, &b).unwrap_or(false) {
+            return false;
+        }
+        self.named.remove(&b);
+        self.chunk_alias.insert(b.clone(), a.clone());
+        self.rename_chunk_refs(&b, &a);
+        true
+    }
+
+    /// `model-warning` through the RPC dispatcher.
+    pub fn model_warning_rpc(&mut self, msg: &str) {
+        self.model_warning(msg);
+    }
+}

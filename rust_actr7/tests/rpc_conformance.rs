@@ -65,6 +65,56 @@ fn rpc_goal_conformance() {
 
 #[test]
 #[ignore = "requires Python 3 and an ACT-R checkout"]
+fn rpc_declarative_conformance() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let script = crate_dir.join("fixtures").join("rpc-declarative-smoke.py");
+    let port = "2698";
+    let mut server = Command::new(env!("CARGO_BIN_EXE_actr"))
+        .args(["server", "--port", port])
+        .spawn()
+        .expect("spawn actr server");
+    for _ in 0..100 {
+        if TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).is_ok() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+
+    let python = std::env::var("PYTHON").unwrap_or_else(|_| "python".into());
+    let mut child = Command::new(python)
+        .arg(&script)
+        .spawn()
+        .expect("run declarative smoke driver");
+    let deadline = Instant::now() + Duration::from_secs(60);
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                println!("PY-CLEAN-EXIT code={status}");
+                break Some(status);
+            }
+            Ok(None) if Instant::now() < deadline => {
+                thread::sleep(Duration::from_millis(100));
+            }
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                println!("PY-TIMEOUT");
+                break None;
+            }
+            Err(error) => panic!("waiting for declarative smoke driver: {error}"),
+        }
+    };
+    let _ = server.kill();
+    let _ = server.wait();
+    let status = status.expect("declarative smoke driver timed out");
+    assert!(
+        status.success(),
+        "declarative replacement smoke test failed"
+    );
+}
+
+#[test]
+#[ignore = "requires Python 3 and an ACT-R checkout"]
 fn rpc_conformance() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let script = crate_dir.join("fixtures").join("rpc-conformance.sh");

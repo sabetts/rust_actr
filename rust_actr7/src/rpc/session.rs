@@ -109,6 +109,7 @@ pub const BUILTINS: &[&str] = &[
     "model-output",
     "command-output",
     "print-warning",
+    "model-warning",
     "act-r-output",
     "buffer-chunk",
     "buffer-status",
@@ -133,6 +134,11 @@ pub const BUILTINS: &[&str] = &[
     "add-dm-fct",
     "define-chunks",
     "define-chunks-fct",
+    "extend-chunks",
+    "find-matching-chunks",
+    "merge-chunks",
+    "chunk-not-storable",
+    "make-chunk-immutable",
     "define-chunk-spec",
     "chunk-spec-to-chunk-def",
     "chunk-type",
@@ -376,6 +382,21 @@ pub struct PendingLoadDispatch {
     pub previous_current: Option<String>,
 }
 
+/// A chunk parameter defined by the remote `extend-chunks` command.
+#[derive(Debug, Clone, Default)]
+struct ChunkParamDef {
+    default_value: Json,
+    merge_value: Option<String>,
+}
+
+/// Values and flags attached to one named chunk.
+#[derive(Debug, Clone, Default)]
+struct ChunkMeta {
+    params: BTreeMap<String, Json>,
+    immutable: bool,
+    not_storable: bool,
+}
+
 /// An inactive model engine owned by the session.
 struct NamedEngine {
     name: String,
@@ -448,6 +469,14 @@ pub struct Session {
     pending_load_dispatches: Vec<PendingLoadDispatch>,
     /// Built-in modules removed by `undefine-module` (`goal`, `declarative`).
     suppressed_builtin_modules: BTreeSet<String>,
+    /// Chunk parameters created by `extend-chunks`, keyed by lowercase name.
+    chunk_param_defs: BTreeMap<String, ChunkParamDef>,
+    /// Per-model, per-chunk parameter values and flags, keyed by uppercase
+    /// model name and canonical chunk name.
+    chunk_meta: BTreeMap<(String, String), ChunkMeta>,
+    /// Generated `chunk-<param>` / `set-chunk-<param>` command names mapped to
+    /// the parameter and whether the command is a setter.
+    chunk_param_commands: BTreeMap<String, (String, bool)>,
     /// Models that installed a speech/microphone device. A runtime engine
     /// rebuild must restore this flag, as `define-chunks` does not uninstall
     /// the device in ACT-R.
@@ -641,6 +670,12 @@ impl Session {
             let doc = builtin_doc(name).unwrap_or("Built-in ACT-R command.");
             commands.insert((*name).to_string(), Command::builtin(doc));
         }
+        // The vendored simple_declarative.py calls the warning command with
+        // an underscore; keep the Lisp spelling plus this compatibility alias.
+        commands.insert(
+            "model_warning".to_string(),
+            Command::builtin("Send a string to the ACT-R warning-trace."),
+        );
         Session {
             model_files: Vec::new(),
             last_model_file: None,
@@ -678,6 +713,9 @@ impl Session {
             next_event_id: 0,
             pending_load_dispatches: Vec::new(),
             suppressed_builtin_modules: BTreeSet::new(),
+            chunk_param_defs: BTreeMap::new(),
+            chunk_meta: BTreeMap::new(),
+            chunk_param_commands: BTreeMap::new(),
             speech_models: Default::default(),
             vwin_handlers: Vec::new(),
             windows: HashMap::new(),
@@ -892,6 +930,272 @@ impl Session {
                 .iter()
                 .any(|buffer| buffer.name.eq_ignore_ascii_case("GOAL"))
         })
+    }
+
+    /// `(model, canonical chunk)` key for external chunk metadata.
+    fn chunk_meta_key(&self, chunk: &str) -> Option<(String, String)> {
+        let model = self.current_model.as_ref()?.to_uppercase();
+        let canonical = self.engine.as_ref()?.canonical_chunk_name_rpc(chunk)?;
+        Some((model, canonical))
+    }
+
+    fn chunk_meta(&self, chunk: &str) -> Option<&ChunkMeta> {
+        let key = self.chunk_meta_key(chunk)?;
+        self.chunk_meta.get(&key)
+    }
+
+    fn chunk_meta_mut(&mut self, chunk: &str) -> Option<&mut ChunkMeta> {
+        let key = self.chunk_meta_key(chunk)?;
+        Some(self.chunk_meta.entry(key).or_default())
+    }
+
+    fn chunk_param_value(&self, chunk: &str, param: &str) -> Option<Json> {
+        self.chunk_meta(chunk)
+            .and_then(|meta| meta.params.get(param).cloned())
+            .or_else(|| {
+                self.chunk_param_defs
+                    .get(param)
+                    .map(|def| def.default_value.clone())
+            })
+    }
+
+    fn clear_chunk_meta_for_model(&mut self, model: &str) {
+        let model = model.to_uppercase();
+        self.chunk_meta
+            .retain(|(owner, _), _| !owner.eq_ignore_ascii_case(&model));
+    }
+
+    fn extend_chunks_cmd(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let name = args
+            .first()
+            .and_then(|arg| arg.as_str())
+            .ok_or("extend-chunks requires a parameter name")?;
+        let param = name.trim_start_matches(':').to_ascii_lowercase();
+        if param.is_empty() {
+            return Err("extend-chunks requires a parameter name".into());
+        }
+        if self.chunk_param_defs.contains_key(&param) {
+            self.warn(&format!("Parameter {name} already defined for chunks."));
+            return Ok(vec![Json::Null]);
+        }
+        let mut def = ChunkParamDef::default();
+        if let Some(Json::Arr(options)) = args.get(1) {
+            for option in options {
+                let Json::Arr(pair) = option else { continue };
+                let Some(key) = pair.first().and_then(|value| value.as_str()) else {
+                    continue;
+                };
+                let value = pair.get(1).cloned().unwrap_or(Json::Null);
+                match key.to_ascii_lowercase().as_str() {
+                    "default-value" => def.default_value = value,
+                    "merge-value-function" => {
+                        def.merge_value = value.as_str().map(|value| {
+                            value
+                                .trim()
+                                .trim_matches('\'')
+                                .trim_matches('"')
+                                .to_ascii_lowercase()
+                        });
+                    }
+                    other => self.warn(&format!("extend-chunks option {other} is not supported.")),
+                }
+            }
+        }
+        self.chunk_param_defs.insert(param.clone(), def);
+        let getter = format!("chunk-{param}");
+        let setter = format!("set-chunk-{param}");
+        self.commands.insert(
+            getter.clone(),
+            Command::builtin("Return a chunk parameter. Params: chunk-name."),
+        );
+        self.commands.insert(
+            setter.clone(),
+            Command::builtin("Set a chunk parameter. Params: chunk-name value."),
+        );
+        self.chunk_param_commands
+            .insert(getter, (param.clone(), false));
+        self.chunk_param_commands
+            .insert(setter, (param.clone(), true));
+        Ok(vec![Json::Str(format!("CHUNK-{}", param.to_uppercase()))])
+    }
+
+    fn chunk_param_command(
+        &mut self,
+        param: &str,
+        set: bool,
+        args: &[Json],
+    ) -> Result<Vec<Json>, String> {
+        let chunk = args
+            .first()
+            .and_then(|arg| arg.as_str())
+            .ok_or("chunk parameter command requires a chunk name")?;
+        let Some(canonical) = self
+            .engine
+            .as_ref()
+            .and_then(|engine| engine.canonical_chunk_name_rpc(chunk))
+        else {
+            self.warn(&format!("Chunk {chunk} does not exist."));
+            return Ok(vec![Json::Null]);
+        };
+        if set {
+            let value = args.get(1).cloned().unwrap_or(Json::Null);
+            if let Some(key) = self.chunk_meta_key(&canonical) {
+                self.chunk_meta
+                    .entry(key)
+                    .or_default()
+                    .params
+                    .insert(param.to_string(), value.clone());
+            }
+            Ok(vec![value])
+        } else {
+            Ok(vec![self
+                .chunk_param_value(&canonical, param)
+                .unwrap_or(Json::Null)])
+        }
+    }
+
+    fn find_matching_chunks_cmd(&mut self, args: &[Json]) -> Result<Vec<Json>, String> {
+        let Some(spec) = args
+            .first()
+            .and_then(|arg| arg.as_f64())
+            .map(|id| self.chunk_specs.borrow().get(id as i64))
+            .flatten()
+        else {
+            self.warn("find-matching-chunks needs a valid chunk-spec id.");
+            return Ok(vec![Json::Null]);
+        };
+        let chunks: Option<Vec<String>> = match args.get(1) {
+            Some(Json::Arr(items)) => Some(
+                items
+                    .iter()
+                    .filter_map(|item| item.as_str().map(str::to_string))
+                    .collect(),
+            ),
+            Some(Json::Str(name)) if name.eq_ignore_ascii_case("all") => None,
+            Some(Json::Null) | None => None,
+            _ => {
+                self.warn("find-matching-chunks chunks parameter must be a list.");
+                return Ok(vec![Json::Null]);
+            }
+        };
+        let Some(engine) = self.engine.as_ref() else {
+            self.warn("Find-matching-chunks called with no current model.");
+            return Ok(vec![Json::Null]);
+        };
+        let found = engine.find_matching_chunks_rpc(&spec, chunks.as_deref());
+        Ok(vec![Json::Arr(found.into_iter().map(Json::Str).collect())])
+    }
+
+    /// Invoke a registered command by name and return its first value. Remote
+    /// commands are called directly on the owning connection so a command
+    /// handler can use another client callback (for example a chunk count
+    /// merge function) without trying to re-borrow the dispatcher.
+    fn call_command_value(
+        &mut self,
+        name: &str,
+        model: Option<&str>,
+        args: Vec<Json>,
+        remote: &mut dyn Remote,
+    ) -> Result<Json, String> {
+        if !self.has_command(name) {
+            return Err(format!("Command {name:?} not found."));
+        }
+        let values = if self.command_is_remote(name) {
+            let owner = self.command_connection(name);
+            let local = self.remote_local_name(name).to_string();
+            remote.call_from(owner.as_deref(), &local, model, args)?
+        } else {
+            self.evaluate(name, model, &args, remote)?
+        };
+        Ok(values.into_iter().next().unwrap_or(Json::Null))
+    }
+
+    fn merge_chunks_cmd(
+        &mut self,
+        args: &[Json],
+        remote: &mut dyn Remote,
+    ) -> Result<Vec<Json>, String> {
+        let a = args
+            .first()
+            .and_then(|arg| arg.as_str())
+            .ok_or("merge-chunks requires a chunk name")?;
+        let b = args
+            .get(1)
+            .and_then(|arg| arg.as_str())
+            .ok_or("merge-chunks requires a second chunk name")?;
+        let Some(engine) = self.engine.as_ref() else {
+            self.warn("Merge-chunks called with no current model.");
+            return Ok(vec![Json::Null]);
+        };
+        let (Some(canonical_a), Some(canonical_b)) = (
+            engine.canonical_chunk_name_rpc(a),
+            engine.canonical_chunk_name_rpc(b),
+        ) else {
+            self.warn("merge-chunks requires two existing chunks.");
+            return Ok(vec![Json::Null]);
+        };
+        if !engine
+            .chunks_equal_rpc(&canonical_a, &canonical_b)
+            .unwrap_or(false)
+        {
+            return Ok(vec![Json::Null]);
+        }
+        if canonical_a == canonical_b {
+            return Ok(vec![Json::Str(a.to_uppercase())]);
+        }
+        let model = self.current_model.clone();
+        let merges: Vec<(String, String)> = self
+            .chunk_param_defs
+            .iter()
+            .filter_map(|(param, def)| {
+                def.merge_value
+                    .as_ref()
+                    .map(|callback| (param.clone(), callback.clone()))
+            })
+            .collect();
+        for (param, callback) in merges {
+            let left = self
+                .chunk_param_value(&canonical_a, &param)
+                .unwrap_or(Json::Null);
+            let right = self
+                .chunk_param_value(&canonical_b, &param)
+                .unwrap_or(Json::Null);
+            match self.call_command_value(&callback, model.as_deref(), vec![left, right], remote) {
+                Ok(value) => {
+                    if let Some(key) = self.chunk_meta_key(&canonical_a) {
+                        self.chunk_meta
+                            .entry(key)
+                            .or_default()
+                            .params
+                            .insert(param, value);
+                    }
+                }
+                Err(error) => self.warn(&format!(
+                    "Error while merging chunk parameter {param}: {error}"
+                )),
+            }
+        }
+        let immutable = self
+            .chunk_meta(&canonical_a)
+            .map(|meta| meta.immutable)
+            .unwrap_or(false)
+            || self
+                .chunk_meta(&canonical_b)
+                .map(|meta| meta.immutable)
+                .unwrap_or(false);
+        let merged = self
+            .engine
+            .as_mut()
+            .map(|engine| engine.merge_chunks_rpc(&canonical_a, &canonical_b))
+            .unwrap_or(false);
+        if merged {
+            if let Some(key) = self.chunk_meta_key(&canonical_a) {
+                self.chunk_meta.entry(key).or_default().immutable |= immutable;
+            }
+            Ok(vec![Json::Str(a.to_uppercase())])
+        } else {
+            Ok(vec![Json::Null])
+        }
     }
 
     /// Overridden model-body commands.
@@ -1297,6 +1601,7 @@ impl Session {
             self.current_model = None;
         }
         self.inactive.retain(|m| !m.name.eq_ignore_ascii_case(name));
+        self.clear_chunk_meta_for_model(name);
         self.speech_models
             .retain(|model| !model.eq_ignore_ascii_case(name));
         self.windows
@@ -1548,11 +1853,20 @@ impl Session {
     /// device actions) must go through this mapping too, not just
     /// `Session::evaluate`.
     pub fn remote_local_name<'a>(&'a self, name: &'a str) -> &'a str {
-        match self.command_entry(name).map(|c| &c.owner) {
-            Some(Owner::Remote {
+        let Some((registered, command)) = self.commands.get_key_value(name).or_else(|| {
+            self.commands
+                .iter()
+                .find(|(command, _)| command.eq_ignore_ascii_case(name))
+        }) else {
+            return name;
+        };
+        match &command.owner {
+            Owner::Remote {
                 local_name: Some(local),
-            }) => local.as_str(),
-            _ => name,
+            } => local.as_str(),
+            // Engine-fired task commands are uppercase; the client registered
+            // the original spelling (usually lowercase).
+            _ => registered.as_str(),
         }
     }
 
@@ -2240,6 +2554,13 @@ impl Session {
         args: &[Json],
         remote: &mut dyn Remote,
     ) -> Result<Vec<Json>, String> {
+        if let Some((param, set)) = self
+            .chunk_param_commands
+            .get(&name.to_ascii_lowercase())
+            .cloned()
+        {
+            return self.chunk_param_command(&param, set, args);
+        }
         match name {
             // The Rust server has no pipe transport. Returning false makes the
             // tutorial client keep using its socket, just as it does when the
@@ -2334,6 +2655,7 @@ impl Session {
             "reset" => {
                 self.queue_signal("reset-start", Vec::new());
                 self.chunk_specs.borrow_mut().clear();
+                self.chunk_meta.clear();
                 let load_dispatch = self.load_dispatch_policy();
                 let defer_tertiary = load_dispatch.any();
                 let multi_marks: Vec<(String, usize)> = if self.is_multi() {
@@ -2437,6 +2759,13 @@ impl Session {
                 }
                 Ok(vec![Json::Null])
             }
+            "model-warning" | "model_warning" => {
+                if let Some(engine) = &mut self.engine {
+                    let text = args.iter().map(json_to_text).collect::<Vec<_>>().join(" ");
+                    engine.model_warning_rpc(&text);
+                }
+                Ok(vec![Json::Null])
+            }
             "get-parameter-value" => {
                 let key = args
                     .first()
@@ -2501,6 +2830,7 @@ impl Session {
                 self.global_run_events = 0;
                 self.trace_pos = 0;
                 self.chunk_specs.borrow_mut().clear();
+                self.chunk_meta.clear();
                 self.prune_stale_module_factories();
                 Ok(vec![Json::Bool(true)])
             }
@@ -2724,6 +3054,7 @@ impl Session {
                 let mut extended = Vec::new();
                 let mut warnings = Vec::new();
                 let mut new_defined = Vec::new();
+                let mut names = Vec::new();
                 if let Some(m) = self.current_def_mut() {
                     let defined_before = m.defined_chunks.len();
                     for c in &chunks {
@@ -2753,9 +3084,12 @@ impl Session {
                                     }
                                 }
                             }
+                            names.push(chunk.name.clone());
                             m.chunks.push(chunk);
                         } else {
-                            model::define_chunk_table_entry(&sexp, m).map_err(|e| e.to_string())?;
+                            let defined = model::define_chunk_table_entry(&sexp, m)
+                                .map_err(|e| e.to_string())?;
+                            names.push(defined);
                         }
                     }
                     m.apply_chunk_defaults();
@@ -2780,7 +3114,25 @@ impl Session {
                         eng.extend_possible_slots(&s);
                     }
                 }
-                Ok(vec![Json::Null])
+                Ok(vec![Json::Arr(names.into_iter().map(Json::Str).collect())])
+            }
+            "extend-chunks" => self.extend_chunks_cmd(args),
+            "find-matching-chunks" => self.find_matching_chunks_cmd(args),
+            "merge-chunks" => self.merge_chunks_cmd(args, remote),
+            "chunk-not-storable" => {
+                let chunk = args.first().and_then(|arg| arg.as_str()).unwrap_or("");
+                let not_storable = self
+                    .chunk_meta(chunk)
+                    .map(|meta| meta.not_storable)
+                    .unwrap_or(false);
+                Ok(vec![Json::Bool(not_storable)])
+            }
+            "make-chunk-immutable" => {
+                let chunk = args.first().and_then(|arg| arg.as_str()).unwrap_or("");
+                if let Some(meta) = self.chunk_meta_mut(chunk) {
+                    meta.immutable = true;
+                }
+                Ok(vec![Json::Bool(true)])
             }
             "chunk-type" => {
                 // `chunk-type-fct` (`framework/chunk-types.lisp:340`): define a
@@ -5133,6 +5485,27 @@ impl Session {
             .unwrap_or((0, false, false))
     }
 
+    /// Whether the active model was explicitly stopped by a break event.
+    pub fn is_stopped(&self) -> bool {
+        self.engine.as_ref().is_some_and(|engine| engine.stopped())
+    }
+
+    /// Whether a client callback dispatched after a slice queued model work
+    /// that is still inside the current run's time limit. Events beyond the
+    /// limit stay queued for a later `run` and must not extend this one.
+    pub fn has_queued_events_before(&mut self, limit_ms: i64) -> bool {
+        self.engine.as_mut().is_some_and(|engine| {
+            engine
+                .next_event_key()
+                .is_some_and(|(time_ms, _, _)| time_ms < limit_ms)
+        }) || self.inactive.iter_mut().any(|model| {
+            model
+                .engine
+                .next_event_key()
+                .is_some_and(|(time_ms, _, _)| time_ms < limit_ms)
+        })
+    }
+
     /// One run slice, reporting why it returned.
     pub fn run_slice_reason(&mut self, limit_ms: i64, full: bool) -> Result<RunStop, String> {
         if self.is_multi() {
@@ -5847,7 +6220,7 @@ impl Session {
         let Some(action) = action.and_then(|a| a.as_str()) else {
             return None;
         };
-        let sexps: Vec<Sexp> = match options {
+        let mut sexps: Vec<Sexp> = match options {
             // The Python client sends `[[key, value], ...]`; select `:params`.
             Some(Json::Arr(a))
                 if a.iter().any(|option| {
@@ -5870,6 +6243,17 @@ impl Session {
         };
         let id = self.next_event_id();
         let remote_action = self.command_is_remote(action);
+        // A scheduled event with a destination prepends the module instance.
+        // For an external module the instance is the creation callback's
+        // return value; the vendored declarative example returns the model
+        // name, so that is what its `retrieved-chunk` callback expects.
+        let has_destination = option(options, "destination")
+            .is_some_and(|value| !matches!(value, Json::Null | Json::Bool(false)));
+        if remote_action && has_destination {
+            if let Some(model) = self.current_model.clone() {
+                sexps.insert(0, Sexp::Sym(model.to_uppercase()));
+            }
+        }
         if let Some(eng) = &mut self.engine {
             if remote_action {
                 eng.register_task_command(action);
@@ -10058,6 +10442,180 @@ mod tests {
             Some("busy"),
             "{value:?}"
         );
+    }
+
+    struct MergeRemote;
+
+    impl Remote for MergeRemote {
+        fn call(
+            &mut self,
+            name: &str,
+            _model: Option<&str>,
+            args: Vec<Json>,
+        ) -> Result<Vec<Json>, String> {
+            if name.eq_ignore_ascii_case("merge-py-chunks") {
+                let left = args.first().and_then(Json::as_f64).unwrap_or(0.0);
+                return Ok(vec![Json::Int(left as i64 + 1)]);
+            }
+            Ok(vec![Json::Null])
+        }
+    }
+
+    #[test]
+    fn chunk_parameter_commands_match_and_merge_external_chunks() {
+        let mut s = Session::new((100, 0));
+        let mut remote = MergeRemote;
+        s.evaluate(
+            "extend-chunks",
+            None,
+            &[Json::Str("ct".into())],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate(
+            "extend-chunks",
+            None,
+            &[
+                Json::Str("count".into()),
+                Json::Arr(vec![Json::Arr(vec![
+                    Json::Str("merge-value-function".into()),
+                    Json::Str("'merge-py-chunks'".into()),
+                ])]),
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+
+        let names = s
+            .evaluate(
+                "define-chunks",
+                None,
+                &[Json::Arr(vec![
+                    Json::Str("dup".into()),
+                    Json::Str("ISA".into()),
+                    Json::Str("number".into()),
+                    Json::Str("number".into()),
+                    Json::Str("one".into()),
+                    Json::Str("next".into()),
+                    Json::Str("two".into()),
+                ])],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(names, vec![Json::Arr(vec![Json::Str("DUP".into())])]);
+
+        s.evaluate(
+            "set-chunk-ct",
+            None,
+            &[Json::Str("one".into()), Json::Int(7)],
+            &mut remote,
+        )
+        .unwrap();
+        let ct = s
+            .evaluate("chunk-ct", None, &[Json::Str("one".into())], &mut remote)
+            .unwrap();
+        assert_eq!(ct, vec![Json::Int(7)]);
+
+        let spec = s
+            .evaluate(
+                "define-chunk-spec",
+                None,
+                &[
+                    Json::Str("ISA".into()),
+                    Json::Str("number".into()),
+                    Json::Str("number".into()),
+                    Json::Str("one".into()),
+                ],
+                &mut remote,
+            )
+            .unwrap()[0]
+            .as_f64()
+            .unwrap() as i64;
+        let found = s
+            .evaluate(
+                "find-matching-chunks",
+                None,
+                &[
+                    Json::Int(spec),
+                    Json::Arr(vec![Json::Str("ONE".into()), Json::Str("TWO".into())]),
+                ],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(found, vec![Json::Arr(vec![Json::Str("ONE".into())])]);
+
+        s.add_remote("merge-py-chunks", None, Some("connection-1".into()));
+        for chunk in ["one", "dup"] {
+            s.evaluate(
+                "set-chunk-count",
+                None,
+                &[Json::Str(chunk.into()), Json::Int(1)],
+                &mut remote,
+            )
+            .unwrap();
+        }
+        let merged = s
+            .evaluate(
+                "merge-chunks",
+                None,
+                &[Json::Str("one".into()), Json::Str("dup".into())],
+                &mut remote,
+            )
+            .unwrap();
+        assert_eq!(merged, vec![Json::Str("ONE".into())]);
+        let count = s
+            .evaluate("chunk-count", None, &[Json::Str("one".into())], &mut remote)
+            .unwrap();
+        assert_eq!(count, vec![Json::Int(2)]);
+    }
+
+    #[test]
+    fn scheduled_destination_prepends_the_model_name() {
+        let mut s = Session::new((100, 0));
+        let mut remote = MergeRemote;
+        s.evaluate(
+            "load-act-r-model",
+            None,
+            &[Json::Str(fixture_model("tutorial;unit1;count.lisp"))],
+            &mut remote,
+        )
+        .unwrap();
+        s.add_remote("retrieved-chunk", None, Some("connection-1".into()));
+        s.evaluate(
+            "schedule-event-relative",
+            None,
+            &[
+                Json::Float(0.0),
+                Json::Str("retrieved-chunk".into()),
+                Json::Arr(vec![
+                    Json::Arr(vec![
+                        Json::Str("params".into()),
+                        Json::Arr(vec![Json::Str("probe".into())]),
+                    ]),
+                    Json::Arr(vec![
+                        Json::Str("destination".into()),
+                        Json::Str("declarative".into()),
+                    ]),
+                ]),
+            ],
+            &mut remote,
+        )
+        .unwrap();
+        s.evaluate("run", None, &[Json::Float(0.1)], &mut remote)
+            .unwrap();
+        let fired = s.take_fired_task_commands();
+        let call = fired
+            .iter()
+            .find(|(name, _)| name == "RETRIEVED-CHUNK")
+            .unwrap_or_else(|| panic!("no retrieved-chunk command: {fired:?}"));
+        assert_eq!(call.1, vec!["COUNT".to_string(), "PROBE".to_string()]);
     }
 
     #[test]
