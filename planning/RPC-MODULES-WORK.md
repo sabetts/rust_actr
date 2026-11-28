@@ -3,8 +3,8 @@
 Last updated: 2026-11-27
 Branch: `main`
 Starting commit: `d00fb51`
-Latest relevant code commit: `b94bdd2`
-Status: Milestones 1-6 complete; Milestone 7 next
+Latest relevant code commit: `b94bdd2` (Milestone 7 in working tree)
+Status: Milestones 1-7 complete; Milestone 8 next
 
 This document tracks support for RPC-defined custom modules in the Rust
 `actr-engine`. It records the design, the ordered milestones, the current
@@ -99,31 +99,20 @@ What exists:
 - The vendored Python `goal.py` replacement runs count, addition, and semantic
   with matching model outcomes.
 
-What is missing:
+The vendored `simple_declarative.py` replacement now runs count, addition, and
+semantic with matching model outcomes. Its model-body `add-dm` is dispatched to
+the client, `define-chunks` returns chunk names, and the DM utility commands
+(`find-matching-chunks`, `merge-chunks`, `chunk-not-storable`,
+`make-chunk-immutable`, `extend-chunks`, `model-warning`) are available.
 
-- Declarative compatibility commands (`find-matching-chunks`, `merge-chunks`,
-  chunk metadata helpers) used by `simple_declarative.py`.
-- Full suppression of the hardcoded declarative module behavior; goal
-  replacement works through module-buffer ownership precedence.
+Deliberate limits:
 
-Relevant missing RPC commands:
-
-- `chunk-spec-to-chunk-def`
-- `define-chunk-spec` (listed, no implementation arm)
-- `schedule-set-buffer-chunk` (listed, no implementation arm)
-- `schedule-event-after-module` (listed, no implementation arm)
-- `set-buffer-failure`
-- `delete-event`
-- `find-matching-chunks`
-- `merge-chunks`
-- `chunk-not-storable`
-- `make-chunk-immutable`
-- `set-chunk-ct`
-- `set-chunk-count`
-- `chunk-ct`
-- `chunk-count`
-- `extend-chunks`
-- `model-warning`
+- `extend-chunks` supports default values and `merge-value-function`; the full
+  Lisp copy/merge option matrix is not implemented.
+- Declarative metadata is session-side for external chunks. The built-in DM
+  viewer and stepper do not understand a replacement module's private store.
+- `find-matching-chunks` supports the built-in slot tests; caller-supplied
+  custom test functions are not dispatched.
 
 ## 5. Architecture decisions
 
@@ -408,15 +397,19 @@ outcomes and outputs match.
 
 ### Milestone 7 — Declarative replacement parity
 
-- [ ] Enable replacement of `add-dm`, `dm`, and `sdp` through the dispatch path.
-- [ ] Add the missing DM utility commands listed in section 4.
-- [ ] Reuse existing chunk matching/merge machinery where possible.
-- [ ] Ensure model-body `add-dm` reaches the custom module during load.
-- [ ] Run `simple_declarative.py` against unit 1 count, addition, and semantic.
-- [ ] Add a regression test or scripted smoke test.
+- [x] Enable replacement of `add-dm`, `dm`, and `sdp` through the dispatch path.
+- [x] Add the missing DM utility commands listed in section 4.
+- [x] Reuse existing chunk matching/merge machinery where possible.
+- [x] Ensure model-body `add-dm` reaches the custom module during load.
+- [x] Run `simple_declarative.py` against unit 1 count, addition, and semantic.
+- [x] Add a regression test or scripted smoke test.
 
 Acceptance: `simple_declarative.py` replaces declarative memory and the unit 1
-models still run with expected results.
+models still run with expected results. The gated
+`rpc_declarative_conformance` driver runs the real vendored module against all
+three models; count prints `FOUR`, addition prints `SEVEN`, and semantic returns
+yes/yes/no for the tested goals. `cargo test` covers the utility commands,
+scheduled destination routing, and built-in DM merge suppression.
 
 ### Milestone 8 — Docs and polish
 
@@ -447,8 +440,17 @@ models still run with expected results.
   path for non-override models and run the full corpus after each change.
 - **Built-in replacement scope.** `undefine-module('goal'/'declarative')` records
   a suppression and returns true, but the hardcoded GOAL buffer/initial-goal
-  paths remain. Module-buffer ownership routes requests/queries correctly; the
-  Python goal replacement is covered, declarative replacement is Milestone 7.
+  paths remain. Module-buffer ownership routes requests/queries correctly, and
+  a custom `RETRIEVAL` owner suppresses the built-in DM clear hook. Both vendored
+  Python replacements are covered.
+- **Chunk parameter scope.** `extend-chunks` supports the default value and
+  merge-value callback used by `simple_declarative.py`. Copy functions, custom
+  merge functions, and full per-chunk parameter integration with the built-in
+  DM viewer are not implemented.
+- **Scheduled destinations.** A remote scheduled action with a destination gets
+  the model name prepended, matching the vendored external modules whose
+  creation callback returns the model name. Arbitrary external creation return
+  values are not stored or replayed.
 - **Top-level remote command monitors.** Client commands invoked directly via
   `evaluate` now route through `call_remote` so they can nest; their dispatcher
   before/after/simple monitors are not run on that path.
@@ -471,8 +473,9 @@ models still run with expected results.
   model is loaded, or pruned after the last model is cleared when a model was
   loaded at disconnect time.
 - **Chunk-spec lifetime.** The table clears on reset, model load, and clear-all.
-  `chunk-spec-to-chunk-def` rejects negated/relative slots; full chunk-spec
-  matching/variables remain Milestone 7.
+  `chunk-spec-to-chunk-def` rejects negated/relative slots;
+  `find-matching-chunks` supports direct, negated, and relative built-in tests
+  but not caller-supplied custom test functions or variable characters.
 - **Trace parity.** Rust trace ordering may differ from Lisp even when model
   results match.
 
@@ -504,6 +507,8 @@ Tests:
   buffer scheduling fixture
 - `rust_actr7/fixtures/rpc-goal-smoke.py` — real `goal.py` smoke driver for
   count, addition, and semantic
+- `rust_actr7/fixtures/rpc-declarative-smoke.py` — real
+  `simple_declarative.py` smoke driver, including DM utility checks
 
 Examples and oracle:
 
@@ -587,25 +592,28 @@ Add one entry per milestone or meaningful checkpoint, with the commit range.
   `environment_rpc` tests, and 10 `rpc_modules` tests. The ignored
   `rpc_goal_conformance` test ran the real `goal.py` against count, addition,
   and semantic successfully.
+- 2026-11-27: Milestone 7 complete in the working tree. `define-chunks`/`add-dm`
+  now return chunk names, `extend-chunks` adds external chunk parameters, and
+  `find-matching-chunks`/`merge-chunks` reuse the engine chunk machinery.
+  Scheduled remote actions with a destination prepend the model name, and a
+  custom `RETRIEVAL` owner suppresses the built-in DM clear merge. Added
+  `rpc-declarative-smoke.py` and `rpc_declarative_conformance`; the real
+  `simple_declarative.py` runs count, addition, and semantic successfully.
+  `cargo test` passed 164 lib tests, 36 `environment_rpc`, 11 `rpc_modules`, and
+  the 560-case model corpus. `cargo fmt --check` is clean.
 
 ## 11. Handoff notes
 
-Next action: start Milestone 7, declarative replacement parity. Wire
-`add-dm`/`dm`/`sdp` through the dispatch path, implement the missing DM utility
-commands, and run the real `simple_declarative.py` against count, addition, and
-semantic.
+Next action: start Milestone 8, docs and polish. Update the Python interface and
+parity notes, then review the remaining declarative limitations above.
 
 Before editing:
 
-- Read `planning/RPC-MODULES-WORK.md` section 4 command list and Milestone 7.
-- Read `rust_actr7/src/rpc/session.rs` around `add-dm`, `dm`, `sdp`,
-  `load_dispatch_policy`, and chunk helpers.
-- Read `rust_actr7/src/engine/dm.rs` for matching/merging helpers.
-- Read `rust_actr7/src/rpc/remote_module.rs` and `drain_load_dispatches` in
-  `rust_actr7/src/rpc/server.rs` for deferred load actions.
-- Read `actr7.x/examples/creating-modules/external/simple_declarative.py`.
-- Read `actr7.x/framework/chunk-spec.lisp` and `chunks.lisp` for the DM utility
-  commands.
+- Read `planning/RPC-MODULES-WORK.md` section 4 command list and Milestone 8.
+- Review `planning/PYTHON-INTERFACE-WORK.md` §4.2 and §8.
+- Review `planning/PARITY-AUDIT.md` known follow-ups.
+- Review `planning/PORTING-NOTES.md` for the callback split and synchronous
+  reentrancy architectural note.
 
 When finishing a milestone:
 
