@@ -49,6 +49,8 @@ python benchmarking\run.py --engine all
 - `--pin-cpu` is Linux-only and is ignored on other platforms.
 - `parity.py` escapes native paths before writing them into the temporary Lisp
   script, so SBCL handles drive-letter paths.
+- The harness terminates the server process tree, so a console shim (for
+  example Chocolatey's `sbcl.exe`) cannot leave an orphaned server behind.
 - Stop any ACT-R server already listening on port 2650 before starting a run;
   the harness reports an occupied port as an error.
 

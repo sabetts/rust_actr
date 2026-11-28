@@ -87,7 +87,17 @@ def any_port_open(port: int = DEFAULT_PORT) -> list[str]:
 def stop(proc: subprocess.Popen[Any]) -> None:
     if proc.poll() is not None:
         return
-    proc.terminate()
+    if sys.platform.startswith("win"):
+        # A console shim (for example Chocolatey's ``sbcl.exe``) waits for the
+        # real executable as its child.  Terminating only the shim would leave
+        # the server running and holding the port, so kill the whole tree.
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        proc.terminate()
     try:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
